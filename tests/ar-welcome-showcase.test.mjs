@@ -53,8 +53,8 @@ test('main LIM renderer draws one lightweight connection beneath existing cell l
   measureText(text){return {width:text.length*10};},
   createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},
   bezierCurveTo(){beziers+=1;},lineTo(){lines+=1;}};
- for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
- const frame=drawArWelcomeShowcase(ctx,3000,false,createArWelcomeClusters(),{opening:true,openingSeed:73421});
+ for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','quadraticCurveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
+ const frame=drawArWelcomeShowcase(ctx,3000,false,createArWelcomeClusters(),{opening:true,openingSeed:73421,drawRoots:false});
  assert.equal(frame.reduce((count,item)=>count+item.nodes.length,0),59);
  assert.equal(beziers,0,'opening connections avoid expensive multi-pass curves');
  assert.ok(lines>0,'parent-child relationships retain a simple line');
@@ -66,8 +66,8 @@ test('minimal introduction reveals only four coloured primary pathways without c
  let lines=0;
  const stack=[];
  const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},restore(){Object.assign(this,stack.pop());},measureText(text){return {width:text.length*10};},createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},lineTo(){lines+=1;}};
- for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
- const pacing={opening:true,minimalIntro:true,openingSeed:73421,openingDuration:30000,minimalStartAt:16000,minimalInterval:4000,minimalRevealDuration:1400,drawPanel:false};
+ for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','quadraticCurveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
+ const pacing={opening:true,minimalIntro:true,openingSeed:73421,openingDuration:30000,minimalStartAt:16000,minimalInterval:4000,minimalRevealDuration:1400,drawPanel:false,drawRoots:false};
  const visibleAt=time=>drawArWelcomeShowcase(ctx,time,false,createArWelcomeClusters(),pacing).flatMap(frame=>frame.nodes).filter(node=>node.opacity>.5);
  assert.equal(visibleAt(15999).length,0);
  assert.equal(visibleAt(17800).length,4);
@@ -161,7 +161,7 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
  createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){radials+=1;return {addColorStop(){}};}};
  for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','roundRect','arc','clip','fillRect','setLineDash'])ctx[method]=()=>{};
  ctx.quadraticCurveTo=()=>{curves+=1;};
- drawArWelcomeShowcase(ctx,64000,true);
+ drawArWelcomeShowcase(ctx,64000,true,undefined,{drawRoots:false});
  const frame=welcomeExperienceFrames(64000,true).flatMap(frame=>frame.nodes).filter(node=>node.opacity>0);
  for(const node of frame){for(const word of node.label.split(' ')){
   const label=labels.find(l=>l.text===word && l.x===0);

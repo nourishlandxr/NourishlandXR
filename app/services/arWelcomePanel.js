@@ -1,4 +1,4 @@
-// One shared silhouette for the AR surface and attached LIM roots.
+// One shared silhouette for the AR welcome surface.
 export const WELCOME_SHAPE = Object.freeze({cx:700,cy:550,radius:520,sides:16});
 export function welcomeBoundary(angle) {
  const {cx,cy,radius}=WELCOME_SHAPE;
@@ -13,20 +13,20 @@ function outline(ctx) {
 export function drawArWelcomePanel(ctx) {
  ctx.save();
  const glass=ctx.createLinearGradient(190,110,1210,990);
- glass.addColorStop(0,'rgba(71,91,76,.72)');
- glass.addColorStop(.46,'rgba(27,51,41,.76)');
- glass.addColorStop(1,'rgba(12,32,28,.79)');
+ glass.addColorStop(0,'rgba(75,126,88,.34)');
+ glass.addColorStop(.46,'rgba(33,82,59,.43)');
+ glass.addColorStop(1,'rgba(15,49,40,.49)');
  outline(ctx);ctx.fillStyle=glass;ctx.fill();
- ctx.strokeStyle='rgba(239,249,234,.36)';ctx.lineWidth=1.7;ctx.stroke();
+ ctx.strokeStyle='rgba(231,250,229,.56)';ctx.lineWidth=1.7;ctx.stroke();
  outline(ctx);ctx.clip();
  const light=ctx.createRadialGradient(400,210,18,490,370,670);
- light.addColorStop(0,'rgba(244,255,234,.20)');
- light.addColorStop(.42,'rgba(218,239,209,.055)');
+ light.addColorStop(0,'rgba(244,255,234,.15)');
+ light.addColorStop(.42,'rgba(218,239,209,.035)');
  light.addColorStop(1,'rgba(255,255,255,0)');
  ctx.fillStyle=light;ctx.fillRect(80,70,1240,990);
  const readingWash=ctx.createRadialGradient(700,555,150,700,555,570);
- readingWash.addColorStop(0,'rgba(5,30,25,.36)');
- readingWash.addColorStop(.7,'rgba(5,30,25,.12)');
+ readingWash.addColorStop(0,'rgba(5,30,25,.18)');
+ readingWash.addColorStop(.7,'rgba(5,30,25,.06)');
  readingWash.addColorStop(1,'rgba(5,30,25,0)');
  ctx.fillStyle=readingWash;ctx.fillRect(160,70,1080,1000);
  ctx.restore();

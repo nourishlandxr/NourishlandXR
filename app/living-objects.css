@@ -1199,7 +1199,7 @@
 
 /* Post-LIMO relationship experience. It lives on the shared spatial surface,
    not in the Control panel, so the gesture and its meaning stay together. */
-.knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.22),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.64),rgba(9,38,29,.42));font-family:system-ui,sans-serif;pointer-events:none}
+.knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.14),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.22),rgba(9,38,29,.16));font-family:system-ui,sans-serif;pointer-events:none}
 .knowledge-combination :is(.knowledge-source-cell,.knowledge-node,nav,nav button){pointer-events:auto}
 .knowledge-combination[hidden],.knowledge-combination [hidden]{display:none!important}
 .knowledge-combination header{position:absolute;z-index:4;left:50%;top:4%;width:78%;transform:translateX(-50%);text-align:center;pointer-events:none}
@@ -1562,8 +1562,9 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side="left"] { left:3%;right:auto;clip-path:polygon(16% 0,100% 0,100% 100%,16% 100%,0 50%); }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side="right"] { left:53%;right:auto;clip-path:polygon(0 0,84% 0,100% 50%,84% 100%,0 100%); }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:8px;line-height:1;letter-spacing:.08em; }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:11px;line-height:1.08; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { font-family:Inter,"Segoe UI",system-ui,sans-serif;font-weight:600;text-shadow:0 1px 2px rgba(20,27,21,.7); }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:9px;line-height:1.1;letter-spacing:.1em;font-weight:750; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:12px;line-height:1.12;font-weight:700; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] > span { display:none; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side]::after { display:none; }
 .tryit-sim-marker-plant.is-neighbour-orb { opacity:.78;scale:.78;filter:saturate(.75);animation:nlxr-neighbour-arrive 1.2s ease both; }
@@ -1574,9 +1575,9 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 @media(max-width:600px) {
     .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { width:min(48vw,220px);height:min(38vh,310px); }
     .tryit-sim-totem-system .nlxr-totem-cards > button:nth-child(1) { min-height:64px;width:62%; }
-    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { height:37px;min-height:37px;padding:3px 7px; }
-    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:8px; }
-    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:6px; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { height:42px;min-height:42px;padding:4px 7px; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:9px; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:7px; }
 }
 .nlxr-totem-system .nlxr-totem-cards > button strong { color:#fff9e8; font-size:14px; }
 .nlxr-totem-system .nlxr-totem-cards > button > span:not(.nlxr-totem-stats) { color:rgba(255,247,220,.9); }
@@ -1593,9 +1594,9 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
     z-index:0;
     inset:0;
     clip-path:polygon(50% 25.7%,58% 27.6%,64.7% 32.9%,69.2% 41%,70.8% 50.5%,69.2% 60%,64.7% 68.1%,58% 73.4%,50% 75.2%,42% 73.4%,35.3% 68.1%,30.8% 60%,29.2% 50.5%,30.8% 41%,35.3% 32.9%,42% 27.6%);
-    background:rgba(146,166,147,.06);
-    -webkit-backdrop-filter:blur(26px) saturate(.78);
-    backdrop-filter:blur(26px) saturate(.78);
+    background:rgba(74,139,91,.14);
+    -webkit-backdrop-filter:blur(22px) saturate(1.12);
+    backdrop-filter:blur(22px) saturate(1.12);
     pointer-events:none;
 }
 .tryit-demo.is-simulated[data-lim-surface="true"] .tryit-live-welcome canvas { z-index:1;filter:drop-shadow(0 18px 36px rgba(6,24,20,.21)); }
@@ -2182,3 +2183,12 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .nlxr-book-teaching-open > p { color:#464640;line-height:1.6; }
 .nlxr-book-teaching-open .nlxr-book-thread-list { margin-top:17px; }
 @media(max-width:720px) { .nlxr-book-teaching-grid { grid-template-columns:minmax(0,1fr); } }
+
+/* The live welcome surface uses its own restrained typography without changing
+   the font system used by the rest of NourishlandXR. */
+.tryit-demo .tryit-guide,
+.tryit-demo .tryit-tutorial-board,
+.tryit-demo .tryit-guided-choice,
+.tryit-demo .tryit-demo-footer button,
+.tryit-demo .tryit-final-actions button,
+.tryit-demo [data-welcome-cell] { font-family:"Manrope","Segoe UI",system-ui,sans-serif; }

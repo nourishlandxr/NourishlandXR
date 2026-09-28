@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { demoBeePose, drawDemoAmbientLife } from '../app/services/demoAmbientLife.js';
 
-test('bees arrive only after their introduction and move across near and far space', () => {
+test('bees arrive after their introduction and orbit around the welcome screen', () => {
     assert.equal(demoBeePose(1200,2000,0),null);
     assert.equal(demoBeePose(2500,2000,1),null);
     const depths=[];
     for(const elapsed of [2000,4000,8000,16000,24000]){
         const bee=demoBeePose(elapsed,2000,0);
         assert.ok(bee.x>.15 && bee.x<.85);
-        assert.ok(bee.y>.27 && bee.y<.69);
+        assert.ok(bee.y>.19 && bee.y<.81);
+        assert.ok(Math.abs(Math.hypot(bee.x-.5,bee.y-.5)-.3)<1e-9);
         assert.ok(bee.opacity>=0 && bee.opacity<=.92);
         depths.push(bee.depth);
     }

@@ -6,10 +6,10 @@ export function demoBeePose(elapsed,startedAt,index=0){
     if(age<0)return null;
     const time=age/1000,phase=time*.34+index*2.7;
     return {
-        x:.5+Math.sin(phase)*.34,
-        y:.48+Math.sin(phase*.72+index*1.2)*.20,
+        x:.5+Math.cos(phase)*.30,
+        y:.5+Math.sin(phase)*.30,
         depth:Math.sin(phase-.9),
-        heading:-Math.cos(phase)*.65,
+        heading:phase+Math.PI/2,
         wing:Math.sin(time*27+index),
         opacity:clamp01(age/1700)*.92
     };
@@ -29,9 +29,8 @@ function drawBee(ctx,x,y,size,wing,opacity){
 export function drawDemoAmbientLife(ctx,width,height,{elapsed=0,beesStartedAt=NaN,reducedMotion=false}={}){
     ctx.clearRect(0,0,width,height);
     if(reducedMotion||!Number.isFinite(beesStartedAt))return;
-    const compact=width<700;
     for(let index=0;index<2;index++){
         const bee=demoBeePose(elapsed,beesStartedAt,index);
-        if(bee)drawBee(ctx,bee.x*width,(bee.y-(compact?.12:0))*height,Math.max(4,Math.min(width,height)*(.009+bee.depth*.003)),bee.wing,bee.opacity);
+        if(bee)drawBee(ctx,bee.x*width,bee.y*height,Math.max(4,Math.min(width,height)*(.009+bee.depth*.003)),bee.wing,bee.opacity);
     }
 }
