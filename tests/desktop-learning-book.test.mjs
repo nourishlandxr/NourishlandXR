@@ -30,9 +30,13 @@ test('book branches use the authored LIM and PIM parent-child identities', () =>
 
 test('desktop book is a separate route and keeps its styles scoped', () => {
     const demo = readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
+    const book = readFileSync(new URL('../app/screens/desktopLearningBook.js', import.meta.url), 'utf8');
     const css = readFileSync(new URL('../app/living-objects.css', import.meta.url), 'utf8');
     assert.match(demo, /if \(isDesktopLearningBookTarget\(\)\) return renderDesktopLearningBook/);
     assert.match(css, /\.nlxr-book-spread/);
-    assert.match(css, /\.nlxr-book-pim-margin/);
+    assert.match(book, /nlxr-book-pim-field/);
+    assert.match(book, /nlxr-book-pim-current/);
+    assert.match(css, /\.nlxr-book-pim-margin \.nlxr-book-cell/);
+    assert.match(css, /clip-path:polygon\(25% 0,75% 0,100% 50%/);
     assert.match(css, /\.nlxr-book-inspector/);
 });

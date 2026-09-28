@@ -22,15 +22,17 @@ test('AR introduction preparation can be dismissed on a device', () => {
     assert.equal(shouldSkipArIntroductionPreparation(storage), true);
 });
 
-test('AR introduction preparation explains supported devices and the limited desktop preview', () => {
+test('AR introduction preparation distinguishes the desktop book and spatial mode', () => {
     const app = { innerHTML: '', querySelector: () => null };
     renderArIntroductionPreparation(app);
-    assert.match(app.innerHTML, /designed for spatial devices and mobile phones/);
-    assert.match(app.innerHTML, /limited desktop preview/);
-    assert.match(app.innerHTML, /Desktop preview does not need a camera/);
+    assert.match(app.innerHTML, /Desktop mode is an alternative illustrated book/);
+    assert.match(app.innerHTML, /compatible Android phone or spatial device\*/);
+    assert.match(app.innerHTML, /iPhone and iPad cannot currently launch this WebXR AR mode/);
+    assert.match(app.innerHTML, /desktop book needs no camera/);
     assert.match(app.innerHTML, /Camera and tracking/);
     assert.match(app.innerHTML, /Begin introduction/);
-    assert.doesNotMatch(app.innerHTML, /Quest/);
+    assert.match(app.innerHTML, /XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame/);
+    assert.match(app.innerHTML, /not confirmed compatible devices/);
     assert.match(app.innerHTML, /Don’t show this preparation next time/);
     assert.match(app.innerHTML, /data-ar-introduction-continue/);
 });

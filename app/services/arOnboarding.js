@@ -62,15 +62,16 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
 export function renderArIntroductionPreparation(app, { onContinue, onCancel } = {}) {
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
-        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">NourishlandXR is designed for spatial devices and mobile phones. A limited desktop preview is available, but the full experience is best tried on a compatible device.</p></div>
+        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">Desktop mode is an alternative illustrated book. For the full spatial experience, use a compatible Android phone or spatial device*.</p></div>
         ${botanicalTextureMarkup('prep')}
         <section class="panel ar-safety-card ar-introduction-preparation-card">
-            <p class="ar-introduction-lead">On a supported device, this introduction places NourishlandXR’s learning cells in the space around you. Desktop preview presents a limited on-screen version.</p>
+            <p class="ar-introduction-lead">On a supported device, learning cells appear in the space around you. iPhone and iPad cannot currently launch this WebXR AR mode.</p>
             <div class="ar-preparation-points">
                 <div><span aria-hidden="true">◎</span><p><strong>Make a little room</strong><small>Use a clear, calm space and stay aware of people and obstacles.</small></p></div>
-                <div><span aria-hidden="true">⌾</span><p><strong>Camera and tracking</strong><small>A spatial device or phone may request access after you continue. Desktop preview does not need a camera.</small></p></div>
+                <div><span aria-hidden="true">⌾</span><p><strong>Camera and tracking</strong><small>A compatible phone or spatial device may request access after you continue. The desktop book needs no camera.</small></p></div>
                 <div><span aria-hidden="true">✦</span><p><strong>Move at your pace</strong><small>On a Spatial device, stay within your safety boundary. On a phone, hold the device securely.</small></p></div>
             </div>
+            <p class="ar-spatial-device-note">* Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p>
             <p class="meta">You can leave at any time. Camera access, when available, begins only after you continue and grant permission.</p>
         </section>
         <label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time on this device</span></label>
