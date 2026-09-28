@@ -50,6 +50,16 @@ test('Totem header exposes area counts and boards use attached sign treatments',
     assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.center.x!==0));
 });
 
+test('Demo Totem keeps one welcome header and four slim horizontal signs',()=>{
+    const cards=[{id:'area',title:'Welcome to this area',body:'Highlights and description',stats:[]},
+        ...['Pigeon Pea','Moringa','Seasonal observation','Area 2'].map((title,index)=>({id:`sign-${index}`,title,eyebrow:'SIGN',summary:'',boardSide:index%2?'left':'right',signHeight:1.2-index*.22}))];
+    const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'area',{signsVisible:true,faded:false,bodyHalfWidth:.2,bodyHalfDepth:.14});
+    assert.equal(surfaces.filter(surface=>surface.card.id==='area').length,1);
+    assert.equal(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').length,4);
+    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.18));
+    assert.ok(!totemCardsMarkup(cards,'area').includes('nlxr-totem-detail'));
+});
+
 test('Beveled geometry has outward unit normals and no degenerate faces',()=>{
     const geometry=createBeveledPrismGeometry();
     for(let i=0;i<geometry.length;i+=18) {

@@ -554,12 +554,14 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.doesNotMatch(source, /showDemoAction\('zone'\)/);
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
-    assert.match(source, /function createDemoTotemExample\(placedPosition=null,placedAnchor=null\)/);
+    assert.match(source, /function createDemoTotemExample\(\)/);
     assert.match(source, /A Totem welcomes you to an Area and keeps its local information together/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.match(source, /const DEMO_TOTEM_STYLES/);
     assert.match(source, /function cycleDemoTotemStyle\(record\)/);
-    assert.match(source, /demoLinkVisible: true/);
+    assert.match(source, /function connectDemoTotems\(\)/);
+    assert.match(source, /first\.demoLinkVisible=second\.demoLinkVisible=true/);
+    assert.match(source, /createDemoNeighbourhood\(totem\)/);
     assert.match(source, /LINKED AREAS/);
     assert.match(source, /if \(record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
     assert.match(styles, /\.tryit-sim-totem-model-toggle/);

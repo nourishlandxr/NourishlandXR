@@ -1605,7 +1605,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
     assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-cell b/);
     assert.match(source, /function renderSimulatedTotem/);
-    assert.match(source, /totemCardsMarkup\(cards\.slice\(0,3\),record\.totemSelectedCard\)/);
+    assert.match(source, /totemCardsMarkup\(cards,record\.totemSelectedCard\)/);
     assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:false\}\)/);
     assert.match(source, /rotationY: demoTotemRotationForPosition\(position\)/);
     assert.match(source, /function demoTotemRotationY\(record\)\{[\s\S]*record\?\.rotationY/);
@@ -1625,15 +1625,16 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /SPATIAL_NOTE_TEMPLATES/);
     assert.match(source, /pollinators/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
-    assert.match(source, /function createDemoTotemExample\(placedPosition=null,placedAnchor=null\)/);
+    assert.match(source, /function createDemoTotemExample\(\)/);
+    assert.match(source, /pairedDemoTotemPosition\(1,groundBaseY\)/);
     assert.match(source, /A Totem welcomes you to an Area/);
     assert.match(source, /A link creates a visitor route between Areas/);
     assert.match(source, /tutorialStage: 'totem'/);
     assert.match(source, /const DEMO_NOTE_IMMERSIVE_SCALE = Object\.freeze\(\{ x: 2\.15, y: 1\.65 \}\)/);
-    assert.match(source, /const noteScale = noteSign \? DEMO_NOTE_IMMERSIVE_SCALE : null/);
+    assert.match(source, /const noteScale = noteSign \? record\.demoAmbientNeighbour/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\) \{ width:min\(72vw,210px\); height:82px;/);
     assert.match(source, /groundBaseY = demoGroundBaseY\(hitMatrix, viewerMatrix, groundYEstimate\)/);
-    assert.match(source, /y: groundBaseY \+ DEMO_TOTEM_HALF_HEIGHT_METRES/);
+    assert.match(source, /y:groundBaseY\+DEMO_TOTEM_HALF_HEIGHT_METRES/);
     assert.match(read('app/screens/arMode.js'), /function totemRotationDegreesForPosition\(position, viewer = latestViewerMatrix\)/);
     assert.match(read('app/screens/arMode.js'), /type === 'area_checkpoint' \? totemRotationDegreesForPosition\(position\) : 0/);
     assert.match(source, /type: type === 'note' \? 'note' : 'plant'/);

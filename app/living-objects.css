@@ -1199,7 +1199,8 @@
 
 /* Post-LIMO relationship experience. It lives on the shared spatial surface,
    not in the Control panel, so the gesture and its meaning stay together. */
-.knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.22),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.64),rgba(9,38,29,.42));font-family:system-ui,sans-serif;pointer-events:auto}
+.knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.22),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.64),rgba(9,38,29,.42));font-family:system-ui,sans-serif;pointer-events:none}
+.knowledge-combination :is(.knowledge-source-cell,.knowledge-node,nav,nav button){pointer-events:auto}
 .knowledge-combination[hidden],.knowledge-combination [hidden]{display:none!important}
 .knowledge-combination header{position:absolute;z-index:4;left:50%;top:4%;width:78%;transform:translateX(-50%);text-align:center;pointer-events:none}
 .knowledge-combination header small{display:block;color:rgba(222,241,211,.62);font-size:clamp(8px,1.15vw,13px);font-weight:800;letter-spacing:.18em}
@@ -1544,6 +1545,39 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 .nlxr-totem-system .nlxr-totem-cards > button:nth-child(3)::after { left:auto; right:100%; }
 .nlxr-totem-system .nlxr-totem-cards > button:nth-child(1)::after { left:50%; right:auto; top:100%; width:8px; height:18px; transform:translateX(-50%); }
 .nlxr-totem-system .nlxr-totem-cards > button small { color:rgba(255,247,216,.82); letter-spacing:.16em; }
+/* Demo Areas arrive as a quiet pair. Their short horizontal arms keep the
+   user's last Plant Orb height without tilting the boards. */
+.tryit-sim-totem-system.is-new-arrival { animation:nlxr-totem-arrive .95s cubic-bezier(.2,.7,.2,1) both; }
+@keyframes nlxr-totem-arrive { from { opacity:0;transform:translate(-50%,-46%) scale(.95); } to { opacity:1;transform:translate(-50%,-50%) scale(1); } }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] {
+    top:var(--sign-top,50%);
+    width:44%;
+    height:47px;
+    min-height:47px;
+    padding:5px 12px;
+    align-content:center;
+    gap:1px;
+    border-radius:2px;
+    text-align:center;
+}
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side="left"] { left:3%;right:auto;clip-path:polygon(16% 0,100% 0,100% 100%,16% 100%,0 50%); }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side="right"] { left:53%;right:auto;clip-path:polygon(0 0,84% 0,100% 50%,84% 100%,0 100%); }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:8px;line-height:1;letter-spacing:.08em; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:11px;line-height:1.08; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] > span { display:none; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side]::after { display:none; }
+.tryit-sim-marker-plant.is-neighbour-orb { opacity:.78;scale:.78;filter:saturate(.75);animation:nlxr-neighbour-arrive 1.2s ease both; }
+.tryit-sim-marker-note.is-neighbour-note { width:min(27vw,154px);height:54px;min-height:54px;padding:5px 8px;opacity:.8;scale:.82;animation:nlxr-neighbour-arrive 1.2s ease both; }
+.tryit-sim-marker-note.is-neighbour-note strong { font-size:11px; }
+.tryit-sim-marker-note.is-neighbour-note small { font-size:8px; }
+@keyframes nlxr-neighbour-arrive { from { opacity:0;filter:blur(7px); } to { opacity:.78;filter:blur(0) saturate(.75); } }
+@media(max-width:600px) {
+    .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { width:min(48vw,220px);height:min(38vh,310px); }
+    .tryit-sim-totem-system .nlxr-totem-cards > button:nth-child(1) { min-height:64px;width:62%; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { height:37px;min-height:37px;padding:3px 7px; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:8px; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:6px; }
+}
 .nlxr-totem-system .nlxr-totem-cards > button strong { color:#fff9e8; font-size:14px; }
 .nlxr-totem-system .nlxr-totem-cards > button > span:not(.nlxr-totem-stats) { color:rgba(255,247,220,.9); }
 .nlxr-totem-stats { display:flex; justify-content:center; gap:6px; margin:3px 0 1px; }

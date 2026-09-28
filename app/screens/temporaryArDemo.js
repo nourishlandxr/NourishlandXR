@@ -199,7 +199,7 @@ let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let knowledgeCombinationState=null,knowledgeCombinationCleanup=()=>{},knowledgeCombinationHold=null;
-let ambientCanvas=null,ambientBeeModel=null,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
+let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
 let demoRainIntensity=1;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
@@ -541,7 +541,7 @@ function clearSessionState() {
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};knowledgeCombinationState=null;knowledgeCombinationHold=null;
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
-    ambientBeeModel?.destroy();ambientBeeModel=null;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
+    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -992,16 +992,26 @@ function demoOrbKnowledge(record) {
 }
 const PIGEON_PEA_PROFILE_FOR_ORB={pim_document:PIGEON_PEA_PIM};
 function demoTotemCards(record) {
-    const content=demoContentFor(record);
-    const neighbour = record.demoLinkVisible && record.demoLinkDestination
-        ? `NEIGHBOUR TOTEM · ${record.demoLinkDestination} · ${record.demoLinkDirection === 'left' ? 'left' : 'right'}`
-        : 'NEIGHBOUR TOTEM · not linked';
-    return totemKnowledgeCards({title:'Welcome to this area',introduction:'Welcome to this area.',context:neighbour,
-        bubbles:content?.bubbles || [],
-        plants:markers.filter(item=>item.demoType==='plant').map(item=>({id:item.id,name:item.name,knowledge:demoOrbKnowledge(item)})),
-        notes:markers.filter(item=>item.demoType==='note').map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),
-        compact:true
-    });
+    const second=record.tutorialStage==='totem2';
+    const plants=markers.filter(item=>item.demoType==='plant' && Boolean(item.demoAmbientNeighbour)===second);
+    const notes=markers.filter(item=>item.demoType==='note' && Boolean(item.demoAmbientNeighbour)===second);
+    const header=totemKnowledgeCards({title:'Welcome to this area',introduction:'Welcome to this area.',
+        plants:plants.map(item=>({id:item.id,name:item.name,knowledge:item.demoAmbientNeighbour?{live:false}:demoOrbKnowledge(item)})),
+        notes:notes.map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),compact:true})[0];
+    const signHeight=item=>{
+        const height=simulatedMode && item?.simulatedAnchor
+            ? .82+(76-Number(item.simulatedAnchor.y))*.014
+            : Number(item?.position?.y)-Number(record.groundBaseY || 0);
+        return Math.max(.46,Math.min(1.22,height));
+    };
+    const plantSigns=second
+        ? [[plants[0],plants[1]],[plants[2],plants[3]]].map((pair,index)=>({id:`plants-${index}`,eyebrow:'PLANT ORBS',title:pair.map(item=>item?.name).filter(Boolean).join(' · '),summary:'',boardSide:index?'left':'right',signHeight:signHeight(pair[0])}))
+        : plants.map((item,index)=>({id:`plant-${item.id}`,eyebrow:'PLANT ORB',title:item.name,summary:'',boardSide:index?'left':'right',signHeight:signHeight(item)}));
+    const note=notes[0];
+    return [header,...plantSigns,
+        {id:'area-note',eyebrow:'NOTE',title:note?.name || 'Seasonal observation',summary:'',body:note ? (demoContentFor(note)?.lines || []).join(' · ') : '',boardSide:'right',signHeight:note ? Math.max(.5,Math.min(.78,signHeight(note))) : .62},
+        {id:'neighbour',eyebrow:'NEIGHBOUR AREA',title:second?'Area 1 →':'← Area 2',summary:'',body:record.demoLinkVisible?'Follow the linked route.':'The neighbouring Area can be connected next.',boardSide:'left',signHeight:.47}
+    ];
 }
 function activateDemoTotemCard(hit) {
     if(!hit)return false;
@@ -1513,7 +1523,11 @@ function knowledgeCombinationHit(point){
     return null;
 }
 function selectImmersiveKnowledgeCombination(){
-    const action=knowledgeCombinationHit(knowledgeCombinationSurfacePoint());if(!action)return false;
+    const action=knowledgeCombinationHit(knowledgeCombinationSurfacePoint());
+    if(!action){
+        const hit=demoRecordAtPointer()?.record;
+        return hit && hit===knowledgeCombinationPlantRecord() ? selectPigeonPeaForCombination() : false;
+    }
     if(action.type==='choice'){selectDemoConnectionChoice(knowledgeCombinationState,action.choice.id);syncKnowledgeCombinationOverlay();setGuide(`${action.choice.sourceTitle} selected. Hold its glowing node, then drag toward ${action.choice.targetTitle}.`);}
     if(action.type==='deeper'){knowledgeCombinationState.phase=DEMO_CONNECTION_PHASES.DEEPER_READY;syncKnowledgeCombinationOverlay();setGuide(`Hold the node on the new idea and connect it to ${DEMO_DEEPER_CONNECTION.targetTitle}.`);}
     if(action.type==='continue')finishKnowledgeCombinationExperience();
@@ -2039,17 +2053,24 @@ function showDemoClosingMessage() {
     );
 }
 
-function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
-    const source = [...markers].reverse().find(record => record.demoType === 'note') || markers.at(-1);
-    const sourcePosition = source?.position || placementPosition() || { x: 0, y: 0, z: -1.4 };
-    const sourceAnchor = source?.simulatedAnchor || { x: 50, y: 56 };
+function pairedDemoTotemPosition(side, groundBaseY) {
+    const viewer = viewerMatrix;
+    const right = viewer ? {x:Number(viewer[0]),z:Number(viewer[2])} : {x:1,z:0};
+    const forward = viewer ? {x:-Number(viewer[8]),z:-Number(viewer[10])} : {x:0,z:-1};
+    const rightLength = Math.hypot(right.x,right.z) || 1;
+    const forwardLength = Math.hypot(forward.x,forward.z) || 1;
+    return {
+        x:(Number(viewer?.[12]) || 0)+forward.x/forwardLength*1.9+right.x/rightLength*side*.82,
+        y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES,
+        z:(Number(viewer?.[14]) || 0)+forward.z/forwardLength*1.9+right.z/rightLength*side*.82
+    };
+}
+
+function createDemoTotemExample() {
     const groundBaseY = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY;
-    const position = placedPosition ? {...placedPosition,y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES} : {
-        x: sourcePosition.x + .72,
-        y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
-        z: sourcePosition.z + .12
-    };
+    const position = pairedDemoTotemPosition(1,groundBaseY);
+    const pairRightLength=Math.hypot(Number(viewerMatrix?.[0]) || 1,Number(viewerMatrix?.[2]) || 0) || 1;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
             name: 'Totem',
@@ -2069,14 +2090,13 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
         demoTotemColor:'#785a43',
         demoTotemSignsVisible:false,
         demoTotemFaded:false,
+        demoArriveAt:performance.now(),
+        demoPairRight:{x:(Number(viewerMatrix?.[0]) || 1)/pairRightLength,z:(Number(viewerMatrix?.[2]) || 0)/pairRightLength},
         demoLinkVisible: false,
         demoExpanded: true,
         demoInteractive: true,
         demoPanelOffset: { x: 0, y: 0 },
-        simulatedAnchor: placedAnchor || {
-            x: Math.max(16, Math.min(84, sourceAnchor.x + 24)),
-            y: Math.max(64, Math.min(80, sourceAnchor.y + 14))
-        },
+        simulatedAnchor: { x:76, y:76 },
         revealTitle: true,
         revealLines: 5,
         demoContent: DEMO_CONTENT.zone,
@@ -2092,16 +2112,11 @@ function createDemoTotemExample(placedPosition=null,placedAnchor=null) {
 
 function createDemoSecondTotem() {
     const first = [...markers].reverse().find(record => record.demoType === 'zone');
-    const source = [...markers].reverse().find(record => record.demoType === 'note') || markers.at(-1);
-    const sourcePosition = first?.position || source?.position || placementPosition() || { x: 0, y: 0, z: -1.4 };
-    const sourceAnchor = first?.simulatedAnchor || source?.simulatedAnchor || { x: 50, y: 56 };
     const groundBaseY = first?.groundBaseY ?? demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY;
-    const position = {
-        x: sourcePosition.x - 1.15,
-        y: groundBaseY + DEMO_TOTEM_HALF_HEIGHT_METRES,
-        z: sourcePosition.z + .1
-    };
+    const position = first?.demoPairRight
+        ? {x:first.position.x-first.demoPairRight.x*1.64,y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES,z:first.position.z-first.demoPairRight.z*1.64}
+        : pairedDemoTotemPosition(-1,groundBaseY);
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
             name: 'Totem',
@@ -2118,39 +2133,62 @@ function createDemoSecondTotem() {
         demoTotemColor:'#526d7a',
         demoTotemSignsVisible:false,
         demoTotemFaded:false,
-        demoLinkVisible: true,
-        demoLinkDirection: 'left',
-        demoLinkDestination: 'Neighbour Totem',
+        demoArriveAt:performance.now(),
+        demoLinkVisible: false,
+        demoLinkDirection: 'right',
+        demoLinkDestination: 'Area 1',
         demoExpanded: true,
         demoInteractive: true,
         demoPanelOffset: { x: 0, y: 0 },
-        simulatedAnchor: {
-            x: Math.max(18, Math.min(38, sourceAnchor.x - 38)),
-            y: Math.max(64, Math.min(80, sourceAnchor.y))
-        },
+        simulatedAnchor: { x:24, y:76 },
         revealTitle: true,
         revealLines: 5,
         demoContent: DEMO_CONTENT.zoneTwo,
         texture: null
     };
-    if (first) {
-        first.demoLinkVisible = true;
-        first.demoLinkDirection = 'right';
-        first.demoLinkDestination = 'Neighbour Totem';
-        first.demoLinkPartner = totem.id;
-        first.demoContent = {
-            ...first.demoContent,
-            bubbles: [...(first.demoContent?.bubbles || [])].slice(0, 5)
-        };
-        totem.demoLinkPartner = first.id;
-        if (first.texture) gl?.deleteTexture(first.texture);
-        first.texture = createMarkerTexture(first);
-    }
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
+    createDemoNeighbourhood(totem);
     updateSimulatedMarkers();
-    setGuide('Each Totem keeps its own local information. The neighbour sign shows its name and direction; the link does not merge their content.');
-    showSceneContinue('Why link Areas?', showLinkedTotemsIntroduction);
+    setGuide('A second Area arrives on the left, with its own nearby plants and a Vetiver row Note. Connect the two Totems when you are ready.');
+    showSceneContinue('Connect the Totems', connectDemoTotems);
+}
+
+function connectDemoTotems() {
+    const [first,second]=markers.filter(record=>record.demoType==='zone');
+    if(!first || !second)return;
+    first.demoLinkVisible=second.demoLinkVisible=true;
+    first.demoLinkDirection='left';first.demoLinkDestination='Area 2';first.demoLinkPartner=second.id;
+    second.demoLinkDirection='right';second.demoLinkDestination='Area 1';second.demoLinkPartner=first.id;
+    first.totemCardsRefreshed=second.totemCardsRefreshed=0;
+    updateSimulatedMarkers();
+    setGuide('The Areas are linked. Each Totem still keeps its own local plants and Notes.');
+    showSceneContinue('Why link Areas?',showLinkedTotemsIntroduction);
+}
+
+function createDemoNeighbourhood(totem) {
+    const right={x:Number(viewerMatrix?.[0]) || 1,z:Number(viewerMatrix?.[2]) || 0};
+    const neighbours=[
+        {name:'Banana',dx:-.48,dy:.92,anchor:{x:8,y:48},color:'green'},
+        {name:'Acacia',dx:.30,dy:1.17,anchor:{x:39,y:46},color:'brown'},
+        {name:'Jackfruit',dx:-.61,dy:.55,anchor:{x:9,y:68},color:'pigeonPea'},
+        {name:'Lychee',dx:.49,dy:.71,anchor:{x:40,y:67},color:'green'}
+    ];
+    for(const neighbour of neighbours){
+        markers.push({
+            ...createMinimalMarkerDraft('plant',{name:neighbour.name}),
+            name:neighbour.name,demoType:'plant',demoAmbientNeighbour:true,demoAlive:true,demoInteractive:false,
+            demoOrbColor:neighbour.color,demoOrbShape:'orb',demoExpanded:false,demoArriveAt:performance.now(),
+            position:{x:totem.position.x+right.x*neighbour.dx,y:totem.groundBaseY+neighbour.dy,z:totem.position.z+right.z*neighbour.dx},
+            simulatedAnchor:neighbour.anchor
+        });
+    }
+    const note={...createMinimalMarkerDraft('note',{name:'Vetiver row'}),name:'Vetiver row',demoType:'note',demoAmbientNeighbour:true,
+        demoInteractive:false,demoExpanded:true,demoArriveAt:performance.now(),simulatedAnchor:{x:16,y:83},
+        position:{x:totem.position.x-right.x*.45,y:totem.groundBaseY+.42,z:totem.position.z-right.z*.45},
+        demoContent:{title:'NOTE · Vetiver row',accent:'#d4bd83',lines:['OBSERVATION  Vetiver marks a living edge.']},revealLines:1};
+    note.texture=createMarkerTexture(note);
+    markers.push(note);
 }
 
 function cycleDemoTotemStyle(record) {
@@ -2199,6 +2237,14 @@ function fadeMappedSceneForLimo() {
 
 function knowledgeCombinationPlantRecord(){
     return markers.find(record=>record.demoType==='plant' && (record.demoPlantPreset==='pigeon-pea' || /pigeon pea/i.test(record.name || ''))) || markers.find(record=>record.demoType==='plant');
+}
+
+function selectPigeonPeaForCombination(){
+    if(!knowledgeCombinationState)return false;
+    selectDemoConnectionChoice(knowledgeCombinationState,DEMO_CONNECTION_CHOICES[0].id);
+    syncKnowledgeCombinationOverlay();
+    setGuide('Pigeon Pea selected. Choose Pruning or Nitrogen Fixation, then hold its glowing node and drag to the matching learning cell.');
+    return true;
 }
 
 function knowledgeCombinationPoint(event,overlay){
@@ -2336,7 +2382,7 @@ function startKnowledgeCombinationExperience(){
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');if(board)board.hidden=true;
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');infoPanel?.suspend(true);
     const overlay=ensureKnowledgeCombinationOverlay();overlay?.removeAttribute('hidden');syncKnowledgeCombinationOverlay();
-    setGuide('Choose Pruning or Nitrogen Fixation to discover what it can reveal with a learning cell.');
+    setGuide('Tap the Pigeon Pea orb or choose one of its two characteristic cells. Then hold and drag its glowing node.');
     knowledgeCombinationCleanup=()=>{limCancelFrame(knowledgeCombinationHold?.frame);knowledgeCombinationHold=null;overlay?.setAttribute('hidden','');};
 }
 
@@ -2436,7 +2482,7 @@ function showTotemIntroduction() {
         'Show Totem',
         () => {
             finishIntroBoard();
-            armDemoPlacement('totem',{explained:true});
+            createDemoTotemExample();
         }
     );
 }
@@ -2756,7 +2802,8 @@ function renderSimulatedPlant(record, index, anchor, offset) {
     const anchorVariables = simulatedAnchorStyle(anchor);
     const orbAppearance = demoOrbStyle(record);
     const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb is-demo-${record.demoOrbShape || 'orb'} has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="button" tabindex="0" aria-label="${orbLabel}"><span class="tryit-sim-orb is-plant" style="${orbAppearance}" aria-hidden="true"></span></span>`;
+    const ambient=Boolean(record.demoAmbientNeighbour);
+    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb is-demo-${record.demoOrbShape || 'orb'} has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${ambient ? ' is-neighbour-orb' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="${ambient ? 'img' : 'button'}" tabindex="${ambient ? '-1' : '0'}" aria-label="${ambient ? `Nearby ${record.name} Plant Orb` : orbLabel}"><span class="tryit-sim-orb is-plant" style="${orbAppearance}" aria-hidden="true"></span></span>`;
     if (!record.demoExpanded) return anchoredOrb;
     const surface = demoPimSurfaceLayout(anchor);
     const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px;width:${surface.panelWidth}px;height:${surface.panelHeight}px`;
@@ -2771,10 +2818,11 @@ function renderSimulatedTotem(record, index, anchor) {
         ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
         : '';
     const colour=record.demoTotemColor || record.demoContent?.accent || '#715a46';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="Totem information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards.slice(0,3),record.totemSelectedCard)}${linkLabel}</span>`;
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-${style.id}${performance.now()-record.demoArriveAt<1800?' is-new-arrival':''}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="Totem information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
+    if(knowledgeCombinationState && record===knowledgeCombinationPlantRecord())return selectPigeonPeaForCombination();
     if(demoKnowledgeWorkspace) return;
     if (!record || record.demoType !== 'plant') return;
     const recordIndex = markers.indexOf(record);
@@ -2929,13 +2977,11 @@ function orientDemoPimPoseToViewer(pose) {
         x: Number(viewerMatrix[12]) - pose.position.x,
         z: Number(viewerMatrix[14]) - pose.position.z
     };
-    const facing = pose.normal.x * towardViewer.x + pose.normal.z * towardViewer.z;
-    const normal = facing >= 0
-        ? { ...pose.normal }
-        : { x: -pose.normal.x, y: -pose.normal.y, z: -pose.normal.z };
-    // Rebuild the horizontal axis from the viewer-facing normal. A stale
-    // stored right vector can otherwise show the whole canvas from its back,
-    // mirroring the PIM labels and reversing touch targets.
+    const length = Math.hypot(towardViewer.x, towardViewer.z);
+    if (length < .001) return pose;
+    // Aim the whole PIM face at the viewer when it first opens. Merely flipping
+    // a stored normal could leave a Pigeon Pea panel almost edge-on.
+    const normal = { x: towardViewer.x / length, y: 0, z: towardViewer.z / length };
     const right = { x: normal.z, y: 0, z: -normal.x };
     return { ...pose, normal, right };
 }
@@ -3034,12 +3080,12 @@ function updateSimulatedMarkers() {
         if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor);
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
-        const collapsible = record.demoExpanded ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
+        const collapsible = record.demoExpanded && record.demoInteractive !== false ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
         const compactContent = record.demoType === 'note' && content
             ? `<strong>${content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}`
             : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoNarrativeFaded ? ' is-narrative-faded' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoAmbientNeighbour ? ' is-neighbour-note' : ''}${record.demoNarrativeFaded ? ' is-narrative-faded' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('')}`;
     bindSimulatedInformationPanels(layer);
 }
@@ -3874,6 +3920,7 @@ function drawDemoKnowledge(view) {
 
 function renderInterface(simulated) {
     ambientBeeModel?.destroy();ambientBeeModel=null;
+    if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;
     simulatedMode = simulated;
     limDiagnostic('layout-recalculation',{reason:'interface-render',simulated,step:demoTutorialStep,...limDeviceContext(simulated && navigator.maxTouchPoints ? 'touch-capable' : simulated ? 'mouse' : 'xr-pointer')});
     const webglControlFallback = Boolean(!simulated && session && !domOverlayEnabled);
@@ -3886,12 +3933,12 @@ function renderInterface(simulated) {
     desktopSpatialPreviewCleanup=mountDesktopSpatialPreview(appRoot,{simulated,quest:isQuestHeadsetBrowser()});
     appRoot.querySelector('[data-tryit-safety-help]')?.remove();
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
-    if(simulated){
+    if(simulated || session){
         const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
         appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
         const credit=document.createElement('a');credit.className='tryit-bee-credit';credit.href='https://sketchfab.com/3d-models/bee-c80f9c2110c847db9375c548f14a0315';credit.target='_blank';credit.rel='noopener noreferrer';credit.textContent='Bee model · etro313 · CC BY 4.0';
         appRoot.querySelector('.tryit-stage')?.append(credit);
-        import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas);}).catch(error=>console.warn('Bee model fallback:',error));
+        import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{sprite:!simulated});}).catch(error=>console.warn('Bee model fallback:',error));
     }
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
@@ -4802,6 +4849,25 @@ function drawSpatialAmbientLife(view){
         ambientWorldAnchor={x:viewerMatrix[12]+rightX*.67+forwardX*2.4,y:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.55,z:viewerMatrix[14]+rightZ*.67+forwardZ*2.4};
     }
     if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const sprite=ambientBeeModel?.renderSprite?.(arWelcomeClock.elapsed,ambientBeesStartedAt);
+    if(sprite && program && buffer){
+        if(!ambientBeeSpriteTexture){ambientBeeSpriteTexture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
+        if(arWelcomeClock.elapsed-ambientBeeSpriteUploadedAt>=70){gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,sprite);ambientBeeSpriteUploadedAt=arWelcomeClock.elapsed;}
+        gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+        const vertex=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');
+        gl.enableVertexAttribArray(vertex);gl.vertexAttribPointer(vertex,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
+        gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.disable(gl.CULL_FACE);
+        for(let index=0;index<2;index++){
+            const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index);if(!bee)continue;
+            const position={x:ambientWorldAnchor.x+(bee.x-.79)*3,y:ambientWorldAnchor.y+.5+(bee.y-.62)*2,z:ambientWorldAnchor.z+bee.depth};
+            const model=billboardMatrix(position,.28,.28,viewerMatrix);
+            gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
+            gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),bee.opacity);
+            gl.drawArrays(gl.TRIANGLES,0,6);
+        }
+        gl.depthMask(true);
+        return;
+    }
     const wings=[];
     for(let index=0;index<2;index++){
         const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index);
@@ -4888,8 +4954,8 @@ function drawMarker(view) {
             sphereRenderer,
             view,
             record.position,
-            (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1),
-            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, highlighted:orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
+            (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour?.78:1),
+            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' && !record.demoAmbientNeighbour ? demoOrbKnowledge(record) : null, highlighted:orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {
@@ -4897,6 +4963,7 @@ function drawMarker(view) {
         const style = record.demoTotemStyle || 'basic';
         const totemColour=demoHexColour(record.demoTotemColor || record.demoContent?.accent);
         const totemHighlight=totemColour.map(channel=>Math.min(.96,channel*.48+.48));
+        const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
@@ -4906,7 +4973,7 @@ function drawMarker(view) {
                 y: groundBaseY + .38
             }, .38, {
                 color: totemColour,
-                alpha: record.demoTotemFaded ? .18 : .98,
+                alpha: arrival*(record.demoTotemFaded ? .18 : .98),
                 emissive: .2
             });
             return;
@@ -4917,7 +4984,7 @@ function drawMarker(view) {
                 y: groundBaseY + .06
             }, .42, {
                 color: totemColour,
-                alpha: record.demoTotemFaded ? .18 : .98,
+                alpha: arrival*(record.demoTotemFaded ? .18 : .98),
                 emissive: .2,
                 scale: { x: 1, y: .16, z: 1 }
             });
@@ -4931,21 +4998,21 @@ function drawMarker(view) {
             color: totemColour,
             topColor: totemHighlight,
             topTaper: .96,
-            alpha: record.demoTotemFaded ? .18 : .98,
+            alpha: arrival*(record.demoTotemFaded ? .18 : .98),
             rotationY
         });
         if(record.demoTotemSignsVisible && !record.demoTotemFaded){
             const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
-            for(const [x,y] of [[-.42,1.30],[.42,1.02],[-.42,.74]]){
-                const direction=Math.sign(x)||1;
+            for(const card of (record.liveTotemCards || demoTotemCards(record)).slice(1,5)){
+                const direction=card.boardSide==='left'?-1:1,y=Number(card.signHeight) || .76;
                 const start={x:record.position.x+right.x*direction*bodyHalfWidth*.88+front.x*(bodyHalfDepth+.012),y:groundBaseY+y,z:record.position.z+right.z*direction*bodyHalfWidth*.88+front.z*(bodyHalfDepth+.012)};
-                const end={x:record.position.x+right.x*(x-direction*.29)+front.x*(bodyHalfDepth+.018),y:groundBaseY+y,z:record.position.z+right.z*(x-direction*.29)+front.z*(bodyHalfDepth+.018)};
+                const end={x:record.position.x+right.x*direction*.56+front.x*(bodyHalfDepth+.018),y:groundBaseY+y,z:record.position.z+right.z*direction*.56+front.z*(bodyHalfDepth+.018)};
                 drawSpatialTether(gl,tetherRenderer,view,start,end,{segments:2,width:.012,curve:0,lift:0,color:[.66,.70,.69,.9]});
             }
         }
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,
-            signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)
+            signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival
         });
     });
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible);
@@ -4998,7 +5065,7 @@ function drawMarker(view) {
             : totem
             ? { ...record.position, y: record.position.y + 1 }
             : record.position;
-        const noteScale = noteSign ? DEMO_NOTE_IMMERSIVE_SCALE : null;
+        const noteScale = noteSign ? record.demoAmbientNeighbour ? {x:DEMO_NOTE_IMMERSIVE_SCALE.x*.62,y:DEMO_NOTE_IMMERSIVE_SCALE.y*.62} : DEMO_NOTE_IMMERSIVE_SCALE : null;
         const defaultPimModel = fixedPimPanelMatrix(record.informationPose);
         const model = plantProfile
             ? (() => {
@@ -5022,7 +5089,7 @@ function drawMarker(view) {
         gl.bindTexture(gl.TEXTURE_2D, record.texture);
         gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
         const profileOpacity = plantProfile ? Math.min(1, Math.max(0, (performance.now() - (record.profileRevealStarted || 0)) / 1050)) : 1;
-        const sceneOpacity=noteSign && record.demoNarrativeFaded ? .14 : profileOpacity;
+        const sceneOpacity=noteSign && record.demoNarrativeFaded ? .14 : record.demoAmbientNeighbour ? .72 : profileOpacity;
         gl.uniform1f(gl.getUniformLocation(program, 'opacity'), sceneOpacity);
         if (plantProfile) gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, 6);

@@ -48,7 +48,7 @@ export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatr
     const bodyHalfDepth = Number(state.bodyHalfDepth) || bodyHalfWidth * .5;
     const bodyHalfHeight = Number(state.bodyHalfHeight) || .69;
     const layout = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
-    const opacity = state.faded ? .18 : 1;
+    const opacity = (state.faded ? .18 : 1) * (Number.isFinite(state.arrivalOpacity) ? state.arrivalOpacity : 1);
     for (const button of layout) {
         const pressed = button.id === '__signs' ? Boolean(state.signsVisible && !state.faded) : Boolean(state.faded);
         drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, button.center, button.radius, {
@@ -73,7 +73,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
     const bodyHalfWidth = Number(state?.bodyHalfWidth) || .07;
     const boardWidth = Number(state?.boardWidth) || (bodyHalfWidth >= .16 ? .72 : .58);
-    const boardHeight = Number(state?.boardHeight) || (bodyHalfWidth >= .16 ? .25 : .22);
+    const boardHeight = Number(state?.boardHeight) || (bodyHalfWidth >= .16 ? .18 : .22);
     const boardAttach = bodyHalfWidth + boardWidth / 2 - .014;
     const place = (x,y,width,height,card,detail=false,offset=bodyHalfDepth+.018) => ({
         center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
@@ -94,20 +94,21 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         }),
         boardSide:side < 0 ? 'left' : 'right'
     });
+    const headerSelected=selectedId===cards[0]?.id;
     const headerBoard = cards[0] ? {
-        ...place(0, 1.58, Math.max(.84, boardWidth + .12), .34, {...cards[0],boardStyle:'header'}),
+        ...place(0, 1.58, Math.max(.84, boardWidth + .12), .34, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats},headerSelected),
         boardStyle:'header'
     } : null;
+    const signCards=cards.slice(1,bodyHalfWidth>=.16 ? 5 : 3);
     const surfaces=[
         ...buttons.map((button,index)=>({center:button.faceCenter,right,width:button.width,height:button.height,card:index===0?signs:fade,detail:false,opacity:faded ? .18 : 1})),
         ...(signsVisible && !faded ? [
             headerBoard,
-            cards[1] ? signBoard(cards[1], 1, 1.10) : null,
-            cards[2] ? signBoard(cards[2], -1, .76) : null
+            ...signCards.map((card,index)=>signBoard(card,card.boardSide==='left'?-1:card.boardSide==='right'?1:index%2?-1:1,Number.isFinite(card.signHeight)?card.signHeight:1.1-index*.25))
         ].filter(Boolean) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && signsVisible && !faded) surfaces.push(place(0,2.04,1.18,.58,{...selected,boardStyle:'header-detail'},true));
+    if(selected && selected.id!==cards[0]?.id && signsVisible && !faded) surfaces.push(place(0,2.04,1.18,.58,{...selected,boardStyle:'header-detail'},true));
     return surfaces;
 }
 
@@ -262,7 +263,8 @@ export function createSpatialTotemCards(gl, options = {}) {
                 gl.uniform2f(locations.size,surface.width,surface.height);
                 const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
                 const fadeOpacity = Number.isFinite(surface.opacity) ? surface.opacity : 1;
-                gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(performance.now()-entry.started)/entry.fadeDuration))*fadeOpacity);
+                const arrival=record?.demoArriveAt ? Math.min(1,Math.max(0,(performance.now()-record.demoArriveAt)/900)) : 1;
+                gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(performance.now()-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }
             gl.depthMask(true);

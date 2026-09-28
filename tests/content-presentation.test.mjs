@@ -15,7 +15,7 @@ test('guided narrative explains the place map, proves one Plant Orb, then introd
     const area = demo.slice(demo.indexOf('const POST_PLACEMENT_AREA_STEP'), demo.indexOf('function runArWelcomeTutorial'));
     const conversion = demo.slice(demo.indexOf('function guidePlantConversion'), demo.indexOf('function showSceneContinue'));
     const placement = demo.slice(demo.indexOf('function placeMarker'), demo.indexOf('function pressPlacementPointer'));
-    const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function createDemoTotemExample'));
+    const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function pairedDemoTotemPosition'));
     assert.match(guide, /Plants inside a Nourishland Project can have information connected to their real-world location/);
     assert.match(guide, /Each Area holds plants, observations and guidance for one part of the place/);
     assert.match(guide, /We’ll begin with one plant/);

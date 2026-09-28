@@ -91,22 +91,35 @@ function makeBee(gltf,resources){
     return {wrapper,mixer,root,baseScale:wrapper.scale.x};
 }
 
-export function mountDemoBeeModel(canvas){
+export function mountDemoBeeModel(canvas,{sprite=false}={}){
     if(!canvas)return null;
-    const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});
+    const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:sprite,powerPreference:'low-power'});
     renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,30);
-    camera.position.z=6;
+    camera.position.z=sprite?3.5:6;
     scene.add(new THREE.HemisphereLight(0xfff7db,0x566c67,2.2));
     const sun=new THREE.DirectionalLight(0xffe2aa,2.4);sun.position.set(-3,5,6);scene.add(sun);
     const fill=new THREE.DirectionalLight(0xc9eaff,1.1);fill.position.set(4,-1,-2);scene.add(fill);
-    let bee=null,resources=null,lastElapsed=NaN,disposed=false,ready=false;
+    let bee=null,resources=null,lastElapsed=NaN,lastSpritePaint=-Infinity,disposed=false,ready=false;
     fetch(BEE_URL).then(response=>{if(!response.ok)throw Error('Bee model could not be loaded');return response.arrayBuffer();}).then(parseGlb).then(async gltf=>{
         const loaded=await beeResources(gltf);if(disposed){loaded.geometry.dispose();loaded.texture.dispose();loaded.material.dispose();loaded.bitmap.close();return;}
         resources=loaded;bee=makeBee(gltf,loaded);scene.add(bee.wrapper);ready=true;canvas.dataset.modelReady='true';
     }).catch(error=>{if(!disposed){console.warn('Bee model fallback:',error);canvas.dataset.modelReady='error';}});
     return {
         get ready(){return ready;},
+        renderSprite(elapsed,startedAt){
+            if(!sprite || !ready || !Number.isFinite(startedAt))return null;
+            if(elapsed-lastSpritePaint<70)return canvas;
+            renderer.setPixelRatio(1);renderer.setSize(256,256,false);
+            bee.wrapper.position.set(0,0,0);
+            bee.wrapper.scale.setScalar(bee.baseScale*2.1);
+            bee.wrapper.rotation.y=.35+Math.sin(elapsed*.0007)*.35;
+            bee.wrapper.rotation.z=Math.sin(elapsed*.0013)*.12;
+            bee.mixer.update(Number.isFinite(lastElapsed)?Math.max(0,Math.min(.1,(elapsed-lastElapsed)/1000)):0);
+            lastElapsed=elapsed;lastSpritePaint=elapsed;
+            renderer.render(scene,camera);
+            return canvas;
+        },
         draw(elapsed,startedAt,reducedMotion=false){
             if(!ready || reducedMotion || !Number.isFinite(startedAt)){canvas.style.visibility='hidden';return;}
             const pose=demoBeePose(elapsed,startedAt,0);if(!pose){canvas.style.visibility='hidden';return;}
