@@ -21,6 +21,10 @@ function escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 }
 
+function proseParagraphs(value) {
+    return String(value ?? '').split(/\n\s*\n/).filter(Boolean).map(paragraph => `<p>${escapeHtml(paragraph)}</p>`).join('');
+}
+
 export function bookChildren(nodes, parentId) {
     return (nodes || []).filter(node => node.parentId === parentId);
 }
@@ -102,7 +106,7 @@ function connectionsPage(state) {
 function inspector(state, documents) {
     if (state.chapter === 'opening') {
         const cell = LIM_INTRO_CELL_BY_ID[state.introId];
-        if (cell) return `<p class="nlxr-book-kicker">INTRODUCTORY LEARNING CELL</p><h2>${escapeHtml(cell.title)}</h2><p>${escapeHtml(limLearningContent(cell.id).body)}</p><div class="nlxr-book-inspector-rule"></div><p class="nlxr-book-inspector-note">Follow a child cell on the page, or choose another way to learn.</p>`;
+        if (cell) return `<p class="nlxr-book-kicker">INTRODUCTORY LEARNING CELL</p><h2>${escapeHtml(cell.title)}</h2>${proseParagraphs(limLearningContent(cell.id).body)}<div class="nlxr-book-inspector-rule"></div><p class="nlxr-book-inspector-note">Follow a child cell on the page, or choose another way to learn.</p>`;
         return `<p class="nlxr-book-kicker">READING PANEL</p><h2>Begin anywhere.</h2><p>Open a learning cell or a plant cell. Its explanation stays here while you explore the page.</p><div class="nlxr-book-inspector-rule"></div><p class="nlxr-book-inspector-note">This desktop book uses the same authored knowledge as the spatial experience, in a layout made for reading.</p>`;
     }
     if (state.chapter === 'connections') {
