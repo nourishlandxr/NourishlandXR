@@ -187,9 +187,10 @@ test('cell selection updates reading content and remounts only when companion me
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     const update=panel.slice(panel.indexOf('function updateReading()'),panel.indexOf('function updatePathway()'));
     assert.match(update,/content\.querySelector\('\.nlxr-info-body'\)\.textContent=/);
-    assert.match(panel,/if\(image\.getAttribute\('src'\)!==preview\.image\)image\.src=preview\.image/);
+    assert.match(panel,/image\.onload=\(\)=>\{[\s\S]*stack\.append\(image\)/);
+    assert.match(styles,/\.nlxr-media-image-stack img[^}]*transition:opacity \.65s ease/);
     assert.doesNotMatch(update,/replaceChildren\(\)/);
-    assert.match(panel,/mediaCollapsed=!media\?\.image;mediaTouched=false;tab='Details';hidden=false;page=0;render\(true\)/);
+    assert.match(panel,/loadPanelImage\(media\?\.image \|\| ''\);mediaCollapsed=!media\?\.image;mediaTouched=false;tab='Details';hidden=false;page=0;render\(true\)/);
     assert.match(panel,/suspend\(value\).*updateReading\(\);updatePathway\(\)/);
     assert.doesNotMatch(styles,/\.is-opening-compact \{ height:/);
 });

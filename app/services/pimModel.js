@@ -216,6 +216,7 @@ export function createPimDocument(input = {}) {
         plantId: source.plantId,
         identity: source.identity || {},
         nodes: source.nodes || [],
+        sources: clone(source.sources || []),
         createdAt: source.createdAt,
         updatedAt: source.updatedAt,
         metadata: clone(source.metadata || {}),

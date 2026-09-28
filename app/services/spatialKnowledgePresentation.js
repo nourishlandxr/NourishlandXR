@@ -42,8 +42,17 @@ export function totemKnowledgeCards({ title = 'This area', introduction = '', co
         .map(node => ({ id: node.id, title: node.title, body: node.body || node.preview, plant: plant.name })));
     const recent = notes.filter(note => text(note.body)).slice(-1)[0] || observations.at(-1);
     const areaBody = [...new Set([introduction, context, ...bubbles].map(text).filter(Boolean))].join('\n\n');
+    const orbCount = plants.length;
+    const noteCount = notes.length;
     return [
-        { id: 'area', title, eyebrow: 'PLACE', summary: introduction || context || 'Explore this area',
+        { id: 'area', title, eyebrow: 'PLACE', summary: compact
+                ? `${orbCount} Plant Orb${orbCount === 1 ? '' : 's'} · ${noteCount} Note${noteCount === 1 ? '' : 's'}`
+                : introduction || context || 'Explore this area',
+            stats: [
+                { label: 'ORB' + (orbCount === 1 ? '' : 'S'), value: orbCount },
+                { label: 'NOTE' + (noteCount === 1 ? '' : 'S'), value: noteCount },
+                { label: 'LIVE', value: live.length }
+            ],
             body: areaBody || 'This area has no introduction yet. Add one in the area settings.' },
         { id: 'plants', title: compact ? 'Plant Orbs' : live.length + ' Live / ' + plants.length + (plants.length===1 ? ' plant' : ' plants'), eyebrow: compact ? 'NEARBY' : 'PLANT KNOWLEDGE',
             summary: compact ? (names.slice(0, 2).join(' · ') || 'No Plant Orbs nearby') : (names.slice(0, 2).join(' · ') || 'No plants in this area yet'),
@@ -67,6 +76,6 @@ export function liveOrbCrownMarkup(knowledge) {
 export function totemCardsMarkup(cards, selectedId = '') {
     const e = escapeSpatialText, selected = cards.find(card => card.id === selectedId);
     return '<div class="nlxr-totem-cards" aria-label="Area knowledge">' + cards.map(card =>
-        '<button type="button" data-totem-card="' + e(card.id) + '" aria-expanded="' + (card.id === selectedId) + '"><small>' + e(card.eyebrow) + '</small><strong>' + e(card.title) + '</strong><span>' + e(card.summary) + '</span></button>').join('') + '</div>' +
+        '<button type="button" class="nlxr-totem-card-' + e(card.id) + '" data-totem-card="' + e(card.id) + '" aria-expanded="' + (card.id === selectedId) + '"><small>' + e(card.eyebrow) + '</small><strong>' + e(card.title) + '</strong>' + (Array.isArray(card.stats) ? '<span class="nlxr-totem-stats">' + card.stats.map(stat => '<b><i>' + e(stat.value) + '</i><em>' + e(stat.label) + '</em></b>').join('') + '</span>' : '') + '<span>' + e(card.summary) + '</span></button>').join('') + '</div>' +
         (selected ? '<section class="nlxr-totem-detail" aria-label="' + e(selected.title) + '"><button type="button" data-totem-close aria-label="Close area note">×</button><small>' + e(selected.eyebrow) + '</small><h3>' + e(selected.title) + '</h3><p>' + e(selected.body) + '</p></section>' : '');
 }

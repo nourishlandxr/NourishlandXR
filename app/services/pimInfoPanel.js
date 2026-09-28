@@ -180,7 +180,9 @@ let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, handMode='pointer', onHandMode=()=>{}, onRainIntensity = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
-    let mediaImage=null,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='left',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
+    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='left',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
+    let visibleMedia=null;
+    const MEDIA_FADE_MS=650;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='';
     let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
@@ -214,6 +216,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false}
         : identity?.media?.image ? {...identity.media,caption:identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
+    function loadPanelImage(source){
+        if(source===mediaImageSource)return;
+        const token=++mediaLoadToken;
+        if(!source){mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource='';mediaFadeStartedAt=performance.now();return;}
+        const image=new Image();image.decoding='async';
+        image.onload=()=>{if(token!==mediaLoadToken)return;mediaPreviousImage=mediaImage;mediaImage=image;mediaImageSource=source;mediaFadeStartedAt=performance.now();};
+        image.onerror=()=>{if(token!==mediaLoadToken)return;mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource=source;mediaFadeStartedAt=performance.now();};
+        image.src=source;
+    }
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const mainUtilities=()=>utilityActions.filter(item=>!['safety','recenter'].includes(item.id));
@@ -281,13 +292,40 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         button.title=className==='nlxr-media-toggle'?'Show or hide the selected plant image.':'Toggle this panel.';
         button.addEventListener('click',event=>{event.stopPropagation();onClick();syncPanelWings();});return button;
     }
+    function mediaFigure(preview){
+        const figure=document.createElement('figure');figure.className='nlxr-plant-preview';
+        const stack=document.createElement('div');stack.className='nlxr-media-image-stack';
+        const caption=document.createElement('figcaption');figure.append(stack,caption);
+        if(preview){
+            const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';
+            stack.append(image);figure.dataset.mediaTarget=preview.image;caption.textContent=preview.caption || '';caption.hidden=!preview.caption;
+        }
+        return figure;
+    }
+    function updateMediaFigure(figure,preview){
+        const stack=figure.querySelector('.nlxr-media-image-stack'),caption=figure.querySelector('figcaption');
+        if(figure.dataset.mediaTarget===preview.image)return;
+        figure.dataset.mediaTarget=preview.image;
+        const image=document.createElement('img');image.alt=preview.alt || '';image.decoding='async';image.className='is-media-entering';
+        const token=preview.image;
+        image.onload=()=>{
+            if(!figure.isConnected || figure.dataset.mediaTarget!==token)return;
+            const old=[...stack.querySelectorAll('img')];stack.append(image);
+            requestAnimationFrame(()=>{image.classList.remove('is-media-entering');old.forEach(node=>node.classList.add('is-media-leaving'));});
+            setTimeout(()=>old.forEach(node=>node.remove()),MEDIA_FADE_MS+60);
+            caption.textContent=preview.caption || '';caption.hidden=!preview.caption;
+            visibleMedia={...preview};
+        };
+        image.onerror=()=>{if(figure.dataset.mediaTarget===token)figure.dataset.mediaTarget='';};
+        image.src=preview.image;
+    }
     function refreshMediaWing(media){
         if(!media)return;
         const preview=previewMedia(),figure=media.querySelector('.nlxr-plant-preview'),empty=media.querySelector('.nlxr-media-empty');
         media.setAttribute('aria-label',preview?.plant?'Plant image':'Illustration');
         if(preview?.image){
-            if(figure){const image=figure.querySelector('img');if(image.getAttribute('src')!==preview.image)image.src=preview.image;image.alt=preview.alt || '';const caption=figure.querySelector('figcaption');caption.textContent=preview.caption;caption.hidden=!preview.caption;}
-            else{const next=document.createElement('figure');next.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;caption.hidden=!preview.caption;next.append(image,caption);empty?.replaceWith(next);}
+            if(figure)updateMediaFigure(figure,preview);
+            else{const next=mediaFigure(visibleMedia && visibleMedia.image!==preview.image?visibleMedia:null);empty?.replaceWith(next);updateMediaFigure(next,preview);}
         }else if(figure){const next=document.createElement('div');next.className='nlxr-media-empty';next.setAttribute('aria-hidden','true');figure.replaceWith(next);}
     }
     function createMediaWing({floating=false}={}){
@@ -299,7 +337,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         handle.addEventListener('click',event=>{event.stopPropagation();if(performance.now()<ignoreMediaClickUntil)return;if(mediaDetached)dockMediaPanel();else detachMediaPanel();});
         toolbar.append(handle);media.append(toolbar);
         const preview=previewMedia();
-        if(preview?.image){const figure=document.createElement('figure');figure.className='nlxr-plant-preview';const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';const caption=document.createElement('figcaption');caption.textContent=preview.caption;caption.hidden=!preview.caption;figure.append(image,caption);media.append(figure);}
+        if(preview?.image){const figure=mediaFigure(visibleMedia && visibleMedia.image!==preview.image?visibleMedia:null);media.append(figure);updateMediaFigure(figure,preview);}
         else{const empty=document.createElement('div');empty.className='nlxr-media-empty';empty.setAttribute('aria-hidden','true');media.append(empty);}
         if(floating)bindMediaPanelMove(handle);
         return media;
@@ -579,7 +617,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(card.hoverHint){ctx.fillStyle='rgba(8,20,31,.88)';ctx.beginPath();ctx.roundRect(40,78,770,46,12);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 19px system-ui';ctx.fillText(card.hoverHint,56,91,740);}
             const imageX=40,imageY=96,imageWidth=920,imageHeight=c.height-(card.caption?166:126);
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,20);ctx.fill();
-            if(card.image){const scale=Math.min(imageWidth/card.image.naturalWidth,imageHeight/card.image.naturalHeight),w=card.image.naturalWidth*scale,h=card.image.naturalHeight*scale;ctx.drawImage(card.image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);}
+            const drawMedia=(image,alpha)=>{if(!image || alpha<=0)return;const scale=Math.min(imageWidth/image.naturalWidth,imageHeight/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);ctx.restore();};
+            drawMedia(card.previousImage,1-card.imageFade);drawMedia(card.image,card.imageFade);
             if(card.caption){ctx.fillStyle='#d2e0e8';ctx.font='600 20px system-ui';ctx.textAlign='center';ctx.fillText(card.caption,500,c.height-48,904);ctx.textAlign='left';}
             return c;
         }
@@ -710,11 +749,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const api={element,
         showLearning(content){
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
-            mediaImage=null;const token=++mediaLoadToken;
             const imageSource=content?.sketchImage || content?.image || '';
             mediaCollapsed=true;mediaTouched=false;
             if(imageSource)mediaCollapsed=false;
-            if(imageSource){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=imageSource;}
+            loadPanelImage(imageSource);
             tab='Details';hidden=false;page=0;render(true);
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
@@ -734,13 +772,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const nextMedia=media?.image ? {image:String(media.image),alt:String(media.alt || '')}
                 : identityImage ? {image:String(identityImage),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}
                     : previousMedia;
-            record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};mediaImage=null;
+            record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};
             mediaCollapsed=!nextMedia?.image;mediaTouched=false;
-            const token=++mediaLoadToken;
-            if(nextMedia?.image){const image=new Image();image.decoding='async';image.onload=()=>{if(token===mediaLoadToken)mediaImage=image;};image.onerror=()=>{if(token===mediaLoadToken)mediaImage=null;};image.src=nextMedia.image;}
+            loadPanelImage(nextMedia?.image || '');
             tab='Details';page=0;render(true);
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
@@ -793,7 +830,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls(),hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
-            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,caption:plantMedia?(identity?.plant || ''):'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
+            const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/MEDIA_FADE_MS));
+            if(imageFade>=1)mediaPreviousImage=null;
+            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,caption:plantMedia?(identity?.plant || ''):'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!settingsOpen && !mediaCollapsed && preview?.image))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
@@ -824,6 +863,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(event.type==='select' && !spatialMove)api.activate(ray);
         };for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);
             removeXrControls=()=>{for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);};},
-        destroy(){mediaLoadToken++;mediaImage=null;removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
+        destroy(){mediaLoadToken++;mediaImage=null;mediaPreviousImage=null;removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
     };render();return api;
 }

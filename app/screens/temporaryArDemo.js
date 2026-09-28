@@ -54,6 +54,7 @@ const DEMO_TUTORIAL_ART = Object.freeze({
 });
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
+import { enrichTrialNodes, MORINGA_TRIAL } from '../services/plantTrialContent.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../services/demoTutorialControls.js';
@@ -195,7 +196,7 @@ let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let knowledgeCombinationState=null,knowledgeCombinationCleanup=()=>{},knowledgeCombinationHold=null;
-let ambientCanvas=null,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
+let ambientCanvas=null,ambientBeeModel=null,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
 let demoRainIntensity=1;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
@@ -430,7 +431,8 @@ const MORINGA_PROFILE = Object.freeze({
             identityStatement: 'A fast-growing food and support tree for tropical and subtropical gardens.',
             image: MORINGA_PROFILE_IMAGE
         }),
-        nodes: Object.freeze([
+        sources: MORINGA_TRIAL.sources,
+        nodes: Object.freeze(enrichTrialNodes([
             { id: 'moringa-forest-layer', parentId: 'food-forest', title: 'Canopy / low tree layer', preview: 'Light canopy role', body: 'A fast-growing low tree within a layered food forest.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-canopy-management', parentId: 'moringa-forest-layer', title: 'Canopy management', preview: 'Prune for light and access', body: 'Regular pruning can keep the canopy low enough for harvest while allowing useful light to reach plants below. Observe regrowth and adjust the cutting cycle to the season and the needs of neighbouring plants.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-layer-observation', parentId: 'moringa-forest-layer', title: 'Layer observation', preview: 'Watch shade through the year', body: 'Record where shade falls in different seasons and times of day. This makes the tree layer a local observation rather than a fixed label.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' },
@@ -466,10 +468,10 @@ const MORINGA_PROFILE = Object.freeze({
             { id: 'moringa-establishment-water', parentId: 'moringa-care', title: 'Establishment water', preview: 'Support roots, then reassess', body: 'Provide appropriate moisture while roots establish, then adjust watering to rainfall, soil drainage, season and the condition of the plant.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-pruning-cycle', parentId: 'moringa-care', title: 'Pruning cycle', preview: 'Height, harvest and regrowth', body: 'Pruning can keep foliage reachable and produce mulch material. Record the cut date, severity and regrowth response so the cycle can be adapted rather than repeated blindly.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
             { id: 'moringa-health-observation', parentId: 'moringa-care', title: 'Plant health observation', preview: 'Notice change before treatment', body: 'Record where symptoms occur, when they began, recent weather, watering and management changes before choosing a response. Photographs over time can help distinguish damage from normal seasonal change.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' }
-        ])
+        ], MORINGA_TRIAL, 'moringa-agroforestry'))
     })
 });
-const MORINGA_PIM = Object.freeze(resolvePlantPim(MORINGA_PROFILE, {
+export const MORINGA_PIM = Object.freeze(resolvePlantPim(MORINGA_PROFILE, {
     id: 'moringa-oleifera',
     plantId: 'moringa-oleifera',
     name: 'Moringa Tree',
@@ -547,7 +549,7 @@ function clearSessionState() {
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};knowledgeCombinationState=null;knowledgeCombinationHold=null;
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
-    ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
+    ambientBeeModel?.destroy();ambientBeeModel=null;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -1670,12 +1672,16 @@ function paintDemoAmbientLife(now){
     if(!ambientCanvas || now-ambientLastPaint<33)return;
     ambientLastPaint=now;
     if(!Number.isFinite(ambientBeesStartedAt))return;
+    const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    ambientBeeModel?.draw(arWelcomeClock.elapsed,ambientBeesStartedAt,reducedMotion);
+    ambientCanvas.style.visibility=ambientBeeModel?.ready?'hidden':'visible';
+    if(ambientBeeModel?.ready)return;
     const width=window.innerWidth,height=window.innerHeight,ratio=Math.min(window.devicePixelRatio||1,1.5);
     if(ambientCanvas.width!==Math.round(width*ratio))ambientCanvas.width=Math.round(width*ratio);
     if(ambientCanvas.height!==Math.round(height*ratio))ambientCanvas.height=Math.round(height*ratio);
     const context=ambientCanvas.getContext('2d');
     context.setTransform(ratio,0,0,ratio,0,0);
-    drawDemoAmbientLife(context,width,height,{elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});
+    drawDemoAmbientLife(context,width,height,{elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion});
 }
 
 function showArWelcomeShowcase() {
@@ -3875,6 +3881,7 @@ function drawDemoKnowledge(view) {
 }
 
 function renderInterface(simulated) {
+    ambientBeeModel?.destroy();ambientBeeModel=null;
     simulatedMode = simulated;
     limDiagnostic('layout-recalculation',{reason:'interface-render',simulated,step:demoTutorialStep,...limDeviceContext(simulated && navigator.maxTouchPoints ? 'touch-capable' : simulated ? 'mouse' : 'xr-pointer')});
     const webglControlFallback = Boolean(!simulated && session && !domOverlayEnabled);
@@ -3887,6 +3894,13 @@ function renderInterface(simulated) {
     desktopSpatialPreviewCleanup=mountDesktopSpatialPreview(appRoot,{simulated,quest:isQuestHeadsetBrowser()});
     appRoot.querySelector('[data-tryit-safety-help]')?.remove();
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
+    if(simulated){
+        const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
+        appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
+        const credit=document.createElement('a');credit.className='tryit-bee-credit';credit.href='https://sketchfab.com/3d-models/bee-c80f9c2110c847db9375c548f14a0315';credit.target='_blank';credit.rel='noopener noreferrer';credit.textContent='Bee model · etro313 · CC BY 4.0';
+        appRoot.querySelector('.tryit-stage')?.append(credit);
+        import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas);}).catch(error=>console.warn('Bee model fallback:',error));
+    }
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,handMode:demoHandMode,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});

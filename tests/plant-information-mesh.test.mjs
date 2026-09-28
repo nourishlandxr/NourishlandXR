@@ -387,7 +387,9 @@ test('PIM spatial bloom keeps a new cell in its final reserved slot', () => {
 test('PIM treats explicit empty child lists as leaves', () => {
     const uses = pimKnowledgeNodes(PIGEON_PEA_AR_KNOWLEDGE).find(node => node.id === 'uses');
     const animalFodder = pimNodeChildren(uses).find(node => node.id === 'animal-fodder');
-    assert.equal(pimNodeChildren(animalFodder).length, 0);
+    const leafyFodder = pimNodeChildren(animalFodder).find(node => node.id === 'leafy-fodder');
+    assert.ok(leafyFodder);
+    assert.equal(pimNodeChildren(leafyFodder).length, 0);
 });
 
 test('AR projection preserves every canonical Pigeon Pea node ID and stable path', () => {

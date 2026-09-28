@@ -4,13 +4,14 @@ export function demoBeePose(elapsed,startedAt,index=0){
     if(!Number.isFinite(startedAt))return null;
     const age=elapsed-startedAt-index*850;
     if(age<0)return null;
-    const time=age/1000;
+    const time=age/1000,phase=time*.34+index*2.7;
     return {
-        x:.79+Math.sin(time*(index? .53:.46)+index*2.3)*.085,
-        y:.62+Math.sin(time*(index? .77:.64)+index*1.7)*.055,
-        depth:Math.sin(time*.41+index*2.1)*.16,
+        x:.5+Math.sin(phase)*.34,
+        y:.48+Math.sin(phase*.72+index*1.2)*.20,
+        depth:Math.sin(phase-.9),
+        heading:-Math.cos(phase)*.65,
         wing:Math.sin(time*27+index),
-        opacity:clamp01(age/1700)*.83
+        opacity:clamp01(age/1700)*.92
     };
 }
 
@@ -31,6 +32,6 @@ export function drawDemoAmbientLife(ctx,width,height,{elapsed=0,beesStartedAt=Na
     const compact=width<700;
     for(let index=0;index<2;index++){
         const bee=demoBeePose(elapsed,beesStartedAt,index);
-        if(bee)drawBee(ctx,bee.x*width,(bee.y-(compact?.25:0))*height,Math.max(4,Math.min(width,height)*.009),bee.wing,bee.opacity);
+        if(bee)drawBee(ctx,bee.x*width,(bee.y-(compact?.12:0))*height,Math.max(4,Math.min(width,height)*(.009+bee.depth*.003)),bee.wing,bee.opacity);
     }
 }

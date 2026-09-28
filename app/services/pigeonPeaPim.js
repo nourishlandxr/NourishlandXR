@@ -1,4 +1,5 @@
 import { createPimDocument } from './pimModel.js';
+import { enrichTrialNodes, PIGEON_PEA_TRIAL } from './plantTrialContent.js';
 
 const REFERENCE_DATE = '2026-08-03T00:00:00.000Z';
 
@@ -122,7 +123,10 @@ export const PIGEON_PEA_PIM = deepFreeze(createPimDocument({
         regionalNames: [],
         tags: ['legume', 'pulse', 'food forest', 'support plant']
     },
-    nodes,
+    nodes: enrichTrialNodes(nodes, PIGEON_PEA_TRIAL, 'pigeon-pea-agroforestry'),
+    sources: [...PIGEON_PEA_TRIAL.sources,
+        { id: 'pigeon-pea-reference-name', title: 'World Agroforestry — Cajanus cajan taxonomy', url: 'https://apps.worldagroforestry.org/treedb2/speciesprofile.php?Spid=408' },
+        { id: 'pigeon-pea-reference-family', title: 'World Agroforestry — Cajanus cajan taxonomy', url: 'https://apps.worldagroforestry.org/treedb2/speciesprofile.php?Spid=408' }],
     createdAt: REFERENCE_DATE,
     updatedAt: REFERENCE_DATE,
     now: REFERENCE_DATE,

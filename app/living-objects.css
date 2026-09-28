@@ -71,6 +71,11 @@
 .nlxr-info-panel .nlxr-plant-preview { position:relative; margin:6px 0 12px; aspect-ratio:16/7; overflow:hidden; border:1px solid #c9dec866; border-radius:10px; background:#111915; box-shadow:inset 0 1px #ffffff26,0 8px 20px #0004; }
 .nlxr-info-panel .nlxr-plant-preview::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,transparent 55%,#10201966); }
 .nlxr-info-panel .nlxr-plant-preview img { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+.nlxr-plant-preview .nlxr-media-image-stack { position:relative; min-height:0; height:100%; overflow:hidden; }
+.nlxr-plant-preview .nlxr-media-image-stack img { position:absolute; inset:0; width:100%; height:100%; opacity:1; transition:opacity .65s ease; }
+.nlxr-plant-preview .nlxr-media-image-stack img.is-media-entering,
+.nlxr-plant-preview .nlxr-media-image-stack img.is-media-leaving { opacity:0; }
+@media (prefers-reduced-motion:reduce) { .nlxr-plant-preview .nlxr-media-image-stack img { transition-duration:.01ms; } }
 .nlxr-info-panel .nlxr-control-actions { justify-content:space-between; }
 .nlxr-info-panel .nlxr-control-page { text-align:center; }
 .nlxr-info-panel.is-hidden { padding:5px; }
@@ -1496,3 +1501,41 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-hint { font-size:10px; }
     .tryit-demo.is-desktop-spatial-preview ~ .nlxr-info-panel.is-demo-panel { width:min(288px,calc(100vw - 16px)); height:min(38dvh,270px); grid-template-columns:74px minmax(0,1fr); gap:0 8px; padding-right:8px; }
 }
+
+/* Totem boards are signboards fixed to the post, not floating note cards. */
+.nlxr-totem-system .nlxr-totem-cards > button {
+    min-height:72px;
+    border:2px solid rgba(248,232,188,.78);
+    border-radius:3px;
+    background:linear-gradient(145deg,rgba(218,193,137,.96),rgba(91,67,43,.96));
+    box-shadow:inset 0 2px rgba(255,250,222,.28),inset 0 -5px rgba(47,34,25,.22),0 9px 20px rgba(5,19,14,.38);
+    clip-path:polygon(0 12%,86% 12%,100% 50%,86% 88%,0 88%);
+    padding:11px 17px 11px 14px;
+    color:#fff7dd;
+}
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(2) { background:linear-gradient(145deg,rgba(216,189,128,.97),rgba(89,64,42,.97)); }
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(3) { background:linear-gradient(145deg,rgba(178,188,152,.96),rgba(55,76,61,.97)); }
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(1) {
+    left:50%; right:auto; top:2%; width:48%; min-height:92px; transform:translateX(-50%);
+    clip-path:polygon(8% 0,92% 0,100% 50%,92% 100%,8% 100%,0 50%);
+    border-color:rgba(193,231,210,.9);
+    background:linear-gradient(150deg,rgba(56,103,119,.96),rgba(28,48,72,.94));
+    box-shadow:inset 0 2px rgba(237,255,226,.28),inset 0 -7px rgba(10,26,42,.32),0 11px 25px rgba(5,19,14,.42);
+    text-align:center;
+}
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(2) { left:58%; right:auto; top:35%; }
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(3) { right:58%; left:auto; top:63%; }
+.nlxr-totem-system .nlxr-totem-cards > button::after {
+    width:31px; height:8px; top:50%; left:100%; border:1px solid rgba(38,34,26,.72); border-radius:2px;
+    background:linear-gradient(90deg,#5b5d57,#d4c18e,#5b5d57); box-shadow:0 2px 3px rgba(0,0,0,.35);
+}
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(2)::after,
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(3)::after { left:auto; right:100%; }
+.nlxr-totem-system .nlxr-totem-cards > button:nth-child(1)::after { left:50%; right:auto; top:100%; width:8px; height:18px; transform:translateX(-50%); }
+.nlxr-totem-system .nlxr-totem-cards > button small { color:rgba(255,247,216,.82); letter-spacing:.16em; }
+.nlxr-totem-system .nlxr-totem-cards > button strong { color:#fff9e8; font-size:14px; }
+.nlxr-totem-system .nlxr-totem-cards > button > span:not(.nlxr-totem-stats) { color:rgba(255,247,220,.9); }
+.nlxr-totem-stats { display:flex; justify-content:center; gap:6px; margin:3px 0 1px; }
+.nlxr-totem-stats b { display:grid; min-width:31px; padding:2px 4px; border:1px solid rgba(223,244,213,.4); border-radius:5px; background:rgba(7,28,43,.26); text-align:center; }
+.nlxr-totem-stats i { color:#fff1b9; font:800 14px/1 system-ui; font-style:normal; }
+.nlxr-totem-stats em { color:rgba(224,245,222,.82); font:700 7px/1.2 system-ui; font-style:normal; letter-spacing:.05em; }

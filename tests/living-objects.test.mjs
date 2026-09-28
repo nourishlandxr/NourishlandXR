@@ -38,6 +38,18 @@ test('Totem cards derive current knowledge without changing node identity or sou
     assert.ok(!totemCardsMarkup(totemKnowledgeCards({title:'<script>bad</script>'}),'area').includes('<script>'));
 });
 
+test('Totem header exposes area counts and boards use attached sign treatments',()=>{
+    const cards=totemKnowledgeCards({title:'Welcome to this area',compact:true,plants:[
+        {id:'orb-1',name:'Pigeon Pea',knowledge:{live:true}},
+        {id:'orb-2',name:'Moringa',knowledge:{live:false}}
+    ],notes:[{id:'note-1',title:'Observation',body:'A nearby note'}]});
+    assert.deepEqual(cards[0].stats.map(stat=>stat.value),[2,1,1]);
+    assert.match(totemCardsMarkup(cards),/nlxr-totem-stats/);
+    const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'',{signsVisible:true,faded:false,bodyHalfWidth:.2,bodyHalfDepth:.14});
+    assert.equal(surfaces.find(surface=>surface.card.id==='area')?.card.boardStyle,'header');
+    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.center.x!==0));
+});
+
 test('Beveled geometry has outward unit normals and no degenerate faces',()=>{
     const geometry=createBeveledPrismGeometry();
     for(let i=0;i<geometry.length;i+=18) {

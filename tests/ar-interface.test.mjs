@@ -1484,7 +1484,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
-    assert.match(source, /const MORINGA_PIM = Object\.freeze\(resolvePlantPim\(MORINGA_PROFILE,/);
+    assert.match(source, /export const MORINGA_PIM = Object\.freeze\(resolvePlantPim\(MORINGA_PROFILE,/);
     assert.match(source, /const MORINGA_KNOWLEDGE = Object\.freeze\(pimToArKnowledge\(MORINGA_PIM\)\)/);
     assert.match(source, /\{ id: 'medicinal', parentId: 'uses'/);
     assert.match(source, /\{ id: 'craft', parentId: 'uses'/);

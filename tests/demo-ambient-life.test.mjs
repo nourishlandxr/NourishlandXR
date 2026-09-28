@@ -3,15 +3,19 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { demoBeePose, drawDemoAmbientLife } from '../app/services/demoAmbientLife.js';
 
-test('bees arrive only after their introduction and stay near the edge', () => {
+test('bees arrive only after their introduction and move across near and far space', () => {
     assert.equal(demoBeePose(1200,2000,0),null);
     assert.equal(demoBeePose(2500,2000,1),null);
-    for(const elapsed of [2000,4000,8000,16000]){
+    const depths=[];
+    for(const elapsed of [2000,4000,8000,16000,24000]){
         const bee=demoBeePose(elapsed,2000,0);
-        assert.ok(bee.x>.69 && bee.x<.89);
-        assert.ok(bee.y>.55 && bee.y<.69);
-        assert.ok(bee.opacity>=0 && bee.opacity<=.83);
+        assert.ok(bee.x>.15 && bee.x<.85);
+        assert.ok(bee.y>.27 && bee.y<.69);
+        assert.ok(bee.opacity>=0 && bee.opacity<=.92);
+        depths.push(bee.depth);
     }
+    assert.ok(depths.some(depth=>depth<0));
+    assert.ok(depths.some(depth=>depth>0));
 });
 
 test('reduced motion omits animated bees', () => {
@@ -33,6 +37,7 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     const style=readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
     const spatialDraw=source.slice(source.indexOf('function drawSpatialAmbientLife'),source.indexOf('function drawSpatialRain'));
     assert.match(source,/data-demo-ambient/);
+    assert.match(source,/mountDemoBeeModel/);
     assert.match(source,/paintDemoAmbientLife\(now\)/);
     assert.match(source,/drawSpatialAmbientLife\(view\)/);
     assert.match(spatialDraw,/ambientWorldAnchor\.x[\s\S]*ambientWorldAnchor\.y[\s\S]*ambientWorldAnchor\.z/);
@@ -42,4 +47,15 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     assert.match(style,/\.tryit-ambient-life[^}]*z-index:12000[^}]*pointer-events:none/);
     assert.match(style,/@media \(hover:hover\) and \(pointer:fine\) \{ \.tryit-demo\.is-simulated \.tryit-stage \{ background:#050606; \} \}/);
     assert.doesNotMatch(source,/darkBackdrop:/);
+});
+
+test('the supplied animated bee asset is bundled with its attribution', () => {
+    const data=readFileSync(new URL('../app/assets/bee.glb',import.meta.url));
+    assert.equal(data.toString('ascii',0,4),'glTF');
+    assert.equal(data.readUInt32LE(4),2);
+    assert.equal(data.readUInt32LE(8),data.length);
+    const json=JSON.parse(data.toString('utf8',20,20+data.readUInt32LE(12)));
+    assert.ok(json.animations.some(animation=>animation.name==='hover'));
+    assert.ok(json.meshes.length>0 && json.skins.length>0);
+    assert.match(readFileSync(new URL('../app/assets/bee-CREDITS.txt',import.meta.url),'utf8'),/etro313[\s\S]*CC BY 4\.0/);
 });

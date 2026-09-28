@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
-import { createPimDocument, pimToArKnowledge } from '../app/services/pimModel.js';
+import { createPimDocument, pimToArKnowledge, validatePimDocument } from '../app/services/pimModel.js';
+import { pimInfoContent } from '../app/services/pimInfoPanel.js';
+import { MORINGA_PIM } from '../app/screens/temporaryArDemo.js';
 import { LIM_INTRO_BRANCHES, limLearningContent } from '../app/services/limLearning.js';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
 
@@ -231,6 +233,29 @@ test('Pigeon Pea and Moringa provide deep template branches for demonstration', 
     for(const id of ['moringa-canopy-management','moringa-biomass-cycle','moringa-leaf-harvest','moringa-food-context','moringa-germination','moringa-leaf-form','moringa-local-names','moringa-pruning-cycle','moringa-health-observation']){
         assert.match(demo,new RegExp(`id: '${id}'`),`missing enriched Moringa cell ${id}`);
     }
+});
+
+test('every trial PIM cell opens into populated, sourced Control-panel content', () => {
+    for (const document of [PIGEON_PEA_PIM, MORINGA_PIM]) {
+        const validation = validatePimDocument(document);
+        assert.equal(validation.valid, true, validation.errors.join('; '));
+        assert.ok(document.nodes.length >= 50, `${document.plantId} needs a deep template`);
+        const projected = pimToArKnowledge(document);
+        assert.ok(projected, `${document.plantId} must reach the spatial presentation`);
+        for (const cell of document.nodes) {
+            const panel = pimInfoContent(document, cell.path);
+            assert.ok(panel?.body?.length > 20, `${document.plantId}/${cell.id} has no Control-panel detail`);
+            assert.notEqual(panel.body, 'No detailed information has been added to this cell yet.');
+            for (const sourceId of cell.sourceIds) {
+                assert.ok(document.sources.some(source => source.id === sourceId), `${document.plantId}/${cell.id} has an unresolved source`);
+            }
+        }
+    }
+    const pigeon = new Map(PIGEON_PEA_PIM.nodes.map(cell => [cell.id, cell]));
+    const moringa = new Map(MORINGA_PIM.nodes.map(cell => [cell.id, cell]));
+    for (const id of ['nitrogen-transfer', 'flower-to-pod', 'split-dhal', 'post-harvest-residues']) assert.ok(pigeon.has(id));
+    for (const id of ['moringa-flower-resource', 'moringa-not-nitrogen-fixer', 'moringa-tender-pods', 'moringa-roots-boundary']) assert.ok(moringa.has(id));
+    assert.match(moringa.get('moringa-roots-boundary').safetyNote, /Do not eat/);
 });
 
 test('Spatial device wording is used in preparation and runtime status while Quest stays technical', () => {

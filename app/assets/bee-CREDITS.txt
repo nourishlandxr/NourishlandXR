@@ -1,0 +1,5 @@
+Bee 3D model by etro313, via Sketchfab.
+https://sketchfab.com/3d-models/bee-c80f9c2110c847db9375c548f14a0315
+Licensed under Creative Commons Attribution 4.0 International (CC BY 4.0):
+https://creativecommons.org/licenses/by/4.0/
+The original GLB is included as bee.glb. No geometry or texture changes were made.

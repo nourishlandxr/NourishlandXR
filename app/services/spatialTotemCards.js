@@ -69,9 +69,12 @@ export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatr
 
 // Small independent text surfaces: no full-scene screenshot or per-frame repaint.
 export function totemCardSurfaces(position, right, cards, selectedId = '', state = {}) {
-    const layout = [[-.42,1.30],[.42,1.02],[-.42,.74]];
     const front={x:-right.z,y:0,z:right.x};
     const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
+    const bodyHalfWidth = Number(state?.bodyHalfWidth) || .07;
+    const boardWidth = Number(state?.boardWidth) || (bodyHalfWidth >= .16 ? .72 : .58);
+    const boardHeight = Number(state?.boardHeight) || (bodyHalfWidth >= .16 ? .25 : .22);
+    const boardAttach = bodyHalfWidth + boardWidth / 2 - .014;
     const place = (x,y,width,height,card,detail=false,offset=bodyHalfDepth+.018) => ({
         center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
         right, width,height,card,detail
@@ -83,12 +86,28 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
     const bodyHalfHeight = Number(state?.bodyHalfHeight) || .69;
     const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
+    const signBoard = (card, side, y) => ({
+        ...place(side * boardAttach, y, boardWidth, boardHeight, {
+            ...card,
+            boardStyle:'attached-sign',
+            boardSide:side < 0 ? 'left' : 'right'
+        }),
+        boardSide:side < 0 ? 'left' : 'right'
+    });
+    const headerBoard = cards[0] ? {
+        ...place(0, 1.58, Math.max(.84, boardWidth + .12), .34, {...cards[0],boardStyle:'header'}),
+        boardStyle:'header'
+    } : null;
     const surfaces=[
         ...buttons.map((button,index)=>({center:button.faceCenter,right,width:button.width,height:button.height,card:index===0?signs:fade,detail:false,opacity:faded ? .18 : 1})),
-        ...(signsVisible && !faded?cards.slice(0,3).map((card,i)=>place(...layout[i],.58,.22,card)):[])
+        ...(signsVisible && !faded ? [
+            headerBoard,
+            cards[1] ? signBoard(cards[1], 1, 1.10) : null,
+            cards[2] ? signBoard(cards[2], -1, .76) : null
+        ].filter(Boolean) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && signsVisible && !faded) surfaces.push(place(0,2.02,1.08,.58,selected,true));
+    if(selected && signsVisible && !faded) surfaces.push(place(0,2.04,1.18,.58,{...selected,boardStyle:'header-detail'},true));
     return surfaces;
 }
 
@@ -146,19 +165,44 @@ function cardCanvas(card, detail, selected) {
         ctx.fillStyle='#f8f1e4';ctx.font='700 116px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(card.symbol || '●',200,194,230);
         return canvas;
     }
+    const boardStyle=card.boardStyle || (detail ? 'header-detail' : 'card');
+    if(boardStyle==='attached-sign'){
+        const left=card.boardSide==='left';
+        const gradient=ctx.createLinearGradient(left?760:0,0,left?0:760,canvas.height);
+        gradient.addColorStop(0,'rgba(236,226,193,.96)');gradient.addColorStop(.18,'rgba(156,128,84,.98)');gradient.addColorStop(1,'rgba(68,55,42,.96)');
+        ctx.shadowColor='rgba(10,17,15,.46)';ctx.shadowBlur=18;ctx.shadowOffsetY=8;
+        ctx.fillStyle=gradient;ctx.strokeStyle='rgba(255,244,205,.88)';ctx.lineWidth=6;ctx.beginPath();
+        if(left){ctx.moveTo(728,66);ctx.lineTo(122,66);ctx.lineTo(32,200);ctx.lineTo(122,334);ctx.lineTo(728,334);}else{ctx.moveTo(40,66);ctx.lineTo(646,66);ctx.lineTo(736,200);ctx.lineTo(646,334);ctx.lineTo(40,334);}
+        ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowColor='transparent';
+        ctx.fillStyle='rgba(37,36,31,.72)';ctx.fillRect(left?704:40,72,24,256);
+        ctx.fillStyle='#42382e';[128,272].forEach(y=>{ctx.beginPath();ctx.arc(left?716:52,y,10,0,Math.PI*2);ctx.fill();ctx.fillStyle='rgba(249,241,211,.72)';ctx.beginPath();ctx.arc((left?716:52)-3,y-3,3,0,Math.PI*2);ctx.fill();ctx.fillStyle='#42382e';});
+        ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='rgba(47,39,31,.78)';ctx.font='700 23px system-ui';ctx.fillText(card.eyebrow,384,92,500);
+        ctx.fillStyle='#fff9e8';ctx.font='700 39px system-ui';wrapped(ctx,card.title,384,130,500,43,2);
+        ctx.fillStyle='rgba(255,248,225,.88)';ctx.font='400 29px system-ui';wrapped(ctx,card.summary,384,236,500,35,2);
+        return canvas;
+    }
+    if(boardStyle==='header' || boardStyle==='header-detail'){
+        const gradient=ctx.createLinearGradient(0,0,768,canvas.height);gradient.addColorStop(0,'rgba(45,83,101,.96)');gradient.addColorStop(.55,'rgba(33,60,84,.94)');gradient.addColorStop(1,'rgba(20,37,57,.91)');
+        ctx.shadowColor='rgba(7,19,29,.52)';ctx.shadowBlur=22;ctx.shadowOffsetY=8;ctx.fillStyle=gradient;ctx.strokeStyle='rgba(220,239,209,.9)';ctx.lineWidth=5;ctx.beginPath();ctx.roundRect(22,28,724,344,42);ctx.fill();ctx.stroke();ctx.shadowColor='transparent';
+        ctx.fillStyle='rgba(223,199,132,.82)';ctx.fillRect(84,42,600,7);
+        ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#d8efda';ctx.font='700 22px system-ui';ctx.fillText(card.eyebrow,384,68,620);
+        ctx.fillStyle='#f7ffe9';ctx.font='700 40px system-ui';wrapped(ctx,card.title,384,104,620,44,2);
+        if(Array.isArray(card.stats)){
+            const stats=card.stats.slice(0,3),width=190;stats.forEach((stat,index)=>{const x=180+index*204;ctx.fillStyle='rgba(170,221,191,.18)';ctx.strokeStyle='rgba(214,244,214,.56)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x-width/2,210,width,82,17);ctx.fill();ctx.stroke();ctx.fillStyle='#fff3c9';ctx.font='800 31px system-ui';ctx.fillText(String(stat.value),x,220,165);ctx.fillStyle='#cae8d0';ctx.font='700 17px system-ui';ctx.fillText(String(stat.label),x,264,170);});
+        }else{ctx.fillStyle='#e4f2e3';ctx.font='400 28px system-ui';wrapped(ctx,detail ? card.body : card.summary,384,210,620,35,3);}
+        if(card.summary && Array.isArray(card.stats)){ctx.fillStyle='rgba(230,245,226,.82)';ctx.font='400 21px system-ui';ctx.fillText(card.summary,384,326,640);}
+        return canvas;
+    }
     const gradient=ctx.createLinearGradient(0,0,768,canvas.height);
     if(detail){gradient.addColorStop(0,'rgba(63,88,99,.96)');gradient.addColorStop(1,'rgba(18,38,49,.95)');}
-    else if(card.control){gradient.addColorStop(0,'rgba(190,210,180,.9)');gradient.addColorStop(1,'rgba(74,105,88,.96)');}
     else {const tones=[['rgba(91,120,91,.86)','rgba(26,55,39,.82)'],['rgba(112,116,82,.84)','rgba(50,52,31,.82)'],['rgba(73,111,101,.84)','rgba(20,50,45,.82)']][Math.abs(String(card.id||'').split('').reduce((sum,value)=>sum+value.charCodeAt(0),0))%3];gradient.addColorStop(0,tones[0]);gradient.addColorStop(1,tones[1]);}
     ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(8,8,752,canvas.height-16,32);ctx.fill();
     ctx.strokeStyle=selected ? '#e5eac0' : 'rgba(218,242,224,.8)';ctx.lineWidth=selected ? 4 : 2;ctx.stroke();
-    ctx.textBaseline='top';ctx.fillStyle='#d2e8c6';ctx.font='600 25px system-ui';
+    ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#d2e8c6';ctx.font='600 25px system-ui';
     ctx.fillText(card.eyebrow,38,28,692);
-    ctx.fillStyle='#f4faef';ctx.font=card.control?'700 48px system-ui':'600 44px system-ui';wrapped(ctx,card.control?(card.collapsed?'＋  Expand':'−  Collapse'):card.title,38,68,692,50,2);
-    ctx.font=detail ? '400 34px system-ui' : '400 34px system-ui';ctx.fillStyle='#e0eadd';
-    wrapped(ctx,detail ? card.body : card.summary,38,180,692,detail ? 43 : 42,detail ? 6 : 2);
-    ctx.fillStyle='#d2e8c6';ctx.font='500 22px system-ui';
-    ctx.fillText(detail ? 'Select this note to close' : 'Select to explore',38,canvas.height-46);
+    ctx.fillStyle='#f4faef';ctx.font='600 44px system-ui';wrapped(ctx,card.title,38,68,692,50,2);
+    ctx.font='400 34px system-ui';ctx.fillStyle='#e0eadd';wrapped(ctx,detail ? card.body : card.summary,38,180,692,detail ? 43 : 42,detail ? 6 : 2);
+    ctx.fillStyle='#d2e8c6';ctx.font='500 22px system-ui';ctx.fillText(detail ? 'Select this note to close' : 'Select to explore',38,canvas.height-46);
     return canvas;
 }
 
@@ -195,7 +239,7 @@ export function createSpatialTotemCards(gl, options = {}) {
                 : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-halfWidth*.35);
             const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemCardSurfaces(position,right,cards,selectedId,{
                 signsVisible:Boolean(record?.demoTotemSignsVisible),faded:Boolean(record?.demoTotemFaded),
-                bodyHalfDepth:record?.demoType==='zone' ? .14 : halfWidth*.5,bodyHalfHeight
+                bodyHalfWidth:halfWidth,bodyHalfDepth:record?.demoType==='zone' ? .14 : halfWidth*.5,bodyHalfHeight
             });
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);
