@@ -96,7 +96,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     });
     const headerSelected=selectedId===cards[0]?.id;
     const headerBoard = cards[0] ? {
-        ...place(0, 1.58, Math.max(.84, boardWidth + .12), .34, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats},headerSelected),
+        ...place(0, 1.58, Math.max(.84, boardWidth + .12), .34, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,bodyHalfWidth>=.16 ? 5 : 3);
@@ -190,7 +190,7 @@ function cardCanvas(card, detail, selected) {
         ctx.fillStyle='#f7ffe9';ctx.font='700 40px system-ui';wrapped(ctx,card.title,384,104,620,44,2);
         if(Array.isArray(card.stats)){
             const stats=card.stats.slice(0,3),width=190;stats.forEach((stat,index)=>{const x=180+index*204;ctx.fillStyle='rgba(170,221,191,.18)';ctx.strokeStyle='rgba(214,244,214,.56)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x-width/2,210,width,82,17);ctx.fill();ctx.stroke();ctx.fillStyle='#fff3c9';ctx.font='800 31px system-ui';ctx.fillText(String(stat.value),x,220,165);ctx.fillStyle='#cae8d0';ctx.font='700 17px system-ui';ctx.fillText(String(stat.label),x,264,170);});
-        }else{ctx.fillStyle='#e4f2e3';ctx.font='400 28px system-ui';wrapped(ctx,detail ? card.body : card.summary,384,210,620,35,3);}
+        }else{ctx.fillStyle='#e4f2e3';ctx.font='400 28px system-ui';wrapped(ctx,boardStyle==='header-detail' ? card.body : card.summary,384,210,620,35,3);}
         if(card.summary && Array.isArray(card.stats)){ctx.fillStyle='rgba(230,245,226,.82)';ctx.font='400 21px system-ui';ctx.fillText(card.summary,384,326,640);}
         return canvas;
     }
