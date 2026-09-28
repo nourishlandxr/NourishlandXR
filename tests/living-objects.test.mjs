@@ -4,7 +4,7 @@ import { createPlantKnowledgeResolver, plantKnowledgeState, totemKnowledgeCards,
 import { createPimDocument, pimAddNode, pimUpdateNode } from '../app/services/pimModel.js';
 import { createOrbCrownGeometry } from '../app/services/spatialSphereRenderer.js';
 import { createBeveledPrismGeometry } from '../app/services/spatialPrismRenderer.js';
-import { totemCardSurfaces, hitTotemSurface, stableTotemCardRight } from '../app/services/spatialTotemCards.js';
+import { totemCardSurfaces, hitTotemSurface, resolveTotemNavigation, stableTotemCardRight } from '../app/services/spatialTotemCards.js';
 
 test('Live availability ignores empty category shells and separates draft/visitor states',()=>{
     const resolve=createPlantKnowledgeResolver();
@@ -38,7 +38,7 @@ test('Totem cards derive current knowledge without changing node identity or sou
     assert.ok(!totemCardsMarkup(totemKnowledgeCards({title:'<script>bad</script>'}),'area').includes('<script>'));
 });
 
-test('Totem header exposes area counts and boards use attached sign treatments',()=>{
+test('Totem header exposes zone counts and plaques stay centred on the post',()=>{
     const cards=totemKnowledgeCards({title:'Welcome to this area',compact:true,plants:[
         {id:'orb-1',name:'Pigeon Pea',knowledge:{live:true}},
         {id:'orb-2',name:'Moringa',knowledge:{live:false}}
@@ -47,7 +47,7 @@ test('Totem header exposes area counts and boards use attached sign treatments',
     assert.match(totemCardsMarkup(cards),/nlxr-totem-stats/);
     const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'',{signsVisible:true,faded:false,bodyHalfWidth:.2,bodyHalfDepth:.14});
     assert.equal(surfaces.find(surface=>surface.card.id==='area')?.card.boardStyle,'header');
-    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.center.x!==0));
+    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.center.x===0));
 });
 
 test('Demo Totem keeps one welcome header and four slim horizontal signs',()=>{
@@ -56,8 +56,18 @@ test('Demo Totem keeps one welcome header and four slim horizontal signs',()=>{
     const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'area',{signsVisible:true,faded:false,bodyHalfWidth:.2,bodyHalfDepth:.14});
     assert.equal(surfaces.filter(surface=>surface.card.id==='area').length,1);
     assert.equal(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').length,4);
-    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.18));
+    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.17));
     assert.ok(!totemCardsMarkup(cards,'area').includes('nlxr-totem-detail'));
+});
+
+test('Neighbouring zone direction appears only with linked positions and a known Totem heading',()=>{
+    const source={position:{x:0,z:0},rotationY:0,demoLinkVisible:false};
+    const partner={position:{x:2,z:0}};
+    assert.deepEqual(resolveTotemNavigation(source,partner),{reliable:false,side:'',arrow:''});
+    source.demoLinkVisible=true;
+    assert.deepEqual(resolveTotemNavigation(source,partner),{reliable:true,side:'right',arrow:'→'});
+    delete source.rotationY;
+    assert.deepEqual(resolveTotemNavigation(source,partner),{reliable:false,side:'',arrow:''});
 });
 
 test('Beveled geometry has outward unit normals and no degenerate faces',()=>{

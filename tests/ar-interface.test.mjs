@@ -204,7 +204,7 @@ test('calibrated Totem routes render as a segmented ground path with arrows', ()
     assert.ok(values.some(value => Math.abs(value - .05) < .01));
 });
 
-test('the demo keeps the three simple Totem forms and adds physical buttons', () => {
+test('the demo keeps the three simple Totem forms and uses physical plaques and buttons', () => {
     const appearance = read('app/services/totemAppearance.js');
     const arSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js');
@@ -222,7 +222,11 @@ test('the demo keeps the three simple Totem forms and adds physical buttons', ()
     const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone')"),demoSource.indexOf('const linkedTotems'));
     assert.match(demoTotemDraw,/bodyHalfWidth=\.20,bodyHalfDepth=\.14,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES/);
     assert.doesNotMatch(demoTotemDraw,/crownRadius|scale:\{x:1,y:\.7,z:\.5\}/);
-    assert.match(demoTotemDraw,/drawSpatialTether\(gl,tetherRenderer,view,start,end/);
+    assert.match(demoSource,/drawSpatialTotemPlaques\(gl,prismRenderer,sphereRenderer/);
+    const plaqueSource=read('app/services/spatialTotemCards.js');
+    assert.match(plaqueSource,/TOTEM_TEXT_RESOLUTION/);
+    assert.match(plaqueSource,/LINEAR_MIPMAP_LINEAR/);
+    assert.match(plaqueSource,/drawSpatialPrism\(gl,prismRenderer/);
 });
 
 test('Creator PIM preserves Android touch clicks while isolating pointer events', () => {

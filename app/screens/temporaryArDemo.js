@@ -4,8 +4,8 @@ import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
 import { createLimActivationController } from '../services/limActivation.js';
 import { advanceLimPathway, backLimPathway, completeLimPathway, idleLimPathwayState, loadLimPathwayState, pauseLimPathway, resumeLimPathway, saveLimPathwayState, startLimPathway, visitLimPathwayCell } from '../services/limPathwayState.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
-import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
-import { createSpatialTotemCards, drawSpatialTotemButtons } from '../services/spatialTotemCards.js';
+import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup, escapeSpatialText } from '../services/spatialKnowledgePresentation.js';
+import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaques, resolveTotemNavigation, totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
 import { WELCOME_ROOT_MILESTONES, WELCOME_ROOT_REFRESH_MS, advanceWelcomeRootProgress, welcomeRootsNeedRefresh } from '../services/arWelcomeRoots.js';
@@ -1005,23 +1005,22 @@ function demoTotemCards(record) {
     const second=record.tutorialStage==='totem2';
     const plants=markers.filter(item=>item.demoType==='plant' && Boolean(item.demoAmbientNeighbour)===second);
     const notes=markers.filter(item=>item.demoType==='note' && Boolean(item.demoAmbientNeighbour)===second);
-    const header=totemKnowledgeCards({title:'Welcome to this area',introduction:'Welcome to this area.',
+    const zoneName=record.demoZoneName || record.demoContent?.title || record.name || 'This zone';
+    const header={...totemKnowledgeCards({title:zoneName,introduction:`Welcome to ${zoneName}.`,
         plants:plants.map(item=>({id:item.id,name:item.name,knowledge:item.demoAmbientNeighbour?{live:false}:demoOrbKnowledge(item)})),
-        notes:notes.map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),compact:true})[0];
-    const signHeight=item=>{
-        const height=simulatedMode && item?.simulatedAnchor
-            ? .82+(76-Number(item.simulatedAnchor.y))*.014
-            : Number(item?.position?.y)-Number(record.groundBaseY || 0);
-        return Math.max(.46,Math.min(1.22,height));
-    };
+        notes:notes.map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),compact:true})[0],eyebrow:'ZONE'};
     const plantSigns=second
-        ? [[plants[0],plants[1]],[plants[2],plants[3]]].map((pair,index)=>({id:`plants-${index}`,eyebrow:'PLANT ORBS',title:pair.map(item=>item?.name).filter(Boolean).join(' · '),summary:'',boardSide:index?'left':'right',signHeight:signHeight(pair[0])}))
-        : plants.map((item,index)=>({id:`plant-${item.id}`,eyebrow:'PLANT ORB',title:item.name,summary:'',boardSide:index?'left':'right',signHeight:signHeight(item)}));
+        ? Array.from({length:Math.ceil(plants.length/2)},(_,index)=>plants.slice(index*2,index*2+2)).map((pair,index)=>({id:`plants-${index}`,eyebrow:pair.length===1?'PLANT':'PLANTS',title:pair.map(item=>item.name).join(' · '),summary:'',plaque:true,references:pair.map(item=>item.id)}))
+        : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'PLANT',title:item.name,summary:'',plaque:true,references:[item.id]}));
     const note=notes[0];
+    const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
+    const destination=partner?.demoZoneName || record.demoNeighbourZoneName || '';
+    const navigation=resolveTotemNavigation(record,partner);
+    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR ZONE',title:navigation.reliable?`${navigation.arrow} ${destination}`:`Explore ${destination}`,summary:'',body:navigation.reliable?'Follow the linked route.':'Direction appears after the zones are reliably linked.',boardSide:navigation.reliable?navigation.side:'',plaque:true,navigation:{...navigation,destinationId:partner?.id || ''}} : null;
     return [header,...plantSigns,
-        {id:'area-note',eyebrow:'NOTE',title:note?.name || 'Seasonal observation',summary:'',body:note ? (demoContentFor(note)?.lines || []).join(' · ') : '',boardSide:'right',signHeight:note ? Math.max(.5,Math.min(.78,signHeight(note))) : .62},
-        {id:'neighbour',eyebrow:'NEIGHBOUR AREA',title:second?'Area 1 →':'← Area 2',summary:'',body:record.demoLinkVisible?'Follow the linked route.':'The neighbouring Area can be connected next.',boardSide:second?'right':'left',signHeight:.47}
-    ];
+        ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:note.name,summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,references:[note.id]}] : []),
+        ...(neighbour ? [neighbour] : [])
+    ].slice(0,5);
 }
 function activateDemoTotemCard(hit) {
     if(!hit)return false;
@@ -2100,6 +2099,8 @@ function createDemoTotemExample() {
         demoType: 'zone',
         tutorialStage: 'totem',
         demoTotemExampleId:'botanical-garden',
+        demoZoneName:'Botanical Garden',
+        demoNeighbourZoneName:'Rainforest Walk',
         demoTotemColor:'#785a43',
         demoTotemSignsVisible:false,
         demoTotemFaded:false,
@@ -2143,13 +2144,13 @@ function createDemoSecondTotem() {
         demoType: 'zone',
         tutorialStage: 'totem2',
         demoTotemExampleId:'rainforest-walk',
+        demoZoneName:'Rainforest Walk',
+        demoNeighbourZoneName:'Botanical Garden',
         demoTotemColor:'#526d7a',
         demoTotemSignsVisible:false,
         demoTotemFaded:false,
         demoArriveAt:performance.now(),
         demoLinkVisible: false,
-        demoLinkDirection: 'right',
-        demoLinkDestination: 'Area 1',
         demoExpanded: true,
         demoInteractive: true,
         demoPanelOffset: { x: 0, y: 0 },
@@ -2172,8 +2173,8 @@ function connectDemoTotems() {
     const [first,second]=markers.filter(record=>record.demoType==='zone');
     if(!first || !second)return;
     first.demoLinkVisible=second.demoLinkVisible=true;
-    first.demoLinkDirection='left';first.demoLinkDestination='Area 2';first.demoLinkPartner=second.id;
-    second.demoLinkDirection='right';second.demoLinkDestination='Area 1';second.demoLinkPartner=first.id;
+    first.demoLinkPartner=second.id;
+    second.demoLinkPartner=first.id;
     first.totemCardsRefreshed=second.totemCardsRefreshed=0;
     updateSimulatedMarkers();
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.areasConnected);
@@ -2831,11 +2832,8 @@ function renderSimulatedPlant(record, index, anchor, offset) {
 
 function renderSimulatedTotem(record, index, anchor) {
     const cards = demoTotemCards(record);
-    const linkLabel = record.demoLinkVisible
-        ? `<span class="tryit-sim-totem-link-label" aria-hidden="true">${record.demoLinkDirection === 'left' ? '←' : '→'} ${record.demoLinkDestination || 'Linked Area'}</span>`
-        : '';
     const colour=record.demoTotemColor || record.demoContent?.accent || '#715a46';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-basic${performance.now()-record.demoArriveAt<1800?' is-new-arrival':''}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="Totem information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}${linkLabel}</span>`;
+    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-basic${performance.now()-record.demoArriveAt<1800?' is-new-arrival':''}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${escapeSpatialText(record.demoZoneName || 'Zone')} Totem information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}</span>`;
 }
 
 function toggleDemoPlantProfile(record) {
@@ -4982,15 +4980,6 @@ function drawMarker(view) {
             alpha: arrival*(record.demoTotemFaded ? .18 : .98),
             rotationY
         });
-        if(record.demoTotemSignsVisible && !record.demoTotemFaded){
-            const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
-            for(const card of (record.liveTotemCards || demoTotemCards(record)).slice(1,5)){
-                const direction=card.boardSide==='left'?-1:1,y=Number(card.signHeight) || .76;
-                const start={x:record.position.x+right.x*direction*bodyHalfWidth*.88+front.x*(bodyHalfDepth+.012),y:groundBaseY+y,z:record.position.z+right.z*direction*bodyHalfWidth*.88+front.z*(bodyHalfDepth+.012)};
-                const end={x:record.position.x+right.x*direction*.56+front.x*(bodyHalfDepth+.018),y:groundBaseY+y,z:record.position.z+right.z*direction*.56+front.z*(bodyHalfDepth+.018)};
-                drawSpatialTether(gl,tetherRenderer,view,start,end,{segments:2,width:.012,curve:0,lift:0,color:[.66,.70,.69,.9]});
-            }
-        }
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival
@@ -5089,7 +5078,12 @@ function drawMarker(view) {
             if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
                 record.liveTotemCards=demoTotemCards(record);record.totemCardsRefreshed=performance.now();
             }
-            totemCardsRenderer.draw(view,record,{...record.position,y:record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES},record.liveTotemCards,record.totemSelectedCard);
+            const base={...record.position,y:record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES};
+            const rotationY=demoTotemRotationY(record);
+            const surfaces=totemLayoutForRecord(record,base,record.liveTotemCards,record.totemSelectedCard,rotationY);
+            const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
+            drawSpatialTotemPlaques(gl,prismRenderer,sphereRenderer,view,surfaces,arrival);
+            totemCardsRenderer.draw(view,record,base,record.liveTotemCards,record.totemSelectedCard);
         });
         totemCardsRenderer.end();
     }
