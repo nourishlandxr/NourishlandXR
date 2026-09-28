@@ -16,7 +16,7 @@ export const WELCOME_ROOT_MILESTONES = Object.freeze({
 });
 export const WELCOME_ROOT_MAX_MILESTONE = WELCOME_ROOT_MILESTONES.demoClosing;
 export const WELCOME_ROOT_GROWTH_MS = 5600;
-export const WELCOME_ROOT_REFRESH_MS = 300;
+export const WELCOME_ROOT_REFRESH_MS = 120;
 export const WELCOME_ROOTS_SETTLED_MS = WELCOME_ROOT_GROWTH_MS;
 
 const clamp = value => Math.max(0, Math.min(1, value));
@@ -42,9 +42,9 @@ const stageEase = value => {
 };
 
 const ROOT_PALETTE = Object.freeze({
-    copper: Object.freeze({ body: 'rgba(181, 116, 66, .94)', highlight: 'rgba(241, 190, 120, .66)' }),
-    olive: Object.freeze({ body: 'rgba(139, 145, 82, .91)', highlight: 'rgba(208, 207, 135, .60)' }),
-    bark: Object.freeze({ body: 'rgba(137, 91, 53, .92)', highlight: 'rgba(222, 165, 102, .60)' })
+    copper: Object.freeze({ body: 'rgba(163, 111, 70, .92)', highlight: 'rgba(226, 179, 119, .52)' }),
+    olive: Object.freeze({ body: 'rgba(128, 137, 88, .88)', highlight: 'rgba(197, 197, 137, .46)' }),
+    bark: Object.freeze({ body: 'rgba(121, 88, 61, .93)', highlight: 'rgba(205, 158, 112, .46)' })
 });
 
 function perimeterPoint(position, inset, tangentDrift = 0) {
@@ -94,7 +94,7 @@ function createPath({ id, stage, kind, start, direction, span, insetStart, inset
         if (!anchor || t > .0001) return point;
         return anchor;
     };
-    const samples = Math.max(9, Math.ceil(span * WELCOME_SHAPE_POINTS.length * 2.6));
+    const samples = Math.max(28, Math.ceil(span * WELCOME_SHAPE_POINTS.length * 11));
     const points = [];
     for (let index = 0; index <= samples; index++) {
         const point = pointAt(index / samples);
@@ -126,7 +126,7 @@ function createRootNetwork() {
         id: `arrival-${index}`, stage: WELCOME_ROOT_MILESTONES.arrival, kind: 'fine',
         ...item, span: .064 + hash(index, 3) * .025,
         insetStart: 5, insetEnd: 29 + hash(index, 5) * 26,
-        width: 1.7 + hash(index, 7) * .55
+        width: 1.35 + hash(index, 7) * .45
     }));
 
     const stems = [...paths];
@@ -137,7 +137,7 @@ function createRootNetwork() {
             stems.push(add({
                 id, stage, kind: 'structural', start: hash(stage, 101), direction: stage % 4 === 1 ? 1 : -1,
                 span: .28 + hash(stage, 107) * .16, insetStart: 15 + hash(stage, 109) * 22,
-                insetEnd: 28 + hash(stage, 113) * 34, width: 9.5 + hash(stage, 127) * 3.2, seed: index
+                insetEnd: 28 + hash(stage, 113) * 34, width: 6.4 + hash(stage, 127) * 2.4, seed: index
             }));
         }
         const mediumCount = 1 + Math.ceil(stage * .56);
@@ -148,7 +148,7 @@ function createRootNetwork() {
                 start: hash(seed, 137), direction: hash(seed, 139) > .5 ? 1 : -1,
                 span: .09 + hash(seed, 149) * .12,
                 insetStart: 20 + hash(seed, 151) * 38, insetEnd: 36 + hash(seed, 157) * 56,
-                width: 4.2 + hash(seed, 163) * 2.4, seed
+                width: 2.8 + hash(seed, 163) * 1.7, seed
             }));
         }
     }
@@ -170,7 +170,7 @@ function createRootNetwork() {
                 start, direction: hash(seed, 179) > .44 ? parent.direction : -parent.direction,
                 span: .04 + hash(seed, 181) * .07,
                 insetStart: inset, insetEnd: Math.min(240, inset + 46 + hash(seed, 191) * 92),
-                width: 1.8 + hash(seed, 193) * 1.35, seed, anchor
+                width: 1.1 + hash(seed, 193) * 1.15, seed, anchor
             });
         }
     }
@@ -255,40 +255,41 @@ export function welcomeRootsNeedRefresh(options = {}) {
     return welcomeRootsAreGrowing(options) || glimmerIsActive(Math.max(0, Number(options.elapsed) || 0));
 }
 
-function traceSmoothPath(ctx, points) {
+function fillRootRibbon(ctx, points, width) {
     if (points.length < 2) return false;
+    const sides=[[],[]],last=points.length-1;
+    for(let index=0;index<=last;index++){
+        const before=points[Math.max(0,index-1)],after=points[Math.min(last,index+1)];
+        const dx=after.x-before.x,dy=after.y-before.y,length=Math.hypot(dx,dy)||1;
+        const fraction=index/last;
+        const rootBase=.38+.62*stageEase(fraction/.15);
+        const tip=.08+.92*stageEase((1-fraction)/.19);
+        const radius=width*.5*rootBase*tip;
+        const nx=-dy/length*radius,ny=dx/length*radius;
+        sides[0].push({x:points[index].x+nx,y:points[index].y+ny});
+        sides[1].push({x:points[index].x-nx,y:points[index].y-ny});
+    }
     ctx.beginPath();
-    ctx.moveTo(points[0].x, points[0].y);
-    if (points.length === 2) {
-        ctx.lineTo(points[1].x, points[1].y);
-        return true;
-    }
-    for (let index = 1; index < points.length - 1; index++) {
-        const midpoint = { x: (points[index].x + points[index + 1].x) * .5, y: (points[index].y + points[index + 1].y) * .5 };
-        ctx.quadraticCurveTo(points[index].x, points[index].y, midpoint.x, midpoint.y);
-    }
-    ctx.lineTo(points.at(-1).x, points.at(-1).y);
+    ctx.moveTo(sides[0][0].x,sides[0][0].y);
+    for(const point of sides[0].slice(1))ctx.lineTo(point.x,point.y);
+    for(const point of sides[1].reverse())ctx.lineTo(point.x,point.y);
+    ctx.closePath();ctx.fill();
     return true;
 }
 
 function strokeRoot(ctx, path, points, alpha) {
-    if (!traceSmoothPath(ctx, points)) return;
-    const palette = ROOT_PALETTE[path.palette] || ROOT_PALETTE.copper;
-    const width = path.width;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
-    ctx.strokeStyle = `rgba(9, 15, 10, ${alpha * .66})`;
-    ctx.lineWidth = width * (path.kind === 'structural' ? 2.05 : 1.7);
-    ctx.stroke();
-    ctx.strokeStyle = palette.body;
-    ctx.globalAlpha *= alpha;
-    ctx.lineWidth = width;
-    ctx.stroke();
-    if (width > 1.35) {
-        ctx.strokeStyle = palette.highlight;
-        ctx.globalAlpha *= .75;
-        ctx.lineWidth = Math.max(.55, width * (path.kind === 'structural' ? .22 : .29));
-        ctx.stroke();
+    const palette=ROOT_PALETTE[path.palette] || ROOT_PALETTE.copper;
+    const inheritedAlpha=Number.isFinite(ctx.globalAlpha) ? ctx.globalAlpha : 1;
+    ctx.globalAlpha=inheritedAlpha*alpha*.54;
+    ctx.fillStyle='rgba(12, 22, 15, .62)';
+    fillRootRibbon(ctx,points,path.width*1.52);
+    ctx.globalAlpha=inheritedAlpha*alpha;
+    ctx.fillStyle=palette.body;
+    fillRootRibbon(ctx,points,path.width);
+    if(path.kind==='structural' || path.kind==='medium'){
+        ctx.globalAlpha=inheritedAlpha*alpha*.45;
+        ctx.fillStyle=palette.highlight;
+        fillRootRibbon(ctx,points,path.width*.19);
     }
 }
 

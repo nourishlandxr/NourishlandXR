@@ -4,7 +4,13 @@ import { createPlantKnowledgeResolver, plantKnowledgeState, totemKnowledgeCards,
 import { createPimDocument, pimAddNode, pimUpdateNode } from '../app/services/pimModel.js';
 import { createOrbCrownGeometry } from '../app/services/spatialSphereRenderer.js';
 import { createBeveledPrismGeometry } from '../app/services/spatialPrismRenderer.js';
-import { totemCardSurfaces, hitTotemSurface, resolveTotemNavigation, stableTotemCardRight } from '../app/services/spatialTotemCards.js';
+import { totemCardSurfaces, hitTotemSurface, resolveTotemNavigation, stableTotemCardRight, textureSupportsMipmaps } from '../app/services/spatialTotemCards.js';
+
+test('spatial panel textures only use mipmaps at compatible canvas sizes',()=>{
+    assert.equal(textureSupportsMipmaps({width:1024,height:256}),true);
+    assert.equal(textureSupportsMipmaps({width:1000,height:680}),false);
+    assert.equal(textureSupportsMipmaps({width:1000,height:160}),false);
+});
 
 test('Live availability ignores empty category shells and separates draft/visitor states',()=>{
     const resolve=createPlantKnowledgeResolver();
@@ -38,7 +44,7 @@ test('Totem cards derive current knowledge without changing node identity or sou
     assert.ok(!totemCardsMarkup(totemKnowledgeCards({title:'<script>bad</script>'}),'area').includes('<script>'));
 });
 
-test('Totem header exposes zone counts and plaques stay centred on the post',()=>{
+test('Totem header exposes zone counts and undirected cards stay centred',()=>{
     const cards=totemKnowledgeCards({title:'Welcome to this area',compact:true,plants:[
         {id:'orb-1',name:'Pigeon Pea',knowledge:{live:true}},
         {id:'orb-2',name:'Moringa',knowledge:{live:false}}
@@ -53,10 +59,11 @@ test('Totem header exposes zone counts and plaques stay centred on the post',()=
 test('Demo Totem keeps one welcome header and four slim horizontal signs',()=>{
     const cards=[{id:'area',title:'Welcome to this area',body:'Highlights and description',stats:[]},
         ...['Pigeon Pea','Moringa','Seasonal observation','Area 2'].map((title,index)=>({id:`sign-${index}`,title,eyebrow:'SIGN',summary:'',boardSide:index%2?'left':'right',signHeight:1.2-index*.22}))];
-    const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'area',{signsVisible:true,faded:false,bodyHalfWidth:.2,bodyHalfDepth:.14});
+    const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'area',{signsVisible:true,faded:false,bodyHalfWidth:.095,bodyHalfDepth:.075,demoZone:true});
     assert.equal(surfaces.filter(surface=>surface.card.id==='area').length,1);
     assert.equal(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').length,4);
-    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.17));
+    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.18));
+    assert.deepEqual(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').map(surface=>Math.sign(surface.center.x)),[1,-1,1,-1]);
     assert.ok(!totemCardsMarkup(cards,'area').includes('nlxr-totem-detail'));
 });
 

@@ -7,6 +7,11 @@ const TOTEM_BUTTON_RADIUS = .052;
 const TOTEM_BUTTON_FACE_RADIUS = .046;
 const TOTEM_TEXT_RESOLUTION = Object.freeze({ plaque:[1024,256], header:[1024,512], detail:[1024,512], control:[512,512] });
 
+export function textureSupportsMipmaps(source) {
+    const powerOfTwo=value=>Number.isInteger(value) && value>0 && (value & (value-1))===0;
+    return powerOfTwo(source?.width) && powerOfTwo(source?.height);
+}
+
 function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9) {
     const localY = Math.max(-1, Math.min(1, (y - bodyHalfHeight) / bodyHalfHeight));
     const t = Math.max(0, Math.min(1, (localY + .35) / 1.35));
@@ -74,8 +79,10 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const front={x:-right.z,y:0,z:right.x};
     const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
     const bodyHalfWidth = Number(state?.bodyHalfWidth) || .07;
-    const boardWidth = Number(state?.boardWidth) || (bodyHalfWidth >= .16 ? .72 : .58);
-    const boardHeight = Number(state?.boardHeight) || (bodyHalfWidth >= .16 ? .17 : .22);
+    const demoZone=Boolean(state?.demoZone);
+    const boardWidth = Number(state?.boardWidth) || (demoZone ? .52 : .58);
+    const boardHeight = Number(state?.boardHeight) || (demoZone ? .18 : .22);
+    const boardAttach=bodyHalfWidth+boardWidth/2-.035;
     const place = (x,y,width,height,card,detail=false,offset=bodyHalfDepth+.018) => ({
         center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
         right, width,height,card,detail
@@ -87,21 +94,24 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
     const bodyHalfHeight = Number(state?.bodyHalfHeight) || .69;
     const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
-    const signBoard = (card, index, count) => ({
-        ...place(0, 1.17-index*(count > 3 ? .235 : .26), boardWidth, boardHeight, {
-            ...card,
-            boardStyle:'attached-sign',
-            boardSide:card.boardSide || '',
-            directional:Boolean(card.navigation?.reliable)
-        }),
-        boardSide:card.boardSide || ''
-    });
+    const signBoard = (card, index, count) => {
+        const side=card.boardSide==='left'?-1:card.boardSide==='right'?1:0;
+        return {
+            ...place(side*boardAttach, 1.20-index*(count > 3 ? .25 : .28), boardWidth, boardHeight, {
+                ...card,
+                boardStyle:'attached-sign',
+                boardSide:card.boardSide || '',
+                directional:Boolean(card.navigation?.reliable)
+            }),
+            boardSide:card.boardSide || ''
+        };
+    };
     const headerSelected=selectedId===cards[0]?.id;
     const headerBoard = cards[0] ? {
-        ...place(0, 1.48, Math.max(.88, boardWidth + .16), .30, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
+        ...place(0, 1.48, demoZone ? .74 : Math.max(.88, boardWidth + .16), .30, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
         boardStyle:'header'
     } : null;
-    const signCards=cards.slice(1,bodyHalfWidth>=.16 ? 5 : 3);
+    const signCards=cards.slice(1,demoZone ? 5 : 3);
     const surfaces=[
         ...buttons.map((button,index)=>({center:button.faceCenter,right,width:.16,height:.16,card:index===0?signs:fade,detail:false,opacity:faded ? .18 : 1})),
         ...(signsVisible && !faded ? [
@@ -118,13 +128,13 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)};
     const size=record?.marker?.appearance?.size || record?.appearance?.size || 'medium';
     const sizeFactor=({tiny:.58,small:.76,medium:1,large:1.34,huge:1.82})[size] || 1;
-    const bodyHalfWidth=record?.demoType==='zone' ? .20 : .07*sizeFactor;
+    const bodyHalfWidth=record?.demoType==='zone' ? .095 : .07*sizeFactor;
     const bodyHalfHeight=record?.demoType==='zone'
         ? .82
         : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-bodyHalfWidth*.35);
     return totemCardSurfaces(position,right,cards,selectedId,{
         signsVisible:Boolean(record?.demoTotemSignsVisible),faded:Boolean(record?.demoTotemFaded),
-        bodyHalfWidth,bodyHalfDepth:record?.demoType==='zone' ? .14 : bodyHalfWidth*.5,bodyHalfHeight
+        bodyHalfWidth,bodyHalfDepth:record?.demoType==='zone' ? .075 : bodyHalfWidth*.5,bodyHalfHeight,demoZone:record?.demoType==='zone'
     });
 }
 
@@ -281,9 +291,13 @@ export function createSpatialTotemCards(gl, options = {}) {
                 if(!entry || entry.content!==content) {
                     if(entry)gl.deleteTexture(entry.texture);
                     const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
-                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,(options.canvas || cardCanvas)(surface.card,surface.detail,selectedId===surface.card.id));
-                    gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-                    if(anisotropy){const maximum=gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,maximum));}
+                    const artwork=(options.canvas || cardCanvas)(surface.card,surface.detail,selectedId===surface.card.id);
+                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,artwork);
+                    const mipmapped=textureSupportsMipmaps(artwork);
+                    if(mipmapped)gl.generateMipmap(gl.TEXTURE_2D);
+                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,mipmapped?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR);
+                    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+                    if(mipmapped && anisotropy){const maximum=gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,maximum));}
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
                     entry={texture,content,started:entry?.started ?? performance.now(),fadeDuration:entry?.fadeDuration ?? surface.card.fadeDuration ?? 450};textures.set(key,entry);
                 }

@@ -1586,8 +1586,7 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 .nlxr-totem-stats i { color:#fff1b9; font:800 14px/1 system-ui; font-style:normal; }
 .nlxr-totem-stats em { color:rgba(224,245,222,.82); font:700 7px/1.2 system-ui; font-style:normal; letter-spacing:.05em; }
 
-/* The demo Totem mirrors the immersive construction: a timber post, one
-   blue-grey header and centred, touch-sized wooden plaques. */
+/* Timber and metal finish with sign arms that keep the direction of each target. */
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { width:min(82vw,360px);height:min(62vh,520px); }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
     left:42%;top:5%;width:16%;height:94%;border-radius:18px 18px 7px 7px;
@@ -1611,16 +1610,20 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 }
 .tryit-sim-totem-system .nlxr-totem-cards > button:first-child::after { left:50%;right:auto;top:8px;width:9px;height:9px;transform:translateX(-50%);border:1px solid #303638;border-radius:50%;background:radial-gradient(circle at 35% 30%,#eef1ec,#697174 55%,#303638);box-shadow:0 1px 2px #0008; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] {
-    left:50%;right:auto;top:calc(27% + var(--plaque-index)*12.5%);width:76%;height:52px;min-height:52px;padding:5px 28px 6px;transform:translateX(-50%);clip-path:none;border:1px solid rgba(62,42,29,.72);border-radius:9px;
+    top:27%;width:46%;height:52px;min-height:52px;padding:5px 12px 6px;transform:none;border:1px solid rgba(62,42,29,.72);border-radius:9px;
     background:
         repeating-linear-gradient(2deg,transparent 0 8px,rgba(56,38,27,.15) 9px,transparent 10px 16px),
         linear-gradient(100deg,#95785b,#b09472 48%,#74583f);
     color:#241d18;box-shadow:inset 0 1px rgba(255,242,214,.45),inset 0 -4px rgba(54,37,27,.16),0 7px 15px rgba(4,12,8,.30);
     text-align:center;text-shadow:none;font-family:Manrope,"Segoe UI",system-ui,sans-serif;
 }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque][data-directional="true"][data-sign-side="left"] { clip-path:polygon(9% 0,100% 0,100% 100%,9% 100%,0 50%); }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque][data-directional="true"][data-sign-side="right"] { clip-path:polygon(0 0,91% 0,100% 50%,91% 100%,0 100%); }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque]::after { left:50%;right:auto;top:5px;width:8px;height:8px;transform:translateX(-50%);border:1px solid #4a433b;border-radius:50%;background:radial-gradient(circle at 35% 30%,#eee9dc,#77746c 56%,#353535);box-shadow:0 1px 2px #0007; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque]:nth-child(3) { top:40%; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque]:nth-child(4) { top:53%; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque]:nth-child(5) { top:66%; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque][data-sign-side="left"] { left:3%;right:auto;clip-path:polygon(9% 0,100% 0,100% 100%,9% 100%,0 50%); }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque][data-sign-side="right"] { left:51%;right:auto;clip-path:polygon(0 0,91% 0,100% 50%,91% 100%,0 100%); }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque]:not([data-sign-side]) { left:50%;right:auto;transform:translateX(-50%); }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque]::after { display:block;left:50%;right:auto;top:5px;width:8px;height:8px;transform:translateX(-50%);border:1px solid #4a433b;border-radius:50%;background:radial-gradient(circle at 35% 30%,#eee9dc,#77746c 56%,#353535);box-shadow:0 1px 2px #0007; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] small { color:rgba(49,37,28,.72);font-size:7px;line-height:1;letter-spacing:.11em; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] strong { color:#241d18;font-size:12px;line-height:1.12;font-weight:650; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] > span { display:none; }
@@ -1628,7 +1631,7 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 @media(max-width:600px) {
     .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { width:min(78vw,300px);height:min(57vh,450px); }
     .tryit-sim-totem-system .nlxr-totem-cards > button:first-child { width:84%;min-height:76px; }
-    .tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] { width:80%;height:48px;min-height:48px;top:calc(25% + var(--plaque-index)*13%); }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] { width:46%;height:48px;min-height:48px;padding:4px 6px; }
     .tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] strong { font-size:11px; }
 }
 

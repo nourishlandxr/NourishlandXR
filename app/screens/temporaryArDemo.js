@@ -319,7 +319,7 @@ const DEMO_ARCHETYPE_REVEAL_MS=1400;
 // responsive while the XR frame loop remains free to render at 60fps.
 const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48;
 const DEMO_LIM_TEXTURE_INTERVAL_MS = 64;
-const DEMO_LIM_SURFACE_CANVAS = Object.freeze({width:1600,height:1344});
+const DEMO_LIM_SURFACE_CANVAS = Object.freeze({width:2500,height:2100});
 const AR_WELCOME_SETTLED_MS = 64000;
 const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
 // A paused XR/browser timer must never leave the demo waiting forever for
@@ -1005,20 +1005,28 @@ function demoTotemCards(record) {
     const second=record.tutorialStage==='totem2';
     const plants=markers.filter(item=>item.demoType==='plant' && Boolean(item.demoAmbientNeighbour)===second);
     const notes=markers.filter(item=>item.demoType==='note' && Boolean(item.demoAmbientNeighbour)===second);
+    const right={x:Math.cos(demoTotemRotationY(record)),z:-Math.sin(demoTotemRotationY(record))};
+    const directionFor=item=>{
+        const dx=Number(item?.position?.x)-Number(record.position?.x);
+        const dz=Number(item?.position?.z)-Number(record.position?.z);
+        if(Number.isFinite(dx) && Number.isFinite(dz) && Math.hypot(dx,dz)>.05)return dx*right.x+dz*right.z<0?'left':'right';
+        return Number(item?.simulatedAnchor?.x)<Number(record.simulatedAnchor?.x)?'left':'right';
+    };
+    const pointedTitle=(title,side)=>side==='left'?`← ${title}`:`${title} →`;
     const zoneName=record.demoZoneName || record.demoContent?.title || record.name || 'This zone';
     const header={...totemKnowledgeCards({title:zoneName,introduction:`Welcome to ${zoneName}.`,
         plants:plants.map(item=>({id:item.id,name:item.name,knowledge:item.demoAmbientNeighbour?{live:false}:demoOrbKnowledge(item)})),
         notes:notes.map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),compact:true})[0],eyebrow:'ZONE'};
     const plantSigns=second
-        ? Array.from({length:Math.ceil(plants.length/2)},(_,index)=>plants.slice(index*2,index*2+2)).map((pair,index)=>({id:`plants-${index}`,eyebrow:pair.length===1?'PLANT':'PLANTS',title:pair.map(item=>item.name).join(' · '),summary:'',plaque:true,references:pair.map(item=>item.id)}))
-        : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'PLANT',title:item.name,summary:'',plaque:true,references:[item.id]}));
+        ? ['left','right'].map(side=>({side,pair:plants.filter(item=>directionFor(item)===side)})).filter(group=>group.pair.length).map(({side,pair})=>({id:`plants-${side}`,eyebrow:pair.length===1?'PLANT ORB':'PLANT ORBS',title:pointedTitle(pair.map(item=>item.name).join(' · '),side),summary:'',plaque:true,boardSide:side,references:pair.map(item=>item.id)}))
+        : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'PLANT ORB',title:pointedTitle(item.name,directionFor(item)),summary:'',plaque:true,boardSide:directionFor(item),references:[item.id]}));
     const note=notes[0];
     const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
     const destination=partner?.demoZoneName || record.demoNeighbourZoneName || '';
     const navigation=resolveTotemNavigation(record,partner);
-    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR ZONE',title:navigation.reliable?`${navigation.arrow} ${destination}`:`Explore ${destination}`,summary:'',body:navigation.reliable?'Follow the linked route.':'Direction appears after the zones are reliably linked.',boardSide:navigation.reliable?navigation.side:'',plaque:true,navigation:{...navigation,destinationId:partner?.id || ''}} : null;
+    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:navigation.reliable?`${navigation.arrow} ${destination}`:`Explore ${destination}`,summary:'',body:navigation.reliable?'Follow the linked route.':'Direction appears after the zones are reliably linked.',boardSide:navigation.reliable?navigation.side:partner?directionFor(partner):'',plaque:true,navigation:{...navigation,destinationId:partner?.id || ''}} : null;
     return [header,...plantSigns,
-        ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:note.name,summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,references:[note.id]}] : []),
+        ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:pointedTitle(note.name,directionFor(note)),summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
         ...(neighbour ? [neighbour] : [])
     ].slice(0,5);
 }
@@ -1628,7 +1636,7 @@ function drawKnowledgeCombinationExperience(ctx,now){
         ctx.fillStyle='#fff';ctx.font='800 39px system-ui,sans-serif';drawWrappedTextureText(ctx,title,left+30,top+60,width-60,44,2);ctx.fillStyle='rgba(247,255,243,.78)';ctx.font='600 22px system-ui,sans-serif';drawWrappedTextureText(ctx,detail,left+30,top+119,width-60,27,2);ctx.restore();
     };
     const line=(from,to,fromColor,toColor,width=11)=>{const a=toPoint(from),b=toPoint(to),bend=Math.max(100,Math.abs(b.x-a.x)*.28),gradient=ctx.createLinearGradient(a.x,a.y,b.x,b.y);gradient.addColorStop(0,fromColor);gradient.addColorStop(1,toColor);ctx.save();ctx.strokeStyle=gradient;ctx.lineWidth=width;ctx.lineCap='round';ctx.shadowColor=toColor;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x+bend,a.y,b.x-bend,b.y,b.x,b.y);ctx.stroke();ctx.restore();};
-    ctx.save();ctx.fillStyle='rgba(6,27,21,.62)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
+    ctx.save();ctx.fillStyle='rgba(6,27,21,.16)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
     ctx.textAlign='center';ctx.fillStyle='#eff7e9';ctx.font='800 58px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,155);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,210,2100);
     ctx.textAlign='left';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 23px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',215,525);ctx.fillText('LEARNING CELLS',1775,525);
     if(state.primaryResult && choice){line(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.sourceColor,choice.targetColor,8);line(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.targetColor,choice.sourceColor,8);}
@@ -2399,7 +2407,7 @@ function startKnowledgeCombinationExperience(){
     const plant=knowledgeCombinationPlantRecord();
     if(plant){plant.demoInteractive=true;plant.demoAlive=true;plant.demoExpanded=false;plant.demoActiveBranch='';plant.demoExpandedNodeIds=[];plant.demoExpandedBranches=[];plant.demoSelectedNodeId='';plant.informationPosition=null;plant.informationPose=null;refreshDemoRecord(plant);}
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');if(board)board.hidden=true;
-    appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');infoPanel?.suspend(true);
+    appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');
     const overlay=ensureKnowledgeCombinationOverlay();overlay?.removeAttribute('hidden');syncKnowledgeCombinationOverlay();
     setGuide('Tap the Pigeon Pea orb or choose one of its two characteristic cells. Then hold and drag its glowing node.');
     knowledgeCombinationCleanup=()=>{limCancelFrame(knowledgeCombinationHold?.frame);knowledgeCombinationHold=null;overlay?.setAttribute('hidden','');};
@@ -4969,7 +4977,7 @@ function drawMarker(view) {
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
-        const bodyHalfWidth=.20,bodyHalfDepth=.14,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES,rotationY=demoTotemRotationY(record);
+        const bodyHalfWidth=.095,bodyHalfDepth=.075,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES,rotationY=demoTotemRotationY(record);
         drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
             halfWidth: bodyHalfWidth,
             halfHeight: bodyHalfHeight,
@@ -4980,6 +4988,12 @@ function drawMarker(view) {
             alpha: arrival*(record.demoTotemFaded ? .18 : .98),
             rotationY
         });
+        const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
+        for(const [offset,shade] of [[-.048,[.17,.12,.09,.25]],[-.016,[.16,.11,.08,.18]],[.037,[.82,.69,.52,.16]]]){
+            const x=record.position.x+right.x*offset+front.x*(bodyHalfDepth+.002);
+            const z=record.position.z+right.z*offset+front.z*(bodyHalfDepth+.002);
+            drawSpatialTether(gl,tetherRenderer,view,{x,y:groundBaseY+.035,z},{x,y:groundBaseY+bodyHalfHeight*2-.035,z},{segments:2,width:.002,curve:0,lift:0,color:shade});
+        }
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival
@@ -5082,6 +5096,14 @@ function drawMarker(view) {
             const rotationY=demoTotemRotationY(record);
             const surfaces=totemLayoutForRecord(record,base,record.liveTotemCards,record.totemSelectedCard,rotationY);
             const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
+            for(const surface of surfaces){
+                if(surface.card?.boardStyle!=='attached-sign' || !surface.boardSide)continue;
+                const side=surface.boardSide==='left'?-1:1;
+                const right={x:Math.cos(rotationY),z:-Math.sin(rotationY)},front={x:-right.z,z:right.x};
+                const start={x:base.x+right.x*side*.08+front.x*.08,y:surface.center.y,z:base.z+right.z*side*.08+front.z*.08};
+                const end={x:surface.center.x-right.x*side*(surface.width*.44),y:surface.center.y,z:surface.center.z-right.z*side*(surface.width*.44)};
+                drawSpatialTether(gl,tetherRenderer,view,start,end,{segments:2,width:.012,curve:0,lift:0,color:[.45,.43,.39,.9]});
+            }
             drawSpatialTotemPlaques(gl,prismRenderer,sphereRenderer,view,surfaces,arrival);
             totemCardsRenderer.draw(view,record,base,record.liveTotemCards,record.totemSelectedCard);
         });
