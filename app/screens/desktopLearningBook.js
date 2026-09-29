@@ -79,7 +79,7 @@ function guideLimCanvas(state) {
 function guidePimCanvas(state, documents, knowledge, size) {
     const document = documents[state.plant];
     const selected = document.nodes.find(node => node.id === state.pimId) || document.nodes[0];
-    const expanded = bookNodePath(document.nodes, selected.id).map(node => node.path);
+    const expanded = state.pimExpanded ? bookNodePath(document.nodes, selected.id).map(node => node.path) : [];
     return `<div class="nxr-guide-pim-field" style="width:${size.width}px;height:${size.height}px">${plantInformationMeshMarkup(knowledge[state.plant], expanded, {
         layoutWidth: size.width, layoutHeight: size.height,
         viewportWidth: size.width, viewportHeight: size.height,
@@ -88,20 +88,32 @@ function guidePimCanvas(state, documents, knowledge, size) {
     })}</div>`;
 }
 
+function guidePlaceCanvas() {
+    return `<div class="nxr-guide-place-map" aria-label="How a NourishlandXR Project is organised">
+        <article class="nxr-guide-place-project"><small>ONE WHOLE PLACE</small><strong>Project</strong><span>Everything that belongs to this garden, school or landscape.</span></article>
+        <div class="nxr-guide-place-link" aria-hidden="true">organised into</div>
+        <div class="nxr-guide-place-areas"><article><small>AREA 01</small><strong>Food garden</strong></article><article><small>AREA 02</small><strong>Learning grove</strong></article></div>
+        <div class="nxr-guide-place-link" aria-hidden="true">find your direction</div>
+        <article class="nxr-guide-place-totem"><small>DIRECTIONAL TOTEM</small><div><span>← Food garden</span><span>Learning grove →</span><span>Plants · Notes · place information</span></div></article>
+    </div>`;
+}
+
 function guideReading(state, documents) {
+    if (state.step === 0) return `<p class="nxr-guide-kicker">START WITH A PLACE</p><h2>One Project, organised into Areas</h2><p>A Project represents the whole place. Areas divide it into useful locations, such as a food garden and a learning grove.</p><p>Directional Totems help people find their way. Their signs point toward Areas, Plants, Notes and other information, so content stays connected to where it belongs.</p>`;
+    if (state.step === 3) return `<p class="nxr-guide-kicker">YOU’RE READY TO EXPLORE</p><h2>Bring knowledge into a real place</h2><p>Search connected plant databases for dynamic reference information. Check its source, then add reviewed knowledge to a Project.</p><p>Create field guides from saved Plants and Areas, and add Notes as you observe how the place changes.</p><p>On a compatible phone or headset, the optional AR introduction lets you place and select Plant Orbs, follow Totem signs, open learning cells and add Notes in the landscape.</p><div class="nxr-guide-reading-next"><strong>Choose what to do next</strong><button type="button" data-guide-place>Explore a place <span aria-hidden="true">→</span></button><button type="button" data-guide-create>Create &amp; manage a Project <span aria-hidden="true">→</span></button><button type="button" data-guide-ar>Open the optional AR introduction <span aria-hidden="true">→</span></button><button type="button" data-guide-restart>Run the introduction again <span aria-hidden="true">↻</span></button></div>`;
     if (state.mode === 'limo') {
         const cell = LIM_CELL_BY_ID[state.limId];
-        if (!cell) return `<p class="nxr-guide-kicker">LIMO · LEARNING INFORMATION MESH</p><h2>Choose a learning theme</h2><p>Select a cell on the canvas. Its explanation will open here.</p><img class="nxr-guide-reading-art" src="${ART.learning}" alt="An explorer looking closely at a plant" />`;
+        if (!cell) return `<p class="nxr-guide-kicker">LEARNING IDEAS · LIMO</p><h2>Choose a learning theme</h2><p>Select a cell on the canvas. Its explanation will open here.</p><img class="nxr-guide-reading-art" src="${ART.learning}" alt="An explorer looking closely at a plant" />`;
         const path = bookLearningPath(cell.id, guideLimFace(cell.id).id);
         const children = bookLearningChildren(cell.id);
-        return `<p class="nxr-guide-kicker">LIMO · LEARNING CELL</p><p class="nxr-guide-reading-path">${escapeHtml(path.map(item => item.title).join(' / '))}</p><h2>${escapeHtml(cell.title)}</h2><p>${escapeHtml(cell.content || limLearningContent(cell.id).body || '')}</p><div class="nxr-guide-reading-next"><strong>${children.length ? 'Follow this idea' : 'End of this branch'}</strong>${children.map(child => `<button type="button" data-guide-lim="${escapeHtml(child.id)}">${escapeHtml(child.title)} <span aria-hidden="true">→</span></button>`).join('') || '<p>Choose another learning theme to explore.</p>'}</div>`;
+        return `${state.step===2?'<p class="nxr-guide-link-context">Connected example · Pigeon Pea → Food Forest → Function</p>':''}<p class="nxr-guide-kicker">LEARNING IDEAS · LIMO</p><p class="nxr-guide-reading-path">${escapeHtml(path.map(item => item.title).join(' / '))}</p><h2>${escapeHtml(cell.title)}</h2><p>${escapeHtml(cell.content || limLearningContent(cell.id).body || '')}</p><div class="nxr-guide-reading-next"><strong>${children.length ? 'Follow this idea' : 'End of this branch'}</strong>${children.map(child => `<button type="button" data-guide-lim="${escapeHtml(child.id)}">${escapeHtml(child.title)} <span aria-hidden="true">→</span></button>`).join('') || '<p>Choose another learning theme to explore.</p>'}</div>`;
     }
     const document = documents[state.plant];
     const node = document.nodes.find(item => item.id === state.pimId) || document.nodes[0];
     const children = bookChildren(document.nodes, node.id);
     const path = bookNodePath(document.nodes, node.id);
     const image = state.plant === 'moringa' ? ART.moringa : ART.pigeon;
-    return `<p class="nxr-guide-kicker">PIMO · PLANT INFORMATION MESH</p><div class="nxr-guide-reading-plant"><img src="${image}" alt="" /><span>${escapeHtml(document.identity?.commonName || '')}<small>${escapeHtml(document.identity?.scientificName || '')}</small></span></div><p class="nxr-guide-reading-path">${escapeHtml(path.map(item => item.title).join(' / '))}</p><h2>${escapeHtml(node.title)}</h2>${node.preview ? `<p class="nxr-guide-reading-preview">${escapeHtml(node.preview)}</p>` : ''}<p>${escapeHtml(node.body || document.identity?.identityStatement || '')}</p>${node.safetyNote ? `<p class="nxr-guide-reading-safety"><strong>Take care</strong><br>${escapeHtml(node.safetyNote)}</p>` : ''}<div class="nxr-guide-reading-next"><strong>${children.length ? 'Follow a child cell' : 'End of this branch'}</strong>${children.map(child => `<button type="button" data-guide-pim="${escapeHtml(child.id)}">${escapeHtml(child.title)} <span aria-hidden="true">→</span></button>`).join('') || '<p>Choose another hexagon on the canvas.</p>'}</div>`;
+    return `<p class="nxr-guide-kicker">PLANT INFORMATION · PIMO</p><div class="nxr-guide-reading-plant"><img src="${image}" alt="" /><span>${escapeHtml(document.identity?.commonName || '')}<small>${escapeHtml(document.identity?.scientificName || '')}</small></span></div><p class="nxr-guide-reading-path">${escapeHtml(path.map(item => item.title).join(' / '))}</p><h2>${escapeHtml(node.title)}</h2>${node.preview ? `<p class="nxr-guide-reading-preview">${escapeHtml(node.preview)}</p>` : ''}<p>${escapeHtml(node.body || document.identity?.identityStatement || '')}</p>${node.safetyNote ? `<p class="nxr-guide-reading-safety"><strong>Take care</strong><br>${escapeHtml(node.safetyNote)}</p>` : ''}<div class="nxr-guide-reading-next"><strong>${children.length ? 'Open a child cell' : 'End of this branch'}</strong>${children.map(child => `<button type="button" data-guide-pim="${escapeHtml(child.id)}">${escapeHtml(child.title)} <span aria-hidden="true">→</span></button>`).join('') || '<p>Choose another hexagon on the canvas.</p>'}</div>`;
 }
 
 export function renderDesktopLearningBook(app, { moringaDocument, onExit = () => globalThis.renderLaunchScreen?.() } = {}) {
@@ -110,14 +122,27 @@ export function renderDesktopLearningBook(app, { moringaDocument, onExit = () =>
     const controller = new AbortController();
     const documents = { pigeon: PIGEON_PEA_PIM, moringa: moringaDocument };
     const knowledge = { pigeon: pimToArKnowledge(documents.pigeon), moringa: pimToArKnowledge(documents.moringa) };
-    const state = { mode: 'pimo', plant: 'pigeon', pimId: 'food-forest', limId: '' };
+    const state = { step: 0, mode: 'overview', plant: 'pigeon', pimId: 'food-forest', pimExpanded: false, limId: 'lim-food-forest' };
     const canvasSize = () => ({
         width: Math.max(650, Math.min(1030, (globalThis.innerWidth || 1440) - 410)),
         height: Math.max(570, Math.min(740, (globalThis.innerHeight || 850) - 170))
     });
     const render = (focus = '') => {
         const size = canvasSize();
-        app.innerHTML = `<div class="nxr-guide"><header class="nxr-guide-header"><div><p class="nxr-guide-kicker">NOURISHLANDXR · DESKTOP TUTORIAL</p><h1>Explore the interface</h1><p>Choose a mesh, select a cell, and read its information on the right.</p></div><button type="button" class="nxr-guide-exit" data-guide-exit>Close tutorial ×</button></header><div class="nxr-guide-toolbar"><div class="nxr-guide-tabs" role="group" aria-label="Choose a mesh"><button type="button" data-guide-mode="pimo" aria-pressed="${state.mode === 'pimo'}">PIMO <small>Plant information</small></button><button type="button" data-guide-mode="limo" aria-pressed="${state.mode === 'limo'}">LIMO <small>Learning information</small></button></div><p>${state.mode === 'pimo' ? 'Select a hexagon to open plant information. Select a branch to go deeper.' : 'Select a learning cell to open its topic. Select a child to follow the idea.'}</p></div><main class="nxr-guide-workspace"><section class="nxr-guide-canvas" aria-label="${state.mode === 'pimo' ? 'Flat Plant Information Mesh' : 'Flat Learning Information Mesh'}"><div class="nxr-guide-canvas-top"><span>${state.mode === 'pimo' ? 'PLANT INFORMATION MESH' : 'LEARNING INFORMATION MESH'}</span>${state.mode === 'pimo' ? `<div class="nxr-guide-plant-switch" role="group" aria-label="Choose a plant"><button type="button" data-guide-plant="pigeon" aria-pressed="${state.plant === 'pigeon'}">Pigeon Pea</button><button type="button" data-guide-plant="moringa" aria-pressed="${state.plant === 'moringa'}">Moringa</button></div>` : '<button type="button" class="nxr-guide-overview" data-guide-lim-overview>All themes</button>'}</div><div class="nxr-guide-canvas-scroll">${state.mode === 'pimo' ? guidePimCanvas(state, documents, knowledge, size) : guideLimCanvas(state)}</div></section><aside class="nxr-guide-reading" aria-label="Information side panel"><div class="nxr-guide-reading-head">INFORMATION PANEL</div><div class="nxr-guide-reading-body" aria-live="polite">${guideReading(state, documents)}</div></aside></main><footer class="nxr-guide-footer"><span>1 · Choose a mesh</span><span>2 · Select a cell</span><span>3 · Follow a branch</span></footer></div>`;
+        state.mode = state.step===0?'overview':state.step===1?'pimo':'limo';
+        const steps=['Map a place','Open plant information','Apply a learning idea','Use NLXR in the field'];
+        const guidance=[
+            'A Project contains Areas. Directional Totems help people find Plants, Notes and other place information.',
+            'This is the real Plant Information Mesh. Select Food Forest; it opens and grows its child cells around it. Choose any other hexagon to open that branch.',
+            'Now connect the plant’s Food Forest role to a learning idea. Select Function; its explanation opens beside the canvas.',
+            'The pattern is simple: map a place, connect trusted information, then use it to guide observation and action.'
+        ];
+        const canvasTitle=state.mode==='overview'?'PROJECT · AREAS · DIRECTIONAL TOTEMS':state.mode==='pimo'?'PLANT INFORMATION · PIMO':'LEARNING IDEAS · LIMO';
+        const canvasLabel=state.mode==='overview'?'Project, Areas and Totem map':state.mode==='pimo'?'Flat interactive Plant Information Mesh':'Flat interactive Learning Information Mesh';
+        const canvasContent=state.mode==='overview'?guidePlaceCanvas():state.mode==='pimo'?guidePimCanvas(state,documents,knowledge,size):guideLimCanvas(state);
+        const progress=state.step<3?`<span>STEP ${state.step+1} OF 4 · ${steps[state.step]}</span><span>${steps.slice(0,4).map((step,index)=>`<i class="${index===state.step?'is-current':index<state.step?'is-done':''}" aria-label="${escapeHtml(step)}"></i>`).join('')}</span>`:'<span>INTRODUCTION COMPLETE</span>';
+        const navigation=state.step===0?'<button type="button" data-guide-next>Next: open plant information →</button>':state.step===1?'<button type="button" data-guide-back>← Back</button><button type="button" data-guide-next>Next: connect learning →</button>':state.step===2?'<button type="button" data-guide-back>← Back</button><button type="button" data-guide-next>Finish introduction →</button>':'';
+        app.innerHTML = `<div class="nxr-guide"><header class="nxr-guide-header"><div><p class="nxr-guide-kicker">NOURISHLANDXR · INTERACTIVE INTRODUCTION</p><h1>One place. Connected knowledge.</h1><p>See how NLXR links real places, plant information and practical learning.</p></div><button type="button" class="nxr-guide-exit" data-guide-exit>Close introduction ×</button></header><div class="nxr-guide-toolbar"><strong>${steps[state.step].toUpperCase()}</strong><p>${guidance[state.step]}</p></div><main class="nxr-guide-workspace"><section class="nxr-guide-canvas" aria-label="${canvasLabel}"><div class="nxr-guide-canvas-top"><span>${canvasTitle}</span>${state.mode==='pimo'?'<span>PIGEON PEA · CLICK A CELL TO OPEN IT</span>':state.mode==='limo'?'<span>CLICK A CELL TO READ AND FOLLOW IT</span>':''}</div><div class="nxr-guide-canvas-scroll">${canvasContent}</div></section><aside class="nxr-guide-reading" aria-label="Information side panel"><div class="nxr-guide-reading-head">${state.step===0?'HOW A PLACE IS ORGANISED':state.step===3?'WHAT YOU CAN DO NEXT':'INFORMATION OPENS HERE'}</div><div class="nxr-guide-reading-body" aria-live="polite">${guideReading(state, documents)}</div></aside></main><footer class="nxr-guide-footer"><div class="nxr-guide-progress">${progress}</div><div class="nxr-guide-navigation">${navigation}</div></footer></div>`;
         if (state.mode === 'pimo') syncPimConnectionLayer(app.querySelector('[data-pim-renderer="canonical"]'));
         if (focus) app.querySelector(focus)?.focus({ preventScroll: true });
     };
@@ -126,12 +151,15 @@ export function renderDesktopLearningBook(app, { moringaDocument, onExit = () =>
         const button = event.target.closest('button');
         if (!button || !app.contains(button)) return;
         if (button.hasAttribute('data-guide-exit')) { exit(); return; }
-        if (button.dataset.guideMode) { state.mode = button.dataset.guideMode; render(`[data-guide-mode="${state.mode}"]`); return; }
-        if (button.dataset.guidePlant && documents[button.dataset.guidePlant]) { state.plant = button.dataset.guidePlant; state.pimId = 'food-forest'; render(`[data-guide-plant="${state.plant}"]`); return; }
-        if (button.hasAttribute('data-guide-lim-overview')) { state.limId = ''; render('[data-guide-lim-overview]'); return; }
-        if (button.dataset.guideLim && LIM_CELL_BY_ID[button.dataset.guideLim]) { state.mode = 'limo'; state.limId = button.dataset.guideLim; render(`[data-guide-lim="${state.limId}"]`); return; }
+        if (button.hasAttribute('data-guide-next')) { state.step=Math.min(3,state.step+1);render('[data-guide-next]');return; }
+        if (button.hasAttribute('data-guide-back')) { state.step=Math.max(0,state.step-1);render('[data-guide-next]');return; }
+        if (button.hasAttribute('data-guide-place')) { exit();globalThis.renderV1Explorer?.();return; }
+        if (button.hasAttribute('data-guide-create')) { exit();globalThis.renderDemoProjects?.();return; }
+        if (button.hasAttribute('data-guide-ar')) { exit();globalThis.openTemporaryArDemoWindow?.();return; }
+        if (button.hasAttribute('data-guide-restart')) { state.step=0;state.mode='overview';state.limId='lim-food-forest-function';render();return; }
+        if (button.dataset.guideLim && LIM_CELL_BY_ID[button.dataset.guideLim]) { state.limId = button.dataset.guideLim; render(`[data-guide-lim="${state.limId}"]`); return; }
         const pimId = button.dataset.guidePim || button.dataset.pimNodeId;
-        if (pimId && documents[state.plant].nodes.some(node => node.id === pimId)) { state.mode = 'pimo'; state.pimId = pimId; render(`[data-pim-node-id="${state.pimId}"]`); }
+        if (pimId && documents[state.plant].nodes.some(node => node.id === pimId)) { state.mode = 'pimo';state.pimExpanded=state.pimId===pimId?!state.pimExpanded:true;state.pimId = pimId; render(`[data-pim-node-id="${state.pimId}"]`); }
     }, { signal: controller.signal });
     globalThis.addEventListener?.('resize', () => { if (state.mode === 'pimo') render(); }, { signal: controller.signal });
     activeBookCleanup = () => controller.abort();

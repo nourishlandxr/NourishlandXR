@@ -2024,7 +2024,30 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .nxr-guide-reading-next strong { margin-bottom:6px;color:#4a6651;font-size:11px;text-transform:uppercase;letter-spacing:.1em; }
 .nxr-guide-reading-next button { display:flex;justify-content:space-between;width:100%;padding:9px 2px;border:0;border-bottom:1px solid var(--guide-line);background:none;text-align:left;font-size:13px; }
 .nxr-guide-reading-next button:hover { color:#236841; }
-.nxr-guide-footer { display:flex;gap:25px;padding:8px 28px;border-top:1px solid var(--guide-line);background:#fafcf7;color:#617166;font-size:11px; }
+.nxr-guide-footer { display:flex;align-items:center;justify-content:space-between;gap:16px;padding:8px 28px;border-top:1px solid var(--guide-line);background:#fafcf7;color:#617166;font-size:11px; }
+.nxr-guide-progress { display:flex;align-items:center;gap:12px; }
+.nxr-guide-progress>span:last-child { display:flex;gap:5px; }
+.nxr-guide-progress i { width:8px;height:8px;border:1px solid #8a948c;border-radius:50%;background:transparent; }
+.nxr-guide-progress i.is-current { border-color:#263b2b;background:#263b2b; }
+.nxr-guide-progress i.is-done { border-color:#718578;background:#bfc9c1; }
+.nxr-guide-navigation { display:flex;gap:8px; }
+.nxr-guide-navigation button,.nxr-guide-reading-next button[data-guide-place],.nxr-guide-reading-next button[data-guide-create],.nxr-guide-reading-next button[data-guide-ar] { padding:9px 13px;border:1px solid #46534a;border-radius:6px;background:#28332b;color:#fff!important;font-weight:650; }
+.nxr-guide-navigation button[data-guide-back] { background:#fff;color:var(--guide-ink)!important;border-color:var(--guide-line); }
+.nxr-guide-place-map { display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-width:650px;min-height:570px;padding:35px;background:radial-gradient(ellipse at 50% 45%,#fff 0%,#f8fbf5 62%,#eef5eb 100%); }
+.nxr-guide-place-project,.nxr-guide-place-areas article,.nxr-guide-place-totem { display:flex;flex-direction:column;gap:6px;padding:17px 22px;border:1px solid #849187;border-radius:8px;background:#fff;box-shadow:0 5px 18px #1d3d2510; }
+.nxr-guide-place-project { min-width:min(440px,90%);text-align:center; }
+.nxr-guide-place-map small { color:#627064;font-size:10px;font-weight:750;letter-spacing:.12em; }
+.nxr-guide-place-map strong { font:500 23px/1.2 Georgia,serif; }
+.nxr-guide-place-map span { color:#526056;font-size:13px; }
+.nxr-guide-place-link { color:#68746b;font-size:12px;letter-spacing:.04em; }
+.nxr-guide-place-areas { display:flex;justify-content:center;gap:14px;width:min(620px,95%); }
+.nxr-guide-place-areas article { flex:1;max-width:250px; }
+.nxr-guide-place-areas strong { font-size:17px; }
+.nxr-guide-place-totem { width:min(620px,95%); }
+.nxr-guide-place-totem>div { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px; }
+.nxr-guide-place-totem span { padding:9px 12px;border:1px solid #b9c1bb;border-radius:4px;background:#f7f8f6;font-weight:600; }
+.nxr-guide-place-totem span:last-child { grid-column:1/-1;text-align:center;font-weight:450; }
+.nxr-guide-link-context { padding:9px 11px;border-left:3px solid #8a948c;background:#f3f5f3;color:#526056;font-size:12px; }
 @media(max-width:850px) {
     .nxr-desktop-ar-options { grid-template-columns:1fr; }
     .nxr-guide-header { padding:12px; }
@@ -2032,7 +2055,9 @@ body[data-project-theme] .creator-ar-context-toolbar button {
     .nxr-guide-toolbar { flex-wrap:wrap;gap:7px;padding:8px 12px; }
     .nxr-guide-workspace { grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(340px,1fr) minmax(190px,34vh); }
     .nxr-guide-reading-body { padding:13px; }
-    .nxr-guide-footer { padding:7px 12px; }
+    .nxr-guide-footer { flex-wrap:wrap;padding:7px 12px; }
+    .nxr-guide-place-map { min-width:0;min-height:440px;padding:16px; }
+    .nxr-guide-place-project,.nxr-guide-place-areas,.nxr-guide-place-totem { width:100%; }
 }
 @media(prefers-reduced-motion:reduce) { .nxr-guide * { animation:none!important;transition:none!important; } }
 .tryit-demo .tryit-guide,
