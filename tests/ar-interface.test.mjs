@@ -1162,7 +1162,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const hoveredRecordHit=/);
     assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.013/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.018:\.013/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
@@ -1178,7 +1178,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementPointerMarkup/);
     assert.match(styles, /\.creator-ar-overlay \.creator-ar-placement-guide/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-revealing/);
-    assert.match(source, /tap the aiming circle to place Pigeon Pea/);
+    assert.match(source, /Tap the aiming circle.*to confirm/);
     assert.match(source, /placementReady = true;\s*place\?\.removeAttribute\('hidden'\)/);
     assert.doesNotMatch(source, /Use the Move tool in the bottom bar/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
@@ -1223,7 +1223,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A project represents a whole place',art:'area'[\s\S]*title:'Areas help you find your way',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A Project holds information',art:'area'[\s\S]*title:'Areas and Totems guide you',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.match(source, /structure:\{image:new URL\('\.\.\/assets\/demo-tutorial-art\/04b-one-place-clear-structure\.png'/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
@@ -1231,9 +1231,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to Nourishland/);
     assert.match(source, /Explore how plants, places and knowledge connect/);
-    assert.match(source, /Every plant holds useful information, but that information is often scattered/);
+    assert.match(source, /A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources/);
     assert.match(source, /plant: \['A plant story in this place', \[/);
-    assert.match(source, /nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.'/);
+    assert.match(source, /nextGuide:'Aim toward the plant or tag location\. Hint: use the right joystick up or down to adjust distance\.'/);
     assert.doesNotMatch(source, /Press it to create a Plant orb\. Press Continue to load your pointer/);
     assert.doesNotMatch(source, /gentle introduction/);
     assert.doesNotMatch(source, /In Mobile Mode, the aim helps you interact with the space/);
@@ -1295,7 +1295,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const afterPlacement=moringa[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.match(source, /if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.setIntroduction\(true\);[\s\S]*infoPanel\?\.suspend\(false\);[\s\S]*if\(step\?\.art\)/);
     assert.doesNotMatch(source, /You do not need prior plant, farming or technology knowledge to begin/);
-    assert.match(source, /Each Area holds plants, observations and guidance for one part of the place/);
+    assert.match(source, /Areas organise one part of a place/);
     assert.match(source, /Pigeon Pea now has a location in this scene/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
     assert.match(source, /Moringa now has its own Plant Profile/);
@@ -1337,7 +1337,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /onUtilityAction:handleDemoPanelAction/);
     assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide learning cells':'Show learning cells'/);
     assert.match(source, /if\(action==='recenter'\)\{infoPanel\?\.recenter\(\)/);
-    assert.match(source, /demoOrientationStep>0[\s\S]{0,120}id:'back',label:'Previous'/);
+    assert.match(source, /demoOrientationStep>0[\s\S]{0,160}id:'back',label:'‹',ariaLabel:'Previous'/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
     assert.match(immersiveSelectHandler, /captureDemoInputEventRay\(event\)[\s\S]*selectDemoProfileCell\(\)/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)\) return;[\s\S]*activateImmersiveDemoControl\(\)/);
@@ -1371,7 +1371,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-demo-taskbar \.tryit-intro-continue \{[^}]*border-color:rgba\(220,239,149,\.62\)/);
     assert.doesNotMatch(styles, /\.tryit-demo\.is-quest-vr > \.tryit-intro-continue/);
-    assert.match(source, /tap the aiming circle to place Pigeon Pea/);
+    assert.match(source, /Tap the aiming circle.*to confirm/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
@@ -1423,7 +1423,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
     assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art,step\.title/);
-    assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'',body:''/);
+    assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:title \|\| 'NourishlandXR',body:body \|\| ''/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
@@ -1440,7 +1440,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.doesNotMatch(source, /radius: \.96/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.013/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.018:\.013/);
     assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
@@ -1595,7 +1595,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)/);
     assert.match(immersiveSelectHandler, /selectDemoProfileCell\(\)[\s\S]*selectDemoPlantAtPointer\(\)/);
-    assert.match(source, /target\.record\.demoType === 'plant' && target\.record\.demoExpanded\) return false/);
+    assert.doesNotMatch(source, /target\.record\.demoType === 'plant' && target\.record\.demoExpanded\) return false/);
     assert.match(source, /if \(demoInfoTarget\(\)\?\.target\) return/);
     assert.match(source, /if \(actionTarget\?\.demoType === 'note'\) return;[\s\S]*beginControllerDemoHold\(\)/);
     assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
@@ -1637,7 +1637,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const DEMO_NOTE_IMMERSIVE_SCALE = Object\.freeze\(\{ x: 2\.15, y: 1\.65 \}\)/);
     assert.match(source, /const noteScale = noteSign \? record\.demoAmbientNeighbour/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\) \{ width:min\(72vw,210px\); height:82px;/);
-    assert.match(source, /groundBaseY = demoGroundBaseY\(hitMatrix, viewerMatrix, groundYEstimate\)/);
+    assert.match(source, /groundBaseY = pairedDemoTotemGroundY\(\)/);
     assert.match(source, /y:groundBaseY\+DEMO_TOTEM_HALF_HEIGHT_METRES/);
     assert.match(read('app/screens/arMode.js'), /function totemRotationDegreesForPosition\(position, viewer = latestViewerMatrix\)/);
     assert.match(read('app/screens/arMode.js'), /type === 'area_checkpoint' \? totemRotationDegreesForPosition\(position\) : 0/);

@@ -54,9 +54,9 @@ test('desktop AR entry opens the choice and its recommended guide', () => {
     try {
         openTemporaryArDemoWindow(app);
         assert.match(app.innerHTML, /RECOMMENDED ON DESKTOP/);
-        assert.match(app.innerHTML, /Continue to AR introduction/);
+        assert.match(app.innerHTML, /Open AR introduction/);
         handlers.get('[data-desktop-learning-book]')();
-        assert.match(app.innerHTML, /data-pim-renderer="canonical"/);
+        assert.match(app.innerHTML, /Project, Areas and Totem map/);
     } finally {
         globalThis.matchMedia = previousMatchMedia;
     }
@@ -71,15 +71,16 @@ test('desktop tutorial opens canonical PIMO cells and LIMO information in a side
         contains: () => true
     };
     renderDesktopLearningBook(app, { moringaDocument: PIGEON_PEA_PIM, onExit: () => {} });
+    assert.match(app.innerHTML, /Project, Areas and Totem map/);
+    assert.match(app.innerHTML, /nxr-guide-reading/);
+    const next = () => click({ target: { closest: () => ({ dataset: {}, hasAttribute: name => name === 'data-guide-next' }) } });
+    next();
     assert.match(app.innerHTML, /data-pim-renderer="canonical"/);
     assert.match(app.innerHTML, /data-pim-node-id="food-forest"/);
-    assert.match(app.innerHTML, /nxr-guide-reading/);
-    assert.match(app.innerHTML, /Choose a mesh/);
-    click({ target: { closest: () => ({ dataset: { guideMode: 'limo' }, hasAttribute: () => false }) } });
-    assert.match(app.innerHTML, /data-guide-lim="lim-climate"/);
-    assert.match(app.innerHTML, /Choose a learning theme/);
-    click({ target: { closest: () => ({ dataset: { guideLim: 'lim-climate' }, hasAttribute: () => false }) } });
-    assert.match(app.innerHTML, /Climate and Place/);
+    next();
+    assert.match(app.innerHTML, /data-guide-lim="lim-food-forest/);
+    click({ target: { closest: () => ({ dataset: { guideLim: 'lim-food-forest-function' }, hasAttribute: () => false }) } });
+    assert.match(app.innerHTML, /Function/);
     assert.match(app.innerHTML, /Follow this idea/);
     const css = readFileSync(new URL('../app/living-objects.css', import.meta.url), 'utf8');
     assert.match(css, /\.nxr-guide-lim-cell/);

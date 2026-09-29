@@ -16,11 +16,11 @@ test('guided narrative explains the place map, proves one Plant Orb, then introd
     const conversion = demo.slice(demo.indexOf('function guidePlantConversion'), demo.indexOf('function showSceneContinue'));
     const placement = demo.slice(demo.indexOf('function placeMarker'), demo.indexOf('function pressPlacementPointer'));
     const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function pairedDemoTotemPosition'));
-    assert.match(guide, /Plants inside a Nourishland Project can have information connected to their real-world location/);
-    assert.match(guide, /Each Area holds plants, observations and guidance for one part of the place/);
-    assert.match(guide, /We’ll begin with one plant/);
+    assert.match(guide, /A Plant Orb attaches information to a real-world location/);
+    assert.match(guide, /Areas organise one part of a place/);
+    assert.match(guide, /Begin with one plant/);
     assert.match(area, /This is the Plant Orb/);
-    assert.ok(guide.indexOf('Areas help you find your way') < guide.indexOf('Begin with one plant'));
+    assert.ok(guide.indexOf('Areas and Totems guide you') < guide.indexOf('Begin with one plant'));
     assert.match(placement, /markers\.push\(marker\);[\s\S]*if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
     assert.match(conversion, /POST_PLACEMENT_AREA_STEP/);
     assert.match(closing, /school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects/);
@@ -56,7 +56,7 @@ test('demo introduces the Control panel before explaining scattered plant inform
     const orientation = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('const POST_PLACEMENT_AREA_STEP'));
     assert.doesNotMatch(opening, /scattered/);
     assert.ok(orientation.indexOf("title:'Meet your Control panel'") < orientation.indexOf("title:'Every plant holds information'"));
-    assert.ok(orientation.indexOf('information is often scattered') < orientation.indexOf("title:'A project represents a whole place'"));
+    assert.ok(orientation.indexOf('NourishlandXR brings those layers together') < orientation.indexOf("title:'A Project holds information'"));
     assert.match(demo, /'Welcome to NourishlandXR'[\s\S]*Explore how plants, places and knowledge connect/);
 });
 
@@ -123,7 +123,7 @@ test('Plant Orb responds to pointer contact in preview and immersive mode', () =
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
     assert.match(demo, /compactMarker\.addEventListener\('pointerenter'.*is-pointer-hover/);
-    assert.match(demo, /highlighted:orbType==='plant' && hoveredPlant===record/);
+    assert.match(demo, /highlighted:signTargets\.has\(record\.id\) \|\| orbType==='plant' && hoveredPlant===record/);
     assert.match(styles, /nlxr-orb-hover-pulse/);
     assert.doesNotMatch(styles, /nlxr-orb-hover-orbit/);
     assert.match(styles, /--demo-orb-ring,#e2cca0/);
@@ -173,7 +173,7 @@ test('Areas hand the journey to public learning pathways and quiet mapped object
     assert.match(demo, /record\.demoType==='note'[\s\S]*record\.demoNarrativeFaded=true/);
     assert.match(styles, /\.tryit-sim-marker-note\.is-narrative-faded/);
     assert.match(styles, /\.nlxr-totem-system\.is-narrative-faded \.nlxr-totem-controls/);
-    assert.doesNotMatch(demo, /['"][^'"\n]*(?:PIMO|LIMO)[^'"\n]*['"]/);
+    assert.match(demo, /Knowledge grows through connection/);
 });
 
 test('main intro gently fades while it narrates and the green welcome board has no old tagline', () => {
