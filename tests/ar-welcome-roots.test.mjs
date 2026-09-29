@@ -28,11 +28,11 @@ function insidePolygon(point) {
     return inside;
 }
 
-test('arrival starts with four fine edge-following roots and no spokes', () => {
+test('arrival grows two tapered trunks before later branches appear', () => {
     const early = welcomeRootFrame({ milestone: WELCOME_ROOT_MILESTONES.arrival, elapsed: 2600 });
     const visible = early.filter(root => root.stage === WELCOME_ROOT_MILESTONES.arrival && root.points.length > 1);
-    assert.equal(visible.length, 4);
-    assert.ok(visible.every(root => root.kind === 'fine' && root.width < 2.4));
+    assert.equal(visible.length, 2);
+    assert.ok(visible.every(root => root.kind === 'structural' && root.width > 10));
 
     const later = welcomeRootFrame({ milestone: WELCOME_ROOT_MILESTONES.arrival, elapsed: 4500 });
     assert.ok(visible.every(root => length(later.find(item => item.id === root.id).points) > length(root.points)));
@@ -61,20 +61,25 @@ test('real demo milestones accumulate and rapid progress completes older phases'
     assert.ok(WELCOME_ROOT_GROWTH_MS >= 5000);
 });
 
-test('mature network follows the polygon and preserves the central reading area', () => {
+test('mature roots branch from parents, cross the glass rim and preserve the reading area', () => {
     const mature = welcomeRootFrame({ milestone: WELCOME_ROOT_MAX_MILESTONE, elapsed: 100000, milestoneStartedAt: 0 });
     const visible = mature.filter(root => root.progress === 1 && root.points.length > 1);
-    assert.ok(visible.length > 60);
-    assert.ok(visible.some(root => root.kind === 'structural' && root.width > 5));
+    assert.ok(visible.length >= 18 && visible.length <= 25);
+    assert.ok(visible.some(root => root.kind === 'structural' && root.width > 10));
     assert.ok(visible.some(root => root.kind === 'medium'));
     assert.ok(visible.some(root => root.kind === 'feeder'));
     for (const root of visible) {
         assert.ok(root.points.every(point => Number.isFinite(point.x) && Number.isFinite(point.y)));
-        assert.ok(root.points.every(insidePolygon));
         assert.ok(root.points.every(point => !inReadingArea(point)));
-        assert.ok(root.points.every(point => radius(point) >= WELCOME_SHAPE.radius * .59));
+        assert.ok(root.points.every(point => radius(point) <= 532.001));
+        if (root.parentId) {
+            const parent = visible.find(item => item.id === root.parentId);
+            assert.ok(parent);
+            assert.ok(parent.points.some(point => Math.hypot(point.x - root.points[0].x, point.y - root.points[0].y) < .001));
+        }
     }
-    const structural = visible.find(root => root.id === 'structural-1');
+    assert.ok(visible.some(root => root.points.some(point => !insidePolygon(point))));
+    const structural = visible.find(root => root.id === 'structural-0');
     assert.ok(length(structural.points) > Math.abs(radius(structural.points.at(-1)) - radius(structural.points[0])) * 2);
 });
 

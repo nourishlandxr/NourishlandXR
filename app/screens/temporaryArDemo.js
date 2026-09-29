@@ -5308,7 +5308,22 @@ async function startImmersive() {
 }
 
 export function openTemporaryArDemoWindow(app) {
-    if (isDesktopLearningBookTarget()) return renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()});
+    if (isDesktopLearningBookTarget()) {
+        app.innerHTML = `<div class="screen ar-safety-screen nxr-desktop-ar-choice" data-desktop-ar-choice>
+            <div class="page-header"><p class="welcome-label">AR introduction · desktop</p><h1>Choose how to explore</h1><p class="subtitle">A desktop browser shows a plain version of the AR introduction. For a clear first look at the interface, we recommend the Learning Book.</p></div>
+            <div class="nxr-desktop-ar-options">
+                <section class="panel nxr-desktop-ar-option is-recommended"><span class="nxr-desktop-ar-tag">RECOMMENDED ON DESKTOP</span><h2>Learning Book</h2><p>Practice with flat plant and learning canvases. Select cells and read their information in a side panel. No camera or emulator is needed.</p><button class="primary" type="button" data-desktop-learning-book>Open Learning Book</button></section>
+                <section class="panel nxr-desktop-ar-option"><span class="nxr-desktop-ar-tag">FOR WEBXR OR EMULATOR SETUPS</span><h2>AR introduction</h2><p>Continue to the plain browser version, or use a WebXR capable browser or emulator. The full spatial experience is designed for compatible phones and headsets; we do not recommend this route for ordinary desktop use.</p><button type="button" data-desktop-plain-ar>Continue to AR introduction</button></section>
+            </div><button class="nxr-desktop-ar-back" type="button" data-desktop-ar-back>← Back to welcome</button>
+        </div>`;
+        app.querySelector('[data-desktop-learning-book]')?.addEventListener('click', () => renderDesktopLearningBook(app, { moringaDocument: MORINGA_PIM, onExit: () => window.renderLaunchScreen?.() }), { once: true });
+        app.querySelector('[data-desktop-plain-ar]')?.addEventListener('click', () => {
+            if (shouldSkipArIntroductionPreparation()) startTemporaryArDemo(app);
+            else renderArIntroductionPreparation(app, { onContinue: () => startTemporaryArDemo(app), onCancel: () => openTemporaryArDemoWindow(app) });
+        }, { once: true });
+        app.querySelector('[data-desktop-ar-back]')?.addEventListener('click', () => window.renderLaunchScreen?.(), { once: true });
+        return;
+    }
     if (shouldSkipArIntroductionPreparation()) return startTemporaryArDemo(app);
     renderArIntroductionPreparation(app, {
         onContinue: () => startTemporaryArDemo(app),
@@ -5317,7 +5332,6 @@ export function openTemporaryArDemoWindow(app) {
 }
 
 export async function startTemporaryArDemo(app) {
-    if (isDesktopLearningBookTarget()) return renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()});
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();

@@ -62,7 +62,7 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
 export function renderArIntroductionPreparation(app, { onContinue, onCancel } = {}) {
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
-        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">Desktop mode is an alternative illustrated book. For the full spatial experience, use a compatible Android phone or spatial device*.</p></div>
+        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">On desktop, the Learning Book is the recommended flat interface tutorial. For the full spatial experience, use a compatible Android phone or spatial device*.</p></div>
         ${botanicalTextureMarkup('prep')}
         <section class="panel ar-safety-card ar-introduction-preparation-card">
             <p class="ar-introduction-lead">On a supported device, learning cells appear in the space around you. iPhone and iPad cannot currently launch this WebXR AR mode.</p>

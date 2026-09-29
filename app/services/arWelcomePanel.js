@@ -13,21 +13,21 @@ function outline(ctx) {
 export function drawArWelcomePanel(ctx) {
  ctx.save();
  const glass=ctx.createLinearGradient(190,110,1210,990);
- glass.addColorStop(0,'rgba(75,126,88,.34)');
- glass.addColorStop(.46,'rgba(33,82,59,.43)');
- glass.addColorStop(1,'rgba(15,49,40,.49)');
+ glass.addColorStop(0,'rgba(15,29,34,.35)');
+ glass.addColorStop(.46,'rgba(9,23,29,.45)');
+ glass.addColorStop(1,'rgba(6,17,23,.40)');
  outline(ctx);ctx.fillStyle=glass;ctx.fill();
- ctx.strokeStyle='rgba(231,250,229,.56)';ctx.lineWidth=1.7;ctx.stroke();
+ ctx.strokeStyle='rgba(222,242,239,.62)';ctx.lineWidth=1.8;ctx.stroke();
  outline(ctx);ctx.clip();
  const light=ctx.createRadialGradient(400,210,18,490,370,670);
- light.addColorStop(0,'rgba(244,255,234,.15)');
- light.addColorStop(.42,'rgba(218,239,209,.035)');
+ light.addColorStop(0,'rgba(239,251,246,.14)');
+ light.addColorStop(.42,'rgba(216,239,235,.035)');
  light.addColorStop(1,'rgba(255,255,255,0)');
  ctx.fillStyle=light;ctx.fillRect(80,70,1240,990);
  const readingWash=ctx.createRadialGradient(700,555,150,700,555,570);
- readingWash.addColorStop(0,'rgba(5,30,25,.18)');
- readingWash.addColorStop(.7,'rgba(5,30,25,.06)');
- readingWash.addColorStop(1,'rgba(5,30,25,0)');
+ readingWash.addColorStop(0,'rgba(2,10,14,.18)');
+ readingWash.addColorStop(.7,'rgba(2,10,14,.05)');
+ readingWash.addColorStop(1,'rgba(2,10,14,0)');
  ctx.fillStyle=readingWash;ctx.fillRect(160,70,1080,1000);
  ctx.restore();
 }

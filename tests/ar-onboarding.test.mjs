@@ -25,7 +25,7 @@ test('AR introduction preparation can be dismissed on a device', () => {
 test('AR introduction preparation distinguishes the desktop book and spatial mode', () => {
     const app = { innerHTML: '', querySelector: () => null };
     renderArIntroductionPreparation(app);
-    assert.match(app.innerHTML, /Desktop mode is an alternative illustrated book/);
+    assert.match(app.innerHTML, /Learning Book is the recommended flat interface tutorial/);
     assert.match(app.innerHTML, /compatible Android phone or spatial device\*/);
     assert.match(app.innerHTML, /iPhone and iPad cannot currently launch this WebXR AR mode/);
     assert.match(app.innerHTML, /desktop book needs no camera/);
