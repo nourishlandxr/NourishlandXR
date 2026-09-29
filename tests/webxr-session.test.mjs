@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { isQuestHeadsetBrowser, selectWebXRSessionMode } from '../app/services/webxrSession.js';
-import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../app/services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, controllerYButtonPressed, createControllerYSkipTracker, handTrackingState, XR_CONTROLLER_Y_BUTTON_INDEX, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../app/services/xrPointer.js';
 
 test('WebXR prefers passthrough AR and falls back to native 6DoF immersive mode', () => {
     assert.equal(selectWebXRSessionMode({ 'immersive-ar': true, 'immersive-vr': true }), 'immersive-ar');
@@ -55,6 +55,34 @@ test('Quest laser pointer configuration is shared by immersive modes', () => {
     assert.equal(subjectEnd.distance, 1.75);
     assert.equal(subjectEnd.z, 1.25);
     assert.equal(controllerRayEnd(ray, []).distance, 1000);
+});
+
+test('demo skip input reads only the left controller Y button', () => {
+    const buttons = index => Array.from({ length: index + 1 }, (_, current) => ({ pressed: current === index }));
+    const leftY = { handedness: 'left', targetRayMode: 'tracked-pointer', gamepad: { buttons: buttons(5) } };
+    const rightB = { handedness: 'right', targetRayMode: 'tracked-pointer', gamepad: { buttons: buttons(5) } };
+    const leftHand = { handedness: 'left', hand: {}, gamepad: { buttons: buttons(5) } };
+    assert.equal(XR_CONTROLLER_Y_BUTTON_INDEX, 5);
+    assert.equal(controllerYButtonPressed([leftY]), true);
+    assert.equal(controllerYButtonPressed([rightB]), false);
+    assert.equal(controllerYButtonPressed([leftHand]), false);
+    assert.equal(controllerYButtonPressed([]), false);
+});
+
+test('controller Y skip tracker advances once per press and can be reset', () => {
+    const buttons = index => Array.from({ length: index + 1 }, (_, current) => ({ pressed: current === index }));
+    const leftY = { handedness: 'left', gamepad: { buttons: buttons(5) } };
+    let skips = 0;
+    const tracker = createControllerYSkipTracker(() => { skips += 1; });
+    assert.equal(tracker.poll([leftY]), true);
+    assert.equal(tracker.poll([leftY]), false);
+    assert.equal(skips, 1);
+    assert.equal(tracker.poll([]), false);
+    assert.equal(tracker.poll([leftY]), true);
+    assert.equal(skips, 2);
+    tracker.reset();
+    assert.equal(tracker.poll([leftY]), true);
+    assert.equal(skips, 3);
 });
 
 test('WebXR hand tracking uses standard joint names and produces a visible hand pointer', () => {

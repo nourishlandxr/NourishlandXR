@@ -1227,7 +1227,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /structure:\{image:new URL\('\.\.\/assets\/demo-tutorial-art\/04b-one-place-clear-structure\.png'/);
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
-    assert.match(source, /Learning module · \$\{learningModuleStep/);
+    assert.match(source, /introBoardStep=`LEARNING 2\.\$\{learningModuleStep\+1\}`/);
+    for (const screenCode of ['INTRO 1.1', 'INTRO 1.2', 'SPACE 1.1', 'ELEMENTS 1.1', 'LEARNING 1.1', 'CLOSURE 1.1']) {
+        assert.ok(source.includes(screenCode), `green-screen code ${screenCode} should remain in the guided demo`);
+    }
+    assert.match(source, /'Thank you for exploring NourishlandXR'/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to Nourishland/);
     assert.match(source, /Explore how plants, places and knowledge connect/);

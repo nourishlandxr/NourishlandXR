@@ -12,6 +12,34 @@ export const XR_LASER_POINTER_CONFIG = Object.freeze({
     alpha: 0.9
 });
 
+// Quest Touch controllers expose X/A at button 4 and Y/B at button 5 after the
+// four reserved xr-standard controls. The demo binds only the left Y button.
+export const XR_CONTROLLER_Y_BUTTON_INDEX = 5;
+
+export function controllerYButtonPressed(inputSources = []) {
+    return [...inputSources].some(source =>
+        source?.handedness === 'left'
+        && !source.hand
+        && Boolean(source.gamepad?.buttons?.[XR_CONTROLLER_Y_BUTTON_INDEX]?.pressed)
+    );
+}
+
+export function createControllerYSkipTracker(onSkip = () => {}) {
+    let wasPressed = false;
+    return {
+        poll(inputSources = []) {
+            const pressed = controllerYButtonPressed(inputSources);
+            const justPressed = pressed && !wasPressed;
+            wasPressed = pressed;
+            if (justPressed) onSkip();
+            return justPressed;
+        },
+        reset() {
+            wasPressed = false;
+        }
+    };
+}
+
 export const XR_HAND_JOINT_CONNECTIONS = Object.freeze([
     ['wrist', 'thumb-metacarpal'], ['thumb-metacarpal', 'thumb-phalanx-proximal'], ['thumb-phalanx-proximal', 'thumb-phalanx-distal'], ['thumb-phalanx-distal', 'thumb-tip'],
     ['wrist', 'index-finger-metacarpal'], ['index-finger-metacarpal', 'index-finger-phalanx-proximal'], ['index-finger-phalanx-proximal', 'index-finger-phalanx-intermediate'], ['index-finger-phalanx-intermediate', 'index-finger-phalanx-distal'], ['index-finger-phalanx-distal', 'index-finger-tip'],
