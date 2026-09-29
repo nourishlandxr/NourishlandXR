@@ -65,10 +65,10 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
     assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
-    assert.match(greeting, /Explore how plants, places and knowledge connect/);
-    assert.doesNotMatch(greeting, /Take a moment to settle in|designed to be explored at your own pace/);
-    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('Explore a living learning space'\)/);
-    assert.match(greeting, /Begin with ideas you can open and explore\. Then meet a plant and see how its story connects\./);
+    assert.match(greeting, /Extended reality for exploring living landscapes/);
+    assert.match(greeting, /Take a moment to settle in\. This place is ready to explore\./);
+    assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('EXTENDED REALITY, ROOTED IN PLACE'\)/);
+    assert.match(greeting, /See the landscape come to life\.[\s\S]*digital plant stories and place-based knowledge appear within the real landscape around you/);
     assert.doesNotMatch(greeting, /Follow one plant to see how it connects to this place/);
     assert.match(greeting, /!openingTyping && welcomeAutoAdvanceReady/);
     assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);

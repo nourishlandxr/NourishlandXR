@@ -1422,7 +1422,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
-    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art,step\.title/);
+    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art,index===0\?'Control panel basics':step\.title/);
     assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:title \|\| 'NourishlandXR',body:body \|\| ''/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);

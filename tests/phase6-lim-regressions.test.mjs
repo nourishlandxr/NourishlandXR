@@ -17,7 +17,7 @@ test('Phase 6 welcome copy is bounded to the compact note and scrolls only in th
     assert.doesNotMatch(demoSource, /drawWrappedTextureText\(ctx, introBoardTitle/);
     assert.doesNotMatch(demoSource, /↙ Control panel/);
     assert.match(demoSource, /ctx\.textAlign = 'left'/);
-    assert.match(demoSource, /isOpeningStatement \? 400 : 520/);
+    assert.match(demoSource, /isOpeningStatement \? 650 : 520/);
     assert.match(demoSource, /ctx\.rect\(contentLeft, bodyTop - 8, contentWidth, bodyBottom - bodyTop \+ 12\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \.tryit-board-text-window[\s\S]*overflow-y:auto/);
 });
