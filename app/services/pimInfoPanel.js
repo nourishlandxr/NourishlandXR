@@ -241,7 +241,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
-        if(action==='Settings'){settingsOpen=!settingsOpen;renderSettings();}
+        if(action==='Settings'){
+            settingsOpen=!settingsOpen;
+            if(settingsOpen){
+                mediaCollapsed=true;mediaTouched=false;
+                if(mediaDetached){mediaDetached=false;mediaFloating?.remove();mediaFloating=null;mediaPosition=null;mediaPose=null;}
+            }
+            renderSettings();
+        }
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
@@ -760,7 +767,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setContextualHint(message=''){contextHint=String(message || '');page=0;updateReading();},
-        setMediaCollapsed(value=true){mediaCollapsed=Boolean(value);mediaTouched=false;render(true);},
+        setMediaCollapsed(value=true){mediaCollapsed=Boolean(value);mediaTouched=false;if(mediaCollapsed && mediaDetached){mediaDetached=false;mediaFloating?.remove();mediaFloating=null;mediaPosition=null;mediaPose=null;}render(true);},
         setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && showPlantPreview() && !mediaCollapsed)render(true);else syncPanelWings();},
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;updatePathway();},

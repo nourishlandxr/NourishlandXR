@@ -7,9 +7,9 @@ import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup, escapeSpatialText } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaques, resolveTotemNavigation, totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
-import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
+import {drawArWelcomePanel,WELCOME_SHAPE} from '../services/arWelcomePanel.js';
 import { WELCOME_ROOT_MILESTONES, WELCOME_ROOT_REFRESH_MS, advanceWelcomeRootProgress, welcomeRootsNeedRefresh } from '../services/arWelcomeRoots.js';
-import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
+import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,WELCOME_PANEL_DRAW_OFFSET,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -292,8 +292,7 @@ const DEMO_TOTEM_HALF_HEIGHT_METRES = .56;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to NourishlandXR',
-    'Explore how plants, places and knowledge connect.',
-    'A short guided demonstration will introduce the controls before the journey continues.'
+    'Extended reality for exploring living landscapes.'
 ]);
 const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
     'Bem-vindo à interface de demonstração do NourishlandXR.',
@@ -1820,8 +1819,8 @@ function showArWelcomeShowcase() {
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
-        introBoardTitle=demoLocalizedText('Explore a living learning space');
-        introBoardBody=demoLocalizedText('Begin with ideas you can open and explore. Then meet a plant and see how its story connects.');
+        introBoardTitle=demoLocalizedText('EXTENDED REALITY, ROOTED IN PLACE');
+        introBoardBody=`${demoLocalizedText('See the landscape come to life.')}\n\n${demoLocalizedText('In NourishlandXR, digital plant stories and place-based knowledge appear within the real landscape around you.')}`;
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('.tryit-board-text-window').innerHTML=openingParagraphs.map(()=>'<p></p>').join('');
@@ -1917,7 +1916,7 @@ function showArWelcomeShowcase() {
         arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    setGuide(`${demoLocalizedText('Welcome to NourishlandXR')}. ${demoLocalizedText('Explore how plants, places and knowledge connect.')}`);
+    setGuide(`${demoLocalizedText('Welcome to NourishlandXR')}. ${demoLocalizedText('Extended reality for exploring living landscapes.')}`);
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -1926,9 +1925,16 @@ function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100) {
     const matrix=billboardMatrix(position,scaleX,scaleY,introWorldAnchor);
     const origin=demoPointerWorldOrigin(),direction=demoPointerWorldRay();
     if(!origin || !direction)return null;
-    return spatialDashboardRayHit({origin,direction},{center:position,
+    const hit=spatialDashboardRayHit({origin,direction},{center:position,
         right:{x:matrix[0]/scaleX,y:0,z:matrix[2]/scaleX},up:{x:0,y:1,z:0},
-        normal:{x:matrix[8],y:0,z:matrix[10]},width:.4*scaleX,height:.16*scaleY},{width,height});
+        normal:{x:matrix[8],y:0,z:matrix[10]},width:scaleX,height:scaleY},{width,height});
+    if(!hit || width!==2500 || height!==2100)return hit;
+    const centerX=WELCOME_PANEL_DRAW_OFFSET.x+WELCOME_SHAPE.cx,centerY=WELCOME_PANEL_DRAW_OFFSET.y+WELCOME_SHAPE.cy;
+    const px=hit.pixelX-centerX,py=hit.pixelY-centerY,angle=Math.atan2(py,px),step=Math.PI*2/WELCOME_SHAPE.sides;
+    const vertexAngle=-Math.PI/2+Math.round((angle+Math.PI/2)/step)*step;
+    const edgeAngle=vertexAngle+step/2,apothem=WELCOME_SHAPE.radius*Math.cos(step/2);
+    if(Math.hypot(px,py)*Math.cos(angle-edgeAngle)>apothem)return null;
+    return hit;
 }
 
 function selectWelcomeCell() {
@@ -1949,7 +1955,7 @@ function showDemoTutorialMedia(key,title,body) {
 
 const DEMO_ORIENTATION_STEPS = [
     {title:'Meet your Control panel',art:'wheel',button:'Continue',nextGuide:'',paragraphs:[
-        'This is your action panel. Select a plant and its information and images will appear here; use the panel actions to move through the demonstration.'
+        'Take a moment to settle in. This place is ready to explore.'
     ]},
     {title:'Every plant holds information',art:'references',button:'Continue',nextGuide:'',paragraphs:[
         'A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources. NourishlandXR brings those layers together where the information becomes useful.'
@@ -1993,11 +1999,11 @@ function runArWelcomeTutorial(index=0) {
         infoPanel?.setMediaCollapsed(true);
         infoPanel?.setIntroduction(true);
         infoPanel?.suspend(false);
-        infoPanel?.setContextualHint('Action panel: selected information and images appear here.');
+        infoPanel?.setContextualHint('HINT · Adjust panel to your liking.');
     }
     if(step?.art){
         infoPanel?.setCompact(false);
-        showDemoTutorialMedia(step.art,step.title,step.paragraphs.join('\n\n'));
+        showDemoTutorialMedia(step.art,index===0?'Control panel basics':step.title,index===0?'Use the panel controls to adjust the interface and move through the introduction.':step.paragraphs.join('\n\n'));
     }
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
@@ -4421,20 +4427,21 @@ function drawIntroNoteContent(ctx) {
     if(openingElapsed!==null){
         if(openingElapsed<DEMO_WELCOME_OPENING_MS){
             const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
-            ctx.globalAlpha*=fade;ctx.fillStyle='#f3f0df';ctx.font='400 84px "Marcellus", Georgia, "Times New Roman", serif';ctx.fillText(demoLocalizedText('Welcome to NourishlandXR'),contentCenter,420,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='rgba(245,242,225,.9)';ctx.font='500 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('A quick hello from NourishlandXR. Explore plants, place and knowledge.'),contentCenter,570,760,54,2);}
+            ctx.globalAlpha*=fade;ctx.fillStyle='#fff';ctx.font='400 84px "Marcellus", Georgia, "Times New Roman", serif';ctx.fillText(demoLocalizedText('Welcome to NourishlandXR'),contentCenter,420,titleWidth);
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f2f5e9';ctx.font='700 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Extended reality for exploring living landscapes.'),contentCenter,570,780,54,2);}
         }
         ctx.restore();return;
     }
     ctx.fillStyle = '#f3f0df';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
+    const isOpeningStatement = introBoardTitle === 'EXTENDED REALITY, ROOTED IN PLACE';
     let titleSize = arWelcomeIntroPending ? 78 : 80;
     const titleFont = '"Marcellus", Georgia, "Times New Roman", serif';
-    ctx.font = `400 ${titleSize}px ${titleFont}`;
+    ctx.font = `${isOpeningStatement ? 700 : 400} ${titleSize}px ${titleFont}`;
     while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
         titleSize -= 2;
-        ctx.font = `400 ${titleSize}px ${titleFont}`;
+        ctx.font = `${isOpeningStatement ? 700 : 400} ${titleSize}px ${titleFont}`;
     }
     ctx.fillText(introBoardTitle, contentCenter, 420, titleWidth);
     if (introBoardVisibleBody) {
@@ -4444,7 +4451,6 @@ function drawIntroNoteContent(ctx) {
     ctx.moveTo(contentLeft, 478);
     ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
-    const isOpeningStatement = false;
     const narrative = null;
     ctx.textAlign = 'left';
     if(narrative){
@@ -4469,7 +4475,7 @@ function drawIntroNoteContent(ctx) {
     const bodyTop = 498;
     const bodyBottom = introBoardNextGuide ? 710 : 775;
     const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
-    ctx.font = `${isOpeningStatement ? 400 : 520} ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
+    ctx.font = `${isOpeningStatement ? 650 : 520} ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
     const bodyX = isOpeningStatement ? contentCenter : contentLeft;
     let paragraphY = bodyTop;
     let clipped = false;
@@ -4481,6 +4487,7 @@ function drawIntroNoteContent(ctx) {
     outer: for (const [paragraphIndex, completeLines] of bodyLayout.paragraphLines.entries()) {
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
         for (const [lineIndex, line] of visibleLines.entries()) {
+            if(isOpeningStatement && paragraphIndex===1)ctx.font=`500 ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
             if (lineY > bodyBottom) { clipped = true; break outer; }
             ctx.fillText(line, bodyX, lineY);
