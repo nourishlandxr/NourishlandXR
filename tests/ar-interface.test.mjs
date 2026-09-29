@@ -1162,7 +1162,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const hoveredRecordHit=/);
     assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.018:\.013/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.009:\.013/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
@@ -1178,7 +1178,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementPointerMarkup/);
     assert.match(styles, /\.creator-ar-overlay \.creator-ar-placement-guide/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-revealing/);
-    assert.match(source, /Tap the aiming circle.*to confirm/);
+    assert.match(source, /press the aiming circle.*to place it/);
     assert.match(source, /placementReady = true;\s*place\?\.removeAttribute\('hidden'\)/);
     assert.doesNotMatch(source, /Use the Move tool in the bottom bar/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
@@ -1347,7 +1347,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(immersiveSelectStartHandler, /activateImmersiveDemoControl/);
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
-    assert.match(source, /plant2: \['Compare a second plant'[\s\S]*next:'Press the visible aiming circle to place Moringa.'/);
+    assert.match(source, /plant2: \['Compare a second plant'[\s\S]*Aim beside Totem 2 and press the aiming circle to place the sample Moringa Orb/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
     assert.match(source, /data-tryit-open-live-tag hidden/);
     assert.match(source, /data-tryit-skip/);
@@ -1371,7 +1371,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /data-tryit-intro-continue/);
     assert.match(styles, /\.tryit-demo-taskbar \.tryit-intro-continue \{[^}]*border-color:rgba\(220,239,149,\.62\)/);
     assert.doesNotMatch(styles, /\.tryit-demo\.is-quest-vr > \.tryit-intro-continue/);
-    assert.match(source, /Tap the aiming circle.*to confirm/);
+    assert.match(source, /Aim at the place you observed, then press the aiming circle to place the Note/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
@@ -1422,8 +1422,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
-    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art,index===0\?'Control panel basics':step\.title/);
-    assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:title \|\| 'NourishlandXR',body:body \|\| ''/);
+    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art\)/);
+    assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'Visual reference',body:''/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
@@ -1440,7 +1440,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.doesNotMatch(source, /radius: \.96/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.018:\.013/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.009:\.013/);
     assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
@@ -1596,8 +1596,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)/);
     assert.match(immersiveSelectHandler, /selectDemoProfileCell\(\)[\s\S]*selectDemoPlantAtPointer\(\)/);
     assert.doesNotMatch(source, /target\.record\.demoType === 'plant' && target\.record\.demoExpanded\) return false/);
-    assert.match(source, /if \(demoInfoTarget\(\)\?\.target\) return/);
-    assert.match(source, /if \(actionTarget\?\.demoType === 'note'\) return;[\s\S]*beginControllerDemoHold\(\)/);
+    assert.match(source, /const profile=demoInfoTarget\(\);\s*const target = demoRecordAtPointer\(\) \|\| \(profile\?\.target/);
+    assert.doesNotMatch(source, /if \(actionTarget\?\.demoType === 'note'\) return;/);
+    assert.match(source, /session\.addEventListener\('selectstart',[\s\S]*beginControllerDemoHold\(\)/);
     assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
     const sessionSelectStart = source.indexOf("session.addEventListener('select'");
     const sessionSelect = source.slice(sessionSelectStart, source.indexOf('const draw =', sessionSelectStart));

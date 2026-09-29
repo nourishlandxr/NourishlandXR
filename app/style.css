@@ -9048,6 +9048,16 @@ button.ar-square-action::before { display: none !important; }
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
     border-top-color:rgba(223,255,155,.16);
 }
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
+    justify-items:center;
+    text-align:center;
+}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {
+    width:min(100%,56ch);
+    margin-inline:auto;
+    text-align:center;
+    overflow-wrap:anywhere;
+}
 .tryit-demo[data-demo-tutorial-step="welcome"] .tryit-guided-choice.is-welcome-board::after {
     content:none;
 }

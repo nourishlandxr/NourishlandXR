@@ -632,7 +632,7 @@ function returnToWelcome() {
 
 function setGuide(message) {
     const guide = appRoot?.querySelector('[data-tryit-guide]');
-    if (guide) guide.textContent = questControlGuide(message);
+    if (guide) { guide.textContent = questControlGuide(message); guide.hidden = !message; }
 }
 
 function questControlGuide(message){
@@ -642,22 +642,19 @@ function questControlGuide(message){
         : copy;
 }
 
-function setIntroBoardNextGuide(message,{reveal=true}={}) {
+function setIntroBoardNextGuide(message) {
     introBoardNextGuide=questControlGuide(message).trim();
-    introBoardNextGuideVisible=Boolean(reveal && introBoardNextGuide);
+    introBoardNextGuideVisible=false;
+    infoPanel?.setContextualHint(introBoardNextGuide ? `HINT: ${introBoardNextGuide}` : '');
     introBoardTextureDirty=true;
     const textWindow=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
     if(!textWindow)return;
-    let cue=textWindow.querySelector('.tryit-board-next');
-    if(!introBoardNextGuide){cue?.remove();return;}
-    if(!cue){cue=document.createElement('p');cue.className='tryit-board-next';textWindow.append(cue);}
-    cue.textContent=`Next · ${introBoardNextGuide}`;
-    cue.hidden=!reveal;
+    textWindow.querySelector('.tryit-board-next')?.remove();
 }
 function revealIntroBoardNextGuide(){
     if(!introBoardNextGuide)return;
-    introBoardNextGuideVisible=true;introBoardTextureDirty=true;
-    appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-next')?.removeAttribute('hidden');
+    introBoardNextGuideVisible=false;introBoardTextureDirty=true;
+    infoPanel?.setContextualHint(`HINT: ${introBoardNextGuide}`);
 }
 
 function demoControlIsVisible(selector) {
@@ -1037,7 +1034,8 @@ function demoTotemCards(record) {
 function demoAreaVisible(record) {
     if (record.demoType === 'zone' || !record.demoAreaId) return true;
     const area=markers.find(item=>item.id===record.demoAreaId);
-    return !area?.demoTotemFaded && !area?.demoNarrativeFaded || Boolean(record.demoConnectionVisible);
+    const totemTwo=area?.tutorialStage==='totem2';
+    return !area?.demoTotemFaded && !area?.demoNarrativeFaded || Boolean(record.demoConnectionVisible && !totemTwo);
 }
 function selectDemoTotemSign(record,cardId) {
     record.totemSelectedCard=record.totemSelectedCard===cardId ? '' : cardId;
@@ -1248,7 +1246,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     // The board is display-only while it types. Clicking it must not snap the
     // remaining copy into place or consume a marker gesture.
     panel.onclick = null;
-    setGuide(`${introBoardTitle}. ${fullText}`);
+    setGuide('');
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
@@ -1351,7 +1349,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         finishTyping,
         Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + bodyText.length * 60)
     );
-    setGuide(`${localizedTitle}. ${bodyText}`);
+    setGuide('');
 }
 
 function finishIntroBoard() {
@@ -1663,16 +1661,16 @@ function drawKnowledgeCombinationExperience(ctx,now){
     };
     const line=(from,to,fromColor,toColor,width=11)=>{const a=toPoint(from),b=toPoint(to),bend=Math.max(100,Math.abs(b.x-a.x)*.28),gradient=ctx.createLinearGradient(a.x,a.y,b.x,b.y);gradient.addColorStop(0,fromColor);gradient.addColorStop(1,toColor);ctx.save();ctx.strokeStyle=gradient;ctx.lineWidth=width;ctx.lineCap='round';ctx.shadowColor=toColor;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x+bend,a.y,b.x-bend,b.y,b.x,b.y);ctx.stroke();ctx.restore();};
     ctx.save();ctx.beginPath();WELCOME_SHAPE_POINTS.forEach((point,index)=>{const x=point.x+WELCOME_PANEL_DRAW_OFFSET.x,y=point.y+WELCOME_PANEL_DRAW_OFFSET.y;if(index)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.closePath();ctx.clip();ctx.fillStyle='rgba(6,27,21,.16)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
-    ctx.textAlign='center';ctx.fillStyle='#eff7e9';ctx.font='800 48px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,615,960);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 24px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,675,920);
-    if(!deeper){ctx.textAlign='center';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 19px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',1000,750);ctx.fillText('LEARNING CELLS',1500,750);}
+    ctx.textAlign='center';ctx.fillStyle='#eff7e9';ctx.font='800 32px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,720,700);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 21px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,775,700);
+    if(!deeper){ctx.textAlign='center';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 17px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',1050,835);ctx.fillText('LEARNING CELLS',1450,835);}
     if(state.primaryResult && choice){line(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.sourceColor,choice.targetColor,8);line(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.targetColor,choice.sourceColor,8);}
-    const resultPosition=deeper?{x:50,y:37}:DEMO_CONNECTION_POSITIONS.result;
+    const resultPosition=deeper?{x:50,y:42}:DEMO_CONNECTION_POSITIONS.result;
     if(state.deeperResult && choice){line(resultPosition,DEMO_CONNECTION_POSITIONS.deeperResult,choice.targetColor,DEMO_DEEPER_CONNECTION.targetColor,8);line(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult,DEMO_DEEPER_CONNECTION.targetColor,choice.targetColor,8);}
     if(state.dragging && choice){const target=state.hoverTarget?demoConnectionTarget(state):state.pointer;if(target)line(demoConnectionSource(state),target,deeper?choice.targetColor:choice.sourceColor,deeper?DEMO_DEEPER_CONNECTION.targetColor:choice.targetColor,15);}
     for(const item of DEMO_CONNECTION_CHOICES){const selected=item.id===choice?.id;card(DEMO_CONNECTION_POSITIONS.sources[item.id],{title:item.sourceTitle,detail:item.sourceDetail,label:'Pigeon Pea',color:item.sourceColor,muted:Boolean(choice&&!selected)});card(DEMO_CONNECTION_POSITIONS.targets[item.id],{title:item.targetTitle,detail:item.targetDetail,label:'Learning cell',color:item.targetColor,muted:Boolean(choice&&!selected),bloom:selected && [DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.RESOLVING].includes(state.phase)});}
-    if(state.primaryResult && choice)card(deeper?resultPosition:DEMO_CONNECTION_POSITIONS.result,{title:state.primaryResult.derivedNode?.title || choice.resultTitle,detail:state.primaryResult.derivedNode?.summary || choice.resultSummary,label:'New connection',color:choice.targetColor,width:500,height:180,bloom:state.phase===DEMO_CONNECTION_PHASES.RESULT});
+    if(state.primaryResult && choice)card(deeper?resultPosition:DEMO_CONNECTION_POSITIONS.result,{title:state.primaryResult.derivedNode?.title || choice.resultTitle,detail:state.primaryResult.derivedNode?.summary || choice.resultSummary,label:'New connection',color:choice.targetColor,width:390,height:170,bloom:state.phase===DEMO_CONNECTION_PHASES.RESULT});
     if(deeper)card(DEMO_CONNECTION_POSITIONS.deeperTarget,{title:DEMO_DEEPER_CONNECTION.targetTitle,detail:DEMO_DEEPER_CONNECTION.targetDetail,label:'Go deeper',color:DEMO_DEEPER_CONNECTION.targetColor,bloom:[DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase),width:440,height:160});
-    if(state.deeperResult && choice)card(DEMO_CONNECTION_POSITIONS.deeperResult,{title:state.deeperResult.derivedNode?.title || choice.deeperTitle,detail:state.deeperResult.derivedNode?.summary || choice.deeperSummary,label:'Question for this place',color:DEMO_DEEPER_CONNECTION.targetColor,width:500,height:190,bloom:true});
+    if(state.deeperResult && choice)card(DEMO_CONNECTION_POSITIONS.deeperResult,{title:state.deeperResult.derivedNode?.title || choice.deeperTitle,detail:state.deeperResult.derivedNode?.summary || choice.deeperSummary,label:'Question for this place',color:DEMO_DEEPER_CONNECTION.targetColor,width:420,height:170,bloom:true});
     const source=demoConnectionSource(state);if(source && [DEMO_CONNECTION_PHASES.READY,DEMO_CONNECTION_PHASES.HOLDING,DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_READY,DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING].includes(state.phase)){const p=toPoint(source),progress=state.holdProgress || 0;ctx.fillStyle='#f4ffd8';ctx.strokeStyle='#173d32';ctx.lineWidth=6;ctx.beginPath();ctx.arc(p.x+245,p.y,20,0,Math.PI*2);ctx.fill();ctx.stroke();if(progress){ctx.strokeStyle='#fff';ctx.lineWidth=9;ctx.beginPath();ctx.arc(p.x+245,p.y,34,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);ctx.stroke();}}
     if(state.primaryResult){const nav=(x,label,filled)=>{const y=deeper?1490:1452;ctx.fillStyle=filled?'#dff0b2':'rgba(22,57,45,.94)';ctx.strokeStyle='rgba(238,255,224,.75)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(x-130,y,260,66,33);ctx.fill();ctx.stroke();ctx.fillStyle=filled?'#173328':'#eff8e9';ctx.font='800 21px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x,y+33);};if(state.phase===DEMO_CONNECTION_PHASES.RESULT)nav(1120,'Go deeper',false);nav(state.phase===DEMO_CONNECTION_PHASES.RESULT?1380:1250,'Continue journey',true);}
     ctx.restore();
@@ -1946,10 +1944,10 @@ function selectWelcomeCell() {
     toggleLimCell(cell.key);return true;
 }
 
-function showDemoTutorialMedia(key,title,body) {
+function showDemoTutorialMedia(key) {
     const art=DEMO_TUTORIAL_ART[key];
     if(!art)return;
-    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:title || 'NourishlandXR',body:body || '',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:'Visual reference',body:'',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
@@ -2003,7 +2001,7 @@ function runArWelcomeTutorial(index=0) {
     }
     if(step?.art){
         infoPanel?.setCompact(false);
-        showDemoTutorialMedia(step.art,index===0?'Control panel basics':step.panelTitle || 'Using the Control panel',index===0?'Use Settings to adjust the panel. Hide collapses it; use the small tab to restore it.':'Continue on the green screen. Adjust the Control panel here when you need to.');
+        showDemoTutorialMedia(step.art);
     }else if(index===DEMO_ORIENTATION_STEPS.length-1){
         infoPanel?.setMediaCollapsed(true);
         infoPanel?.setContextualHint('HINT · Move the right joystick up or down to adjust distance.');
@@ -2181,7 +2179,7 @@ function createDemoTotemExample() {
     markers.filter(record=>['plant','note'].includes(record.demoType) && !record.demoAmbientNeighbour).forEach(record=>{record.demoAreaId=totem.id;});
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.firstAreaShown);
     updateSimulatedMarkers();
-    showDemoTutorialMedia('totem','A Totem unfolds garden knowledge','Two simple physical buttons control the Totem: show or store its attached signs, and fade or restore it when it is not in use.');
+    showDemoTutorialMedia('totem');
     setGuide('The Totem welcomes you to this area. Open its short signs to find Notes, Plant Orbs and the neighbouring Totem.');
     showSceneContinue('Show neighbouring Totem', createDemoSecondTotem);
 }
@@ -2226,7 +2224,7 @@ function createDemoSecondTotem() {
     createDemoNeighbourhood(totem);
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.secondAreaShown);
     updateSimulatedMarkers();
-    setGuide('A second Area arrives on the left, with its own nearby plants and a Vetiver row Note. Connect the two Totems when you are ready.');
+    setGuide('Totem 2 shows a sample PIMO layout: local Plant Orbs and a Note placed around one Area. Connect the two Totems when ready.');
     showSceneContinue('Connect the Totems', connectDemoTotems);
 }
 
@@ -2272,7 +2270,7 @@ function createDemoNeighbourhood(totem) {
 }
 
 function showLinkedTotemsIntroduction() {
-    showDemoTutorialMedia('connectedAreas','One larger garden, many Areas','Each Totem welcomes visitors to a different Area. The route connects the place while each Area keeps its own local knowledge.');
+    showDemoTutorialMedia('connectedAreas');
     showIntroBoard(
         'Why link Areas?',
         [
@@ -2436,23 +2434,27 @@ function syncKnowledgeCombinationOverlay(){
 
 async function resolveKnowledgeCombination(deeper=false){
     const state=knowledgeCombinationState,choice=demoConnectionChoice(state);if(!state || !choice)return false;
+    if([DEMO_CONNECTION_PHASES.RESOLVING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase) || (!deeper && state.primaryResult) || (deeper && !state.primaryResult))return false;
     state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_RESOLVING:DEMO_CONNECTION_PHASES.RESOLVING;syncKnowledgeCombinationOverlay();
     try{
         const record=knowledgeCombinationPlantRecord() || {id:'pigeon-pea-demo',demoPlantPreset:'pigeon-pea',demoExpanded:false};
         const document=demoOrbKnowledge(record).document,ownerId=demoMeshOwnerId(record,document);meshSourceResolver.registerPimDocument(document,{ownerId});
         const refs=deeper?[state.primaryResult.derivedRef,limMeshRef(DEMO_DEEPER_CONNECTION.targetId)]:[pimMeshRef(document,choice.sourceId,{ownerId,specimenId:String(record.id || ownerId)}),limMeshRef(choice.targetId)];
         meshComposition.clear();refs.forEach(ref=>meshComposition.add(ref));meshComposition.resolving();
-        const result=await meshRelationships.resolve(refs,{context:{mode:'general'}});meshComposition.display(result);
+        const result=await meshRelationships.resolve(refs,{context:{mode:'general'}});
+        if(knowledgeCombinationState!==state)return false;
+        meshComposition.display(result);
         if(deeper){state.deeperResult=result;state.phase=DEMO_CONNECTION_PHASES.COMPLETE;setGuide(`${choice.deeperTitle} is ready as a question for this place.`);}
         else{state.primaryResult=result;state.phase=DEMO_CONNECTION_PHASES.RESULT;setGuide(`${choice.resultTitle} emerged. Go deeper with Place and Observation, or continue the journey.`);}
         advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.knowledgeConnected);
         navigator.vibrate?.([35,35,60]);
-    }catch(error){meshComposition.fail(error);state.error='The ideas did not connect this time. Try the same gesture again.';state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_READY:DEMO_CONNECTION_PHASES.READY;}
+    }catch(error){if(knowledgeCombinationState!==state)return false;meshComposition.fail(error);state.error='The ideas did not connect this time. Try the same gesture again.';state.phase=deeper?DEMO_CONNECTION_PHASES.DEEPER_READY:DEMO_CONNECTION_PHASES.READY;}
     syncKnowledgeCombinationOverlay();return true;
 }
 
 function startKnowledgeCombinationExperience(){
-    useSharedWelcomeBoard(false);clearLimSelection();knowledgeCombinationState=createDemoConnectionState();knowledgeCombinationCleanup();
+    useSharedWelcomeBoard(false);clearLimSelection();knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};meshComposition.clear();knowledgeCombinationState=createDemoConnectionState();
+    fadeMappedSceneForLimo();
     limMeshVisible=true;introBoardTextureDirty=true;
     const plant=knowledgeCombinationPlantRecord();
     if(plant){plant.demoInteractive=true;plant.demoAlive=true;plant.demoConnectionVisible=true;refreshDemoRecord(plant);}
@@ -2464,7 +2466,7 @@ function startKnowledgeCombinationExperience(){
 }
 
 function finishKnowledgeCombinationExperience(){
-    knowledgeCombinationCleanup();knowledgeCombinationState=null;markers.forEach(record=>{record.demoConnectionVisible=false;});updateSimulatedMarkers();infoPanel?.suspend(false);showAudienceValue();
+    knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};knowledgeCombinationState=null;meshComposition.clear();markers.forEach(record=>{record.demoConnectionVisible=false;});updateSimulatedMarkers();infoPanel?.suspend(false);showAudienceValue();
 }
 
 function showKnowledgeCombinationIntroduction(){
@@ -2484,7 +2486,7 @@ function showKnowledgeCombinationIntroduction(){
 
 function showLimoLearningModes() {
     setDemoJourneyStage('apply');
-    showDemoTutorialMedia('connection','Connect plant knowledge to learning','A Plant Profile explains a plant. Learning pathways turn that knowledge into questions and practical exploration, on site or as a standalone experience.');
+    showDemoTutorialMedia('connection');
     showIntroBoard(
         'Learn here or as a standalone experience',
         [
@@ -2548,7 +2550,7 @@ function showAudienceValue() {
 
 function showTotemIntroduction() {
     setDemoJourneyStage('connect');
-    showDemoTutorialMedia('totem','A Totem gathers local information','A welcoming Totem gives each Area a clear, simple place to gather its visitor information.');
+    showDemoTutorialMedia('totem');
     showIntroBoard(
         'Meet the Totem',
         [
@@ -2694,21 +2696,21 @@ function armDemoPlacement(type, {explained=false}={}) {
         totem: ['Place Botanical Garden Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
-    const mediaKey=type==='totem'?'totem':type==='note'?'note':type==='plant'?'controller':'orb';
-    if(type==='plant2')infoPanel?.setMediaCollapsed(true);
-    else showDemoTutorialMedia(mediaKey,title,typeof introduction==='string'?introduction:introduction.join('\n\n'));
+    const mediaKey=type==='totem'?'totem':type==='note'?'note':'orb';
+    if(type==='plant' || type==='plant2')infoPanel?.setMediaCollapsed(true);
+    else showDemoTutorialMedia(mediaKey);
     if(type==='note')infoPanel?.setContextualHint('Press Note for more examples and observation templates.');
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
         const questTriggerPlacement=Boolean(session && demoControllerInputSource()?.targetRayMode!=='screen');
         const placementCopy = type === 'plant'
-            ? {title:'Place Pigeon Pea',body:`Aim toward the real plant, or the place where you want its information tag to appear. This places a tag; it does not plant a virtual Pigeon Pea. ${questTriggerPlacement?'Pull the Quest controller trigger':'Tap the aiming circle'} to confirm.`,next:'Hint: aim at the plant or information-tag location; move the right joystick up or down to adjust distance.'}
+            ? {title:'Place Pigeon Pea',body:'A Plant Orb attaches this plant’s information to a real place. Pigeon Pea is our first example.',next:`Aim at the real plant or desired tag location, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place it. Use the right joystick to adjust distance.`}
             : type === 'plant2'
-                ? {title:'Place Moringa',body:'This second orb will show how two distinct plant profiles can share a place.',next:'Press the visible aiming circle to place Moringa.'}
+                ? {title:'Place Moringa',body:'Totem 2 is a sample PIMO layout, with its own plant information and local observations.',next:'Aim beside Totem 2 and press the aiming circle to place the sample Moringa Orb.'}
                 : type==='totem'
-                    ? {title:'Place Botanical Garden Totem',body:'The vertical preview shows where the Totem will stand. Adjust its depth, then confirm placement.',next:'Aim the upright preview and pull the trigger to place the Totem.'}
-                    : {title:'Place an observation',body:'A Note gives an observation a location beside the plants.',next:'Press the visible aiming circle to place the Note.'};
+                    ? {title:'Place Botanical Garden Totem',body:'A Totem gives an Area a clear welcome point for its signs and local information.',next:'Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.'}
+                    : {title:'Place an observation',body:'A Note keeps something noticed in this part of the landscape beside the plants it relates to.',next:'Aim at the place you observed, then press the aiming circle to place the Note.'};
         introBoardTitle=placementCopy.title;
         introBoardBody=placementCopy.body;
         introBoardVisibleBody=placementCopy.body;
@@ -2716,8 +2718,6 @@ function armDemoPlacement(type, {explained=false}={}) {
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${placementCopy.title}</h2><div class="tryit-board-text-window"><p>${placementCopy.body}</p></div>`;board.classList.add('is-copy-ready');board.classList.remove('is-typing');}
         setIntroBoardNextGuide(placementCopy.next);
-        if(type==='plant')infoPanel?.setContextualHint(placementCopy.body);
-        if(type==='note')infoPanel?.setContextualHint('Press Note for more examples and observation templates.');
         setGuide(type === 'plant'
             ? `Aim toward the real plant or desired information-tag position, then ${questTriggerPlacement?'pull the Quest controller trigger':'tap the aiming circle'} to confirm.`
             : type === 'plant2'
@@ -3752,10 +3752,11 @@ function beginPointerDemoHold(event) {
 
 function beginControllerDemoHold() {
     if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
-    const target = demoRecordAtPointer();
+    const profile=demoInfoTarget();
+    const target = demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
     if (!target || target.record.demoInteractive === false) return false;
-    // Match the phone preview: an open plant-information surface is locked.
-    // A cell press must never start moving the orb behind that surface.
+    // Quick presses still select PIMO cells. Holding on an open PIMO surface
+    // moves its anchored Orb after the hold delay.
     const origin = demoPointerWorldOrigin();
     if (!origin) return false;
     captureDemoGrabPose(target.record, origin, demoPointerWorldRay());
@@ -3770,7 +3771,8 @@ function beginControllerDemoHold() {
 
 function beginHandDemoGrab() {
     if (placementReady || demoHeldIndex >= 0) return false;
-    const target = demoRecordAtPointer();
+    const profile=demoInfoTarget();
+    const target = demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
     const origin = demoPointerWorldOrigin();
     if (!target || !origin || target.record.demoInteractive === false) return false;
     if (!captureDemoGrabPose(target.record, origin, demoPointerWorldRay())) return false;
@@ -4460,7 +4462,7 @@ function drawIntroNoteContent(ctx) {
     ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
     const narrative = null;
-    ctx.textAlign = isOpeningStatement ? 'center' : 'left';
+    ctx.textAlign = 'center';
     if(narrative){
         ctx.save();ctx.globalAlpha*=.18*narrative.alpha;
         const glow=ctx.createRadialGradient(contentCenter,610,10,contentCenter,610,360);
@@ -4481,11 +4483,12 @@ function drawIntroNoteContent(ctx) {
     // its ascenders were previously being cut because the baseline sat too
     // close to the clip rectangle.
     const bodyTop = 498;
-    const bodyBottom = introBoardNextGuide ? 710 : 775;
+    const bodyBottom = 775;
     const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `${isOpeningStatement ? 650 : 520} ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
-    const bodyX = isOpeningStatement ? contentCenter : contentLeft;
-    let paragraphY = bodyTop;
+    const bodyX = contentCenter;
+    const bodyHeight=bodyLayout.paragraphLines.reduce((height,lines)=>height+lines.length*bodyLayout.lineHeight,0)+Math.max(0,bodyLayout.paragraphLines.length-1)*bodyLayout.paragraphGap;
+    let paragraphY = bodyTop+Math.max(0,(bodyBottom-bodyTop-bodyHeight)/2);
     let clipped = false;
     ctx.save();
     ctx.beginPath();
@@ -4509,10 +4512,10 @@ function drawIntroNoteContent(ctx) {
     if(introBoardNextGuideVisible && introBoardNextGuide){
         ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
         ctx.beginPath();ctx.moveTo(contentLeft,724);ctx.lineTo(contentLeft+contentWidth,724);ctx.stroke();
-        ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
+        ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
         ctx.font='500 30px "Segoe UI Variable", Inter, system-ui, sans-serif';
         const guideLines=wrappedTextureLines(ctx,`Next · ${introBoardNextGuide}`,contentWidth);
-        guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentLeft,736+index*29));
+        guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentCenter,736+index*29,contentWidth));
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
@@ -5293,9 +5296,6 @@ async function startImmersive() {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
             if (beginImmersiveKnowledgeCombination()) return;
-            if (demoInfoTarget()?.target) return;
-            const actionTarget = demoRecordAtPointer()?.record;
-            if (actionTarget?.demoType === 'note') return;
             beginControllerDemoHold();
         });
         session.addEventListener('selectend', event => {

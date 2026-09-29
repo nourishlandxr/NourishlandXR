@@ -50,11 +50,11 @@ test('Quest laser pointer configuration is shared by immersive modes', () => {
     assert.deepEqual(ray.origin, { x: 1, y: 2, z: 3 });
     assert.deepEqual(ray.direction, { x: -0, y: -0, z: -1 });
     assert.equal(ray.handedness, 'right');
-    assert.equal(XR_LASER_POINTER_CONFIG.length, 5);
+    assert.equal(XR_LASER_POINTER_CONFIG.length, 1000);
     const subjectEnd = controllerRayEnd(ray, [{ position: { x: 1, y: 2, z: 1 }, radius: .25 }]);
     assert.equal(subjectEnd.distance, 1.75);
     assert.equal(subjectEnd.z, 1.25);
-    assert.equal(controllerRayEnd(ray, []).distance, 5);
+    assert.equal(controllerRayEnd(ray, []).distance, 1000);
 });
 
 test('WebXR hand tracking uses standard joint names and produces a visible hand pointer', () => {

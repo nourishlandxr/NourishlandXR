@@ -3,7 +3,9 @@
 // Creator AR, while phone touch placement continues to use its own aim dot.
 export const XR_LASER_POINTER_CONFIG = Object.freeze({
     startOffset: 0.04,
-    length: 5,
+    // Keep the idle ray visible across large real spaces. Actual surfaces
+    // still terminate it at the exact hit point in the renderer.
+    length: 1000,
     width: 0.0045,
     segments: 8,
     color: Object.freeze([0.35, 1, 0.2]),

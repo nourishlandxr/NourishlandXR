@@ -138,7 +138,7 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const rail=164,media=0;
     const left=rail+22,width=1000-rail-44;
     const button=(item,x,y,w,h)=>({...item,description:item.description || controlDescription(item),x,y,width:w,height:h});
-    const result=[button({action:'MovePanel',label:'✋',ariaLabel:'Grab and move Control panel',kind:'handle'},754,18,52,38)];
+    const result=[button({action:'MovePanel',label:'MOVE',ariaLabel:'Grab and move Control panel',kind:'handle'},700,18,106,38)];
     items.filter(item=>['tab','menu'].includes(item.kind)).forEach((item,index)=>result.push(button(item,16,150+index*50,rail-28,40)));
     const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
     const secondary=items.filter(item=>item.kind==='utility' && item!==primary);
@@ -340,7 +340,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const media=document.createElement('aside');media.className='nlxr-media-wing'+(floating?' nlxr-media-floating':'');
         const toolbar=document.createElement('div');toolbar.className='nlxr-media-toolbar';
         if(!floating && !isDesktopDemo())toolbar.append(makePanelToggle('Media','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed));
-        const handle=document.createElement('button');handle.type='button';handle.className='nlxr-media-detach';handle.textContent='✋';handle.dataset.infoAction='ToggleMediaDetach';
+        const handle=document.createElement('button');handle.type='button';handle.className='nlxr-media-detach';handle.textContent='↔';handle.dataset.infoAction='ToggleMediaDetach';
         handle.setAttribute('aria-label',floating?'Dock media panel to Control panel':'Detach media panel');handle.title=floating?'Drag to move · click to dock to Control panel':'Detach media panel';
         handle.addEventListener('click',event=>{event.stopPropagation();if(performance.now()<ignoreMediaClickUntil)return;if(mediaDetached)dockMediaPanel();else detachMediaPanel();});
         toolbar.append(handle);media.append(toolbar);
@@ -455,6 +455,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     }
     function bindPanelMove(handle){
         handle.addEventListener('pointerdown',event=>{
+            if(handle.matches('header') && event.target.closest('button,a,input,select,textarea,[role="button"]'))return;
             if(event.button!==0 && event.pointerType==='mouse')return;
             event.preventDefault();event.stopPropagation();const rect=element.getBoundingClientRect(),dx=event.clientX-rect.left,dy=event.clientY-rect.top;
             handle.setPointerCapture?.(event.pointerId);
@@ -570,7 +571,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');scientific.hidden=hasPimPath() || !scientific.textContent;
             const hideButton=makeButton(controls().find(item=>item.action==='Hide'));hideButton.classList.add('is-panel-hide');
             header.append(hideButton);
-            if(!desktopDemo){const moveButton=document.createElement('button');moveButton.type='button';moveButton.className='nlxr-panel-move';moveButton.textContent='✋';moveButton.setAttribute('aria-label','Grab and move Control panel');bindPanelMove(moveButton);header.append(moveButton);}
+            header.classList.add('is-move-handle');header.title='Drag to move the Control panel';bindPanelMove(header);
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>['tab','menu'].includes(item.kind) && item.action!=='Hide').forEach(item=>tabs.append(makeButton(item)));
@@ -621,7 +622,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();ctx.strokeStyle=card.guided?'#93d9f2':'rgba(166,204,229,.72)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.media){
-            ctx.fillStyle='rgba(119,169,198,.34)';ctx.beginPath();ctx.roundRect(846,16,108,58,15);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#a9e7fa';ctx.font='700 30px system-ui';ctx.textAlign='center';ctx.fillText('✋',900,27,56);ctx.textAlign='left';
+            ctx.fillStyle='rgba(119,169,198,.34)';ctx.beginPath();ctx.roundRect(846,16,108,58,15);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#a9e7fa';ctx.font='700 30px system-ui';ctx.textAlign='center';ctx.fillText('↔',900,27,56);ctx.textAlign='left';
             if(card.hoverHint){ctx.fillStyle='rgba(8,20,31,.88)';ctx.beginPath();ctx.roundRect(40,78,770,46,12);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 19px system-ui';ctx.fillText(card.hoverHint,56,91,740);}
             const imageX=40,imageY=96,imageWidth=920,imageHeight=c.height-(card.caption?166:126);
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,20);ctx.fill();
@@ -724,7 +725,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         });return c;
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return renderer.hit(ray);}
-    const mediaSpatialControls=()=>[{action:'MoveMediaPanel',label:'✋',ariaLabel:mediaDetached?'Move or dock media panel':'Detach and move media panel',kind:'handle',x:836,y:10,width:128,height:70,description:controlDescription({action:'MoveMediaPanel'})}];
+    const mediaSpatialControls=()=>[{action:'MoveMediaPanel',label:'MOVE',ariaLabel:mediaDetached?'Move or dock media panel':'Detach and move media panel',kind:'handle',x:836,y:10,width:128,height:70,description:controlDescription({action:'MoveMediaPanel'})}];
     const controlsForTarget=target=>target?.card?.media?mediaSpatialControls():target?.card?.settings?settingsControls():(headset?spatialControls():controls());
     const targetButtonAtRay=target=>{
         if(!target?.width || !target.height)return null;

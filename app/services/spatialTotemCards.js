@@ -5,7 +5,7 @@ import { totemHeightPreset } from './totemAppearance.js';
 const TOTEM_BUTTON_WIDTH = .104;
 const TOTEM_BUTTON_RADIUS = .052;
 const TOTEM_BUTTON_FACE_RADIUS = .046;
-const TOTEM_TEXT_RESOLUTION = Object.freeze({ plaque:[1024,256], header:[1024,512], detail:[1024,512], control:[512,512] });
+const TOTEM_TEXT_RESOLUTION = Object.freeze({ plaque:[2048,512], header:[2048,1024], detail:[2048,1024], control:[1024,1024] });
 
 export function textureSupportsMipmaps(source) {
     const powerOfTwo=value=>Number.isInteger(value) && value>0 && (value & (value-1))===0;
@@ -157,7 +157,7 @@ export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view,
         const style=surface.card?.boardStyle || surface.boardStyle;
         const header=style==='header' || style==='header-detail';
         const right=surface.right,front={x:-right.z,y:0,z:right.x};
-        const rotationY=Math.atan2(-right.z,right.x),halfDepth=header ? .032 : .024;
+        const rotationY=Math.atan2(-right.z,right.x),halfDepth=header ? .016 : .012;
         const centerDepth={x:surface.center.x-front.x*(halfDepth+.003),z:surface.center.z-front.z*(halfDepth+.003)};
         const colour=header ? [.26,.35,.41] : [.42,.29,.20];
         const highlight=header ? [.49,.59,.65] : [.68,.52,.35];
@@ -229,6 +229,8 @@ function cardCanvas(card, detail) {
             : boardStyle==='header' || boardStyle==='header-detail' ? TOTEM_TEXT_RESOLUTION.header : TOTEM_TEXT_RESOLUTION.plaque;
     const canvas=document.createElement('canvas');canvas.width=resolution[0];canvas.height=resolution[1];
     const ctx=canvas.getContext('2d');
+    // Preserve the existing logical type layout while rasterizing at double density.
+    ctx.scale(2,2);
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.shadowColor='rgba(5,10,8,.72)';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
     const face='Manrope, "Segoe UI", system-ui, sans-serif';
@@ -298,7 +300,7 @@ export function createSpatialTotemCards(gl, options = {}) {
                     if(mipmapped)gl.generateMipmap(gl.TEXTURE_2D);
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,mipmapped?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR);
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-                    if(mipmapped && anisotropy){const maximum=gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,maximum));}
+                    if(mipmapped && anisotropy){const maximum=gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,maximum));}
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
                     entry={texture,content,started:entry?.started ?? performance.now(),fadeDuration:entry?.fadeDuration ?? surface.card.fadeDuration ?? 450};textures.set(key,entry);
                 }

@@ -29,9 +29,9 @@ export const DEMO_DEEPER_CONNECTION=Object.freeze({
 });
 
 export const DEMO_CONNECTION_POSITIONS=Object.freeze({
-    sources:Object.freeze({pruning:Object.freeze({x:40,y:40}),'nitrogen-fixation':Object.freeze({x:40,y:63})}),
-    targets:Object.freeze({pruning:Object.freeze({x:60,y:40}),'nitrogen-fixation':Object.freeze({x:60,y:63})}),
-    result:Object.freeze({x:50,y:51}),deeperTarget:Object.freeze({x:60,y:53}),deeperResult:Object.freeze({x:50,y:64})
+    sources:Object.freeze({pruning:Object.freeze({x:42,y:46}),'nitrogen-fixation':Object.freeze({x:42,y:63})}),
+    targets:Object.freeze({pruning:Object.freeze({x:58,y:46}),'nitrogen-fixation':Object.freeze({x:58,y:63})}),
+    result:Object.freeze({x:50,y:54}),deeperTarget:Object.freeze({x:60,y:51}),deeperResult:Object.freeze({x:50,y:68})
 });
 
 export function createDemoConnectionState(){
@@ -56,7 +56,7 @@ export function demoConnectionIsDeeper(state){
 export function demoConnectionSource(state){
     const choice=demoConnectionChoice(state);
     if(!choice)return null;
-    return demoConnectionIsDeeper(state)?Object.freeze({x:50,y:37}):DEMO_CONNECTION_POSITIONS.sources[choice.id];
+    return demoConnectionIsDeeper(state)?Object.freeze({x:50,y:42}):DEMO_CONNECTION_POSITIONS.sources[choice.id];
 }
 
 export function demoConnectionTarget(state){

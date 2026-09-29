@@ -74,7 +74,7 @@ test('desktop control panel keeps a stable rail and shows media only for the act
     const styles = read('app/living-objects.css');
     assert.match(panel, /if\(desktopDemo\)railCollapsed=false;/);
     assert.match(panel, /const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached && !settingsOpen;/);
-    assert.match(panel, /if\(!desktopDemo\)\{const moveButton=/);
+    assert.match(panel, /header\.classList\.add\('is-move-handle'\);header\.title='Drag to move the Control panel';bindPanelMove\(header\)/);
     assert.match(panel, /if\(!floating && !isDesktopDemo\(\)\)toolbar\.append\(makePanelToggle\('Media'/);
     assert.match(panel, /if\(mediaToggle && desktopDemo\)mediaToggle\.remove\(\)/);
     assert.match(panel, /isDesktopDemo\(\)\?items\.filter\(item=>item\.action!=='Recenter'\):items/);
@@ -82,7 +82,7 @@ test('desktop control panel keeps a stable rail and shows media only for the act
     assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview ~ \.nlxr-info-panel\.is-demo-panel/);
     assert.match(styles, /width:clamp\(440px,31vw,540px\) !important/);
     assert.match(styles, /height:calc\(100dvh - 36px\) !important/);
-    assert.match(styles, /nlxr-panel-move,.nlxr-rail-toggle,.nlxr-media-toggle/);
+    assert.match(styles, /\.nlxr-control-header\.is-move-handle/);
 });
 
 test('desktop primary action stays on its rendered surface while phone preview uses the safe footer', () => {

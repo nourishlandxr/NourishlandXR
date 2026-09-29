@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {DEMO_CONNECTION_CHOICES,DEMO_CONNECTION_HOLD_MS,DEMO_CONNECTION_PHASES,DEMO_DEEPER_CONNECTION,createDemoConnectionState,demoConnectionCurve,demoConnectionTargetAt,selectDemoConnectionChoice} from '../app/services/demoKnowledgeConnections.js';
+import {DEMO_CONNECTION_CHOICES,DEMO_CONNECTION_HOLD_MS,DEMO_CONNECTION_PHASES,DEMO_CONNECTION_POSITIONS,DEMO_DEEPER_CONNECTION,createDemoConnectionState,demoConnectionCurve,demoConnectionSource,demoConnectionTarget,demoConnectionTargetAt,selectDemoConnectionChoice} from '../app/services/demoKnowledgeConnections.js';
 import {PIGEON_PEA_PIM} from '../app/services/pigeonPeaPim.js';
 import {createMeshRepository} from '../app/services/meshRepository.js';
 import {createMeshSourceResolver,pimMeshRef,limMeshRef} from '../app/services/meshReferences.js';
@@ -14,11 +14,24 @@ test('guided connection state offers two curated plant and learning pairs',()=>{
     assert.equal(DEMO_CONNECTION_CHOICES.length,2);
     selectDemoConnectionChoice(state,'pruning');
     assert.equal(state.phase,DEMO_CONNECTION_PHASES.READY);
-    assert.equal(demoConnectionTargetAt(state,81,39),true);
+    assert.equal(demoConnectionTargetAt(state,58,46),true);
     assert.equal(demoConnectionTargetAt(state,81,68),false);
     selectDemoConnectionChoice(state,'nitrogen-fixation');
-    assert.equal(demoConnectionTargetAt(state,81,68),true);
+    assert.equal(demoConnectionTargetAt(state,58,63),true);
     assert.equal(DEMO_CONNECTION_HOLD_MS,500);
+});
+
+test('connection cells and both drag targets stay within the welcome panel footprint',()=>{
+    const state=createDemoConnectionState();
+    selectDemoConnectionChoice(state,'pruning');
+    assert.deepEqual(demoConnectionSource(state),DEMO_CONNECTION_POSITIONS.sources.pruning);
+    assert.deepEqual(demoConnectionTarget(state),DEMO_CONNECTION_POSITIONS.targets.pruning);
+    assert.ok(demoConnectionSource(state).x>35 && demoConnectionSource(state).x<65);
+    assert.ok(demoConnectionTarget(state).x>35 && demoConnectionTarget(state).x<65);
+    state.primaryResult={derivedRef:{version:1,kind:'derived',nodeId:'test'}};
+    state.phase=DEMO_CONNECTION_PHASES.DEEPER_READY;
+    assert.deepEqual(demoConnectionSource(state),{x:50,y:42});
+    assert.deepEqual(demoConnectionTarget(state),DEMO_CONNECTION_POSITIONS.deeperTarget);
 });
 
 test('connection curve is a stable curved path with no layout mutation',()=>{

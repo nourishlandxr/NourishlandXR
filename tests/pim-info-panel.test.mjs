@@ -13,7 +13,7 @@ test('Quest Control panel keeps its navigation rail and Continue reachable', () 
     for(const action of ['MovePanel','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
     assert.equal(folded.some(item=>['ToggleMenu','ToggleMedia'].includes(item.action)),false);
     assert.equal(folded.some(item=>item.action==='ToggleTools'),false);
-    assert.equal(folded.find(item=>item.action==='MovePanel').label,'✋');
+    assert.equal(folded.find(item=>item.action==='MovePanel').label,'MOVE');
     assert.equal(spatialPanelControls({hidden:true})[0].label,'Control panel');
 });
 import { hitTotemSurface } from '../app/services/spatialTotemCards.js';
@@ -100,7 +100,9 @@ test('Control panel keeps navigation separate from experience actions',()=>{
     assert.equal(controlPanelControls().some(b=>['Details','Modules'].includes(b.action)),false);
     assert.equal(controlPanelControls().find(b=>b.action==='Help').label,'Help');
     const menu=controlPanelControls({height:760,utilityActions:[{id:'lim-visibility',label:'Hide learning cells'},{id:'close',label:'Close demo'}]});
-    assert.deepEqual(menu.filter(button=>button.kind==='menu').map(button=>button.action),['Settings','Utility:close','Utility:lim-visibility']);
+    const menuActions=menu.filter(button=>button.kind==='menu');
+    assert.deepEqual(menuActions.map(button=>button.action),['Settings','Utility:close','Utility:lim-visibility','Hide']);
+    assert.ok(menuActions.find(button=>button.action==='Hide').y>menuActions.find(button=>button.action==='Utility:close').y);
     assert.equal(menu.some(button=>button.kind==='utility' && ['Utility:lim-visibility','Utility:close'].includes(button.action)),false);
     const utilities=controlPanelControls({tab:'Details',height:760,utilityActions:[{id:'continue',label:'Continue'},{id:'recenter',label:'Recenter panel'}]});
     assert.deepEqual(utilities.filter(button=>button.kind==='utility').map(button=>button.action),['Utility:recenter','Utility:continue']);
