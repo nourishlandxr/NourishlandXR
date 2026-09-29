@@ -38,7 +38,7 @@ import { SPATIAL_NOTE_TEMPLATES, spatialNoteTemplate } from '../services/spatial
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
-import { createPimDocument, pimToArKnowledge } from '../services/pimModel.js';
+import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 const PIGEON_PEA_CONTROL_IMAGE = new URL('../assets/pigeon-pea-cajanus-cajan.png', import.meta.url).href;
@@ -58,6 +58,7 @@ const DEMO_TUTORIAL_ART = Object.freeze({
 });
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
+import { demoNeighbourPim } from '../services/demoNeighbourPim.js';
 import { enrichTrialNodes, MORINGA_TRIAL } from '../services/plantTrialContent.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
@@ -1015,7 +1016,7 @@ function demoTotemCards(record) {
     const pointedTitle=(title,side)=>side==='left'?`← ${title}`:`${title} →`;
     const zoneName=record.demoZoneName || record.demoContent?.title || record.name || 'This zone';
     const header={...totemKnowledgeCards({title:zoneName,introduction:`Welcome to ${zoneName}.`,
-        plants:plants.map(item=>({id:item.id,name:item.name,knowledge:item.demoAmbientNeighbour?{live:false}:demoOrbKnowledge(item)})),
+        plants:plants.map(item=>({id:item.id,name:item.name,knowledge:demoOrbKnowledge(item)})),
         notes:notes.map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),compact:true})[0],eyebrow:'ZONE'};
     const plantSigns=second
         ? ['left','right'].map(side=>({side,pair:plants.filter(item=>directionFor(item)===side)})).filter(group=>group.pair.length).map(({side,pair})=>({id:`plants-${side}`,eyebrow:pair.length===1?'PLANT ORB':'PLANT ORBS',title:pointedTitle(pair.map(item=>item.name).join(' · '),side),summary:'',plaque:true,boardSide:side,references:pair.map(item=>item.id)}))
@@ -1663,6 +1664,7 @@ function paintWelcomeLayer(now) {
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
             opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            drawRoots:false,
             rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
             drawCellLabels:true,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''
@@ -2200,14 +2202,7 @@ function createDemoNeighbourhood(totem) {
     ];
     for(const neighbour of neighbours){
         const plantId=neighbour.name.toLocaleLowerCase().replace(/[^a-z0-9]+/g,'-');
-        const profile={common_name:neighbour.name,pim:createPimDocument({
-            id:`${plantId}-demo-pim`,plantId,
-            identity:{commonName:neighbour.name,identityStatement:`A Plant Information Mesh for ${neighbour.name}, ready for verified identity and observations from this Area.`},
-            nodes:[
-                {id:`${plantId}-identity-observation`,parentId:'scientific-information',title:'Identity to confirm',preview:'Record observed features and a reliable source',body:'Use several visible features together and keep a reliable identification source with this plant record.',informationType:'local_observation',evidenceStatus:'local_observation',status:'published'},
-                {id:`${plantId}-place-observation`,parentId:'cultivation',title:'Growing in this Area',preview:'Record local conditions and response',body:'Add dated notes about light, soil, moisture, season, growth and care in this Area. Let observations guide any local growing advice.',informationType:'local_observation',evidenceStatus:'local_observation',status:'published'}
-            ]
-        })};
+        const profile={common_name:neighbour.name,pim:demoNeighbourPim(plantId)};
         markers.push({
             ...createMinimalMarkerDraft('plant',{name:neighbour.name}),
             name:neighbour.name,demoType:'plant',demoAmbientNeighbour:true,demoAlive:true,demoInteractive:true,
@@ -2857,11 +2852,13 @@ function toggleDemoPlantProfile(record) {
         activePimLimBridge=null;
         if(record.tutorialStage==='plant'){setDemoJourneyStage('know');advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.plantProfileOpened);}
         clearLimSelection();
+        const ambientNeighbour=Boolean(record.demoAmbientNeighbour);
         const moringa=record.demoPlantPreset==='moringa';
-        infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,moringa
+        const plantMedia=ambientNeighbour ? null : moringa
             ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
-            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas',hint:'Select the plant to explore it, or grab it to reposition it.'});
-        setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
+            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas',hint:'Select the plant to explore it, or grab it to reposition it.'};
+        infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,plantMedia);
+        if(!ambientNeighbour)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
         setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
         record.profileRevealStarted = performance.now();
         const firstOpen = !record.demoProfileOpened;
@@ -2877,7 +2874,8 @@ function toggleDemoPlantProfile(record) {
         record.informationPosition = record.informationPose?.position || record.informationPosition || null;
         // Establish the compact tutorial board before sizing the canonical
         // mesh so its first frame already respects the true top safe inset.
-        showPersistentPimPrompt(record);
+        if(ambientNeighbour)setGuide(`${record.name} information opened. Select a cell to explore its story.`);
+        else showPersistentPimPrompt(record);
     }
     refreshDemoRecord(record);
     if (record.demoExpanded && record.awaitingProfileReveal) {
@@ -2886,7 +2884,7 @@ function toggleDemoPlantProfile(record) {
     }
     if (!record.demoExpanded) {
         infoPanel?.setMediaCollapsed(true);
-        setDemoTutorialStep(DEMO_TUTORIAL_STEPS.GUIDED);
+        if(!record.demoAmbientNeighbour)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.GUIDED);
         setGuide(`${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
     }
 }
@@ -2938,7 +2936,7 @@ function selectDemoProfileCell() {
         record.demoActiveBranch = '';
         record.pimBloomStarted = 0;
         refreshDemoPimProfile(record);
-        setGuide('Pigeon Pea flower reset.');
+        setGuide(`${record.name || 'Plant'} information reset.`);
         return true;
     }
     if (node.pimBack) {
@@ -2972,6 +2970,7 @@ function selectDemoProfileCell() {
 }
 
 function advanceAfterDemoProfileInteraction(record) {
+    if (record?.demoAmbientNeighbour) return 0;
     if (!record || record.demoProfileInteracted) return 0;
     if (record.demoProfileReady) return 0;
     const opened = demoPimState(record).expandedNodeIds.has(record.demoActiveBranch);
@@ -4346,7 +4345,7 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
+    if(arWelcomeShowcaseActive){arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawRoots:false,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);

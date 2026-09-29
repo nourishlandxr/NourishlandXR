@@ -213,7 +213,8 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     assert.match(panel, /identityImage=document\?\.identity\?\.image/);
     assert.match(panel, /imageHeight=Math\.min\(520,Math\.max\(250,card\.height\*\.42\)\)/);
     assert.match(demo, /new URL\('\.\.\/assets\/moringa-oleifera\.jpg', import\.meta\.url\)/);
-    assert.match(demo, /focusPlant\(record,demoOrbKnowledge\(record\)\.document,moringa/);
+    assert.match(demo, /const plantMedia=ambientNeighbour \? null : moringa/);
+    assert.match(demo, /focusPlant\(record,demoOrbKnowledge\(record\)\.document,plantMedia\)/);
     const conversion=demo.slice(demo.indexOf('function guidePlantConversion'),demo.indexOf('function showSceneContinue'));
     assert.doesNotMatch(conversion,/focusPlant\(/);
     assert.match(creator, /infoPanel\?\.focusPlant\(record,creatorKnowledgeDocument\(record\)\)/);
