@@ -44,6 +44,7 @@ import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialD
 const PIGEON_PEA_CONTROL_IMAGE = new URL('../assets/pigeon-pea-cajanus-cajan.png', import.meta.url).href;
 const MORINGA_PROFILE_IMAGE = new URL('../assets/moringa-oleifera.jpg', import.meta.url).href;
 const DEMO_TUTORIAL_ART = Object.freeze({
+    wheel:{image:new URL('../assets/living-knowledge-seed-atlas.png',import.meta.url).href,alt:'Nourishland website hero knowledge wheel, a visual index to information that can grow around a place.'},
     curiosity:{image:new URL('../assets/demo-tutorial-art/01-plant-curiosity.png',import.meta.url).href,alt:'A visitor pauses beside an unfamiliar plant, wondering what it is.'},
     companion:{image:new URL('../assets/demo-tutorial-art/02-companion-control-panel.png',import.meta.url).href,alt:'A visitor explores the NourishlandXR companion Control panel.'},
     references:{image:new URL('../assets/demo-tutorial-art/03-cumbersome-reference-tools.png',import.meta.url).href,alt:'A visitor carries books, a phone, compass and field guides while identifying a plant.'},
@@ -54,7 +55,9 @@ const DEMO_TUTORIAL_ART = Object.freeze({
     note:{image:new URL('../assets/demo-tutorial-art/07-add-a-plant-note.png',import.meta.url).href,alt:'A visitor adds a note beside a plant.'},
     connection:{image:new URL('../assets/demo-tutorial-art/08-connect-pimo-to-limo.png',import.meta.url).href,alt:'Plant information is connected to a learning pathway.'},
     connectedAreas:{image:new URL('../assets/demo-tutorial-art/10-connected-areas-garden.png',import.meta.url).href,alt:'A monochrome panorama of a large garden with several distinct Totems marking connected Areas.'},
-    pathways:{image:new URL('../assets/demo-tutorial-art/09-explore-archetype-pathways.png',import.meta.url).href,alt:'A visitor explores connected learning pathway archetypes.'}
+    pathways:{image:new URL('../assets/demo-tutorial-art/09-explore-archetype-pathways.png',import.meta.url).href,alt:'A visitor explores connected learning pathway archetypes.'},
+    comparePlants:{image:new URL('../assets/demo-tutorial-art/11-compare-moringa-pigeon-pea.svg',import.meta.url).href,alt:'Black and white plant comparison: Moringa foliage and pods above a Pigeon Pea shrub branch.'},
+    controller:{image:new URL('../assets/demo-tutorial-art/12-controller-placement-guide.svg',import.meta.url).href,alt:'Controller guide: pull the trigger to place the tag and move the right joystick up or down to adjust its distance.'}
 });
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
@@ -175,7 +178,7 @@ function reportDemoRenderFailure(error, phase = 'demo render') {
     recordArFailure(error, phase);
     setGuide('The scene is recovering. Your information is still available.');
 }
-function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
+function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded && demoAreaVisible(r)).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
 function syncDemoPimHover(){
     const candidate=demoInfoTarget(),nextRecord=candidate?.record || null,nextPath=candidate?.target?.node?.path || candidate?.target?.path || '';
     if(nextRecord===demoPimHover.record && nextPath===demoPimHover.path)return;
@@ -285,7 +288,7 @@ const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
 // keeps the same real-world proportions at 88% so it reads as a nearby Note,
 // without turning into a flyaway presentation board.
 const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
-const DEMO_TOTEM_HALF_HEIGHT_METRES = .82;
+const DEMO_TOTEM_HALF_HEIGHT_METRES = .56;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to NourishlandXR',
@@ -382,7 +385,11 @@ const DEMO_ORB_MATERIALS = Object.freeze({
         ring: [1, 0.78, 0.25],
         radius: 0.074,
         style: '--demo-orb-size:62px;--demo-orb-light:#ffe0a0;--demo-orb-mid:#d17723;--demo-orb-dark:#6b250c;--demo-orb-ring:#ffc84a'
-    }
+    },
+    banana: {shell:[.22,.46,.12],core:[.75,.85,.28],ring:[.87,.95,.38],radius:.067,style:'--demo-orb-light:#e5f5a6;--demo-orb-mid:#81a543;--demo-orb-dark:#2b5b31;--demo-orb-ring:#daf378'},
+    acacia: {shell:[.51,.31,.10],core:[.96,.76,.30],ring:[1,.85,.42],radius:.067,style:'--demo-orb-light:#fff0b5;--demo-orb-mid:#c99843;--demo-orb-dark:#70461c;--demo-orb-ring:#ffdc72'},
+    jackfruit: {shell:[.18,.32,.47],core:[.44,.73,.91],ring:[.58,.83,1],radius:.067,style:'--demo-orb-light:#c4ecff;--demo-orb-mid:#4b93b3;--demo-orb-dark:#203e66;--demo-orb-ring:#92d8fa'},
+    lychee: {shell:[.47,.14,.27],core:[.96,.46,.61],ring:[1,.65,.74],radius:.067,style:'--demo-orb-light:#ffd2dc;--demo-orb-mid:#ca6685;--demo-orb-dark:#692648;--demo-orb-ring:#ffaac1'}
 });
 const BIOMAP_CATEGORIES = Object.freeze({
     FOOD: [],
@@ -665,7 +672,7 @@ function demoPanelActions() {
     const actions=[];
     const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
-    if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'Previous'});
+    if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous'});
     if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
     if(arWelcomeShowcaseActive && ['apply','connect','impact'].includes(demoJourneyStage))actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
     if(!desktopDemo)actions.push({id:'safety',label:'Safety guidance'});
@@ -724,7 +731,7 @@ function handleDemoPanelAction(action) {
     if(action==='lim-visibility'){setLimMeshVisible(!limMeshVisible);return;}
     if(action==='quest'){void retryQuestImmersive();return;}
     if(action==='recenter'){infoPanel?.recenter();return;}
-    if(action==='close')returnToWelcome();
+    if(action==='close' && window.confirm('Are you sure you want to exit the demo?'))returnToWelcome();
 }
 
 async function retryQuestImmersive() {
@@ -781,7 +788,7 @@ function demoTextTypingDelay(text, visibleLength) {
 function showDemoAction(nextStage) {
     if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
     const messages = {
-        plant2: ['Apply the thinking in the place', 'Pigeon Pea can provide food, seed and support. Add Moringa to compare a different plant role and see how more than one plant becomes part of the same living map.'],
+        plant2: ['Apply the thinking in the place', 'A plant profile can hold far more than harvest or soil needs: identity, relationships, seasonal change, care, uses, local knowledge and questions still being explored. Add Moringa to see how two distinct living profiles can connect within one place.'],
         note: ['Turn attention into a record', 'The plants provide reference knowledge. A Note adds what someone actually sees, remembers or needs to do in this place.']
     };
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
@@ -1023,13 +1030,33 @@ function demoTotemCards(record) {
         : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'PLANT ORB',title:pointedTitle(item.name,directionFor(item)),summary:'',plaque:true,boardSide:directionFor(item),references:[item.id]}));
     const note=notes[0];
     const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
-    const destination=partner?.demoZoneName || record.demoNeighbourZoneName || '';
+    const destination=partner?.demoZoneName || '';
     const navigation=resolveTotemNavigation(record,partner);
-    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:navigation.reliable?`${navigation.arrow} ${destination}`:`Explore ${destination}`,summary:'',body:navigation.reliable?'Follow the linked route.':'Direction appears after the zones are reliably linked.',boardSide:navigation.reliable?navigation.side:partner?directionFor(partner):'',plaque:true,navigation:{...navigation,destinationId:partner?.id || ''}} : null;
-    return [header,...plantSigns,
+    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:pointedTitle(destination,directionFor(partner)),summary:'',body:'Follow this sign to the neighbouring Totem.',boardSide:directionFor(partner),plaque:true,navigation:{...navigation,destinationId:partner.id}} : null;
+    return [header,...(neighbour ? [neighbour] : []),...plantSigns,
         ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:pointedTitle(note.name,directionFor(note)),summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
-        ...(neighbour ? [neighbour] : [])
     ].slice(0,5);
+}
+function demoAreaVisible(record) {
+    if (record.demoType === 'zone' || !record.demoAreaId) return true;
+    const area=markers.find(item=>item.id===record.demoAreaId);
+    return !area?.demoTotemFaded && !area?.demoNarrativeFaded || Boolean(record.demoConnectionVisible);
+}
+function selectDemoTotemSign(record,cardId) {
+    record.totemSelectedCard=record.totemSelectedCard===cardId ? '' : cardId;
+    const card=demoTotemCards(record).find(item=>item.id===record.totemSelectedCard);
+    const target=markers.find(item=>item.id===(card?.navigation?.destinationId || card?.references?.[0]));
+    if(target)setGuide(`Follow the ${card.boardSide || 'nearby'} sign to ${target.demoZoneName || target.name}. The destination is highlighted.`);
+    updateSimulatedMarkers();
+}
+function selectedDemoTotemTargets() {
+    const ids=new Set();
+    for(const area of markers.filter(item=>item.demoType==='zone' && item.totemSelectedCard)) {
+        const card=demoTotemCards(area).find(item=>item.id===area.totemSelectedCard);
+        for(const id of card?.references || [])ids.add(id);
+        if(card?.navigation?.destinationId)ids.add(card.navigation.destinationId);
+    }
+    return ids;
 }
 function activateDemoTotemCard(hit) {
     if(!hit)return false;
@@ -1039,15 +1066,16 @@ function activateDemoTotemCard(hit) {
         hit.record.demoTotemFaded=false;
         hit.record.totemSelectedCard='';
         hit.record.totemCardsRefreshed=0;
+        infoPanel?.setContextualHint(hit.record.demoTotemSignsVisible?'Signs are visible. Each directional plaque points toward nearby Orbs, Notes or Totems.':'Signs are hidden. Turn them on to follow directional plaques to nearby Orbs, Notes or Totems.');
         updateSimulatedMarkers();return true;
     }
     if(hit.card?.id==='__fade'){
         hit.record.demoTotemFaded=!hit.record.demoTotemFaded;
         hit.record.totemSelectedCard='';
+        infoPanel?.setContextualHint(hit.record.demoTotemFaded?'Totem faded. Use Fade again to restore its full visibility.':'Totem restored. Fade dims it temporarily while you explore nearby information.');
         updateSimulatedMarkers();return true;
     }
-    hit.record.totemSelectedCard=hit.detail || hit.record.totemSelectedCard===hit.card.id ? '' : hit.card.id;
-    updateSimulatedMarkers();return true;
+    selectDemoTotemSign(hit.record,hit.detail ? '' : hit.card.id);return true;
 }
 
 function demoContentFor(record) {
@@ -1814,8 +1842,17 @@ function showArWelcomeShowcase() {
         finishOpeningCopy();
     };
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
-    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Discover how plant knowledge becomes a mapped, understandable and connected place."></canvas>';
+    layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Discover how plant knowledge becomes a mapped, understandable and connected place."></canvas><button type="button" class="tryit-welcome-more" data-welcome-more>Click for more</button>';
     arWelcomeCanvas=layer.querySelector('canvas');
+    const welcomeMore=layer.querySelector('[data-welcome-more]');
+    welcomeMore.hidden=!simulatedMode;
+    welcomeMore.title='Click to open more about NourishlandXR.';
+    welcomeMore.addEventListener('click',()=>{
+        infoPanel?.setCompact(false);
+        infoPanel?.showLearning({id:'ar-welcome-more',title:'Welcome to NourishlandXR',body:'Explore a real place through its plants, Areas and local knowledge. Plant Orbs open living information; directional Totem signs guide visitors toward Orbs, Notes and other Totems. Projects can support an orchard tagging tool, an educational module or an immersive tour.',image:new URL('../assets/living-knowledge-seed-atlas.png',import.meta.url).href,imageAlt:'Nourishland website hero knowledge wheel',accent:'#b7cbd0',mesh:'lim',editable:false});
+        infoPanel?.setIntroduction(true);
+        infoPanel?.setContextualHint('Select a plant or Area to open its connected information here.');
+    });
     if(simulatedMode){arWelcomeCanvas.width=DEMO_LIM_SURFACE_CANVAS.width;arWelcomeCanvas.height=DEMO_LIM_SURFACE_CANVAS.height;}
     // Native buttons provide touch, keyboard and screen-reader access to cells.
     for(const frame of welcomeExperienceFrames(64000,false,arWelcomeClusters))for(const node of frame.nodes){
@@ -1850,6 +1887,7 @@ function showArWelcomeShowcase() {
         if(!arWelcomeIntroPending || !welcomeSequenceCanContinue())return;
         clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
         arWelcomeIntroPending=false;arWelcomeOpeningActive=false;clearTimeout(boardTypingTimer);introBoardTextureDirty=true;
+        if(welcomeMore)welcomeMore.hidden=true;
         infoPanel?.setLearningModules(null);
         if(skip)skip.hidden=false;
         suppressSessionSelectUntil=performance.now()+700;
@@ -1905,39 +1943,35 @@ function selectWelcomeCell() {
 function showDemoTutorialMedia(key,title,body) {
     const art=DEMO_TUTORIAL_ART[key];
     if(!art)return;
-    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:'',body:'',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:title || 'NourishlandXR',body:body || '',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {title:'Meet your Control panel',button:'Continue',nextGuide:'',paragraphs:[
-        'This Control panel helps you interact with the demonstration and responds to what you select.'
+    {title:'Meet your Control panel',art:'wheel',button:'Continue',nextGuide:'',paragraphs:[
+        'This is your action panel. Select a plant and its information and images will appear here; use the panel actions to move through the demonstration.'
     ]},
     {title:'Every plant holds information',art:'references',button:'Continue',nextGuide:'',paragraphs:[
-        'Every plant holds useful information, but that information is often scattered across books, signs, websites, phones and people.',
-        'NourishlandXR brings it together in the place where it becomes useful.'
+        'A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources. NourishlandXR brings those layers together where the information becomes useful.'
     ]},
     {title:'Imagine arriving in a garden',art:'curiosity',button:'Continue',nextGuide:'',paragraphs:[
         'Imagine arriving in a garden and noticing a plant you do not recognise.',
         'You pause, look closely and wonder what it is, how it belongs here and what it might teach you.'
     ]},
-    {title:'A project represents a whole place',art:'area',button:'Continue',nextGuide:'',paragraphs:[
-        'A Project brings the place, its plants, Areas, observations and knowledge into one connected structure.',
-        'It keeps useful information connected to the place it describes.'
+    {title:'A Project holds information',art:'area',button:'Continue',nextGuide:'',paragraphs:[
+        'Create a Project anchored to a real place: tag an orchard, build an educational module, or make an immersive tour. Its Areas, plants, observations and guidance stay connected to that landscape.'
     ]},
-    {title:'Areas help you find your way',art:'structure',button:'Continue',nextGuide:'',paragraphs:[
-        'Each Area holds plants, observations and guidance for one part of the place.',
-        'We’ll begin with one plant.'
+    {title:'Areas and Totems guide you',art:'structure',button:'Continue',nextGuide:'',paragraphs:[
+        'Areas organise one part of a place. Directional Totem signs point visitors toward nearby Plant Orbs, Notes and other Totems, while keeping each Area’s information together.'
     ]},
-    {title:'Begin with one plant',art:'orb',button:'Place Pigeon Pea',nextGuide:'Place the Plant Orb, then open it to discover the plant’s information.',paragraphs:[
-        'Plants inside a Nourishland Project can have information connected to their real-world location.',
-        'Pigeon Pea is our example. First choose where this plant belongs in the scene.'
+    {title:'Begin with one plant',art:'controller',button:'Place Pigeon Pea',nextGuide:'Aim toward the plant or tag location. Hint: use the right joystick up or down to adjust distance.',paragraphs:[
+        'A Plant Orb attaches information to a real-world location. Pigeon Pea is our example: aim toward the plant or the exact place where you want its tag to appear.'
     ]}
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
     title:'This is the Plant Orb',button:'Select the Plant Orb',
-    nextGuide:'Aim at the Pigeon Pea Plant Orb and pull the trigger to explore it.',
+    nextGuide:'Select the Plant Orb to open its information. Press and hold it to move it.',
     paragraphs:[
         'Pigeon Pea now has a location in this scene. This Plant Orb connects information to this plant in the real place.',
         'The Orb is interactive. Select the Plant Orb to explore its information, beginning with simple facts and deeper connected branches.'
@@ -1959,6 +1993,7 @@ function runArWelcomeTutorial(index=0) {
         infoPanel?.setMediaCollapsed(true);
         infoPanel?.setIntroduction(true);
         infoPanel?.suspend(false);
+        infoPanel?.setContextualHint('Action panel: selected information and images appear here.');
     }
     if(step?.art){
         infoPanel?.setCompact(false);
@@ -2002,7 +2037,7 @@ function guidePlantConversion(record) {
         pointer?.setAttribute('hidden', '');
         pointer?.classList.remove('is-revealing', 'is-ready');
         refreshDemoRecord(record);
-        infoPanel?.setContextualHint(`Select the ${plantName} Plant Orb to open its Plant Profile.`);
+        infoPanel?.setContextualHint(`Select the ${plantName} Plant Orb to open its Plant Profile. Press and hold it to move it.`);
         infoPanel?.suspend(false);
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
@@ -2077,20 +2112,26 @@ function showDemoClosingMessage() {
 }
 
 function pairedDemoTotemPosition(side, groundBaseY) {
-    const viewer = viewerMatrix;
-    const right = viewer ? {x:Number(viewer[0]),z:Number(viewer[2])} : {x:1,z:0};
-    const forward = viewer ? {x:-Number(viewer[8]),z:-Number(viewer[10])} : {x:0,z:-1};
-    const rightLength = Math.hypot(right.x,right.z) || 1;
-    const forwardLength = Math.hypot(forward.x,forward.z) || 1;
+    const anchor=introWorldAnchor || introWorldAnchorFromViewer(viewerMatrix);
+    const center=anchor ? introLocalPosition(anchor,AR_PHONE_COMFORT.boardPosition) : {x:0,z:-1.9};
+    const right={x:Number(anchor?.[0]) || 1,z:Number(anchor?.[2]) || 0};
     return {
-        x:(Number(viewer?.[12]) || 0)+forward.x/forwardLength*1.9+right.x/rightLength*side*.82,
+        x:center.x+right.x*side,
         y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES,
-        z:(Number(viewer?.[14]) || 0)+forward.z/forwardLength*1.9+right.z/rightLength*side*.82
+        z:center.z+right.z*side
     };
+}
+function pairedDemoTotemGroundY() {
+    if(isDemoFloorHit(hitMatrix,viewerMatrix))return Number(hitMatrix[13]);
+    const cameraY=Number(viewerMatrix?.[13]);
+    if(Number.isFinite(cameraY) && cameraY>=1.3)return demoGroundBaseY(null,viewerMatrix,groundYEstimate);
+    const anchor=introWorldAnchor || introWorldAnchorFromViewer(viewerMatrix);
+    const center=anchor ? introLocalPosition(anchor,AR_PHONE_COMFORT.boardPosition) : null;
+    return center ? center.y-AR_PHONE_COMFORT.boardScale[1]*.16*2100/1080/2 : demoGroundBaseY(null,viewerMatrix,groundYEstimate);
 }
 
 function createDemoTotemExample() {
-    const groundBaseY = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
+    const groundBaseY = pairedDemoTotemGroundY();
     groundYEstimate = groundBaseY;
     const position = pairedDemoTotemPosition(1,groundBaseY);
     const pairRightLength=Math.hypot(Number(viewerMatrix?.[0]) || 1,Number(viewerMatrix?.[2]) || 0) || 1;
@@ -2128,6 +2169,7 @@ function createDemoTotemExample() {
     };
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
+    markers.filter(record=>['plant','note'].includes(record.demoType) && !record.demoAmbientNeighbour).forEach(record=>{record.demoAreaId=totem.id;});
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.firstAreaShown);
     updateSimulatedMarkers();
     showDemoTutorialMedia('totem','A Totem unfolds garden knowledge','Two simple physical buttons control the Totem: show or store its attached signs, and fade or restore it when it is not in use.');
@@ -2140,7 +2182,7 @@ function createDemoSecondTotem() {
     const groundBaseY = first?.groundBaseY ?? demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY;
     const position = first?.demoPairRight
-        ? {x:first.position.x-first.demoPairRight.x*1.64,y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES,z:first.position.z-first.demoPairRight.z*1.64}
+        ? {x:first.position.x-first.demoPairRight.x*2,y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES,z:first.position.z-first.demoPairRight.z*2}
         : pairedDemoTotemPosition(-1,groundBaseY);
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
@@ -2195,24 +2237,24 @@ function connectDemoTotems() {
 function createDemoNeighbourhood(totem) {
     const right={x:Number(viewerMatrix?.[0]) || 1,z:Number(viewerMatrix?.[2]) || 0};
     const neighbours=[
-        {name:'Banana',dx:-.48,dy:.92,anchor:{x:8,y:48},color:'green'},
-        {name:'Acacia',dx:.30,dy:1.17,anchor:{x:39,y:46},color:'brown'},
-        {name:'Jackfruit',dx:-.61,dy:.55,anchor:{x:9,y:68},color:'pigeonPea'},
-        {name:'Lychee',dx:.49,dy:.71,anchor:{x:40,y:67},color:'green'}
+        {name:'Banana',dx:-.48,dy:.92,anchor:{x:8,y:48},color:'banana'},
+        {name:'Acacia',dx:.30,dy:1.17,anchor:{x:39,y:46},color:'acacia'},
+        {name:'Jackfruit',dx:-.61,dy:.55,anchor:{x:9,y:68},color:'jackfruit'},
+        {name:'Lychee',dx:.49,dy:.71,anchor:{x:40,y:67},color:'lychee'}
     ];
     for(const neighbour of neighbours){
         const plantId=neighbour.name.toLocaleLowerCase().replace(/[^a-z0-9]+/g,'-');
         const profile={common_name:neighbour.name,pim:demoNeighbourPim(plantId)};
         markers.push({
             ...createMinimalMarkerDraft('plant',{name:neighbour.name}),
-            name:neighbour.name,demoType:'plant',demoAmbientNeighbour:true,demoAlive:true,demoInteractive:true,
+            name:neighbour.name,demoType:'plant',demoAreaId:totem.id,demoAmbientNeighbour:true,demoAlive:true,demoInteractive:true,
             demoKnowledgeProfile:profile,demoKnowledgeProjection:pimToArKnowledge(profile.pim),
             demoOrbColor:neighbour.color,demoOrbShape:'orb',demoExpanded:false,demoArriveAt:performance.now(),
             position:{x:totem.position.x+right.x*neighbour.dx,y:totem.groundBaseY+neighbour.dy,z:totem.position.z+right.z*neighbour.dx},
             simulatedAnchor:neighbour.anchor
         });
     }
-    const note={...createMinimalMarkerDraft('note',{name:'Vetiver row'}),name:'Vetiver row',demoType:'note',demoAmbientNeighbour:true,
+    const note={...createMinimalMarkerDraft('note',{name:'Vetiver row'}),name:'Vetiver row',demoType:'note',demoAreaId:totem.id,demoAmbientNeighbour:true,
         demoInteractive:false,demoExpanded:true,demoArriveAt:performance.now(),simulatedAnchor:{x:16,y:83},
         position:{x:totem.position.x-right.x*.45,y:totem.groundBaseY+.42,z:totem.position.z-right.z*.45},
         demoContent:{title:'NOTE · Vetiver row',accent:'#d4bd83',lines:['OBSERVATION  Vetiver marks a living edge.']},revealLines:1};
@@ -2398,9 +2440,9 @@ async function resolveKnowledgeCombination(deeper=false){
 
 function startKnowledgeCombinationExperience(){
     useSharedWelcomeBoard(false);clearLimSelection();knowledgeCombinationState=createDemoConnectionState();knowledgeCombinationCleanup();
-    limMeshVisible=true;limMeshActivatedAt=arWelcomeClock.elapsed;introBoardTextureDirty=true;
+    limMeshVisible=true;introBoardTextureDirty=true;
     const plant=knowledgeCombinationPlantRecord();
-    if(plant){plant.demoInteractive=true;plant.demoAlive=true;plant.demoExpanded=false;plant.demoActiveBranch='';plant.demoExpandedNodeIds=[];plant.demoExpandedBranches=[];plant.demoSelectedNodeId='';plant.informationPosition=null;plant.informationPose=null;refreshDemoRecord(plant);}
+    if(plant){plant.demoInteractive=true;plant.demoAlive=true;plant.demoConnectionVisible=true;refreshDemoRecord(plant);}
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');if(board)board.hidden=true;
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');
     const overlay=ensureKnowledgeCombinationOverlay();overlay?.removeAttribute('hidden');syncKnowledgeCombinationOverlay();
@@ -2409,7 +2451,7 @@ function startKnowledgeCombinationExperience(){
 }
 
 function finishKnowledgeCombinationExperience(){
-    knowledgeCombinationCleanup();knowledgeCombinationState=null;infoPanel?.suspend(false);showAudienceValue();
+    knowledgeCombinationCleanup();knowledgeCombinationState=null;markers.forEach(record=>{record.demoConnectionVisible=false;});updateSimulatedMarkers();infoPanel?.suspend(false);showAudienceValue();
 }
 
 function showKnowledgeCombinationIntroduction(){
@@ -2498,8 +2540,8 @@ function showTotemIntroduction() {
         'Meet the Totem',
         [
             'A Totem welcomes you to an Area and keeps its local information together.',
-            'Its short signs point to Notes, Plant Orbs and neighbouring Totems.',
-            'Open the Totem to see what is nearby, then choose the information you want to explore.'
+            'Its directional signs point toward Notes, Plant Orbs and neighbouring Totems. Show Signs toggles the plaques; Fade softens the Totem while you explore nearby information.',
+            'Open a Totem card to see what is nearby, then choose the information you want to explore.'
         ],
         'Show Totem',
         () => {
@@ -2639,14 +2681,15 @@ function armDemoPlacement(type, {explained=false}={}) {
         totem: ['Place Botanical Garden Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
-    const mediaKey=type==='totem'?'totem':type==='note'?'note':'orb';
+    const mediaKey=type==='totem'?'totem':type==='note'?'note':type==='plant2'?'comparePlants':type==='plant'?'controller':'orb';
     showDemoTutorialMedia(mediaKey,title,typeof introduction==='string'?introduction:introduction.join('\n\n'));
+    if(type==='note')infoPanel?.setContextualHint('Press Note for more examples and observation templates.');
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
         const questTriggerPlacement=Boolean(session && demoControllerInputSource()?.targetRayMode!=='screen');
         const placementCopy = type === 'plant'
-            ? {title:'Place Pigeon Pea',body:questTriggerPlacement?'Aim at the ground where you want the plant to appear, then pull the Quest controller trigger to place Pigeon Pea.':'Aim at the ground where you want the plant to appear, then tap the aiming circle to place Pigeon Pea.',next:questTriggerPlacement?'Aim at the ground and pull the trigger to place Pigeon Pea.':'Aim at the ground and tap the aiming circle to place Pigeon Pea.'}
+            ? {title:'Place Pigeon Pea',body:`Aim toward the real plant, or the place where you want its information tag to appear. This places a tag; it does not plant a virtual Pigeon Pea. ${questTriggerPlacement?'Pull the Quest controller trigger':'Tap the aiming circle'} to confirm.`,next:'Hint: aim at the plant or information-tag location; move the right joystick up or down to adjust distance.'}
             : type === 'plant2'
                 ? {title:'Place Moringa',body:'This second orb will show how two distinct plant profiles can share a place.',next:'Press the visible aiming circle to place Moringa.'}
                 : type==='totem'
@@ -2659,8 +2702,10 @@ function armDemoPlacement(type, {explained=false}={}) {
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${placementCopy.title}</h2><div class="tryit-board-text-window"><p>${placementCopy.body}</p></div>`;board.classList.add('is-copy-ready');board.classList.remove('is-typing');}
         setIntroBoardNextGuide(placementCopy.next);
+        if(type==='plant')infoPanel?.setContextualHint(placementCopy.body);
+        if(type==='note')infoPanel?.setContextualHint('Press Note for more examples and observation templates.');
         setGuide(type === 'plant'
-            ? questTriggerPlacement?'Aim at the ground, then pull the Quest controller trigger to place Pigeon Pea.':'Aim at the ground, then tap the aiming circle to place Pigeon Pea.'
+            ? `Aim toward the real plant or desired information-tag position, then ${questTriggerPlacement?'pull the Quest controller trigger':'tap the aiming circle'} to confirm.`
             : type === 'plant2'
                 ? 'Press the aiming circle to place the Moringa orb.'
                 : type==='totem'?'Position the upright Totem preview, then confirm placement.':'Tap the circle to place a Note.');
@@ -3085,15 +3130,17 @@ function updateSimulatedMarkers() {
     appRoot?.querySelectorAll(':scope > .nlxr-totem-detail').forEach(note=>note.remove());
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
+    const highlighted=selectedDemoTotemTargets();
     layer.innerHTML = `${renderSimulatedAreaLink()}${markers.map((record, index) => {
+        if(!demoAreaVisible(record))return '';
         const content = demoContentFor(record);
         const lines = content?.lines?.slice(0, record.revealLines ?? content.lines.length) || [];
         const anchor = record.simulatedAnchor || { x: 50, y: 50 };
         if (record.demoType === 'plant') {
             const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
-            return renderSimulatedPlant(record, index, anchor, offset);
+            return renderSimulatedPlant(record, index, anchor, offset).replace('tryit-sim-marker tryit-sim-marker-plant',`tryit-sim-marker tryit-sim-marker-plant${highlighted.has(record.id)?' is-sign-target':''}`);
         }
-        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor);
+        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         const collapsible = record.demoExpanded && record.demoInteractive !== false ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
@@ -3101,7 +3148,7 @@ function updateSimulatedMarkers() {
             ? `<strong>${content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}`
             : '';
         const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoAmbientNeighbour ? ' is-neighbour-note' : ''}${record.demoNarrativeFaded ? ' is-narrative-faded' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${highlighted.has(record.id)?' is-sign-target':''}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoAmbientNeighbour ? ' is-neighbour-note' : ''}${record.demoNarrativeFaded ? ' is-narrative-faded' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
     }).join('')}`;
     bindSimulatedInformationPanels(layer);
 }
@@ -3123,9 +3170,6 @@ function bindSimulatedInformationPanels(layer) {
         let holdTimer = null;
         let holdGesture = null;
         compactMarker.addEventListener('pointerdown', event => {
-            // A plant is intentionally locked while its mesh is visible.
-            // Press the orb again to close the mesh, then hold to move it.
-            if (record.demoType === 'plant' && record.demoExpanded) return;
             if (demoHeldIndex === index) return;
             holdGesture = {
                 pointerId: event.pointerId,
@@ -3218,7 +3262,7 @@ function bindSimulatedInformationPanels(layer) {
             compactMarker.querySelectorAll('[data-totem-card]').forEach(button=>{
                 button.addEventListener('pointerdown',event=>event.stopPropagation());
                 button.addEventListener('click',event=>{
-                    event.stopPropagation();infoPanel?.setMediaCollapsed(true);record.totemSelectedCard=record.totemSelectedCard===button.dataset.totemCard ? '' : button.dataset.totemCard;updateSimulatedMarkers();
+                    event.stopPropagation();infoPanel?.setMediaCollapsed(true);selectDemoTotemSign(record,button.dataset.totemCard);
                 });
             });
             compactMarker.querySelector('[data-totem-close]')?.addEventListener('pointerdown',event=>event.stopPropagation());
@@ -3613,7 +3657,7 @@ function demoTotemRotationY(record){
 function demoRecordAtPointer() {
     const adjustable = markers
         .map((record, index) => ({ record, index, hit:demoRecordRayHit(record) }))
-        .filter(item => item.record.demoInteractive !== false && item.hit)
+        .filter(item => item.record.demoInteractive !== false && demoAreaVisible(item.record) && item.hit)
         .map(item=>({...item,distance:item.hit.distance}))
         .sort((left, right) => left.distance - right.distance);
     return adjustable[0] || null;
@@ -3698,7 +3742,6 @@ function beginControllerDemoHold() {
     if (!target || target.record.demoInteractive === false) return false;
     // Match the phone preview: an open plant-information surface is locked.
     // A cell press must never start moving the orb behind that surface.
-    if (target.record.demoType === 'plant' && target.record.demoExpanded) return false;
     const origin = demoPointerWorldOrigin();
     if (!origin) return false;
     captureDemoGrabPose(target.record, origin, demoPointerWorldRay());
@@ -3716,7 +3759,6 @@ function beginHandDemoGrab() {
     const target = demoRecordAtPointer();
     const origin = demoPointerWorldOrigin();
     if (!target || !origin || target.record.demoInteractive === false) return false;
-    if (target.record.demoType === 'plant' && target.record.demoExpanded) return false;
     if (!captureDemoGrabPose(target.record, origin, demoPointerWorldRay())) return false;
     demoHeldIndex = target.index;
     setGuide(`Holding ${target.record.name || 'the orb'}. Move your hand, then release.`);
@@ -3982,7 +4024,7 @@ function renderInterface(simulated) {
     liveTagButton.addEventListener('click', event => event.stopPropagation());
     const holdCleanups = [
         bindHoldToConfirmButton(skipButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: () => skipDemoNarration?.() }),
-        bindHoldToConfirmButton(exitButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: returnToWelcome })
+        bindHoldToConfirmButton(exitButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: () => { if(window.confirm('Are you sure you want to exit the demo?'))returnToWelcome(); } })
     ];
     demoHoldButtonCleanup = () => holdCleanups.forEach(cleanup => cleanup());
     const reflowDemoViewport = () => {
@@ -4380,7 +4422,7 @@ function drawIntroNoteContent(ctx) {
         if(openingElapsed<DEMO_WELCOME_OPENING_MS){
             const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
             ctx.globalAlpha*=fade;ctx.fillStyle='#f3f0df';ctx.font='400 84px "Marcellus", Georgia, "Times New Roman", serif';ctx.fillText(demoLocalizedText('Welcome to NourishlandXR'),contentCenter,420,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='rgba(245,242,225,.9)';ctx.font='500 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Explore how plants, places and knowledge connect.'),contentCenter,570,760,54,3);}
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='rgba(245,242,225,.9)';ctx.font='500 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('A quick hello from NourishlandXR. Explore plants, place and knowledge.'),contentCenter,570,760,54,2);}
         }
         ctx.restore();return;
     }
@@ -4942,9 +4984,10 @@ function drawMarker(view) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     const hoveredPlant=latestControllerRay ? demoRecordAtPointer()?.record : null;
+    const signTargets=selectedDemoTotemTargets();
     markers.forEach(record => {
         const orbType = record.demoType === 'plant' ? 'plant' : record.demoType === 'marker' ? 'marker' : '';
-        if (!orbType) return;
+        if (!orbType || !demoAreaVisible(record)) return;
         const material = DEMO_ORB_MATERIALS[record.demoOrbColor];
         if (record.demoOrbShape === 'triangle') {
             const questScale=sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1;
@@ -4965,7 +5008,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1),
-            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, highlighted:orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
+            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {
@@ -4987,6 +5030,7 @@ function drawMarker(view) {
             alpha: arrival*(record.demoTotemFaded ? .18 : .98),
             rotationY
         });
+        if(signTargets.has(record.id))drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY+bodyHalfHeight},bodyHalfHeight*.9,{color:[.75,.96,.65],alpha:.16,emissive:.25});
         const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
         for(const [offset,shade] of [[-.048,[.17,.12,.09,.25]],[-.016,[.16,.11,.08,.18]],[.037,[.82,.69,.52,.16]]]){
             const x=record.position.x+right.x*offset+front.x*(bodyHalfDepth+.002);
@@ -5033,7 +5077,7 @@ function drawMarker(view) {
                 record.pimBloomStarted = 0;
             }
         }
-        if(demoKnowledgeWorkspace && record.demoType === 'plant' && record.demoExpanded) return;
+        if(!demoAreaVisible(record) || demoKnowledgeWorkspace && record.demoType === 'plant' && record.demoExpanded) return;
         if (record.demoType === 'zone') return;
         if (!record.texture) return;
         const orbOnly = ['marker', 'plant'].includes(record.demoType) && !record.demoExpanded;
@@ -5138,6 +5182,9 @@ function drawDemoControllerPointer(view) {
     const limSurface=(arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell()) || (arWelcomeShowcaseActive && introWorldAnchor && knowledgeCombinationState)
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
         : null;
+    const greenSurface=arWelcomeShowcaseActive && introWorldAnchor && introBoardVisible
+        ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
+        : null;
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
     const controlSurface=session && !domOverlayEnabled && continueButton && sessionMode!=='immersive-vr' && !continueButton.hidden && introWorldAnchor
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,360)
@@ -5149,7 +5196,7 @@ function drawDemoControllerPointer(view) {
     const hoveredRecordTarget=demoRecordAtPointer();
     const hoveredRecordHit=hoveredRecordTarget?.hit || null;
     const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
-    const surface = [limSurface,controlSurface,placementSurface,pimSurface,hoveredRecordHit,infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.
@@ -5168,7 +5215,10 @@ function drawDemoControllerPointer(view) {
         lift: .001,
         color:latestTrackedHandStates.length ? [.78,.91,.96,handPinchActive ? .76 : .54] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
-    if(surface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.013,{color:latestTrackedHandStates.length?[.82,.94,.98]:[.82,1,.56],alpha:1,emissive:.65});
+    if(surface){
+        if(surface===greenSurface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.048,{color:[.69,.94,.8],alpha:.12,emissive:.15});
+        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,surface===controlSurface?.022:surface===greenSurface?.018:.013,{color:surface===greenSurface?[.73,.94,.83]:latestTrackedHandStates.length?[.82,.94,.98]:[.82,1,.56],alpha:1,emissive:surface===greenSurface?.25:.65});
+    }
 }
 
 async function startImmersive() {

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-labelledby="title desc">
+  <title id="title">Place a plant information tag</title>
+  <desc id="desc">Monochrome right controller diagram showing the trigger for placement and joystick up or down for distance.</desc>
+  <rect width="900" height="1200" rx="34" fill="#f2f0eb"/>
+  <g fill="#242522" font-family="Arial, sans-serif">
+    <text x="64" y="92" font-size="28" font-weight="700" letter-spacing="4">PLACE A PLANT INFORMATION TAG</text>
+    <text x="64" y="145" font-size="21" letter-spacing="2">AIM AT THE REAL PLANT OR THE TAG LOCATION</text>
+  </g>
+  <g fill="none" stroke="#282a28" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M330 275c-54 24-87 79-93 153l-20 302c-7 101 33 184 105 211 31 12 76 11 111-3l142-59c60-25 89-78 85-146l-17-291c-4-66-28-121-75-151-54-35-178-43-238-16Z" fill="#e7e5df" stroke-width="14"/>
+    <path d="M599 318c55-39 113-29 131 4 14 26 1 67-36 93l-93 65" stroke-width="21"/>
+    <path d="M619 344c32-15 62-10 68 5 7 16-9 35-37 52" stroke-width="13"/>
+    <circle cx="443" cy="402" r="74" fill="#d3d1cb" stroke-width="11"/>
+    <circle cx="443" cy="402" r="39" fill="#faf9f5" stroke-width="10"/>
+    <path d="M443 356v-34m-18 19 18-19 18 19M443 448v34m-18-19 18 19 18-19" stroke-width="9"/>
+    <path d="M259 525c-34 44-43 112-36 178l18 166c5 41 29 75 60 86l19-126-16-260Z" fill="#d6d4cd" stroke-width="12"/>
+    <path d="M255 573h-86m86 0 43-35m-43 35 41 36" stroke-width="10"/>
+    <path d="M638 542h137m-137 0 40-36m-40 36 40 36" stroke-width="9"/>
+    <path d="M774 542v-58" stroke-width="8"/>
+    <path d="M735 484h78l-39-41Z" fill="#282a28" stroke-width="7"/>
+  </g>
+  <g fill="#252624" font-family="Arial, sans-serif" font-weight="700">
+    <text x="109" y="554" font-size="21" letter-spacing="2">RIGHT STICK</text>
+    <text x="104" y="591" font-size="17" letter-spacing="1">UP / DOWN</text>
+    <text x="660" y="618" font-size="21" letter-spacing="2">TRIGGER</text>
+    <text x="659" y="653" font-size="17" letter-spacing="1">CONFIRM PLACE</text>
+  </g>
+  <path d="M64 1015H836" stroke="#77736c" stroke-width="2"/>
+  <text x="64" y="1070" fill="#242522" font-family="Arial, sans-serif" font-size="21">Joystick adjusts distance. The tag may sit above ground.</text>
+</svg>

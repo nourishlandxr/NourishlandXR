@@ -80,6 +80,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
     const bodyHalfWidth = Number(state?.bodyHalfWidth) || .07;
     const demoZone=Boolean(state?.demoZone);
+    const demoScale=demoZone ? (Number(state?.bodyHalfHeight) || .56)/.82 : 1;
     const boardWidth = Number(state?.boardWidth) || (demoZone ? .52 : .58);
     const boardHeight = Number(state?.boardHeight) || (demoZone ? .18 : .22);
     const boardAttach=bodyHalfWidth+boardWidth/2-.035;
@@ -97,7 +98,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const signBoard = (card, index, count) => {
         const side=card.boardSide==='left'?-1:card.boardSide==='right'?1:0;
         return {
-            ...place(side*boardAttach, 1.20-index*(count > 3 ? .25 : .28), boardWidth, boardHeight, {
+            ...place(side*boardAttach, (1.20-index*(count > 3 ? .25 : .28))*demoScale, boardWidth, boardHeight, {
                 ...card,
                 boardStyle:'attached-sign',
                 boardSide:card.boardSide || '',
@@ -108,7 +109,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     };
     const headerSelected=selectedId===cards[0]?.id;
     const headerBoard = cards[0] ? {
-        ...place(0, 1.48, demoZone ? .74 : Math.max(.88, boardWidth + .16), .30, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
+        ...place(0, 1.48*demoScale, demoZone ? .74 : Math.max(.88, boardWidth + .16), .30, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,demoZone ? 5 : 3);
@@ -120,7 +121,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         ].filter(Boolean) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && selected.id!==cards[0]?.id && signsVisible && !faded) surfaces.push(place(0,2.04,1.18,.58,{...selected,boardStyle:'header-detail'},true));
+    if(selected && selected.id!==cards[0]?.id && signsVisible && !faded) surfaces.push(place(0,2.04*demoScale,1.18,.58,{...selected,boardStyle:'header-detail'},true));
     return surfaces;
 }
 
@@ -130,7 +131,7 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     const sizeFactor=({tiny:.58,small:.76,medium:1,large:1.34,huge:1.82})[size] || 1;
     const bodyHalfWidth=record?.demoType==='zone' ? .095 : .07*sizeFactor;
     const bodyHalfHeight=record?.demoType==='zone'
-        ? .82
+        ? .56
         : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-bodyHalfWidth*.35);
     return totemCardSurfaces(position,right,cards,selectedId,{
         signsVisible:Boolean(record?.demoTotemSignsVisible),faded:Boolean(record?.demoTotemFaded),

@@ -106,7 +106,8 @@ export function panelCenterFromGrab(ray, grab, axes) {
 export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:150,y:28,width:700,height:104}];
     const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue');
-    const menuUtilities=utilities.filter(item=>['close','lim-visibility'].includes(item.id));
+    const menuUtilities=utilities.filter(item=>['close','back','lim-visibility'].includes(item.id))
+        .sort((a,b)=>({close:0,back:1,'lim-visibility':2}[a.id]-({close:0,back:1,'lim-visibility':2}[b.id])));
     const secondary=utilities.filter(item=>item!==primary && !menuUtilities.includes(item));
     const secondaryRows=Math.ceil(secondary.length/2),primaryHeight=primary?68:0,moduleRows=tab==='Help'?moduleActions.length:0;
     const primaryY=height-22-primaryHeight,secondaryStart=primaryY-secondaryRows*62;
@@ -114,7 +115,7 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
     const buttons=[{action:'Hide',label:'Hide',x:18,y:height-76,width:174,height:54}];
     buttons.push({action:'Help',label:'Help',kind:'tab',selected:tab==='Help',x:18,y:148,width:174,height:56});
     buttons.push({action:'Settings',label:'Settings',kind:'menu',x:18,y:216,width:174,height:56});
-    menuUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='close'?'Close demo':item.label,kind:'menu',disabled:Boolean(item.disabled),x:18,y:284+index*62,width:174,height:54}));
+    menuUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='close'?'Close demo':item.label,ariaLabel:item.ariaLabel || item.label,title:item.description,description:item.description,kind:'menu',disabled:Boolean(item.disabled),x:18,y:284+index*62,width:174,height:54}));
     if(tab==='Details' && pageCount>1)buttons.push({action:'Previous',label:'‹',ariaLabel:'Previous page',kind:'pager',x:852,y:130,width:52,height:42,disabled:page===0},{action:'Next',label:'›',ariaLabel:'Next page',kind:'pager',x:918,y:130,width:52,height:42,disabled:page>=pageCount-1});
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-moduleRows*58-62,width:226,height:48}));
     if(tab==='Help')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY-moduleRows*58+index*58,width:732,height:48}));
@@ -200,7 +201,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     };
     const currentHint=()=>tab==='Help'?'':contextHint || identity?.hint || '';
     const pages=()=>infoPages(text(),headset?(largeText?29:34):(largeText?32:38),pathwayContext?4:7);
-    const title=()=>tab==='Help'?'Help':selection?.title || (identity?'':'Ready to explore');
+    const title=()=>tab==='Help'?'Help':selection?.title || 'Control panel';
     const hasPimPath=()=>Boolean(selection && identity);
     const pimPath=()=>{
         if(!hasPimPath())return '';
