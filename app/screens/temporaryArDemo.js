@@ -7,7 +7,7 @@ import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup, escapeSpatialText } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaques, resolveTotemNavigation, totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
-import {drawArWelcomePanel,WELCOME_SHAPE} from '../services/arWelcomePanel.js';
+import {drawArWelcomePanel,WELCOME_SHAPE,WELCOME_SHAPE_POINTS} from '../services/arWelcomePanel.js';
 import { WELCOME_ROOT_MILESTONES, WELCOME_ROOT_REFRESH_MS, advanceWelcomeRootProgress, welcomeRootsNeedRefresh } from '../services/arWelcomeRoots.js';
 import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,WELCOME_PANEL_DRAW_OFFSET,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
@@ -56,8 +56,6 @@ const DEMO_TUTORIAL_ART = Object.freeze({
     connection:{image:new URL('../assets/demo-tutorial-art/08-connect-pimo-to-limo.png',import.meta.url).href,alt:'Plant information is connected to a learning pathway.'},
     connectedAreas:{image:new URL('../assets/demo-tutorial-art/10-connected-areas-garden.png',import.meta.url).href,alt:'A monochrome panorama of a large garden with several distinct Totems marking connected Areas.'},
     pathways:{image:new URL('../assets/demo-tutorial-art/09-explore-archetype-pathways.png',import.meta.url).href,alt:'A visitor explores connected learning pathway archetypes.'},
-    comparePlants:{image:new URL('../assets/demo-tutorial-art/11-compare-moringa-pigeon-pea.svg',import.meta.url).href,alt:'Black and white plant comparison: Moringa foliage and pods above a Pigeon Pea shrub branch.'},
-    controller:{image:new URL('../assets/demo-tutorial-art/12-controller-placement-guide.svg',import.meta.url).href,alt:'Controller guide: pull the trigger to place the tag and move the right joystick up or down to adjust its distance.'}
 });
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
@@ -1656,7 +1654,7 @@ function bindLimSessionInteractions(arSession) {
 function drawKnowledgeCombinationExperience(ctx,now){
     const state=knowledgeCombinationState;if(!state)return;
     const choice=demoConnectionChoice(state),deeper=demoConnectionIsDeeper(state),toPoint=point=>({x:point.x*25,y:point.y*21});
-    const card=(point,{title,detail,label,color,muted=false,bloom=false,width=500,height=190})=>{
+    const card=(point,{title,detail,label,color,muted=false,bloom=false,width=440,height=180})=>{
         const p=toPoint(point),left=p.x-width/2,top=p.y-height/2;ctx.save();ctx.globalAlpha=muted?.26:1;
         if(bloom){ctx.shadowColor=color;ctx.shadowBlur=36+Math.sin(now/180)*8;}
         const fill=ctx.createLinearGradient(left,top,left+width,top+height);fill.addColorStop(0,`${color}ee`);fill.addColorStop(1,'rgba(13,39,31,.96)');ctx.fillStyle=fill;ctx.strokeStyle=bloom?'rgba(255,255,235,.95)':'rgba(235,249,226,.55)';ctx.lineWidth=bloom?6:3;
@@ -1664,18 +1662,19 @@ function drawKnowledgeCombinationExperience(ctx,now){
         ctx.fillStyle='#fff';ctx.font='800 39px system-ui,sans-serif';drawWrappedTextureText(ctx,title,left+30,top+60,width-60,44,2);ctx.fillStyle='rgba(247,255,243,.78)';ctx.font='600 22px system-ui,sans-serif';drawWrappedTextureText(ctx,detail,left+30,top+119,width-60,27,2);ctx.restore();
     };
     const line=(from,to,fromColor,toColor,width=11)=>{const a=toPoint(from),b=toPoint(to),bend=Math.max(100,Math.abs(b.x-a.x)*.28),gradient=ctx.createLinearGradient(a.x,a.y,b.x,b.y);gradient.addColorStop(0,fromColor);gradient.addColorStop(1,toColor);ctx.save();ctx.strokeStyle=gradient;ctx.lineWidth=width;ctx.lineCap='round';ctx.shadowColor=toColor;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x+bend,a.y,b.x-bend,b.y,b.x,b.y);ctx.stroke();ctx.restore();};
-    ctx.save();ctx.fillStyle='rgba(6,27,21,.16)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
-    ctx.textAlign='center';ctx.fillStyle='#eff7e9';ctx.font='800 58px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,155);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 27px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,210,2100);
-    ctx.textAlign='left';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 23px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',215,525);ctx.fillText('LEARNING CELLS',1775,525);
+    ctx.save();ctx.beginPath();WELCOME_SHAPE_POINTS.forEach((point,index)=>{const x=point.x+WELCOME_PANEL_DRAW_OFFSET.x,y=point.y+WELCOME_PANEL_DRAW_OFFSET.y;if(index)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.closePath();ctx.clip();ctx.fillStyle='rgba(6,27,21,.16)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
+    ctx.textAlign='center';ctx.fillStyle='#eff7e9';ctx.font='800 48px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,615,960);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 24px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,675,920);
+    if(!deeper){ctx.textAlign='center';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 19px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',1000,750);ctx.fillText('LEARNING CELLS',1500,750);}
     if(state.primaryResult && choice){line(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.sourceColor,choice.targetColor,8);line(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.targetColor,choice.sourceColor,8);}
-    if(state.deeperResult && choice){line(DEMO_CONNECTION_POSITIONS.result,DEMO_CONNECTION_POSITIONS.deeperResult,choice.targetColor,DEMO_DEEPER_CONNECTION.targetColor,8);line(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult,DEMO_DEEPER_CONNECTION.targetColor,choice.targetColor,8);}
+    const resultPosition=deeper?{x:50,y:37}:DEMO_CONNECTION_POSITIONS.result;
+    if(state.deeperResult && choice){line(resultPosition,DEMO_CONNECTION_POSITIONS.deeperResult,choice.targetColor,DEMO_DEEPER_CONNECTION.targetColor,8);line(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult,DEMO_DEEPER_CONNECTION.targetColor,choice.targetColor,8);}
     if(state.dragging && choice){const target=state.hoverTarget?demoConnectionTarget(state):state.pointer;if(target)line(demoConnectionSource(state),target,deeper?choice.targetColor:choice.sourceColor,deeper?DEMO_DEEPER_CONNECTION.targetColor:choice.targetColor,15);}
     for(const item of DEMO_CONNECTION_CHOICES){const selected=item.id===choice?.id;card(DEMO_CONNECTION_POSITIONS.sources[item.id],{title:item.sourceTitle,detail:item.sourceDetail,label:'Pigeon Pea',color:item.sourceColor,muted:Boolean(choice&&!selected)});card(DEMO_CONNECTION_POSITIONS.targets[item.id],{title:item.targetTitle,detail:item.targetDetail,label:'Learning cell',color:item.targetColor,muted:Boolean(choice&&!selected),bloom:selected && [DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.RESOLVING].includes(state.phase)});}
-    if(state.primaryResult && choice)card(DEMO_CONNECTION_POSITIONS.result,{title:state.primaryResult.derivedNode?.title || choice.resultTitle,detail:state.primaryResult.derivedNode?.summary || choice.resultSummary,label:'New connection',color:choice.targetColor,width:650,height:250,bloom:state.phase===DEMO_CONNECTION_PHASES.RESULT});
-    if(deeper)card(DEMO_CONNECTION_POSITIONS.deeperTarget,{title:DEMO_DEEPER_CONNECTION.targetTitle,detail:DEMO_DEEPER_CONNECTION.targetDetail,label:'Go deeper',color:DEMO_DEEPER_CONNECTION.targetColor,bloom:[DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase),width:500,height:190});
-    if(state.deeperResult && choice)card(DEMO_CONNECTION_POSITIONS.deeperResult,{title:state.deeperResult.derivedNode?.title || choice.deeperTitle,detail:state.deeperResult.derivedNode?.summary || choice.deeperSummary,label:'Question for this place',color:DEMO_DEEPER_CONNECTION.targetColor,width:680,height:245,bloom:true});
+    if(state.primaryResult && choice)card(deeper?resultPosition:DEMO_CONNECTION_POSITIONS.result,{title:state.primaryResult.derivedNode?.title || choice.resultTitle,detail:state.primaryResult.derivedNode?.summary || choice.resultSummary,label:'New connection',color:choice.targetColor,width:500,height:180,bloom:state.phase===DEMO_CONNECTION_PHASES.RESULT});
+    if(deeper)card(DEMO_CONNECTION_POSITIONS.deeperTarget,{title:DEMO_DEEPER_CONNECTION.targetTitle,detail:DEMO_DEEPER_CONNECTION.targetDetail,label:'Go deeper',color:DEMO_DEEPER_CONNECTION.targetColor,bloom:[DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase),width:440,height:160});
+    if(state.deeperResult && choice)card(DEMO_CONNECTION_POSITIONS.deeperResult,{title:state.deeperResult.derivedNode?.title || choice.deeperTitle,detail:state.deeperResult.derivedNode?.summary || choice.deeperSummary,label:'Question for this place',color:DEMO_DEEPER_CONNECTION.targetColor,width:500,height:190,bloom:true});
     const source=demoConnectionSource(state);if(source && [DEMO_CONNECTION_PHASES.READY,DEMO_CONNECTION_PHASES.HOLDING,DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_READY,DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING].includes(state.phase)){const p=toPoint(source),progress=state.holdProgress || 0;ctx.fillStyle='#f4ffd8';ctx.strokeStyle='#173d32';ctx.lineWidth=6;ctx.beginPath();ctx.arc(p.x+245,p.y,20,0,Math.PI*2);ctx.fill();ctx.stroke();if(progress){ctx.strokeStyle='#fff';ctx.lineWidth=9;ctx.beginPath();ctx.arc(p.x+245,p.y,34,-Math.PI/2,-Math.PI/2+Math.PI*2*progress);ctx.stroke();}}
-    if(state.primaryResult){const nav=(x,label,filled)=>{ctx.fillStyle=filled?'#dff0b2':'rgba(22,57,45,.94)';ctx.strokeStyle='rgba(238,255,224,.75)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(x-190,1930,380,78,39);ctx.fill();ctx.stroke();ctx.fillStyle=filled?'#173328':'#eff8e9';ctx.font='800 27px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x,1969);};if(state.phase===DEMO_CONNECTION_PHASES.RESULT)nav(1010,'Go deeper',false);nav(state.phase===DEMO_CONNECTION_PHASES.RESULT?1490:1250,'Continue journey',true);}
+    if(state.primaryResult){const nav=(x,label,filled)=>{const y=deeper?1490:1452;ctx.fillStyle=filled?'#dff0b2':'rgba(22,57,45,.94)';ctx.strokeStyle='rgba(238,255,224,.75)';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(x-130,y,260,66,33);ctx.fill();ctx.stroke();ctx.fillStyle=filled?'#173328':'#eff8e9';ctx.font='800 21px system-ui,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x,y+33);};if(state.phase===DEMO_CONNECTION_PHASES.RESULT)nav(1120,'Go deeper',false);nav(state.phase===DEMO_CONNECTION_PHASES.RESULT?1380:1250,'Continue journey',true);}
     ctx.restore();
 }
 
@@ -1932,7 +1931,8 @@ function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100) {
     const centerX=WELCOME_PANEL_DRAW_OFFSET.x+WELCOME_SHAPE.cx,centerY=WELCOME_PANEL_DRAW_OFFSET.y+WELCOME_SHAPE.cy;
     const px=hit.pixelX-centerX,py=hit.pixelY-centerY,angle=Math.atan2(py,px),step=Math.PI*2/WELCOME_SHAPE.sides;
     const vertexAngle=-Math.PI/2+Math.round((angle+Math.PI/2)/step)*step;
-    const edgeAngle=vertexAngle+step/2,apothem=WELCOME_SHAPE.radius*Math.cos(step/2);
+    const pointerInset=22;
+    const edgeAngle=vertexAngle+step/2,apothem=(WELCOME_SHAPE.radius-pointerInset)*Math.cos(step/2);
     if(Math.hypot(px,py)*Math.cos(angle-edgeAngle)>apothem)return null;
     return hit;
 }
@@ -1957,20 +1957,20 @@ const DEMO_ORIENTATION_STEPS = [
     {title:'Meet your Control panel',art:'wheel',button:'Continue',nextGuide:'',paragraphs:[
         'Take a moment to settle in. This place is ready to explore.'
     ]},
-    {title:'Every plant holds information',art:'references',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'Every plant holds information',art:'references',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources. NourishlandXR brings those layers together where the information becomes useful.'
     ]},
-    {title:'Imagine arriving in a garden',art:'curiosity',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'Imagine arriving in a garden',art:'curiosity',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'Imagine arriving in a garden and noticing a plant you do not recognise.',
         'You pause, look closely and wonder what it is, how it belongs here and what it might teach you.'
     ]},
-    {title:'A Project holds information',art:'area',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'A Project holds information',art:'area',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'Create a Project anchored to a real place: tag an orchard, build an educational module, or make an immersive tour. Its Areas, plants, observations and guidance stay connected to that landscape.'
     ]},
-    {title:'Areas and Totems guide you',art:'structure',button:'Continue',nextGuide:'',paragraphs:[
+    {title:'Areas and Totems guide you',art:'structure',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'Areas organise one part of a place. Directional Totem signs point visitors toward nearby Plant Orbs, Notes and other Totems, while keeping each Area’s information together.'
     ]},
-    {title:'Begin with one plant',art:'controller',button:'Place Pigeon Pea',nextGuide:'Aim toward the plant or tag location. Hint: use the right joystick up or down to adjust distance.',paragraphs:[
+    {title:'Begin with one plant',panelTitle:'Placement controls',button:'Place Pigeon Pea',nextGuide:'Aim toward the plant or tag location. Hint: use the right joystick up or down to adjust distance.',paragraphs:[
         'A Plant Orb attaches information to a real-world location. Pigeon Pea is our example: aim toward the plant or the exact place where you want its tag to appear.'
     ]}
 ];
@@ -2003,7 +2003,10 @@ function runArWelcomeTutorial(index=0) {
     }
     if(step?.art){
         infoPanel?.setCompact(false);
-        showDemoTutorialMedia(step.art,index===0?'Control panel basics':step.title,index===0?'Use the panel controls to adjust the interface and move through the introduction.':step.paragraphs.join('\n\n'));
+        showDemoTutorialMedia(step.art,index===0?'Control panel basics':step.panelTitle || 'Using the Control panel',index===0?'Use Settings to adjust the panel. Hide collapses it; use the small tab to restore it.':'Continue on the green screen. Adjust the Control panel here when you need to.');
+    }else if(index===DEMO_ORIENTATION_STEPS.length-1){
+        infoPanel?.setMediaCollapsed(true);
+        infoPanel?.setContextualHint('HINT · Move the right joystick up or down to adjust distance.');
     }
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
@@ -2411,6 +2414,8 @@ function syncKnowledgeCombinationOverlay(){
     const state=knowledgeCombinationState,overlay=arWelcomeLayer?.querySelector('[data-knowledge-combination]');if(!state || !overlay)return;
     const choice=demoConnectionChoice(state),deeper=demoConnectionIsDeeper(state),activeDrag=state.dragging;
     overlay.dataset.phase=state.phase;overlay.style.setProperty('--source-color',choice?.sourceColor || '#7ea45f');overlay.style.setProperty('--target-color',deeper?DEMO_DEEPER_CONNECTION.targetColor:(choice?.targetColor || '#a06a43'));
+    overlay.querySelectorAll('.knowledge-column-label').forEach(label=>{label.hidden=deeper;});
+    overlay.querySelector('nav')?.style.setProperty('top',deeper?'71%':'69%');
     overlay.querySelector('[data-combination-status]').textContent=knowledgeCombinationStatus(state);
     overlay.querySelectorAll('[data-combination-choice]').forEach(cell=>{const selected=cell.dataset.combinationChoice===choice?.id;cell.classList.toggle('is-selected',selected);cell.classList.toggle('is-muted',Boolean(choice && !selected));cell.setAttribute('aria-pressed',String(selected));const node=cell.querySelector('[data-combination-node]');if(node)node.tabIndex=selected && !state.primaryResult?0:-1;});
     overlay.querySelectorAll('[data-combination-target]').forEach(cell=>{const selected=cell.dataset.combinationTarget===choice?.id;cell.classList.toggle('is-matching',selected && [DEMO_CONNECTION_PHASES.DRAGGING,DEMO_CONNECTION_PHASES.RESOLVING].includes(state.phase));cell.classList.toggle('is-magnetic',selected && state.hoverTarget);cell.classList.toggle('is-muted',Boolean(choice && !selected));});
@@ -2421,8 +2426,10 @@ function syncKnowledgeCombinationOverlay(){
     overlay.querySelector('[data-combination-continue]').hidden=!state.primaryResult || [DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase);
     const primaryPath=overlay.querySelector('[data-primary-path]'),deeperPath=overlay.querySelector('[data-deeper-path]'),livePath=overlay.querySelector('[data-live-path]');
     overlay.querySelector('[data-gradient-source]')?.setAttribute('stop-color',choice?.sourceColor || '#7ea45f');overlay.querySelector('[data-gradient-target]')?.setAttribute('stop-color',choice?.targetColor || '#a06a43');overlay.querySelector('[data-gradient-deeper-source]')?.setAttribute('stop-color',choice?.targetColor || '#a06a43');
+    const resultPosition=deeper?{x:50,y:37}:DEMO_CONNECTION_POSITIONS.result;
+    result.style.setProperty('--cell-y',`${resultPosition.y}%`);
     primaryPath.setAttribute('d',state.primaryResult?`${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result)} ${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result)}`:'');
-    deeperPath.setAttribute('d',state.deeperResult?`${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.result,DEMO_CONNECTION_POSITIONS.deeperResult)} ${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult)}`:'');
+    deeperPath.setAttribute('d',state.deeperResult?`${demoConnectionCurve(resultPosition,DEMO_CONNECTION_POSITIONS.deeperResult)} ${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult)}`:'');
     const endpoint=activeDrag?(state.hoverTarget?demoConnectionTarget(state):state.pointer):null;livePath.setAttribute('d',endpoint?demoConnectionCurve(demoConnectionSource(state),endpoint):'');
     paintWelcomeLayer(performance.now());introBoardTextureDirty=true;
 }
@@ -2687,8 +2694,9 @@ function armDemoPlacement(type, {explained=false}={}) {
         totem: ['Place Botanical Garden Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
-    const mediaKey=type==='totem'?'totem':type==='note'?'note':type==='plant2'?'comparePlants':type==='plant'?'controller':'orb';
-    showDemoTutorialMedia(mediaKey,title,typeof introduction==='string'?introduction:introduction.join('\n\n'));
+    const mediaKey=type==='totem'?'totem':type==='note'?'note':type==='plant'?'controller':'orb';
+    if(type==='plant2')infoPanel?.setMediaCollapsed(true);
+    else showDemoTutorialMedia(mediaKey,title,typeof introduction==='string'?introduction:introduction.join('\n\n'));
     if(type==='note')infoPanel?.setContextualHint('Press Note for more examples and observation templates.');
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
@@ -4452,7 +4460,7 @@ function drawIntroNoteContent(ctx) {
     ctx.lineTo(contentLeft + contentWidth, 478);
     ctx.stroke();
     const narrative = null;
-    ctx.textAlign = 'left';
+    ctx.textAlign = isOpeningStatement ? 'center' : 'left';
     if(narrative){
         ctx.save();ctx.globalAlpha*=.18*narrative.alpha;
         const glow=ctx.createRadialGradient(contentCenter,610,10,contentCenter,610,360);
@@ -5223,8 +5231,8 @@ function drawDemoControllerPointer(view) {
         color:latestTrackedHandStates.length ? [.78,.91,.96,handPinchActive ? .76 : .54] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
     if(surface){
-        if(surface===greenSurface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.048,{color:[.69,.94,.8],alpha:.12,emissive:.15});
-        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,surface===controlSurface?.022:surface===greenSurface?.018:.013,{color:surface===greenSurface?[.73,.94,.83]:latestTrackedHandStates.length?[.82,.94,.98]:[.82,1,.56],alpha:1,emissive:surface===greenSurface?.25:.65});
+        if(surface===greenSurface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.024,{color:[.69,.94,.8],alpha:.10,emissive:.15});
+        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,surface===controlSurface?.022:surface===greenSurface?.009:.013,{color:surface===greenSurface?[.73,.94,.83]:latestTrackedHandStates.length?[.82,.94,.98]:[.82,1,.56],alpha:1,emissive:surface===greenSurface?.25:.65});
     }
 }
 
