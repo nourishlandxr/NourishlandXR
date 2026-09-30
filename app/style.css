@@ -8857,8 +8857,8 @@ button.ar-square-action::before { display: none !important; }
     line-height:1.35;
 }
 .tryit-demo .tryit-guided-choice.is-welcome-board h2 {
-    font-family:Inter,"Aptos","Segoe UI",system-ui,sans-serif;
-    font-weight:720;
+    font-family:Manrope,"Segoe UI Variable",Inter,system-ui,sans-serif;
+    font-weight:700;
     letter-spacing:-.026em;
 }
 .tryit-live-welcome button[data-welcome-cell].is-lim-related {
@@ -11783,6 +11783,14 @@ body:has(.app-surface) {
     max-width:680px;
     margin-inline:auto;
     animation:nlxr-welcome-support-settle .65s .35s ease-out both;
+}
+/* The desktop action belongs below the glass reading surface. It is inside
+   the live canvas layer, so the older sibling selector cannot position it. */
+.tryit-demo.is-desktop-spatial-preview .tryit-live-welcome > .tryit-context-trigger[data-context-mode="continue"] {
+    top:auto;
+    bottom:24px;
+    min-height:54px;
+    padding:11px 22px;
 }
 @keyframes nlxr-welcome-title-settle { from { opacity:0; transform:translateY(9px); } to { opacity:1; transform:none; } }
 @keyframes nlxr-welcome-support-settle { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:none; } }

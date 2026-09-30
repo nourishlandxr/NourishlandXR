@@ -4361,18 +4361,18 @@ function wrappedTextureLines(ctx, text, maxWidth) {
 
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     const paragraphs = String(text || '').split(/\n\n/);
-    for (let fontSize = 60; fontSize >= 26; fontSize -= 2) {
+    for (let fontSize = 60; fontSize >= 22; fontSize -= 2) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .5);
-        ctx.font = `520 ${fontSize}px system-ui, sans-serif`;
+        ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
         const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
             + Math.max(0, paragraphLines.length - 1) * paragraphGap;
-        if (totalHeight <= maxHeight || fontSize === 26) {
+        if (totalHeight <= maxHeight || fontSize === 22) {
             return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
     }
-    return { fontSize: 26, lineHeight: 32, paragraphGap: 13, paragraphLines: [] };
+    return { fontSize: 22, lineHeight: 27, paragraphGap: 11, paragraphLines: [] };
 }
 
 function createSpatialKnowledgeTexture(record) {
@@ -4477,15 +4477,14 @@ function createIntroNoteTexture(texture = null) {
 }
 
 function drawIntroNoteContent(ctx) {
-    // The note is a 900x500 surface at (250,300). Keep every piece of copy
-    // inside that surface; the previous 1,100px text box extended beyond both
-    // edges after the welcome panel was compacted.
-    const contentLeft = 300;
-    const contentWidth = 800;
+    // Give the copy the full readable centre of the glass screen without
+    // reaching its sloped sides. The extra width keeps long slides legible.
+    const contentLeft = 260;
+    const contentWidth = 880;
     const contentCenter = contentLeft + contentWidth / 2;
-    const titleWidth = 900;
+    const titleWidth = 960;
     ctx.save();
-    const gentleIntroFade=(arWelcomeIntroPending && !arWelcomeSettleStage) || (arWelcomeShowcaseActive && demoOrientationStep>=0 && demoOrientationStep<=1 && !selectedLimCell);
+    const gentleIntroFade=arWelcomeIntroPending && !arWelcomeSettleStage;
     if(gentleIntroFade){
         const elapsed=arWelcomeClock?.elapsed || 0;
         ctx.globalAlpha*=.72+.28*(.5+.5*Math.sin(elapsed/2400));
@@ -4502,23 +4501,26 @@ function drawIntroNoteContent(ctx) {
     if(openingElapsed!==null){
         if(openingElapsed<DEMO_WELCOME_OPENING_MS){
             const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
-            ctx.globalAlpha*=fade;ctx.fillStyle='#fff';ctx.font='400 70px "Marcellus", Georgia, "Times New Roman", serif';ctx.fillText(demoLocalizedText('Welcome to the NourishlandXR demo'),contentCenter,420,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f2f5e9';ctx.font='700 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('NLXR is an immersive information hub for living landscapes.'),contentCenter,570,780,54,2);}
+            const openingTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
+            let openingTitleSize=80;
+            ctx.globalAlpha*=fade;ctx.fillStyle='#f7fbf4';
+            do {ctx.font=`700 ${openingTitleSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
+            ctx.fillText(openingTitle,contentCenter,420);
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font='600 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('NLXR is an immersive information hub for living landscapes.'),contentCenter,570,780,54,2);}
         }
         ctx.restore();return;
     }
-    ctx.fillStyle = '#f3f0df';
+    ctx.fillStyle = '#f7fbf4';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
-    const isOpeningStatement = introBoardTitle === 'EXTENDED REALITY, ROOTED IN PLACE';
     let titleSize = arWelcomeIntroPending ? 78 : 80;
-    const titleFont = '"Marcellus", Georgia, "Times New Roman", serif';
-    ctx.font = `${isOpeningStatement ? 700 : 400} ${titleSize}px ${titleFont}`;
-    while (titleSize > 48 && ctx.measureText(introBoardTitle).width > titleWidth) {
+    const titleFont = '"Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';
+    ctx.font = `700 ${titleSize}px ${titleFont}`;
+    while (titleSize > 36 && ctx.measureText(introBoardTitle).width > titleWidth) {
         titleSize -= 2;
-        ctx.font = `${isOpeningStatement ? 700 : 400} ${titleSize}px ${titleFont}`;
+        ctx.font = `700 ${titleSize}px ${titleFont}`;
     }
-    ctx.fillText(introBoardTitle, contentCenter, 420, titleWidth);
+    ctx.fillText(introBoardTitle, contentCenter, 420);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(241,249,237,.25)';
     ctx.lineWidth = 1.5;
@@ -4550,7 +4552,7 @@ function drawIntroNoteContent(ctx) {
     const bodyTop = 498;
     const bodyBottom = 775;
     const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
-    ctx.font = `${isOpeningStatement ? 650 : 520} ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
+    ctx.font = `600 ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
     const bodyX = contentCenter;
     const bodyHeight=bodyLayout.paragraphLines.reduce((height,lines)=>height+lines.length*bodyLayout.lineHeight,0)+Math.max(0,bodyLayout.paragraphLines.length-1)*bodyLayout.paragraphGap;
     let paragraphY = bodyTop+Math.max(0,(bodyBottom-bodyTop-bodyHeight)/2);
@@ -4563,7 +4565,6 @@ function drawIntroNoteContent(ctx) {
     outer: for (const [paragraphIndex, completeLines] of bodyLayout.paragraphLines.entries()) {
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
         for (const [lineIndex, line] of visibleLines.entries()) {
-            if(isOpeningStatement && paragraphIndex===1)ctx.font=`500 ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
             if (lineY > bodyBottom) { clipped = true; break outer; }
             ctx.fillText(line, bodyX, lineY);
