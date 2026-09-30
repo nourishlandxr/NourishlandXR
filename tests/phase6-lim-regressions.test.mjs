@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { infoPanelPose, panelPoseOutsideSafeBounds } from '../app/services/pimInfoPanel.js';
 import { WELCOME_PANEL_DRAW_OFFSET, welcomeExperienceFrames, welcomeCellAtPoint } from '../app/services/arWelcomeShowcase.js';
+import { DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_TEXT_TEXTURE_INTERVAL_MS } from '../app/features/ar-demo/demoConfig.js';
 
 const demoSource = fs.readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
 const panelSource = fs.readFileSync(new URL('../app/services/pimInfoPanel.js', import.meta.url), 'utf8');
@@ -44,8 +45,8 @@ test('spatial panel keeps its pose through head turns and only moves on grab or 
 });
 
 test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
-    assert.match(demoSource, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
-    assert.match(demoSource, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
+    assert.equal(DEMO_TEXT_TEXTURE_INTERVAL_MS,48);
+    assert.equal(DEMO_LIM_TEXTURE_INTERVAL_MS,64);
     assert.match(demoSource, /const textureInterval=limActivation\?\.active \|\| textIsTyping \? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS/);
     assert.match(demoSource, /introTextureUploadedAt >= textureInterval/);
     assert.match(demoSource, /if\(label\.width!==width\)label\.width=width/);

@@ -14,10 +14,12 @@ import {
     demoViewerPointerFallbackAllowed,
     preservePlacedDemoPlants,
     selectDemoPlantRecord,
-    selectGuidedDemoOrb,
-    demoRainProgress,
-    welcomeAutoAdvanceReady
+    selectGuidedDemoOrb
 } from '../app/screens/temporaryArDemo.js';
+import { BIOMAP_CATEGORIES, DEMO_ORB_MATERIALS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../app/features/ar-demo/demoContent.js';
+import { AR_PHONE_COMFORT, DEMO_ARCHETYPE_START_MS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_WELCOME_OPENING_MS, INTRO_CONTROL_POSITION, demoRainProgress, welcomeAutoAdvanceReady } from '../app/features/ar-demo/demoConfig.js';
+import { MORINGA_KNOWLEDGE, MORINGA_PIM } from '../app/features/ar-demo/demoPlantContent.js';
+import { PIM_SPATIAL_CONFIG } from '../app/services/plantInformationMesh.js';
 import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
 import { avoidDemoPanelOverlap } from '../app/services/demoPanelGeometry.js';
 import { alignAreaToCheckpoint } from '../app/services/areaSpatialAlignment.js';
@@ -36,7 +38,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('welcome stays concise and spatial controllers never fall back to head movement', () => {
-    assert.match(read('app/screens/temporaryArDemo.js'), /NLXR is an immersive information hub for living landscapes/);
+    assert.ok(WELCOME_BOARD_PARAGRAPHS.includes('NLXR is an immersive information hub for living landscapes.'));
     assert.equal(demoViewerPointerFallbackAllowed({ simulated:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ hasScreenInput:true, spatialInputSeen:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ spatialInputSeen:true }), false);
@@ -1224,15 +1226,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /width: min\(88vw, 560px\)/);
     assert.match(styles, /overflow-wrap: anywhere/);
     assert.doesNotMatch(source, /tryit-spatial-pim-web/);
-    assert.match(source, /Nourishland XR/);
+    assert.ok(WELCOME_BOARD_PARAGRAPHS_PT.some(line=>line.includes('Nourishland XR')));
     assert.match(source, /INTRO_KNOWLEDGE_KEYWORDS/);
-    for (const keyword of ['FOOD', 'FOREST', 'PLANT LITERACY', 'RELATIONSHIPS', 'FRUIT', 'FLOWER', 'SEED', 'GUILD', 'MICRO CLIMATE', 'USES', 'PROPAGATION', 'LAYERS']) {
-        assert.match(source, new RegExp(keyword));
-    }
-    assert.doesNotMatch(source, /['"]MICRO['"]/);
-    assert.doesNotMatch(source, /['"]MACRO['"]/);
+    assert.deepEqual(INTRO_KNOWLEDGE_KEYWORDS,['FOOD', 'FOREST', 'PLANT LITERACY', 'RELATIONSHIPS', 'FRUIT', 'FLOWER', 'SEED', 'GUILD', 'MICRO CLIMATE', 'USES', 'PROPAGATION', 'LAYERS']);
+    assert.equal(Object.hasOwn(BIOMAP_CATEGORIES,'MICRO'),false);
+    assert.equal(Object.hasOwn(BIOMAP_CATEGORIES,'MACRO'),false);
     for (const child of ['CULINARY', 'MEDICINAL', 'INDUSTRIAL', 'GRAFTING', 'GERMINATION', 'MARCOTTS', 'CUTTINGS', 'CLONING', 'DWARF', 'DECIDUOUS', 'EVERGREEN', 'ANNUAL', 'PERENNIAL', 'CANOPY', 'LOW TREE', 'SHRUB', 'HERBACEOUS', 'GROUNDCOVER', 'RHIZOSPHERE', 'VERTICAL']) {
-        assert.match(source, new RegExp(child));
+        assert.ok(Object.values(BIOMAP_CATEGORIES).flat().includes(child),`missing BIOMAP child ${child}`);
     }
     assert.match(source, /createIntroKnowledgeTexture/);
     assert.match(source, /data-biomap-category/);
@@ -1255,7 +1255,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
     assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A Project holds information',art:'area'[\s\S]*title:'Areas and Totems guide you',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
-    assert.match(source, /structure:\{image:new URL\('\.\.\/assets\/demo-tutorial-art\/04b-one-place-clear-structure\.png'/);
+    assert.ok(DEMO_TUTORIAL_ART.structure.image.endsWith('/assets/demo-tutorial-art/04b-one-place-clear-structure.png'));
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
     assert.match(source, /introBoardStep=`LEARNING 2\.\$\{learningModuleStep\+1\}`/);
@@ -1263,7 +1263,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
         assert.ok(source.includes(screenCode), `green-screen code ${screenCode} should remain in the guided demo`);
     }
     assert.match(source, /'Thank you for exploring NourishlandXR'/);
-    assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
+    assert.equal(WELCOME_BOARD_PARAGRAPHS.length,2);
     assert.match(source, /Welcome to Nourishland/);
     assert.match(source, /NLXR is an immersive information hub for living landscapes/);
     assert.match(source, /A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources/);
@@ -1307,7 +1307,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
     assert.match(source, /function releaseHeldDemoRecord\(\)/);
-    assert.match(source, /const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800/);
+    assert.equal(DEMO_PLANT_ORB_HOLD_DELAY_MS,800);
     assert.match(source, /function simulatedAnchorFromPointer\(startAnchor, startX, startY, event, markerRadius = 32\)/);
     assert.match(source, /record\.simulatedAnchor = simulatedAnchorFromPointer\(/);
     assert.match(source, /function applySimulatedMarkerAnchor\(layer, index, anchor\)/);
@@ -1340,8 +1340,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /demoOrbColor: type === 'plant' \? 'pigeonPea' : type === 'plant2' \? 'green'/);
     assert.match(source, /demoOrbShape: type === 'plant' \? 'orb' : type === 'plant2' \? 'orb'/);
     assert.match(source, /class="tryit-sim-orb is-plant" style="\$\{orbAppearance\}"/);
-    assert.match(source, /pigeonPea:[\s\S]*radius: 0\.06/);
-    assert.match(source, /green:[\s\S]*radius: 0\.074/);
+    assert.equal(DEMO_ORB_MATERIALS.pigeonPea.radius,.065);
+    assert.equal(DEMO_ORB_MATERIALS.green.radius,.074);
     assert.match(source, /drawSpatialTriangle\(gl, triangleRenderer/);
     assert.match(source, /ringColor: material\?\.ring/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
@@ -1429,8 +1429,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /createElement\('button'\)[\s\S]{0,180}tryit-intro-continue/);
     assert.match(source, /appRoot\.querySelector\('\.tryit-demo'\)\?\.append\(placementPointer\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.match(source, /boardPosition: \[0\.42, 0\.82, -2\.8\]/);
-    assert.match(source, /boardScale: \[5\.6, 10\.8\]/);
+    assert.deepEqual(AR_PHONE_COMFORT.boardPosition,[.42,.82,-2.8]);
+    assert.deepEqual(AR_PHONE_COMFORT.boardScale,[5.6,10.8]);
     assert.match(source, /const width=arWelcomeShowcaseActive\?2500:1400,height=arWelcomeShowcaseActive\?2100:1080/);
     assert.match(source, /if\(label\.height!==height\)label\.height=height/);
     assert.match(source, /fitIntroBodyLayout\(ctx, narrative\?\.text \|\| introBoardBody, contentWidth, bodyBottom - bodyTop\)/);
@@ -1442,10 +1442,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
     assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
-    assert.match(source, /const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48/);
+    assert.equal(DEMO_TEXT_TEXTURE_INTERVAL_MS,48);
     assert.match(source, /label\.width = 900/);
     assert.match(source, /label\.height = 360/);
-    assert.match(source, /const INTRO_CONTROL_POSITION = Object\.freeze\(\[0\.42, 0\.16, -2\.755\]\)/);
+    assert.deepEqual(INTRO_CONTROL_POSITION,[.42,.16,-2.755]);
     assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
     assert.match(source, /const phoneFooterAction=simulatedMode && !desktopPreview/);
     assert.match(source, /trigger\.classList\.toggle\('is-phone-footer-action',phoneFooterAction\)/);
@@ -1463,8 +1463,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source.match(/function prepareStableLimoSurface\(\) \{[\s\S]*?\n\}/)?.[0] || '', /demoExpanded=false|demoExpandedNodeIds=\[\]/);
     assert.match(source, /function startNativeConnectionExperience\(\) \{[\s\S]*prepareStableLimoSurface\(\);[\s\S]*limMeshVisible=true;[\s\S]*useSharedWelcomeBoard\(true\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
-    assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);
-    assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
+    assert.equal(DEMO_WELCOME_OPENING_MS,12000);
+    assert.equal(DEMO_ARCHETYPE_START_MS,20500);
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
     assert.match(source, /NLXR is an immersive information hub for living landscapes/);
     assert.match(source, /demoViewerPointerFallbackAllowed/);
@@ -1479,7 +1479,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.doesNotMatch(source, /radius: \.96/);
     assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.009:\.013/);
-    assert.match(source, /const DEMO_LIM_TEXTURE_INTERVAL_MS = 64/);
+    assert.equal(DEMO_LIM_TEXTURE_INTERVAL_MS,64);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
     assert.match(source, /plant: \{ x: 34,[\s\S]*plant2: \{ x: 66,[\s\S]*note: \{ x: 50,/);
@@ -1501,8 +1501,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\)/);
     assert.match(styles, /max-height:none/);
     assert.match(styles, /\.tryit-demo-taskbar \{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
-    assert.match(source, /pointerOffsetCss: '3\.5cm'/);
-    assert.match(source, /pointerOffsetPixels: 132\.3/);
+    assert.equal(AR_PHONE_COMFORT.pointerOffsetCss,'3.5cm');
+    assert.equal(AR_PHONE_COMFORT.pointerOffsetPixels,132.3);
     assert.match(styles, /top:calc\(50% \+ 3\.5cm\)/);
     assert.match(styles, /\.creator-ar-mode-pointer \{[\s\S]*top:\s*calc\(50% \+ 3\.5cm\)/);
     assert.doesNotMatch(styles, /\.tryit-intro-continue \{[^}]*border-radius:999px/);
@@ -1523,12 +1523,13 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-demo\.is-immersive \.tryit-spatial-intro \{ display: none !important;/);
     assert.doesNotMatch(source, /createIntroHexTexture|introHexTextures/);
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
-    assert.match(source, /export const MORINGA_PIM = Object\.freeze\(resolvePlantPim\(MORINGA_PROFILE,/);
-    assert.match(source, /const MORINGA_KNOWLEDGE = Object\.freeze\(pimToArKnowledge\(MORINGA_PIM\)\)/);
-    assert.match(source, /\{ id: 'medicinal', parentId: 'uses'/);
-    assert.match(source, /\{ id: 'craft', parentId: 'uses'/);
-    assert.match(source, /parentId: 'propagation'/);
-    assert.match(source, /parentId: 'cultivation'/);
+    assert.equal(MORINGA_PIM.plantId,'moringa-oleifera');
+    assert.equal(MORINGA_KNOWLEDGE.plantId,MORINGA_PIM.plantId);
+    const moringaNode = nodeId => MORINGA_PIM.nodes.find(node => node.id === nodeId);
+    assert.equal(moringaNode('medicinal')?.parentId,'uses');
+    assert.equal(moringaNode('craft')?.parentId,'uses');
+    assert.ok(MORINGA_PIM.nodes.some(node => node.parentId === 'propagation'));
+    assert.ok(MORINGA_PIM.nodes.some(node => node.parentId === 'cultivation'));
     assert.match(source, /plantInformationMeshMarkup/);
     assert.match(source, /createPlantInformationHoneycombTexture/);
     assert.doesNotMatch(source, /function plantKnowledgeMarkup/);
@@ -1617,7 +1618,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     const interactionAdvance=source.slice(source.indexOf('function advanceAfterDemoProfileInteraction'),source.indexOf('function orientDemoPimPoseToViewer'));
     assert.doesNotMatch(interactionAdvance,/continueAfterDemoPim\(record\)/);
     assert.match(interactionAdvance,/record\.demoProfileReady = true/);
-    assert.match(source, /PIM_SPATIAL_CONFIG\.expandedSurfaceWidthMetres \/ \.4/);
+    assert.equal(DEMO_PIM_IMMERSIVE_SCALE.x,PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / .4);
+    assert.equal(DEMO_PIM_IMMERSIVE_SCALE.y,PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / .16);
     assert.match(styles, /left: var\(--pim-node-x, 50%\)/);
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
     assert.match(pimCanvasSource, /pimVisibleNodes/);
@@ -1665,7 +1667,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(pimCanvasSource, /context\.strokeText\(line, x, y\)/);
     assert.match(pimCanvasSource, /drawOutlinedLines\(context, coreLines, center\.x/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
-    assert.match(source, /SPATIAL_NOTE_TEMPLATES/);
+    assert.match(source, /DEMO_NOTE_TEMPLATE_KEYS/);
     assert.match(source, /pollinators/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
     assert.match(source, /function createDemoTotemExample\(\)/);
@@ -1673,7 +1675,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /A Totem welcomes you to an Area/);
     assert.match(source, /A link creates a visitor route between Areas/);
     assert.match(source, /tutorialStage: 'totem'/);
-    assert.match(source, /const DEMO_NOTE_IMMERSIVE_SCALE = Object\.freeze\(\{ x: 2\.15, y: 1\.65 \}\)/);
+    assert.deepEqual(DEMO_NOTE_IMMERSIVE_SCALE,{x:2.15,y:1.65});
     assert.match(source, /const noteScale = noteSign \? record\.demoAmbientNeighbour/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\) \{ width:min\(72vw,210px\); height:82px;/);
     assert.match(source, /groundBaseY = pairedDemoTotemGroundY\(\)/);

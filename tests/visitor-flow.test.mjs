@@ -5,6 +5,7 @@ import test from 'node:test';
 import { renderProjectEntry } from '../app/components/projectEntry.js';
 import { renderLaunchScreen } from '../app/screens/launch.js';
 import { scopedMarkerStorageId } from '../app/services/markerWorkflow.js';
+import { DEMO_SEQUENCE } from '../app/features/ar-demo/demoConfig.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 
@@ -536,7 +537,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /nextGuide:'Aim toward the plant or tag location\. Hint: use the right joystick up or down to adjust distance\.'/);
     assert.match(source, /Aim at the real plant or desired tag location, then/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
-    assert.match(source, /const DEMO_SEQUENCE = \['plant', 'plant2', 'note', 'totem'\]/);
+    assert.deepEqual(DEMO_SEQUENCE,['plant','plant2','note','totem']);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.doesNotMatch(source, /Area · Citrus Guild/);
     assert.match(source, /function createSpatialKnowledgeTexture/);

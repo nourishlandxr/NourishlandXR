@@ -30,37 +30,23 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
 import { renderDesktopLearningBook } from './desktopLearningBook.js';
+import { BIOMAP_CATEGORIES, DEMO_CONTENT, DEMO_JOURNEY_STAGES, DEMO_NOTE_TEMPLATE_KEYS, DEMO_ORB_MATERIALS, DEMO_PANEL_HINTS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, NOTE_TEMPLATES, PIGEON_PEA_CONTROL_IMAGE, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../features/ar-demo/demoContent.js';
+import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_STABLE_EYE_HEIGHT_METRES, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
+import { MORINGA_KNOWLEDGE, MORINGA_PIM, MORINGA_PROFILE, MORINGA_PROFILE_IMAGE } from '../features/ar-demo/demoPlantContent.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
 import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
-import { SPATIAL_NOTE_TEMPLATES, spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
+import { spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-const PIGEON_PEA_CONTROL_IMAGE = new URL('../assets/pigeon-pea-cajanus-cajan.png', import.meta.url).href;
-const MORINGA_PROFILE_IMAGE = new URL('../assets/moringa-oleifera.jpg', import.meta.url).href;
-const DEMO_TUTORIAL_ART = Object.freeze({
-    wheel:{image:new URL('../assets/living-knowledge-seed-atlas.png',import.meta.url).href,alt:'Nourishland website hero knowledge wheel, a visual index to information that can grow around a place.'},
-    curiosity:{image:new URL('../assets/demo-tutorial-art/01-plant-curiosity.png',import.meta.url).href,alt:'A visitor pauses beside an unfamiliar plant, wondering what it is.'},
-    companion:{image:new URL('../assets/demo-tutorial-art/02-companion-control-panel.png',import.meta.url).href,alt:'A visitor explores the NourishlandXR companion Control panel.'},
-    references:{image:new URL('../assets/demo-tutorial-art/03-cumbersome-reference-tools.png',import.meta.url).href,alt:'A visitor carries books, a phone, compass and field guides while identifying a plant.'},
-    area:{image:new URL('../assets/demo-tutorial-art/04-create-an-area.png',import.meta.url).href,alt:'A garden Area is organised as part of a living place.'},
-    structure:{image:new URL('../assets/demo-tutorial-art/04b-one-place-clear-structure.png',import.meta.url).href,alt:'Signs for a food forest, rainforest walk and school garden reveal Areas within one connected place.'},
-    totem:{image:new URL('../assets/demo-tutorial-art/05-totem-unfolds-garden-knowledge.png',import.meta.url).href,alt:'A Totem reveals organised plant and garden information in a dense garden.'},
-    orb:{image:new URL('../assets/demo-tutorial-art/06-plant-orb-effects.png',import.meta.url).href,alt:'A Plant Orb connects a plant to its information.'},
-    note:{image:new URL('../assets/demo-tutorial-art/07-add-a-plant-note.png',import.meta.url).href,alt:'A visitor adds a note beside a plant.'},
-    connection:{image:new URL('../assets/demo-tutorial-art/08-connect-pimo-to-limo.png',import.meta.url).href,alt:'Plant information is connected to a learning pathway.'},
-    connectedAreas:{image:new URL('../assets/demo-tutorial-art/10-connected-areas-garden.png',import.meta.url).href,alt:'A monochrome panorama of a large garden with several distinct Totems marking connected Areas.'},
-    pathways:{image:new URL('../assets/demo-tutorial-art/09-explore-archetype-pathways.png',import.meta.url).href,alt:'A visitor explores connected learning pathway archetypes.'},
-});
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { demoNeighbourPim } from '../services/demoNeighbourPim.js';
-import { enrichTrialNodes, MORINGA_TRIAL } from '../services/plantTrialContent.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../services/demoTutorialControls.js';
@@ -72,6 +58,8 @@ import { createPlaceholderKnowledgeGenerator } from '../services/meshGenerator.j
 import { createMeshRelationshipService } from '../services/meshRelationships.js';
 import { createMeshCompositionState } from '../services/meshCompositionState.js';
 import { demoNativeConnectionSpec, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../services/demoNativeConnection.js';
+
+export { demoRainProgress, welcomeAutoAdvanceReady, MORINGA_PIM };
 
 let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=null, demoKnowledgePanel=null;
 let demoKnowledgeScrollAt=0;
@@ -308,48 +296,6 @@ function limDeviceContext(pointerType = 'unknown') {
         userAgent: navigator.userAgent
     };
 }
-const AR_PHONE_COMFORT = Object.freeze({
-    pointerOffsetCss: '3.5cm',
-    pointerOffsetPixels: 132.3,
-    // Give the left-side reading panel room in the spatial view.
-    boardPosition: [0.42, 0.82, -2.8],
-    boardScale: [5.6, 10.8]
-});
-// Keep the primary trigger on the central screen rather than floating beneath it.
-// It sits slightly in front of the screen so the texture remains crisp and the
-// shared ray hit target can still resolve it independently from LIM cells.
-const INTRO_CONTROL_POSITION = Object.freeze([0.42, 0.16, -2.755]);
-const INTRO_CONTROL_SCALE = Object.freeze([1.05, .72]);
-const DEMO_QUEST_ORB_SCALE = 0.62;
-// The shared demo quad is .4 m by .16 m before model scaling. These values
-// produce the configured 1.44 m by 1.08 m transparent PIM interaction wall.
-const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
-    x: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / .4,
-    y: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / .16
-});
-// Creator Mode's medium Note is 1.88 m x .69 m on the shared quad. The demo
-// keeps the same real-world proportions at 88% so it reads as a nearby Note,
-// without turning into a flyaway presentation board.
-const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
-const DEMO_TOTEM_HALF_HEIGHT_METRES = .56;
-const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
-const DEMO_PRESENTATION_FONT='"Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';
-const DEMO_PANEL_HINTS=Object.freeze([
-    'The image panel is attached above.',
-    'Open Settings to adjust the experience.',
-    'Select Help if you need guidance.',
-    'Use Back to revisit an earlier information cell.',
-    'Hide this panel when you want an unobstructed view.'
-]);
-const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Welcome to the NourishlandXR demo',
-    'NLXR is an immersive information hub for living landscapes.'
-]);
-const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
-    'Bem-vindo à interface de demonstração do NourishlandXR.',
-    'A realidade aumentada (RA) e a realidade mista (XR) são tecnologias que nos ajudam a compreender e interagir melhor com o mundo à nossa volta, ligando informação virtual a lugares reais.',
-    'O Nourishland XR é um portal de informação sobre plantas, uma ferramenta de mapeamento de ecosistemas e um editor de experiências para visitantes e estudantes. Esta demonstração mostra algumas formas de ligar informação sobre plantas a lugares reais.'
-]);
 const demoLocalizedText = value => translateNxrText(value);
 const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
     ? WELCOME_BOARD_PARAGRAPHS_PT
@@ -359,38 +305,6 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => introBoardStep || 'INTRO 1.1';
-const DEMO_WELCOME_OPENING_MS=12000;
-const DEMO_WELCOME_TITLE_HOLD_MS=2800;
-const DEMO_WELCOME_DESCRIPTION_HOLD_MS=10000;
-const DEMO_WELCOME_CONTINUE_MS=12000;
-export const welcomeAutoAdvanceReady=(elapsed,reducedMotion=false)=>elapsed>=(reducedMotion?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS)+2500;
-export const demoRainProgress=elapsed=>Math.max(0,Math.min(1,(elapsed-12000)/5000));
-const DEMO_ARCHETYPE_START_MS=20500;
-const DEMO_ARCHETYPE_INTERVAL_MS=2500;
-const DEMO_ARCHETYPE_REVEAL_MS=1400;
-// Canvas texture uploads are expensive on phones. Coalesce the continuously
-// changing welcome copy/mesh into a modest cadence so typing and input stay
-// responsive while the XR frame loop remains free to render at 60fps.
-const DEMO_TEXT_TEXTURE_INTERVAL_MS = 48;
-const DEMO_LIM_TEXTURE_INTERVAL_MS = 64;
-const DEMO_LIM_SURFACE_CANVAS = Object.freeze({width:2500,height:2100});
-const AR_WELCOME_SETTLED_MS = 64000;
-const DEMO_PLANT_ORB_HOLD_DELAY_MS = 800;
-// A paused XR/browser timer must never leave the demo waiting forever for
-// the last character. The copy still types in normally, then completes within
-// this bounded window so Continue remains available on every runtime.
-// Only a suspended/background tab should need the safety timeout. A normal
-// narration must finish character-by-character without snapping its tail in.
-const DEMO_BOARD_TYPING_SAFETY_MS = 30000;
-const DEMO_SEQUENCE = ['plant', 'plant2', 'note', 'totem'];
-const DEMO_JOURNEY_STAGES = Object.freeze([
-    Object.freeze({id:'why',label:'Why'}),
-    Object.freeze({id:'map',label:'Map'}),
-    Object.freeze({id:'know',label:'Know'}),
-    Object.freeze({id:'apply',label:'Apply'}),
-    Object.freeze({id:'connect',label:'Connect'}),
-    Object.freeze({id:'impact',label:'Impact'})
-]);
 let demoJourneyStage='why';
 
 function setDemoJourneyStage(stageId) {
@@ -422,130 +336,6 @@ function pulseDemoHaptics(inputSource=null){
         else if(inputSource?.gamepad?.hapticActuators?.[0]?.pulse)void inputSource.gamepad.hapticActuators[0].pulse(.18,45);
     }catch{}
 }
-const DEMO_ORB_MATERIALS = Object.freeze({
-    brown: {
-        shell: [0.34, 0.23, 0.14],
-        core: [0.67, 0.48, 0.27],
-        radius: 0.07,
-        style: '--demo-orb-size:56px;--demo-orb-light:#ead7ba;--demo-orb-mid:#8a6946;--demo-orb-dark:#3e2a1c;--demo-orb-core-light:#f1dfbd;--demo-orb-core-mid:#a77b48;--demo-orb-core-dark:#4d321e'
-    },
-    pigeonPea: {
-        shell: [0.05, 0.34, 0.38],
-        core: [0.42, 0.9, 0.82],
-        ring: [0.55, 0.95, 0.92],
-        radius: 0.065,
-        style: '--demo-orb-size:56px;--demo-orb-light:#b8f2e9;--demo-orb-mid:#238a8a;--demo-orb-dark:#073a44;--demo-orb-ring:#8ff4e6'
-    },
-    green: {
-        shell: [0.48, 0.18, 0.05],
-        core: [0.98, 0.62, 0.14],
-        ring: [1, 0.78, 0.25],
-        radius: 0.074,
-        style: '--demo-orb-size:62px;--demo-orb-light:#ffe0a0;--demo-orb-mid:#d17723;--demo-orb-dark:#6b250c;--demo-orb-ring:#ffc84a'
-    },
-    banana: {shell:[.22,.46,.12],core:[.75,.85,.28],ring:[.87,.95,.38],radius:.067,style:'--demo-orb-light:#e5f5a6;--demo-orb-mid:#81a543;--demo-orb-dark:#2b5b31;--demo-orb-ring:#daf378'},
-    acacia: {shell:[.51,.31,.10],core:[.96,.76,.30],ring:[1,.85,.42],radius:.067,style:'--demo-orb-light:#fff0b5;--demo-orb-mid:#c99843;--demo-orb-dark:#70461c;--demo-orb-ring:#ffdc72'},
-    jackfruit: {shell:[.18,.32,.47],core:[.44,.73,.91],ring:[.58,.83,1],radius:.067,style:'--demo-orb-light:#c4ecff;--demo-orb-mid:#4b93b3;--demo-orb-dark:#203e66;--demo-orb-ring:#92d8fa'},
-    lychee: {shell:[.47,.14,.27],core:[.96,.46,.61],ring:[1,.65,.74],radius:.067,style:'--demo-orb-light:#ffd2dc;--demo-orb-mid:#ca6685;--demo-orb-dark:#692648;--demo-orb-ring:#ffaac1'}
-});
-const BIOMAP_CATEGORIES = Object.freeze({
-    FOOD: [],
-    FOREST: [],
-    'PLANT LITERACY': ['DWARF', 'DECIDUOUS', 'EVERGREEN', 'ANNUAL', 'PERENNIAL'],
-    RELATIONSHIPS: [],
-    FRUIT: [],
-    FLOWER: [],
-    SEED: [],
-    GUILD: [],
-    'MICRO CLIMATE': ['TROPICAL', 'SUBTROPICAL', 'WARM TEMPERATE', 'COOL TEMPERATE', 'MEDITERRANEAN', 'ARID'],
-    USES: ['CULINARY', 'MEDICINAL', 'INDUSTRIAL'],
-    PROPAGATION: ['GRAFTING', 'GERMINATION', 'MARCOTTS', 'CUTTINGS', 'CLONING'],
-    LAYERS: ['CANOPY', 'LOW TREE', 'SHRUB', 'HERBACEOUS', 'GROUNDCOVER', 'RHIZOSPHERE', 'VERTICAL']
-});
-const INTRO_KNOWLEDGE_KEYWORDS = Object.keys(BIOMAP_CATEGORIES);
-const DEMO_CONTENT = Object.freeze({
-    plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
-    note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
-    zone: {
-        title: 'Welcome to this area',
-        accent: '#785a43',
-        bubbles: [
-            'NOTES · nearby',
-            'PLANT ORBS · around this Totem',
-            'NEIGHBOUR TOTEM · right'
-        ]
-    },
-    zoneTwo: {
-        title: 'Welcome to this area',
-        accent: '#438f99',
-        bubbles: [
-            'NOTES · nearby',
-            'PLANT ORBS · around this Totem',
-            'NEIGHBOUR TOTEM · left'
-        ]
-    }
-});
-const MORINGA_PROFILE = Object.freeze({
-    common_name: 'Moringa Tree',
-    scientific_name: 'Moringa oleifera',
-    pim: Object.freeze({
-        schemaVersion: 1,
-        plantId: 'moringa-oleifera',
-        identity: Object.freeze({
-            commonName: 'Moringa Tree',
-            scientificName: 'Moringa oleifera',
-            identityStatement: 'A fast-growing food and support tree for tropical and subtropical gardens.',
-            image: MORINGA_PROFILE_IMAGE
-        }),
-        sources: MORINGA_TRIAL.sources,
-        nodes: Object.freeze(enrichTrialNodes([
-            { id: 'moringa-forest-layer', parentId: 'food-forest', title: 'Canopy / low tree layer', preview: 'Light canopy role', body: 'A fast-growing low tree within a layered food forest.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-canopy-management', parentId: 'moringa-forest-layer', title: 'Canopy management', preview: 'Prune for light and access', body: 'Regular pruning can keep the canopy low enough for harvest while allowing useful light to reach plants below. Observe regrowth and adjust the cutting cycle to the season and the needs of neighbouring plants.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-layer-observation', parentId: 'moringa-forest-layer', title: 'Layer observation', preview: 'Watch shade through the year', body: 'Record where shade falls in different seasons and times of day. This makes the tree layer a local observation rather than a fixed label.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' },
-            { id: 'moringa-relationships', parentId: 'food-forest', title: 'Garden relationships', preview: 'Shade and mulch', body: 'Light shade and pruned biomass can support nearby garden plants.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-biomass-cycle', parentId: 'moringa-relationships', title: 'Biomass cycle', preview: 'Return suitable prunings', body: 'Clean leaves and soft stems can be cut into manageable pieces and used as surface mulch. Keep material clear of vulnerable stems and exclude diseased material.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-pollinator-observation', parentId: 'moringa-relationships', title: 'Flower visitors', preview: 'Observe insects at flowers', body: 'When the tree flowers, record which insects visit, the time of day and whether nearby plants are flowering too. This creates a place-based relationship record.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' },
-            { id: 'moringa-culinary', parentId: 'uses', title: 'Culinary', preview: 'Leaves and pods', body: 'Nutritious leaves and long seed pods are used as food.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-leaf-harvest', parentId: 'moringa-culinary', title: 'Leaf harvest', preview: 'Pick clean young leaflets', body: 'Harvest clean foliage from correctly identified plants and use preparation methods appropriate to the dish and local food practice. Leave enough healthy canopy for continued growth.', informationType: 'practice', evidenceStatus: 'needs_review', safetyNote: 'Confirm plant identity and use an appropriate food preparation method.', status: 'published' },
-            { id: 'moringa-pod-harvest', parentId: 'moringa-culinary', title: 'Pod harvest', preview: 'Tender and mature stages differ', body: 'Tender pods and mature seed are distinct harvest stages with different textures and preparation needs. Record the stage rather than treating every pod as the same food.', informationType: 'guidance', evidenceStatus: 'needs_review', safetyNote: 'Use a preparation method suitable for the harvested stage.', status: 'published' },
-            { id: 'moringa-food-context', parentId: 'moringa-culinary', title: 'Food context', preview: 'Retain recipe and source', body: 'A useful food record includes the part used, harvest stage, preparation method, recipe tradition and the person or source that supplied the knowledge.', informationType: 'traditional_knowledge', evidenceStatus: 'community_contributed', attribution: 'A named recipe source, knowledge holder or community should accompany a specific food practice.', safetyNote: 'Traditional food records do not replace allergy or dietary advice.', status: 'published' },
-            { id: 'medicinal', parentId: 'uses', title: 'Medicinal', preview: 'Attributed traditions', body: 'Traditional uses must record their source and cultural context.', informationType: 'traditional_knowledge', evidenceStatus: 'needs_review', safetyNote: 'Traditional knowledge only; not medical advice.', status: 'published' },
-            { id: 'moringa-medicinal-boundary', parentId: 'medicinal', title: 'Knowledge boundary', preview: 'Attribute and limit claims', body: 'Record who shared a practice, where it belongs, which plant part was discussed and any limits on sharing. Do not convert a cultural record into a universal health claim.', informationType: 'traditional_knowledge', evidenceStatus: 'community_contributed', attribution: 'A named knowledge holder or community is required for a specific traditional-use record.', safetyNote: 'This is not medical advice. Seek qualified health guidance where needed.', status: 'published' },
-            { id: 'craft', parentId: 'uses', title: 'Craft', preview: 'Dry stems', body: 'Dry stems and other garden material can be used in simple crafts.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-garden-materials', parentId: 'craft', title: 'Garden materials', preview: 'Use dry pruned stems', body: 'Dry straight stems can be trialled as lightweight garden markers, temporary supports or learning materials. Their durability depends on stem age, preparation and exposure.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-seed', parentId: 'propagation', title: 'Seed', preview: 'Direct sowing', body: 'Seed and direct sowing are common starting methods.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-seed-selection', parentId: 'moringa-seed', title: 'Seed selection', preview: 'Choose mature labelled seed', body: 'Select mature seed from healthy pods and retain the source, harvest date and parent-plant notes. Labelling lets later growers compare germination and local performance.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-germination', parentId: 'moringa-seed', title: 'Germination', preview: 'Warmth with careful moisture', body: 'Use warm conditions and a free-draining medium. Keep the medium suitably moist without prolonged saturation, and record emergence time instead of assuming every seed lot behaves alike.', informationType: 'guidance', evidenceStatus: 'needs_review', climateContext: 'Temperature and moisture affect emergence.', status: 'published' },
-            { id: 'moringa-cuttings', parentId: 'propagation', title: 'Cuttings', preview: 'Vegetative start', body: 'Cuttings are another propagation pathway.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-cutting-establishment', parentId: 'moringa-cuttings', title: 'Cutting establishment', preview: 'Monitor stability and new growth', body: 'Protect a new cutting from movement while roots establish. Record new growth, water response and stability before treating it as an established tree.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-botanical-name', parentId: 'scientific-information', title: 'Botanical name', preview: 'Moringa oleifera', body: 'Moringa oleifera', informationType: 'fact', evidenceStatus: 'verified', status: 'published' },
-            { id: 'moringa-family', parentId: 'scientific-information', title: 'Family', preview: 'Moringaceae', body: 'Moringaceae', informationType: 'fact', evidenceStatus: 'verified', status: 'published' },
-            { id: 'moringa-growth-form', parentId: 'scientific-information', title: 'Growth form', preview: 'Fast-growing small tree', body: 'A fast-growing small tree.', informationType: 'fact', evidenceStatus: 'sourced', status: 'published' },
-            { id: 'moringa-leaf-form', parentId: 'moringa-growth-form', title: 'Leaf form', preview: 'Compound leaves with small leaflets', body: 'The foliage is made of compound leaves carrying many small leaflets. Use several features together when identifying a plant rather than relying on leaves alone.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-flowering', parentId: 'moringa-growth-form', title: 'Flowering and pods', preview: 'Flowers followed by long pods', body: 'Flowering and pod development vary with plant age, season, water and management. Dated local observations make this general pattern useful in a real place.', informationType: 'fact', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-origin', parentId: 'historical-data', title: 'Origin', preview: 'South Asia', body: 'Documented origin in South Asia.', informationType: 'historical_record', evidenceStatus: 'sourced', status: 'published' },
-            { id: 'moringa-origin-sources', parentId: 'moringa-origin', title: 'Origin sources', preview: 'Keep historical claims traceable', body: 'Retain the publication, date, region and wording used for an origin claim. This allows later reviewers to distinguish evidence from repeated summaries.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-food-cultures', parentId: 'historical-data', title: 'Food cultures', preview: 'Tropical cultivation', body: 'Cultivated through many tropical regions.', informationType: 'historical_record', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-local-names', parentId: 'moringa-food-cultures', title: 'Local names and practices', preview: 'Record language and place', body: 'Record a local name with its language, place, contributor and the plant part or practice it refers to. Similar names can carry different meanings in different regions.', informationType: 'traditional_knowledge', evidenceStatus: 'community_contributed', attribution: 'A named contributor or community should accompany each local record.', status: 'published' },
-            { id: 'moringa-climate', parentId: 'cultivation', title: 'Climate', preview: 'Tropical and subtropical', body: 'Adapted to tropical and subtropical growing conditions.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-seasonal-response', parentId: 'moringa-climate', title: 'Seasonal response', preview: 'Observe heat, rain and cool periods', body: 'Track leaf growth, flowering, pod set and stress through local wet, dry, hot and cool periods. The record is more useful than a climate label alone.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' },
-            { id: 'moringa-care', parentId: 'cultivation', title: 'Growing care', preview: 'Sun, drainage, pruning', body: 'Grow in full sun and free-draining soil, with regular pruning where appropriate.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-soil-drainage', parentId: 'moringa-care', title: 'Soil and drainage', preview: 'Avoid prolonged saturation', body: 'Establishment is generally more reliable where excess water can drain. Observe the actual soil after heavy rain before deciding how often to water.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-establishment-water', parentId: 'moringa-care', title: 'Establishment water', preview: 'Support roots, then reassess', body: 'Provide appropriate moisture while roots establish, then adjust watering to rainfall, soil drainage, season and the condition of the plant.', informationType: 'guidance', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-pruning-cycle', parentId: 'moringa-care', title: 'Pruning cycle', preview: 'Height, harvest and regrowth', body: 'Pruning can keep foliage reachable and produce mulch material. Record the cut date, severity and regrowth response so the cycle can be adapted rather than repeated blindly.', informationType: 'practice', evidenceStatus: 'needs_review', status: 'published' },
-            { id: 'moringa-health-observation', parentId: 'moringa-care', title: 'Plant health observation', preview: 'Notice change before treatment', body: 'Record where symptoms occur, when they began, recent weather, watering and management changes before choosing a response. Photographs over time can help distinguish damage from normal seasonal change.', informationType: 'local_observation', evidenceStatus: 'local_observation', status: 'published' }
-        ], MORINGA_TRIAL, 'moringa-agroforestry'))
-    })
-});
-export const MORINGA_PIM = Object.freeze(resolvePlantPim(MORINGA_PROFILE, {
-    id: 'moringa-oleifera',
-    plantId: 'moringa-oleifera',
-    name: 'Moringa Tree',
-    commonName: 'Moringa Tree',
-    title: 'Moringa Tree',
-    scientificName: 'Moringa oleifera'
-}));
-const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(MORINGA_PIM));
 const knowledgeFor = record => record.demoKnowledgeProjection || (record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE);
 const demoSpatialPimLayoutOptions = () => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS });
 function demoPimSurfaceSize(record) {
@@ -567,15 +357,6 @@ function demoPimPanel(record, pose = record?.informationPose) {
         height: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres * size.height / PIM_TEXTURE_SIZE.height
     });
 }
-const NOTE_TEMPLATES = Object.freeze(Object.fromEntries(SPATIAL_NOTE_TEMPLATES.map(item => [item.id, Object.freeze({
-    title: item.title,
-    accent: item.color,
-    lines: item.topics.length
-        ? item.topics.map(topic => `${topic.title.toUpperCase()}  ${topic.body}`)
-        : [item.description]
-})])));
-const DEMO_NOTE_TEMPLATE_KEYS = Object.freeze(Object.keys(NOTE_TEMPLATES));
-
 function clearSessionState() {
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-surface');

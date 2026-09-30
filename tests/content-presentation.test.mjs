@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
 import { createPimDocument, pimToArKnowledge, validatePimDocument } from '../app/services/pimModel.js';
 import { pimInfoContent } from '../app/services/pimInfoPanel.js';
-import { MORINGA_PIM } from '../app/screens/temporaryArDemo.js';
+import { DEMO_CONTENT, DEMO_ORB_MATERIALS, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../app/features/ar-demo/demoContent.js';
+import { DEMO_ARCHETYPE_START_MS } from '../app/features/ar-demo/demoConfig.js';
+import { MORINGA_PIM, MORINGA_PROFILE_IMAGE } from '../app/features/ar-demo/demoPlantContent.js';
 import { LIM_INTRO_BRANCHES, limLearningContent } from '../app/services/limLearning.js';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
 
@@ -49,7 +51,7 @@ test('post-LIMO discovery connects the authored Pigeon Pea and Living Landscapes
 
 test('demo introduces the Control panel before explaining scattered plant information', () => {
     const demo = read('app/screens/temporaryArDemo.js');
-    const opening = demo.slice(demo.indexOf('const WELCOME_BOARD_PARAGRAPHS'), demo.indexOf('const DEMO_WELCOME_OPENING_MS'));
+    const opening = [...WELCOME_BOARD_PARAGRAPHS,...WELCOME_BOARD_PARAGRAPHS_PT].join(' ');
     const orientation = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('const POST_PLACEMENT_AREA_STEP'));
     assert.doesNotMatch(opening, /scattered/);
     assert.ok(orientation.indexOf("title:'Meet your Control panel'") < orientation.indexOf("title:'Every plant holds information'"));
@@ -88,7 +90,7 @@ test('the first-time journey introduces the Control panel before four practical 
     const panel=read('app/services/pimInfoPanel.js');
     const styles=read('app/living-objects.css');
     assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information'/);
-    assert.match(demo,/const DEMO_ARCHETYPE_START_MS=20500/);
+    assert.equal(DEMO_ARCHETYPE_START_MS,20500);
     assert.doesNotMatch(demo,/welcomeNarrative\(openingElapsed/);
     assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'/);
     assert.match(demo,/infoPanel\?\.suspend\(true\)/);
@@ -151,8 +153,9 @@ test('each archetype keeps its ordered illustration while media labels stay plan
 
 test('Totem examples stay generic and use short local signs', () => {
     const demo = read('app/screens/temporaryArDemo.js');
+    const totemCopy=JSON.stringify(DEMO_CONTENT.zone);
     for (const label of ['Welcome to this area', 'NOTES · nearby', 'PLANT ORBS · around this Totem', 'NEIGHBOUR TOTEM · right']) {
-        assert.ok(demo.includes(label), `missing Area example ${label}`);
+        assert.ok(totemCopy.includes(label), `missing Area example ${label}`);
     }
     assert.match(demo, /'Meet the Totem'/);
     assert.doesNotMatch(demo, /Show Botanical Garden Totem|Rainforest Walk Totem|A Botanical Garden can welcome visitors/);
@@ -209,7 +212,7 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     assert.match(model, /image: source\.identity\.image/);
     assert.match(panel, /identityImage=document\?\.identity\?\.image/);
     assert.match(panel, /imageHeight=Math\.min\(520,Math\.max\(250,card\.height\*\.42\)\)/);
-    assert.match(demo, /new URL\('\.\.\/assets\/moringa-oleifera\.jpg', import\.meta\.url\)/);
+    assert.ok(MORINGA_PROFILE_IMAGE.endsWith('/assets/moringa-oleifera.jpg'));
     assert.match(demo, /function demoPlantMedia\(record\)/);
     assert.match(demo, /return showDemoPlantPhoto\(record\)/);
     assert.match(demo, /focusPlant\(record,demoOrbKnowledge\(record\)\.document,plantMedia\)/);
@@ -231,9 +234,9 @@ test('Pigeon Pea and Moringa provide deep template branches for demonstration', 
     for(const id of ['pollinator-resource','culinary-record','germination-check','leaf-identification','local-introduction-record','soil-observation','pruning-response','health-check']){
         assert.ok(pigeonById.get(id)?.body.length>70,`missing enriched Pigeon Pea cell ${id}`);
     }
-    const demo=read('app/screens/temporaryArDemo.js');
+    const moringaById=new Map(MORINGA_PIM.nodes.map(node=>[node.id,node]));
     for(const id of ['moringa-canopy-management','moringa-biomass-cycle','moringa-leaf-harvest','moringa-food-context','moringa-germination','moringa-leaf-form','moringa-local-names','moringa-pruning-cycle','moringa-health-observation']){
-        assert.match(demo,new RegExp(`id: '${id}'`),`missing enriched Moringa cell ${id}`);
+        assert.ok(moringaById.has(id),`missing enriched Moringa cell ${id}`);
     }
 });
 
@@ -284,7 +287,7 @@ test('simulated and immersive plant orbs use the shared crowned renderer', () =>
     assert.match(renderer, /export function drawSpatialOrb\(/);
     assert.match(renderer, /export function createOrbCrownGeometry\(/);
     assert.match(styles, /\.tryit-sim-orb\.is-plant::before/);
-    assert.match(demo, /--demo-orb-size:56px/);
+    assert.match(DEMO_ORB_MATERIALS.pigeonPea.style,/--demo-orb-size:56px/);
     assert.match(creator, /shape === 4 \? \.72 : 1/);
     assert.match(renderer, /band\(1\.18,\.022,0,Math\.PI\*2,96\)/);
     assert.match(styles, /border:2px solid var\(--demo-orb-ring/);
