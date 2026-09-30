@@ -82,7 +82,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const demoZone=Boolean(state?.demoZone);
     const demoScale=demoZone ? (Number(state?.bodyHalfHeight) || .56)/.82 : 1;
     const boardWidth = Number(state?.boardWidth) || (demoZone ? .52 : .58);
-    const boardHeight = Number(state?.boardHeight) || (demoZone ? .15 : .19);
+    const boardHeight = Number(state?.boardHeight) || (demoZone ? .18 : .22);
     const boardAttach=bodyHalfWidth+boardWidth/2-.035;
     const place = (x,y,width,height,card,detail=false,offset=bodyHalfDepth+.018) => ({
         center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
@@ -109,7 +109,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     };
     const headerSelected=selectedId===cards[0]?.id;
     const headerBoard = cards[0] ? {
-        ...place(0, 1.48*demoScale, demoZone ? .74 : Math.max(.88, boardWidth + .16), demoZone ? .26 : .28, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
+        ...place(0, 1.48*demoScale, demoZone ? .74 : Math.max(.88, boardWidth + .16), .30, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,demoZone ? 5 : 3);
@@ -157,7 +157,7 @@ export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view,
         const style=surface.card?.boardStyle || surface.boardStyle;
         const header=style==='header' || style==='header-detail';
         const right=surface.right,front={x:-right.z,y:0,z:right.x};
-        const rotationY=Math.atan2(-right.z,right.x),halfDepth=header ? .016 : .012;
+        const rotationY=Math.atan2(-right.z,right.x),halfDepth=header ? .014 : .009;
         const centerDepth={x:surface.center.x-front.x*(halfDepth+.003),z:surface.center.z-front.z*(halfDepth+.003)};
         const colour=header ? [.26,.35,.41] : [.42,.29,.20];
         const highlight=header ? [.49,.59,.65] : [.68,.52,.35];

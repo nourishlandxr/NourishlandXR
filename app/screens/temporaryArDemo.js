@@ -243,6 +243,7 @@ let introBoardNextGuideVisible = false;
 let placementReady = false, placementDistance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
 let demoHeldIndex = -1;
 let demoGrabPreparingIndex = -1;
+let demoGrabInputSource = null;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 let demoWebModeOpen = false;
@@ -3902,7 +3903,7 @@ function beginPointerDemoHold(event) {
     return true;
 }
 
-function beginControllerDemoHold(inputSource=null) {
+function beginControllerDemoHold() {
     if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
     const profile=demoInfoTarget();
     const target = demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
@@ -3917,7 +3918,7 @@ function beginControllerDemoHold(inputSource=null) {
         demoHoldTimer = null;
         demoGrabPreparingIndex=-1;
         demoHeldIndex = target.index;
-        pulseDemoHaptics(inputSource);
+        pulseDemoHaptics(demoGrabInputSource);
         suppressSessionSelectUntil = performance.now() + 420;
         setGuide(`Holding ${target.record.name || 'the orb'}. Move the controller, then release.`);
     }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
@@ -5197,7 +5198,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1),
-            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, held:demoHeldIndex===markers.indexOf(record), grabReady:demoGrabPreparingIndex===markers.indexOf(record), highlighted:demoHeldIndex===markers.indexOf(record) || demoGrabPreparingIndex===markers.indexOf(record) || signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
+            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, held:demoHeldIndex===markers.indexOf(record), grabReady:demoGrabPreparingIndex===markers.indexOf(record), highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===markers.indexOf(record) || demoGrabPreparingIndex===markers.indexOf(record), time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {
@@ -5478,7 +5479,8 @@ async function startImmersive() {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
             if (beginImmersiveKnowledgeCombination()) return;
-            beginControllerDemoHold(event.inputSource);
+            demoGrabInputSource=event.inputSource;
+            beginControllerDemoHold();
         });
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
