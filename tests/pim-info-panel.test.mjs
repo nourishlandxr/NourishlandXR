@@ -181,7 +181,7 @@ test('side dots reveal mounted wings without rebuilding or resizing the panel',(
     assert.doesNotMatch(styles,/\.has-media:not\(\.is-media-collapsed\) \{ grid-template-columns:96px/);
     assert.match(panel,/mediaDockSide='top'/);
     assert.match(styles,/\[data-media-dock-side="top"\]:not\(\.is-media-collapsed\) > \.nlxr-media-wing/);
-    assert.match(panel,/!settingsOpen && !mediaCollapsed && preview\?\.image/);
+    assert.match(panel,/!hidden && !mediaCollapsed && preview\?\.image && \(mediaDetached \|\| !settingsOpen\)/);
     assert.match(panel,/mediaCollapsed \|\| mediaDetached \|\| \(settingsOpen && !mediaDetached\)/);
 });
 

@@ -1,13 +1,14 @@
 const clamp01=value=>Math.max(0,Math.min(1,value));
 
-export function demoBeePose(elapsed,startedAt,index=0){
+export function demoBeePose(elapsed,startedAt,index=0,{attention='screen'}={}){
     if(!Number.isFinite(startedAt))return null;
     const age=elapsed-startedAt-index*850;
     if(age<0)return null;
     const time=age/1000,phase=time*.34+index*2.7;
+    const gather=attention==='control'?1-clamp01((age-3600)/2400):0;
     return {
-        x:.5+Math.cos(phase)*.30,
-        y:.5+Math.sin(phase)*.30,
+        x:(.5+Math.cos(phase)*.30)*(1-gather)+(.25+Math.cos(phase*2)*.055)*gather,
+        y:(.5+Math.sin(phase)*.30)*(1-gather)+(.72+Math.sin(phase*2)*.055)*gather,
         depth:Math.sin(phase-.9),
         heading:phase+Math.PI/2,
         wing:Math.sin(time*27+index),
@@ -26,11 +27,11 @@ function drawBee(ctx,x,y,size,wing,opacity){
     ctx.restore();
 }
 
-export function drawDemoAmbientLife(ctx,width,height,{elapsed=0,beesStartedAt=NaN,reducedMotion=false}={}){
+export function drawDemoAmbientLife(ctx,width,height,{elapsed=0,beesStartedAt=NaN,reducedMotion=false,attention='screen'}={}){
     ctx.clearRect(0,0,width,height);
     if(reducedMotion||!Number.isFinite(beesStartedAt))return;
     for(let index=0;index<2;index++){
-        const bee=demoBeePose(elapsed,beesStartedAt,index);
+        const bee=demoBeePose(elapsed,beesStartedAt,index,{attention});
         if(bee)drawBee(ctx,bee.x*width,bee.y*height,Math.max(4,Math.min(width,height)*(.009+bee.depth*.003)),bee.wing,bee.opacity);
     }
 }

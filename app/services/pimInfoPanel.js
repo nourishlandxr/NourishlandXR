@@ -182,7 +182,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const HEAVY_RAIN_INTENSITY=1.65;
     const CELL_OPACITY_LEVELS=[0,.25,.5,1];
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),meshCellOpacity=CELL_OPACITY_LEVELS.reduce((best,value)=>Math.abs(value-Number(cellOpacity))<Math.abs(best-Number(cellOpacity))?value:best,1),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
-    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTransitionTimer=0,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
+    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let visibleMedia=null;
     const MEDIA_FADE_MS=650;
     let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
@@ -215,7 +215,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const panelHeading=()=>hasPimPath() && tab==='Details' ? pimPath() : title();
     const hasPimPathHeading=()=>hasPimPath() && tab==='Details';
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const previewMedia=()=>selection?.mesh==='lim' && (selection.sketchImage || selection.image)
+    const previewMedia=()=>mediaPreviewBlocked ? null : selection?.mesh==='lim' && (selection.sketchImage || selection.image)
         ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false,fit:selection.imageFit || 'cover'}
         : identity?.media?.image ? {...identity.media,caption:identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
@@ -223,7 +223,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(source===mediaImageSource)return;
         const token=++mediaLoadToken;
         clearTimeout(mediaTransitionTimer);mediaTransitionTimer=0;
-        if(discardPrevious){mediaPreviousImage=null;mediaImage=null;mediaImageSource='';mediaFadeStartedAt=performance.now();}
+        mediaPreviewBlocked=delayMs>0;
+        if(discardPrevious){mediaPreviousImage=null;mediaImage=null;mediaImageSource='';visibleMedia=null;mediaFadeStartedAt=performance.now();}
         if(!source){mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource='';mediaFadeStartedAt=performance.now();return;}
         const beginLoad=()=>{
             if(token!==mediaLoadToken)return;
@@ -232,7 +233,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             image.onerror=()=>{if(token!==mediaLoadToken)return;if(discardPrevious)mediaPreviousImage=null;else mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource=source;mediaFadeStartedAt=performance.now();};
             image.src=source;
         };
-        if(delayMs>0){mediaTransitionTimer=setTimeout(()=>{mediaTransitionTimer=0;beginLoad();},delayMs);return;}
+        if(delayMs>0){mediaTransitionTimer=setTimeout(()=>{mediaTransitionTimer=0;mediaPreviewBlocked=false;beginLoad();render(true);},delayMs);return;}
         beginLoad();
     }
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
@@ -246,7 +247,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;
         if(action==='ToggleMedia'){mediaCollapsed=!mediaCollapsed;mediaTouched=true;}
         if(action==='ToggleMediaDetach'){if(mediaDetached)dockMediaPanel();else detachMediaPanel();return;}
-        if(action==='Restore')hidden=false;
+        if(action==='Restore'){hidden=false;render(true);return;}
         if(action==='Hide')hidden=true;
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
         if(action==='Settings'){
@@ -380,7 +381,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(!mediaDetached){mediaFloating?.remove();mediaFloating=null;return;}
         if(!mediaFloating){mediaFloating=createMediaWing({floating:true});root?.append(mediaFloating);}
         refreshMediaWing(mediaFloating);
-        mediaFloating.hidden=Boolean(renderer);
+        mediaFloating.hidden=Boolean(renderer || hidden || mediaCollapsed || !previewMedia()?.image);
         const position=mediaPosition || {left:Math.max(8,element.getBoundingClientRect().right+12),top:element.getBoundingClientRect().top};
         mediaFloating.style.left=position.left+'px';mediaFloating.style.top=position.top+'px';
     }
@@ -793,14 +794,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             mediaCollapsed=true;mediaTouched=false;
             if(imageSource)mediaCollapsed=false;
             loadPanelImage(imageSource,{delayMs:Number(content?.imageTransitionDelayMs)||0,discardPrevious:Boolean(content?.discardPreviousImage)});
-            tab='Details';hidden=false;page=0;render(true);
+            tab='Details';page=0;render(true);
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setContextualHint(message=''){contextHint=String(message || '');page=0;updateReading();},
         setPanelHints(values=[]){rotatingPanelHints=Array.isArray(values)?values.map(String).filter(Boolean):[];panelHintIndex=0;clearInterval(panelHintTimer);panelHintTimer=0;if(rotatingPanelHints.length>1)panelHintTimer=setInterval(()=>{panelHintIndex=(panelHintIndex+1)%rotatingPanelHints.length;if(!contextHint && !identity?.hint && tab!=='Help')updateReading();},7000);if(!contextHint && !identity?.hint && tab!=='Help')updateReading();},
-        setMediaCollapsed(value=true){mediaCollapsed=Boolean(value);mediaTouched=false;if(mediaCollapsed && mediaDetached){mediaDetached=false;mediaFloating?.remove();mediaFloating=null;mediaPosition=null;mediaPose=null;}render(true);},
+        setMediaCollapsed(value=true){mediaCollapsed=Boolean(value);mediaTouched=false;render(true);},
+        restore(){hidden=false;detached=false;element.style.visibility='';render(true);},
         setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && showPlantPreview() && !mediaCollapsed)render(true);else syncPanelWings();},
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;updatePathway();},
@@ -828,7 +830,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
             const settingsWidth=.62*spatialScale,gap=0,companionHeight=mainHeight*.78;
             if(settingsOpen && !hidden && settingsCard)surfaces.push({...companionPanelPose(pose,'left',mainWidth,settingsWidth,18,gap),width:settingsWidth,height:companionHeight,card:settingsCard});
-            if((!hidden || mediaDetached) && mediaCard && (mediaDetached || !settingsOpen)){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
+            if(!hidden && mediaCard && (mediaDetached || !settingsOpen)){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -882,7 +884,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
-            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!settingsOpen && !mediaCollapsed && preview?.image))cards.push(mediaCard);
+            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image && (mediaDetached || !settingsOpen))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
         activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && button.action!=='MoveMediaPanel')act(button.action);return true;},

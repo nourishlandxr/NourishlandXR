@@ -1428,7 +1428,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
     assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art\)/);
     assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'',hideTitle:true,imageFit:'contain'/);
-    assert.match(source, /function prepareStableLimoSurface\(\)[\s\S]*record\.demoExpanded=false;[\s\S]*record\.demoExpandedNodeIds=\[\];/);
+    assert.match(source, /function prepareStableLimoSurface\(\)[\s\S]*record\.demoInteractive=true;[\s\S]*record\.demoAlive=true;/);
+    assert.doesNotMatch(source.match(/function prepareStableLimoSurface\(\) \{[\s\S]*?\n\}/)?.[0] || '', /demoExpanded=false|demoExpandedNodeIds=\[\]/);
     assert.match(source, /function startKnowledgeCombinationExperience\(\)\{[\s\S]*prepareStableLimoSurface\(\);[\s\S]*useSharedWelcomeBoard\(true\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);

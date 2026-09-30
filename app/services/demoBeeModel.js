@@ -120,9 +120,9 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
             renderer.render(scene,camera);
             return canvas;
         },
-        draw(elapsed,startedAt,reducedMotion=false){
+        draw(elapsed,startedAt,reducedMotion=false,{attention='screen'}={}){
             if(!ready || reducedMotion || !Number.isFinite(startedAt)){canvas.style.visibility='hidden';return;}
-            const pose=demoBeePose(elapsed,startedAt,0);if(!pose){canvas.style.visibility='hidden';return;}
+            const pose=demoBeePose(elapsed,startedAt,0,{attention});if(!pose){canvas.style.visibility='hidden';return;}
             const width=window.innerWidth,height=window.innerHeight;if(!width||!height)return;
             if(canvas.width!==Math.round(width*renderer.getPixelRatio()) || canvas.height!==Math.round(height*renderer.getPixelRatio())){renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();}
             canvas.style.visibility='visible';canvas.classList.toggle('is-behind',pose.depth<0);
