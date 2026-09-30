@@ -27,7 +27,7 @@ test('V2 welcome gives exploration priority while preserving creator and AR entr
  assert.match(app.innerHTML,/Create &amp; manage/);
  assert.match(app.innerHTML,/renderDemoProjects/);
  assert.match(app.innerHTML,/openTemporaryArDemoWindow/);
- assert.match(app.innerHTML,/About Nourishland XR/);
+ assert.match(app.innerHTML,/data-v2-about>About<\/button>/);
  assert.match(app.innerHTML,/welcome-version-badge/);
  assert.match(app.innerHTML,/v2-intro-sequence/);
  assert.doesNotMatch(app.innerHTML,/v2-intro-grid/);

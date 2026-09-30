@@ -57,15 +57,15 @@ test('demo introduces the Control panel before explaining scattered plant inform
     assert.doesNotMatch(opening, /scattered/);
     assert.ok(orientation.indexOf("title:'Meet your Control panel'") < orientation.indexOf("title:'Every plant holds information'"));
     assert.ok(orientation.indexOf('NourishlandXR brings those layers together') < orientation.indexOf("title:'A Project holds information'"));
-    assert.match(demo, /'Welcome to NourishlandXR'[\s\S]*Explore how plants, places and knowledge connect/);
+    assert.match(demo, /'Welcome to the NourishlandXR demo'[\s\S]*NLXR is an immersive information hub for living landscapes/);
 });
 
 test('demo uses one continuous welcome before beginning the Why stage', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
-    assert.match(greeting, /introBoardTitle='Welcome to NourishlandXR'/);
-    assert.match(greeting, /Extended reality for exploring living landscapes/);
+    assert.match(greeting, /introBoardTitle=demoLocalizedText\('Welcome to the NourishlandXR demo'\)/);
+    assert.match(greeting, /NLXR is an immersive information hub for living landscapes/);
     assert.match(greeting, /Take a moment to settle in\. This place is ready to explore\./);
     assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('EXTENDED REALITY, ROOTED IN PLACE'\)/);
     assert.match(greeting, /See the landscape come to life\.[\s\S]*digital plant stories and place-based knowledge appear within the real landscape around you/);
@@ -213,7 +213,8 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     assert.match(panel, /identityImage=document\?\.identity\?\.image/);
     assert.match(panel, /imageHeight=Math\.min\(520,Math\.max\(250,card\.height\*\.42\)\)/);
     assert.match(demo, /new URL\('\.\.\/assets\/moringa-oleifera\.jpg', import\.meta\.url\)/);
-    assert.match(demo, /const plantMedia=ambientNeighbour \? null : moringa/);
+    assert.match(demo, /function demoPlantMedia\(record\)/);
+    assert.match(demo, /return showDemoPlantPhoto\(record\)/);
     assert.match(demo, /focusPlant\(record,demoOrbKnowledge\(record\)\.document,plantMedia\)/);
     const conversion=demo.slice(demo.indexOf('function guidePlantConversion'),demo.indexOf('function showSceneContinue'));
     assert.doesNotMatch(conversion,/focusPlant\(/);

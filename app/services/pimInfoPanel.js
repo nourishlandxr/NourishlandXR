@@ -3,6 +3,8 @@ import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js
 import { handTrackingState } from './xrPointer.js';
 
 export const INFO_HELP = 'Aim at an object to highlight it. Hold a plant cell to read its details here. Select a Plant Orb to explore information connected to that plant.';
+const PANEL_GRAB_HOLD_MS = 800;
+const PANEL_GRAB_CANCEL_DISTANCE_PX = 14;
 
 // This is a reading projection, never a second store of plant knowledge.
 export function pimInfoContent(document, path) {
@@ -91,8 +93,7 @@ export function panelPoseOutsideSafeBounds(matrix, panelPose) {
     return forwardDistance < .16 || forwardDistance > 2.4 || Math.abs(lateralDistance) > 1.45 || Math.abs(dy) > 1.35;
 }
 
-// Keep the point under the user's ray fixed instead of snapping the panel's
-// centre onto the ray when its off-centre move handle is grabbed.
+// Keep the point under the user's ray fixed when the panel is grabbed.
 export function panelCenterFromGrab(ray, grab, axes) {
     if (!ray?.origin || !ray.direction || !grab || !axes?.right || !axes?.up) return null;
     return {
@@ -138,7 +139,7 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const rail=164,media=0;
     const left=rail+22,width=1000-rail-44;
     const button=(item,x,y,w,h)=>({...item,description:item.description || controlDescription(item),x,y,width:w,height:h});
-    const result=[button({action:'MovePanel',label:'MOVE',ariaLabel:'Grab and move Control panel',kind:'handle'},700,18,106,38)];
+    const result=[];
     items.filter(item=>['tab','menu'].includes(item.kind)).forEach((item,index)=>result.push(button(item,16,150+index*50,rail-28,40)));
     const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
     const secondary=items.filter(item=>item.kind==='utility' && item!==primary);
@@ -156,7 +157,6 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
 
 function controlDescription(item={}){
     const descriptions={
-        MovePanel:'Press and hold to reposition the Control panel.',
         MoveMediaPanel:'Press and hold to detach and move the media panel; release near an edge to dock it.',
         Hide:'Collapse the Control panel. Reopen it from its small tab.',
         Restore:'Restore the Control panel.',
@@ -186,7 +186,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const MEDIA_FADE_MS=650;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='';
-    let spatialMove=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
+    let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
@@ -237,7 +237,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;
         if(action==='ToggleMedia'){mediaCollapsed=!mediaCollapsed;mediaTouched=true;}
         if(action==='ToggleMediaDetach'){if(mediaDetached)dockMediaPanel();else detachMediaPanel();return;}
-        if(action==='MovePanel')return;
         if(action==='Restore')hidden=false;
         if(action==='Hide')hidden=true;
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
@@ -453,16 +452,38 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(railToggle){railToggle.setAttribute('aria-expanded',String(!railCollapsed));railToggle.setAttribute('aria-label',railCollapsed?'Open settings and sections':'Collapse settings and sections');}
         if(mediaToggle){mediaToggle.setAttribute('aria-expanded',String(!mediaCollapsed));mediaToggle.setAttribute('aria-label',mediaCollapsed?'Open plant media':'Collapse plant media');}
     }
-    function bindPanelMove(handle){
-        handle.addEventListener('pointerdown',event=>{
-            if(handle.matches('header') && event.target.closest('button,a,input,select,textarea,[role="button"]'))return;
-            if(event.button!==0 && event.pointerType==='mouse')return;
-            event.preventDefault();event.stopPropagation();const rect=element.getBoundingClientRect(),dx=event.clientX-rect.left,dy=event.clientY-rect.top;
-            handle.setPointerCapture?.(event.pointerId);
-            const move=next=>{const left=Math.max(8,Math.min(window.innerWidth-element.offsetWidth-8,next.clientX-dx)),top=Math.max(8,Math.min(window.innerHeight-element.offsetHeight-8,next.clientY-dy));element.style.left=left+'px';element.style.top=top+'px';element.style.right='auto';element.style.bottom='auto';onMove();};
-            const end=()=>{handle.removeEventListener('pointermove',move);handle.removeEventListener('pointerup',end);handle.removeEventListener('pointercancel',end);};
-            handle.addEventListener('pointermove',move);handle.addEventListener('pointerup',end);handle.addEventListener('pointercancel',end);
-        });
+    function bindPanelMove(){
+        let grab=null;
+        const clear=()=>{
+            if(grab){clearTimeout(grab.timer);try{if(element.hasPointerCapture?.(grab.pointerId))element.releasePointerCapture(grab.pointerId);}catch{}}
+            grab=null;element.classList.remove('is-grab-ready','is-grabbed');
+            window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);
+        };
+        const move=event=>{
+            if(!grab || event.pointerId!==grab.pointerId)return;
+            if(!grab.armed){if(Math.hypot(event.clientX-grab.startX,event.clientY-grab.startY)>PANEL_GRAB_CANCEL_DISTANCE_PX)clear();return;}
+            event.preventDefault();
+            const left=Math.max(8,Math.min(window.innerWidth-element.offsetWidth-8,event.clientX-grab.offsetX));
+            const top=Math.max(8,Math.min(window.innerHeight-element.offsetHeight-8,event.clientY-grab.offsetY));
+            element.style.left=`${left}px`;element.style.top=`${top}px`;element.style.right='auto';element.style.bottom='auto';onMove();
+        };
+        const end=event=>{if(grab && event.pointerId===grab.pointerId)clear();};
+        const start=event=>{
+            if(hidden || detached || (event.pointerType==='mouse' && event.button!==0))return;
+            if(event.target.closest('button,a,input,select,textarea,[role="button"],[role="tab"],[contenteditable]'))return;
+            clear();
+            const rect=element.getBoundingClientRect();
+            grab={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top,armed:false,timer:null};
+            element.classList.add('is-grab-ready');
+            grab.timer=setTimeout(()=>{
+                if(!grab || grab.pointerId!==event.pointerId)return;
+                grab.armed=true;element.classList.remove('is-grab-ready');element.classList.add('is-grabbed');
+                try{element.setPointerCapture?.(event.pointerId);}catch{}
+            },PANEL_GRAB_HOLD_MS);
+            window.addEventListener('pointermove',move,{passive:false});window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+        };
+        element.addEventListener('pointerdown',start);
+        return ()=>{clear();element.removeEventListener('pointerdown',start);};
     }
     function updateReading(){
         if(detached)return;
@@ -571,7 +592,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');scientific.hidden=hasPimPath() || !scientific.textContent;
             const hideButton=makeButton(controls().find(item=>item.action==='Hide'));hideButton.classList.add('is-panel-hide');
             header.append(hideButton);
-            header.classList.add('is-move-handle');header.title='Drag to move the Control panel';bindPanelMove(header);
+            header.classList.add('is-move-handle');header.title='Hold to move the Control panel';
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>['tab','menu'].includes(item.kind) && item.action!=='Hide').forEach(item=>tabs.append(makeButton(item)));
@@ -615,11 +636,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         element.querySelector('[data-info-action="'+tab+'"]')?.focus();
     });
     element.addEventListener('beforexrselect',event=>event.preventDefault());
+    const removePanelMove=bindPanelMove();
     element.addEventListener('pointerdown',event=>event.stopPropagation());
     function canvas(card){
         const c=document.createElement('canvas');c.width=1000;c.height=card.hidden?160:card.height;const ctx=c.getContext('2d');
             const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,'rgba(39,57,73,.96)');gradient.addColorStop(1,'rgba(9,20,31,.94)');
-        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();ctx.strokeStyle=card.guided?'#93d9f2':'rgba(166,204,229,.72)';ctx.lineWidth=card.guided?4:2;ctx.stroke();ctx.textBaseline='top';
+        ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();
+        ctx.strokeStyle=card.grabState==='held'?'#dfff9b':card.grabState==='ready'?'#bceeff':card.grabState==='hover'?'#a6e7fa':card.guided?'#93d9f2':'rgba(166,204,229,.72)';
+        ctx.lineWidth=card.grabState==='held'?8:card.grabState?5:card.guided?4:2;
+        ctx.shadowColor=card.grabState==='held'?'rgba(223,255,155,.8)':'rgba(119,212,247,.55)';ctx.shadowBlur=card.grabState==='held'?36:card.grabState?22:0;ctx.stroke();ctx.shadowBlur=0;ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.media){
             ctx.fillStyle='rgba(119,169,198,.34)';ctx.beginPath();ctx.roundRect(846,16,108,58,15);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#a9e7fa';ctx.font='700 30px system-ui';ctx.textAlign='center';ctx.fillText('↔',900,27,56);ctx.textAlign='left';
@@ -801,12 +826,17 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
             const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
+            const grab=spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
-            if(spatialMove?.source?.hand && xrFrame){const pointer=handTrackingState(xrFrame,spatialMove.source,spatialMove.referenceSpace)?.pointer;handMoveRay=pointer?{...pointer,direction:spatialMove.handDirection || pointer.direction}:null;}
-            if(spatialMove && !spatialMove.source?.hand && xrFrame?.getPose && spatialMove.source?.targetRaySpace && spatialMove.referenceSpace){
-                try{heldTransform=xrFrame.getPose(spatialMove.source.targetRaySpace,spatialMove.referenceSpace)?.transform.matrix || null;}catch{heldTransform=null;}
+            if(grab?.source?.hand && xrFrame){const pointer=handTrackingState(xrFrame,grab.source,grab.referenceSpace)?.pointer;handMoveRay=pointer?{...pointer,direction:grab.handDirection || pointer.direction}:null;}
+            if(grab && !grab.source?.hand && xrFrame?.getPose && grab.source?.targetRaySpace && grab.referenceSpace){
+                try{heldTransform=xrFrame.getPose(grab.source.targetRaySpace,grab.referenceSpace)?.transform.matrix || null;}catch{heldTransform=null;}
             }
             const heldRay=handMoveRay || (heldTransform?{origin:{x:heldTransform[12],y:heldTransform[13],z:heldTransform[14]},direction:{x:-heldTransform[8],y:-heldTransform[9],z:-heldTransform[10]}}:xrFrame?null:inputRay);
+            if(spatialGrabPending && time-spatialGrabPending.startedAt>=PANEL_GRAB_HOLD_MS){
+                if(heldRay && hit(heldRay)?.card?.id==='control')spatialMove={...spatialGrabPending,panel:'main'};
+                spatialGrabPending=null;
+            }
             if(spatialMove && heldRay?.origin && heldRay?.direction){
                 pose ||= next;
                 if(spatialMove.panel==='media')mediaPose ||= spatialMediaDockPose(mediaDockSide);
@@ -832,12 +862,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(nextHoverDescription!==hoveredDescription || nextHoverPanelId!==hoveredPanelId){hoveredDescription=nextHoverDescription;hoveredPanelId=nextHoverPanelId;}
             lastTime=time;
         },
-        recenter(){heading=null;pose=null;mediaPose=mediaDetached?null:mediaPose;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;},
+        recenter(){heading=null;pose=null;mediaPose=mediaDetached?null:mediaPose;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;spatialGrabPending=null;},
         getPosition(){return pose?.center ? {...pose.center} : null;},
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
-            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
+            const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls(),hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/MEDIA_FADE_MS));
             if(imageFade>=1)mediaPreviousImage=null;
@@ -845,7 +875,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!settingsOpen && !mediaCollapsed && preview?.image))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
-        activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !['MovePanel','MoveMediaPanel'].includes(button.action))act(button.action);return true;},
+        activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && button.action!=='MoveMediaPanel')act(button.action);return true;},
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
             if(event.type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
             if(event.type==='selectend' && spatialMove?.source===event.inputSource){
@@ -853,6 +883,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 finishingMoveSource=event.inputSource;spatialMove=null;
                 if(moving.panel==='media' && candidate)dockSpatialMedia(candidate.side);
                 event.stopImmediatePropagation();return;
+            }
+            if(event.type==='selectend' && spatialGrabPending?.source===event.inputSource){
+                if(performance.now()-spatialGrabPending.startedAt>=PANEL_GRAB_HOLD_MS)finishingMoveSource=event.inputSource;
+                spatialGrabPending=null;event.stopImmediatePropagation();return;
             }
             if(event.type==='select' && (spatialMove?.source===event.inputSource || finishingMoveSource===event.inputSource)){finishingMoveSource=null;event.stopImmediatePropagation();return;}
             const handRay=event.inputSource?.hand ? handTrackingState(event.frame,event.inputSource,referenceSpace)?.pointer : null;
@@ -863,15 +897,18 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const target=hit(ray);if(!target)return;
             event.stopImmediatePropagation();
             const button=targetButtonAtRay(target);
-            if(event.type==='selectstart' && button && ['MovePanel','MoveMediaPanel'].includes(button.action)){
-                const movingMedia=button.action==='MoveMediaPanel';
-                if(movingMedia && !mediaDetached){mediaPose=spatialMediaDockPose(mediaDockSide);mediaDetached=true;mediaCollapsed=false;render(true);}
-                spatialMove={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:movingMedia?'media':'main',handDirection:event.inputSource?.hand?{...ray.direction}:null};
+            if(event.type==='selectstart' && button?.action==='MoveMediaPanel'){
+                if(!mediaDetached){mediaPose=spatialMediaDockPose(mediaDockSide);mediaDetached=true;mediaCollapsed=false;render(true);}
+                spatialMove={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'media',handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
-            if(event.type==='select' && !spatialMove)api.activate(ray);
+            if(event.type==='selectstart' && target.card?.id==='control' && !hidden){
+                spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,startedAt:performance.now(),handDirection:event.inputSource?.hand?{...ray.direction}:null};
+                return;
+            }
+            if(event.type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
         };for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);
-            removeXrControls=()=>{for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);};},
-        destroy(){mediaLoadToken++;mediaImage=null;mediaPreviousImage=null;removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
+            removeXrControls=()=>{spatialGrabPending=null;spatialMove=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);};},
+        destroy(){mediaLoadToken++;mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
     };render();return api;
 }

@@ -53,6 +53,13 @@ export function demoConnectionIsDeeper(state){
     return [DEMO_CONNECTION_PHASES.DEEPER_READY,DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING,DEMO_CONNECTION_PHASES.COMPLETE].includes(state?.phase);
 }
 
+export function demoConnectionScreenCode(state){
+    if(state?.phase===DEMO_CONNECTION_PHASES.COMPLETE)return 'LEARNING 1.12';
+    if(demoConnectionIsDeeper(state))return 'LEARNING 1.11';
+    if(state?.phase===DEMO_CONNECTION_PHASES.RESULT)return 'LEARNING 1.10';
+    return 'LEARNING 1.9';
+}
+
 export function demoConnectionSource(state){
     const choice=demoConnectionChoice(state);
     if(!choice)return null;
@@ -68,6 +75,26 @@ export function demoConnectionTarget(state){
 export function demoConnectionTargetAt(state,xPercent,yPercent,radius=12){
     const target=demoConnectionTarget(state);
     return Boolean(target && Math.hypot(Number(xPercent)-target.x,Number(yPercent)-target.y)<=radius);
+}
+
+export function demoConnectionActionAt(state,point){
+    if(!state || !point)return null;
+    const choice=demoConnectionChoice(state);
+    if(!choice){
+        const selected=DEMO_CONNECTION_CHOICES.find(item=>{
+            const source=DEMO_CONNECTION_POSITIONS.sources[item.id];
+            return Math.abs(point.x-source.x)<=12 && Math.abs(point.y-source.y)<=7;
+        });
+        return selected?{type:'choice',choice:selected}:null;
+    }
+    const source=demoConnectionSource(state);
+    if(source && Math.hypot(point.x-(source.x+10),point.y-source.y)<=5 && [DEMO_CONNECTION_PHASES.READY,DEMO_CONNECTION_PHASES.DEEPER_READY].includes(state.phase))return {type:'node',deeper:demoConnectionIsDeeper(state)};
+    // The drawn buttons occupy roughly x=40–60%, y=69–74%.
+    if(state.primaryResult && point.y>=68 && point.y<=75 && point.x>=38 && point.x<=62){
+        if(state.phase===DEMO_CONNECTION_PHASES.RESULT)return {type:point.x<50?'deeper':'continue'};
+        if(![DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase))return {type:'continue'};
+    }
+    return null;
 }
 
 export function demoConnectionCurve(start,end){

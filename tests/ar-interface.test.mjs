@@ -36,7 +36,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('welcome stays concise and spatial controllers never fall back to head movement', () => {
-    assert.match(read('app/screens/temporaryArDemo.js'), /Explore how plants, places and knowledge connect/);
+    assert.match(read('app/screens/temporaryArDemo.js'), /NLXR is an immersive information hub for living landscapes/);
     assert.equal(demoViewerPointerFallbackAllowed({ simulated:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ hasScreenInput:true, spatialInputSeen:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ spatialInputSeen:true }), false);
@@ -1234,7 +1234,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /'Thank you for exploring NourishlandXR'/);
     assert.match(source, /WELCOME_BOARD_PARAGRAPHS/);
     assert.match(source, /Welcome to Nourishland/);
-    assert.match(source, /Explore how plants, places and knowledge connect/);
+    assert.match(source, /NLXR is an immersive information hub for living landscapes/);
     assert.match(source, /A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources/);
     assert.match(source, /plant: \['A plant story in this place', \[/);
     assert.match(source, /nextGuide:'Aim toward the plant or tag location\. Hint: use the right joystick up or down to adjust distance\.'/);
@@ -1432,7 +1432,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
-    assert.match(source, /Explore how plants, places and knowledge connect/);
+    assert.match(source, /NLXR is an immersive information hub for living landscapes/);
     assert.match(source, /demoViewerPointerFallbackAllowed/);
     assert.match(source, /button:'Place Pigeon Pea'/);
     assert.match(source, /hasPhoneScreenInput=Array\.from\(session\?\.inputSources \|\| \[\]\)/);

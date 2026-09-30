@@ -10,10 +10,10 @@ test('Quest Control panel keeps its navigation rail and Continue reachable', () 
     const folded=spatialPanelControls({height:1050,items,railCollapsed:true,mediaCollapsed:true});
     assert.ok(open.some(item=>item.kind==='tab'));
     assert.ok(folded.some(item=>item.kind==='tab'));
-    for(const action of ['MovePanel','Utility:continue'])assert.ok(folded.some(item=>item.action===action));
+    assert.ok(folded.some(item=>item.action==='Utility:continue'));
+    assert.equal(folded.some(item=>item.action==='MovePanel'),false);
     assert.equal(folded.some(item=>['ToggleMenu','ToggleMedia'].includes(item.action)),false);
     assert.equal(folded.some(item=>item.action==='ToggleTools'),false);
-    assert.equal(folded.find(item=>item.action==='MovePanel').label,'MOVE');
     assert.equal(spatialPanelControls({hidden:true})[0].label,'Control panel');
 });
 import { hitTotemSurface } from '../app/services/spatialTotemCards.js';
@@ -141,7 +141,7 @@ test('grabbing the off-centre move dot keeps that exact point under the controll
     assert.ok(Math.abs(moved.y-center.y-.06)<1e-10);
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     assert.match(panel,/distance:target\.distance,localX:target\.localX,localY:target\.localY/);
-    assert.match(panel,/xrFrame\.getPose\(spatialMove\.source\.targetRaySpace,spatialMove\.referenceSpace\)/);
+    assert.match(panel,/xrFrame\.getPose\(grab\.source\.targetRaySpace,grab\.referenceSpace\)/);
     assert.match(panel,/card\.largeText\?'500 31px':'500 27px'/);
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\) \.nlxr-info-trail \{ font-size:15px/);

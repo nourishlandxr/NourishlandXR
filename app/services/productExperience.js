@@ -14,8 +14,8 @@ export function searchSpecimens(plants, query = '', area = '', layer = '') {
 export function leafArtwork() {
     return `<svg class="v2-botanical" viewBox="0 0 480 430" aria-hidden="true"><circle cx="252" cy="210" r="175" fill="#e4ead9"/><circle cx="252" cy="210" r="146" fill="none" stroke="#c6d3bf" stroke-dasharray="2 10"/><path d="M245 395C222 290 262 175 318 58" fill="none" stroke="#607e61" stroke-width="3"/><path d="M246 306C140 317 113 238 110 196C204 186 255 231 246 306Z" fill="#abc3a4"/><path d="M247 252C344 262 395 203 394 154C301 144 253 188 247 252Z" fill="#c6d4aa"/><path d="M271 171C190 174 165 109 169 69C244 72 278 113 271 171Z" fill="#d3bf9e"/><path d="M293 114C355 128 389 71 383 35C327 39 295 64 293 114Z" fill="#98b6a3"/><g fill="none" stroke="#718868" stroke-width="1.5"><path d="M246 306 130 215M247 252 373 173M271 171 185 89M293 114 367 51"/></g><circle cx="123" cy="333" r="7" fill="#b18d61"/><circle cx="355" cy="299" r="10" fill="#d4b991"/></svg>`;
 }
-export function productHeader(mode = 'Explore') {
-    return `<header class="v2-masthead"><button type="button" class="v2-wordmark" data-v2-home aria-label="Nourishland home">nourishland<span>XR</span></button><span>${html(mode)}</span><button type="button" data-v2-settings aria-label="Experience settings">Settings</button></header>`;
+export function productHeader(mode = 'Explore', middle = '') {
+    return `<header class="v2-masthead"><button type="button" class="v2-wordmark" data-v2-home aria-label="Nourishland home">nourishland<span>XR</span></button><span>${html(mode)}</span>${middle}<button type="button" data-v2-settings aria-label="Experience settings">Settings</button></header>`;
 }
 export function bindProductHeader(root) {
     root.querySelector('[data-v2-home]')?.addEventListener('click', () => window.renderLaunchScreen());

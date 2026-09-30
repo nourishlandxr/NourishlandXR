@@ -71,7 +71,7 @@ import { createMeshSourceResolver, limMeshRef, pimMeshRef } from '../services/me
 import { createPlaceholderKnowledgeGenerator } from '../services/meshGenerator.js';
 import { createMeshRelationshipService } from '../services/meshRelationships.js';
 import { createMeshCompositionState } from '../services/meshCompositionState.js';
-import { DEMO_CONNECTION_CHOICES, DEMO_CONNECTION_HOLD_MS, DEMO_CONNECTION_PHASES, DEMO_CONNECTION_POSITIONS, DEMO_DEEPER_CONNECTION, createDemoConnectionState, demoConnectionChoice, demoConnectionCurve, demoConnectionIsDeeper, demoConnectionSource, demoConnectionTarget, demoConnectionTargetAt, selectDemoConnectionChoice } from '../services/demoKnowledgeConnections.js';
+import { DEMO_CONNECTION_CHOICES, DEMO_CONNECTION_HOLD_MS, DEMO_CONNECTION_PHASES, DEMO_CONNECTION_POSITIONS, DEMO_DEEPER_CONNECTION, createDemoConnectionState, demoConnectionActionAt, demoConnectionChoice, demoConnectionCurve, demoConnectionIsDeeper, demoConnectionScreenCode, demoConnectionSource, demoConnectionTarget, demoConnectionTargetAt, selectDemoConnectionChoice } from '../services/demoKnowledgeConnections.js';
 
 let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=null, demoKnowledgePanel=null;
 let demoKnowledgeScrollAt=0;
@@ -289,8 +289,8 @@ const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
 const DEMO_TOTEM_HALF_HEIGHT_METRES = .56;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Welcome to NourishlandXR',
-    'Extended reality for exploring living landscapes.'
+    'Welcome to the NourishlandXR demo',
+    'NLXR is an immersive information hub for living landscapes.'
 ]);
 const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
     'Bem-vindo à interface de demonstração do NourishlandXR.',
@@ -305,7 +305,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => introBoardStep || (demoIsPortuguese() ? 'UMA INTRODUÇÃO VIVA' : demoIsDutch() ? 'EEN LEVENDE INTRODUCTIE' : 'A LIVING INTRODUCTION');
+const demoIntroLabel = () => introBoardStep || 'INTRO 1.1';
 const DEMO_WELCOME_OPENING_MS=12000;
 const DEMO_WELCOME_TITLE_HOLD_MS=2800;
 const DEMO_WELCOME_DESCRIPTION_HOLD_MS=10000;
@@ -806,7 +806,7 @@ function showDemoAction(nextStage) {
     const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
     showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
         if (choice === 'continue') armDemoPlacement(nextStage,{explained:nextStage==='note'});
-    },{stepLabel:nextStage==='note'?'ELEMENTS 1.8':'ELEMENTS 1.5',nextGuide:nextStage==='note'?'':undefined});
+    },{stepLabel:nextStage==='note'?'ELEMENTS 1.14':'ELEMENTS 1.9',nextGuide:nextStage==='note'?'':undefined});
 }
 
 function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
@@ -877,7 +877,7 @@ function inviteVirtualTag(record) {
         showGuidedChoice('<h2>Knowledge stays available</h2><p>The Orb keeps this plant’s profile in the spatial map. The same published information can also be reached through an ordinary web view, so a headset is never required.</p>', () => {}, {
             persistent: true,
             tutorialStep: DEMO_TUTORIAL_STEPS.PLACEMENT,
-            stepLabel:'ELEMENTS 1.4'
+            stepLabel:'ELEMENTS 1.8'
         });
         setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PLACEMENT);
         const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -891,7 +891,7 @@ function inviteVirtualTag(record) {
     showGuidedChoice(`<h2>One map, more than one way to enter</h2><p>${record?.name || 'This plant'} can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.</p>`, () => {}, {
         persistent: true,
         tutorialStep: DEMO_TUTORIAL_STEPS.LIVE_TAG,
-        stepLabel:'ELEMENTS 1.4'
+        stepLabel:'ELEMENTS 1.8'
     });
     setDemoTutorialStep(DEMO_TUTORIAL_STEPS.LIVE_TAG);
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -1394,7 +1394,7 @@ function showPersistentPimPrompt(record) {
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     if (!panel || !continueButton) return;
     if (record?.demoProfileInteracted) {setGuide(`${record.name || 'Plant'} information remains open for exploration.`);return;}
-    introBoardStep='ELEMENTS 1.4';
+    introBoardStep=record?.tutorialStage==='plant2'?'ELEMENTS 1.13':'ELEMENTS 1.7';
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Explore this plant');
     const body = record?.tutorialStage==='plant'
@@ -1577,17 +1577,12 @@ function knowledgeCombinationSurfacePoint(){
     return hit?{x:hit.pixelX/25,y:hit.pixelY/21}:null;
 }
 function knowledgeCombinationHit(point){
-    const state=knowledgeCombinationState,choice=demoConnectionChoice(state);if(!state || !point)return null;
-    if(!choice){const selected=DEMO_CONNECTION_CHOICES.find(item=>{const p=DEMO_CONNECTION_POSITIONS.sources[item.id];return Math.abs(point.x-p.x)<=12 && Math.abs(point.y-p.y)<=7;});return selected?{type:'choice',choice:selected}:null;}
-    const source=demoConnectionSource(state),node=source?{x:source.x+10,y:source.y}:null;
-    if(node && Math.hypot(point.x-node.x,point.y-node.y)<=5 && [DEMO_CONNECTION_PHASES.READY,DEMO_CONNECTION_PHASES.DEEPER_READY].includes(state.phase))return {type:'node',deeper:demoConnectionIsDeeper(state)};
-    if(state.primaryResult && state.phase===DEMO_CONNECTION_PHASES.RESULT && point.y>=90){if(point.x<50)return {type:'deeper'};return {type:'continue'};}
-    if(state.primaryResult && ![DEMO_CONNECTION_PHASES.DEEPER_HOLDING,DEMO_CONNECTION_PHASES.DEEPER_DRAGGING,DEMO_CONNECTION_PHASES.DEEPER_RESOLVING].includes(state.phase) && point.y>=90)return {type:'continue'};
-    return null;
+    return demoConnectionActionAt(knowledgeCombinationState,point);
 }
 function selectImmersiveKnowledgeCombination(){
     const action=knowledgeCombinationHit(knowledgeCombinationSurfacePoint());
     if(!action){
+        if(selectDemoProfileCell())return true;
         const hit=demoRecordAtPointer()?.record;
         return hit && hit===knowledgeCombinationPlantRecord() ? selectPigeonPeaForCombination() : false;
     }
@@ -1682,8 +1677,8 @@ function drawKnowledgeCombinationExperience(ctx,now){
         ctx.fillStyle='#fff';ctx.font='800 39px system-ui,sans-serif';drawWrappedTextureText(ctx,title,left+30,top+60,width-60,44,2);ctx.fillStyle='rgba(247,255,243,.78)';ctx.font='600 22px system-ui,sans-serif';drawWrappedTextureText(ctx,detail,left+30,top+119,width-60,27,2);ctx.restore();
     };
     const line=(from,to,fromColor,toColor,width=11)=>{const a=toPoint(from),b=toPoint(to),bend=Math.max(100,Math.abs(b.x-a.x)*.28),gradient=ctx.createLinearGradient(a.x,a.y,b.x,b.y);gradient.addColorStop(0,fromColor);gradient.addColorStop(1,toColor);ctx.save();ctx.strokeStyle=gradient;ctx.lineWidth=width;ctx.lineCap='round';ctx.shadowColor=toColor;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x+bend,a.y,b.x-bend,b.y,b.x,b.y);ctx.stroke();ctx.restore();};
-    ctx.save();ctx.beginPath();WELCOME_SHAPE_POINTS.forEach((point,index)=>{const x=point.x+WELCOME_PANEL_DRAW_OFFSET.x,y=point.y+WELCOME_PANEL_DRAW_OFFSET.y;if(index)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.closePath();ctx.clip();ctx.fillStyle='rgba(6,27,21,.16)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
-    ctx.textAlign='center';ctx.fillStyle='#eff7e9';ctx.font='800 32px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,720,700);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 21px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,775,700);
+    ctx.save();ctx.beginPath();WELCOME_SHAPE_POINTS.forEach((point,index)=>{const x=point.x+WELCOME_PANEL_DRAW_OFFSET.x,y=point.y+WELCOME_PANEL_DRAW_OFFSET.y;if(index)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.closePath();ctx.clip();ctx.fillStyle='rgba(6,27,21,.78)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
+    ctx.textAlign='center';ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='700 24px system-ui,sans-serif';ctx.fillText(demoConnectionScreenCode(state),1250,675,700);ctx.fillStyle='#eff7e9';ctx.font='800 32px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,720,700);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 21px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,775,700);
     if(!deeper){ctx.textAlign='center';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 17px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',1050,835);ctx.fillText('LEARNING CELLS',1450,835);}
     if(state.primaryResult && choice){line(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.sourceColor,choice.targetColor,8);line(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.targetColor,choice.sourceColor,8);}
     const resultPosition=deeper?{x:50,y:42}:DEMO_CONNECTION_POSITIONS.result;
@@ -1707,6 +1702,13 @@ function paintWelcomeLayer(now) {
     const context=arWelcomeCanvas.getContext('2d');
     context.save();
     context.scale(arWelcomeCanvas.width/2500,arWelcomeCanvas.height/2100);
+    if(knowledgeCombinationState){
+        context.clearRect(0,0,2500,2100);
+        drawKnowledgeCombinationExperience(context,now);
+        arWelcomeRenderedFrames=[];
+        context.restore();
+        return;
+    }
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
             opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
@@ -1759,7 +1761,7 @@ function paintDemoAmbientLife(now){
 function showArWelcomeShowcase() {
     infoPanel?.setHeaderProgress(null);
     selectedLimCell='';
-    introBoardStep='';
+    introBoardStep='INTRO 1.1';
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');
     const skip=appRoot?.querySelector('[data-tryit-skip]');
     if(!panel)return;
@@ -1788,8 +1790,8 @@ function showArWelcomeShowcase() {
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='INTRO 1.1';
-    introBoardTitle='Welcome to NourishlandXR';
-    introBoardBody=demoLocalizedText('Explore how plants, places and knowledge connect.');
+    introBoardTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
+    introBoardBody=demoLocalizedText('NLXR is an immersive information hub for living landscapes.');
     introBoardVisibleBody='';
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
@@ -1937,7 +1939,7 @@ function showArWelcomeShowcase() {
         arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    setGuide(`${demoLocalizedText('Welcome to NourishlandXR')}. ${demoLocalizedText('Extended reality for exploring living landscapes.')}`);
+    setGuide(`${demoLocalizedText('Welcome to the NourishlandXR demo')}. ${demoLocalizedText('NLXR is an immersive information hub for living landscapes.')}`);
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -2084,24 +2086,21 @@ function guidePlantConversion(record) {
             finishIntroBoard();
             setGuide(`The ${plantName} orb is ready. Hold it to move it, or press it to open or close its plant information.`);
         },
-        {stepLabel:moringa?'ELEMENTS 1.7':'ELEMENTS 1.4',nextGuide:afterPlacement.nextGuide,deferContinueUntilCopyReady:!moringa}
+        {stepLabel:moringa?'ELEMENTS 1.12':'ELEMENTS 1.6',nextGuide:afterPlacement.nextGuide,deferContinueUntilCopyReady:!moringa}
     );
     // The sample plant is interactive while the large instruction board is
     // still visible, so the suggested grab can be tried immediately.
     completeConversion();
 }
 
-function showSceneContinue(label, onContinue) {
-    hideGuidedChoice();
-    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    if (!continueButton) return;
-    continueButton.textContent = demoLocalizedText(label);
-    continueButton.onclick = () => {
-        suppressSessionSelectUntil = performance.now() + 700;
-        continueButton.hidden = true;
-        onContinue();
-    };
-    continueButton.hidden = false;
+function showSceneContinue(label, onContinue, stepLabel) {
+    const sceneCopy={
+        'ELEMENTS 1.19':['Area 1 is ready','Its Totem holds the welcome for this Area. Select a sign to find a nearby plant or Note.'],
+        'ELEMENTS 1.20':['Meet the neighbouring Area','Totem 2 shows a sample layout with its own Plant Orbs and Note. Each belongs to this Area.'],
+        'ELEMENTS 1.21':['The Areas are connected','Each Totem still holds its own local information. The link provides a route between them.']
+    }[stepLabel];
+    if(!sceneCopy)return;
+    showIntroBoard(sceneCopy[0],sceneCopy[1],label,onContinue,{stepLabel});
 }
 
 function cycleDemoNoteTemplate(record) {
@@ -2206,7 +2205,7 @@ function createDemoTotemExample() {
     updateSimulatedMarkers();
     showDemoTutorialMedia('totem');
     setGuide('The Totem welcomes you to this area. Open its short signs to find Notes, Plant Orbs and the neighbouring Totem.');
-    showSceneContinue('Show neighbouring Totem', createDemoSecondTotem);
+    showSceneContinue('Show neighbouring Totem', createDemoSecondTotem, 'ELEMENTS 1.19');
 }
 
 function createDemoSecondTotem() {
@@ -2250,7 +2249,7 @@ function createDemoSecondTotem() {
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.secondAreaShown);
     updateSimulatedMarkers();
     setGuide('Totem 2 shows a sample PIMO layout: local Plant Orbs and a Note placed around one Area. Connect the two Totems when ready.');
-    showSceneContinue('Connect the Totems', connectDemoTotems);
+    showSceneContinue('Connect the Totems', connectDemoTotems, 'ELEMENTS 1.20');
 }
 
 function connectDemoTotems() {
@@ -2263,7 +2262,7 @@ function connectDemoTotems() {
     updateSimulatedMarkers();
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.areasConnected);
     setGuide('The Areas are linked. Each Totem still keeps its own local plants and Notes.');
-    showSceneContinue('Why link Areas?',showLinkedTotemsIntroduction);
+    showSceneContinue('Why link Areas?',showLinkedTotemsIntroduction, 'ELEMENTS 1.21');
 }
 
 function createDemoNeighbourhood(totem) {
@@ -2307,7 +2306,7 @@ function showLinkedTotemsIntroduction() {
         ],
         'Connect plant knowledge to learning',
         showLimoLearningModes,
-        {stepLabel:'ELEMENTS 1.12'}
+        {stepLabel:'ELEMENTS 1.22'}
     );
 }
 
@@ -2368,7 +2367,7 @@ function ensureKnowledgeCombinationOverlay(){
     overlay=document.createElement('section');
     overlay.className='knowledge-combination';overlay.dataset.knowledgeCombination='';
     overlay.setAttribute('aria-label','Combine plant knowledge with learning cells');
-    overlay.innerHTML=`<header><small>EVER-GENERATING INFORMATION MESH</small><h2>What can these ideas reveal together?</h2><p data-combination-status aria-live="polite"></p></header>
+    overlay.innerHTML=`<header><small data-combination-screen-code>LEARNING 1.9</small><h2>What can these ideas reveal together?</h2><p data-combination-status aria-live="polite"></p></header>
         <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs>
             <linearGradient id="knowledge-primary-gradient"><stop offset="0" data-gradient-source></stop><stop offset="1" data-gradient-target></stop></linearGradient>
             <linearGradient id="knowledge-deeper-gradient"><stop offset="0" data-gradient-deeper-source></stop><stop offset="1" stop-color="${DEMO_DEEPER_CONNECTION.targetColor}"></stop></linearGradient>
@@ -2437,6 +2436,8 @@ function bindKnowledgeCombinationNode(node,overlay){
 function syncKnowledgeCombinationOverlay(){
     const state=knowledgeCombinationState,overlay=arWelcomeLayer?.querySelector('[data-knowledge-combination]');if(!state || !overlay)return;
     const choice=demoConnectionChoice(state),deeper=demoConnectionIsDeeper(state),activeDrag=state.dragging;
+    introBoardStep=demoConnectionScreenCode(state);
+    overlay.querySelector('[data-combination-screen-code]').textContent=introBoardStep;
     overlay.dataset.phase=state.phase;overlay.style.setProperty('--source-color',choice?.sourceColor || '#7ea45f');overlay.style.setProperty('--target-color',deeper?DEMO_DEEPER_CONNECTION.targetColor:(choice?.targetColor || '#a06a43'));
     overlay.querySelectorAll('.knowledge-column-label').forEach(label=>{label.hidden=deeper;});
     overlay.querySelector('nav')?.style.setProperty('top',deeper?'71%':'69%');
@@ -2455,7 +2456,11 @@ function syncKnowledgeCombinationOverlay(){
     primaryPath.setAttribute('d',state.primaryResult?`${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result)} ${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result)}`:'');
     deeperPath.setAttribute('d',state.deeperResult?`${demoConnectionCurve(resultPosition,DEMO_CONNECTION_POSITIONS.deeperResult)} ${demoConnectionCurve(DEMO_CONNECTION_POSITIONS.deeperTarget,DEMO_CONNECTION_POSITIONS.deeperResult)}`:'');
     const endpoint=activeDrag?(state.hoverTarget?demoConnectionTarget(state):state.pointer):null;livePath.setAttribute('d',endpoint?demoConnectionCurve(demoConnectionSource(state),endpoint):'');
-    paintWelcomeLayer(performance.now());introBoardTextureDirty=true;
+    const now=performance.now();
+    if(state.lastCanvasPhase!==state.phase || now-(state.lastCanvasPaintAt || 0)>=50){
+        state.lastCanvasPhase=state.phase;state.lastCanvasPaintAt=now;
+        paintWelcomeLayer(now);introBoardTextureDirty=true;
+    }
 }
 
 async function resolveKnowledgeCombination(deeper=false){
@@ -2481,14 +2486,17 @@ async function resolveKnowledgeCombination(deeper=false){
 function startKnowledgeCombinationExperience(){
     useSharedWelcomeBoard(false);clearLimSelection();knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};meshComposition.clear();knowledgeCombinationState=createDemoConnectionState();
     fadeMappedSceneForLimo();
-    limMeshVisible=true;introBoardTextureDirty=true;
+    // The connection surface contains its own visible source and learning
+    // cells. Keep the full LIM tree inactive while this focused interaction is
+    // shown, so the two surfaces cannot compete for memory or input.
+    limMeshVisible=false;introBoardTextureDirty=true;
     const plant=knowledgeCombinationPlantRecord();
     if(plant){plant.demoInteractive=true;plant.demoAlive=true;plant.demoConnectionVisible=true;refreshDemoRecord(plant);}
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');if(board)board.hidden=true;
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');
-    const overlay=ensureKnowledgeCombinationOverlay();overlay?.removeAttribute('hidden');syncKnowledgeCombinationOverlay();
+    const overlay=ensureKnowledgeCombinationOverlay();overlay?.removeAttribute('hidden');arWelcomeLayer?.classList.add('is-combining-knowledge');syncKnowledgeCombinationOverlay();
     setGuide('Tap the Pigeon Pea orb or choose one of its two characteristic cells. Then hold and drag its glowing node.');
-    knowledgeCombinationCleanup=()=>{limCancelFrame(knowledgeCombinationHold?.frame);knowledgeCombinationHold=null;overlay?.setAttribute('hidden','');};
+    knowledgeCombinationCleanup=()=>{limCancelFrame(knowledgeCombinationHold?.frame);knowledgeCombinationHold=null;overlay?.setAttribute('hidden','');arWelcomeLayer?.classList.remove('is-combining-knowledge');};
 }
 
 function finishKnowledgeCombinationExperience(){
@@ -2590,7 +2598,7 @@ function showTotemIntroduction() {
             finishIntroBoard();
             createDemoTotemExample();
         },
-        {stepLabel:'ELEMENTS 1.11'}
+        {stepLabel:'ELEMENTS 1.18'}
     );
 }
 
@@ -2630,7 +2638,7 @@ function guideNoteConversion(record) {
             finishIntroBoard();
             showSpatialGardenSummary();
         },
-        {stepLabel:'ELEMENTS 1.10'}
+        {stepLabel:'ELEMENTS 1.17'}
     );
 }
 
@@ -2741,7 +2749,7 @@ function armDemoPlacement(type, {explained=false}={}) {
                 : type==='totem'
                     ? {title:'Place Botanical Garden Totem',body:'A Totem gives an Area a clear welcome point for its signs and local information.',next:'Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.'}
                     : {title:'Place an observation',body:'A Note keeps something noticed in this part of the landscape beside the plants it relates to.',next:'Aim at the place you observed, then press the aiming circle to place the Note.'};
-        introBoardStep=type==='plant'?'ELEMENTS 1.3':type==='plant2'?'ELEMENTS 1.6':type==='note'?'ELEMENTS 1.9':'ELEMENTS 1.11';
+        introBoardStep=type==='plant'?'ELEMENTS 1.5':type==='plant2'?'ELEMENTS 1.11':type==='note'?'ELEMENTS 1.16':'ELEMENTS 1.24';
         introBoardTitle=placementCopy.title;
         introBoardBody=placementCopy.body;
         introBoardVisibleBody=placementCopy.body;
@@ -2760,7 +2768,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         requestAnimationFrame(() => place?.classList.add('is-revealing', 'is-ready'));
     };
     if(explained){startPlacement();return;}
-    const stepLabel=type==='plant'?'ELEMENTS 1.3':type==='plant2'?'ELEMENTS 1.6':type==='note'?'ELEMENTS 1.9':'ELEMENTS 1.11';
+    const stepLabel=type==='plant'?'ELEMENTS 1.4':type==='plant2'?'ELEMENTS 1.10':type==='note'?'ELEMENTS 1.15':'ELEMENTS 1.23';
     showIntroBoard(title, introduction, 'Continue', startPlacement,{stepLabel});
 }
 
@@ -2930,6 +2938,25 @@ function renderSimulatedTotem(record, index, anchor) {
     return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-basic${performance.now()-record.demoArriveAt<1800?' is-new-arrival':''}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${escapeSpatialText(record.demoZoneName || 'Zone')} Totem information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}</span>`;
 }
 
+function demoPlantMedia(record) {
+    if(record?.demoAmbientNeighbour)return null;
+    return record?.demoPlantPreset==='moringa'
+        ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
+        : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea flowers, green pods and peas',hint:'Select the plant to explore it, or grab it to reposition it.'};
+}
+
+function showDemoPlantPhoto(record) {
+    if(!record || record.demoType!=='plant')return false;
+    const media=demoPlantMedia(record);
+    const document=demoOrbKnowledge(record).document;
+    if(!media && !document?.identity?.image){setGuide(`${record.name || 'This plant'} has no sample photo yet.`);return false;}
+    infoPanel?.suspend(false);
+    infoPanel?.focusPlant(record,document,media);
+    infoPanel?.setMediaCollapsed(false);
+    setGuide(`${record.name || 'Plant'} photo opened in the media panel.`);
+    return true;
+}
+
 function toggleDemoPlantProfile(record) {
     if(knowledgeCombinationState && record===knowledgeCombinationPlantRecord())return selectPigeonPeaForCombination();
     if(demoKnowledgeWorkspace) return;
@@ -2944,10 +2971,7 @@ function toggleDemoPlantProfile(record) {
         if(record.tutorialStage==='plant'){setDemoJourneyStage('know');advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.plantProfileOpened);}
         clearLimSelection();
         const ambientNeighbour=Boolean(record.demoAmbientNeighbour);
-        const moringa=record.demoPlantPreset==='moringa';
-        const plantMedia=ambientNeighbour ? null : moringa
-            ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
-            : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea with flowers, tender green pods, fresh green peas and whole dry peas',hint:'Select the plant to explore it, or grab it to reposition it.'};
+        const plantMedia=demoPlantMedia(record);
         infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,plantMedia);
         if(!ambientNeighbour)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
         setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
@@ -3023,12 +3047,7 @@ function selectDemoProfileCell() {
     }
     if (node.pimRead) {openDemoKnowledge(record);return true;}
     if (node.pimCore) {
-        setDemoPimState(record, pimResetInteractionState(demoPimState(record)));
-        record.demoActiveBranch = '';
-        record.pimBloomStarted = 0;
-        refreshDemoPimProfile(record);
-        setGuide(`${record.name || 'Plant'} information reset.`);
-        return true;
+        return showDemoPlantPhoto(record);
     }
     if (node.pimBack) {
         setDemoPimState(record, pimToggleNodeState(knowledgeFor(record), demoPimState(record), node.path));
@@ -3373,6 +3392,7 @@ function bindSimulatedInformationPanels(layer) {
         const record = markers[index];
         const handles = profile.querySelectorAll('[data-desktop-pim-move-handle],[data-plant-profile-handle]');
         if (!record || !handles.length) return;
+        let draggedCenter=false;
         const pimTarget = event => event.target.closest?.('[data-pim-node],[data-pim-back],[data-pim-read-all]');
         profile.addEventListener('pointerdown', event => {
             if (!pimTarget(event)) return;
@@ -3392,11 +3412,8 @@ function bindSimulatedInformationPanels(layer) {
             const core = event.target.closest?.('[data-pim-role="center"]');
             if (core && profile.contains(core)) {
                 event.stopPropagation();
-                setDemoPimState(record, pimResetInteractionState(demoPimState(record)));
-                record.demoActiveBranch = '';
-                record.pimBloomStarted = 0;
-                refreshDemoPimProfile(record, profile);
-                setGuide('Pigeon Pea flower reset.');
+                if(draggedCenter){draggedCenter=false;return;}
+                showDemoPlantPhoto(record);
                 return;
             }
             const back = event.target.closest?.('[data-pim-back]');
@@ -3444,6 +3461,7 @@ function bindSimulatedInformationPanels(layer) {
                 event.preventDefault();
                 event.stopPropagation();
                 start = { x: event.clientX, y: event.clientY, offset: record.demoPanelOffset || { x: 0, y: 0 } };
+                if(handle.matches('[data-pim-role="center"]'))draggedCenter=false;
                 handle.setPointerCapture?.(event.pointerId);
                 profile.classList.add('is-dragging');
             });
@@ -3451,6 +3469,7 @@ function bindSimulatedInformationPanels(layer) {
                 if (!start) return;
                 event.preventDefault();
                 event.stopPropagation();
+                if(handle.matches('[data-pim-role="center"]') && Math.hypot(event.clientX-start.x,event.clientY-start.y)>6)draggedCenter=true;
                 record.demoPanelOffset = clampPlantPanelOffset(record.simulatedAnchor || { x: 50, y: 50 }, {
                     x: start.offset.x + event.clientX - start.x,
                     y: start.offset.y + event.clientY - start.y
@@ -3466,6 +3485,9 @@ function bindSimulatedInformationPanels(layer) {
             handle.addEventListener('pointercancel', finish);
             if(handle.matches('[data-desktop-pim-move-handle]'))handle.addEventListener('click', event => event.stopPropagation());
             handle.addEventListener('keydown', event => {
+                if(handle.matches('[data-pim-role="center"]') && (event.key==='Enter' || event.key===' ')){
+                    event.preventDefault();event.stopPropagation();showDemoPlantPhoto(record);return;
+                }
                 const movement = {
                     ArrowLeft: { x: -12, y: 0 },
                     ArrowRight: { x: 12, y: 0 },
@@ -4439,7 +4461,16 @@ function createIntroNoteTexture(texture = null) {
     if(label.height!==height)label.height=height;
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
-    if(arWelcomeShowcaseActive){arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:introBoardVisible,drawRoots:false,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});return canvasTexture(label,texture);}
+    if(knowledgeCombinationState){
+        drawKnowledgeCombinationExperience(ctx,performance.now());
+        arWelcomeRenderedFrames=[];
+        return canvasTexture(label,texture);
+    }
+    if(arWelcomeShowcaseActive){
+        arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,drawRoots:false,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?currentPathwayNode()?.key || '':''});
+        if(knowledgeCombinationState)drawKnowledgeCombinationExperience(ctx,performance.now());
+        return canvasTexture(label,texture);
+    }
     drawArWelcomePanel(ctx);
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);
@@ -4471,8 +4502,8 @@ function drawIntroNoteContent(ctx) {
     if(openingElapsed!==null){
         if(openingElapsed<DEMO_WELCOME_OPENING_MS){
             const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
-            ctx.globalAlpha*=fade;ctx.fillStyle='#fff';ctx.font='400 84px "Marcellus", Georgia, "Times New Roman", serif';ctx.fillText(demoLocalizedText('Welcome to NourishlandXR'),contentCenter,420,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f2f5e9';ctx.font='700 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('Extended reality for exploring living landscapes.'),contentCenter,570,780,54,2);}
+            ctx.globalAlpha*=fade;ctx.fillStyle='#fff';ctx.font='400 70px "Marcellus", Georgia, "Times New Roman", serif';ctx.fillText(demoLocalizedText('Welcome to the NourishlandXR demo'),contentCenter,420,titleWidth);
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#f2f5e9';ctx.font='700 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('NLXR is an immersive information hub for living landscapes.'),contentCenter,570,780,54,2);}
         }
         ctx.restore();return;
     }

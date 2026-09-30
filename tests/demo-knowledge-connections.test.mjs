@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {DEMO_CONNECTION_CHOICES,DEMO_CONNECTION_HOLD_MS,DEMO_CONNECTION_PHASES,DEMO_CONNECTION_POSITIONS,DEMO_DEEPER_CONNECTION,createDemoConnectionState,demoConnectionCurve,demoConnectionSource,demoConnectionTarget,demoConnectionTargetAt,selectDemoConnectionChoice} from '../app/services/demoKnowledgeConnections.js';
+import {DEMO_CONNECTION_CHOICES,DEMO_CONNECTION_HOLD_MS,DEMO_CONNECTION_PHASES,DEMO_CONNECTION_POSITIONS,DEMO_DEEPER_CONNECTION,createDemoConnectionState,demoConnectionActionAt,demoConnectionCurve,demoConnectionScreenCode,demoConnectionSource,demoConnectionTarget,demoConnectionTargetAt,selectDemoConnectionChoice} from '../app/services/demoKnowledgeConnections.js';
 import {PIGEON_PEA_PIM} from '../app/services/pigeonPeaPim.js';
 import {createMeshRepository} from '../app/services/meshRepository.js';
 import {createMeshSourceResolver,pimMeshRef,limMeshRef} from '../app/services/meshReferences.js';
@@ -36,6 +36,24 @@ test('connection cells and both drag targets stay within the welcome panel footp
 
 test('connection curve is a stable curved path with no layout mutation',()=>{
     assert.equal(demoConnectionCurve({x:10,y:20},{x:80,y:70}),'M 10.00 20.00 C 29.60 20.00, 60.40 70.00, 80.00 70.00');
+});
+
+test('connection screen codes and headset hit targets follow the visible flow',()=>{
+    const state=createDemoConnectionState();
+    assert.equal(demoConnectionScreenCode(state),'LEARNING 1.9');
+    assert.equal(demoConnectionActionAt(state,{x:42,y:46})?.choice.id,'pruning');
+    selectDemoConnectionChoice(state,'pruning');
+    assert.deepEqual(demoConnectionActionAt(state,{x:52,y:46}),{type:'node',deeper:false});
+    state.primaryResult={derivedRef:{version:1,kind:'derived',nodeId:'test'}};
+    state.phase=DEMO_CONNECTION_PHASES.RESULT;
+    assert.equal(demoConnectionScreenCode(state),'LEARNING 1.10');
+    assert.equal(demoConnectionActionAt(state,{x:45,y:71})?.type,'deeper');
+    assert.equal(demoConnectionActionAt(state,{x:55,y:71})?.type,'continue');
+    assert.equal(demoConnectionActionAt(state,{x:55,y:90}),null);
+    state.phase=DEMO_CONNECTION_PHASES.DEEPER_READY;
+    assert.equal(demoConnectionScreenCode(state),'LEARNING 1.11');
+    state.phase=DEMO_CONNECTION_PHASES.COMPLETE;
+    assert.equal(demoConnectionScreenCode(state),'LEARNING 1.12');
 });
 
 test('both demo cell pairs connect and support the deeper learning cell',async()=>{

@@ -54,7 +54,7 @@
 .nlxr-info-panel button:disabled { opacity:.45; cursor:default; }
 .nlxr-info-panel button:focus-visible { outline:2px solid #b9e3ff; outline-offset:3px; }
 .nlxr-info-panel .nlxr-control-header.is-move-handle { cursor:grab; touch-action:none; }
-.nlxr-info-panel .nlxr-control-header.is-move-handle:active { cursor:grabbing; }
+.nlxr-info-panel.is-grabbed .nlxr-control-header.is-move-handle { cursor:grabbing; }
 .nlxr-info-panel.is-hidden { width:auto; padding:4px; }
 .nlxr-info-panel.is-hidden nav { margin:0; }
 @media(max-width:600px) { .nlxr-info-panel { left:10px; bottom:88px; width:min(280px,calc(100vw - 20px)); max-height:35vh; padding:12px; } }
@@ -1202,6 +1202,7 @@
 /* Post-LIMO relationship experience. It lives on the shared spatial surface,
    not in the Control panel, so the gesture and its meaning stay together. */
 .knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;clip-path:polygon(50% 25.71%,57.97% 27.6%,64.71% 32.97%,69.22% 41%,70.8% 50.48%,69.22% 59.96%,64.71% 68%,57.97% 73.35%,50% 75.24%,42.03% 73.35%,35.29% 68%,30.78% 59.96%,29.2% 50.48%,30.78% 41%,35.29% 32.97%,42.03% 27.6%);color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.14),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.22),rgba(9,38,29,.16));font-family:system-ui,sans-serif;pointer-events:none}
+.tryit-live-welcome.is-combining-knowledge [data-welcome-cell]{visibility:hidden;pointer-events:none}
 .knowledge-combination :is(.knowledge-source-cell,.knowledge-node,nav,nav button){pointer-events:auto}
 .knowledge-combination[hidden],.knowledge-combination [hidden]{display:none!important}
 .knowledge-combination header{position:absolute;z-index:4;left:50%;top:33%;width:30%;transform:translateX(-50%);text-align:center;pointer-events:none}
@@ -2068,3 +2069,7 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .tryit-demo .tryit-demo-footer button,
 .tryit-demo .tryit-final-actions button,
 .tryit-demo [data-welcome-cell] { font-family:"Manrope","Segoe UI",system-ui,sans-serif; }
+
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):hover { border-color:rgba(166,231,250,.9); box-shadow:0 20px 54px rgba(2,9,19,.6),0 0 16px rgba(119,212,247,.24),inset 0 1px rgba(236,250,255,.24); }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-grab-ready { border-color:#bceeff; box-shadow:0 20px 54px rgba(2,9,19,.6),0 0 0 2px rgba(166,231,250,.28),0 0 26px rgba(119,212,247,.48); user-select:none; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-grabbed { border-color:#dfff9b; box-shadow:0 24px 58px rgba(2,9,19,.65),0 0 0 3px rgba(223,255,155,.48),0 0 34px rgba(223,255,155,.5); cursor:grabbing; user-select:none; }

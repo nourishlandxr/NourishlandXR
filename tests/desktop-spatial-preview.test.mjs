@@ -74,7 +74,10 @@ test('desktop control panel keeps a stable rail and shows media only for the act
     const styles = read('app/living-objects.css');
     assert.match(panel, /if\(desktopDemo\)railCollapsed=false;/);
     assert.match(panel, /const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached && !settingsOpen;/);
-    assert.match(panel, /header\.classList\.add\('is-move-handle'\);header\.title='Drag to move the Control panel';bindPanelMove\(header\)/);
+    assert.match(panel, /const removePanelMove=bindPanelMove\(\)/);
+    assert.match(panel, /header\.title='Hold to move the Control panel'/);
+    assert.match(panel, /PANEL_GRAB_HOLD_MS = 800/);
+    assert.match(styles, /\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-grabbed/);
     assert.match(panel, /if\(!floating && !isDesktopDemo\(\)\)toolbar\.append\(makePanelToggle\('Media'/);
     assert.match(panel, /if\(mediaToggle && desktopDemo\)mediaToggle\.remove\(\)/);
     assert.match(panel, /isDesktopDemo\(\)\?items\.filter\(item=>item\.action!=='Recenter'\):items/);
