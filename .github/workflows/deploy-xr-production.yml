@@ -56,6 +56,9 @@ jobs:
           set -euo pipefail
           test -f dist/xr/index.html
           test -f dist/xr/.htaccess
+          test -f dist/xr/features/ar-demo/demoConfig.js
+          test -f dist/xr/features/ar-demo/demoContent.js
+          test -f dist/xr/features/ar-demo/demoPlantContent.js
           if find dist/xr -type l -print -quit | grep -q .; then
             echo "Deployment artifact contains a symbolic link." >&2
             exit 1

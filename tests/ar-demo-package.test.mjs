@@ -28,6 +28,8 @@ const read = relativePath => readFileSync(new URL(`../${relativePath}`, import.m
 
 test('AR demo screen consumes the feature package instead of redeclaring static content', () => {
     const source = read('app/screens/temporaryArDemo.js');
+    const hostedBuildSource = read('tools/build-hosted.mjs');
+    const deploymentSource = read('.github/workflows/deploy-xr-production.yml');
 
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoConfig\.js'/);
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoContent\.js'/);
@@ -35,6 +37,10 @@ test('AR demo screen consumes the feature package instead of redeclaring static 
     assert.doesNotMatch(source, /const AR_PHONE_COMFORT\s*=/);
     assert.doesNotMatch(source, /const DEMO_CONTENT\s*=/);
     assert.doesNotMatch(source, /const MORINGA_PROFILE\s*=/);
+    assert.match(hostedBuildSource, /'features'/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoConfig\.js/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoContent\.js/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoPlantContent\.js/);
 });
 
 test('AR demo configuration exports stable behavior contracts', () => {

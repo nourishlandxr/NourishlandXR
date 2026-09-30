@@ -28,6 +28,7 @@ const frontendEntries = [
     'living-objects.css',
     'assets',
     'components',
+    'features',
     'managers',
     'models',
     'screens',
