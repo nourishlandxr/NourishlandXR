@@ -34,13 +34,19 @@ test('AR demo screen consumes the feature package instead of redeclaring static 
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoConfig\.js'/);
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoContent\.js'/);
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoPlantContent\.js'/);
+    assert.match(source, /from '\.\.\/features\/ar-demo\/demoGeometry\.js'/);
+    assert.match(source, /from '\.\.\/features\/ar-demo\/demoSelection\.js'/);
     assert.doesNotMatch(source, /const AR_PHONE_COMFORT\s*=/);
     assert.doesNotMatch(source, /const DEMO_CONTENT\s*=/);
     assert.doesNotMatch(source, /const MORINGA_PROFILE\s*=/);
+    assert.doesNotMatch(source, /(?:export )?function demoPlacementPosition\(/);
+    assert.doesNotMatch(source, /(?:export )?function preservePlacedDemoPlants\(/);
     assert.match(hostedBuildSource, /'features'/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoConfig\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoContent\.js/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoGeometry\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoPlantContent\.js/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoSelection\.js/);
 });
 
 test('AR demo configuration exports stable behavior contracts', () => {

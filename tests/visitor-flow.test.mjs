@@ -530,6 +530,7 @@ test('quick access creation is minimal and separates Area assignment from placem
 
 test('Try It Now guides two Plants, an in-place Note and a final Totem example', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
+    const geometrySource = fs.readFileSync(path.join(root, 'app/features/ar-demo/demoGeometry.js'), 'utf8');
     const webxrSource = fs.readFileSync(path.join(root, 'app/services/webxrSession.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
@@ -585,7 +586,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /TEXTURE_WRAP_S, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /TEXTURE_WRAP_T, gl\.CLAMP_TO_EDGE/);
     assert.match(source, /Finish demo/);
-    assert.match(source, /spatialPosition\(null, matrix, 0\)/);
+    assert.match(geometrySource, /spatialPosition\(null, matrix, 0\)/);
     assert.doesNotMatch(source, /from ['"][^'"]*persistence|apiFetch|fetch\(/);
     assert.match(source, /load:async\(\)=>record\.demoKnowledgeProfile/);
 });

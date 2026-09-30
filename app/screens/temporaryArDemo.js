@@ -14,7 +14,6 @@ import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_O
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
  */
-import { spatialPosition } from '../services/spatialPlacement.js';
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
@@ -31,8 +30,10 @@ import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
 import { renderDesktopLearningBook } from './desktopLearningBook.js';
 import { BIOMAP_CATEGORIES, DEMO_CONTENT, DEMO_JOURNEY_STAGES, DEMO_NOTE_TEMPLATE_KEYS, DEMO_ORB_MATERIALS, DEMO_PANEL_HINTS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, NOTE_TEMPLATES, PIGEON_PEA_CONTROL_IMAGE, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../features/ar-demo/demoContent.js';
-import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_STABLE_EYE_HEIGHT_METRES, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
+import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
 import { MORINGA_KNOWLEDGE, MORINGA_PIM, MORINGA_PROFILE, MORINGA_PROFILE_IMAGE } from '../features/ar-demo/demoPlantContent.js';
+import { demoGroundBaseY, demoPlacementPosition, demoPointerScreenPoint, demoViewerPointerFallbackAllowed, isDemoFloorHit } from '../features/ar-demo/demoGeometry.js';
+import { preservePlacedDemoPlants, selectDemoPlantRecord, selectGuidedDemoOrb as selectGuidedDemoOrbRecord } from '../features/ar-demo/demoSelection.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
@@ -2458,20 +2459,11 @@ function guideNoteConversion(record) {
     );
 }
 
-export function preservePlacedDemoPlants(records = markers) {
-    records.forEach(record => {
-        if (!['plant', 'plant2'].includes(record?.tutorialStage) || record.demoType !== 'plant') return;
-        record.demoAlive = true;
-        record.demoInteractive = true;
-    });
-    return records;
-}
-
 function shiftSimulatedSceneForStage(type) {
     // Stage changes must not rewrite placed spatial anchors. Each new simulated
     // aim gets its own position instead, so Plants and Notes remain where the
     // user placed them and stay available for interaction.
-    preservePlacedDemoPlants();
+    preservePlacedDemoPlants(markers);
     if (simulatedMode) updateSimulatedMarkers();
 }
 
@@ -2820,29 +2812,12 @@ function toggleDemoPlantProfile(record) {
     }
 }
 
-export function selectGuidedDemoOrb(records = markers, reveal = toggleDemoPlantProfile) {
-    const record = [...records].reverse().find(candidate =>
-        candidate?.demoType === 'plant'
-        && candidate.demoInteractive !== false
-        && candidate.awaitingProfileReveal
-    );
-    if (!record) return false;
-    reveal(record);
-    return true;
-}
-
-export function selectDemoPlantRecord(target, reveal = toggleDemoPlantProfile) {
-    const record = target?.record || target;
-    if (!record
-        || record.demoType !== 'plant'
-        || record.demoInteractive === false
-        || record.demoAlive === false) return false;
-    reveal(record);
-    return true;
-}
-
 function selectDemoPlantAtPointer() {
-    return selectDemoPlantRecord(demoRecordAtPointer());
+    return selectDemoPlantRecord(demoRecordAtPointer(), toggleDemoPlantProfile);
+}
+
+function selectGuidedDemoOrb() {
+    return selectGuidedDemoOrbRecord(markers, toggleDemoPlantProfile);
 }
 
 function selectDemoProfileCell() {
@@ -3371,20 +3346,6 @@ function refreshDemoPimProfile(record, profile = null) {
     return reconcilePlantInformationMesh(liveProfile, demoPlantKnowledgeMarkup(record));
 }
 
-export function demoPointerScreenPoint(rect, viewportWidth = globalThis.innerWidth, viewportHeight = globalThis.innerHeight) {
-    const width = Number(rect?.width);
-    const height = Number(rect?.height);
-    const hasVisibleRect = Number.isFinite(width) && width > 0 && Number.isFinite(height) && height > 0;
-    return hasVisibleRect
-        ? { x: Number(rect.left) + width / 2, y: Number(rect.top) + height / 2 }
-        : { x: Number(viewportWidth) / 2, y: Number(viewportHeight) / 2 };
-}
-
-export function demoViewerPointerFallbackAllowed({ simulated = false, hasScreenInput = false, spatialInputSeen = false, headsetBrowser = false, mode = 'immersive-ar' } = {}) {
-    if (simulated || hasScreenInput) return true;
-    return !spatialInputSeen && !headsetBrowser && mode !== 'immersive-vr';
-}
-
 function demoViewerPointerFallbackActive() {
     const sources = [...(session?.inputSources || [])];
     return demoViewerPointerFallbackAllowed({
@@ -3426,40 +3387,6 @@ function demoPointerWorldOrigin() {
     return viewerMatrix
         ? { x: viewerMatrix[12], y: viewerMatrix[13], z: viewerMatrix[14] }
         : null;
-}
-
-export function demoPlacementPosition(matrix, ray, origin = null, distanceMetres = AR_EXPERIENCE_CONFIG.placementDistanceMetres) {
-    const base = origin || (matrix ? { x: matrix[12], y: matrix[13], z: matrix[14] } : null);
-    if (!base) return null;
-    if (!ray) return spatialPosition(null, matrix, 0);
-    const distance = Math.max(.55,Math.min(4,Number(distanceMetres)||AR_EXPERIENCE_CONFIG.placementDistanceMetres));
-    return {
-        x: base.x + ray.x * distance,
-        y: base.y + ray.y * distance,
-        z: base.z + ray.z * distance
-    };
-}
-
-function isDemoFloorHit(hitPoseMatrix, cameraMatrix) {
-    const hitY = Number(hitPoseMatrix?.[13]);
-    const hitNormalY = Math.abs(Number(hitPoseMatrix?.[5]));
-    const cameraY = Number(cameraMatrix?.[13]);
-    const hasCameraY = Number.isFinite(cameraY);
-    return Number.isFinite(hitY)
-        && Number.isFinite(hitNormalY)
-        && hitNormalY >= .65
-        && (!hasCameraY || cameraY - hitY >= .7);
-}
-
-export function demoGroundBaseY(hitPoseMatrix, cameraMatrix, previousGroundY = null) {
-    const hitY = Number(hitPoseMatrix?.[13]);
-    const cameraY = Number(cameraMatrix?.[13]);
-    const hasCameraY = Number.isFinite(cameraY);
-    const floorLikeHit = isDemoFloorHit(hitPoseMatrix, cameraMatrix);
-    if (floorLikeHit) return hitY;
-    if (previousGroundY !== null && previousGroundY !== undefined && Number.isFinite(Number(previousGroundY))) return Number(previousGroundY);
-    if (hasCameraY) return cameraY - DEMO_STABLE_EYE_HEIGHT_METRES;
-    return 0;
 }
 
 function placementPosition() {

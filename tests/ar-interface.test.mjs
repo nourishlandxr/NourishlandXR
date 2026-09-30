@@ -11,11 +11,13 @@ import {
     demoGroundBaseY,
     demoPlacementPosition,
     demoPointerScreenPoint,
-    demoViewerPointerFallbackAllowed,
+    demoViewerPointerFallbackAllowed
+} from '../app/features/ar-demo/demoGeometry.js';
+import {
     preservePlacedDemoPlants,
     selectDemoPlantRecord,
     selectGuidedDemoOrb
-} from '../app/screens/temporaryArDemo.js';
+} from '../app/features/ar-demo/demoSelection.js';
 import { BIOMAP_CATEGORIES, DEMO_ORB_MATERIALS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../app/features/ar-demo/demoContent.js';
 import { AR_PHONE_COMFORT, DEMO_ARCHETYPE_START_MS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_WELCOME_OPENING_MS, INTRO_CONTROL_POSITION, demoRainProgress, welcomeAutoAdvanceReady } from '../app/features/ar-demo/demoConfig.js';
 import { MORINGA_KNOWLEDGE, MORINGA_PIM } from '../app/features/ar-demo/demoPlantContent.js';
@@ -1182,6 +1184,7 @@ test('Creator AR falls back to setup when WebXR cannot start', () => {
 
 test('welcome Try It Now AR keeps one live placement control and no dashboard panel', () => {
     const source = read('app/screens/temporaryArDemo.js');
+    const geometrySource = read('app/features/ar-demo/demoGeometry.js');
     const pimCanvasSource = read('app/services/plantInformationMeshCanvas.js');
     const pimViewSource = read('app/services/plantInformationMeshView.js');
     const webxrSource = read('app/services/webxrSession.js');
@@ -1571,8 +1574,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /targetRayMode === 'screen' && source\.targetRaySpace/);
     assert.doesNotMatch(source, /board\?\.classList\.contains\('is-typing'\)/);
     assert.doesNotMatch(source, /board\.click\(\);/);
-    assert.match(source, /export function demoPointerScreenPoint\(rect/);
-    assert.match(source, /const hasVisibleRect = Number\.isFinite\(width\) && width > 0/);
+    assert.match(geometrySource, /export function demoPointerScreenPoint\(rect/);
+    assert.match(geometrySource, /const hasVisibleRect = Number\.isFinite\(width\) && width > 0/);
     assert.match(source, /profileRevealStarted = performance\.now\(\)/);
     assert.match(source, /uniform float opacity/);
     assert.match(source, /record\.demoDistance = Math\.max\(\.4, Math\.min\(4, 1 \+ verticalTravel \/ 120\)\)/);
