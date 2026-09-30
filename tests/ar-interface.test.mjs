@@ -416,6 +416,7 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     const sphereSource = read('app/services/spatialSphereRenderer.js');
     const creatorSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js');
+    const previewSource = read('app/features/ar-demo/demoPreviewMarkup.js');
     const explorerSource = read('app/services/arNote.js');
     const panelSource = read('app/services/arPanel.js');
     const styles = read('app/style.css');
@@ -429,7 +430,7 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     assert.match(creatorSource, /readyPlacementType === 'plant' \? 'plant' : 'marker'/);
     assert.match(demoSource, /record\.demoType === 'plant' \? 'plant' : record\.demoType === 'marker' \? 'marker'/);
     assert.match(demoSource, /const orbOnly = \['marker', 'plant'\]\.includes\(record\.demoType\) && !record\.demoExpanded/);
-    assert.match(demoSource, /class="tryit-sim-orb/);
+    assert.match(previewSource, /class="tryit-sim-orb/);
     assert.match(read('app/living-objects.css'), /\.tryit-sim-orb\.is-plant::after \{[\s\S]*content:none;[\s\S]*display:none;/);
     assert.match(sphereSource, /createUvSphereGeometry\(latitudeBands = 12, longitudeBands = 16\)/);
     assert.doesNotMatch(sphereSource, /uniform float time|uniform float motion|ribbonA|ribbonB/);
@@ -591,6 +592,7 @@ test('Creator and Demo AR taskbars reflow into a touch-safe landscape bottom doc
 test('Creator AR keeps the editable Location Note hidden until it is opened from its Totem', () => {
     const arSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js');
+    const previewSource = read('app/features/ar-demo/demoPreviewMarkup.js');
     const dashboardSource = read('app/screens/projectDashboard.js');
     const mainSource = read('app/main.js');
     const styles = read('app/style.css');
@@ -622,7 +624,7 @@ test('Creator AR keeps the editable Location Note hidden until it is opened from
     assert.match(styles, /100% \{ opacity:\.7;[^}]*translate\(-50%,-50%\)/);
     assert.match(styles, /\.nourishland-spatial-note-surface/);
     assert.doesNotMatch(demoSource, /tryit-spatial-welcome-note nourishland-spatial-note-surface/);
-    assert.match(demoSource, /nourishland-spatial-note-surface/);
+    assert.match(previewSource, /nourishland-spatial-note-surface/);
     assert.match(arSource, /nourishland-spatial-note-surface creator-ar-demo-note/);
     assert.match(dashboardSource, /<h2 id="projectLocationNoteTitle">AR Location Note<\/h2>/);
     assert.match(dashboardSource, /It stays hidden when AR opens/);
@@ -1084,6 +1086,7 @@ test('immersive demo builds its welcome before requesting the first XR frame', (
     assert.match(source, /runXrFrameStep\('ambient render',\(\)=>drawSpatialAmbientLife\(view\)\)/);
     assert.match(source, /runXrFrameStep\('controller update',\(\)=>updateDemoControllerRay\(frame\)\)/);
     assert.match(source, /runXrFrameStep\('marker render',\(\)=>drawMarker\(view\)\)/);
+    assert.doesNotMatch(source, /(?:begin|sync|end)ImmersiveKnowledgeCombination|knowledge combination/);
     assert.match(source, /drawXrRecoverySurface\(view\)/);
     assert.match(source, /NLXR-XR-01/);
     assert.match(immersive, /if\(xrRecoveryStatus==='failed'\)\{returnToWelcome\(\);return;\}/);
@@ -1184,6 +1187,7 @@ test('Creator AR falls back to setup when WebXR cannot start', () => {
 
 test('welcome Try It Now AR keeps one live placement control and no dashboard panel', () => {
     const source = read('app/screens/temporaryArDemo.js');
+    const previewSource = read('app/features/ar-demo/demoPreviewMarkup.js');
     const geometrySource = read('app/features/ar-demo/demoGeometry.js');
     const stateSource = read('app/features/ar-demo/demoState.js');
     const simulationSource = read('app/features/ar-demo/demoSimulation.js');
@@ -1282,7 +1286,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introBoardStep=''/);
     assert.doesNotMatch(source, /Add current knowledge|Clear selected knowledge|Connect selected ideas/);
     assert.doesNotMatch(source, /Open Cultivation, then Maintenance/);
-    assert.match(source, /Select the plant to explore it, or grab it to reposition it/);
+    assert.match(previewSource, /Select the plant to explore it, or grab it to reposition it/);
     assert.doesNotMatch(livingStyles,/Final welcome action geometry/);
     assert.match(styles,/background:linear-gradient\(145deg,#6f8d70,#3c674f\)/);
     assert.match(source,/arWelcomeClusters=createArWelcomeClusters\(\);limHiddenCells=new Set\(\);limExpandedCells=new Set\(\);limExpandedAt=new Map\(\)/);
@@ -1344,7 +1348,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
     assert.match(source, /demoOrbColor: type === 'plant' \? 'pigeonPea' : type === 'plant2' \? 'green'/);
     assert.match(source, /demoOrbShape: type === 'plant' \? 'orb' : type === 'plant2' \? 'orb'/);
-    assert.match(source, /class="tryit-sim-orb is-plant" style="\$\{orbAppearance\}"/);
+    assert.match(previewSource, /class="tryit-sim-orb is-plant" style="\$\{orbAppearance\}"/);
     assert.equal(DEMO_ORB_MATERIALS.pigeonPea.radius,.065);
     assert.equal(DEMO_ORB_MATERIALS.green.radius,.074);
     assert.match(source, /drawSpatialTriangle\(gl, triangleRenderer/);
@@ -1392,10 +1396,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /data-tryit-open-live-tag hidden/);
     assert.match(source, /data-tryit-skip/);
     assert.match(source, /bindHoldToConfirmButton/);
-    assert.match(source, /WEB MODE · PLANT LIVE TAG/);
-    assert.match(source, /FULL PLANT PROFILE/);
-    assert.match(source, /data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR/);
-    assert.match(source, /A Plant Live Tag can open this full, view-only plant file/);
+    assert.match(previewSource, /WEB MODE · PLANT LIVE TAG/);
+    assert.match(previewSource, /FULL PLANT PROFILE/);
+    assert.match(previewSource, /data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR/);
+    assert.match(previewSource, /A Plant Live Tag can open this full, view-only plant file/);
     assert.match(source, /function advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(source, /record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
     assert.match(source, /record\.tutorialStage === 'plant'[\s\S]*clearLimSelection\(\);[\s\S]*limMeshVisible=false;[\s\S]*showDemoAction\('plant2'\)/);
@@ -1655,7 +1659,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /PIGEON_PEA_AR_KNOWLEDGE/);
     assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-cell b/);
     assert.match(source, /function renderSimulatedTotem/);
-    assert.match(source, /totemCardsMarkup\(cards,record\.totemSelectedCard\)/);
+    assert.match(previewSource, /totemCardsMarkup\(cards, record\.totemSelectedCard\)/);
     assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:false\}\)/);
     assert.match(source, /rotationY: demoTotemRotationForPosition\(position\)/);
     assert.match(source, /function demoTotemRotationY\(record\)\{[\s\S]*record\?\.rotationY/);
@@ -1663,7 +1667,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-totem-pillar::before[\s\S]*clip-path:polygon/);
     assert.match(styles, /\.tryit-sim-totem-pillar::after[\s\S]*clip-path:polygon/);
     assert.match(source, /drawSpatialPrism\(gl, prismRenderer, view/);
-    assert.match(source, /const cards = demoTotemCards\(record\)/);
+    assert.match(source, /cards: demoTotemCards\(record\)/);
     assert.doesNotMatch(source, /CITRUS · HERBS · POLLINATORS/);
     assert.match(styles, /\.tryit-sim-totem-card-5/);
     assert.match(styles, /border-radius: 32% 23% 35% 25% \/ 25% 34% 24% 37%/);

@@ -204,6 +204,7 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     const model = read('app/services/pimModel.js');
     const panel = read('app/services/pimInfoPanel.js');
     const demo = read('app/screens/temporaryArDemo.js');
+    const preview = read('app/features/ar-demo/demoPreviewMarkup.js');
     const creator = read('app/screens/arMode.js');
     const styles = read('app/living-objects.css');
     const pimStyles = read('app/pim.css');
@@ -213,7 +214,7 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     assert.match(panel, /identityImage=document\?\.identity\?\.image/);
     assert.match(panel, /imageHeight=Math\.min\(520,Math\.max\(250,card\.height\*\.42\)\)/);
     assert.ok(MORINGA_PROFILE_IMAGE.endsWith('/assets/moringa-oleifera.jpg'));
-    assert.match(demo, /function demoPlantMedia\(record\)/);
+    assert.match(preview, /export function demoPlantMedia\(record\)/);
     assert.match(demo, /return showDemoPlantPhoto\(record\)/);
     assert.match(demo, /focusPlant\(record,demoOrbKnowledge\(record\)\.document,plantMedia\)/);
     const conversion=demo.slice(demo.indexOf('function guidePlantConversion'),demo.indexOf('function showSceneContinue'));

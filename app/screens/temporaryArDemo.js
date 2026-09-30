@@ -4,7 +4,7 @@ import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
 import { createLimActivationController } from '../services/limActivation.js';
 import { advanceLimPathway, backLimPathway, completeLimPathway, idleLimPathwayState, loadLimPathwayState, pauseLimPathway, resumeLimPathway, saveLimPathwayState, startLimPathway, visitLimPathwayCell } from '../services/limPathwayState.js';
 import { bindSpatialPimHold } from '../services/pimActivationHold.js';
-import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup, escapeSpatialText } from '../services/spatialKnowledgePresentation.js';
+import { createPlantKnowledgeResolver, totemKnowledgeCards, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaques, resolveTotemNavigation, totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel,WELCOME_SHAPE,WELCOME_SHAPE_POINTS} from '../services/arWelcomePanel.js';
@@ -29,13 +29,14 @@ import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/we
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
 import { renderDesktopLearningBook } from './desktopLearningBook.js';
-import { BIOMAP_CATEGORIES, DEMO_CONTENT, DEMO_JOURNEY_STAGES, DEMO_NOTE_TEMPLATE_KEYS, DEMO_ORB_MATERIALS, DEMO_PANEL_HINTS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, NOTE_TEMPLATES, PIGEON_PEA_CONTROL_IMAGE, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../features/ar-demo/demoContent.js';
+import { BIOMAP_CATEGORIES, DEMO_CONTENT, DEMO_JOURNEY_STAGES, DEMO_NOTE_TEMPLATE_KEYS, DEMO_ORB_MATERIALS, DEMO_PANEL_HINTS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, NOTE_TEMPLATES, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../features/ar-demo/demoContent.js';
 import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
-import { MORINGA_KNOWLEDGE, MORINGA_PIM, MORINGA_PROFILE, MORINGA_PROFILE_IMAGE } from '../features/ar-demo/demoPlantContent.js';
+import { MORINGA_KNOWLEDGE, MORINGA_PIM, MORINGA_PROFILE } from '../features/ar-demo/demoPlantContent.js';
 import { demoGroundBaseY, demoPlacementPosition, demoPointerScreenPoint, demoViewerPointerFallbackAllowed, isDemoFloorHit } from '../features/ar-demo/demoGeometry.js';
 import { preservePlacedDemoPlants, selectDemoPlantRecord, selectGuidedDemoOrb as selectGuidedDemoOrbRecord } from '../features/ar-demo/demoSelection.js';
 import { demoPimExpandedNodeIds, demoPimState, setDemoPimState } from '../features/ar-demo/demoState.js';
-import { demoOrbStyle, simulatedAnchorFromPointer, simulatedAnchorStyle } from '../features/ar-demo/demoSimulation.js';
+import { simulatedAnchorFromPointer } from '../features/ar-demo/demoSimulation.js';
+import { demoContentFor, demoPlantMedia, simulatedAreaLinkMarkup, simulatedPlantMarkup, simulatedRecordMarkup, simulatedTotemMarkup, virtualTagProfileMarkup } from '../features/ar-demo/demoPreviewMarkup.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
@@ -659,29 +660,6 @@ function showDemoAction(nextStage) {
     },{stepLabel:nextStage==='note'?'ELEMENTS 1.14':'ELEMENTS 1.9',nextGuide:nextStage==='note'?'':undefined});
 }
 
-function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
-    return `<div class="tryit-virtual-tag-shell">
-        <header class="tryit-virtual-tag-header">
-          <span>WEB MODE · PLANT LIVE TAG</span>
-          <strong>FULL PLANT PROFILE</strong>
-        </header>
-        <main class="tryit-virtual-tag-profile" aria-labelledby="tryitVirtualTagTitle">
-          <section class="tryit-virtual-tag-identity">
-            <span class="tryit-virtual-tag-orb" aria-hidden="true"></span>
-            <div><small>${profile.name} · COMPLETE PLANT FILE</small><h2 id="tryitVirtualTagTitle">${profile.commonName}</h2><p><i>${profile.scientificName}</i> · ${profile.family}</p><p>${profile.plantType}</p></div>
-          </section>
-          <section class="tryit-virtual-tag-tutorial">
-            <small>TUTORIAL · WEB MODE</small>
-            <strong>The same Plant Profile can be read outside AR.</strong>
-            <p>${profile.shortProfile}</p>
-            <p>A Plant Live Tag can open this full, view-only plant file. Close Web Mode to return to the same AR scene and continue with Moringa.</p>
-          </section>
-          <section class="tryit-virtual-tag-pim" aria-label="Pigeon Pea plant information"><div data-demo-pim-web-mount></div></section>
-        </main>
-        <button type="button" class="tryit-virtual-tag-close" data-demo-close-web-mode>CLOSE WEB MODE · RETURN TO AR</button>
-      </div>`;
-}
-
 function closeDemoVirtualTag(record) {
     const webMode = appRoot?.querySelector('[data-demo-virtual-tag]');
     if (!webMode || !demoWebModeOpen) return;
@@ -941,10 +919,6 @@ function activateDemoTotemCard(hit) {
         updateSimulatedMarkers();return true;
     }
     selectDemoTotemSign(hit.record,hit.detail ? '' : hit.card.id);return true;
-}
-
-function demoContentFor(record) {
-    return record.demoContent || DEMO_CONTENT[record.demoType || record.type];
 }
 
 function hideGuidedChoice({ hideBoard = false } = {}) {
@@ -2715,28 +2689,23 @@ function demoPlantKnowledgeMarkup(record, anchor = record?.simulatedAnchor || { 
 }
 
 function renderSimulatedPlant(record, index, anchor, offset) {
-    const anchorVariables = simulatedAnchorStyle(anchor);
-    const orbAppearance = demoOrbStyle(record);
-    const orbLabel = record.demoExpanded ? `Hide ${record.name || 'Plant'} profile` : `Open ${record.name || 'Plant'} profile`;
-    const ambient=Boolean(record.demoAmbientNeighbour && record.demoInteractive===false);
-    const anchoredOrb = `<span class="tryit-sim-marker tryit-sim-marker-plant is-demo-orb is-demo-${record.demoOrbShape || 'orb'} has-plant-profile${record.demoExpanded ? ' has-information' : ''}${demoHeldIndex === index ? ' is-held' : ''}${ambient ? ' is-neighbour-orb' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${anchorVariables};${orbAppearance};--depth-scale:${record.demoDepthScale || 1}" role="${record.demoInteractive===false ? 'img' : 'button'}" tabindex="${record.demoInteractive===false ? '-1' : '0'}" aria-label="${record.demoInteractive===false ? `Nearby ${record.name} Plant Orb` : orbLabel}"><span class="tryit-sim-orb is-plant" style="${orbAppearance}" aria-hidden="true"></span></span>`;
-    if (!record.demoExpanded) return anchoredOrb;
-    const surface = demoPimSurfaceLayout(anchor);
-    const profileVariables = `${anchorVariables};--panel-x:${offset.x}px;--panel-y:${offset.y}px;width:${surface.panelWidth}px;height:${surface.panelHeight}px`;
-    return `${anchoredOrb}<span class="tryit-sim-plant-profile" data-demo-plant-profile="${index}" style="${profileVariables}" role="group" aria-label="${record.name || 'Plant'} information"><button type="button" class="nlxr-desktop-pim-move" data-desktop-pim-move-handle aria-label="Move plant information"><span aria-hidden="true">Move plant information</span></button>${demoPlantKnowledgeMarkup(record, anchor)}</span>`;
+    if (!record.demoExpanded) {
+        return simulatedPlantMarkup(record, index, anchor, offset, {
+            held: demoHeldIndex === index
+        });
+    }
+    return simulatedPlantMarkup(record, index, anchor, offset, {
+        held: demoHeldIndex === index,
+        surface: demoPimSurfaceLayout(anchor),
+        knowledgeMarkup: demoPlantKnowledgeMarkup(record, anchor)
+    });
 }
 
 function renderSimulatedTotem(record, index, anchor) {
-    const cards = demoTotemCards(record);
-    const colour=record.demoTotemColor || record.demoContent?.accent || '#715a46';
-    return `<span class="tryit-sim-marker tryit-sim-marker-zone tryit-sim-totem-system nlxr-totem-system is-totem-style-basic${performance.now()-record.demoArriveAt<1800?' is-new-arrival':''}${record.demoTotemSignsVisible?' is-signs-open':''}${record.demoTotemFaded?' is-totem-faded':''}${record.demoNarrativeFaded?' is-narrative-faded':''}${demoHeldIndex === index ? ' is-held' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};--demo-totem-color:${colour};--depth-scale:${record.demoDepthScale || 1}" role="group" aria-label="${escapeSpatialText(record.demoZoneName || 'Zone')} Totem information"><span class="tryit-sim-totem-pillar" aria-hidden="true"></span><span class="nlxr-totem-controls" aria-label="Totem controls"><button type="button" data-totem-signs aria-pressed="${Boolean(record.demoTotemSignsVisible && !record.demoTotemFaded)}" aria-label="${record.demoTotemSignsVisible?'Store':'Show'} attached signs"><span aria-hidden="true">↔</span><small>Signs</small></button><button type="button" data-totem-fade aria-pressed="${Boolean(record.demoTotemFaded)}" aria-label="${record.demoTotemFaded?'Restore':'Fade'} Totem"><span aria-hidden="true">◐</span><small>${record.demoTotemFaded?'Wake':'Fade'}</small></button></span>${totemCardsMarkup(cards,record.totemSelectedCard)}</span>`;
-}
-
-function demoPlantMedia(record) {
-    if(record?.demoAmbientNeighbour)return null;
-    return record?.demoPlantPreset==='moringa'
-        ? {image:MORINGA_PROFILE_IMAGE,alt:'Moringa tree with compound green leaves'}
-        : {image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea flowers, green pods and peas',hint:'Select the plant to explore it, or grab it to reposition it.'};
+    return simulatedTotemMarkup(record, index, anchor, {
+        cards: demoTotemCards(record),
+        held: demoHeldIndex === index
+    });
 }
 
 function showDemoPlantPhoto(record) {
@@ -2956,27 +2925,12 @@ function demoPimNodeAtPointer(record) {
     return demoPimPointerTarget(record)?.node || null;
 }
 
-function renderSimulatedAreaLink() {
-    const linked = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible && record.simulatedAnchor);
-    if (linked.length < 2) return '';
-    const [first, second] = linked;
-    const start = first.simulatedAnchor;
-    const end = second.simulatedAnchor;
-    const dx = end.x - start.x;
-    const dy = end.y - start.y;
-    const width = Math.max(2, Math.hypot(dx, dy));
-    const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-    const faded=linked.every(record=>record.demoTotemFaded) ? ' is-narrative-faded' : '';
-    return `<span class="tryit-sim-area-link-line${faded}" aria-hidden="true" style="left:${start.x}%;top:${start.y}%;width:${width}%;transform:rotate(${angle}deg)"></span><span class="tryit-sim-area-link-label${faded}" aria-hidden="true" style="left:${midpoint.x}%;top:${midpoint.y}%">↔ LINKED AREAS</span>`;
-}
-
 function updateSimulatedMarkers() {
     appRoot?.querySelectorAll(':scope > .nlxr-totem-detail').forEach(note=>note.remove());
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
     const highlighted=selectedDemoTotemTargets();
-    layer.innerHTML = `${renderSimulatedAreaLink()}${markers.map((record, index) => {
+    layer.innerHTML = `${simulatedAreaLinkMarkup(markers)}${markers.map((record, index) => {
         if(!demoAreaVisible(record))return '';
         const content = demoContentFor(record);
         const lines = content?.lines?.slice(0, record.revealLines ?? content.lines.length) || [];
@@ -2988,12 +2942,16 @@ function updateSimulatedMarkers() {
         if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
-        const collapsible = record.demoExpanded && record.demoInteractive !== false ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
-        const compactContent = record.demoType === 'note' && content
-            ? `<strong>${content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}`
-            : '';
-        const orbProjection = record.demoType === 'marker' ? '<span class="tryit-sim-orb" aria-hidden="true"></span>' : '';
-        return `<span class="tryit-sim-marker tryit-sim-marker-${record.demoType || record.type}${highlighted.has(record.id)?' is-sign-target':''}${record.demoType === 'note' ? ' nourishland-spatial-note-surface' : ''}${record.demoAmbientNeighbour ? ' is-neighbour-note' : ''}${record.demoNarrativeFaded ? ' is-narrative-faded' : ''}${record.demoOrbColor ? ' is-demo-orb' : ''}${record.demoExpanded ? ' is-expanded' : ''}${demoHeldIndex === index ? ' is-held' : ''}${record.demoInteractive === false ? ' is-arriving' : ''}" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)};${demoOrbStyle(record)};--panel-x:${offset.x}px;--panel-y:${offset.y}px;--depth-scale:${record.demoDepthScale || 1}"${collapsible}>${orbProjection}${content && record.demoExpanded ? `<strong>${record.revealTitle === false ? '' : content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}` : compactContent}</span>`;
+        return simulatedRecordMarkup({
+            record,
+            index,
+            anchor,
+            offset,
+            content,
+            lines,
+            highlighted: highlighted.has(record.id),
+            held: demoHeldIndex === index
+        });
     }).join('')}`;
     bindSimulatedInformationPanels(layer);
 }
@@ -5194,14 +5152,12 @@ async function startImmersive() {
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
-            if (beginImmersiveKnowledgeCombination()) return;
             demoGrabInputSource=event.inputSource;
             beginControllerDemoHold();
         });
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
-            captureDemoInputEventRay(event);syncImmersiveKnowledgeCombination();
-            if(endImmersiveKnowledgeCombination())return;
+            captureDemoInputEventRay(event);
             if (demoHeldIndex < 0) {
                 clearTimeout(demoHoldTimer);
                 demoHoldTimer = null;
@@ -5211,7 +5167,6 @@ async function startImmersive() {
             releaseHeldDemoRecord();
             suppressSessionSelectUntil = performance.now() + 280;
         });
-        session.addEventListener('selectcancel',()=>endImmersiveKnowledgeCombination(true));
         session.addEventListener('end', () => { const shouldReturn = !ending; session = null; clearSessionState(); if (shouldReturn) window.renderLaunchScreen(); ending = false; });
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
@@ -5234,7 +5189,6 @@ async function startImmersive() {
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame));
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);
-            runXrFrameStep('knowledge combination',()=>syncImmersiveKnowledgeCombination(_time));
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
             runXrFrameStep('hand pinch',pollDemoHandPinch);
             runXrFrameStep('LIM hover',syncImmersiveLimHover);

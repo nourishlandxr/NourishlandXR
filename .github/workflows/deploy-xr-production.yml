@@ -60,6 +60,7 @@ jobs:
           test -f dist/xr/features/ar-demo/demoContent.js
           test -f dist/xr/features/ar-demo/demoGeometry.js
           test -f dist/xr/features/ar-demo/demoPlantContent.js
+          test -f dist/xr/features/ar-demo/demoPreviewMarkup.js
           test -f dist/xr/features/ar-demo/demoSelection.js
           test -f dist/xr/features/ar-demo/demoSimulation.js
           test -f dist/xr/features/ar-demo/demoState.js

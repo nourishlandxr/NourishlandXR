@@ -25,6 +25,13 @@ import {
 } from '../app/features/ar-demo/demoPlantContent.js';
 import { demoPimExpandedNodeIds, demoPimState, setDemoPimState } from '../app/features/ar-demo/demoState.js';
 import { demoOrbStyle, simulatedAnchorFromPointer, simulatedAnchorStyle } from '../app/features/ar-demo/demoSimulation.js';
+import {
+    demoContentFor,
+    demoPlantMedia,
+    simulatedAreaLinkMarkup,
+    simulatedPlantMarkup,
+    virtualTagProfileMarkup
+} from '../app/features/ar-demo/demoPreviewMarkup.js';
 import { pimCreateInteractionState } from '../app/services/plantInformationMesh.js';
 
 const read = relativePath => readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8');
@@ -41,6 +48,7 @@ test('AR demo screen consumes the feature package instead of redeclaring static 
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoSelection\.js'/);
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoState\.js'/);
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoSimulation\.js'/);
+    assert.match(source, /from '\.\.\/features\/ar-demo\/demoPreviewMarkup\.js'/);
     assert.doesNotMatch(source, /const AR_PHONE_COMFORT\s*=/);
     assert.doesNotMatch(source, /const DEMO_CONTENT\s*=/);
     assert.doesNotMatch(source, /const MORINGA_PROFILE\s*=/);
@@ -48,6 +56,7 @@ test('AR demo screen consumes the feature package instead of redeclaring static 
     assert.doesNotMatch(source, /(?:export )?function preservePlacedDemoPlants\(/);
     assert.doesNotMatch(source, /function demoPimState\(/);
     assert.doesNotMatch(source, /function simulatedAnchorStyle\(/);
+    assert.doesNotMatch(source, /function virtualTagProfileMarkup\(/);
     assert.match(hostedBuildSource, /'features'/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoConfig\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoContent\.js/);
@@ -56,6 +65,7 @@ test('AR demo screen consumes the feature package instead of redeclaring static 
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoSelection\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoState\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoSimulation\.js/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoPreviewMarkup\.js/);
 });
 
 test('AR demo configuration exports stable behavior contracts', () => {
@@ -115,4 +125,19 @@ test('simulated AR helpers keep anchors bounded and presentation deterministic',
     assert.equal(simulatedAnchorStyle({ x: 12.345, y: 67.891 }), '--marker-x:12.35%;--marker-y:67.89%');
     assert.match(demoOrbStyle({ demoOrbColor: 'green' }), /--demo-orb/);
     assert.equal(demoOrbStyle({ demoOrbColor: 'unknown' }), '');
+});
+
+test('preview markup renders plants, links and Web Mode without runtime ownership', () => {
+    const pigeon = { name: 'Pigeon Pea', demoType: 'plant', demoOrbColor: 'pigeonPea', demoExpanded: false, demoInteractive: true };
+    assert.equal(demoContentFor({ demoType: 'note' }).title, 'Focus Point · Seasonal observation');
+    assert.ok(demoPlantMedia(pigeon).image.endsWith('/assets/pigeon-pea-cajanus-cajan.png'));
+    assert.equal(demoPlantMedia({ ...pigeon, demoAmbientNeighbour: true }), null);
+    assert.match(virtualTagProfileMarkup(), /data-demo-pim-web-mount/);
+    assert.match(simulatedPlantMarkup(pigeon, 2, { x: 40, y: 60 }, { x: 0, y: 0 }), /data-demo-marker-index="2"/);
+    const link = simulatedAreaLinkMarkup([
+        { demoType: 'zone', demoLinkVisible: true, simulatedAnchor: { x: 20, y: 30 }, demoTotemFaded: false },
+        { demoType: 'zone', demoLinkVisible: true, simulatedAnchor: { x: 60, y: 50 }, demoTotemFaded: false }
+    ]);
+    assert.match(link, /tryit-sim-area-link-line/);
+    assert.match(link, /LINKED AREAS/);
 });

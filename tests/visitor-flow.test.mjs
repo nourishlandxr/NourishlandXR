@@ -530,6 +530,7 @@ test('quick access creation is minimal and separates Area assignment from placem
 
 test('Try It Now guides two Plants, an in-place Note and a final Totem example', () => {
     const source = fs.readFileSync(path.join(root, 'app/screens/temporaryArDemo.js'), 'utf8');
+    const previewSource = fs.readFileSync(path.join(root, 'app/features/ar-demo/demoPreviewMarkup.js'), 'utf8');
     const geometrySource = fs.readFileSync(path.join(root, 'app/features/ar-demo/demoGeometry.js'), 'utf8');
     const webxrSource = fs.readFileSync(path.join(root, 'app/services/webxrSession.js'), 'utf8');
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
@@ -560,11 +561,11 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /A Totem welcomes you to an Area and keeps its local information together/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.doesNotMatch(source, /const DEMO_TOTEM_STYLES|function cycleDemoTotemStyle\(record\)/);
-    assert.match(source, /is-totem-style-basic/);
+    assert.match(previewSource, /is-totem-style-basic/);
     assert.match(source, /function connectDemoTotems\(\)/);
     assert.match(source, /first\.demoLinkVisible=second\.demoLinkVisible=true/);
     assert.match(source, /createDemoNeighbourhood\(totem\)/);
-    assert.match(source, /LINKED AREAS/);
+    assert.match(previewSource, /LINKED AREAS/);
     assert.match(source, /if \(record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
     assert.doesNotMatch(styles, /\.tryit-sim-totem-model-toggle|is-totem-style-organic|is-totem-style-flat-disc/);
     assert.match(styles, /\.tryit-sim-area-link-line/);
