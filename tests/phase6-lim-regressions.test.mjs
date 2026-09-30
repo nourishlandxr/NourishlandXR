@@ -57,6 +57,9 @@ test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
 test('screen and tracked-pointer selection activate LIM once while the hidden DOM layer stays idle', () => {
     assert.match(demoSource, /\['screen','tracked-pointer'\]\.includes\(event\.inputSource\?\.targetRayMode\)/);
     assert.match(demoSource, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
+    const sessionInteractions = demoSource.slice(demoSource.indexOf('function bindLimSessionInteractions'), demoSource.indexOf('function paintWelcomeLayer'));
+    assert.match(sessionInteractions, /captureDemoInputEventRay\(event\)/);
+    assert.doesNotMatch(sessionInteractions, /nativeConnectionState[\s\S]{0,180}return;if\(!limActivation\.consumeSyntheticClick/);
     assert.match(demoSource, /event\.detail===0\?'assistive-click':'click'/);
     assert.match(demoSource, /if\(simulatedMode && now-last>=50/);
     assert.match(demoSource, /if\(simulatedMode && arWelcomeLayer\)arWelcomeShowcaseFrame=limRequestFrame\(frame\)/);

@@ -53,6 +53,15 @@ test('welcome exploration steps share one fading stage without layout movement',
  assert.match(launch,/paused=Boolean\(reduced\.matches\)/);
 });
 
+test('welcome headings and body copy use one responsive typography system',()=>{
+ const styles=fs.readFileSync(path.join(root,'app/product-v2.css'),'utf8');
+ assert.match(styles, /--v2-welcome-heading-font:Georgia,'Times New Roman',serif/);
+ assert.match(styles, /#app \.v2-welcome :is\(h1,h2\)\{font-family:var\(--v2-welcome-heading-font\)/);
+ assert.match(styles, /#app \.v2-welcome h1\{font-size:var\(--v2-welcome-title-size\)\}/);
+ assert.match(styles, /#app \.v2-welcome h2\{font-size:var\(--v2-welcome-section-size\)\}/);
+ assert.match(styles, /#app \.v2-welcome p:not\(\.v2-eyebrow\)\{font-family:var\(--v2-welcome-body-font\);font-size:var\(--v2-welcome-body-size\)/);
+});
+
 test('Try It Now offers optional LIM paths and a concise post-plant journey',()=>{
  const source=fs.readFileSync(path.join(root,'app/screens/temporaryArDemo.js'),'utf8');
  const styles=fs.readFileSync(path.join(root,'app/style.css'),'utf8');

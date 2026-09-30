@@ -45,8 +45,19 @@ test('post-LIMO discovery connects the authored Pigeon Pea and Living Landscapes
     assert.match(guide, /Place Pigeon Pea/);
     assert.match(demo, /limMeshVisible=false/);
     assert.match(demo, /deferContinueUntilCopyReady:index===0/);
+    assert.match(demo, /stepLabel:'LEARNING 1\.9'[\s\S]*Select \$\{nativeConnectionState\.sourceTitle\} in Pigeon Pea to continue/);
+    assert.match(demo, /stepLabel:'LEARNING 1\.10'[\s\S]*Select \$\{state\.targetTitle\} in LIMO to continue/);
+    assert.doesNotMatch(demo, /stepLabel:'LEARNING 1\.9',nextGuide:''/);
     assert.deepEqual(LIM_INTRO_BRANCHES.map(branch => branch.title),
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);
+});
+
+test('placement instructions remain in slide history and describe the object that exists', () => {
+    const demo = read('app/screens/temporaryArDemo.js');
+    assert.match(demo, /kind:'placement'/);
+    assert.match(demo, /slide\.kind==='welcome' \|\| slide\.kind==='placement'/);
+    assert.match(demo, /Moringa is the second Plant Orb in this map/);
+    assert.doesNotMatch(demo, /Totem 2 is a sample PIMO layout/);
 });
 
 test('demo introduces the Control panel before explaining scattered plant information', () => {

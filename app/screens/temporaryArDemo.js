@@ -235,7 +235,7 @@ let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=fals
 let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS,arWelcomeOpeningSeed=0;
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
-let nativeConnectionState=null,nativePimHoldCompleted=false,nativeLimHoldPointer=null,nativeConnectionEffect=null,nativeConnectionEffectLastAt=0;
+let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=null,nativeConnectionEffectLastAt=0;
 let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
 let demoRainIntensity=1;
 let demoCellOpacity=1;
@@ -1232,12 +1232,13 @@ function showDemoSlideFromHistory(index){
             if(next<demoSlideHistory.length)showDemoSlideFromHistory(next);
             else slide.onContinue?.();
         },{...slide.options,stepLabel:slide.stepLabel,historyReplay:true});
-    }else if(slide.kind==='welcome'){
+    }else if(slide.kind==='welcome' || slide.kind==='placement'){
         introSceneActive=true;introBoardVisible=true;introBoardTitle=slide.title;introBoardBody=slide.body;introBoardVisibleBody=slide.body;introBoardStep=slide.stepLabel;introBoardTextureDirty=true;useSharedWelcomeBoard(true);
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${slide.title}</h2><div class="tryit-board-text-window"><p>${slide.body}</p></div>`;board.hidden=false;board.classList.add('is-copy-ready','is-persistent-demo-board');}
         const button=appRoot?.querySelector('[data-tryit-intro-continue]');
-        if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=()=>{const next=demoSlideHistoryIndex+1;if(next<demoSlideHistory.length)showDemoSlideFromHistory(next);else slide.onContinue?.();};}
+        if(button && slide.kind==='placement'){button.hidden=true;button.onclick=null;setIntroBoardNextGuide(slide.options?.nextGuide || 'Aim at the highlighted position and confirm placement.');}
+        else if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=()=>{const next=demoSlideHistoryIndex+1;if(next<demoSlideHistory.length)showDemoSlideFromHistory(next);else slide.onContinue?.();};}
     }
     demoSlideHistoryReplay=false;
     syncDemoPanelActions();
@@ -1484,7 +1485,6 @@ function bindLimCellInteractions() {
         const click=event=>{
             event.preventDefault();event.stopPropagation();
             if(limActivation.consumeSyntheticClick(key,performance.now()))return;
-            if(nativeConnectionState && key===nativeConnectionTargetKey() && ['target','resolving','connected'].includes(nativeConnectionState.phase))return;
             limActivation.activateNow(key,performance.now(),event.detail===0?'assistive-click':'click');
         };
         const holdStart=event=>{
@@ -1506,19 +1506,22 @@ function bindLimSessionInteractions(arSession) {
     if(!arSession || !limActivation)return;
     const selectStart=event=>{
         if(!['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
+        captureDemoInputEventRay(event);
         const node=currentLimPointerCell();if(!node)return;
         limInputSource=event.inputSource;limActivation.start(node.key,performance.now(),'xr-hold');startLimActivationFrame();
         event.preventDefault?.();event.stopImmediatePropagation?.();
     };
     const selectEnd=event=>{
         if(event.inputSource!==limInputSource)return;
+        captureDemoInputEventRay(event);
         limActivation.end(limActivation.activeKey,performance.now());limInputSource=null;
         event.preventDefault?.();event.stopImmediatePropagation?.();
     };
     const select=event=>{
         if(!arWelcomeShowcaseActive || !['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
+        captureDemoInputEventRay(event);
         const node=currentLimPointerCell();
-        if(node){event.preventDefault?.();event.stopImmediatePropagation?.();if(nativeConnectionState && (node.limId || node.label)===nativeConnectionState.targetId && ['target','resolving'].includes(nativeConnectionState.phase))return;if(!limActivation.consumeSyntheticClick(node.key,performance.now()))limActivation.activateNow(node.key,performance.now(),'xr-select');limActivationSessionSuppressUntil=performance.now()+450;return;}
+        if(node){event.preventDefault?.();event.stopImmediatePropagation?.();if(!limActivation.consumeSyntheticClick(node.key,performance.now()))limActivation.activateNow(node.key,performance.now(),'xr-select');limActivationSessionSuppressUntil=performance.now()+450;return;}
         if(performance.now()<limActivationSessionSuppressUntil)event.stopImmediatePropagation?.();
     };
     const visibility=()=>{if(arSession.visibilityState!=='visible')limActivation.cancel('session-hidden');};
@@ -2182,7 +2185,6 @@ function nativeConnectionTargetKey() {
 }
 
 function clearNativeConnectionHold() {
-    nativePimHoldCompleted=false;
     nativeLimHoldPointer=null;
     limActivation?.cancel('connection-reset');
 }
@@ -2251,9 +2253,10 @@ function startNativeConnectionExperience() {
     limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SETTLED_MS;
     limHiddenCells.delete(spec.targetId);
     useSharedWelcomeBoard(true);
-    showIntroBoard('Connect a plant cell to a learning cell.',[], 'Continue',
-        ()=>{if(nativeConnectionState?.phase==='connected')showAudienceValue();else setGuide(`Hold ${nativeConnectionState?.sourceTitle} in Pigeon Pea, then hold ${nativeConnectionState?.targetTitle} in LIMO.`);},
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.9',nextGuide:''});
+    showIntroBoard('Connect a plant cell to a learning cell.',
+        [`Select Pigeon Pea’s ${nativeConnectionState.sourceTitle} cell in the open Plant Profile. A trigger press or short hold selects it.`],
+        '',()=>{},
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.9',nextGuide:`Select ${nativeConnectionState.sourceTitle} in Pigeon Pea to continue.`});
     nativeConnectionPanelGuide();
     introBoardTextureDirty=true;
 }
@@ -2263,9 +2266,10 @@ function acceptNativePimCell(record,path) {
     if(record!==nativeConnectionPlant() || !acceptDemoNativeSource(state,path))return false;
     record.demoSelectedNodeId=state.sourcePath;
     refreshDemoPimProfile(record);
-    showIntroBoard('Connect a plant cell to a learning cell.',[], 'Continue',
-        ()=>{if(nativeConnectionState?.phase==='connected')showAudienceValue();else setGuide(`Aim at ${state.targetTitle} and hold to complete the connection.`);},
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.10',nextGuide:''});
+    showIntroBoard('Connect a plant cell to a learning cell.',
+        [`Now select LIMO’s ${state.targetTitle} cell. A trigger press or short hold completes the connection.`],
+        '',()=>{},
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.10',nextGuide:`Select ${state.targetTitle} in LIMO to continue.`});
     nativeConnectionPanelGuide();
     navigator.vibrate?.(12);
     return true;
@@ -2529,7 +2533,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         const placementCopy = type === 'plant'
             ? {title:'Place Pigeon Pea',body:'A Plant Orb attaches this plant’s information to a real place. Pigeon Pea is our first example.',next:`Aim at the real plant or desired tag location, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place it. Use the right joystick to adjust distance.`}
             : type === 'plant2'
-                ? {title:'Place Moringa',body:'Totem 2 is a sample PIMO layout, with its own plant information and local observations.',next:'Aim beside Totem 2 and press the aiming circle to place the sample Moringa Orb.'}
+                ? {title:'Place Moringa',body:'Moringa is the second Plant Orb in this map. Its own Plant Profile lets you compare two living roles in the same place.',next:`Aim beside Pigeon Pea, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place the Moringa Orb.`}
                 : type==='totem'
                     ? {title:'Place Botanical Garden Totem',body:'A Totem gives an Area a clear welcome point for its signs and local information.',next:'Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.'}
                     : {title:'Place an observation',body:'A Note keeps something noticed in this part of the landscape beside the plants it relates to.',next:'Aim at the place you observed, then press the aiming circle to place the Note.'};
@@ -2537,6 +2541,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         introBoardTitle=placementCopy.title;
         introBoardBody=placementCopy.body;
         introBoardVisibleBody=placementCopy.body;
+        rememberDemoSlide({stepLabel:introBoardStep,title:placementCopy.title,body:placementCopy.body,buttonLabel:'',onContinue:null,options:{nextGuide:placementCopy.next},kind:'placement'});
         introBoardTextureDirty=true;
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${placementCopy.title}</h2><div class="tryit-board-text-window"><p>${placementCopy.body}</p></div>`;board.classList.add('is-copy-ready');board.classList.remove('is-typing');}
@@ -2790,10 +2795,7 @@ function selectDemoProfileCell() {
         setGuide('Aim at a visible plant information cell to explore it.');
         return false;
     }
-    if(nativeConnectionState?.phase==='source' && record===nativeConnectionPlant() && node.path===nativeConnectionState.sourcePath){
-        if(!nativePimHoldCompleted){setGuide(`Hold ${nativeConnectionState.sourceTitle} until the ring completes.`);return true;}
-        return acceptNativePimCell(record,node.path);
-    }
+    if(nativeConnectionState?.phase==='source' && record===nativeConnectionPlant() && node.path===nativeConnectionState.sourcePath)return acceptNativePimCell(record,node.path);
     if (node.pimRead) {openDemoKnowledge(record);return true;}
     if (node.pimCore) {
         return showDemoPlantPhoto(record);
@@ -5141,8 +5143,8 @@ async function startImmersive() {
             if (activateImmersiveDemoControl()) return;
             selectGuidedDemoOrb();
         });
-        pimHold=bindSpatialPimHold({session,enabled:()=>!demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady && !infoPanel?.hit(latestControllerRay),
-            getTarget:demoInfoTarget,activate:()=>{nativePimHoldCompleted=true;try{selectDemoProfileCell();}finally{nativePimHoldCompleted=false;}},
+        pimHold=bindSpatialPimHold({session,enabled:()=>nativeConnectionState?.phase!=='source' && !demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady && !infoPanel?.hit(latestControllerRay),
+            getTarget:demoInfoTarget,activate:selectDemoProfileCell,
             progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;queueDemoPimTextureRefresh(record);}
         });
         session.addEventListener('selectstart', event => {

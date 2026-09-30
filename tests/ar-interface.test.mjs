@@ -1391,7 +1391,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(immersiveSelectStartHandler, /activateImmersiveDemoControl/);
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
-    assert.match(source, /plant2: \['Compare a second plant'[\s\S]*Aim beside Totem 2 and press the aiming circle to place the sample Moringa Orb/);
+    assert.match(source, /plant2: \['Compare a second plant'[\s\S]*Aim beside Pigeon Pea[\s\S]*place the Moringa Orb/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
     assert.match(source, /data-tryit-open-live-tag hidden/);
     assert.match(source, /data-tryit-skip/);

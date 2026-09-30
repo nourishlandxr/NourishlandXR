@@ -414,6 +414,17 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 #app:has(> .v2-welcome){width:100%;max-width:none;margin:0;padding:0;box-sizing:border-box}
 #app .screen.v2-welcome{width:100%;max-width:none;min-height:100svh;box-sizing:border-box;padding:clamp(18px,3vw,34px) clamp(20px,5vw,84px) 48px}
 .v2-welcome>:is(.v2-masthead,.v2-hero,.v2-intro-sequence,.v2-context){width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
+#app .v2-welcome{
+ --v2-welcome-heading-font:Georgia,'Times New Roman',serif;
+ --v2-welcome-body-font:system-ui,-apple-system,'Segoe UI',sans-serif;
+ --v2-welcome-title-size:clamp(2.25rem,4.7vw,3.75rem);
+ --v2-welcome-section-size:clamp(1.35rem,2.2vw,1.55rem);
+ --v2-welcome-body-size:clamp(1rem,1.35vw,1.075rem);
+}
+#app .v2-welcome :is(h1,h2){font-family:var(--v2-welcome-heading-font);font-weight:400;line-height:1.12;letter-spacing:-.025em;text-transform:none}
+#app .v2-welcome h1{font-size:var(--v2-welcome-title-size)}
+#app .v2-welcome h2{font-size:var(--v2-welcome-section-size)}
+#app .v2-welcome p:not(.v2-eyebrow){font-family:var(--v2-welcome-body-font);font-size:var(--v2-welcome-body-size);font-weight:400;line-height:1.6}
 @media(max-width:700px){#app .screen.v2-welcome{padding:16px 18px 40px}}
 
 /* Keep experience Settings inside narrow phone and Android WebView widths. */
