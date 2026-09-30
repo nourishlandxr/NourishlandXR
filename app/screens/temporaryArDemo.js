@@ -667,7 +667,7 @@ function demoPanelActions() {
     const actions=[];
     const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
-    if(demoSlideHistoryIndex>0)actions.push({id:'back',label:'<',ariaLabel:'Previous slide',description:'Previous'});
+    if(demoSlideHistoryIndex>0 || (demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME))actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous'});
     if(demoSlideHistoryIndex>=0 && demoSlideHistoryIndex<demoSlideHistory.length-1)actions.push({id:'forward',label:'>',ariaLabel:'Next slide',description:'Next'});
     if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
     if(arWelcomeShowcaseActive && ['apply','connect','impact'].includes(demoJourneyStage))actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
@@ -2036,7 +2036,7 @@ const DEMO_ORIENTATION_STEPS = [
     ]},
     {code:'ELEMENTS 1.1',title:'Every plant holds information',art:'references',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'Finding a plant in the field can be confusing when you are carrying books, checking a phone and comparing guides. It can be hard to connect what you read to the plant in front of you.',
-        'A plant holds far more than a name: ecology, care, seasons, uses, local knowledge and trusted sources.'
+        'A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources.'
     ]},
     {code:'SPACE 1.2',title:'Imagine arriving in a garden',art:'curiosity',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'Imagine arriving in a garden and noticing a plant you do not recognise.',
@@ -2079,11 +2079,9 @@ function runArWelcomeTutorial(index=0) {
         infoPanel?.suspend(false);
         infoPanel?.setContextualHint('HINT · Adjust panel to your liking.');
     }
-    if(step?.art && index!==1){
+    if(step?.art){
         infoPanel?.setCompact(false);
-        showDemoTutorialMedia(step.art);
-    }else if(index===1){
-        infoPanel?.setCompact(false);
+        if(index!==1)showDemoTutorialMedia(step.art);
     }else if(index===DEMO_ORIENTATION_STEPS.length-1){
         infoPanel?.setMediaCollapsed(true);
         infoPanel?.setContextualHint('HINT · Move the right joystick up or down to adjust distance.');

@@ -1427,7 +1427,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
     assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art\)/);
-    assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'Visual reference',body:''/);
+    assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'',hideTitle:true,imageFit:'contain'/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);
