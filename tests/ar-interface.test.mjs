@@ -1069,6 +1069,19 @@ test('Creator AR fences stale session, restore and placement work', () => {
     assert.match(arSource, /contextToolbarRecord\)[\s\S]*openContextInWebMode\(\)/);
 });
 
+test('immersive demo builds its welcome before requesting the first XR frame', () => {
+    const source = read('app/screens/temporaryArDemo.js');
+    const immersive = source.slice(source.indexOf('async function startImmersive()'), source.indexOf('export function openTemporaryArDemoWindow'));
+    assert.ok(immersive.indexOf('renderInterface(false);') > -1);
+    assert.ok(immersive.indexOf('renderInterface(false);') < immersive.indexOf('session.requestAnimationFrame(draw);'));
+    assert.match(source, /if \(simulated\) introNarrationTimer = setTimeout\(showArWelcomeShowcase, 120\);\s*else showArWelcomeShowcase\(\);/);
+    assert.match(source, /try \{ drawSpatialRain\(view, _time\); \}\s*catch \(error\) \{ reportDemoRenderFailure\(error, 'rain render'\); \}/);
+    assert.match(source, /try \{ drawSpatialAmbientLife\(view\); \}\s*catch \(error\) \{ reportDemoRenderFailure\(error, 'ambient render'\); \}/);
+    const entry = source.slice(source.indexOf('export async function startTemporaryArDemo'));
+    assert.match(entry, /if \(!immersive\) \{\s*renderInterface\(true\);/);
+    assert.doesNotMatch(entry, /renderInterface\(!immersive\)/);
+});
+
 test('demo placement stays clear of the Control panel at desktop and narrow widths', () => {
     const cases = [
         { viewport: [800, 720], panel: { left: 10, top: 8, right: 370, bottom: 588 }, aim: { x: 34, y: 78 } },

@@ -4167,7 +4167,12 @@ function renderInterface(simulated) {
     appRoot.querySelector('[data-tryit-reset]').addEventListener('click', () => { appRoot.querySelector('[data-tryit-action]').dataset.nextStage = 'reset'; advanceDemo(); });
     appRoot.querySelector('[data-tryit-finish]').addEventListener('click', returnToWelcome);
     clearTimeout(introNarrationTimer);
-    introNarrationTimer = setTimeout(showArWelcomeShowcase, 120);
+    // An immersive session can present its first headset frame before normal
+    // window timers receive another turn. Build the spatial welcome now so
+    // Quest never starts with a cleared framebuffer and no scene. The short
+    // delay remains useful only for the desktop transition animation.
+    if (simulated) introNarrationTimer = setTimeout(showArWelcomeShowcase, 120);
+    else showArWelcomeShowcase();
 }
 
 function multiply(a, b) {
@@ -5378,6 +5383,10 @@ async function startImmersive() {
             setGuide(`${sessionMode === 'immersive-vr' ? 'Spatial device immersive mode' : 'Passthrough AR'} is active. Surface detection unavailable; placement uses your view direction. (${error.message})`);
         }
         setupRenderer();
+        // Finish constructing the immersive UI and its welcome texture before
+        // the first XR frame is requested. Desktop fallback is rendered by the
+        // caller only when session setup fails.
+        renderInterface(false);
         session.addEventListener('select', event => {
             if(event.inputSource?.hand)return;
             captureDemoInputEventRay(event);
@@ -5466,8 +5475,10 @@ async function startImmersive() {
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                drawSpatialRain(view, _time);
-                drawSpatialAmbientLife(view);
+                try { drawSpatialRain(view, _time); }
+                catch (error) { reportDemoRenderFailure(error, 'rain render'); }
+                try { drawSpatialAmbientLife(view); }
+                catch (error) { reportDemoRenderFailure(error, 'ambient render'); }
                 try { drawMarker(view); }
                 catch (error) { reportDemoRenderFailure(error, 'marker render'); }
                 try { drawDemoKnowledge(view); }
@@ -5515,6 +5526,8 @@ export async function startTemporaryArDemo(app) {
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
     const immersive = await startImmersive();
-    renderInterface(!immersive);
-    if (!immersive) viewerMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+    if (!immersive) {
+        renderInterface(true);
+        viewerMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+    }
 }
