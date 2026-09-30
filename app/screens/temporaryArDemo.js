@@ -5128,11 +5128,18 @@ async function startImmersive() {
             if(event.inputSource?.hand)return;
             if(xrRecoveryStatus==='failed'){returnToWelcome();return;}
             captureDemoInputEventRay(event);
+            // The dedicated LIM listener normally consumes this event first.
+            // Keep an independent route here because some Quest runtimes do
+            // not deliver capture-phase XRInputSourceEvents consistently.
+            // A live LIM hit must win before plant grabs, PIM panels or the
+            // tutorial fallback can swallow the same trigger press.
+            if(performance.now()<limActivationSessionSuppressUntil)return;
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
-            if (demoHeldIndex >= 0) return;
             if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
+            if(selectWelcomeCell()){limActivationSessionSuppressUntil=performance.now()+450;return;}
+            if (demoHeldIndex >= 0) return;
             if (activateDemoTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return;
             if (selectDemoProfileCell()) return;
             if (selectDemoNoteTemplateAtPointer()) return;
@@ -5150,6 +5157,9 @@ async function startImmersive() {
         session.addEventListener('selectstart', event => {
             if(event.inputSource?.hand)return;
             captureDemoInputEventRay(event);
+            // If the capture-phase LIM listener is unavailable, still keep a
+            // trigger aimed at the mesh out of the plant grab state machine.
+            if(currentLimPointerCell())return;
             if(demoKnowledgeWorkspace) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
