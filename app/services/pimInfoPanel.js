@@ -178,13 +178,14 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, cellOpacity = 1, handMode='pointer', onHandMode=()=>{}, onRainIntensity = () => {}, onCellOpacity = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, cellOpacity = 1, handMode='pointer', panelHints = [], onHandMode=()=>{}, onRainIntensity = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     const HEAVY_RAIN_INTENSITY=1.65;
     const CELL_OPACITY_LEVELS=[0,.25,.5,1];
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),meshCellOpacity=CELL_OPACITY_LEVELS.reduce((best,value)=>Math.abs(value-Number(cellOpacity))<Math.abs(best-Number(cellOpacity))?value:best,1),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
-    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
+    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTransitionTimer=0,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let visibleMedia=null;
     const MEDIA_FADE_MS=650;
+    let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='';
     let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
@@ -200,7 +201,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 :'Information about what you select will appear here.';
         return reading;
     };
-    const currentHint=()=>tab==='Help'?'':contextHint || identity?.hint || '';
+    const currentHint=()=>tab==='Help'?'':contextHint || identity?.hint || rotatingPanelHints[panelHintIndex] || '';
     const pages=()=>infoPages(text(),headset?(largeText?29:34):(largeText?32:38),pathwayContext?4:7);
     const title=()=>tab==='Help'?'Help':selection?.hideTitle?'':selection?.title || 'Control panel';
     const hasPimPath=()=>Boolean(selection && identity);
@@ -218,14 +219,21 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false,fit:selection.imageFit || 'cover'}
         : identity?.media?.image ? {...identity.media,caption:identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
-    function loadPanelImage(source){
+    function loadPanelImage(source,{delayMs=0,discardPrevious=false}={}){
         if(source===mediaImageSource)return;
         const token=++mediaLoadToken;
+        clearTimeout(mediaTransitionTimer);mediaTransitionTimer=0;
+        if(discardPrevious){mediaPreviousImage=null;mediaImage=null;mediaImageSource='';mediaFadeStartedAt=performance.now();}
         if(!source){mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource='';mediaFadeStartedAt=performance.now();return;}
-        const image=new Image();image.decoding='async';
-        image.onload=()=>{if(token!==mediaLoadToken)return;mediaPreviousImage=mediaImage;mediaImage=image;mediaImageSource=source;mediaFadeStartedAt=performance.now();};
-        image.onerror=()=>{if(token!==mediaLoadToken)return;mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource=source;mediaFadeStartedAt=performance.now();};
-        image.src=source;
+        const beginLoad=()=>{
+            if(token!==mediaLoadToken)return;
+            const image=new Image();image.decoding='async';
+            image.onload=()=>{if(token!==mediaLoadToken)return;if(discardPrevious)mediaPreviousImage=null;else mediaPreviousImage=mediaImage;mediaImage=image;mediaImageSource=source;mediaFadeStartedAt=performance.now();};
+            image.onerror=()=>{if(token!==mediaLoadToken)return;if(discardPrevious)mediaPreviousImage=null;else mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource=source;mediaFadeStartedAt=performance.now();};
+            image.src=source;
+        };
+        if(delayMs>0){mediaTransitionTimer=setTimeout(()=>{mediaTransitionTimer=0;beginLoad();},delayMs);return;}
+        beginLoad();
     }
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
@@ -243,10 +251,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
         if(action==='Settings'){
             settingsOpen=!settingsOpen;
-            if(settingsOpen){
-                mediaCollapsed=true;mediaTouched=false;
-                if(mediaDetached){mediaDetached=false;mediaFloating?.remove();mediaFloating=null;mediaPosition=null;mediaPose=null;}
-            }
             renderSettings();
         }
         if(action==='Previous')page=Math.max(0,page-1);
@@ -343,10 +347,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const media=document.createElement('aside');media.className='nlxr-media-wing'+(floating?' nlxr-media-floating':'');
         const toolbar=document.createElement('div');toolbar.className='nlxr-media-toolbar';
         if(!floating && !isDesktopDemo())toolbar.append(makePanelToggle('Media','nlxr-media-toggle',()=>{mediaCollapsed=!mediaCollapsed;mediaTouched=true;},!mediaCollapsed));
-        const handle=document.createElement('button');handle.type='button';handle.className='nlxr-media-detach';handle.textContent='↔';handle.dataset.infoAction='ToggleMediaDetach';
-        handle.setAttribute('aria-label',floating?'Dock media panel to Control panel':'Detach media panel');handle.title=floating?'Drag to move · click to dock to Control panel':'Detach media panel';
-        handle.addEventListener('click',event=>{event.stopPropagation();if(performance.now()<ignoreMediaClickUntil)return;if(mediaDetached)dockMediaPanel();else detachMediaPanel();});
-        toolbar.append(handle);media.append(toolbar);
+        if(toolbar.childElementCount)media.append(toolbar);
         const preview=previewMedia();
         if(preview?.image){const figure=mediaFigure(visibleMedia && visibleMedia.image!==preview.image?visibleMedia:null);media.append(figure);updateMediaFigure(figure,preview);}
         else{const empty=document.createElement('div');empty.className='nlxr-media-empty';empty.setAttribute('aria-hidden','true');media.append(empty);}
@@ -400,7 +401,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(event.target.closest('button,a,input,select,textarea,[role="button"],[contenteditable]'))return;
             event.stopPropagation();const rect=surface.getBoundingClientRect();
             mediaPointerDrag={pointerId:event.pointerId,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top,startX:event.clientX,startY:event.clientY,moved:false,armed:false,timer:null};surface.classList.add('is-grab-ready');
-            mediaPointerDrag.timer=setTimeout(()=>{if(!mediaPointerDrag || mediaPointerDrag.pointerId!==event.pointerId)return;if(!mediaDetached)detachMediaPanel();mediaPointerDrag.armed=true;surface.classList.remove('is-grab-ready');mediaFloating?.classList.add('is-grabbed');},PANEL_GRAB_HOLD_MS);
+            mediaPointerDrag.timer=setTimeout(()=>{if(!mediaPointerDrag || mediaPointerDrag.pointerId!==event.pointerId)return;if(!mediaDetached)detachMediaPanel();mediaPointerDrag.armed=true;surface.classList.remove('is-grab-ready');mediaFloating?.classList.add('is-grabbed');onGrab(null);},PANEL_GRAB_HOLD_MS);
             const move=next=>{
                 if(!mediaPointerDrag || next.pointerId!==mediaPointerDrag.pointerId)return;
                 const drag=mediaPointerDrag;
@@ -654,7 +655,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         ctx.shadowColor=card.grabState==='held'?'rgba(223,255,155,.8)':'rgba(119,212,247,.55)';ctx.shadowBlur=card.grabState==='held'?36:card.grabState?22:0;ctx.stroke();ctx.shadowBlur=0;ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.media){
-            ctx.fillStyle='rgba(119,169,198,.34)';ctx.beginPath();ctx.roundRect(846,16,108,58,15);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#a9e7fa';ctx.font='700 30px system-ui';ctx.textAlign='center';ctx.fillText('↔',900,27,56);ctx.textAlign='left';
             if(card.hoverHint){ctx.fillStyle='rgba(8,20,31,.88)';ctx.beginPath();ctx.roundRect(40,78,770,46,12);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 19px system-ui';ctx.fillText(card.hoverHint,56,91,740);}
             const imageX=40,imageY=96,imageWidth=920,imageHeight=c.height-(card.caption?166:126);
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,20);ctx.fill();
@@ -757,8 +757,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         });return c;
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return renderer.hit(ray);}
-    const mediaSpatialControls=()=>[{action:'MoveMediaPanel',label:'MOVE',ariaLabel:mediaDetached?'Move or dock media panel':'Detach and move media panel',kind:'handle',x:836,y:10,width:128,height:70,description:controlDescription({action:'MoveMediaPanel'})}];
-    const controlsForTarget=target=>target?.card?.media?mediaSpatialControls():target?.card?.settings?settingsControls():(headset?spatialControls():controls());
+    const controlsForTarget=target=>target?.card?.settings?settingsControls():(headset?spatialControls():controls());
     const targetButtonAtRay=target=>{
         if(!target?.width || !target.height)return null;
         const x=(target.localX/target.width+.5)*1000,logicalHeight=target.card?.height || (hidden?160:spatialHeight());
@@ -793,13 +792,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const imageSource=content?.sketchImage || content?.image || '';
             mediaCollapsed=true;mediaTouched=false;
             if(imageSource)mediaCollapsed=false;
-            loadPanelImage(imageSource);
+            loadPanelImage(imageSource,{delayMs:Number(content?.imageTransitionDelayMs)||0,discardPrevious:Boolean(content?.discardPreviousImage)});
             tab='Details';hidden=false;page=0;render(true);
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setContextualHint(message=''){contextHint=String(message || '');page=0;updateReading();},
+        setPanelHints(values=[]){rotatingPanelHints=Array.isArray(values)?values.map(String).filter(Boolean):[];panelHintIndex=0;clearInterval(panelHintTimer);panelHintTimer=0;if(rotatingPanelHints.length>1)panelHintTimer=setInterval(()=>{panelHintIndex=(panelHintIndex+1)%rotatingPanelHints.length;if(!contextHint && !identity?.hint && tab!=='Help')updateReading();},7000);if(!contextHint && !identity?.hint && tab!=='Help')updateReading();},
         setMediaCollapsed(value=true){mediaCollapsed=Boolean(value);mediaTouched=false;if(mediaCollapsed && mediaDetached){mediaDetached=false;mediaFloating?.remove();mediaFloating=null;mediaPosition=null;mediaPose=null;}render(true);},
         setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && showPlantPreview() && !mediaCollapsed)render(true);else syncPanelWings();},
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;render();},
@@ -841,7 +841,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             }
             const heldRay=handMoveRay || (heldTransform?{origin:{x:heldTransform[12],y:heldTransform[13],z:heldTransform[14]},direction:{x:-heldTransform[8],y:-heldTransform[9],z:-heldTransform[10]}}:xrFrame?null:inputRay);
             if(spatialGrabPending && time-spatialGrabPending.startedAt>=PANEL_GRAB_HOLD_MS){
-                if(heldRay && hit(heldRay)?.card?.id===spatialGrabPending.cardId)spatialMove={...spatialGrabPending,panel:spatialGrabPending.panel};
+                if(heldRay && hit(heldRay)?.card?.id===spatialGrabPending.cardId){
+                    if(spatialGrabPending.panel==='media' && !mediaDetached){mediaPose=spatialMediaDockPose(mediaDockSide);mediaDetached=true;mediaCollapsed=false;render(true);}
+                    spatialMove={...spatialGrabPending,panel:spatialGrabPending.panel};onGrab(spatialGrabPending.source);
+                }
                 spatialGrabPending=null;
             }
             if(spatialMove && heldRay?.origin && heldRay?.direction){
@@ -904,8 +907,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const target=hit(ray);if(!target)return;
             event.stopImmediatePropagation();
             const button=targetButtonAtRay(target);
-            if(event.type==='selectstart' && button?.action==='MoveMediaPanel'){
-                if(!mediaDetached){mediaPose=spatialMediaDockPose(mediaDockSide);mediaDetached=true;mediaCollapsed=false;render(true);}
+            if(event.type==='selectstart' && target.card?.id==='media'){
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'media',cardId:'media',startedAt:performance.now(),handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
@@ -916,6 +918,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(event.type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
         };for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);
             removeXrControls=()=>{spatialGrabPending=null;spatialMove=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);};},
-        destroy(){mediaLoadToken++;mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
+        destroy(){mediaLoadToken++;clearTimeout(mediaTransitionTimer);clearInterval(panelHintTimer);mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
     };render();return api;
 }

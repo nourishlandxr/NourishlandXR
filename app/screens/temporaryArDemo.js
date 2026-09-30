@@ -242,6 +242,7 @@ let introBoardNextGuide = '';
 let introBoardNextGuideVisible = false;
 let placementReady = false, placementDistance = AR_EXPERIENCE_CONFIG.placementDistanceMetres;
 let demoHeldIndex = -1;
+let demoGrabPreparingIndex = -1;
 let suppressDemoMarkerClick = false;
 let suppressSessionSelectUntil = 0;
 let demoWebModeOpen = false;
@@ -290,6 +291,14 @@ const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
 const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
 const DEMO_TOTEM_HALF_HEIGHT_METRES = .56;
 const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
+const DEMO_PRESENTATION_FONT='"Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';
+const DEMO_PANEL_HINTS=Object.freeze([
+    'The image panel is attached above.',
+    'Open Settings to adjust the experience.',
+    'Select Help if you need guidance.',
+    'Use Back to revisit an earlier information cell.',
+    'Hide this panel when you want an unobstructed view.'
+]);
 const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo',
     'NLXR is an immersive information hub for living landscapes.'
@@ -363,6 +372,13 @@ function demoHexColour(value,fallback=[.32,.52,.36]){
     const match=String(value||'').match(/^#?([\da-f]{6})$/i);
     if(!match)return fallback;
     return match[1].match(/[\da-f]{2}/gi).map(part=>parseInt(part,16)/255);
+}
+function pulseDemoHaptics(inputSource=null){
+    try{
+        const actuator=inputSource?.gamepad?.vibrationActuator;
+        if(actuator?.playEffect)void actuator.playEffect('dual-rumble',{duration:45,strongMagnitude:.18,weakMagnitude:.12}).catch(()=>{});
+        else if(inputSource?.gamepad?.hapticActuators?.[0]?.pulse)void inputSource.gamepad.hapticActuators[0].pulse(.18,45);
+    }catch{}
 }
 const DEMO_ORB_MATERIALS = Object.freeze({
     brown: {
@@ -2027,7 +2043,8 @@ function selectWelcomeCell() {
 function showDemoTutorialMedia(key) {
     const art=DEMO_TUTORIAL_ART[key];
     if(!art)return;
-    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:'',hideTitle:true,imageFit:'contain',imageFadeMs:key==='references'?1400:650,body:'',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
+    const delayedIllustration=key==='totem' || key==='connectedAreas';
+    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:'',hideTitle:true,imageFit:'contain',imageFadeMs:key==='references'?1400:850,imageTransitionDelayMs:delayedIllustration?220:0,discardPreviousImage:delayedIllustration,body:'',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
@@ -2160,7 +2177,7 @@ function showSceneContinue(label, onContinue, stepLabel) {
 
 function cycleDemoNoteTemplate(record) {
     if (!record || record.demoType !== 'note') return false;
-    infoPanel?.setMediaCollapsed(true);
+    infoPanel?.showLearning({id:'demo-note-guidance',title:'Location Note',body:'In a full Project, you can edit this Note or create your own. Notes can hold observations, instructions and other place-based knowledge.',accent:'#dcef95',mesh:'lim',editable:false});
     infoPanel?.setContextualHint('');
     const current = Math.max(0, Number(record.demoNoteTemplateIndex) || 0);
     record.demoNoteTemplateIndex = (current + 1) % DEMO_NOTE_TEMPLATE_KEYS.length;
@@ -3860,6 +3877,7 @@ function beginPointerDemoHold(event) {
         demoHoldTimer = setTimeout(() => {
             demoHoldTimer = null;
             demoHeldIndex = index;
+            pulseDemoHaptics();
             markers[index].simulatedAnchor = capturedSimulatedAnchor();
             setGuide(`Holding ${markers[index].name || 'the orb'}. Move the pointer, then release.`);
             updateSimulatedMarkers();
@@ -3873,15 +3891,18 @@ function beginPointerDemoHold(event) {
     event.currentTarget?.setPointerCapture?.(event.pointerId);
     suppressSessionSelectUntil = performance.now() + 1200;
     captureDemoGrabPose(target.record, demoPointerWorldOrigin(), demoPointerWorldRay());
+    demoGrabPreparingIndex=target.index;
     demoHoldTimer = setTimeout(() => {
         demoHoldTimer = null;
+        demoGrabPreparingIndex=-1;
         demoHeldIndex = target.index;
+        pulseDemoHaptics();
         setGuide(`Holding ${target.record.name || 'the orb'}. Move your phone, then release.`);
     }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
     return true;
 }
 
-function beginControllerDemoHold() {
+function beginControllerDemoHold(inputSource=null) {
     if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
     const profile=demoInfoTarget();
     const target = demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
@@ -3891,16 +3912,19 @@ function beginControllerDemoHold() {
     const origin = demoPointerWorldOrigin();
     if (!origin) return false;
     captureDemoGrabPose(target.record, origin, demoPointerWorldRay());
+    demoGrabPreparingIndex=target.index;
     demoHoldTimer = setTimeout(() => {
         demoHoldTimer = null;
+        demoGrabPreparingIndex=-1;
         demoHeldIndex = target.index;
+        pulseDemoHaptics(inputSource);
         suppressSessionSelectUntil = performance.now() + 420;
         setGuide(`Holding ${target.record.name || 'the orb'}. Move the controller, then release.`);
     }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
     return true;
 }
 
-function beginHandDemoGrab() {
+function beginHandDemoGrab(inputSource=null) {
     if (placementReady || demoHeldIndex >= 0) return false;
     const profile=demoInfoTarget();
     const target = demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
@@ -3908,6 +3932,7 @@ function beginHandDemoGrab() {
     if (!target || !origin || target.record.demoInteractive === false) return false;
     if (!captureDemoGrabPose(target.record, origin, demoPointerWorldRay())) return false;
     demoHeldIndex = target.index;
+    pulseDemoHaptics(inputSource);
     setGuide(`Holding ${target.record.name || 'the orb'}. Move your hand, then release.`);
     return true;
 }
@@ -3921,6 +3946,7 @@ function selectDemoNoteTemplateAtPointer() {
 function releaseHeldDemoRecord() {
     clearTimeout(demoHoldTimer);
     demoHoldTimer = null;
+    demoGrabPreparingIndex=-1;
     if (demoHeldIndex < 0) return false;
     const record = markers[demoHeldIndex];
     demoHeldIndex = -1;
@@ -4124,7 +4150,8 @@ function renderInterface(simulated) {
     }
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,cellOpacity:demoCellOpacity,handMode:demoHandMode,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -4378,7 +4405,7 @@ function pollDemoHandPinch() {
         if(!handled)handled=Boolean(selectDemoProfileCell());
         if(!handled)handled=Boolean(selectDemoNoteTemplateAtPointer());
         if(!handled)handled=Boolean(activateDemoTotemCard(totemCardsRenderer?.hit(latestControllerRay)));
-        if(!handled)handled=Boolean(beginHandDemoGrab());
+        if(!handled)handled=Boolean(beginHandDemoGrab(latestTrackedHandStates.find(entry=>entry.state===latestHandState)?.source));
         if (handled) { handPinchActive = true; return; }
     }
     if (!pinching && handPinchActive && demoHeldIndex >= 0) releaseHeldDemoRecord();
@@ -4573,26 +4600,26 @@ function drawIntroNoteContent(ctx) {
     ctx.textBaseline = 'middle';
     if(arWelcomeSettleStage)ctx.globalAlpha*=Math.max(0,Math.min(1,(arWelcomeClock.elapsed-arWelcomeSettleStartedAt)/850));
     ctx.fillStyle = 'rgba(232,246,225,.7)';
-    ctx.font = '600 29px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';
+    ctx.font = `600 29px ${DEMO_PRESENTATION_FONT}`;
     ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
     const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
     if(openingElapsed!==null){
         if(openingElapsed<DEMO_WELCOME_OPENING_MS){
             const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
             const openingTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
-            let openingTitleSize=80;
+            let openingTitleSize=96;
             ctx.globalAlpha*=fade;ctx.fillStyle='#f7fbf4';
-            do {ctx.font=`700 ${openingTitleSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
+            do {ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
             ctx.fillText(openingTitle,contentCenter,420);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font='600 42px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';drawWrappedTextureText(ctx,demoLocalizedText('NLXR is an immersive information hub for living landscapes.'),contentCenter,570,780,54,2);}
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font=`600 42px ${DEMO_PRESENTATION_FONT}`;drawWrappedTextureText(ctx,demoLocalizedText('NLXR is an immersive information hub for living landscapes.'),contentCenter,570,780,54,2);}
         }
         ctx.restore();return;
     }
     ctx.fillStyle = '#f7fbf4';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
-    let titleSize = arWelcomeIntroPending ? 78 : 80;
-    const titleFont = '"Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';
+    let titleSize = 96;
+    const titleFont = DEMO_PRESENTATION_FONT;
     ctx.font = `700 ${titleSize}px ${titleFont}`;
     while (titleSize > 36 && ctx.measureText(introBoardTitle).width > titleWidth) {
         titleSize -= 2;
@@ -4630,7 +4657,7 @@ function drawIntroNoteContent(ctx) {
     const bodyTop = 498;
     const bodyBottom = introBoardNextGuideVisible && introBoardNextGuide ? 705 : 775;
     const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
-    ctx.font = `600 ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
+    ctx.font = `600 ${bodyLayout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
     const bodyX = contentCenter;
     const bodyHeight=bodyLayout.paragraphLines.reduce((height,lines)=>height+lines.length*bodyLayout.lineHeight,0)+Math.max(0,bodyLayout.paragraphLines.length-1)*bodyLayout.paragraphGap;
     let paragraphY = bodyTop+Math.max(0,(bodyBottom-bodyTop-bodyHeight)/2);
@@ -4657,7 +4684,7 @@ function drawIntroNoteContent(ctx) {
         ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
         ctx.beginPath();ctx.moveTo(contentLeft,724);ctx.lineTo(contentLeft+contentWidth,724);ctx.stroke();
         ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
-        ctx.font='500 30px "Segoe UI Variable", Inter, system-ui, sans-serif';
+        ctx.font=`500 30px ${DEMO_PRESENTATION_FONT}`;
         const guideLines=wrappedTextureLines(ctx,`Next · ${introBoardNextGuide}`,contentWidth);
         guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentCenter,736+index*29,contentWidth));
     }
@@ -5170,7 +5197,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1),
-            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
+            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, held:demoHeldIndex===markers.indexOf(record), grabReady:demoGrabPreparingIndex===markers.indexOf(record), highlighted:demoHeldIndex===markers.indexOf(record) || demoGrabPreparingIndex===markers.indexOf(record) || signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {
@@ -5283,6 +5310,14 @@ function drawMarker(view) {
         if (plantProfile) gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         if (plantProfile) gl.depthMask(true);
+        if(noteSign && (demoHeldIndex===markers.indexOf(record) || demoGrabPreparingIndex===markers.indexOf(record))){
+            const point=(sx,sy)=>({x:model[12]+model[0]*sx+model[4]*sy,y:model[13]+model[1]*sx+model[5]*sy,z:model[14]+model[2]*sx+model[6]*sy});
+            const corners=[point(-.5,-.5),point(.5,-.5),point(.5,.5),point(-.5,.5)];
+            const ready=demoGrabPreparingIndex===markers.indexOf(record),edgeColor=ready?[.55,.86,1]:[.62,1,.28];
+            gl.depthMask(false);
+            for(let edge=0;edge<4;edge++)drawSpatialTether(gl,tetherRenderer,view,corners[edge],corners[(edge+1)%4],{segments:1,width:.009,curve:0,lift:0,color:edgeColor});
+            gl.depthMask(true);gl.useProgram(program);
+        }
         if (record.isBoundary) {
             record.boundaryTexture ||= createBoundaryTexture();
             const boundaryMvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, groundMatrix(record.position, 4.6)));
@@ -5443,7 +5478,7 @@ async function startImmersive() {
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
             if (beginImmersiveKnowledgeCombination()) return;
-            beginControllerDemoHold();
+            beginControllerDemoHold(event.inputSource);
         });
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
@@ -5452,6 +5487,7 @@ async function startImmersive() {
             if (demoHeldIndex < 0) {
                 clearTimeout(demoHoldTimer);
                 demoHoldTimer = null;
+                demoGrabPreparingIndex=-1;
                 return;
             }
             releaseHeldDemoRecord();

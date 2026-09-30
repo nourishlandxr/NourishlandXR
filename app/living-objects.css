@@ -1560,9 +1560,9 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] {
     top:var(--sign-top,50%);
     width:44%;
-    height:47px;
-    min-height:47px;
-    padding:5px 12px;
+    height:39px;
+    min-height:39px;
+    padding:4px 12px;
     align-content:center;
     gap:1px;
     border-radius:2px;
@@ -1570,9 +1570,9 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side="left"] { left:3%;right:auto;clip-path:polygon(16% 0,100% 0,100% 100%,16% 100%,0 50%); }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side="right"] { left:53%;right:auto;clip-path:polygon(0 0,84% 0,100% 50%,84% 100%,0 100%); }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { font-family:Inter,"Segoe UI",system-ui,sans-serif;font-weight:600;text-shadow:0 1px 2px rgba(20,27,21,.7); }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:9px;line-height:1.1;letter-spacing:.1em;font-weight:750; }
-.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:12px;line-height:1.12;font-weight:700; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { font-family:Inter,"Segoe UI",system-ui,sans-serif;font-weight:700;text-shadow:0 1px 1px rgba(255,244,219,.4); }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { color:#21180f;font-size:8px;line-height:1.1;letter-spacing:.1em;font-weight:800; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { color:#17110d;font-size:13px;line-height:1.12;font-weight:800; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] > span { display:none; }
 .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side]::after { display:none; }
 .tryit-sim-marker-plant.is-neighbour-orb { opacity:.78;scale:.78;filter:saturate(.75);animation:nlxr-neighbour-arrive 1.2s ease both; }
@@ -1583,8 +1583,8 @@ button.knowledge-source-cell{appearance:none;font:inherit;cursor:pointer;touch-a
 @media(max-width:600px) {
     .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system { width:min(48vw,220px);height:min(38vh,310px); }
     .tryit-sim-totem-system .nlxr-totem-cards > button:nth-child(1) { min-height:64px;width:62%; }
-    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { height:42px;min-height:42px;padding:4px 7px; }
-    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:9px; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] { height:36px;min-height:36px;padding:3px 7px; }
+    .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] strong { font-size:10px; }
     .tryit-sim-totem-system .nlxr-totem-cards > button[data-sign-side] small { font-size:7px; }
 }
 .nlxr-totem-system .nlxr-totem-cards > button strong { color:#fff9e8; font-size:14px; }
@@ -2082,3 +2082,25 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .nlxr-media-floating.is-grabbed { border-color:#dfff9b; box-shadow:0 24px 58px rgba(2,9,19,.65),0 0 0 3px rgba(223,255,155,.48),0 0 34px rgba(223,255,155,.5); cursor:grabbing; }
 .nlxr-media-floating .nlxr-plant-preview.is-tutorial-art { aspect-ratio:4/3; background:#e9edea; }
 .nlxr-media-floating .nlxr-plant-preview.is-tutorial-art img { object-fit:contain; transition:opacity 1.4s ease; }
+
+/* A clear two-state grab cue shared by demo Notes, Plant Orbs and totems. */
+.tryit-demo .tryit-sim-marker.is-drag-ready { outline-color:#bceeff; box-shadow:0 0 0 8px rgba(166,231,250,.16),0 0 28px rgba(119,212,247,.64); }
+.tryit-demo .tryit-sim-marker.is-held { outline:3px solid #dfff9b; outline-offset:7px; box-shadow:0 0 0 9px rgba(223,255,155,.2),0 0 34px rgba(196,255,113,.72); filter:drop-shadow(0 0 14px rgba(223,255,155,.92)); }
+
+/* Keep every welcome board on one readable type scale and text alignment. */
+.tryit-demo .tryit-guided-choice.is-welcome-board h2 {
+    color:#fbfdf9!important;
+    font-family:"Manrope","Segoe UI Variable",Inter,system-ui,sans-serif!important;
+    font-size:clamp(1.7rem,4vw,2.55rem)!important;
+    font-weight:700!important;
+    line-height:1.12!important;
+    text-align:center!important;
+    text-wrap:balance;
+}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window,
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {
+    font-family:"Manrope","Segoe UI Variable",Inter,system-ui,sans-serif!important;
+    text-align:center!important;
+}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window { width:min(100%,66ch); margin-inline:auto; }
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) { min-height:62px; font-size:clamp(1rem,1.6vw,1.2rem); }
