@@ -380,6 +380,14 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
   ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.shadowColor=accentRgba(accent,hue,.72);ctx.shadowBlur=hoverOnly?18:14;ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?5:4;
   learningCellPath(ctx,r-2);ctx.stroke();ctx.shadowBlur=0;
  }
+ if(visual.holdProgress>0){
+  ctx.save();ctx.strokeStyle='#dfff9b';ctx.lineWidth=6;ctx.lineCap='round';
+  ctx.beginPath();ctx.arc(0,0,r+11,-Math.PI/2,-Math.PI/2+Math.PI*2*visual.holdProgress);ctx.stroke();ctx.restore();
+ }
+ if(visual.connected){
+  ctx.save();ctx.strokeStyle='rgba(223,255,155,.78)';ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(0,0,r+10+(reducedMotion?0:Math.sin(elapsed/380)*3),0,Math.PI*2);ctx.stroke();ctx.restore();
+ }
  ctx.globalAlpha=node.opacity*smooth(node.progress,.35,.65);
  ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.fillStyle='rgba(255,255,245,.98)';
@@ -593,7 +601,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  for(const node of frame.nodes){
   const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
   const linked=linkedKeys.has(node.key),linkedCurrent=linked?{...current,accent:relationship.accent}:current;
-  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{selected:options.selectedKey===node.key,hovered:options.hoverKey===node.key,pathway});
+  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{selected:options.selectedKey===node.key,hovered:options.hoverKey===node.key,pathway,holdProgress:options.holdKey===node.key?options.holdProgress:0,connected:options.connectedKey===node.key});
  }
  }
  ctx.restore();

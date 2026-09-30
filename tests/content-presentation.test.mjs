@@ -26,18 +26,15 @@ test('guided narrative explains the place map, proves one Plant Orb, then introd
     assert.match(closing, /school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects/);
 });
 
-test('post-LIMO discovery offers two plant-to-learning combinations and an optional deeper connection', () => {
+test('post-LIMO discovery connects the authored Pigeon Pea and Living Landscapes cells', () => {
     const demo = read('app/screens/temporaryArDemo.js');
-    const connections = read('app/services/demoKnowledgeConnections.js');
+    const connections = read('app/services/demoNativeConnection.js');
     const guide = demo.slice(demo.indexOf('const DEMO_ORIENTATION_STEPS'), demo.indexOf('function runArWelcomeTutorial'));
-    assert.match(demo, /showKnowledgeCombinationIntroduction/);
-    assert.match(demo, /resolveKnowledgeCombination/);
-    assert.match(connections, /Living Landscapes/);
-    assert.match(connections, /Pruning as Biomass Cycling/);
-    assert.match(connections, /Wildlife and Relationships/);
-    assert.match(connections, /Root Partnerships/);
-    assert.match(connections, /Place and Observation/);
-    assert.match(connections, /Watch What Changes/);
+    assert.match(demo, /showNativeConnectionIntroduction/);
+    assert.match(demo, /meshRelationships\.resolve\(\[source,target\]\)/);
+    assert.match(connections, /DEMO_NATIVE_SOURCE_ID = 'food-forest'/);
+    assert.match(connections, /DEMO_NATIVE_TARGET_ID = 'lim-food-forest'/);
+    assert.doesNotMatch(demo, /knowledge-combination|Choose one plant characteristic to begin/);
     assert.match(demo, /welcomeAutoAdvanceReady\(arWelcomeClock\.elapsed/);
     assert.match(demo, /limMeshActivatedAt=arWelcomeClock\.elapsed-AR_WELCOME_SETTLED_MS/);
     assert.match(demo, /runArWelcomeTutorial\(0\)/);
@@ -173,7 +170,7 @@ test('Areas hand the journey to public learning pathways and quiet mapped object
     assert.match(demo, /record\.demoType==='note'[\s\S]*record\.demoNarrativeFaded=true/);
     assert.match(styles, /\.tryit-sim-marker-note\.is-narrative-faded/);
     assert.match(styles, /\.nlxr-totem-system\.is-narrative-faded \.nlxr-totem-controls/);
-    assert.match(demo, /Knowledge grows through connection/);
+    assert.match(demo, /Connect plant knowledge to learning/);
 });
 
 test('main intro gently fades while it narrates and the green welcome board has no old tagline', () => {

@@ -1430,7 +1430,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'',hideTitle:true,imageFit:'contain'/);
     assert.match(source, /function prepareStableLimoSurface\(\)[\s\S]*record\.demoInteractive=true;[\s\S]*record\.demoAlive=true;/);
     assert.doesNotMatch(source.match(/function prepareStableLimoSurface\(\) \{[\s\S]*?\n\}/)?.[0] || '', /demoExpanded=false|demoExpandedNodeIds=\[\]/);
-    assert.match(source, /function startKnowledgeCombinationExperience\(\)\{[\s\S]*prepareStableLimoSurface\(\);[\s\S]*useSharedWelcomeBoard\(true\)/);
+    assert.match(source, /function startNativeConnectionExperience\(\) \{[\s\S]*prepareStableLimoSurface\(\);[\s\S]*limMeshVisible=true;[\s\S]*useSharedWelcomeBoard\(true\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.match(source, /const DEMO_WELCOME_OPENING_MS=12000/);
     assert.match(source, /const DEMO_ARCHETYPE_START_MS=20500/);

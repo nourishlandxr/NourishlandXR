@@ -361,7 +361,8 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         const open = expanded.has(node.path);
         const hovered = hoverPath === node.path;
         const selected = String(options.selectedNodeId || '') === node.path;
-        const active = open || hovered || selected;
+        const connected = String(options.connectedPath || '') === node.path;
+        const active = open || hovered || selected || connected;
         const hue = pimNodeHue(node);
         const renderedRadius = Math.max(22, Number(node.layoutCellWidthPercent) / 100 * width / 2);
         // A hover/selection state changes only emphasis. Cell scale stays
@@ -387,6 +388,10 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             context.setLineDash([Math.max(4,radius*.12),Math.max(3,radius*.07)]);
             drawHexagon(context,point.x,point.y,radius-3,'rgba(0,0,0,0)',`rgba(214,246,173,${.28+progress*.68})`,2+progress*2);
             context.setLineDash([]);
+        }
+        if (connected) {
+            context.shadowColor='rgba(223,255,155,.75)';context.shadowBlur=18;
+            drawHexagon(context,point.x,point.y,radius+5,'rgba(0,0,0,0)','rgba(223,255,155,.88)',3);
         }
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
