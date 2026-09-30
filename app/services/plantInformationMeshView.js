@@ -380,11 +380,22 @@ function pimPointInsideTarget(target, event) {
  * One deliberate PIM gesture for Demo and Creator. Delegation keeps the
  * binding valid as reconcilePlantInformationMesh appends new children. A
  * marked click is emitted only after the complete hold so the existing screen
- * handlers remain the one shared data/action path.
+ * handlers remain the one shared data/action path. A screen with an explicit
+ * click handler can opt out of interception while retaining layout binding.
  */
 export function bindPlantInformationMeshPress(container, options = {}) {
     if (!container || container.dataset.pimPressBound === 'true') return () => {};
     container.dataset.pimPressBound = 'true';
+    if (options.activateOnClick === true) {
+        const map = container.querySelector('[data-pim-renderer="canonical"]');
+        bindPimConnectionLayout(map, options.signal);
+        return () => {
+            map?.__pimConnectionLayoutCleanup?.();
+            if (map?.__pimTextFitFrame && globalThis.cancelAnimationFrame) globalThis.cancelAnimationFrame(map.__pimTextFitFrame);
+            if (map) map.__pimTextFitFrame = 0;
+            container.dataset.pimPressBound = 'false';
+        };
+    }
     const active = { pointerId: null, target: null, timer: 0, frame: 0, complete: false, keyboard: false, startedAt: 0 };
     const raf = callback => (globalThis.requestAnimationFrame
         ? globalThis.requestAnimationFrame(callback)

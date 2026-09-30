@@ -2221,7 +2221,7 @@ function syncNativeConnectionEffect(now=performance.now()) {
 function nativeConnectionPanelGuide() {
     const state=nativeConnectionState;if(!state)return;
     const body=state.phase==='source'
-        ? `1. Select and hold Pigeon Pea’s ${state.sourceTitle} cell. 2. Direct the connection toward LIMO’s ${state.targetTitle} cell. 3. Hold ${state.targetTitle} to connect them.`
+        ? `1. Select Pigeon Pea’s ${state.sourceTitle} cell. 2. Direct the connection toward LIMO’s ${state.targetTitle} cell. 3. Hold ${state.targetTitle} to connect them.`
         : state.phase==='target'
         ? `The ${state.sourceTitle} cell is selected. Aim at LIMO’s ${state.targetTitle} cell and hold until its progress ring completes. Release early to cancel and try again.`
         : state.phase==='resolving'
@@ -2254,7 +2254,7 @@ function startNativeConnectionExperience() {
     limHiddenCells.delete(spec.targetId);
     useSharedWelcomeBoard(true);
     showIntroBoard('Connect a plant cell to a learning cell.',
-        [`Select Pigeon Pea’s ${nativeConnectionState.sourceTitle} cell in the open Plant Profile. A trigger press or short hold selects it.`],
+        [`Select Pigeon Pea’s ${nativeConnectionState.sourceTitle} cell in the open Plant Profile. A click or trigger press selects it.`],
         '',()=>{},
         {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.9',nextGuide:`Select ${nativeConnectionState.sourceTitle} in Pigeon Pea to continue.`});
     nativeConnectionPanelGuide();
@@ -3180,8 +3180,7 @@ function bindSimulatedInformationPanels(layer) {
             event.stopPropagation();
             const nodePath = cell.dataset.pimNode;
             if(nativeConnectionState?.phase==='source' && record===nativeConnectionPlant() && nodePath===nativeConnectionState.sourcePath){
-                if(event.__nxrPimHoldActivation)acceptNativePimCell(record,nodePath);
-                else setGuide(`Hold ${nativeConnectionState.sourceTitle} until the ring completes.`);
+                acceptNativePimCell(record,nodePath);
                 return;
             }
             const node = pimNodeAtPath(knowledgeFor(record), nodePath);
@@ -3207,7 +3206,9 @@ function bindSimulatedInformationPanels(layer) {
                 ? `${cellLabel} remains open.`
                 : `${cellLabel} opened into its information petals.${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring this plant.` : ''}`);
         });
-        bindPlantInformationMeshPress(profile);
+        // Desktop AR already owns the cell click action above. Keep the shared
+        // PIMO layout observer, but do not let the hold binder swallow clicks.
+        bindPlantInformationMeshPress(profile,{activateOnClick:true});
         handles.forEach(handle => {
             let start = null;
             handle.addEventListener('pointerdown', event => {

@@ -36,7 +36,7 @@ import {
     pimHoneycombTextureSize,
     wrapPimTextLines
 } from '../app/services/plantInformationMeshCanvas.js';
-import { plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
+import { bindPlantInformationMeshPress, plantInformationMeshMarkup } from '../app/services/plantInformationMeshView.js';
 import { createHoldToConfirmController } from '../app/services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../app/services/demoTutorialControls.js';
 import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
@@ -111,6 +111,9 @@ test('Demo and Creator consume one canonical PIM renderer, geometry and interact
     assert.match(styles, /plant-knowledge-press-fill/);
     assert.match(viewSource, /PIM_ACTIVATION_MS as PIM_PRESS_DURATION_MS/);
     assert.match(viewSource, /export function bindPlantInformationMeshPress/);
+    assert.match(viewSource, /options\.activateOnClick === true[\s\S]*bindPimConnectionLayout\(map, options\.signal\)/);
+    assert.match(demoSource, /bindPlantInformationMeshPress\(profile,\{activateOnClick:true\}\)/);
+    assert.doesNotMatch(demoSource, /event\.__nxrPimHoldActivation/);
     const fs = await import('node:fs/promises');
     await assert.rejects(() => fs.access(new URL('../app/services/creatorPlantProfileLayout.js', import.meta.url)));
 });
@@ -123,6 +126,20 @@ test('canonical AR PIM markup always exposes one center and six primary cells', 
         assert.match(markup, new RegExp(`data-pim-node-id="${compass.id}"`));
     }
     assert.match(markup, /data-pim-role="center"[^>]*>.*Pigeon Pea/s);
+});
+
+test('desktop AR click mode leaves PIMO cell clicks to the screen handler', () => {
+    const boundEvents = [];
+    const container = {
+        dataset: {},
+        querySelector: () => null,
+        addEventListener: type => boundEvents.push(type)
+    };
+    const cleanup = bindPlantInformationMeshPress(container, { activateOnClick: true });
+    assert.equal(container.dataset.pimPressBound, 'true');
+    assert.deepEqual(boundEvents, [], 'the hold layer does not install a click interceptor');
+    cleanup();
+    assert.equal(container.dataset.pimPressBound, 'false');
 });
 
 test('phone PIM markup uses the shared name-first density without a second renderer', () => {
