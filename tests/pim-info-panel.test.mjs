@@ -185,6 +185,18 @@ test('side dots reveal mounted wings without rebuilding or resizing the panel',(
     assert.match(panel,/mediaCollapsed \|\| mediaDetached \|\| \(settingsOpen && !mediaDetached\)/);
 });
 
+test('media movement uses the same hold gesture and settings expose shared mesh opacity',()=>{
+    const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+    assert.match(panel,/bindMediaPanelMove\(media\)/);
+    assert.match(panel,/if\(!mediaDetached\)detachMediaPanel\(\)/);
+    assert.match(panel,/mediaPointerDrag\.timer=setTimeout/);
+    assert.match(panel,/PANEL_GRAB_HOLD_MS/);
+    assert.match(panel,/action:'CellOpacity'/);
+    assert.match(panel,/Cells · \$\{Math\.round\(meshCellOpacity\*100\)\}%/);
+    assert.match(panel,/onCellOpacity\(meshCellOpacity\)/);
+    assert.match(panel,/panel:'media',cardId:'media',startedAt:performance\.now\(\)/);
+});
+
 test('cell selection updates reading content and remounts only when companion media changes',()=>{
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     const styles=readFileSync(new URL('../app/living-objects.css',import.meta.url),'utf8');

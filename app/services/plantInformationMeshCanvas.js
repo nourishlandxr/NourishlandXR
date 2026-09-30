@@ -335,6 +335,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     const bloomPath=String(options.bloomPath || '');
     const bloomForNode=node=>bloomPath && (node?.parentPath===bloomPath || String(node?.path || '').startsWith(`${bloomPath}/`)) ? bloom : 1;
     const hoverPath = String(options.hoverPath || '');
+    const cellOpacity = Math.max(0, Math.min(1, Number(options.cellOpacity ?? 1)));
     const position = node => {
         const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomForNode(node) : 1);
         return { x: point.x / 100 * width, y: point.y / 100 * height };
@@ -367,7 +368,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         // authored so opening a branch never makes the existing flower jump.
         const radius = renderedRadius;
         context.save();
-        context.globalAlpha = node.depth > 0 ? (.35 + .65 * nodeBloom) : 1;
+        context.globalAlpha = (node.depth > 0 ? (.35 + .65 * nodeBloom) : 1) * cellOpacity;
         if (active) {
             context.shadowColor = `hsla(${hue}, 70%, 68%, .22)`;
             context.shadowBlur = 8;
@@ -427,6 +428,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
 
     const coreRadius = Math.max(22, Number(nodes[0]?.layoutCellWidthPercent || 13.9) / 100 * width / 2);
     context.save();
+    context.globalAlpha=cellOpacity;
     context.shadowColor = 'rgba(76, 108, 166, .18)';
     context.shadowBlur = 8;
     drawHexagon(context, center.x, center.y, coreRadius, options.softSurface ? 'rgba(211,223,201,.10)' : 'rgba(39,58,92,.10)', options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);

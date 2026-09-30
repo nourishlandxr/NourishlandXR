@@ -540,6 +540,8 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
   })})).filter(frame=>frame.nodes.length);
  }
  if(options.drawCells===false){ctx.restore();return frames;}
+ const cellOpacity=Math.max(0,Math.min(1,Number(options.cellOpacity ?? 1)));
+ ctx.save();ctx.globalAlpha*=cellOpacity;
  const allNodes=frames.flatMap(frame=>frame.nodes);
  const selectedNode=allNodes.find(node=>node.key===options.selectedKey);
  const relationship=welcomeRelationshipFor(selectedNode?.limId);
@@ -594,6 +596,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
   if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{selected:options.selectedKey===node.key,hovered:options.hoverKey===node.key,pathway});
  }
  }
+ ctx.restore();
  ctx.restore();
  return frames;
 }
