@@ -8,8 +8,31 @@ import { createPlantKnowledgeResolver } from './spatialKnowledgePresentation.js'
 
 let session=null, starting=false, resetReadingSpace=null;
 const diagnostics=[];
+const AR_DIAGNOSTICS_STORAGE_KEY='nourishland-xr-last-diagnostics';
+const AR_DIAGNOSTICS_LIMIT=80;
 export function getArDiagnostics(){return [...diagnostics];}
-export function recordArFailure(error,stage='AR'){diagnostics.push(`${stage}: ${error?.message || error}`);}
+export function getPersistedArDiagnostics(){
+    try {
+        const saved=JSON.parse(globalThis.localStorage?.getItem(AR_DIAGNOSTICS_STORAGE_KEY) || '[]');
+        return Array.isArray(saved)?saved:[];
+    }
+    catch { return []; }
+}
+function appendArDiagnostic(message,{persist=false}={}){
+    const entry=`${new Date().toISOString()} ${message}`;
+    diagnostics.push(entry);
+    if(diagnostics.length>AR_DIAGNOSTICS_LIMIT)diagnostics.splice(0,diagnostics.length-AR_DIAGNOSTICS_LIMIT);
+    if(!persist)return;
+    try {
+        const saved=getPersistedArDiagnostics();
+        saved.push(entry);
+        globalThis.localStorage?.setItem(AR_DIAGNOSTICS_STORAGE_KEY,JSON.stringify(saved.slice(-AR_DIAGNOSTICS_LIMIT)));
+    } catch {}
+}
+export function recordArFailure(error,stage='AR'){
+    const detail=String(error?.stack || error?.message || error).slice(0,2000);
+    appendArDiagnostic(`${stage}: ${detail}`,{persist:true});
+}
 function developerDiagnosticsEnabled(){
     try { return JSON.parse(localStorage.getItem('nourishland-xr-settings') || '{}').developerDiagnostics === true; }
     catch { return false; }
@@ -21,9 +44,12 @@ export function recordArDiagnostic(stage, details = {}){
     if(!developerDiagnosticsEnabled())return;
     let payload='';
     try { payload=JSON.stringify(details); } catch { payload=String(details); }
-    diagnostics.push(`${stage}: ${payload}`);
+    appendArDiagnostic(`${stage}: ${payload}`);
 }
-export async function copyArDiagnostics(){await navigator.clipboard.writeText(diagnostics.join('\n') || 'No AR diagnostics recorded.');}
+export async function copyArDiagnostics(){
+    const entries=[...getPersistedArDiagnostics(),...diagnostics];
+    await navigator.clipboard.writeText(entries.join('\n') || 'No AR diagnostics recorded.');
+}
 export function isArActive(){return Boolean(session);}
 export function resetArPlacement(){resetReadingSpace?.();}
 export async function exitAr(){if(session)await session.end();}

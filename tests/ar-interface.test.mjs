@@ -1075,11 +1075,29 @@ test('immersive demo builds its welcome before requesting the first XR frame', (
     assert.ok(immersive.indexOf('renderInterface(false);') > -1);
     assert.ok(immersive.indexOf('renderInterface(false);') < immersive.indexOf('session.requestAnimationFrame(draw);'));
     assert.match(source, /if \(simulated\) introNarrationTimer = setTimeout\(showArWelcomeShowcase, 120\);\s*else showArWelcomeShowcase\(\);/);
-    assert.match(source, /try \{ drawSpatialRain\(view, _time\); \}\s*catch \(error\) \{ reportDemoRenderFailure\(error, 'rain render'\); \}/);
-    assert.match(source, /try \{ drawSpatialAmbientLife\(view\); \}\s*catch \(error\) \{ reportDemoRenderFailure\(error, 'ambient render'\); \}/);
+    assert.match(immersive, /beginXrFirstContentWatchdog\(\);/);
+    assert.match(source, /runXrFrameStep\('rain render',\(\)=>drawSpatialRain\(view, _time\)\)/);
+    assert.match(source, /runXrFrameStep\('ambient render',\(\)=>drawSpatialAmbientLife\(view\)\)/);
+    assert.match(source, /runXrFrameStep\('controller update',\(\)=>updateDemoControllerRay\(frame\)\)/);
+    assert.match(source, /runXrFrameStep\('marker render',\(\)=>drawMarker\(view\)\)/);
+    assert.match(source, /drawXrRecoverySurface\(view\)/);
+    assert.match(source, /NLXR-XR-01/);
+    assert.match(immersive, /if\(xrRecoveryStatus==='failed'\)\{returnToWelcome\(\);return;\}/);
     const entry = source.slice(source.indexOf('export async function startTemporaryArDemo'));
     assert.match(entry, /if \(!immersive\) \{\s*renderInterface\(true\);/);
     assert.doesNotMatch(entry, /renderInterface\(!immersive\)/);
+});
+
+test('immersive demo validates shaders and persists runtime failures', () => {
+    const source = read('app/screens/temporaryArDemo.js');
+    const diagnostics = read('app/services/arNote.js');
+    assert.match(source, /getShaderParameter\(shader,gl\.COMPILE_STATUS\)/);
+    assert.match(source, /getProgramParameter\(program,gl\.LINK_STATUS\)/);
+    assert.match(source, /getShaderInfoLog\(shader\)/);
+    assert.match(source, /getProgramInfoLog\(program\)/);
+    assert.match(diagnostics, /nourishland-xr-last-diagnostics/);
+    assert.match(diagnostics, /export function getPersistedArDiagnostics/);
+    assert.match(diagnostics, /recordArFailure[\s\S]*persist:true/);
 });
 
 test('demo placement stays clear of the Control panel at desktop and narrow widths', () => {
@@ -1403,7 +1421,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.demoActiveBranch = ''/);
     assert.match(source, /function replaceDemoTexture\(record\)/);
     assert.match(source, /function queueDemoPimTextureRefresh\(record\)/);
-    assert.match(source, /catch \(error\) \{ reportDemoRenderFailure\(error, 'PIM render'\); \}/);
+    assert.match(source, /runXrFrameStep\('PIM render',\(\)=>drawDemoKnowledge\(view\)\)/);
     assert.match(source, /function drawIntroSpatial\(view\)/);
     assert.match(source, /function createIntroControlTexture\(labelText/);
     assert.match(source, /function createIntroPointerTexture\(/);

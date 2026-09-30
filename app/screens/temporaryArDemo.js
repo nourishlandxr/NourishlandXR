@@ -109,6 +109,10 @@ let pimHold = null;
 let demoPimHover={record:null,path:''};
 let activePimLimBridge = null;
 let demoRenderFailureReported = false;
+const XR_FIRST_CONTENT_TIMEOUT_MS=2500;
+const XR_RECOVERY_CODE='NLXR-XR-01';
+let xrRecoveryTexture=null,xrRecoveryCanvas=null,xrRecoveryStatus='starting',xrRecoveryDetail='';
+let xrFirstContentRendered=false,xrFirstContentWatchdog=null,xrDisabledFrameSteps=new Set(),xrReportedFailurePhases=new Set();
 const meshRepository=createMeshRepository();
 const meshSourceResolver=createMeshSourceResolver({repository:meshRepository});
 const meshGenerator=createPlaceholderKnowledgeGenerator();
@@ -171,10 +175,47 @@ function queueDemoPimTextureRefresh(record) {
 }
 
 function reportDemoRenderFailure(error, phase = 'demo render') {
+    if(!xrReportedFailurePhases.has(phase)){
+        xrReportedFailurePhases.add(phase);
+        recordArFailure(error, phase);
+    }
+    xrRecoveryStatus='failed';
+    xrRecoveryDetail=phase;
+    if(xrRecoveryTexture && gl){gl.deleteTexture(xrRecoveryTexture);xrRecoveryTexture=null;}
     if (demoRenderFailureReported) return;
     demoRenderFailureReported = true;
-    recordArFailure(error, phase);
     setGuide('The scene is recovering. Your information is still available.');
+}
+
+function runXrFrameStep(phase, operation) {
+    if(xrDisabledFrameSteps.has(phase))return false;
+    try { operation();return true; }
+    catch(error){
+        xrDisabledFrameSteps.add(phase);
+        reportDemoRenderFailure(error,phase);
+        return false;
+    }
+}
+
+function beginXrFirstContentWatchdog(){
+    clearTimeout(xrFirstContentWatchdog);
+    xrFirstContentRendered=false;
+    xrRecoveryStatus='starting';
+    xrRecoveryDetail='';
+    xrDisabledFrameSteps=new Set();
+    xrReportedFailurePhases=new Set();
+    xrFirstContentWatchdog=setTimeout(()=>{
+        if(xrFirstContentRendered || !session)return;
+        reportDemoRenderFailure(new Error('No spatial content rendered before the startup deadline.'),'first-frame watchdog');
+    },XR_FIRST_CONTENT_TIMEOUT_MS);
+}
+
+function markXrFirstContentRendered(){
+    if(xrFirstContentRendered)return;
+    xrFirstContentRendered=true;
+    if(xrRecoveryStatus!=='failed')xrRecoveryStatus='ready';
+    clearTimeout(xrFirstContentWatchdog);xrFirstContentWatchdog=null;
+    recordArDiagnostic('Temporary demo first spatial frame',{mode:sessionMode});
 }
 function demoInfoTarget() { return [...markers].reverse().filter(r=>r.demoType==='plant' && r.demoExpanded && demoAreaVisible(r)).map(record=>({record,target:demoPimPointerTarget(record)})).find(t=>t.target?.node || t.target?.pimBack) || null; }
 function syncDemoPimHover(){
@@ -571,6 +612,7 @@ function clearSessionState() {
     clearTimeout(pointerPressTimer);
     clearTimeout(demoHoldTimer);
     clearTimeout(introNarrationTimer);
+    clearTimeout(xrFirstContentWatchdog);xrFirstContentWatchdog=null;xrFirstContentRendered=false;xrDisabledFrameSteps=new Set();xrReportedFailurePhases=new Set();xrRecoveryStatus='starting';xrRecoveryDetail='';
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
@@ -592,6 +634,7 @@ function clearSessionState() {
     if (introKnowledgeTexture) gl?.deleteTexture(introKnowledgeTexture);
     if (introControlTexture) gl?.deleteTexture(introControlTexture);
     if (introPointerTexture) gl?.deleteTexture(introPointerTexture);
+    if (xrRecoveryTexture) gl?.deleteTexture(xrRecoveryTexture);
     introNoteTexture = null;
     introNoteCanvas = null;
     introBoardVisibleBody = '';
@@ -606,6 +649,8 @@ function clearSessionState() {
     introControlTextureLabel = '';
     introPointerTexture = null;
     introPointerTextureKind = '';
+    xrRecoveryTexture = null;
+    xrRecoveryCanvas = null;
     demoPimWebController?.destroy();
     demoPimWebController = null;
     demoHoldButtonCleanup?.();
@@ -4207,15 +4252,32 @@ function groundMatrix(position, scale = 1) {
     return new Float32Array([scale, 0, 0, 0, 0, 0, -scale, 0, 0, scale, 0, 0, position.x, position.y - .12, position.z, 1]);
 }
 
+function compileDemoShader(type,source,label){
+    const shader=gl.createShader(type);
+    if(!shader)throw new Error(`${label} shader could not be created.`);
+    gl.shaderSource(shader,source);
+    gl.compileShader(shader);
+    if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)){
+        const detail=gl.getShaderInfoLog(shader) || 'No WebGL compiler details.';
+        gl.deleteShader(shader);
+        throw new Error(`${label} shader failed: ${detail}`);
+    }
+    return shader;
+}
+
 function setupRenderer() {
-    const vertex = gl.createShader(gl.VERTEX_SHADER);
-    gl.shaderSource(vertex, 'attribute vec3 p;attribute vec2 uv;uniform mat4 mvp;varying vec2 v;void main(){gl_Position=mvp*vec4(p,1.);v=uv;}');
-    gl.compileShader(vertex);
-    const fragment = gl.createShader(gl.FRAGMENT_SHADER);
-    gl.shaderSource(fragment, 'precision mediump float;varying vec2 v;uniform sampler2D t;uniform float opacity;void main(){vec4 sampleColor=texture2D(t,v);if(sampleColor.a<.02)discard;gl_FragColor=vec4(sampleColor.rgb,sampleColor.a*opacity);}');
-    gl.compileShader(fragment);
+    const vertex = compileDemoShader(gl.VERTEX_SHADER,'attribute vec3 p;attribute vec2 uv;uniform mat4 mvp;varying vec2 v;void main(){gl_Position=mvp*vec4(p,1.);v=uv;}','Vertex');
+    const fragment = compileDemoShader(gl.FRAGMENT_SHADER,'precision mediump float;varying vec2 v;uniform sampler2D t;uniform float opacity;void main(){vec4 sampleColor=texture2D(t,v);if(sampleColor.a<.02)discard;gl_FragColor=vec4(sampleColor.rgb,sampleColor.a*opacity);}','Fragment');
     program = gl.createProgram();
+    if(!program)throw new Error('Demo WebGL program could not be created.');
     gl.attachShader(program, vertex); gl.attachShader(program, fragment); gl.linkProgram(program);
+    if(!gl.getProgramParameter(program,gl.LINK_STATUS)){
+        const detail=gl.getProgramInfoLog(program) || 'No WebGL linker details.';
+        gl.deleteProgram(program);program=null;
+        gl.deleteShader(vertex);gl.deleteShader(fragment);
+        throw new Error(`Demo WebGL program failed: ${detail}`);
+    }
+    gl.deleteShader(vertex);gl.deleteShader(fragment);
     buffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
@@ -4468,6 +4530,42 @@ function canvasTexture(label, texture = null, flipY = false) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     return texture;
+}
+
+function createXrRecoveryTexture(){
+    const label=xrRecoveryCanvas ||= document.createElement('canvas');
+    label.width=1200;label.height=560;
+    const ctx=label.getContext('2d');
+    ctx.clearRect(0,0,label.width,label.height);
+    const failed=xrRecoveryStatus==='failed';
+    ctx.fillStyle=failed?'rgba(54,22,18,.96)':'rgba(9,37,29,.94)';
+    ctx.beginPath();ctx.roundRect(18,18,label.width-36,label.height-36,56);ctx.fill();
+    ctx.strokeStyle=failed?'rgba(255,176,128,.9)':'rgba(197,239,176,.9)';ctx.lineWidth=8;ctx.stroke();
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillStyle='#f5ffe9';ctx.font='700 62px system-ui, sans-serif';
+    ctx.fillText(failed?'Scene recovery active':'NourishlandXR is starting',label.width/2,170);
+    ctx.fillStyle='rgba(244,255,238,.9)';ctx.font='500 34px system-ui, sans-serif';
+    ctx.fillText(failed?`Press the trigger to return · ${XR_RECOVERY_CODE}`:'Preparing the spatial welcome…',label.width/2,278);
+    ctx.fillStyle=failed?'rgba(255,203,167,.88)':'rgba(214,239,199,.8)';ctx.font='500 25px system-ui, sans-serif';
+    ctx.fillText(failed?String(xrRecoveryDetail || 'XR runtime').slice(0,70):'If this remains visible, exit AR and reopen the demo.',label.width/2,382);
+    return canvasTexture(label,xrRecoveryTexture);
+}
+
+function drawXrRecoverySurface(view){
+    if(xrRecoveryStatus==='ready' || !viewerMatrix || !program || !buffer)return;
+    xrRecoveryTexture ||= createXrRecoveryTexture();
+    const anchor=introWorldAnchorFromViewer(viewerMatrix);
+    if(!anchor)return;
+    const center=introLocalPosition(anchor,[0,.04,-1.35]);
+    const model=billboardMatrix(center,2.85,2.75,anchor);
+    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
+    const p=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');
+    gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);
+    gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
+    gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,xrRecoveryTexture);
+    gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),1);
+    gl.disable(gl.CULL_FACE);gl.depthMask(false);gl.drawArrays(gl.TRIANGLES,0,6);gl.depthMask(true);
 }
 
 function createIntroNoteTexture(texture = null) {
@@ -5387,8 +5485,10 @@ async function startImmersive() {
         // the first XR frame is requested. Desktop fallback is rendered by the
         // caller only when session setup fails.
         renderInterface(false);
+        beginXrFirstContentWatchdog();
         session.addEventListener('select', event => {
             if(event.inputSource?.hand)return;
+            if(xrRecoveryStatus==='failed'){returnToWelcome();return;}
             captureDemoInputEventRay(event);
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
@@ -5439,32 +5539,41 @@ async function startImmersive() {
             if (!session || frame.session !== session || !gl) return;
             session.requestAnimationFrame(draw);
             introFrameToken = _time;
-            const pose = frame.getViewerPose(referenceSpace);
-            if (pose) {
+            let pose=null;
+            try { pose=frame.getViewerPose(referenceSpace); }
+            catch(error){reportDemoRenderFailure(error,'viewer pose');return;}
+            if (pose) runXrFrameStep('viewer transform',()=>{
                 viewerMatrix = Float32Array.from(pose.transform.matrix);
                 latestDemoView = pose.views?.[0] || null;
                 lastViewerPoseAt = _time;
-            }
-            const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
-            const hitPose = hit?.getPose(referenceSpace);
-            hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
-            groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
-            updateDemoControllerRay(frame);
-            pollDemoControllerSkip();
-            syncDemoPimHover();
-            syncImmersiveKnowledgeCombination(_time);
-            pollDemoControllerDepth(_time);
-            pollDemoHandPinch();
-            syncImmersiveLimHover();
-            tickLimActivation(_time);
-            infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame);
-            if(!limPanelDiagnosticRecorded && infoPanel?.getPosition?.()){
-                limDiagnostic('companion-panel-position',infoPanel.getPosition());
-                limPanelDiagnosticRecorded=true;
-            }
-            pimHold?.tick(_time);
-            if(!demoKnowledgeWorkspace) updateHeldDemoRecordPosition();
-            const layer = frame.session.renderState.baseLayer;
+            });
+            runXrFrameStep('hit-test update',()=>{
+                const hit = hitTestSource && frame.getHitTestResults(hitTestSource)[0];
+                const hitPose = hit?.getPose(referenceSpace);
+                hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
+                groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
+            });
+            runXrFrameStep('controller update',()=>updateDemoControllerRay(frame));
+            runXrFrameStep('controller skip',pollDemoControllerSkip);
+            runXrFrameStep('PIM hover',syncDemoPimHover);
+            runXrFrameStep('knowledge combination',()=>syncImmersiveKnowledgeCombination(_time));
+            runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
+            runXrFrameStep('hand pinch',pollDemoHandPinch);
+            runXrFrameStep('LIM hover',syncImmersiveLimHover);
+            runXrFrameStep('LIM activation',()=>tickLimActivation(_time));
+            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame));
+            runXrFrameStep('panel diagnostic',()=>{
+                if(!limPanelDiagnosticRecorded && infoPanel?.getPosition?.()){
+                    limDiagnostic('companion-panel-position',infoPanel.getPosition());
+                    limPanelDiagnosticRecorded=true;
+                }
+            });
+            runXrFrameStep('PIM hold',()=>pimHold?.tick(_time));
+            runXrFrameStep('held element update',()=>{if(!demoKnowledgeWorkspace)updateHeldDemoRecordPosition();});
+            let layer=null;
+            try { layer=frame.session.renderState.baseLayer; }
+            catch(error){reportDemoRenderFailure(error,'XR framebuffer');return;}
+            if(!layer){reportDemoRenderFailure(new Error('XR base layer unavailable.'),'XR framebuffer');return;}
             gl.bindFramebuffer(gl.FRAMEBUFFER, layer.framebuffer);
             gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
             if(!pose){gl.disable(gl.SCISSOR_TEST);gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);return;}
@@ -5475,16 +5584,13 @@ async function startImmersive() {
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                try { drawSpatialRain(view, _time); }
-                catch (error) { reportDemoRenderFailure(error, 'rain render'); }
-                try { drawSpatialAmbientLife(view); }
-                catch (error) { reportDemoRenderFailure(error, 'ambient render'); }
-                try { drawMarker(view); }
-                catch (error) { reportDemoRenderFailure(error, 'marker render'); }
-                try { drawDemoKnowledge(view); }
-                catch (error) { reportDemoRenderFailure(error, 'PIM render'); }
-                try { infoPanel?.draw(view); }
-                catch (error) { reportDemoRenderFailure(error, 'Control panel render'); }
+                runXrFrameStep('startup surface',()=>drawXrRecoverySurface(view));
+                runXrFrameStep('rain render',()=>drawSpatialRain(view, _time));
+                runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));
+                if(runXrFrameStep('marker render',()=>drawMarker(view)))markXrFirstContentRendered();
+                runXrFrameStep('PIM render',()=>drawDemoKnowledge(view));
+                runXrFrameStep('Control panel render',()=>infoPanel?.draw(view));
+                if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));
             }
             gl.disable(gl.SCISSOR_TEST);
         };
