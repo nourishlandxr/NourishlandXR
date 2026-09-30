@@ -25,6 +25,21 @@ test('the opening uses the existing LIM mesh with seeded parent-first succession
  }
 });
 
+test('the main welcome surface is readable from the first XR frame',()=>{
+ const stack=[];
+ const ctx={globalAlpha:1,textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',
+  save(){stack.push({globalAlpha:this.globalAlpha,textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},
+  restore(){Object.assign(this,stack.pop());},
+  measureText(text){return {width:text.length*10};},
+  createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};}};
+ for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','lineTo','quadraticCurveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
+ let contentOpacity=0;
+ drawArWelcomeShowcase(ctx,0,false,createArWelcomeClusters(),{
+  drawCells:false,drawRoots:false,drawContent:context=>{contentOpacity=context.globalAlpha;}
+ });
+ assert.equal(contentOpacity,1,'the opening heading must not inherit a zero-opacity whole-panel fade');
+});
+
 test('existing LIM cells reveal progressively, settle, then fade before copy begins',()=>{
  const early=welcomeOpeningFrames(3500,73421),middle=welcomeOpeningFrames(8000,73421),full=welcomeOpeningFrames(14000,73421),faded=welcomeOpeningFrames(AR_WELCOME_OPENING_MS,73421);
  const visible=frames=>frames.flatMap(frame=>frame.nodes).filter(node=>node.opacity>0).length;

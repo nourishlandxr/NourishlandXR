@@ -4725,7 +4725,9 @@ function drawIntroSpatial(view) {
     }
     const now = performance.now();
     if(arWelcomeShowcaseActive){
-        arWelcomeClock.tick(Date.now(),session?.visibilityState==='visible');
+        // XR sessions may report visible-blurred (or omit visibilityState).
+        // Only a truly hidden session should pause the opening clock.
+        arWelcomeClock.tick(Date.now(),session?.visibilityState!=='hidden');
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;

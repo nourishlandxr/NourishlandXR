@@ -504,7 +504,10 @@ export function welcomeOpeningFrames(elapsed,seed=0x4e4c5852,duration=AR_WELCOME
 }
 
 export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,options={}) {
- ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);ctx.globalAlpha=reducedMotion?1:smooth(elapsed,0,1800);
+ // The welcome surface must be readable on the first XR frame. Its former
+ // whole-panel fade started at zero and could leave Quest users facing an
+ // empty screen while the session clock waited for visibility updates.
+ ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);
  if(options.drawPanel!==false){
  drawArWelcomePanel(ctx);
  }
