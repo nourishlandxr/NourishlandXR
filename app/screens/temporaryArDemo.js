@@ -2381,6 +2381,23 @@ function fadeMappedSceneForLimo() {
     updateSimulatedMarkers();
 }
 
+function prepareStableLimoSurface() {
+    activePimLimBridge=null;
+    for(const record of markers){
+        if(record.demoType!=='plant')continue;
+        record.demoExpanded=false;
+        record.demoActiveBranch='';
+        record.demoSelectedNodeId='';
+        record.demoExpandedNodeIds=[];
+        record.demoExpandedBranches=[];
+        record.pimClosingNodePaths=[];
+        record.demoConnectionVisible=false;
+        refreshDemoRecord(record);
+    }
+    infoPanel?.setMediaCollapsed(true);
+    clearLimSelection();
+}
+
 function knowledgeCombinationPlantRecord(){
     return markers.find(record=>record.demoType==='plant' && (record.demoPlantPreset==='pigeon-pea' || /pigeon pea/i.test(record.name || ''))) || markers.find(record=>record.demoType==='plant');
 }
@@ -2538,7 +2555,8 @@ async function resolveKnowledgeCombination(deeper=false){
 }
 
 function startKnowledgeCombinationExperience(){
-    useSharedWelcomeBoard(false);clearLimSelection();knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};meshComposition.clear();knowledgeCombinationState=createDemoConnectionState();
+    prepareStableLimoSurface();
+    useSharedWelcomeBoard(true);knowledgeCombinationCleanup();knowledgeCombinationCleanup=()=>{};meshComposition.clear();knowledgeCombinationState=createDemoConnectionState();
     fadeMappedSceneForLimo();
     // The connection surface contains its own visible source and learning
     // cells. Keep the full LIM tree inactive while this focused interaction is
@@ -2548,7 +2566,9 @@ function startKnowledgeCombinationExperience(){
     if(plant){plant.demoInteractive=true;plant.demoAlive=true;plant.demoConnectionVisible=true;refreshDemoRecord(plant);}
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');if(board)board.hidden=true;
     appRoot?.querySelector('[data-tryit-intro-continue]')?.setAttribute('hidden','');
-    const overlay=ensureKnowledgeCombinationOverlay();overlay?.removeAttribute('hidden');arWelcomeLayer?.classList.add('is-combining-knowledge');syncKnowledgeCombinationOverlay();
+    const overlay=ensureKnowledgeCombinationOverlay();
+    if(!overlay){knowledgeCombinationState=null;useSharedWelcomeBoard(true);showKnowledgeCombinationIntroduction();setGuide('The connection view was restored. Continue to try it again.');return;}
+    overlay.removeAttribute('hidden');arWelcomeLayer.classList.add('is-combining-knowledge');syncKnowledgeCombinationOverlay();
     setGuide('Tap the Pigeon Pea orb or choose one of its two characteristic cells. Then hold and drag its glowing node.');
     knowledgeCombinationCleanup=()=>{limCancelFrame(knowledgeCombinationHold?.frame);knowledgeCombinationHold=null;overlay?.setAttribute('hidden','');arWelcomeLayer?.classList.remove('is-combining-knowledge');};
 }
@@ -2574,6 +2594,7 @@ function showKnowledgeCombinationIntroduction(){
 
 function showLimoLearningModes() {
     setDemoJourneyStage('apply');
+    prepareStableLimoSurface();
     showDemoTutorialMedia('connection');
     showIntroBoard(
         'Learn here or as a standalone experience',
@@ -2589,6 +2610,7 @@ function showLimoLearningModes() {
 }
 
 function showLimoArchetypes() {
+    prepareStableLimoSurface();
     fadeMappedSceneForLimo();
     clearLimSelection();
     limExpandedCells=new Set();
