@@ -201,7 +201,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     };
     const currentHint=()=>tab==='Help'?'':contextHint || identity?.hint || '';
     const pages=()=>infoPages(text(),headset?(largeText?29:34):(largeText?32:38),pathwayContext?4:7);
-    const title=()=>tab==='Help'?'Help':selection?.title || 'Control panel';
+    const title=()=>tab==='Help'?'Help':selection?.hideTitle?'':selection?.title || 'Control panel';
     const hasPimPath=()=>Boolean(selection && identity);
     const pimPath=()=>{
         if(!hasPimPath())return '';
@@ -214,7 +214,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const hasPimPathHeading=()=>hasPimPath() && tab==='Details';
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const previewMedia=()=>selection?.mesh==='lim' && (selection.sketchImage || selection.image)
-        ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false}
+        ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false,fit:selection.imageFit || 'cover'}
         : identity?.media?.image ? {...identity.media,caption:identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
     function loadPanelImage(source){
@@ -300,17 +300,18 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         button.addEventListener('click',event=>{event.stopPropagation();onClick();syncPanelWings();});return button;
     }
     function mediaFigure(preview){
-        const figure=document.createElement('figure');figure.className='nlxr-plant-preview';
+        const figure=document.createElement('figure');figure.className='nlxr-plant-preview';if(preview?.fit==='contain')figure.classList.add('is-tutorial-art');
         const stack=document.createElement('div');stack.className='nlxr-media-image-stack';
         const caption=document.createElement('figcaption');figure.append(stack,caption);
         if(preview){
-            const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';
+            const image=document.createElement('img');image.src=preview.image;image.alt=preview.alt || '';image.decoding='async';image.className='is-media-entering';image.onload=()=>requestAnimationFrame(()=>image.classList.remove('is-media-entering'));
             stack.append(image);figure.dataset.mediaTarget=preview.image;caption.textContent=preview.caption || '';caption.hidden=!preview.caption;
         }
         return figure;
     }
     function updateMediaFigure(figure,preview){
         const stack=figure.querySelector('.nlxr-media-image-stack'),caption=figure.querySelector('figcaption');
+        figure.classList.toggle('is-tutorial-art',preview?.fit==='contain');
         if(figure.dataset.mediaTarget===preview.image)return;
         figure.dataset.mediaTarget=preview.image;
         const image=document.createElement('img');image.alt=preview.alt || '';image.decoding='async';image.className='is-media-entering';
@@ -394,12 +395,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         handle.addEventListener('pointerdown',event=>{
             if(!mediaDetached || (event.button!==0 && event.pointerType==='mouse'))return;
             event.preventDefault();event.stopPropagation();const rect=mediaFloating.getBoundingClientRect();
-            mediaPointerDrag={pointerId:event.pointerId,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top,startX:event.clientX,startY:event.clientY,moved:false};
+            mediaPointerDrag={pointerId:event.pointerId,offsetX:event.clientX-rect.left,offsetY:event.clientY-rect.top,startX:event.clientX,startY:event.clientY,moved:false};mediaFloating?.classList.add('is-grab-ready');
             handle.setPointerCapture?.(event.pointerId);
             const move=next=>{
                 if(!mediaPointerDrag || next.pointerId!==mediaPointerDrag.pointerId)return;
                 const drag=mediaPointerDrag,rawLeft=next.clientX-drag.offsetX,rawTop=next.clientY-drag.offsetY;
                 drag.moved ||= Math.hypot(next.clientX-drag.startX,next.clientY-drag.startY)>4;
+                if(drag.moved)mediaFloating?.classList.add('is-grabbed');
                 const raw=clampMediaPosition(rawLeft,rawTop),rawRect={...mediaFloating.getBoundingClientRect(),left:raw.left,top:raw.top,right:raw.left+rect.width,bottom:raw.top+rect.height,width:rect.width,height:rect.height};
                 const candidate=closestDockCandidate(rawRect,element.getBoundingClientRect());
                 const position=candidate?placeMediaAgainstMain(candidate.side,rawRect,element.getBoundingClientRect()):raw;
@@ -409,10 +411,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const end=next=>{
                 if(!mediaPointerDrag || (next?.pointerId!==undefined && next.pointerId!==mediaPointerDrag.pointerId))return;
                 const drag=mediaPointerDrag,candidate=closestDockCandidate(mediaFloating.getBoundingClientRect(),element.getBoundingClientRect());
-                mediaPointerDrag=null;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',cancel);
+                mediaPointerDrag=null;mediaFloating?.classList.remove('is-grab-ready','is-grabbed');window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',cancel);
                 if(drag.moved){ignoreMediaClickUntil=performance.now()+450;if(candidate)dockMediaPanel(candidate.side);else{mediaFloating?.classList.remove('is-magnetized');delete mediaFloating?.dataset.dockSide;}}
             };
-            const cancel=next=>{if(next.pointerId!==mediaPointerDrag?.pointerId)return;mediaPointerDrag=null;window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',cancel);mediaFloating?.classList.remove('is-magnetized');};
+            const cancel=next=>{if(next.pointerId!==mediaPointerDrag?.pointerId)return;mediaPointerDrag=null;mediaFloating?.classList.remove('is-grab-ready','is-grabbed');window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',cancel);mediaFloating?.classList.remove('is-magnetized');};
             window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',cancel);
         });
     }
@@ -869,9 +871,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls(),hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
-            const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/MEDIA_FADE_MS));
+            const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
-            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,caption:plantMedia?(identity?.plant || ''):'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.plant || ''):'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(mediaDetached || (!settingsOpen && !mediaCollapsed && preview?.image))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,

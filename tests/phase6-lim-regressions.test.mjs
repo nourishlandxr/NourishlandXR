@@ -9,15 +9,15 @@ const panelSource = fs.readFileSync(new URL('../app/services/pimInfoPanel.js', i
 const styles = fs.readFileSync(new URL('../app/style.css', import.meta.url), 'utf8');
 
 test('Phase 6 welcome copy is bounded to the compact note and scrolls only in the DOM copy', () => {
-    assert.match(demoSource, /const contentWidth = 800/);
-    assert.match(demoSource, /const titleWidth = 900/);
-    assert.ok(demoSource.indexOf('const titleWidth = 900') < demoSource.indexOf('if(openingElapsed!==null)'), 'opening copy initializes its title bounds before drawing');
-    assert.match(demoSource, /ctx\.fillText\(introBoardTitle, contentCenter, 420, titleWidth\)/);
+    assert.match(demoSource, /const contentWidth = 880/);
+    assert.match(demoSource, /const titleWidth = 960/);
+    assert.ok(demoSource.indexOf('const titleWidth = 960') < demoSource.indexOf('if(openingElapsed!==null)'), 'opening copy initializes its title bounds before drawing');
+    assert.match(demoSource, /ctx\.fillText\(introBoardTitle, contentCenter, 420\)/);
     assert.match(demoSource, /NLXR is an immersive information hub for living landscapes/);
     assert.doesNotMatch(demoSource, /drawWrappedTextureText\(ctx, introBoardTitle/);
     assert.doesNotMatch(demoSource, /↙ Control panel/);
     assert.match(demoSource, /ctx\.textAlign = 'left'/);
-    assert.match(demoSource, /isOpeningStatement \? 650 : 520/);
+    assert.match(demoSource, /ctx\.font = `600 \$\{bodyLayout\.fontSize\}px/);
     assert.match(demoSource, /ctx\.rect\(contentLeft, bodyTop - 8, contentWidth, bodyBottom - bodyTop \+ 12\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \.tryit-board-text-window[\s\S]*overflow-y:auto/);
 });

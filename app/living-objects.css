@@ -75,6 +75,11 @@
 .nlxr-info-panel .nlxr-plant-preview { position:relative; margin:6px 0 12px; aspect-ratio:16/7; overflow:hidden; border:1px solid #c9dec866; border-radius:10px; background:#111915; box-shadow:inset 0 1px #ffffff26,0 8px 20px #0004; }
 .nlxr-info-panel .nlxr-plant-preview::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,transparent 55%,#10201966); }
 .nlxr-info-panel .nlxr-plant-preview img { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+.nlxr-info-panel .nlxr-plant-preview.is-tutorial-art { aspect-ratio:4/3; background:#e9edea; }
+.nlxr-info-panel .nlxr-plant-preview.is-tutorial-art::after { display:none; }
+.nlxr-info-panel .nlxr-plant-preview.is-tutorial-art img { object-fit:contain; transition:opacity 1.4s ease; }
+.nlxr-info-panel .nlxr-plant-preview:is(:hover,:focus-within) { border-color:rgba(188,238,255,.9); box-shadow:0 0 0 2px rgba(166,231,250,.24),0 0 22px rgba(119,212,247,.38); }
+@media(prefers-reduced-motion:reduce) { .nlxr-info-panel .nlxr-plant-preview.is-tutorial-art img,.nlxr-media-floating .nlxr-plant-preview.is-tutorial-art img { transition-duration:.01ms; } }
 .nlxr-plant-preview .nlxr-media-image-stack { position:relative; min-height:0; height:100%; overflow:hidden; }
 .nlxr-plant-preview .nlxr-media-image-stack img { position:absolute; inset:0; width:100%; height:100%; opacity:1; transition:opacity .65s ease; }
 .nlxr-plant-preview .nlxr-media-image-stack img.is-media-entering,
@@ -1201,13 +1206,13 @@
 
 /* Post-LIMO relationship experience. It lives on the shared spatial surface,
    not in the Control panel, so the gesture and its meaning stay together. */
-.knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;clip-path:polygon(50% 25.71%,57.97% 27.6%,64.71% 32.97%,69.22% 41%,70.8% 50.48%,69.22% 59.96%,64.71% 68%,57.97% 73.35%,50% 75.24%,42.03% 73.35%,35.29% 68%,30.78% 59.96%,29.2% 50.48%,30.78% 41%,35.29% 32.97%,42.03% 27.6%);color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.14),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.22),rgba(9,38,29,.16));font-family:system-ui,sans-serif;pointer-events:none}
+.knowledge-combination{position:absolute;inset:0;z-index:20;overflow:hidden;clip-path:polygon(50% 25.71%,57.97% 27.6%,64.71% 32.97%,69.22% 41%,70.8% 50.48%,69.22% 59.96%,64.71% 68%,57.97% 73.35%,50% 75.24%,42.03% 73.35%,35.29% 68%,30.78% 59.96%,29.2% 50.48%,30.78% 41%,35.29% 32.97%,42.03% 27.6%);color:#f5fbef;background:radial-gradient(circle at 50% 48%,rgba(89,132,97,.14),transparent 34%),linear-gradient(145deg,rgba(6,29,22,.22),rgba(9,38,29,.16));font-family:Manrope,"Segoe UI Variable",Inter,system-ui,sans-serif;pointer-events:none}
 .tryit-live-welcome.is-combining-knowledge [data-welcome-cell]{visibility:hidden;pointer-events:none}
 .knowledge-combination :is(.knowledge-source-cell,.knowledge-node,nav,nav button){pointer-events:auto}
 .knowledge-combination[hidden],.knowledge-combination [hidden]{display:none!important}
 .knowledge-combination header{position:absolute;z-index:4;left:50%;top:33%;width:30%;transform:translateX(-50%);text-align:center;pointer-events:none}
 .knowledge-combination header small{display:block;color:rgba(222,241,211,.62);font-size:clamp(8px,1.15vw,13px);font-weight:800;letter-spacing:.18em}
-.knowledge-combination header h2{margin:.35em 0 .2em;font:800 clamp(13px,1.7vw,25px)/1.08 system-ui,sans-serif;color:#f6fff0}
+.knowledge-combination header h2{margin:.35em 0 .2em;font:700 clamp(13px,1.7vw,25px)/1.08 Manrope,"Segoe UI Variable",Inter,system-ui,sans-serif;color:#f7fbf4}
 .knowledge-combination header p{margin:0 auto;max-width:100%;color:rgba(237,248,231,.8);font:600 clamp(9px,1.05vw,14px)/1.25 system-ui,sans-serif}
 .knowledge-combination svg{position:absolute;z-index:1;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 .knowledge-combination path{fill:none;stroke-linecap:round;vector-effect:non-scaling-stroke}
@@ -2073,3 +2078,7 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):hover { border-color:rgba(166,231,250,.9); box-shadow:0 20px 54px rgba(2,9,19,.6),0 0 16px rgba(119,212,247,.24),inset 0 1px rgba(236,250,255,.24); }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-grab-ready { border-color:#bceeff; box-shadow:0 20px 54px rgba(2,9,19,.6),0 0 0 2px rgba(166,231,250,.28),0 0 26px rgba(119,212,247,.48); user-select:none; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-grabbed { border-color:#dfff9b; box-shadow:0 24px 58px rgba(2,9,19,.65),0 0 0 3px rgba(223,255,155,.48),0 0 34px rgba(223,255,155,.5); cursor:grabbing; user-select:none; }
+.nlxr-media-floating.is-grab-ready,.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):has(.nlxr-media-detach:is(:hover,:focus-visible)) { border-color:#bceeff; box-shadow:0 20px 54px rgba(2,9,19,.6),0 0 0 2px rgba(166,231,250,.28),0 0 26px rgba(119,212,247,.48); }
+.nlxr-media-floating.is-grabbed { border-color:#dfff9b; box-shadow:0 24px 58px rgba(2,9,19,.65),0 0 0 3px rgba(223,255,155,.48),0 0 34px rgba(223,255,155,.5); cursor:grabbing; }
+.nlxr-media-floating .nlxr-plant-preview.is-tutorial-art { aspect-ratio:4/3; background:#e9edea; }
+.nlxr-media-floating .nlxr-plant-preview.is-tutorial-art img { object-fit:contain; transition:opacity 1.4s ease; }

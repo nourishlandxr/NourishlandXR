@@ -250,6 +250,7 @@ let demoViewportCleanup = null;
 let groundYEstimate = null;
 let demoTutorialStep = DEMO_TUTORIAL_STEPS.WELCOME;
 let demoOrientationStep=-1,demoPanelControlsCleanup=()=>{},demoPanelActionSignature='',elementPanelActionSignature='',demoControllerYSkipTracker=null;
+let demoSlideHistory=[],demoSlideHistoryIndex=-1,demoSlideHistoryReplay=false;
 let desktopSpatialPreviewCleanup=()=>{};
 const limDiagnostic = (stage, details = {}) => recordArDiagnostic(`LIM ${stage}`, details);
 function limDeviceContext(pointerType = 'unknown') {
@@ -666,7 +667,8 @@ function demoPanelActions() {
     const actions=[];
     const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
-    if(demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous'});
+    if(demoSlideHistoryIndex>0)actions.push({id:'back',label:'<',ariaLabel:'Previous slide',description:'Previous'});
+    if(demoSlideHistoryIndex>=0 && demoSlideHistoryIndex<demoSlideHistory.length-1)actions.push({id:'forward',label:'>',ariaLabel:'Next slide',description:'Next'});
     if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
     if(arWelcomeShowcaseActive && ['apply','connect','impact'].includes(demoJourneyStage))actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
     if(!desktopDemo)actions.push({id:'safety',label:'Safety guidance'});
@@ -720,7 +722,8 @@ function handleDemoPanelAction(action) {
     if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
     if(action==='pim-lim'){openPimLimBridge(activePimLimBridge);return;}
     if(action==='safety'){showArSafetyDialog(appRoot?.querySelector('.tryit-demo'));return;}
-    if(action==='back' && demoOrientationStep>0){runArWelcomeTutorial(demoOrientationStep-1);return;}
+    if(action==='back'){showDemoSlideFromHistory(demoSlideHistoryIndex-1);return;}
+    if(action==='forward'){showDemoSlideFromHistory(demoSlideHistoryIndex+1);return;}
     if(action==='skip'){skipDemoNarration?.();return;}
     if(action==='lim-visibility'){setLimMeshVisible(!limMeshVisible);return;}
     if(action==='quest'){void retryQuestImmersive();return;}
@@ -1279,7 +1282,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         .filter(Boolean);
     const bodyText = paragraphs.join('\n\n');
     introSceneActive = true;
-    introBoardStep = options.stepLabel || '';
+    introBoardStep = options.stepLabel || nextDemoSlideCode();
     introBoardTitle = localizedTitle;
     introBoardBody = bodyText;
     introBoardVisibleBody = '';
@@ -1290,6 +1293,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
     const deferContinueUntilCopyReady = Boolean(options.deferContinueUntilCopyReady);
+    rememberDemoSlide({stepLabel:introBoardStep,title:localizedTitle,body:bodyText,buttonLabel,onContinue,options:{...options},kind:'intro'});
     let typingStartDelay = 220;
     let typedLength = 0;
     let typing = true;
@@ -1373,6 +1377,51 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     setGuide('');
 }
 
+function rememberDemoSlide(slide){
+    if(demoSlideHistoryReplay)return;
+    const code=String(slide?.stepLabel || '').trim();
+    if(!code)return;
+    const previous=demoSlideHistory[demoSlideHistoryIndex];
+    if(previous?.stepLabel===code){demoSlideHistory[demoSlideHistoryIndex]={...slide};syncDemoPanelActions();return;}
+    demoSlideHistory=demoSlideHistory.slice(0,demoSlideHistoryIndex+1);
+    demoSlideHistory.push({...slide});
+    demoSlideHistoryIndex=demoSlideHistory.length-1;
+    syncDemoPanelActions();
+}
+
+function nextDemoSlideCode(){
+    const family=['connect','impact','know'].includes(demoJourneyStage)?'LEARNING':['why'].includes(demoJourneyStage)?'INTRO':'ELEMENTS';
+    const prefix=`${family} 1.`;
+    const highest=demoSlideHistory.reduce((max,item)=>{
+        if(!item.stepLabel?.startsWith(prefix))return max;
+        const number=Number(item.stepLabel.slice(prefix.length));
+        return Number.isFinite(number)?Math.max(max,number):max;
+    },0);
+    return `${prefix}${highest+1}`;
+}
+
+function showDemoSlideFromHistory(index){
+    const slide=demoSlideHistory[index];
+    if(!slide || index<0 || index>=demoSlideHistory.length)return;
+    demoSlideHistoryIndex=index;
+    demoSlideHistoryReplay=true;
+    if(slide.kind==='intro'){
+        showIntroBoard(slide.title,slide.body,slide.buttonLabel,()=>{
+            const next=demoSlideHistoryIndex+1;
+            if(next<demoSlideHistory.length)showDemoSlideFromHistory(next);
+            else slide.onContinue?.();
+        },{...slide.options,stepLabel:slide.stepLabel,historyReplay:true});
+    }else if(slide.kind==='welcome'){
+        introSceneActive=true;introBoardVisible=true;introBoardTitle=slide.title;introBoardBody=slide.body;introBoardVisibleBody=slide.body;introBoardStep=slide.stepLabel;introBoardTextureDirty=true;useSharedWelcomeBoard(true);
+        const board=appRoot?.querySelector('[data-tryit-guided-choice]');
+        if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${slide.title}</h2><div class="tryit-board-text-window"><p>${slide.body}</p></div>`;board.hidden=false;board.classList.add('is-copy-ready','is-persistent-demo-board');}
+        const button=appRoot?.querySelector('[data-tryit-intro-continue]');
+        if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=()=>{const next=demoSlideHistoryIndex+1;if(next<demoSlideHistory.length)showDemoSlideFromHistory(next);else slide.onContinue?.();};}
+    }
+    demoSlideHistoryReplay=false;
+    syncDemoPanelActions();
+}
+
 function finishIntroBoard() {
     clearTimeout(boardTypingTimer);
     // The large welcome/instruction board stays present for the entire demo.
@@ -1388,7 +1437,7 @@ function finishIntroBoard() {
 }
 
 function showPersistentPimPrompt(record) {
-    useSharedWelcomeBoard(false);
+    useSharedWelcomeBoard(true);
     setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -1401,7 +1450,7 @@ function showPersistentPimPrompt(record) {
         ? demoLocalizedText(`Open a few plant information cells to see how knowledge branches from the plant. When you find Pruning, it can connect with an idea about the wider landscape.`)
         : demoLocalizedText(`This connected view brings together what is known about ${plantName}. Open any cell to follow a topic such as food, growing, uses or ecological roles.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide(record?.tutorialStage==='plant'?'Explore a few plant information cells. Continue when you are ready.':'Explore a plant topic, or continue when ready.');
+    setIntroBoardNextGuide(record?.tutorialStage==='plant'?'Explore a few plant information cells. Continue when child cells are open.':'Explore a plant topic, or continue when ready.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1412,6 +1461,7 @@ function showPersistentPimPrompt(record) {
     introBoardVisibleBody = body;
     introBoardTextureDirty = true;
     introBoardVisible = true;
+    rememberDemoSlide({stepLabel:introBoardStep,title,body,buttonLabel:'Continue',onContinue:()=>continueAfterDemoPim(record),options:{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,nextGuide:'Explore a few plant information cells. Continue when child cells are open.'},kind:'welcome'});
     continueButton.textContent = demoLocalizedText('Continue');
     continueButton.onclick = () => {
         suppressSessionSelectUntil = performance.now() + 700;
@@ -1673,12 +1723,12 @@ function drawKnowledgeCombinationExperience(ctx,now){
         const p=toPoint(point),left=p.x-width/2,top=p.y-height/2;ctx.save();ctx.globalAlpha=muted?.26:1;
         if(bloom){ctx.shadowColor=color;ctx.shadowBlur=36+Math.sin(now/180)*8;}
         const fill=ctx.createLinearGradient(left,top,left+width,top+height);fill.addColorStop(0,`${color}ee`);fill.addColorStop(1,'rgba(13,39,31,.96)');ctx.fillStyle=fill;ctx.strokeStyle=bloom?'rgba(255,255,235,.95)':'rgba(235,249,226,.55)';ctx.lineWidth=bloom?6:3;
-        ctx.beginPath();ctx.roundRect(left,top,width,height,44);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='rgba(244,255,239,.72)';ctx.font='700 21px system-ui,sans-serif';ctx.fillText(label.toUpperCase(),left+30,top+27);
-        ctx.fillStyle='#fff';ctx.font='800 39px system-ui,sans-serif';drawWrappedTextureText(ctx,title,left+30,top+60,width-60,44,2);ctx.fillStyle='rgba(247,255,243,.78)';ctx.font='600 22px system-ui,sans-serif';drawWrappedTextureText(ctx,detail,left+30,top+119,width-60,27,2);ctx.restore();
+        ctx.beginPath();ctx.roundRect(left,top,width,height,44);ctx.fill();ctx.stroke();ctx.shadowBlur=0;ctx.textAlign='left';ctx.textBaseline='top';ctx.fillStyle='rgba(244,255,239,.82)';ctx.font='700 18px "Manrope",system-ui,sans-serif';ctx.fillText(label.toUpperCase(),left+30,top+18);
+        ctx.fillStyle='#f7fbf4';ctx.font='700 30px "Manrope",system-ui,sans-serif';drawWrappedTextureText(ctx,title,left+30,top+45,width-60,33,2);ctx.fillStyle='rgba(247,255,243,.9)';ctx.font='500 18px "Manrope",system-ui,sans-serif';drawWrappedTextureText(ctx,detail,left+30,top+110,width-60,21,2);ctx.restore();
     };
     const line=(from,to,fromColor,toColor,width=11)=>{const a=toPoint(from),b=toPoint(to),bend=Math.max(100,Math.abs(b.x-a.x)*.28),gradient=ctx.createLinearGradient(a.x,a.y,b.x,b.y);gradient.addColorStop(0,fromColor);gradient.addColorStop(1,toColor);ctx.save();ctx.strokeStyle=gradient;ctx.lineWidth=width;ctx.lineCap='round';ctx.shadowColor=toColor;ctx.shadowBlur=18;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.bezierCurveTo(a.x+bend,a.y,b.x-bend,b.y,b.x,b.y);ctx.stroke();ctx.restore();};
     ctx.save();ctx.beginPath();WELCOME_SHAPE_POINTS.forEach((point,index)=>{const x=point.x+WELCOME_PANEL_DRAW_OFFSET.x,y=point.y+WELCOME_PANEL_DRAW_OFFSET.y;if(index)ctx.lineTo(x,y);else ctx.moveTo(x,y);});ctx.closePath();ctx.clip();ctx.fillStyle='rgba(6,27,21,.78)';ctx.beginPath();ctx.roundRect(55,55,2390,1990,82);ctx.fill();
-    ctx.textAlign='center';ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='700 24px system-ui,sans-serif';ctx.fillText(demoConnectionScreenCode(state),1250,675,700);ctx.fillStyle='#eff7e9';ctx.font='800 32px system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,720,700);ctx.fillStyle='rgba(230,244,225,.75)';ctx.font='600 21px system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,775,700);
+    ctx.textAlign='center';ctx.fillStyle='rgba(230,244,225,.85)';ctx.font='700 24px "Manrope",system-ui,sans-serif';ctx.fillText(demoConnectionScreenCode(state),1250,675,700);ctx.fillStyle='#f7fbf4';ctx.font='700 32px "Manrope",system-ui,sans-serif';ctx.fillText('What can these ideas reveal together?',1250,720,700);ctx.fillStyle='rgba(230,244,225,.85)';ctx.font='600 21px "Manrope",system-ui,sans-serif';ctx.fillText(knowledgeCombinationStatus(state),1250,775,700);
     if(!deeper){ctx.textAlign='center';ctx.fillStyle='rgba(224,242,216,.58)';ctx.font='800 17px system-ui,sans-serif';ctx.fillText('PLANT CHARACTERISTICS',1050,835);ctx.fillText('LEARNING CELLS',1450,835);}
     if(state.primaryResult && choice){line(DEMO_CONNECTION_POSITIONS.sources[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.sourceColor,choice.targetColor,8);line(DEMO_CONNECTION_POSITIONS.targets[choice.id],DEMO_CONNECTION_POSITIONS.result,choice.targetColor,choice.sourceColor,8);}
     const resultPosition=deeper?{x:50,y:42}:DEMO_CONNECTION_POSITIONS.result;
@@ -1759,6 +1809,7 @@ function paintDemoAmbientLife(now){
 }
 
 function showArWelcomeShowcase() {
+    demoSlideHistory=[];demoSlideHistoryIndex=-1;demoSlideHistoryReplay=false;
     infoPanel?.setHeaderProgress(null);
     selectedLimCell='';
     introBoardStep='INTRO 1.1';
@@ -1843,6 +1894,7 @@ function showArWelcomeShowcase() {
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText('EXTENDED REALITY, ROOTED IN PLACE');
         introBoardBody=`${demoLocalizedText('See the landscape come to life.')}\n\n${demoLocalizedText('In NourishlandXR, digital plant stories and place-based knowledge appear within the real landscape around you.')}`;
+        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
@@ -1853,6 +1905,7 @@ function showArWelcomeShowcase() {
         panel.classList.add('is-typing');paintOpeningCopy('');
         boardTypingTimer=setTimeout(typeOpeningCopy,320);
     };
+    rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitForOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
         if(arWelcomeClock.elapsed>=arWelcomeOpeningDuration){beginOpeningCopy();return;}
@@ -1973,7 +2026,7 @@ function selectWelcomeCell() {
 function showDemoTutorialMedia(key) {
     const art=DEMO_TUTORIAL_ART[key];
     if(!art)return;
-    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:'Visual reference',body:'',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:`demo-tutorial-${key}`,title:'',hideTitle:true,imageFit:'contain',imageFadeMs:key==='references'?1400:650,body:'',image:art.image,imageAlt:art.alt,accent:'#b7cbd0',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
@@ -1982,7 +2035,8 @@ const DEMO_ORIENTATION_STEPS = [
         'Take a moment to settle in. This place is ready to explore.'
     ]},
     {code:'ELEMENTS 1.1',title:'Every plant holds information',art:'references',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
-        'A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources. NourishlandXR brings those layers together where the information becomes useful.'
+        'Finding a plant in the field can be confusing when you are carrying books, checking a phone and comparing guides. It can be hard to connect what you read to the plant in front of you.',
+        'A plant holds far more than a name: ecology, care, seasons, uses, local knowledge and trusted sources.'
     ]},
     {code:'SPACE 1.2',title:'Imagine arriving in a garden',art:'curiosity',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'Imagine arriving in a garden and noticing a plant you do not recognise.',
@@ -2000,11 +2054,11 @@ const DEMO_ORIENTATION_STEPS = [
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
-    title:'This is the Plant Orb',button:'Select the Plant Orb',
-    nextGuide:'Select the Plant Orb to open its information. Press and hold it to move it.',
+    title:'This is the Plant Orb',button:'Continue',
+    nextGuide:'Press the Plant Orb to open its information. Press and hold it to move it.',
     paragraphs:[
         'Pigeon Pea now has a location in this scene. This Plant Orb connects information to this plant in the real place.',
-        'The Orb is interactive. Select the Plant Orb to explore its information, beginning with simple facts and deeper connected branches.'
+        'The Orb is interactive. Press it to explore its information, beginning with simple facts and deeper connected branches.'
     ]
 };
 
@@ -2025,9 +2079,11 @@ function runArWelcomeTutorial(index=0) {
         infoPanel?.suspend(false);
         infoPanel?.setContextualHint('HINT · Adjust panel to your liking.');
     }
-    if(step?.art){
+    if(step?.art && index!==1){
         infoPanel?.setCompact(false);
         showDemoTutorialMedia(step.art);
+    }else if(index===1){
+        infoPanel?.setCompact(false);
     }else if(index===DEMO_ORIENTATION_STEPS.length-1){
         infoPanel?.setMediaCollapsed(true);
         infoPanel?.setContextualHint('HINT · Move the right joystick up or down to adjust distance.');
@@ -2039,7 +2095,7 @@ function runArWelcomeTutorial(index=0) {
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:step.code,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===0});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:step.code,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===0,onTextComplete:index===1?()=>setTimeout(()=>{if(demoOrientationStep===1)showDemoTutorialMedia(step.art);},900):undefined});
 }
 
 function guidePlantConversion(record) {
@@ -4550,7 +4606,7 @@ function drawIntroNoteContent(ctx) {
     // its ascenders were previously being cut because the baseline sat too
     // close to the clip rectangle.
     const bodyTop = 498;
-    const bodyBottom = 775;
+    const bodyBottom = introBoardNextGuideVisible && introBoardNextGuide ? 705 : 775;
     const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `600 ${bodyLayout.fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
     const bodyX = contentCenter;
