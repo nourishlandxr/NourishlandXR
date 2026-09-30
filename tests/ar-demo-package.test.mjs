@@ -23,6 +23,9 @@ import {
     MORINGA_PIM,
     MORINGA_PROFILE
 } from '../app/features/ar-demo/demoPlantContent.js';
+import { demoPimExpandedNodeIds, demoPimState, setDemoPimState } from '../app/features/ar-demo/demoState.js';
+import { demoOrbStyle, simulatedAnchorFromPointer, simulatedAnchorStyle } from '../app/features/ar-demo/demoSimulation.js';
+import { pimCreateInteractionState } from '../app/services/plantInformationMesh.js';
 
 const read = relativePath => readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8');
 
@@ -36,17 +39,23 @@ test('AR demo screen consumes the feature package instead of redeclaring static 
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoPlantContent\.js'/);
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoGeometry\.js'/);
     assert.match(source, /from '\.\.\/features\/ar-demo\/demoSelection\.js'/);
+    assert.match(source, /from '\.\.\/features\/ar-demo\/demoState\.js'/);
+    assert.match(source, /from '\.\.\/features\/ar-demo\/demoSimulation\.js'/);
     assert.doesNotMatch(source, /const AR_PHONE_COMFORT\s*=/);
     assert.doesNotMatch(source, /const DEMO_CONTENT\s*=/);
     assert.doesNotMatch(source, /const MORINGA_PROFILE\s*=/);
     assert.doesNotMatch(source, /(?:export )?function demoPlacementPosition\(/);
     assert.doesNotMatch(source, /(?:export )?function preservePlacedDemoPlants\(/);
+    assert.doesNotMatch(source, /function demoPimState\(/);
+    assert.doesNotMatch(source, /function simulatedAnchorStyle\(/);
     assert.match(hostedBuildSource, /'features'/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoConfig\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoContent\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoGeometry\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoPlantContent\.js/);
     assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoSelection\.js/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoState\.js/);
+    assert.match(deploymentSource, /test -f dist\/xr\/features\/ar-demo\/demoSimulation\.js/);
 });
 
 test('AR demo configuration exports stable behavior contracts', () => {
@@ -75,4 +84,35 @@ test('Moringa demo knowledge remains a resolved PIM document', () => {
     assert.ok(MORINGA_PIM.nodes.length >= 50);
     assert.equal(MORINGA_PIM.nodes.find(node => node.id === 'medicinal')?.parentId, 'uses');
     assert.equal(MORINGA_PIM.nodes.find(node => node.id === 'craft')?.parentId, 'uses');
+});
+
+test('AR demo PIM state round-trips through a record without losing compatibility fields', () => {
+    const record = { id: 'pigeon-pea', demoExpandedBranches: ['uses'] };
+    const initial = demoPimState(record);
+    assert.deepEqual([...initial.expandedNodeIds], ['uses']);
+
+    const next = pimCreateInteractionState(['uses', 'cultivation'], 'cultivation', 'pigeon-pea');
+    assert.equal(setDemoPimState(record, next), next);
+    assert.deepEqual(demoPimExpandedNodeIds(record), ['uses', 'cultivation']);
+    assert.deepEqual(record.demoExpandedBranches, ['uses', 'cultivation']);
+    assert.equal(record.demoSelectedNodeId, 'cultivation');
+    assert.equal(record.demoFocusedPlantId, 'pigeon-pea');
+});
+
+test('simulated AR helpers keep anchors bounded and presentation deterministic', () => {
+    const observed = [];
+    const anchor = simulatedAnchorFromPointer(
+        { x: 50, y: 50 },
+        100,
+        100,
+        { clientX: 500, clientY: -500 },
+        { width: 400, height: 800 },
+        (candidate, radius) => { observed.push({ candidate, radius }); return candidate; },
+        44
+    );
+    assert.deepEqual(anchor, { x: 92, y: 12 });
+    assert.deepEqual(observed, [{ candidate: { x: 92, y: 12 }, radius: 44 }]);
+    assert.equal(simulatedAnchorStyle({ x: 12.345, y: 67.891 }), '--marker-x:12.35%;--marker-y:67.89%');
+    assert.match(demoOrbStyle({ demoOrbColor: 'green' }), /--demo-orb/);
+    assert.equal(demoOrbStyle({ demoOrbColor: 'unknown' }), '');
 });

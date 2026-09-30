@@ -34,12 +34,14 @@ import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DE
 import { MORINGA_KNOWLEDGE, MORINGA_PIM, MORINGA_PROFILE, MORINGA_PROFILE_IMAGE } from '../features/ar-demo/demoPlantContent.js';
 import { demoGroundBaseY, demoPlacementPosition, demoPointerScreenPoint, demoViewerPointerFallbackAllowed, isDemoFloorHit } from '../features/ar-demo/demoGeometry.js';
 import { preservePlacedDemoPlants, selectDemoPlantRecord, selectGuidedDemoOrb as selectGuidedDemoOrbRecord } from '../features/ar-demo/demoSelection.js';
+import { demoPimExpandedNodeIds, demoPimState, setDemoPimState } from '../features/ar-demo/demoState.js';
+import { demoOrbStyle, simulatedAnchorFromPointer, simulatedAnchorStyle } from '../features/ar-demo/demoSimulation.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
 import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
-import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea, pimVisibleNodes } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -2597,19 +2599,6 @@ function advanceDemo() {
     armDemoPlacement(nextStage || 'plant');
 }
 
-function simulatedAnchorStyle(anchor) {
-    return `--marker-x:${Number(anchor.x).toFixed(2)}%;--marker-y:${Number(anchor.y).toFixed(2)}%`;
-}
-
-function simulatedAnchorFromPointer(startAnchor, startX, startY, event, markerRadius = 32) {
-    const { width: viewportWidth, height: viewportHeight } = demoViewportDimensions();
-    const anchor = {
-        x: Math.max(8, Math.min(92, Number(startAnchor?.x) + ((event.clientX - startX) / viewportWidth) * 100)),
-        y: Math.max(12, Math.min(88, Number(startAnchor?.y) + ((event.clientY - startY) / viewportHeight) * 100))
-    };
-    return keepDemoAnchorClear(anchor, markerRadius);
-}
-
 function applySimulatedMarkerAnchor(layer, index, anchor) {
     const markerX = `${Number(anchor.x).toFixed(2)}%`;
     const markerY = `${Number(anchor.y).toFixed(2)}%`;
@@ -2699,10 +2688,6 @@ function capturedSimulatedAnchor() {
         x: Number.isFinite(x) ? x : 50,
         y: Number.isFinite(y) ? y : 50
     };
-}
-
-function demoOrbStyle(record) {
-    return DEMO_ORB_MATERIALS[record?.demoOrbColor]?.style || '';
 }
 
 function demoPlantKnowledgeMarkup(record, anchor = record?.simulatedAnchor || { x: 50, y: 50 }) {
@@ -3061,7 +3046,15 @@ function bindSimulatedInformationPanels(layer) {
             if (simulatedMode) {
                 const orbRadius = record.demoType === 'plant'
                     ? Math.max(32, compactMarker.offsetWidth * (record.demoDepthScale || 1) / 2 + 8) : 32;
-                record.simulatedAnchor = simulatedAnchorFromPointer(holdGesture.startAnchor, holdGesture.startX, holdGesture.startY, event, orbRadius);
+                record.simulatedAnchor = simulatedAnchorFromPointer(
+                    holdGesture.startAnchor,
+                    holdGesture.startX,
+                    holdGesture.startY,
+                    event,
+                    demoViewportDimensions(),
+                    keepDemoAnchorClear,
+                    orbRadius
+                );
                 applySimulatedMarkerAnchor(layer, index, record.simulatedAnchor);
             }
             const verticalTravel = holdGesture.startY - event.clientY;
@@ -3306,29 +3299,6 @@ function bindSimulatedInformationPanels(layer) {
             });
         });
     });
-}
-
-function demoPimState(record) {
-    return pimCreateInteractionState(
-        record?.demoExpandedNodeIds || record?.demoExpandedBranches || [],
-        record?.demoSelectedNodeId || '',
-        record?.demoFocusedPlantId || record?.id || record?.name || '',
-        record?.pimClosingNodePaths || []
-    );
-}
-
-function demoPimExpandedNodeIds(record) {
-    return record?.demoExpandedNodeIds || record?.demoExpandedBranches || [];
-}
-
-function setDemoPimState(record, state) {
-    if (!record) return state;
-    record.demoSelectedNodeId = state.selectedNodeId;
-    record.demoExpandedNodeIds = pimExpandedNodeIds(state);
-    record.pimClosingNodePaths = pimClosingNodePaths(state);
-    record.demoExpandedBranches = [...record.demoExpandedNodeIds];
-    record.demoFocusedPlantId = state.focusedPlantId || record.id || record.name || '';
-    return state;
 }
 
 function refreshDemoRecord(record) {

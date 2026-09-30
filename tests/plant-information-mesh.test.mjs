@@ -58,14 +58,15 @@ function rectanglesOverlap(left, right) {
 }
 
 test('Demo and Creator consume one canonical PIM renderer, geometry and interaction contract', async () => {
-    const [demoSource, creatorSource, viewSource, canvasSource, styles] = await Promise.all([
+    const [demoSource, demoStateSource, creatorSource, viewSource, canvasSource, styles] = await Promise.all([
         import('node:fs/promises').then(fs => fs.readFile(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8')),
+        import('node:fs/promises').then(fs => fs.readFile(new URL('../app/features/ar-demo/demoState.js', import.meta.url), 'utf8')),
         import('node:fs/promises').then(fs => fs.readFile(new URL('../app/screens/arMode.js', import.meta.url), 'utf8')),
         import('node:fs/promises').then(fs => fs.readFile(new URL('../app/services/plantInformationMeshView.js', import.meta.url), 'utf8')),
         import('node:fs/promises').then(fs => fs.readFile(new URL('../app/services/plantInformationMeshCanvas.js', import.meta.url), 'utf8')),
         import('node:fs/promises').then(fs => fs.readFile(new URL('../app/style.css', import.meta.url), 'utf8'))
     ]);
-    for (const source of [demoSource, creatorSource]) {
+    for (const source of [`${demoSource}\n${demoStateSource}`, creatorSource]) {
         assert.match(source, /plantInformationMeshMarkup/);
         assert.match(source, /createPlantInformationHoneycombTexture/);
         assert.match(source, /pimCreateInteractionState/);

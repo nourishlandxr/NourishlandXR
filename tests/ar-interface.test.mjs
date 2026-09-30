@@ -1185,6 +1185,8 @@ test('Creator AR falls back to setup when WebXR cannot start', () => {
 test('welcome Try It Now AR keeps one live placement control and no dashboard panel', () => {
     const source = read('app/screens/temporaryArDemo.js');
     const geometrySource = read('app/features/ar-demo/demoGeometry.js');
+    const stateSource = read('app/features/ar-demo/demoState.js');
+    const simulationSource = read('app/features/ar-demo/demoSimulation.js');
     const pimCanvasSource = read('app/services/plantInformationMeshCanvas.js');
     const pimViewSource = read('app/services/plantInformationMeshView.js');
     const webxrSource = read('app/services/webxrSession.js');
@@ -1311,7 +1313,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
     assert.match(source, /function releaseHeldDemoRecord\(\)/);
     assert.equal(DEMO_PLANT_ORB_HOLD_DELAY_MS,800);
-    assert.match(source, /function simulatedAnchorFromPointer\(startAnchor, startX, startY, event, markerRadius = 32\)/);
+    assert.match(simulationSource, /export function simulatedAnchorFromPointer\(/);
     assert.match(source, /record\.simulatedAnchor = simulatedAnchorFromPointer\(/);
     assert.match(source, /function applySimulatedMarkerAnchor\(layer, index, anchor\)/);
     assert.match(source, /compactMarker\.addEventListener\('pointercancel', \(\) => \{[\s\S]*releaseHeldDemoRecord\(\)/);
@@ -1628,7 +1630,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(pimCanvasSource, /pimVisibleNodes/);
     assert.match(source, /pimCreateInteractionState/);
     assert.match(source, /pimToggleNodeState/);
-    assert.match(source, /pimExpandedNodeIds/);
+    assert.match(stateSource, /pimExpandedNodeIds/);
     assert.match(read('app/screens/arMode.js'), /pimToggleNodeState/);
     assert.match(pimViewSource, /data-pim-node/);
     assert.match(source, /pimHoneycombTargetAtPercent/);
