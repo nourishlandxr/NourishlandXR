@@ -7,7 +7,11 @@ test('bees arrive after their introduction and orbit around the welcome screen',
     assert.equal(demoBeePose(1200,2000,0),null);
     assert.equal(demoBeePose(2500,2000,1),null);
     const depths=[];
-    for(const elapsed of [2000,4000,8000,16000,24000]){
+    const flyby=demoBeePose(4600,2000,0);
+    assert.ok(flyby.flyby>.95,'the first bee briefly approaches the viewer');
+    assert.ok(flyby.x>.38 && flyby.x<.62);
+    assert.ok(flyby.y>.35 && flyby.y<.55);
+    for(const elapsed of [2000,6000,10000,18000,26000]){
         const bee=demoBeePose(elapsed,2000,0);
         assert.ok(bee.x>.15 && bee.x<.85);
         assert.ok(bee.y>.19 && bee.y<.81);
@@ -45,12 +49,15 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     assert.match(spatialDraw,/ambientBeeModel\?\.renderSprite\?\.\(arWelcomeClock\.elapsed,ambientBeesStartedAt\)/);
     assert.match(spatialDraw,/gl\.texImage2D\(gl\.TEXTURE_2D,0,gl\.RGBA,gl\.RGBA,gl\.UNSIGNED_BYTE,sprite\)/);
     assert.match(spatialDraw,/ambientWorldAnchor\.x[\s\S]*ambientWorldAnchor\.y[\s\S]*ambientWorldAnchor\.z/);
+    assert.match(spatialDraw,/bee\.flyby\*2\.8/);
     assert.doesNotMatch(spatialDraw,/\bbase\.(?:x|y|z)\b/);
     assert.doesNotMatch(source,/seedlingGrowthStage|ambientGrowth|tickDemoAmbientLife/);
     assert.doesNotMatch(source,/drawAmbientTreeSprites|AMBIENT_TREE_ASSETS|lychee-tree-/);
     assert.match(style,/\.tryit-ambient-life[^}]*z-index:12000[^}]*pointer-events:none/);
     assert.match(style,/@media \(hover:hover\) and \(pointer:fine\) \{ \.tryit-demo\.is-simulated \.tryit-stage \{ background:#050606; \} \}/);
     assert.doesNotMatch(source,/darkBackdrop:/);
+    assert.doesNotMatch(source,/tryit-bee-credit|Bee model ·/);
+    assert.doesNotMatch(style,/tryit-bee-credit/);
 });
 
 test('the supplied animated bee asset is bundled with its attribution', () => {

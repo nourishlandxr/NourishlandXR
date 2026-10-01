@@ -3733,8 +3733,6 @@ function renderInterface(simulated) {
     if(simulated || session){
         const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
         appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
-        const credit=document.createElement('a');credit.className='tryit-bee-credit';credit.href='https://sketchfab.com/3d-models/bee-c80f9c2110c847db9375c548f14a0315';credit.target='_blank';credit.rel='noopener noreferrer';credit.textContent='Bee model · etro313 · CC BY 4.0';
-        appRoot.querySelector('.tryit-stage')?.append(credit);
         import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{sprite:!simulated});}).catch(error=>console.warn('Bee model fallback:',error));
     }
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
@@ -4734,7 +4732,8 @@ function drawSpatialAmbientLife(view){
         for(let index=0;index<2;index++){
             const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control'});if(!bee)continue;
             const position=ambientBeeWorldPosition(bee);
-            const model=billboardMatrix(position,.28,.28,viewerMatrix);
+            const spriteScale=.28*(1+bee.flyby*2.8);
+            const model=billboardMatrix(position,spriteScale,spriteScale,viewerMatrix);
             gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),bee.opacity);
             gl.drawArrays(gl.TRIANGLES,0,6);
@@ -4751,8 +4750,9 @@ function drawSpatialAmbientLife(view){
         // soon as the Meet a Plant Orb step enabled the bees. Because the frame
         // had already been cleared, that made the whole AR scene disappear.
         const position=ambientBeeWorldPosition(bee);
-        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
-        const flap=.025+Math.abs(bee.wing)*.013;
+        const flybyScale=1+bee.flyby*2.8;
+        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018*flybyScale,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
+        const flap=(.025+Math.abs(bee.wing)*.013)*flybyScale;
         wings.push(position.x-.008,position.y,position.z,position.x-.025,position.y+flap,position.z,
             position.x+.008,position.y,position.z,position.x+.025,position.y+flap,position.z);
     }
@@ -4767,10 +4767,25 @@ function ambientBeeWorldPosition(bee){
     const across=(bee.x-.5)*AR_PHONE_COMFORT.boardScale[0];
     const vertical=(bee.y-.5)*AR_PHONE_COMFORT.boardScale[1];
     const behindScreen=.18+((bee.depth+1)*.5)*.42;
-    return {
+    const ambientPosition={
         x:ambientWorldAnchor.x+rightX*across+forwardX*behindScreen,
         y:ambientWorldAnchor.y+vertical,
         z:ambientWorldAnchor.z+rightZ*across+forwardZ*behindScreen
+    };
+    const flyby=Math.max(0,Math.min(1,Number(bee.flyby)||0));
+    if(!flyby)return ambientPosition;
+    const progress=Math.max(0,Math.min(1,Number(bee.flybyProgress)||0));
+    const faceDistance=.42+Math.abs(progress-.5)*.24;
+    const faceAcross=(.5-progress)*.24;
+    const facePosition={
+        x:viewerMatrix[12]+rightX*faceAcross+forwardX*faceDistance,
+        y:viewerMatrix[13]-.035-Math.sin(Math.PI*progress)*.025,
+        z:viewerMatrix[14]+rightZ*faceAcross+forwardZ*faceDistance
+    };
+    return {
+        x:ambientPosition.x+(facePosition.x-ambientPosition.x)*flyby,
+        y:ambientPosition.y+(facePosition.y-ambientPosition.y)*flyby,
+        z:ambientPosition.z+(facePosition.z-ambientPosition.z)*flyby
     };
 }
 
