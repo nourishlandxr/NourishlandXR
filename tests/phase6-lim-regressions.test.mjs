@@ -5,7 +5,7 @@ import { infoPanelPose, panelPoseOutsideSafeBounds } from '../app/services/pimIn
 import { WELCOME_PANEL_DRAW_OFFSET, welcomeExperienceFrames, welcomeCellAtPoint } from '../app/services/arWelcomeShowcase.js';
 import { DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_TEXT_TEXTURE_INTERVAL_MS } from '../app/features/ar-demo/demoConfig.js';
 import { demoBillboardSurfaceSize, demoBillboardTextureLocalPoint } from '../app/features/ar-demo/demoGeometry.js';
-import { spatialDashboardRayHit } from '../app/services/spatialDashboardMirror.js';
+import { demoWelcomeSurfaceHit } from '../app/services/demoWelcomeHit.js';
 
 const demoSource = fs.readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
 const panelSource = fs.readFileSync(new URL('../app/services/pimInfoPanel.js', import.meta.url), 'utf8');
@@ -34,7 +34,7 @@ test('LIM hit targets use cell coordinates while the welcome panel keeps its own
     assert.equal(welcomeCellAtPoint(welcomeExperienceFrames(64000, true), node.x, node.y).key, node.key);
 });
 
-test('Quest rays map the rendered shared quad back to all LIMO texture quadrants', () => {
+test('Quest rays select all four LIMO roots and child cells outside the central welcome note', () => {
     const scaleX = 10;
     const scaleY = 21;
     const surface = demoBillboardSurfaceSize(scaleX, scaleY);
@@ -46,21 +46,35 @@ test('Quest rays map the rendered shared quad back to all LIMO texture quadrants
         normal: { x: 0, y: 0, z: 1 },
         ...surface
     };
-    const pathwayRoots = welcomeExperienceFrames(30000, false)
+    const pathwayRoots = welcomeExperienceFrames(64000, false)
         .flatMap(frame => frame.nodes)
         .filter(node => node.depth === 0 && node.id !== 'vision');
     assert.equal(pathwayRoots.length, 4);
-    for (const { x: pixelX, y: pixelY } of pathwayRoots) {
+    const expandedFrames=welcomeExperienceFrames(64000,false,undefined,undefined,{
+        cellsActivatedAt:0,
+        expandedLimIds:pathwayRoots.map(node=>node.limId),
+        expandedAt:Object.fromEntries(pathwayRoots.map(node=>[node.limId,0]))
+    });
+    const pathwayChildren=expandedFrames.flatMap(frame=>frame.nodes.filter(node=>node.depth===1).slice(0,1));
+    assert.equal(pathwayChildren.length,4);
+    for (const { x: pixelX, y: pixelY, key } of [...pathwayRoots,...pathwayChildren]) {
         const local = demoBillboardTextureLocalPoint(pixelX, pixelY, 2500, 2100);
-        const hit = spatialDashboardRayHit({
+        const ray={
             origin: { x: local.x * scaleX, y: local.y * scaleY, z: 1 },
             direction: { x: 0, y: 0, z: -1 }
-        }, panel, { width: 2500, height: 2100 });
+        };
+        const hit = demoWelcomeSurfaceHit(ray,panel);
         assert.ok(hit);
         assert.ok(Math.abs(hit.pixelX - pixelX) < 1e-9);
         assert.ok(Math.abs(hit.pixelY - pixelY) < 1e-9);
+        assert.equal(welcomeCellAtPoint(expandedFrames,hit.pixelX,hit.pixelY)?.key,key);
+        assert.equal(demoWelcomeSurfaceHit(ray,panel,{panelOnly:true}),null,'central note must not swallow LIMO rays');
     }
+    const center=demoBillboardTextureLocalPoint(1250,1060,2500,2100);
+    assert.ok(demoWelcomeSurfaceHit({origin:{x:center.x*scaleX,y:center.y*scaleY,z:1},direction:{x:0,y:0,z:-1}},panel,{panelOnly:true}));
     assert.match(demoSource, /demoBillboardSurfaceSize\(scaleX,scaleY\)/);
+    assert.match(demoSource, /return demoWelcomeSurfaceHit\(\{origin,direction\}/);
+    assert.match(demoSource, /2500,2100,true\)/);
     assert.match(demoSource, /demoBillboardTextureLocalPoint\(targetNode\.x,targetNode\.y,2500,2100\)/);
 });
 

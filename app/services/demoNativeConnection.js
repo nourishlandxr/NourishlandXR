@@ -3,6 +3,25 @@
 export const DEMO_NATIVE_SOURCE_ID = 'food-forest';
 export const DEMO_NATIVE_TARGET_ID = 'lim-food-forest';
 
+export function demoNativeTargetLineage(frames,targetId=DEMO_NATIVE_TARGET_ID){
+    for(const frame of frames || []){
+        const byId=new Map(frame.nodes.map(node=>[node.id,node]));
+        const target=frame.nodes.find(node=>node.limId===targetId);
+        if(!target)continue;
+        const ancestors=[],seen=new Set();
+        let cursor=target;
+        while(cursor?.parent){
+            const parent=byId.get(cursor.parent);
+            if(!parent || seen.has(parent.id))break;
+            seen.add(parent.id);
+            ancestors.unshift(parent.limId || parent.id);
+            cursor=parent;
+        }
+        return {key:`${frame.corner}:${target.id}`,ancestors};
+    }
+    return null;
+}
+
 export function demoNativeConnectionSpec(pimDocument, limCells) {
     const source = pimDocument?.nodes?.find(node => node.id === DEMO_NATIVE_SOURCE_ID);
     const target = limCells?.[DEMO_NATIVE_TARGET_ID];

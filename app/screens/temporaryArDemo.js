@@ -7,9 +7,9 @@ import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaques, resolveTotemNavigation, totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
-import {drawArWelcomePanel,WELCOME_SHAPE,WELCOME_SHAPE_POINTS} from '../services/arWelcomePanel.js';
+import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
 import { WELCOME_ROOT_MILESTONES, WELCOME_ROOT_REFRESH_MS, advanceWelcomeRootProgress, welcomeRootsNeedRefresh } from '../services/arWelcomeRoots.js';
-import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,WELCOME_PANEL_DRAW_OFFSET,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
+import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -54,7 +54,8 @@ import { DEMO_NEIGHBOUR_PLANT_IDS, demoNeighbourPim } from '../services/demoNeig
 import { DEMO_RECORD_IDS, demoAreaRecordVisible, demoGroundLinkRoute } from '../services/demoAreaOwnership.js';
 import { createDemoExitLifecycle, DEMO_EXIT_STATES } from '../services/demoExitLifecycle.js';
 import { nearestDemoXrTarget } from '../services/demoXrInteraction.js';
-import { demoRainV2Field } from '../services/demoRainV2.js';
+import { demoRainV2Field, paintDemoRainV2Preview } from '../services/demoRainV2.js';
+import { demoWelcomeSurfaceHit } from '../services/demoWelcomeHit.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 import { bindHoldToConfirmButton } from '../services/holdToConfirm.js';
 import { DEMO_TUTORIAL_STEPS, demoTutorialControlsForStep } from '../services/demoTutorialControls.js';
@@ -65,7 +66,7 @@ import { createMeshSourceResolver, limMeshRef, pimMeshRef } from '../services/me
 import { createPlaceholderKnowledgeGenerator } from '../services/meshGenerator.js';
 import { createMeshRelationshipService } from '../services/meshRelationships.js';
 import { createMeshCompositionState } from '../services/meshCompositionState.js';
-import { demoNativeConnectionSpec, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../services/demoNativeConnection.js';
+import { demoNativeConnectionSpec, demoNativeTargetLineage, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../services/demoNativeConnection.js';
 
 export { demoRainProgress, welcomeAutoAdvanceReady, MORINGA_PIM };
 
@@ -245,6 +246,7 @@ let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=null,nativeConnectionEffectLastAt=0;
 let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
+let rainV2Canvas=null,rainV2LastPaint=0;
 let demoRainIntensity=1;
 let demoRainStyle='v2';
 let demoCloseStageWasInert=false;
@@ -415,7 +417,7 @@ function clearSessionState() {
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
-    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;
+    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -1667,6 +1669,22 @@ function paintDemoAmbientLife(now){
     drawDemoAmbientLife(context,width,height,{elapsed:arWelcomeClock.elapsed,beesStartedAt:ambientBeesStartedAt,reducedMotion,attention:'control'});
 }
 
+function paintSimulatedRainV2(now){
+    if(!rainV2Canvas || now-rainV2LastPaint<33)return;
+    rainV2LastPaint=now;
+    const width=window.innerWidth,height=window.innerHeight,ratio=Math.min(window.devicePixelRatio||1,1.5);
+    if(rainV2Canvas.width!==Math.round(width*ratio))rainV2Canvas.width=Math.round(width*ratio);
+    if(rainV2Canvas.height!==Math.round(height*ratio))rainV2Canvas.height=Math.round(height*ratio);
+    const context=rainV2Canvas.getContext('2d');
+    if(!context)return;
+    context.setTransform(ratio,0,0,ratio,0,0);
+    context.clearRect(0,0,width,height);
+    if(demoRainStyle!=='v2' || demoRainIntensity<=0 || window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const progress=demoRainProgress(arWelcomeClock.elapsed)*demoRainIntensity;
+    if(progress<=0)return;
+    paintDemoRainV2Preview(context,width,height,demoRainV2Field(now,progress,{mobile:navigator.maxTouchPoints>0}));
+}
+
 function showArWelcomeShowcase() {
     demoSlideHistory=[];demoSlideHistoryIndex=-1;demoSlideHistoryReplay=false;
     infoPanel?.setHeaderProgress(null);
@@ -1808,7 +1826,7 @@ function showArWelcomeShowcase() {
         if(simulatedMode && now-last>=50 && (!reduced || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
-        if(simulatedMode)paintDemoAmbientLife(now);
+        if(simulatedMode){paintDemoAmbientLife(now);paintSimulatedRainV2(now);}
         if(simulatedMode)syncNativeConnectionEffect(now);
         // XRSession frames drive immersive textures; a hidden DOM canvas need
         // not render a second copy. Reduced motion repaints only changed copy.
@@ -1858,23 +1876,15 @@ function showArWelcomeShowcase() {
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
-function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100) {
+function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100,panelOnly=false) {
     if(!introWorldAnchor)return null;
     const matrix=billboardMatrix(position,scaleX,scaleY,introWorldAnchor);
     const surface=demoBillboardSurfaceSize(scaleX,scaleY);
     const origin=demoPointerWorldOrigin(),direction=demoPointerWorldRay();
     if(!origin || !direction)return null;
-    const hit=spatialDashboardRayHit({origin,direction},{center:position,
+    return demoWelcomeSurfaceHit({origin,direction},{center:position,
         right:{x:matrix[0]/scaleX,y:0,z:matrix[2]/scaleX},up:{x:0,y:1,z:0},
-        normal:{x:matrix[8],y:0,z:matrix[10]},width:surface.width,height:surface.height},{width,height});
-    if(!hit || width!==2500 || height!==2100)return hit;
-    const centerX=WELCOME_PANEL_DRAW_OFFSET.x+WELCOME_SHAPE.cx,centerY=WELCOME_PANEL_DRAW_OFFSET.y+WELCOME_SHAPE.cy;
-    const px=hit.pixelX-centerX,py=hit.pixelY-centerY,angle=Math.atan2(py,px),step=Math.PI*2/WELCOME_SHAPE.sides;
-    const vertexAngle=-Math.PI/2+Math.round((angle+Math.PI/2)/step)*step;
-    const pointerInset=22;
-    const edgeAngle=vertexAngle+step/2,apothem=(WELCOME_SHAPE.radius-pointerInset)*Math.cos(step/2);
-    if(Math.hypot(px,py)*Math.cos(angle-edgeAngle)>apothem)return null;
-    return hit;
+        normal:{x:matrix[8],y:0,z:matrix[10]},width:surface.width,height:surface.height},{width,height,panelOnly});
 }
 
 function selectWelcomeCell() {
@@ -2327,15 +2337,19 @@ function startNativeConnectionExperience() {
     if(!plant){setGuide('Pigeon Pea is unavailable. Return to its Plant Orb and try again.');return;}
     let spec;
     try{spec=demoNativeConnectionSpec(demoOrbKnowledge(plant).document,LIM_CELL_BY_ID);}catch(error){setGuide(error.message);return;}
+    const targetLineage=demoNativeTargetLineage(welcomeFrames(),spec.targetId);
+    if(!targetLineage){setGuide('The learning target is unavailable. Return to the pathway and try again.');return;}
     clearNativeConnectionHold();
     nativeConnectionState=createDemoNativeConnection(spec);
+    nativeConnectionState.targetKey=targetLineage.key;
     removeNativeConnectionEffect();
     meshComposition.clear();
     prepareStableLimoSurface();
     if(!plant.demoExpanded)toggleDemoPlantProfile(plant);
     limMeshVisible=true;
     limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SETTLED_MS;
-    limHiddenCells.delete(spec.targetId);
+    for(const id of targetLineage.ancestors){limExpandedCells.add(id);limExpandedAt.set(id,arWelcomeClock.elapsed-8000);}
+    limHiddenCells.delete(targetLineage.key);
     useSharedWelcomeBoard(true);
     showIntroBoard('Connect a plant cell to a learning cell.',
         [`Select Pigeon Pea’s ${nativeConnectionState.sourceTitle} cell in the open Plant Profile. A click or trigger press selects it.`],
@@ -3810,6 +3824,13 @@ function renderInterface(simulated) {
     desktopSpatialPreviewCleanup=mountDesktopSpatialPreview(appRoot,{simulated,quest:isQuestHeadsetBrowser()});
     appRoot.querySelector('[data-tryit-safety-help]')?.remove();
     ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
+    rainV2Canvas=null;rainV2LastPaint=0;
+    if(simulated){
+        rainV2Canvas=document.createElement('canvas');
+        rainV2Canvas.className='tryit-rain-v2';
+        rainV2Canvas.setAttribute('aria-hidden','true');
+        appRoot.querySelector('.tryit-stage')?.prepend(rainV2Canvas);
+    }
     if(simulated || session){
         const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
         appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
@@ -5166,7 +5187,7 @@ function drawDemoControllerPointer(view) {
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
         : null;
     const greenSurface=arWelcomeShowcaseActive && introWorldAnchor && introBoardVisible
-        ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
+        ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,2500,2100,true)
         : null;
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
     const controlSurface=session && !domOverlayEnabled && continueButton && sessionMode!=='immersive-vr' && !continueButton.hidden && introWorldAnchor
