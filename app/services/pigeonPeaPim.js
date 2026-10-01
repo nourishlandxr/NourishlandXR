@@ -1,5 +1,6 @@
 import { createPimDocument } from './pimModel.js';
 import { enrichTrialNodes, PIGEON_PEA_TRIAL } from './plantTrialContent.js';
+import { attachPimCellIllustrations } from './pimCellIllustrations.js';
 
 const REFERENCE_DATE = '2026-08-03T00:00:00.000Z';
 
@@ -112,7 +113,7 @@ function deepFreeze(value) {
     return Object.freeze(value);
 }
 
-export const PIGEON_PEA_PIM = deepFreeze(createPimDocument({
+export const PIGEON_PEA_PIM = deepFreeze(attachPimCellIllustrations(createPimDocument({
     id: 'cajanus-cajan-pim',
     plantId: 'cajanus-cajan',
     identity: {
@@ -134,4 +135,4 @@ export const PIGEON_PEA_PIM = deepFreeze(createPimDocument({
         referenceProfile: true,
         editorialNote: 'Claims marked needs_review require an authoritative source or attributed local record before evidence status is upgraded.'
     }
-}));
+}), 'pigeon-pea'));

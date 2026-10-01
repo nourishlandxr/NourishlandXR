@@ -19,6 +19,7 @@ export function pimInfoContent(document, path) {
         plant: document.identity?.commonName || document.identity?.scientificName || document.plantId,
         breadcrumb: [...pimAncestors(document, node.id).map(item => item.title), node.title].join(' › '),
         body: node.body || 'No detailed information has been added to this cell yet.',
+        media: (node.media || []).find(item => item && (item.image || item.url || item.src)) || null,
         scope: pimKnowledgeScope(node), status: node.status, evidence: node.evidenceStatus,
         safety: node.safetyNote || '',
         sources: (node.sourceIds || []).map(id => document.sources?.find(source => source.id === id))
@@ -846,7 +847,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             loadPanelImage(nextMedia?.image || '');
             tab='Details';page=0;render(true);
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.imageAlt || document.identity.commonName || document.identity.scientificName || 'Plant'),caption:String(document.identity.imageCaption || '')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String(cellMedia?.caption || document.identity?.imageCaption || '')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{

@@ -1,6 +1,7 @@
 import { enrichTrialNodes, MORINGA_TRIAL } from '../../services/plantTrialContent.js';
 import { resolvePlantPim } from '../../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../../services/pimModel.js';
+import { attachPimCellIllustrations } from '../../services/pimCellIllustrations.js';
 
 export const MORINGA_PROFILE_IMAGE = new URL('../../assets/moringa-oleifera.jpg', import.meta.url).href;
 
@@ -57,13 +58,13 @@ export const MORINGA_PROFILE = Object.freeze({
     })
 });
 
-export const MORINGA_PIM = Object.freeze(resolvePlantPim(MORINGA_PROFILE, {
+export const MORINGA_PIM = Object.freeze(attachPimCellIllustrations(resolvePlantPim(MORINGA_PROFILE, {
     id: 'moringa-oleifera',
     plantId: 'moringa-oleifera',
     name: 'Moringa Tree',
     commonName: 'Moringa Tree',
     title: 'Moringa Tree',
     scientificName: 'Moringa oleifera'
-}));
+}), 'moringa'));
 
 export const MORINGA_KNOWLEDGE = Object.freeze(pimToArKnowledge(MORINGA_PIM));
