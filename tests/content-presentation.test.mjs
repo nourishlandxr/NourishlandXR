@@ -140,7 +140,7 @@ test('Plant Orb responds to pointer contact in preview and immersive mode', () =
     assert.match(styles, /\.tryit-sim-orb\.is-plant::after\s*\{\s*content:none;/);
 });
 
-test('each archetype keeps its ordered illustration while media labels stay plant-only', () => {
+test('each archetype keeps its ordered illustration while plant media retains honest attribution', () => {
     const ordered = [
         ['lim-intro-analysis', 'archetype-read-nature.jpg'],
         ['lim-intro-literacy', 'archetype-understand-land.jpg'],
@@ -159,7 +159,7 @@ test('each archetype keeps its ordered illustration while media labels stay plan
     assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);
     assert.doesNotMatch(panel, /LIMO cell sketch|LIMO CELL SKETCH|PLANT MEDIA/);
     assert.match(panel, /caption:'',plant:false/);
-    assert.match(panel, /caption:plantMedia\?\(identity\?\.plant \|\| ''\):''/);
+    assert.match(panel, /caption:plantMedia\?\(identity\?\.media\?\.caption \|\| identity\?\.plant \|\| ''\):''/);
 });
 
 test('Totem examples stay generic and use short local signs', () => {

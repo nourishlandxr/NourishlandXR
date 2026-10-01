@@ -3,6 +3,11 @@ import { PIM_COMPASS } from './pimCompass.js';
 
 const REFERENCE_DATE = '2026-09-29T00:00:00.000Z';
 const COMPASS = new Map(PIM_COMPASS.map(cell => [cell.id, cell]));
+const PLANT_MEDIA=Object.freeze({
+    acacia:{image:new URL('../assets/demo-plants/acacia-fimbriata-illustrative.webp',import.meta.url).href,imageAlt:'Illustrative Acacia fimbriata botanical reference',imageCaption:'Illustrative only · Acacia fimbriata. The Totem plant remains identified as Acacia sp.'},
+    jackfruit:{image:new URL('../assets/demo-plants/jackfruit-artocarpus-heterophyllus.webp',import.meta.url).href,imageAlt:'Jackfruit foliage, flowers, fruit and seed reference',imageCaption:'Jackfruit · Artocarpus heterophyllus'},
+    lychee:{image:new URL('../assets/demo-plants/lychee-red-ball-illustrative.webp',import.meta.url).href,imageAlt:'Red Ball lychee foliage, flower and fruit reference',imageCaption:'Illustrative cultivar · Red Ball lychee. The Totem plant cultivar is not identified.'}
+});
 
 // These are authored demonstration profiles, not observations of a real site.
 // Each source supports the corresponding plant's general reference content.
@@ -36,6 +41,41 @@ const PLANTS = Object.freeze({
             cultivation: ['Warmth, water and shelter', 'Bananas grow best with warmth, steady moisture and fertile, well-drained soil. Site conditions and cultivar change the result.', [
                 ['water-and-drainage', 'Water and drainage', 'Moist without standing water', 'Check moisture through the growing season and look for drainage after heavy rain. A single watering rule does not fit every site.'],
                 ['wind-protection', 'Wind protection', 'Keep the bunch supported', 'Observe the direction of damaging winds and whether fruiting stems need shelter or support.']
+            ]]
+        }
+    },
+    vetiver: {
+        name: 'Vetiver grass', scientificName: 'Chrysopogon zizanioides',
+        statement: 'A densely tufted perennial grass with narrow leaves, flowering panicles and a fibrous root system. This demonstration treats it as a planted living edge whose real effect must be checked against the slope, water movement and neighbouring plants.',
+        sources: [
+            { id: 'vetiver-kew', title: 'Royal Botanic Gardens, Kew — Chrysopogon zizanioides', url: 'https://powo.science.kew.org/taxon/urn:lsid:ipni.org:names:396213-1/general-information' },
+            { id: 'vetiver-usda', title: 'USDA NRCS — Vetivergrass Plant Guide', url: 'https://plants.sc.egov.usda.gov/DocumentLibrary/plantguide/pdf/pg_chzi.pdf' },
+            { id: 'vetiver-victoria', title: 'Agriculture Victoria — Invasiveness assessment for Monto vetiver', url: 'https://vro.agriculture.vic.gov.au/dpi/vro/vrosite.nsf/pages/invasive_monto_vetiver' }
+        ],
+        sections: {
+            'food-forest': ['A planted edge to observe', 'A close row of vetiver can be used as a vegetative barrier, but its useful role depends on the contour, spacing, establishment and actual movement of water and sediment at the site.', [
+                ['edge-function', 'Edge function', 'Watch water meet the row', 'After rain, observe whether water slows, spreads, ponds, cuts a new path or carries sediment through the planting. Record what happens before calling the row erosion control.'],
+                ['neighbour-effect', 'Neighbour effect', 'Check both sides of the hedge', 'A dense grass edge can change access, light and root-zone conditions. Compare the plants on both sides through the season rather than assuming the relationship is helpful.']
+            ]],
+            uses: ['Roots, leaves and environmental uses', 'Vetiver has documented environmental and material uses, and its aromatic roots are associated with fragrance products. A local record should name the plant part, preparation and source instead of turning those references into a broad food or medicine claim.', [
+                ['aromatic-roots', 'Aromatic roots', 'Identify the material and purpose', 'The roots are known for aromatic oil and crafted materials. Keep fragrance or material use separate from any unverified edible or medicinal claim.'],
+                ['cut-leaves', 'Cut leaves', 'Record where biomass goes', 'Cut foliage may be retained as biomass or mulch in some systems. Observe whether it covers soil, obstructs access or affects nearby plants in this particular Area.']
+            ]],
+            propagation: ['Divide an identified clump', 'Cultivated vetiver is commonly propagated vegetatively by dividing a crown into slips. Fertility and spreading behaviour vary among plant material, so do not assume every vetiver plant is sterile.', [
+                ['crown-slips', 'Crown slips', 'Keep roots and crown tissue', 'Prepare planting pieces from an identified parent clump, keep them moist and record the source, division date and establishment result.'],
+                ['fertility-check', 'Fertility check', 'Cultivar matters', 'Monto vetiver is reported as functionally sterile, but that evidence should not be applied to an unnamed plant. Record the cultivar or provenance before making a sterility claim.']
+            ]],
+            'scientific-information': ['A perennial grass in Poaceae', 'Chrysopogon zizanioides is the accepted name for a tufted perennial grass formerly widely recorded as Vetiveria zizanioides. Narrow leaf blades, upright culms, panicles and aromatic roots help describe it.', [
+                ['diagnostic-form', 'Diagnostic form', 'Photograph more than leaves', 'Record the basal clump, leaf blades, flowering panicle and roots when available. A leaf-only photograph is not enough to confirm an identity.'],
+                ['root-observation', 'Root observation', 'Describe what is actually exposed', 'Vetiver is associated with a dense, deep root system, but depth varies with site and age. Measure an exposed or excavated example rather than assigning a fixed depth to this plant.']
+            ]],
+            'historical-data': ['A species carried beyond its native range', 'Kew records the native range from north-eastern India to Indo-China and documents the former name Vetiveria zizanioides. A local planting still needs its own source and date.', [
+                ['name-history', 'Name history', 'Keep the synonym searchable', 'Retain Vetiveria zizanioides as a synonym in older records while publishing the accepted name Chrysopogon zizanioides.'],
+                ['planting-story', 'Planting story', 'Who established this row?', 'Record who supplied and planted the material, its cultivar if known, and the intended purpose. That evidence connects the broad species history to this real place.']
+            ]],
+            cultivation: ['Establish the row, then inspect it', 'Vetiver is used across warm environments and can tolerate varied conditions once established, but new slips still need suitable planting, moisture and follow-up. Local suitability should be observed rather than promised.', [
+                ['establishment-check', 'Establishment check', 'Follow each planted slip', 'Check moisture, new shoots, wash-out and gaps during establishment. Replace a failed section only after considering why it failed.'],
+                ['maintenance-check', 'Maintenance check', 'Keep the edge functional', 'Record cutting, accumulated sediment, gaps and unwanted effects on access or neighbouring plants. Adjust maintenance to the purpose of this particular edge.']
             ]]
         }
     },
@@ -153,10 +193,13 @@ export function demoNeighbourPim(plantId) {
     }
     return createPimDocument({
         id: `${plantId}-demo-pim`, plantId,
-        identity: { commonName: plant.name, scientificName: plant.scientificName, identityStatement: plant.statement },
+        identity: { commonName: plant.name, scientificName: plant.scientificName, identityStatement: plant.statement, ...(PLANT_MEDIA[plantId] || {}) },
         nodes, sources: plant.sources, createdAt: REFERENCE_DATE, updatedAt: REFERENCE_DATE, now: REFERENCE_DATE,
         metadata: { demonstrationProfile: true, editorialNote: 'Reference information is general; no local observation or species identification is implied.' }
     });
 }
 
-export const DEMO_NEIGHBOUR_PLANT_IDS = Object.freeze(Object.keys(PLANTS));
+// This is the authored four-plant inventory around Totem 2. Additional
+// profiles, including Banana, remain available through demoNeighbourPim()
+// without appearing as unowned or incidental Orbs in that Area.
+export const DEMO_NEIGHBOUR_PLANT_IDS = Object.freeze(['vetiver', 'acacia', 'jackfruit', 'lychee']);

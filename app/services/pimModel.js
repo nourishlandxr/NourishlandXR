@@ -50,6 +50,8 @@ function normalizeIdentity(identity = {}, fallbackPlantId = '') {
         scientificName: text(identity.scientificName ?? identity.scientific_name),
         identityStatement: text(identity.identityStatement ?? identity.summary ?? identity.overview),
         image: text(identity.image ?? identity.photo),
+        imageAlt: text(identity.imageAlt ?? identity.image_alt),
+        imageCaption: text(identity.imageCaption ?? identity.image_caption),
         cultivar: text(identity.cultivar),
         synonyms: uniqueText(identity.synonyms),
         regionalNames: uniqueText(identity.regionalNames ?? identity.regional_names),

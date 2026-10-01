@@ -3,6 +3,7 @@ import { escapeSpatialText, totemCardsMarkup } from '../../services/spatialKnowl
 import { DEMO_CONTENT, PIGEON_PEA_CONTROL_IMAGE } from './demoContent.js';
 import { MORINGA_PROFILE_IMAGE } from './demoPlantContent.js';
 import { demoOrbStyle, simulatedAnchorStyle } from './demoSimulation.js';
+import { demoAreaLinkVisible } from '../../services/demoAreaOwnership.js';
 
 export function virtualTagProfileMarkup(profile = PIGEON_PEA_EXAMPLE) {
     return `<div class="tryit-virtual-tag-shell">
@@ -58,6 +59,7 @@ export function simulatedAreaLinkMarkup(records = []) {
     const linked = records.filter(record => record.demoType === 'zone' && record.demoLinkVisible && record.simulatedAnchor);
     if (linked.length < 2) return '';
     const [first, second] = linked;
+    if (!demoAreaLinkVisible(first, second)) return '';
     const start = first.simulatedAnchor;
     const end = second.simulatedAnchor;
     const dx = end.x - start.x;
@@ -65,8 +67,7 @@ export function simulatedAreaLinkMarkup(records = []) {
     const width = Math.max(2, Math.hypot(dx, dy));
     const angle = Math.atan2(dy, dx) * 180 / Math.PI;
     const midpoint = { x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 };
-    const faded = linked.every(record => record.demoTotemFaded) ? ' is-narrative-faded' : '';
-    return `<span class="tryit-sim-area-link-line${faded}" aria-hidden="true" style="left:${start.x}%;top:${start.y}%;width:${width}%;transform:rotate(${angle}deg)"></span><span class="tryit-sim-area-link-label${faded}" aria-hidden="true" style="left:${midpoint.x}%;top:${midpoint.y}%">↔ LINKED AREAS</span>`;
+    return `<span class="tryit-sim-area-link-line" aria-hidden="true" style="left:${start.x}%;top:${start.y}%;width:${width}%;transform:rotate(${angle}deg)"></span><span class="tryit-sim-area-link-label" aria-hidden="true" style="left:${midpoint.x}%;top:${midpoint.y}%">↔ LINKED AREAS</span>`;
 }
 
 export function simulatedRecordMarkup({ record, index, anchor, offset, content, lines = [], highlighted = false, held = false }) {

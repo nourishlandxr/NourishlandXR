@@ -14,6 +14,7 @@ export function createPimHold({ activate, progress = () => {}, duration = PIM_AC
             if (step !== active.step) { active.step = step; progress(active.target, step / 20); }
             if (amount >= 1) { active.done = true; progress(active.target, 0); activate(active.target); }
         },
+        activateNow(target=active?.target) { if(!active || active.done || key(target)!==active.key)return false;active.done=true;progress(active.target,0);activate(active.target);return true; },
         cancel() { if (active) progress(active.target, 0); active = null; },
         get active() { return Boolean(active); }
     };
@@ -34,13 +35,15 @@ export function bindSpatialPimHold({ session, getTarget, enabled, activate, prog
         hold.cancel(); suppressUntil = performance.now() + 300; event.stopImmediatePropagation();
     };
     const select = event => {
-        if (event.inputSource === source && (hold.active || performance.now() < suppressUntil)) event.stopImmediatePropagation();
+        if (event.inputSource === source && (hold.active || performance.now() < suppressUntil)) {hold.activateNow();suppressUntil=performance.now()+300;event.stopImmediatePropagation();}
     };
-    const visibility = () => { if (session.visibilityState !== 'visible') hold.cancel(); };
+    const cancel=()=>{hold.cancel();source=null;suppressUntil=0;};
+    const visibility = () => { if (session.visibilityState !== 'visible') cancel(); };
     session.addEventListener('selectstart', start, true); session.addEventListener('selectend', end, true); session.addEventListener('select', select, true);
     session.addEventListener('visibilitychange', visibility);
     return {
         tick(time) { if (!enabled()) hold.cancel(); else hold.tick(getTarget(), time); },
-        destroy() { hold.cancel(); session.removeEventListener('selectstart', start, true); session.removeEventListener('selectend', end, true); session.removeEventListener('select', select, true); session.removeEventListener('visibilitychange', visibility); }
+        cancel,
+        destroy() { cancel(); session.removeEventListener('selectstart', start, true); session.removeEventListener('selectend', end, true); session.removeEventListener('select', select, true); session.removeEventListener('visibilitychange', visibility); }
     };
 }

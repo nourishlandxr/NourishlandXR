@@ -121,15 +121,15 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
             return canvas;
         },
         draw(elapsed,startedAt,reducedMotion=false,{attention='screen'}={}){
-            if(!ready || reducedMotion || !Number.isFinite(startedAt)){canvas.style.visibility='hidden';return;}
-            const pose=demoBeePose(elapsed,startedAt,0,{attention});if(!pose){canvas.style.visibility='hidden';return;}
+            if(!ready || !Number.isFinite(startedAt)){canvas.style.visibility='hidden';return;}
+            const pose=demoBeePose(elapsed,startedAt,0,{attention,encounters:!reducedMotion});if(!pose){canvas.style.visibility='hidden';return;}
             const width=window.innerWidth,height=window.innerHeight;if(!width||!height)return;
             if(canvas.width!==Math.round(width*renderer.getPixelRatio()) || canvas.height!==Math.round(height*renderer.getPixelRatio())){renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();}
             canvas.style.visibility='visible';canvas.classList.toggle('is-behind',pose.depth<0);canvas.classList.toggle('is-flyby',pose.flyby>.08);
-            const distance=6.5-pose.depth*1.3-pose.flyby*2.6;
+            const distance=6.5-pose.depth*1.3-pose.flyby*.75;
             const visibleHeight=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*distance;
             bee.wrapper.position.set((pose.x-.5)*visibleHeight*camera.aspect,(.5-pose.y)*visibleHeight,6-distance);
-            bee.wrapper.scale.setScalar(bee.baseScale*(.52+pose.depth*.16)*(1+pose.flyby*1.4)*Math.min(1.35,Math.max(.7,width/1000)));
+            bee.wrapper.scale.setScalar(bee.baseScale*(.52+pose.depth*.16)*(1+pose.flyby*.28)*Math.min(1.35,Math.max(.7,width/1000)));
             bee.wrapper.rotation.y=pose.heading;bee.wrapper.rotation.z=Math.sin(elapsed*.0009)*.13;
             bee.mixer.update(Number.isFinite(lastElapsed)?Math.max(0,Math.min(.1,(elapsed-lastElapsed)/1000)):0);lastElapsed=elapsed;
             renderer.render(scene,camera);

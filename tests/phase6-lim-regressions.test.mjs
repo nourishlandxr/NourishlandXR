@@ -97,13 +97,14 @@ test('screen and tracked-pointer selection activate LIM once while the hidden DO
     assert.match(demoSource, /if\(simulatedMode && arWelcomeLayer\)arWelcomeShowcaseFrame=limRequestFrame\(frame\)/);
 });
 
-test('Quest main selection pipeline preserves a direct LIMO fallback before plant interactions', () => {
+test('Quest main selection pipeline activates the nearest PIMO or LIMO surface', () => {
     const selectAt = demoSource.indexOf("session.addEventListener('select', event =>");
     const immersive = demoSource.slice(selectAt, demoSource.indexOf('pimHold=bindSpatialPimHold', selectAt));
-    assert.match(immersive, /if\(performance\.now\(\)<limActivationSessionSuppressUntil\)return/);
-    assert.match(immersive, /if\(selectWelcomeCell\(\)\)\{limActivationSessionSuppressUntil=performance\.now\(\)\+450;return;\}/);
-    assert.ok(immersive.indexOf('if(selectWelcomeCell())') < immersive.indexOf('if (demoHeldIndex >= 0) return'));
+    assert.match(immersive, /resolveDemoCellTarget\(\)\?\.kind==='lim-cell'/);
+    assert.match(immersive, /cellTarget\?\.kind==='pim-cell' && selectDemoProfileCell\(cellTarget\)/);
+    assert.match(immersive, /cellTarget\?\.kind==='lim-cell' && selectWelcomeCell\(\)/);
+    assert.ok(immersive.indexOf("cellTarget?.kind==='pim-cell'") < immersive.indexOf("cellTarget?.kind==='lim-cell'"));
     const selectStartAt = demoSource.indexOf("session.addEventListener('selectstart', event =>", demoSource.indexOf('pimHold=bindSpatialPimHold'));
     const selectStart = demoSource.slice(selectStartAt, demoSource.indexOf("session.addEventListener('selectend', event =>", selectStartAt));
-    assert.match(selectStart, /captureDemoInputEventRay\(event\);[\s\S]*if\(currentLimPointerCell\(\)\)return;[\s\S]*beginControllerDemoHold\(\)/);
+    assert.match(selectStart, /captureDemoInputEventRay\(event\);[\s\S]*resolveDemoCellTarget\(\)[\s\S]*beginControllerDemoHold\(\)/);
 });

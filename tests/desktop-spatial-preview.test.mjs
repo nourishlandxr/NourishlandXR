@@ -80,7 +80,7 @@ test('desktop control panel keeps a stable rail and shows media only for the act
     assert.match(styles, /\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-grabbed/);
     assert.match(panel, /if\(!floating && !isDesktopDemo\(\)\)toolbar\.append\(makePanelToggle\('Media'/);
     assert.match(panel, /if\(mediaToggle && desktopDemo\)mediaToggle\.remove\(\)/);
-    assert.match(panel, /isDesktopDemo\(\)\?items\.filter\(item=>item\.action!=='Recenter'\):items/);
+    assert.match(panel, /isDesktopDemo\(\)\?visible\.filter\(item=>item\.action!=='Recenter'\):visible/);
     assert.match(demo, /if\(!desktopDemo\)actions\.push\(\{id:'safety',label:'Safety guidance'\}\)/);
     assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview ~ \.nlxr-info-panel\.is-demo-panel/);
     assert.match(styles, /width:clamp\(440px,31vw,540px\) !important/);

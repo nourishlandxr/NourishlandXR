@@ -1,17 +1,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { demoBeePose, drawDemoAmbientLife } from '../app/services/demoAmbientLife.js';
+import { BEE_ENCOUNTER_DURATION_MS, BEE_FIRST_ENCOUNTER_MS, demoBeeEncounter, demoBeePose, drawDemoAmbientLife } from '../app/services/demoAmbientLife.js';
 
 test('bees arrive after their introduction and orbit around the welcome screen', () => {
     assert.equal(demoBeePose(1200,2000,0),null);
     assert.equal(demoBeePose(2500,2000,1),null);
     const depths=[];
-    const flyby=demoBeePose(4600,2000,0);
-    assert.ok(flyby.flyby>.95,'the first bee briefly approaches the viewer');
-    assert.ok(flyby.x>.38 && flyby.x<.62);
-    assert.ok(flyby.y>.35 && flyby.y<.55);
-    for(const elapsed of [2000,6000,10000,18000,26000]){
+    const flyby=demoBeePose(2000+BEE_FIRST_ENCOUNTER_MS+BEE_ENCOUNTER_DURATION_MS*.45,2000,0);
+    assert.equal(flyby.encounterPhase,'inspect');
+    assert.ok(flyby.flyby>.95,'the first bee gradually reaches its viewer-facing inspection');
+    assert.ok(flyby.x>.35 && flyby.x<.7);
+    assert.ok(flyby.y>.35 && flyby.y<.6);
+    for(const elapsed of [2000,6000,10000,31000,39000]){
         const bee=demoBeePose(elapsed,2000,0);
         assert.ok(bee.x>.15 && bee.x<.85);
         assert.ok(bee.y>.19 && bee.y<.81);
@@ -23,18 +24,36 @@ test('bees arrive after their introduction and orbit around the welcome screen',
     assert.ok(depths.some(depth=>depth>0));
 });
 
-test('reduced motion omits animated bees', () => {
+test('reduced motion keeps subtle ambient bees but disables face approaches', () => {
     const calls=[];
     const context={
         clearRect(){},save(){},restore(){},translate(){},fill(){},stroke(){},
         beginPath(){},moveTo(){},lineTo(){},bezierCurveTo(){},quadraticCurveTo(){},arc(){},
         ellipse(...args){calls.push(args);}
     };
-    drawDemoAmbientLife(context,1200,800,{growth:1,elapsed:6000,beesStartedAt:0,reducedMotion:true});
-    assert.equal(calls.length,0);
+    drawDemoAmbientLife(context,1200,800,{growth:1,elapsed:BEE_FIRST_ENCOUNTER_MS+3000,beesStartedAt:0,reducedMotion:true});
+    assert.ok(calls.length>=6);
+    assert.equal(demoBeePose(BEE_FIRST_ENCOUNTER_MS+3000,0,0,{encounters:false}).encounterPhase,'ambient');
     calls.length=0;
     drawDemoAmbientLife(context,1200,800,{growth:1,elapsed:6000,beesStartedAt:0});
     assert.ok(calls.length>=6);
+});
+
+test('bee encounters are deterministic, comfortably timed and continuous at every phase boundary',()=>{
+    assert.equal(demoBeeEncounter(BEE_FIRST_ENCOUNTER_MS-1),null);
+    const phases=[[.2,'approach'],[.45,'inspect'],[.65,'pass'],[.9,'exit']];
+    for(const [progress,phase] of phases)assert.equal(demoBeeEncounter(BEE_FIRST_ENCOUNTER_MS+BEE_ENCOUNTER_DURATION_MS*progress).phase,phase);
+    for(const boundary of [.38,.52,.8]){
+        const before=demoBeePose(BEE_FIRST_ENCOUNTER_MS+BEE_ENCOUNTER_DURATION_MS*boundary-1,0,0);
+        const after=demoBeePose(BEE_FIRST_ENCOUNTER_MS+BEE_ENCOUNTER_DURATION_MS*boundary+1,0,0);
+        assert.ok(Math.hypot(after.x-before.x,after.y-before.y)<.01);
+        assert.ok(Math.abs(after.depth-before.depth)<.01);
+    }
+    const firstEnd=BEE_FIRST_ENCOUNTER_MS+BEE_ENCOUNTER_DURATION_MS;
+    let nextStart=firstEnd+1;
+    while(!demoBeeEncounter(nextStart) && nextStart<firstEnd+76000)nextStart+=100;
+    assert.ok(nextStart-firstEnd>=35000 && nextStart-firstEnd<=75100);
+    assert.deepEqual(demoBeeEncounter(nextStart),demoBeeEncounter(nextStart));
 });
 
 test('ambient life is wired into simulated and immersive demo rendering', () => {
@@ -49,7 +68,8 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     assert.match(spatialDraw,/ambientBeeModel\?\.renderSprite\?\.\(arWelcomeClock\.elapsed,ambientBeesStartedAt\)/);
     assert.match(spatialDraw,/gl\.texImage2D\(gl\.TEXTURE_2D,0,gl\.RGBA,gl\.RGBA,gl\.UNSIGNED_BYTE,sprite\)/);
     assert.match(spatialDraw,/ambientWorldAnchor\.x[\s\S]*ambientWorldAnchor\.y[\s\S]*ambientWorldAnchor\.z/);
-    assert.match(spatialDraw,/bee\.flyby\*2\.8/);
+    assert.match(spatialDraw,/bee\.flyby\*\.3/);
+    assert.match(spatialDraw,/encounters:!reducedMotion/);
     assert.doesNotMatch(spatialDraw,/\bbase\.(?:x|y|z)\b/);
     assert.doesNotMatch(source,/seedlingGrowthStage|ambientGrowth|tickDemoAmbientLife/);
     assert.doesNotMatch(source,/drawAmbientTreeSprites|AMBIENT_TREE_ASSETS|lychee-tree-/);

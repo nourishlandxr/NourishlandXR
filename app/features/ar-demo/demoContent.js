@@ -59,6 +59,7 @@ export const DEMO_ORB_MATERIALS = Object.freeze({
         style: '--demo-orb-size:62px;--demo-orb-light:#ffe0a0;--demo-orb-mid:#d17723;--demo-orb-dark:#6b250c;--demo-orb-ring:#ffc84a'
     },
     banana: {shell:[.22,.46,.12],core:[.75,.85,.28],ring:[.87,.95,.38],radius:.067,style:'--demo-orb-light:#e5f5a6;--demo-orb-mid:#81a543;--demo-orb-dark:#2b5b31;--demo-orb-ring:#daf378'},
+    vetiver: {shell:[.19,.38,.21],core:[.58,.78,.38],ring:[.75,.9,.49],radius:.064,style:'--demo-orb-light:#d9edb0;--demo-orb-mid:#6e9852;--demo-orb-dark:#294d32;--demo-orb-ring:#b9da72'},
     acacia: {shell:[.51,.31,.10],core:[.96,.76,.30],ring:[1,.85,.42],radius:.067,style:'--demo-orb-light:#fff0b5;--demo-orb-mid:#c99843;--demo-orb-dark:#70461c;--demo-orb-ring:#ffdc72'},
     jackfruit: {shell:[.18,.32,.47],core:[.44,.73,.91],ring:[.58,.83,1],radius:.067,style:'--demo-orb-light:#c4ecff;--demo-orb-mid:#4b93b3;--demo-orb-dark:#203e66;--demo-orb-ring:#92d8fa'},
     lychee: {shell:[.47,.14,.27],core:[.96,.46,.61],ring:[1,.65,.74],radius:.067,style:'--demo-orb-light:#ffd2dc;--demo-orb-mid:#ca6685;--demo-orb-dark:#692648;--demo-orb-ring:#ffaac1'}

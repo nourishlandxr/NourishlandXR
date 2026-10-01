@@ -2,7 +2,12 @@ import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 import { handTrackingState } from './xrPointer.js';
 
-export const INFO_HELP = 'Aim at an object to highlight it. Hold a plant cell to read its details here. Select a Plant Orb to explore information connected to that plant.';
+export const INFO_HELP = `Aim at an object to highlight it. Hold a plant cell to read its details here. Select a Plant Orb to explore information connected to that plant.
+
+Build this in Project Creator
+Areas organise real places. Totems welcome and orient visitors. Plant Orbs connect PIMO to actual plants, while Notes preserve observations, instructions and provenance. Area links create routes between physical locations. Project maps can use plans, aerial images, hand-drawn layouts or mapped positions, and published information can be updated as a site changes.
+
+NLXR connects knowledge to real plants and real places. Check information against the plant, season and conditions around you. Visual weather is an experience effect, not a sensor reading. Keep location, source and date with local observations.`;
 const PANEL_GRAB_HOLD_MS = 800;
 const PANEL_GRAB_CANCEL_DISTANCE_PX = 14;
 
@@ -125,6 +130,9 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
     if(primary)buttons.push({action:'Utility:'+primary.id,label:primary.label,kind:'utility',primary:true,disabled:Boolean(primary.disabled),x:238,y:primaryY,width:732,height:68});
     return buttons;
 }
+export function optionalPanelControl(items=[],action=''){
+    return Array.isArray(items)?items.find(item=>item?.action===action) || null:null;
+}
 export function controlPanelHeight(lines,largeText=false,pathway=false,utilities=0,moduleCount=0){
     const items=Array.isArray(utilities)?utilities.slice(0,8):[],count=items.length || Math.min(8,Number(utilities)||0);
     const hasPrimary=items.some(item=>item.primary || item.id==='continue');
@@ -169,6 +177,7 @@ function controlDescription(item={}){
         'Utility:close':'Close the current demo experience.',
         'Utility:continue':'Continue to the next demo step.',
         RainIntensity:'Cycle rain between off, light, normal, and heavy.',
+        RainStyle:'Switch between the preserved Rain V1 effect and the layered Rain V2 trial.',
         TextDown:'Reduce the reading text size.',
         TextUp:'Increase the reading text size.',
         Recenter:'Return the panel to its comfortable forward position.',
@@ -178,32 +187,34 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, cellOpacity = 1, handMode='pointer', panelHints = [], onHandMode=()=>{}, onRainIntensity = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = 1, handMode='pointer', panelHints = [], onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     const HEAVY_RAIN_INTENSITY=1.65;
     const CELL_OPACITY_LEVELS=[0,.25,.5,1];
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),meshCellOpacity=CELL_OPACITY_LEVELS.reduce((best,value)=>Math.abs(value-Number(cellOpacity))<Math.abs(best-Number(cellOpacity))?value:best,1),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=CELL_OPACITY_LEVELS.reduce((best,value)=>Math.abs(value-Number(cellOpacity))<Math.abs(best-Number(cellOpacity))?value:best,1),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
     let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let visibleMedia=null;
     const MEDIA_FADE_MS=650;
     let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='';
-    let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
+    let confirmation=null,confirmationSnapshot=null;
+    let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,panelGestureSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
     settingsElement.className='nlxr-settings-companion';settingsElement.setAttribute('aria-label','Settings companion panel');settingsElement.hidden=true;root?.append(settingsElement);
     const isDesktopDemo=()=>Boolean(root?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     const text=()=>{
+        if(confirmation)return confirmation.body;
         if(tab==='Help')return [moduleContext?.body,INFO_HELP].filter(Boolean).join('\n\n');
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
             :identity?'Information about what you select will appear here. Select a Plant Orb or hold one of its cells to explore.'
                 :'Information about what you select will appear here.';
         return reading;
     };
-    const currentHint=()=>tab==='Help'?'':contextHint || identity?.hint || rotatingPanelHints[panelHintIndex] || '';
+    const currentHint=()=>confirmation || tab==='Help'?'':contextHint || identity?.hint || rotatingPanelHints[panelHintIndex] || '';
     const pages=()=>infoPages(text(),headset?(largeText?29:34):(largeText?32:38),pathwayContext?4:7);
-    const title=()=>tab==='Help'?'Help':selection?.hideTitle?'':selection?.title || 'Control panel';
+    const title=()=>confirmation?.title || (tab==='Help'?'Help':selection?.hideTitle?'':selection?.title || 'Control panel');
     const hasPimPath=()=>Boolean(selection && identity);
     const pimPath=()=>{
         if(!hasPimPath())return '';
@@ -217,7 +228,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const metadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const previewMedia=()=>mediaPreviewBlocked ? null : selection?.mesh==='lim' && (selection.sketchImage || selection.image)
         ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false,fit:selection.imageFit || 'cover'}
-        : identity?.media?.image ? {...identity.media,caption:identity.plant,plant:true} : null;
+        : identity?.media?.image ? {...identity.media,caption:identity.media.caption || identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
     function loadPanelImage(source,{delayMs=0,discardPrevious=false}={}){
         if(source===mediaImageSource)return;
@@ -239,7 +250,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const mainUtilities=()=>utilityActions.filter(item=>!['safety','recenter'].includes(item.id));
-    const controls=()=>{const items=controlPanelControls({hidden,tab,selected:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:pathwayContext?.actions || [],moduleActions:moduleContext?.actions || [],utilityActions:mainUtilities()});return isDesktopDemo()?items.filter(item=>item.action!=='Recenter'):items;};
+    const controls=()=>{const items=controlPanelControls({hidden,tab,selected:confirmation?false:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:confirmation?[]:pathwayContext?.actions || [],moduleActions:confirmation?[]:moduleContext?.actions || [],utilityActions:mainUtilities()});const visible=confirmation?items.filter(item=>item.kind==='utility'):items;return isDesktopDemo()?visible.filter(item=>item.action!=='Recenter'):visible;};
     // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
     const spatialHeight=()=>phoneAR?900:headset?600:height();
     const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
@@ -264,6 +275,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='ScaleDown')spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);
         if(action==='ScaleUp')spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);
         if(action==='RainIntensity'){ambientRain=ambientRain>=HEAVY_RAIN_INTENSITY?0:ambientRain>=1?HEAVY_RAIN_INTENSITY:ambientRain<=0?.45:1;onRainIntensity(ambientRain);}
+        if(action==='RainStyle'){ambientRainStyle=ambientRainStyle==='v1'?'v2':'v1';onRainStyle(ambientRainStyle);}
         if(action==='CellOpacity'){meshCellOpacity=CELL_OPACITY_LEVELS[(CELL_OPACITY_LEVELS.indexOf(meshCellOpacity)+1)%CELL_OPACITY_LEVELS.length];onCellOpacity(meshCellOpacity);}
         if(action.startsWith('Path')){onPathwayAction(action);return;}
         if(action.startsWith('Module:')){onModuleAction(action.slice(7));return;}
@@ -278,7 +290,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         {action:'CellOpacity',label:`Cells · ${Math.round(meshCellOpacity*100)}%`,ariaLabel:'Change PIMO and LIMO cell opacity',x:300,y:274,width:400,height:50},
         {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',x:776,y:274,width:160,height:50},
         {action:'Recenter',label:'◎  Recenter panel',x:56,y:354,width:424,height:48},
-        {action:'RainIntensity',label:`Rain · ${ambientRain<=0?'Off':ambientRain<1?'Light':ambientRain>1?'Heavy':'Normal'}`,ariaLabel:'Change rain intensity',x:520,y:354,width:424,height:48}
+        {action:'RainIntensity',label:`Rain · ${ambientRain<=0?'Off':ambientRain<1?'Light':ambientRain>1?'Heavy':'Normal'}`,ariaLabel:'Change rain intensity',x:520,y:354,width:424,height:48},
+        {action:'RainStyle',label:`Rain style · ${ambientRainStyle.toUpperCase()}`,ariaLabel:'Switch rain visual style',x:520,y:418,width:424,height:48}
     ];
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
@@ -599,8 +612,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const header=document.createElement('header');header.className='nlxr-control-header';
             const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || 'Control panel';plant.hidden=hasPimPath();
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');scientific.hidden=hasPimPath() || !scientific.textContent;
-            const hideButton=makeButton(controls().find(item=>item.action==='Hide'));hideButton.classList.add('is-panel-hide');
-            header.append(hideButton);
+            const hideControl=optionalPanelControl(controls(),'Hide');
+            if(hideControl){const hideButton=makeButton(hideControl);hideButton.classList.add('is-panel-hide');header.append(hideButton);}
             header.classList.add('is-move-handle');header.title='Hold to move the Control panel';
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
@@ -788,6 +801,19 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     }
     function dockSpatialMedia(side){mediaDockSide=side || 'top';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
     const api={element,
+        showConfirmation(value={}){
+            if(!confirmation){confirmationSnapshot={tab,page,hidden,settingsOpen,mediaCollapsed,detached,visibility:element.style.visibility};}
+            confirmation={title:String(value.title || 'Close demo?'),body:String(value.body || 'Your current demo state will close. Choose Keep demo open to return, or Close demo to leave.')};
+            tab='Details';page=0;hidden=false;settingsOpen=false;mediaCollapsed=true;detached=false;element.style.visibility='';render(true);
+        },
+        hideConfirmation(){
+            if(!confirmation)return false;
+            confirmation=null;
+            const snapshot=confirmationSnapshot;confirmationSnapshot=null;
+            if(snapshot){tab=snapshot.tab;page=snapshot.page;hidden=snapshot.hidden;settingsOpen=snapshot.settingsOpen;mediaCollapsed=snapshot.mediaCollapsed;detached=snapshot.detached;element.style.visibility=snapshot.visibility;}
+            render(true);return true;
+        },
+        clearPlant(nextRecord){if(record!==nextRecord)return false;record=null;identity=null;selection=null;mediaCollapsed=true;loadPanelImage('');page=0;render(true);return true;},
         showLearning(content){
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
             const imageSource=content?.sketchImage || content?.image || '';
@@ -812,15 +838,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const previousMedia=record===nextRecord ? identity?.media : null;
             const previousHint=record===nextRecord ? identity?.hint : '';
             const identityImage=document?.identity?.image;
-            const nextMedia=media?.image ? {image:String(media.image),alt:String(media.alt || '')}
-                : identityImage ? {image:String(identityImage),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}
+            const nextMedia=media?.image ? {image:String(media.image),alt:String(media.alt || ''),caption:String(media.caption || '')}
+                : identityImage ? {image:String(identityImage),alt:String(document.identity.imageAlt || document.identity.commonName || document.identity.scientificName || 'Plant'),caption:String(document.identity.imageCaption || '')}
                     : previousMedia;
             record=nextRecord;selection=null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};
             mediaCollapsed=!nextMedia?.image;mediaTouched=false;
             loadPanelImage(nextMedia?.image || '');
             tab='Details';page=0;render(true);
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.commonName || document.identity.scientificName || 'Plant')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const image=document?.identity?.image;const media=image?{image:String(image),alt:String(document.identity.imageAlt || document.identity.commonName || document.identity.scientificName || 'Plant'),caption:String(document.identity.imageCaption || '')}:previous;record=nextRecord;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
@@ -883,7 +909,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const settingsCard={id:'settings',settings:true,height:spatialHeight(),controls:settingsControls(),hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
-            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image && (mediaDetached || !settingsOpen))cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
@@ -901,25 +927,30 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 spatialGrabPending=null;event.stopImmediatePropagation();return;
             }
             if(event.type==='select' && (spatialMove?.source===event.inputSource || finishingMoveSource===event.inputSource)){finishingMoveSource=null;event.stopImmediatePropagation();return;}
+            if(event.type==='selectend' && panelGestureSource!==event.inputSource)return;
+            if(event.type==='select' && panelGestureSource && panelGestureSource!==event.inputSource)return;
             const handRay=event.inputSource?.hand ? handTrackingState(event.frame,event.inputSource,referenceSpace)?.pointer : null;
             const targetRaySpace=event.inputSource?.targetRaySpace;
             const transform=targetRaySpace ? event.frame?.getPose(targetRaySpace,referenceSpace)?.transform.matrix : null;
             if(!handRay && !transform)return;
             const ray=handRay || {origin:{x:transform[12],y:transform[13],z:transform[14]},direction:{x:-transform[8],y:-transform[9],z:-transform[10]}};
-            const target=hit(ray);if(!target)return;
+            const target=hit(ray);if(!target){if(event.type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
             event.stopImmediatePropagation();
             const button=targetButtonAtRay(target);
             if(event.type==='selectstart' && target.card?.id==='media'){
+                panelGestureSource=event.inputSource;
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'media',cardId:'media',startedAt:performance.now(),handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
             if(event.type==='selectstart' && target.card?.id==='control' && !hidden){
+                panelGestureSource=event.inputSource;
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'main',cardId:'control',startedAt:performance.now(),handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
             if(event.type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
-        };for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);
-            removeXrControls=()=>{spatialGrabPending=null;spatialMove=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);};},
+            if(event.type==='selectend')panelGestureSource=null;
+        };const visibility=()=>{if(session.visibilityState!=='visible'){spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
+            removeXrControls=()=>{spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
         destroy(){mediaLoadToken++;clearTimeout(mediaTransitionTimer);clearInterval(panelHintTimer);mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
     };render();return api;
 }
