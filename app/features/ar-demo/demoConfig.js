@@ -18,9 +18,10 @@ export const DEMO_QUEST_ORB_SCALE = 0.62;
 
 // The shared demo quad is .4 m by .16 m before model scaling. These values
 // produce the configured 1.44 m by 1.08 m transparent PIM interaction wall.
+export const DEMO_SHARED_QUAD_SIZE = Object.freeze({ width: .4, height: .16 });
 export const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
-    x: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / .4,
-    y: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / .16
+    x: PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / DEMO_SHARED_QUAD_SIZE.width,
+    y: PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / DEMO_SHARED_QUAD_SIZE.height
 });
 
 // Creator Mode's medium Note is 1.88 m x .69 m on the shared quad. The demo

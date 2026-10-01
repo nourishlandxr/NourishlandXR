@@ -1,6 +1,23 @@
 import { AR_EXPERIENCE_CONFIG } from '../../services/arExperienceConfig.js';
 import { spatialPosition } from '../../services/spatialPlacement.js';
-import { DEMO_STABLE_EYE_HEIGHT_METRES } from './demoConfig.js';
+import { DEMO_SHARED_QUAD_SIZE, DEMO_STABLE_EYE_HEIGHT_METRES } from './demoConfig.js';
+
+export function demoBillboardSurfaceSize(scaleX = 1, scaleY = 1) {
+    return {
+        width: Math.abs(Number(scaleX) || 0) * DEMO_SHARED_QUAD_SIZE.width,
+        height: Math.abs(Number(scaleY) || 0) * DEMO_SHARED_QUAD_SIZE.height
+    };
+}
+
+export function demoBillboardTextureLocalPoint(pixelX, pixelY, textureWidth, textureHeight) {
+    const width = Number(textureWidth);
+    const height = Number(textureHeight);
+    if (!(width > 0) || !(height > 0)) return null;
+    return {
+        x: (Number(pixelX) / width - .5) * DEMO_SHARED_QUAD_SIZE.width,
+        y: (.5 - Number(pixelY) / height) * DEMO_SHARED_QUAD_SIZE.height
+    };
+}
 
 export function demoPointerScreenPoint(rect, viewportWidth = globalThis.innerWidth, viewportHeight = globalThis.innerHeight) {
     const width = Number(rect?.width);

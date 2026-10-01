@@ -4,6 +4,8 @@ import fs from 'node:fs';
 import { infoPanelPose, panelPoseOutsideSafeBounds } from '../app/services/pimInfoPanel.js';
 import { WELCOME_PANEL_DRAW_OFFSET, welcomeExperienceFrames, welcomeCellAtPoint } from '../app/services/arWelcomeShowcase.js';
 import { DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_TEXT_TEXTURE_INTERVAL_MS } from '../app/features/ar-demo/demoConfig.js';
+import { demoBillboardSurfaceSize, demoBillboardTextureLocalPoint } from '../app/features/ar-demo/demoGeometry.js';
+import { spatialDashboardRayHit } from '../app/services/spatialDashboardMirror.js';
 
 const demoSource = fs.readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
 const panelSource = fs.readFileSync(new URL('../app/services/pimInfoPanel.js', import.meta.url), 'utf8');
@@ -30,6 +32,36 @@ test('LIM hit targets use cell coordinates while the welcome panel keeps its own
     assert.doesNotMatch(demoSource, /hit\.pixelX-WELCOME/);
     const node = welcomeExperienceFrames(64000, true)[0].nodes[0];
     assert.equal(welcomeCellAtPoint(welcomeExperienceFrames(64000, true), node.x, node.y).key, node.key);
+});
+
+test('Quest rays map the rendered shared quad back to all LIMO texture quadrants', () => {
+    const scaleX = 10;
+    const scaleY = 21;
+    const surface = demoBillboardSurfaceSize(scaleX, scaleY);
+    assert.deepEqual(surface, { width: 4, height: 3.36 });
+    const panel = {
+        center: { x: 0, y: 0, z: 0 },
+        right: { x: 1, y: 0, z: 0 },
+        up: { x: 0, y: 1, z: 0 },
+        normal: { x: 0, y: 0, z: 1 },
+        ...surface
+    };
+    const pathwayRoots = welcomeExperienceFrames(30000, false)
+        .flatMap(frame => frame.nodes)
+        .filter(node => node.depth === 0 && node.id !== 'vision');
+    assert.equal(pathwayRoots.length, 4);
+    for (const { x: pixelX, y: pixelY } of pathwayRoots) {
+        const local = demoBillboardTextureLocalPoint(pixelX, pixelY, 2500, 2100);
+        const hit = spatialDashboardRayHit({
+            origin: { x: local.x * scaleX, y: local.y * scaleY, z: 1 },
+            direction: { x: 0, y: 0, z: -1 }
+        }, panel, { width: 2500, height: 2100 });
+        assert.ok(hit);
+        assert.ok(Math.abs(hit.pixelX - pixelX) < 1e-9);
+        assert.ok(Math.abs(hit.pixelY - pixelY) < 1e-9);
+    }
+    assert.match(demoSource, /demoBillboardSurfaceSize\(scaleX,scaleY\)/);
+    assert.match(demoSource, /demoBillboardTextureLocalPoint\(targetNode\.x,targetNode\.y,2500,2100\)/);
 });
 
 test('spatial panel keeps its pose through head turns and only moves on grab or explicit recenter', () => {

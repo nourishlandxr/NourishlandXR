@@ -19,7 +19,7 @@ import {
     selectGuidedDemoOrb
 } from '../app/features/ar-demo/demoSelection.js';
 import { BIOMAP_CATEGORIES, DEMO_ORB_MATERIALS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../app/features/ar-demo/demoContent.js';
-import { AR_PHONE_COMFORT, DEMO_ARCHETYPE_START_MS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_WELCOME_OPENING_MS, INTRO_CONTROL_POSITION, demoRainProgress, welcomeAutoAdvanceReady } from '../app/features/ar-demo/demoConfig.js';
+import { AR_PHONE_COMFORT, DEMO_ARCHETYPE_START_MS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_SHARED_QUAD_SIZE, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_WELCOME_OPENING_MS, INTRO_CONTROL_POSITION, demoRainProgress, welcomeAutoAdvanceReady } from '../app/features/ar-demo/demoConfig.js';
 import { MORINGA_KNOWLEDGE, MORINGA_PIM } from '../app/features/ar-demo/demoPlantContent.js';
 import { PIM_SPATIAL_CONFIG } from '../app/services/plantInformationMesh.js';
 import { plantInformationMeshSurfaceLayout } from '../app/services/plantInformationMeshSurfaceLayout.js';
@@ -1627,8 +1627,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     const interactionAdvance=source.slice(source.indexOf('function advanceAfterDemoProfileInteraction'),source.indexOf('function orientDemoPimPoseToViewer'));
     assert.doesNotMatch(interactionAdvance,/continueAfterDemoPim\(record\)/);
     assert.match(interactionAdvance,/record\.demoProfileReady = true/);
-    assert.equal(DEMO_PIM_IMMERSIVE_SCALE.x,PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / .4);
-    assert.equal(DEMO_PIM_IMMERSIVE_SCALE.y,PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / .16);
+    assert.equal(DEMO_SHARED_QUAD_SIZE.width,.4);
+    assert.equal(DEMO_SHARED_QUAD_SIZE.height,.16);
+    assert.equal(DEMO_PIM_IMMERSIVE_SCALE.x,PIM_SPATIAL_CONFIG.expandedSurfaceWidthMetres / DEMO_SHARED_QUAD_SIZE.width);
+    assert.equal(DEMO_PIM_IMMERSIVE_SCALE.y,PIM_SPATIAL_CONFIG.expandedSurfaceHeightMetres / DEMO_SHARED_QUAD_SIZE.height);
     assert.match(styles, /left: var\(--pim-node-x, 50%\)/);
     assert.doesNotMatch(source, /items\.map\(\(\[label, value\]/);
     assert.match(pimCanvasSource, /pimVisibleNodes/);

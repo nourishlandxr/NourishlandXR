@@ -32,7 +32,7 @@ import { renderDesktopLearningBook } from './desktopLearningBook.js';
 import { BIOMAP_CATEGORIES, DEMO_CONTENT, DEMO_JOURNEY_STAGES, DEMO_NOTE_TEMPLATE_KEYS, DEMO_ORB_MATERIALS, DEMO_PANEL_HINTS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, NOTE_TEMPLATES, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../features/ar-demo/demoContent.js';
 import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
 import { MORINGA_KNOWLEDGE, MORINGA_PIM, MORINGA_PROFILE } from '../features/ar-demo/demoPlantContent.js';
-import { demoGroundBaseY, demoPlacementPosition, demoPointerScreenPoint, demoViewerPointerFallbackAllowed, isDemoFloorHit } from '../features/ar-demo/demoGeometry.js';
+import { demoBillboardSurfaceSize, demoBillboardTextureLocalPoint, demoGroundBaseY, demoPlacementPosition, demoPointerScreenPoint, demoViewerPointerFallbackAllowed, isDemoFloorHit } from '../features/ar-demo/demoGeometry.js';
 import { preservePlacedDemoPlants, selectDemoPlantRecord, selectGuidedDemoOrb as selectGuidedDemoOrbRecord } from '../features/ar-demo/demoSelection.js';
 import { demoPimExpandedNodeIds, demoPimState, setDemoPimState } from '../features/ar-demo/demoState.js';
 import { simulatedAnchorFromPointer } from '../features/ar-demo/demoSimulation.js';
@@ -1780,11 +1780,12 @@ function showArWelcomeShowcase() {
 function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100) {
     if(!introWorldAnchor)return null;
     const matrix=billboardMatrix(position,scaleX,scaleY,introWorldAnchor);
+    const surface=demoBillboardSurfaceSize(scaleX,scaleY);
     const origin=demoPointerWorldOrigin(),direction=demoPointerWorldRay();
     if(!origin || !direction)return null;
     const hit=spatialDashboardRayHit({origin,direction},{center:position,
         right:{x:matrix[0]/scaleX,y:0,z:matrix[2]/scaleX},up:{x:0,y:1,z:0},
-        normal:{x:matrix[8],y:0,z:matrix[10]},width:scaleX,height:scaleY},{width,height});
+        normal:{x:matrix[8],y:0,z:matrix[10]},width:surface.width,height:surface.height},{width,height});
     if(!hit || width!==2500 || height!==2100)return hit;
     const centerX=WELCOME_PANEL_DRAW_OFFSET.x+WELCOME_SHAPE.cx,centerY=WELCOME_PANEL_DRAW_OFFSET.y+WELCOME_SHAPE.cy;
     const px=hit.pixelX-centerX,py=hit.pixelY-centerY,angle=Math.atan2(py,px),step=Math.PI*2/WELCOME_SHAPE.sides;
@@ -4806,8 +4807,8 @@ function drawNativeConnectionSpatial(view){
     const source={x:panel.center.x+panel.right.x*sx+panel.up.x*sy,y:panel.center.y+panel.right.y*sx+panel.up.y*sy,z:panel.center.z+panel.right.z*sx+panel.up.z*sy};
     const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
     const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
-    const tx=targetNode.x/2500-.5,ty=.5-targetNode.y/2100;
-    const target={x:board[12]+board[0]*tx+board[4]*ty,y:board[13]+board[1]*tx+board[5]*ty,z:board[14]+board[2]*tx+board[6]*ty};
+    const targetLocal=demoBillboardTextureLocalPoint(targetNode.x,targetNode.y,2500,2100);
+    const target={x:board[12]+board[0]*targetLocal.x+board[4]*targetLocal.y,y:board[13]+board[1]*targetLocal.x+board[5]*targetLocal.y,z:board[14]+board[2]*targetLocal.x+board[6]*targetLocal.y};
     const linked=state.phase==='connected',time=performance.now();
     gl.depthMask(false);
     drawSpatialTether(gl,tetherRenderer,view,source,target,{segments:12,width:linked ? .0035 : .002,curve:.025,lift:.04,color:[.81,1,.64,linked ? .62 : .25]});
