@@ -336,18 +336,25 @@ function leaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)'){
  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=colour;
  ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(size*.4,-size*.55,size,-size*.38,size,0);
  ctx.bezierCurveTo(size*.65,size*.38,size*.25,size*.35,0,0);ctx.fill();
- ctx.strokeStyle=vein;ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(1,0);ctx.lineTo(size*.8,0);ctx.stroke();ctx.restore();
+ // Soft lamina shading and veins add depth without enlarging the leaf.
+ ctx.fillStyle='rgba(211,224,165,.10)';ctx.beginPath();ctx.moveTo(0,0);
+ ctx.bezierCurveTo(size*.4,-size*.55,size,-size*.38,size,0);ctx.quadraticCurveTo(size*.45,-size*.045,0,0);ctx.fill();
+ ctx.strokeStyle=vein;ctx.lineWidth=.65;ctx.beginPath();ctx.moveTo(1,0);ctx.quadraticCurveTo(size*.42,-size*.035,size*.86,0);ctx.stroke();
+ if(size>9)for(let n=1;n<=3;n++){
+  const x=size*(.22+n*.15);ctx.beginPath();ctx.moveTo(x,0);ctx.quadraticCurveTo(x+size*.04,-size*.12,x+size*.12,-size*.2);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,0);ctx.quadraticCurveTo(x+size*.02,size*.08,x+size*.09,size*.14);ctx.stroke();
+ }
+ ctx.restore();
 }
 function growRimStem(ctx,angle,target,progress,colour='#637448'){
  if(progress<=0)return;
  const base=polarPoint(angle,WELCOME_SHAPE.radius+2);
  const bend=polarPoint(angle+.012,527);
  ctx.strokeStyle=colour;ctx.lineWidth=1.65;ctx.beginPath();ctx.moveTo(base.x,base.y);
- // Draw only the established portion, so the tip advances from the surface.
- for(let i=1;i<=18;i++){
-  const t=progress*i/18,u=1-t;
-  ctx.lineTo(u*u*base.x+2*u*t*bend.x+t*t*target.x,u*u*base.y+2*u*t*bend.y+t*t*target.y);
- }
+ // Exact partial quadratic keeps the advancing stem smooth at any size.
+ const t=progress,u=1-t;
+ ctx.quadraticCurveTo(mix(base.x,bend.x,t),mix(base.y,bend.y,t),
+  u*u*base.x+2*u*t*bend.x+t*t*target.x,u*u*base.y+2*u*t*bend.y+t*t*target.y);
  ctx.stroke();
 }
 function drawLivingRim(ctx,{elapsed=0,reducedMotion=false}){
@@ -417,7 +424,9 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false}){
    for(let j=0;j<5;j++){
     ctx.save();ctx.rotate(j*Math.PI*2/5);ctx.beginPath();ctx.moveTo(0,0);
     ctx.quadraticCurveTo(-4,-4,-2.5,-8);ctx.lineTo(0,-6.8);ctx.lineTo(2.5,-8);
-    ctx.quadraticCurveTo(4,-4,0,0);ctx.fill();ctx.restore();
+    ctx.quadraticCurveTo(4,-4,0,0);ctx.fill();
+    ctx.fillStyle='rgba(244,218,232,.16)';ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-2,-4,0,-6.8);ctx.quadraticCurveTo(2,-3,0,0);ctx.fill();
+    ctx.strokeStyle='rgba(105,57,94,.26)';ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(0,-1);ctx.lineTo(0,-5.8);ctx.stroke();ctx.restore();
    }
    ctx.fillStyle='#dcc395';ctx.beginPath();ctx.arc(0,0,1.65,0,Math.PI*2);ctx.fill();ctx.restore();
   }
