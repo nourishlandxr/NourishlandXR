@@ -1263,7 +1263,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A Project holds information',art:'area'[\s\S]*title:'Areas and Totems guide you',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:null[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'[\s\S]*title:'A Project holds information',art:'area'[\s\S]*title:'Areas and Totems guide you',art:'structure'[\s\S]*title:'Begin with one plant'[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.ok(DEMO_TUTORIAL_ART.structure.image.endsWith('/assets/demo-tutorial-art/04b-one-place-clear-structure.png'));
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
@@ -1467,7 +1467,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
-    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*showDemoTutorialMedia\(step\.art\)/);
+    assert.match(source, /title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:null[\s\S]*showDemoTutorialMedia\(step\.art\)/);
     assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'',hideTitle:true,imageFit:'contain'/);
     assert.match(source, /function prepareStableLimoSurface\(\)[\s\S]*record\.demoInteractive=true;[\s\S]*record\.demoAlive=true;/);
     assert.doesNotMatch(source.match(/function prepareStableLimoSurface\(\) \{[\s\S]*?\n\}/)?.[0] || '', /demoExpanded=false|demoExpandedNodeIds=\[\]/);

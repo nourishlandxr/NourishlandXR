@@ -103,7 +103,7 @@ test('the first-time journey introduces the Control panel before four practical 
     assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information'/);
     assert.equal(DEMO_ARCHETYPE_START_MS,20500);
     assert.doesNotMatch(demo,/welcomeNarrative\(openingElapsed/);
-    assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:'references'[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'/);
+    assert.match(demo,/title:'Meet your Control panel'[\s\S]*title:'Every plant holds information',art:null[\s\S]*title:'Imagine arriving in a garden',art:'curiosity'/);
     assert.match(demo,/infoPanel\?\.suspend\(true\)/);
     assert.match(demo,/if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.suspend\(false\)/);
     assert.doesNotMatch(demo,/do not need prior plant, farming or technology knowledge|For a beginner|beginners can enter/);
