@@ -116,7 +116,16 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
             bee.wrapper.rotation.y=.08+Math.sin(elapsed*.0007)*.1;
             bee.wrapper.rotation.z=Math.sin(elapsed*.0013)*.12;
             bee.mixer.update(Number.isFinite(lastElapsed)?Math.max(0,Math.min(.1,(elapsed-lastElapsed)/1000)):0);
-            lastElapsed=elapsed;lastSpritePaint=elapsed;
+            lastElapsed=elapsed;
+            bee.wrapper.updateMatrixWorld(true);
+            const bounds=new THREE.Box3().setFromObject(bee.wrapper);
+            const center=bounds.getCenter(new THREE.Vector3());
+            const size=bounds.getSize(new THREE.Vector3());
+            const halfHeight=Math.max(.25,size.y,size.x/camera.aspect)/2;
+            camera.position.set(center.x,center.y,bounds.max.z+halfHeight/Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*1.22);
+            camera.lookAt(center);
+            camera.updateProjectionMatrix();
+            lastSpritePaint=elapsed;
             renderer.render(scene,camera);
             return canvas;
         },

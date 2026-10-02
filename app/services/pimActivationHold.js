@@ -41,10 +41,15 @@ export function bindSpatialPimHold({ session, getTarget, enabled, activate, prog
         if (source) return;
         hold.cancel(); source = null; pressedTarget = null; gestureComplete = false; selectObserved = false;
         suppressSource = null; suppressUntil = 0;
-        if (event.inputSource?.targetRayMode !== 'tracked-pointer' || !enabled()) return;
+        if (event.inputSource?.targetRayMode !== 'tracked-pointer' || !enabled() || session.visibilityState === 'hidden') return;
         captureEvent(event);
         const target = getTarget(); if (!target) return;
-        source = event.inputSource; pressedTarget = target; hold.start(target, performance.now()); event.stopImmediatePropagation();
+        source = event.inputSource; pressedTarget = target; hold.start(target, performance.now());
+        // A PIMO cell is a selection, not a move handle. Activate on the
+        // initial trigger press so a brief press never depends on XR release
+        // ordering or a 500 ms dwell. The later select/end events are consumed.
+        activatePressedCell();
+        event.stopImmediatePropagation();
     };
     const end = event => {
         if (event.inputSource !== source) return;

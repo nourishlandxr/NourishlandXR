@@ -156,13 +156,13 @@ test('hold requires dwell on the same cell, activates once, and clears fill on c
     assert.equal(events.length,1); assert.equal(hold.active,false); assert.equal(fills.at(-1),0);
 });
 
-test('XR cell holds consume their select event without blocking later object selections',()=>{
+test('XR cell press opens immediately and consumes its select without blocking later objects',()=>{
     const session=new EventTarget(), source={targetRayMode:'tracked-pointer'};
     let target={record:{id:'plant'},target:{path:'uses'}}, activated=0, ordinary=0;
     const binding=bindSpatialPimHold({session,getTarget:()=>target,enabled:()=>true,activate:()=>activated++,progress:()=>{}});
     session.addEventListener('select',()=>ordinary++);
     const send=type=>{const event=new Event(type);event.inputSource=source;session.dispatchEvent(event);};
-    send('selectstart');binding.tick(performance.now()+600);send('select');send('selectend');
+    send('selectstart');assert.equal(activated,1);send('select');send('selectend');
     assert.equal(activated,1);assert.equal(ordinary,0);
     target=null;send('selectstart');send('select');send('selectend');assert.equal(ordinary,1);
     binding.destroy();
@@ -177,6 +177,7 @@ test('Quest PIMO short presses activate once whether select arrives before or af
         session.addEventListener('select',()=>ordinary++);
         const send=type=>{const event=new Event(type);event.inputSource=source;session.dispatchEvent(event);};
         send('selectstart');
+        assert.equal(activated,1,'the initial trigger press opens the cell');
         for(const type of order)send(type);
         assert.equal(activated,1,`Pigeon Pea should open on ${order.join(' → ')}`);
         assert.equal(ordinary,0,'the trailing XR select must not open another target');
@@ -184,7 +185,7 @@ test('Quest PIMO short presses activate once whether select arrives before or af
     }
 });
 
-test('Quest PIMO release survives a missing hover frame but never activates a different cell',()=>{
+test('Quest PIMO press survives a missing hover frame without selecting another cell',()=>{
     const session=new EventTarget(),source={targetRayMode:'tracked-pointer'};
     const pigeon={record:{id:'pigeon-pea'},target:{path:'food-forest'}};
     const other={record:pigeon.record,target:{path:'uses'}};
@@ -195,11 +196,11 @@ test('Quest PIMO release survives a missing hover frame but never activates a di
     send('selectend');send('select');
     assert.deepEqual(activated,['food-forest']);
     target=pigeon;send('selectstart');target=other;send('selectend');send('select');
-    assert.deepEqual(activated,['food-forest'],'releasing over a different cell cannot open either cell');
+    assert.deepEqual(activated,['food-forest','food-forest'],'releasing over a different cell cannot open that cell');
     binding.destroy();
 });
 
-test('Quest PIMO release tests the event controller pose instead of a stale hover frame',()=>{
+test('Quest PIMO press uses the event controller pose before release moves away',()=>{
     const session=new EventTarget(),source={targetRayMode:'tracked-pointer'};
     const pigeon={record:{id:'pigeon-pea'},target:{path:'food-forest'}};
     const other={record:pigeon.record,target:{path:'uses'}};
@@ -209,12 +210,12 @@ test('Quest PIMO release tests the event controller pose instead of a stale hove
         activate:()=>activated++,progress:()=>{}});
     const send=(type,releaseTarget)=>{const event=new Event(type);event.inputSource=source;event.releaseTarget=releaseTarget;session.dispatchEvent(event);};
     send('selectstart');send('selectend',other);send('select',other);
-    assert.equal(activated,0,'release over Uses cannot activate the old Food Forest hover');
+    assert.equal(activated,1,'the initial Food Forest press opens before the release ray moves');
     assert.deepEqual(captured,['selectstart','selectend']);
     binding.destroy();
 });
 
-test('Quest PIMO holds survive visible-blurred and missing visibility state but cancel when hidden',()=>{
+test('Quest PIMO presses work while visible-blurred but ignore an already hidden session',()=>{
     for(const visibilityState of ['visible-blurred',undefined]){
         const session=new EventTarget(),source={targetRayMode:'tracked-pointer'};
         const target={record:{id:'pigeon-pea'},target:{path:'uses'}};
@@ -224,8 +225,9 @@ test('Quest PIMO holds survive visible-blurred and missing visibility state but 
         session.visibilityState=visibilityState;
         send('selectstart');send('visibilitychange');send('selectend');send('select');
         assert.equal(activated,1,`a ${String(visibilityState)} session keeps a valid PIMO press`);
-        send('selectstart');session.visibilityState='hidden';send('visibilitychange');send('selectend');send('select');
-        assert.equal(activated,1,'an explicitly hidden session cancels the active press');
+        session.visibilityState='hidden';send('visibilitychange');
+        send('selectstart');send('selectend');send('select');
+        assert.equal(activated,1,'an explicitly hidden session ignores a new press');
         binding.destroy();
     }
 });

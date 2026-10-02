@@ -103,6 +103,7 @@ let sphereRenderer = null;
 let totemCardsRenderer = null;
 let infoPanel = null;
 let pimHold = null;
+let lastSpatialPimActivationAt = -Infinity;
 let demoPimHover={record:null,path:''};
 let activePimLimBridge = null;
 let demoRenderFailureReported = false;
@@ -2901,6 +2902,11 @@ function selectDemoProfileCell(selection=demoInfoTarget()) {
         setGuide('Aim at a visible plant information cell to explore it.');
         return false;
     }
+    // Some Quest runtimes deliver the same trigger through both the capture
+    // listener and the general select fallback. Do not toggle the branch shut
+    // on that duplicate event, even if the first activation revealed children.
+    if(session && performance.now()-lastSpatialPimActivationAt<350)return true;
+    if(session)lastSpatialPimActivationAt=performance.now();
     if(nativeConnectionState?.phase==='source' && record===nativeConnectionPlant() && node.path===nativeConnectionState.sourcePath)return acceptNativePimCell(record,node.path);
     if (node.pimRead) {openDemoKnowledge(record);return true;}
     if (node.pimCore) {
@@ -4848,7 +4854,7 @@ function drawSpatialAmbientLife(view){
         for(let index=0;index<2;index++){
             const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion});if(!bee)continue;
             const position=ambientBeeWorldPosition(bee,index);
-            const spriteScale=.28*(1+bee.flyby*.3);
+            const spriteScale=.34*(1+bee.flyby*.3);
             const model=billboardMatrix(position,spriteScale,spriteScale,viewerMatrix);
             gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),bee.opacity);

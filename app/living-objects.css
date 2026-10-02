@@ -1685,10 +1685,11 @@
     background:transparent;
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-utilities .is-primary-action {
-    color:#18362c;
-    border-color:rgba(238,250,237,.73);
-    background:rgba(237,249,235,.88)!important;
-    font-weight:650;
+    color:#f3fbf4;
+    border:2px solid rgba(200,233,216,.78);
+    background:rgba(48,91,78,.38)!important;
+    font-size:clamp(1.15rem,1.6vw,1.4rem);
+    font-weight:680;
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview { border-color:rgba(255,255,255,.17);border-radius:16px;background:rgba(13,27,26,.22);box-shadow:none; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview figcaption { color:rgba(246,250,247,.83);background:rgba(18,34,32,.38); }
@@ -2129,3 +2130,26 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 }
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window { width:min(100%,66ch); margin-inline:auto; }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) { min-height:62px; font-size:clamp(1rem,1.6vw,1.2rem); }
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) {
+    min-height:68px;
+    padding:13px 24px;
+    border:2px solid rgba(211,238,216,.82);
+    background:rgba(48,91,78,.20);
+    color:#f3fbf4;
+    box-shadow:none;
+    font-size:clamp(1.2rem,2vw,1.5rem);
+    font-weight:680;
+}
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):is(:hover,:focus-visible) {
+    background:rgba(69,119,98,.35);
+    color:#fff;
+    box-shadow:none;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel),
+.nlxr-settings-companion,
+.nlxr-media-floating {
+    border:2px solid rgba(211,233,219,.62)!important;
+    box-shadow:0 12px 28px rgba(4,20,19,.18)!important;
+    -webkit-backdrop-filter:blur(14px) saturate(.9);
+    backdrop-filter:blur(14px) saturate(.9);
+}

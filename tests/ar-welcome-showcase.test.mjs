@@ -107,7 +107,7 @@ test('LIM cells distinguish idle, hover and selected without a progress fill',()
  assert.doesNotMatch(showcaseSource,/r\*\.34,r\*\.18/);
  assert.doesNotMatch(showcaseSource,/Centre-out paint|const activation=/);
  assert.match(showcaseSource,/accentRgba\(accent,hue,hoverOnly\?\.24:\.28\)/);
- assert.match(showcaseSource,/ctx\.lineWidth=hoverOnly\?5:4/);
+ assert.match(showcaseSource,/ctx\.lineWidth=hoverOnly\?6:5/);
 });
 
 test('the four archetypes fade in after learning cells are activated late in the demo',()=>{
