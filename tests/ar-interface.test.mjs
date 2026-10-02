@@ -1204,7 +1204,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const hoveredRecordHit=/);
     assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.009:\.013/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016,\{color:\[\.12,\.19,\.18\],alpha:\.34,emissive:0\}\)/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
@@ -1274,7 +1274,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /'Thank you for exploring NourishlandXR'/);
     assert.equal(WELCOME_BOARD_PARAGRAPHS.length,2);
     assert.match(source, /Welcome to Nourishland/);
-    assert.match(source, /NLXR is an immersive information hub for living landscapes/);
+    assert.match(source, /DEMO_QUICK_ACCESS_COPY\['INTRO 1\.1'\]/);
     assert.match(source, /A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources/);
     assert.match(source, /plant: \['A plant story in this place', \[/);
     assert.match(source, /nextGuide:'Aim toward the plant or tag location\. Hint: use the right joystick up or down to adjust distance\.'/);
@@ -1476,7 +1476,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.equal(DEMO_WELCOME_OPENING_MS,12000);
     assert.equal(DEMO_ARCHETYPE_START_MS,20500);
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
-    assert.match(source, /NLXR is an immersive information hub for living landscapes/);
+    assert.match(source, /DEMO_QUICK_ACCESS_COPY\['INTRO 1\.1'\]/);
     assert.match(source, /demoViewerPointerFallbackAllowed/);
     assert.match(source, /button:'Place Pigeon Pea'/);
     assert.match(source, /hasPhoneScreenInput=Array\.from\(session\?\.inputSources \|\| \[\]\)/);
@@ -1488,7 +1488,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.doesNotMatch(source, /radius: \.96/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,surface===controlSurface\?\.022:surface===greenSurface\?\.009:\.013/);
+    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016,\{color:\[\.12,\.19,\.18\],alpha:\.34,emissive:0\}\)/);
     assert.equal(DEMO_LIM_TEXTURE_INTERVAL_MS,64);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);

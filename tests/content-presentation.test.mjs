@@ -67,7 +67,7 @@ test('demo introduces the Control panel before explaining scattered plant inform
     assert.doesNotMatch(opening, /scattered/);
     assert.ok(orientation.indexOf("title:'Meet your Control panel'") < orientation.indexOf("title:'Every plant holds information'"));
     assert.ok(orientation.indexOf('NourishlandXR brings those layers together') < orientation.indexOf("title:'A Project holds information'"));
-    assert.match(demo, /'Welcome to the NourishlandXR demo'[\s\S]*NLXR is an immersive information hub for living landscapes/);
+    assert.match(demo, /'INTRO 1\.1':'Welcome to NourishlandXR — where extended reality brings plant stories and knowledge into living landscapes\.'/);
 });
 
 test('demo uses one continuous welcome before beginning the Why stage', () => {
@@ -75,10 +75,10 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     const greeting = demo.slice(demo.indexOf('function showArWelcomeShowcase'), demo.indexOf('function runArWelcomeTutorial'));
     assert.doesNotMatch(demo, /runArWelcomeGreeting/);
     assert.match(greeting, /introBoardTitle=demoLocalizedText\('Welcome to the NourishlandXR demo'\)/);
-    assert.match(greeting, /NLXR is an immersive information hub for living landscapes/);
+    assert.match(greeting, /introBoardBody=demoLocalizedText\(DEMO_QUICK_ACCESS_COPY\['INTRO 1\.1'\]\)/);
     assert.match(greeting, /Take a moment to settle in\. This place is ready to explore\./);
     assert.match(greeting, /arWelcomeSettleStage=true[\s\S]*introBoardTitle=demoLocalizedText\('EXTENDED REALITY, ROOTED IN PLACE'\)/);
-    assert.match(greeting, /See the landscape come to life\.[\s\S]*digital plant stories and place-based knowledge appear within the real landscape around you/);
+    assert.match(greeting, /introBoardBody=demoLocalizedText\(DEMO_QUICK_ACCESS_COPY\['INTRO 1\.2'\]\)/);
     assert.doesNotMatch(greeting, /Follow one plant to see how it connects to this place/);
     assert.match(greeting, /!openingTyping && welcomeAutoAdvanceReady/);
     assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);
