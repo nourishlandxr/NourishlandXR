@@ -16,7 +16,7 @@ export const WELCOME_ROOT_MILESTONES = Object.freeze({
 });
 export const WELCOME_ROOT_MAX_MILESTONE = WELCOME_ROOT_MILESTONES.demoClosing;
 export const WELCOME_ROOT_GROWTH_MS = 60000;
-export const WELCOME_ROOT_REFRESH_MS = 80;
+export const WELCOME_ROOT_REFRESH_MS = 1000;
 export const WELCOME_ROOTS_SETTLED_MS = WELCOME_ROOT_GROWTH_MS;
 
 const clamp = value => Math.max(0, Math.min(1, value));
@@ -294,7 +294,7 @@ function drawAmberPoint(ctx, point, radius, alpha) {
     ctx.restore();
 }
 
-export function drawArWelcomeRoots(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false, cellClearance = [] } = {}) {
+function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false, cellClearance = [] } = {}) {
     const frame = welcomeRootFrame({ milestone, elapsed, milestoneStartedAt, reducedMotion });
     ctx.save();
     // Clip each exclusion independently: overlapping cells must never cancel
@@ -470,4 +470,25 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false}){
   if(growth>.65 && i%2===0){ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(end.x,end.y-length*.22);ctx.quadraticCurveTo(end.x+12,end.y-length*.1,end.x+15,end.y+12*growth);ctx.stroke();}
  }
  ctx.restore();
+}
+
+// Cache only decoration, keeping text and LIMO feedback on their own cadence.
+const livingFrameCache=new WeakMap();
+export function drawArWelcomeRoots(ctx,options={}){
+ if(typeof document==='undefined' || typeof ctx.drawImage!=='function')return drawWelcomeRootsDirect(ctx,options);
+ let entry=livingFrameCache.get(ctx);
+ if(!entry){const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=1500;entry={canvas,context:canvas.getContext('2d'),key:null,clearance:null,frame:null};livingFrameCache.set(ctx,entry);}
+ const key=[Math.floor((options.elapsed||0)/WELCOME_ROOT_REFRESH_MS),options.milestone||0,options.milestoneStartedAt||0,Boolean(options.reducedMotion)].join(':');
+ if(entry.key!==key || entry.clearance!==options.cellClearance){
+  const paint=entry.context;paint.clearRect(0,0,1400,1500);
+  entry.frame=drawWelcomeRootsDirect(paint,{...options,cellClearance:[]});
+  // Subtract all cell discs in one operation. Their union stays excluded,
+  // including overlaps, without a deep stack of expensive canvas clips.
+  if(options.cellClearance?.length){paint.save();paint.globalCompositeOperation='destination-out';paint.beginPath();
+   for(const cell of options.cellClearance){paint.moveTo(cell.x+cell.radius,cell.y);paint.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);}
+   paint.fill();paint.restore();
+  }
+  entry.key=key;entry.clearance=options.cellClearance;
+ }
+ ctx.drawImage(entry.canvas,0,0);return entry.frame;
 }

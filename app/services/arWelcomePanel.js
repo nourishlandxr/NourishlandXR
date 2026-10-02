@@ -10,7 +10,7 @@ function outline(ctx) {
  ctx.arc(WELCOME_SHAPE.cx,WELCOME_SHAPE.cy,WELCOME_SHAPE.radius,0,Math.PI*2);
  ctx.closePath();
 }
-export const WELCOME_RIM_MOTION = Object.freeze({revolutionMs:1200000,refreshMs:250});
+export const WELCOME_RIM_MOTION = Object.freeze({revolutionMs:1200000,refreshMs:1000});
 export function drawArWelcomePanel(ctx,{elapsed=0,reducedMotion=false}={}) {
  ctx.save();
  const glass=ctx.createLinearGradient(190,110,1210,990);

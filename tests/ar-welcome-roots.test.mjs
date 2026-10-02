@@ -107,3 +107,24 @@ test('demo reset clears accumulated roots while screen redraws preserve them', (
     assert.match(screen, /if\(!next\.changed\)return/);
     assert.match(screen, /rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt/);
 });
+
+test('living decoration reuses its raster within a slow growth interval', () => {
+    const previousDocument=Object.getOwnPropertyDescriptor(globalThis,'document');
+    let paints=0,blits=0,clips=0;
+    const paint={clearRect(){paints++;},clip(){clips++;}};
+    for(const method of ['save','restore','beginPath','moveTo','lineTo','quadraticCurveTo','bezierCurveTo','closePath','stroke','arc','ellipse','fill','translate','rotate','scale'])paint[method]=()=>{};
+    Object.defineProperty(globalThis,'document',{configurable:true,value:{createElement:()=>({getContext:()=>paint})}});
+    try {
+        const destination={drawImage(){blits++;}};
+        const cellClearance=[{x:200,y:200,radius:100}];
+        drawArWelcomeRoots(destination,{elapsed:150000,cellClearance});
+        drawArWelcomeRoots(destination,{elapsed:150100,cellClearance});
+        assert.equal(paints,1,'interaction redraws must not regenerate vegetation');
+        assert.equal(blits,2);
+        assert.equal(clips,0,'cell clearance uses one subtractive mask');
+        drawArWelcomeRoots(destination,{elapsed:151000,cellClearance});
+        assert.equal(paints,2,'growth refreshes at the next one-second interval');
+    } finally {
+        if(previousDocument)Object.defineProperty(globalThis,'document',previousDocument);else delete globalThis.document;
+    }
+});

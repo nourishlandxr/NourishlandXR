@@ -1,0 +1,5 @@
+<!doctype html><meta charset="utf-8"><title>Living frame render benchmark</title><button>Run benchmark</button><pre>Ready</pre><canvas width="2500" height="2100" style="width:600px"></canvas><script type="module">
+import {drawArWelcomeShowcase} from '../app/services/arWelcomeShowcase.js';
+const ctx=document.querySelector('canvas').getContext('2d');document.querySelector('button').onclick=()=>{
+ const result={};for(const roots of [false,true]){const samples=[];for(let i=0;i<24;i++){const start=performance.now();drawArWelcomeShowcase(ctx,300000+i*80,false,undefined,{drawRoots:roots,rootMilestone:9,progression:{opening:true}});ctx.getImageData(0,0,1,1);if(i>=4)samples.push(performance.now()-start);}samples.sort((a,b)=>a-b);result[roots?'withFrame':'withoutFrame']={medianMs:Math.round(samples[10]*100)/100,p95Ms:Math.round(samples[19]*100)/100};}document.querySelector('pre').textContent=JSON.stringify(result,null,2);
+};</script>

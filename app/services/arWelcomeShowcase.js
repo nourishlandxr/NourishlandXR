@@ -518,6 +518,7 @@ export function welcomeOpeningFrames(elapsed,seed=0x4e4c5852,duration=AR_WELCOME
  return prepareOrganicOpeningFrames(frames,elapsed,seed,duration,reducedMotion).frames;
 }
 
+const vegetationClearanceCache=new WeakMap();
 export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,options={}) {
  // The welcome surface must be readable on the first XR frame. Its former
  // whole-panel fade started at zero and could leave Quest users facing an
@@ -527,10 +528,11 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  drawArWelcomePanel(ctx,{elapsed,reducedMotion});
  }
  if(options.drawRoots!==false){
- const reservedCells=revealFrames(graphs).flatMap(frame=>frame.nodes).map(node=>({
+ let reservedCells=vegetationClearanceCache.get(graphs);
+ if(!reservedCells){reservedCells=revealFrames(graphs).flatMap(frame=>frame.nodes).map(node=>({
   x:node.x-WELCOME_PANEL_DRAW_OFFSET.x,y:node.y-WELCOME_PANEL_DRAW_OFFSET.y,
   radius:node.baseRadius+LIVING_RIM.cellGap
- }));
+ }));vegetationClearanceCache.set(graphs,reservedCells);}
  drawArWelcomeRoots(ctx,{milestone:options.rootMilestone||0,elapsed,milestoneStartedAt:options.rootMilestoneStartedAt||0,reducedMotion,cellClearance:reservedCells});
  }
  if(options.drawPanel!==false){

@@ -27,7 +27,7 @@ test('XR startup returns while refresh-rate negotiation is still pending', async
             timer = setTimeout(() => reject(new Error('XR startup waited for refresh negotiation')), 500);
         })]);
         assert.equal(result.session, session);
-        assert.equal(requested, 120);
+        assert.equal(requested, 90);
         assert.equal(result.passthrough, true);
     } finally {
         clearTimeout(timer);

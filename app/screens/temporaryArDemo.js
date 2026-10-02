@@ -4249,7 +4249,13 @@ function unusedLegacyMarkerTexture() {
     texture ||= gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
+    const storage=demoTextureStorage.get(texture);
+    if(storage?.width===label.width && storage?.height===label.height){
+        gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,label);
+    }else{
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,label);
+        demoTextureStorage.set(texture,{width:label.width,height:label.height});
+    }
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -4369,6 +4375,7 @@ function createSpatialKnowledgeTexture(record) {
     return canvasTexture(label);
 }
 
+const demoTextureStorage=new WeakMap();
 function canvasTexture(label, texture = null, flipY = false) {
     texture ||= gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -4683,8 +4690,8 @@ function drawIntroSpatial(view) {
         arWelcomeClock.tick(Date.now(),session?.visibilityState!=='hidden');
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
-        const rootsNeedRefresh=welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
-        if(limRevealIsAnimating() || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh || (!reducedMotion && (arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS || nativeConnectionState?.phase==='connected'))){
+        const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
+        if((limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh || (!reducedMotion && (arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS || nativeConnectionState?.phase==='connected'))){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }

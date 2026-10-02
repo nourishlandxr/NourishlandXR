@@ -1,5 +1,5 @@
 export const WEBXR_SESSION_MODES = Object.freeze(['immersive-ar', 'immersive-vr']);
-export const PREFERRED_XR_FRAME_RATE = 120;
+export const PREFERRED_XR_FRAME_RATE = 90;
 
 export async function configureXRFrameRate(session, preferred = PREFERRED_XR_FRAME_RATE) {
     const supported = Array.from(session.supportedFrameRates || []).filter(rate => Number.isFinite(rate) && rate > 0);
