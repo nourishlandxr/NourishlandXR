@@ -115,7 +115,13 @@ export async function requestImmersiveArSession(domOverlayRoot, { requireDomOver
                     await session.end().catch(() => {});
                     throw new Error('This WebXR session did not enable the Creator AR control overlay.');
                 }
-                const frameRate = await configureXRFrameRate(session, targetFrameRate);
+                // Refresh negotiation must not delay creation of the XR layer
+                // or the first session frame. Some runtimes settle this request
+                // only after their compositor has started rendering.
+                const frameRate = { preferred: targetFrameRate, requested: null, actual: session.frameRate || null };
+                configureXRFrameRate(session, targetFrameRate)
+                    .then(result => Object.assign(frameRate, result))
+                    .catch(error => console.warn('[WebXR refresh] Keeping runtime default', error));
                 const blendMode = session.environmentBlendMode || '';
                 return {
                     session,

@@ -2,13 +2,38 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
-import { isQuestHeadsetBrowser, selectWebXRSessionMode } from '../app/services/webxrSession.js';
+import { isQuestHeadsetBrowser, selectWebXRSessionMode, requestImmersiveArSession } from '../app/services/webxrSession.js';
 import { controllerRayEnd, controllerRayFromPose, controllerYButtonPressed, createControllerYSkipTracker, handTrackingState, XR_CONTROLLER_Y_BUTTON_INDEX, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../app/services/xrPointer.js';
 
 test('WebXR prefers passthrough AR and falls back to native 6DoF immersive mode', () => {
     assert.equal(selectWebXRSessionMode({ 'immersive-ar': true, 'immersive-vr': true }), 'immersive-ar');
     assert.equal(selectWebXRSessionMode({ 'immersive-ar': false, 'immersive-vr': true }), 'immersive-vr');
     assert.equal(selectWebXRSessionMode({ 'immersive-ar': false, 'immersive-vr': false }), '');
+});
+
+test('XR startup returns while refresh-rate negotiation is still pending', async () => {
+    const previousNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
+    const previousWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');
+    let requested = null;
+    const session = { supportedFrameRates: [72,90,120], frameRate: 72, environmentBlendMode: 'alpha-blend',
+        updateTargetFrameRate(rate) { requested = rate; return new Promise(() => {}); } };
+    Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { xr: {
+        isSessionSupported: async mode => mode === 'immersive-ar', requestSession: async () => session
+    } } });
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: { isSecureContext: true } });
+    let timer;
+    try {
+        const result = await Promise.race([requestImmersiveArSession(null),new Promise((_,reject) => {
+            timer = setTimeout(() => reject(new Error('XR startup waited for refresh negotiation')), 500);
+        })]);
+        assert.equal(result.session, session);
+        assert.equal(requested, 120);
+        assert.equal(result.passthrough, true);
+    } finally {
+        clearTimeout(timer);
+        if(previousNavigator)Object.defineProperty(globalThis,'navigator',previousNavigator);else delete globalThis.navigator;
+        if(previousWindow)Object.defineProperty(globalThis,'window',previousWindow);else delete globalThis.window;
+    }
 });
 
 test('Quest detection is headset-specific and does not classify phone AR as Quest', () => {
