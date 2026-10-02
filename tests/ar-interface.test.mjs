@@ -1500,11 +1500,11 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introBoardVisibleBody = bodyText\.slice\(0, typedLength\)/);
     assert.match(source, /typedLength = nextDemoTextLength\(bodyText, typedLength\)/);
     assert.match(source, /const typingDelay = demoTextTypingDelay\(bodyText, typedLength\)/);
-    assert.match(source, /return 34;/);
+    assert.match(source, /return 62;/);
     assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
     assert.doesNotMatch(source, /boardControlTimer/);
-    assert.match(styles, /tryit-cursor-blink 1\.4s ease-in-out infinite/);
-    assert.match(styles, /content:"…";/);
+    assert.doesNotMatch(source, /'▌'/);
+    assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after,[\s\S]*?content:none;/);
     assert.match(styles, /width:min\(94vw,820px\)/);
     assert.match(styles, /top:max\(4px,env\(safe-area-inset-top\)\)/);
     assert.match(styles, /height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\)/);

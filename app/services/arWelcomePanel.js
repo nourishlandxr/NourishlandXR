@@ -17,7 +17,7 @@ export function drawArWelcomePanel(ctx) {
  glass.addColorStop(.46,'rgba(9,23,29,.45)');
  glass.addColorStop(1,'rgba(6,17,23,.40)');
  outline(ctx);ctx.fillStyle=glass;ctx.fill();
- ctx.strokeStyle='rgba(222,242,239,.62)';ctx.lineWidth=1.8;ctx.stroke();
+ ctx.strokeStyle='rgba(222,242,239,.78)';ctx.lineWidth=6;ctx.stroke();
  outline(ctx);ctx.clip();
  const light=ctx.createRadialGradient(400,210,18,490,370,670);
  light.addColorStop(0,'rgba(239,251,246,.14)');

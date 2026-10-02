@@ -688,11 +688,11 @@ function nextDemoTextLength(text, currentLength) {
 
 function demoTextTypingDelay(text, visibleLength) {
     const lastVisibleCharacter = text[visibleLength - 1] || '';
-    if (/\n/.test(lastVisibleCharacter)) return 260;
-    if (/[.!?]/.test(lastVisibleCharacter)) return 240;
-    if (/[,;]/.test(lastVisibleCharacter)) return 130;
-    if (/\s/.test(lastVisibleCharacter)) return 24;
-    return 34;
+    if (/\n/.test(lastVisibleCharacter)) return 420;
+    if (/[.!?]/.test(lastVisibleCharacter)) return 360;
+    if (/[,;]/.test(lastVisibleCharacter)) return 200;
+    if (/\s/.test(lastVisibleCharacter)) return 48;
+    return 62;
 }
 
 function showDemoAction(nextStage) {
@@ -1159,7 +1159,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     if (typing) {
         boardTypingWatchdogTimer = setTimeout(
             finishTyping,
-            Math.max(DEMO_BOARD_TYPING_SAFETY_MS, 1200 + fullText.length * 60)
+            Math.max(DEMO_BOARD_TYPING_SAFETY_MS, 1200 + fullText.length * 90)
         );
     }
     // The board is display-only while it types. Clicking it must not snap the
@@ -1267,7 +1267,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
     boardTypingWatchdogTimer = setTimeout(
         finishTyping,
-        Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + bodyText.length * 60)
+        Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + bodyText.length * 90)
     );
     setGuide('');
 }
@@ -4408,9 +4408,7 @@ function drawIntroNoteContent(ctx) {
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = 'rgba(0,20,17,.52)';
     ctx.shadowBlur = 4;
-    const typedBody = narrative?.text || (introBoardVisibleBody
-        ? `${introBoardVisibleBody}${introBoardVisibleBody.length < introBoardBody.length ? '▌' : ''}`
-        : '▌');
+    const typedBody = narrative?.text || introBoardVisibleBody;
     const visibleParagraphs = typedBody.split(/\n\n/);
     // Keep the first body line clear of the divider and the clipping edge;
     // its ascenders were previously being cut because the baseline sat too

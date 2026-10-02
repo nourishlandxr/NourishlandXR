@@ -1686,9 +1686,9 @@
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-utilities .is-primary-action {
     color:#f3fbf4;
-    border:2px solid rgba(200,233,216,.78);
-    background:rgba(48,91,78,.38)!important;
-    font-size:clamp(1.15rem,1.6vw,1.4rem);
+    border:3px solid rgba(234,246,240,.82);
+    background:rgba(9,25,28,.08)!important;
+    font-size:clamp(1.3rem,1.8vw,1.55rem);
     font-weight:680;
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview { border-color:rgba(255,255,255,.17);border-radius:16px;background:rgba(13,27,26,.22);box-shadow:none; }
@@ -2131,17 +2131,17 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window { width:min(100%,66ch); margin-inline:auto; }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) { min-height:62px; font-size:clamp(1rem,1.6vw,1.2rem); }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) {
-    min-height:68px;
-    padding:13px 24px;
-    border:2px solid rgba(211,238,216,.82);
-    background:rgba(48,91,78,.20);
+    min-height:72px;
+    padding:14px 28px;
+    border:3px solid rgba(234,246,240,.88);
+    background:rgba(9,25,28,.08);
     color:#f3fbf4;
     box-shadow:none;
-    font-size:clamp(1.2rem,2vw,1.5rem);
+    font-size:clamp(1.45rem,2.3vw,1.75rem);
     font-weight:680;
 }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):is(:hover,:focus-visible) {
-    background:rgba(69,119,98,.35);
+    background:rgba(25,54,55,.22);
     color:#fff;
     box-shadow:none;
 }

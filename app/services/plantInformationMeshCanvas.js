@@ -288,11 +288,8 @@ export function drawHexagon(context, x, y, radius, fill, stroke, lineWidth = 2) 
         else context.lineTo(px, py);
     }
     context.closePath();
-    context.fillStyle = fill;
-    context.fill();
-    context.strokeStyle = stroke;
-    context.lineWidth = lineWidth;
-    context.stroke();
+    if (fill) { context.fillStyle = fill; context.fill(); }
+    if (stroke && lineWidth > 0) { context.strokeStyle = stroke; context.lineWidth = lineWidth; context.stroke(); }
 }
 
 function drawOutlinedLines(context, lines, x, startY, lineHeight) {
@@ -370,8 +367,13 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         // A hover/selection state changes only emphasis. Cell scale stays
         // authored so opening a branch never makes the existing flower jump.
         const radius = renderedRadius;
+        const bloomAlpha = node.depth > 0 ? (.35 + .65 * nodeBloom) : 1;
         context.save();
-        context.globalAlpha = (node.depth > 0 ? (.35 + .65 * nodeBloom) : 1) * cellOpacity;
+        context.globalAlpha = bloomAlpha * cellOpacity;
+        drawHexagon(context, point.x, point.y, radius, `hsla(${hue}, 31%, 12%, ${active ? .82 : .7})`, null, 0);
+        context.restore();
+        context.save();
+        context.globalAlpha = bloomAlpha;
         if (active) {
             context.shadowColor = `hsla(${hue}, 70%, 68%, .22)`;
             context.shadowBlur = 8;
@@ -381,7 +383,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             point.x,
             point.y,
             radius,
-            `hsla(${hue}, 31%, 12%, ${active ? .82 : .7})`,
+            null,
             options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
             active ? 4 : 2
         );
@@ -439,9 +441,12 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     const coreRadius = Math.max(22, Number(nodes[0]?.layoutCellWidthPercent || 13.9) / 100 * width / 2);
     context.save();
     context.globalAlpha=cellOpacity;
+    drawHexagon(context, center.x, center.y, coreRadius, 'rgba(22,35,55,.82)', null, 0);
+    context.restore();
+    context.save();
     context.shadowColor = 'rgba(76, 108, 166, .18)';
     context.shadowBlur = 8;
-    drawHexagon(context, center.x, center.y, coreRadius, 'rgba(22,35,55,.82)', options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);
+    drawHexagon(context, center.x, center.y, coreRadius, null, options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);
     context.restore();
     context.save();
     context.globalAlpha = 1;

@@ -742,7 +742,7 @@ body[data-project-theme] .tryit-demo .tryit-place.creator-ar-placement-guide { a
 .tryit-guided-choice button { min-height: 44px; border-color: rgba(220,239,149,.55); background: rgba(220,239,149,.17); color: #fff; }
 .tryit-guided-choice .is-awaiting-text { visibility: hidden; }
 .tryit-guided-choice.is-typing p.is-current::after,
-.tryit-guided-choice.is-typing .tryit-board-text-window p:only-child::after { content: "▋"; display: inline-block; margin-left: 2px; color: #dcef95; animation: tryit-cursor-blink 1.4s ease-in-out infinite; }
+.tryit-guided-choice.is-typing .tryit-board-text-window p:only-child::after { content: none; }
 .tryit-guided-choice.is-welcome-board { left:50%; top:max(4px,env(safe-area-inset-top)); bottom:auto !important; grid-template-rows:auto auto minmax(0,1fr); align-content:stretch; row-gap:clamp(12px,2vh,24px); width:min(94vw,820px); height:calc(100svh - max(8px,env(safe-area-inset-top))); height:calc(100dvh - max(8px,env(safe-area-inset-top))); max-height:none; min-height:calc(100svh - max(8px,env(safe-area-inset-top))); padding:clamp(24px,4.5vh,48px) clamp(24px,6vw,58px) max(116px,calc(env(safe-area-inset-bottom) + 102px)); transform:translateX(-50%); overflow:hidden; border:1px solid rgba(240,255,232,.72); border-radius:38px 28px 46px 32px; background:radial-gradient(circle at 18% 8%,rgba(255,255,255,.2),transparent 35%),radial-gradient(circle at 88% 82%,rgba(178,210,154,.18),transparent 36%),linear-gradient(145deg,rgba(59,111,76,.7),rgba(10,38,25,.5)); text-align:left; box-shadow:0 24px 72px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.2); backdrop-filter:blur(15px); }
 .tryit-guided-choice.is-welcome-board.is-entering { animation:tryit-board-arrive 1.4s cubic-bezier(.2,.72,.2,1) both; }
 .tryit-guided-choice.is-welcome-board.is-entering > small,
@@ -8596,7 +8596,7 @@ button.ar-square-action::before { display: none !important; }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::before {
     inset: 0;
     background: hsl(var(--pim-hue,112) 24% 44% / .58);
-    opacity: var(--pim-cell-opacity, 1);
+    opacity: 1;
     clip-path: polygon(evenodd,25% 0,75% 0,100% 50%,75% 100%,25% 100%,0 50%,25% 0,26% 2%,2% 50%,26% 98%,74% 98%,98% 50%,74% 2%,26% 2%);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::after {
@@ -8828,9 +8828,7 @@ button.ar-square-action::before { display: none !important; }
 }
 .tryit-guided-choice.is-typing p.is-current::after,
 .tryit-guided-choice.is-typing .tryit-board-text-window p:only-child::after {
-    content:"…";
-    color:rgba(220,239,149,.72);
-    animation-duration:2.2s;
+    content:none;
 }
 
 /* Demo guidance is deliberately readable at a distance. Keep the large
@@ -11768,28 +11766,26 @@ body:has(.app-surface) {
 .app-surface-selection .project-selection-list .create-project-action strong { color: #fff; }
 .app-surface-selection .project-selection-list .create-project-action:hover { background: #235c42; }
 
-/* XR introduction primary action: a filled, central target that survives
-   headset distance and avoids the shimmer of a thin outline. */
+/* A broad, clear action with a strong edge that remains legible at distance. */
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"],
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) {
     min-width:min(360px,76vw);
-    min-height:72px;
+    min-height:80px;
     padding:20px 34px;
-    border:2px solid transparent;
+    border:4px solid rgba(234,246,240,.88);
     border-radius:18px;
-    background:linear-gradient(145deg,#6f8d70,#3c674f);
+    background:rgba(9,25,28,.08);
     color:#f7fbf3;
-    box-shadow:inset 0 1px rgba(255,255,255,.25),0 10px 24px rgba(7,26,15,.32);
-    font-size:clamp(calc(.9rem + 2pt),calc(1.8vw + 2pt),calc(1.12rem + 2pt));
-    font-weight:800;
-    letter-spacing:.015em;
+    box-shadow:none;
+    font-size:clamp(1.7rem,2.5vw,2rem);
+    font-weight:680;
+    letter-spacing:0;
 }
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"]:is(:hover,:focus-visible),
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):is(:hover,:focus-visible) {
-    border-color:transparent;
-    background:linear-gradient(145deg,#7b9879,#48745a);
-    outline:4px solid rgba(205,226,198,.24);
-    outline-offset:4px;
+    border-color:#f7fff8;
+    background:rgba(25,54,55,.18);
+    outline:none;
     transform:translateX(-50%) translateY(-2px);
 }
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"]:active { transform:translateX(-50%) translateY(1px) scale(.985); }

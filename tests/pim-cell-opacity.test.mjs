@@ -15,7 +15,7 @@ function capturePimCanvas(cellOpacity) {
         strokeStyle: '',
         save() { saved.push({ globalAlpha: this.globalAlpha, fillStyle: this.fillStyle, strokeStyle: this.strokeStyle }); },
         restore() { Object.assign(this, saved.pop()); },
-        beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, stroke() {}, clearRect() {}, fillRect() {},
+        beginPath() {}, moveTo() {}, lineTo() {}, closePath() {}, stroke() { events.push({ type: 'stroke', style: this.strokeStyle, alpha: this.globalAlpha }); }, clearRect() {}, fillRect() {},
         setLineDash() {}, strokeText() {},
         createRadialGradient() { return { addColorStop() {} }; },
         measureText(value) { return { width: String(value).length * 8 }; },
@@ -32,12 +32,18 @@ test('Quest PIMO opacity changes dark glass while labels remain fully readable',
         const events = capturePimCanvas(level);
         const hex = events.find(event => event.type === 'fill' && String(event.style).includes('31%, 12%, 0.7'));
         const core = events.find(event => event.type === 'fill' && event.style === 'rgba(22,35,55,.82)');
+        const outline = events.find(event => event.type === 'stroke' && String(event.style).includes('58%, 82%'));
+        const coreOutline = events.find(event => event.type === 'stroke' && event.style === 'rgba(137,165,213,.82)');
         const labels = events.filter(event => event.type === 'text');
         assert.ok(hex, 'primary cell has an actual filled body');
         assert.ok(core, 'centre cell has an actual filled body');
+        assert.ok(outline, 'primary cell keeps a visible outline');
+        assert.ok(coreOutline, 'centre cell keeps a visible outline');
         assert.ok(labels.length > 6, 'PIMO labels are drawn');
         assert.equal(hex.alpha, level);
         assert.equal(core.alpha, level);
+        assert.equal(outline.alpha, 1);
+        assert.equal(coreOutline.alpha, 1);
         assert.ok(labels.every(event => event.alpha === 1), 'text stays readable at every glass opacity');
     }
 });
@@ -51,6 +57,7 @@ test('simulated PIMO receives the same opacity without changing cell identity or
         [...quarter.matchAll(/data-pim-node-id="([^"]+)"/g)].map(match => match[1]));
     const styles = readFileSync(new URL('../app/style.css', import.meta.url), 'utf8');
     assert.match(styles, /\.plant-knowledge-cell::after \{[\s\S]*?background: hsl\(var\(--pim-hue,112\) 31% 12% \/ \.82\);[\s\S]*?opacity: var\(--pim-cell-opacity, 1\)/);
+    assert.match(styles, /\.plant-knowledge-cell::before \{[\s\S]*?opacity: 1;/);
     assert.match(styles, /\.plant-knowledge-cell \{[\s\S]*?opacity: 1;[\s\S]*?isolation: isolate/);
     assert.match(styles, /@keyframes pim-cell-fade-in \{[\s\S]*?to \{ opacity: 1;/);
     const demo = readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
