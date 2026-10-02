@@ -71,7 +71,7 @@ test('companion faces hinge cleanly from the main frame while turning inward',()
 
 test('Quest panel source keeps progress separate and all three surfaces aligned',()=>{
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
-    assert.match(panel,/target\.prepend\(region\)/);
+    assert.match(panel,/target\.append\(region\)/);
     assert.doesNotMatch(panel,/Choose a topic|Explore → Details/);
     assert.match(panel,/companionHeight=mainHeight/);
     assert.match(panel,/companionPanelPose\(pose,'left',mainWidth,settingsWidth,18,gap\)/);
@@ -254,7 +254,7 @@ test('media movement uses the same hold gesture and settings expose shared mesh 
     assert.match(panel,/mediaPointerDrag\.timer=setTimeout/);
     assert.match(panel,/PANEL_GRAB_HOLD_MS/);
     assert.match(panel,/action:'CellOpacity'/);
-    assert.match(panel,/Cells · \$\{Math\.round\(meshCellOpacity\*100\)\}%/);
+    assert.match(panel,/Glass · \$\{Math\.round\(meshCellOpacity\*100\)\}%/);
     assert.match(panel,/onCellOpacity\(meshCellOpacity\)/);
     assert.match(panel,/panel:'media',cardId:'media',startedAt:performance\.now\(\)/);
 });

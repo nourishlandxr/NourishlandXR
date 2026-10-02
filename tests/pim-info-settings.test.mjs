@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { controlPanelControls, spatialPanelControls, panelSettingsControls } from '../app/services/pimInfoPanel.js';
 
-test('reading arrows remain in fixed positions and disable only at their page boundaries',()=>{
+test('reading arrows appear for multi-page content and retain fixed positions',()=>{
     const cases=[
         {tab:'Details',page:0,pageCount:1,previous:true,next:true},
         {tab:'Details',page:0,pageCount:3,previous:true,next:false},
@@ -14,13 +14,18 @@ test('reading arrows remain in fixed positions and disable only at their page bo
     let base=null,spatialBase=null;
     for(const state of cases){
         const items=controlPanelControls(state),pager=items.filter(item=>item.kind==='pager');
+        if(state.pageCount===1){
+            assert.deepEqual(pager,[]);
+            assert.deepEqual(spatialPanelControls({height:600,items}).filter(item=>item.kind==='pager'),[]);
+            continue;
+        }
         assert.deepEqual(pager.map(item=>item.action),['Previous','Next']);
-        assert.deepEqual(pager.map(item=>item.disabled),[state.previous,state.next]);
+        assert.deepEqual(pager.map(item=>item.disabled),[state.page===0,state.page>=state.pageCount-1]);
         const positions=pager.map(({x,y,width,height})=>({x,y,width,height}));
         base ||= positions;
         assert.deepEqual(positions,base);
         const spatial=spatialPanelControls({height:600,items}).filter(item=>item.kind==='pager');
-        assert.deepEqual(spatial.map(item=>item.disabled),[state.previous,state.next]);
+        assert.deepEqual(spatial.map(item=>item.disabled),[state.page===0,state.page>=state.pageCount-1]);
         const spatialPositions=spatial.map(({x,y,width,height})=>({x,y,width,height}));
         spatialBase ||= spatialPositions;
         assert.deepEqual(spatialPositions,spatialBase);
@@ -39,6 +44,8 @@ test('demo history arrows stay compact, adjacent and ray-selectable even when di
     assert.deepEqual(spatial.map(item=>item.action),['Utility:back','Utility:forward']);
     assert.ok(spatial[0].x+spatial[0].width<=spatial[1].x);
     assert.ok(spatial.every(item=>item.width<=44));
+    const initial=controlPanelControls({utilityActions:[{id:'back',label:'‹',disabled:true},{id:'forward',label:'›',disabled:true}]});
+    assert.deepEqual(initial.filter(item=>item.kind==='history').map(item=>item.action),['Utility:back']);
 });
 
 test('Settings rows keep all existing actions in compact non-overlapping Quest hit regions',()=>{
@@ -47,7 +54,7 @@ test('Settings rows keep all existing actions in compact non-overlapping Quest h
     const actions=['TextDown','TextUp','ScaleDown','ScaleUp','CellOpacity','RainIntensity','RainStyle','Recenter'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
     assert.deepEqual(quest.map(item=>item.action),['HandMode',...actions]);
-    assert.equal(desktop.find(item=>item.action==='CellOpacity').label,'Cells · 50%');
+    assert.equal(desktop.find(item=>item.action==='CellOpacity').label,'Glass · 50%');
     assert.equal(desktop.find(item=>item.action==='RainIntensity').label,'Heavy');
     assert.equal(desktop.find(item=>item.action==='RainStyle').label,'V1');
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Outline');
