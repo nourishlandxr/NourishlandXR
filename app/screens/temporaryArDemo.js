@@ -1398,7 +1398,7 @@ function showPersistentPimPrompt(record) {
         ? demoLocalizedText(`Open plant information cells to see how knowledge branches from the plant. When you find Pruning, it can connect with an idea about the wider landscape. Continue whenever you are ready.`)
         : demoLocalizedText(`This connected view brings together what is known about ${plantName}. Open any cell to follow a topic such as food, growing, uses or ecological roles.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide('Explore a plant topic, or continue when ready.');
+    setIntroBoardNextGuide('Press and hold the Orb to move it. While holding it, move the right joystick to bring it closer or further away. Press a cell once to expand plant information.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1409,7 +1409,7 @@ function showPersistentPimPrompt(record) {
     introBoardVisibleBody = body;
     introBoardTextureDirty = true;
     introBoardVisible = true;
-    rememberDemoSlide({stepLabel:introBoardStep,title,body,buttonLabel:'Continue',onContinue:()=>continueAfterDemoPim(record),options:{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,nextGuide:'Explore a plant topic, or continue when ready.'},kind:'welcome'});
+    rememberDemoSlide({stepLabel:introBoardStep,title,body,buttonLabel:'Continue',onContinue:()=>continueAfterDemoPim(record),options:{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,nextGuide:'Press and hold the Orb to move it. While holding it, move the right joystick to bring it closer or further away. Press a cell once to expand plant information.'},kind:'welcome'});
     continueButton.textContent = demoLocalizedText('Continue');
     continueButton.onclick = () => {
         suppressSessionSelectUntil = performance.now() + 700;
@@ -1969,7 +1969,7 @@ const DEMO_ORIENTATION_STEPS = [
     {code:'SPACE 1.1',title:'Meet your Control panel',art:'wheel',button:'Continue',nextGuide:'',paragraphs:[
         'Take a moment to settle in. This place is ready to explore.'
     ]},
-    {code:'ELEMENTS 1.1',title:'Every plant holds information',art:'references',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
+    {code:'ELEMENTS 1.1',title:'Every plant holds information',art:null,panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
         'Finding a plant in the field can be confusing when you are carrying books, checking a phone and comparing guides. It can be hard to connect what you read to the plant in front of you.',
         'A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources.'
     ]},
@@ -2017,6 +2017,8 @@ function runArWelcomeTutorial(index=0) {
     if(step?.art){
         infoPanel?.setCompact(false);
         if(index!==1)showDemoTutorialMedia(step.art,index===0?{title:'Your Control panel',hideTitle:false,body:'Selected information appears here. Use Settings to adjust the view, Help for guidance, Back to revisit a page, and Hide when you want to focus on the landscape.'}:index===3?{title:'Build a Project',hideTitle:false,body:'Start with an Area, add a Totem for orientation, then place Plant Orbs and Notes. In a full Project, you can publish a guide and keep its information current.'}:{});
+    }else if(step.code==='ELEMENTS 1.1'){
+        infoPanel?.setMediaCollapsed(true);
     }else if(index===DEMO_ORIENTATION_STEPS.length-1){
         infoPanel?.setMediaCollapsed(true);
         infoPanel?.setContextualHint('HINT · Move the right joystick up or down to adjust distance.');
@@ -2028,7 +2030,7 @@ function runArWelcomeTutorial(index=0) {
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:step.code,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===0,onTextComplete:index===1?()=>setTimeout(()=>{if(demoOrientationStep===1)showDemoTutorialMedia(step.art);},900):undefined});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:step.code,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===0,onTextComplete:index===1 && step.art?()=>setTimeout(()=>{if(demoOrientationStep===1)showDemoTutorialMedia(step.art);},900):undefined});
 }
 
 function guidePlantConversion(record) {
@@ -5335,8 +5337,12 @@ function drawDemoControllerPointer(view) {
         lift: .001,
         color:latestTrackedHandStates.length ? [.78,.85,.84,handPinchActive ? .58 : .4] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
-    // The thin ray ends at the panel surface; an opaque contact marker hid
-    // small controls and looked like a black disc in the headset.
+    // A short illuminated tip confirms contact without covering the control.
+    if(surfacePoint){
+        const tipStart={x:end.x-direction.x*.014,y:end.y-direction.y*.014,z:end.z-direction.z*.014};
+        const tipEnd={x:end.x-direction.x*.002,y:end.y-direction.y*.002,z:end.z-direction.z*.002};
+        drawSpatialTether(gl,tetherRenderer,view,tipStart,tipEnd,{segments:2,width:.004,curve:0,lift:0,color:[.94,.91,.81,.86]});
+    }
 }
 
 async function startImmersive() {

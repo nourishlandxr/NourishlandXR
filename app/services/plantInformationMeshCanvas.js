@@ -164,7 +164,7 @@ export function fitPimTextBlock(context, options = {}) {
     const titleLineHeightFor = size => Math.max(1, Math.round(size * 1.06));
     const detailLineHeightFor = size => Math.max(1, Math.round(size * 1.12));
     const build = (titleFontSize, detailFontSize, breakWords = false) => {
-        context.font = `650 ${titleFontSize}px system-ui, sans-serif`;
+        context.font = `600 ${titleFontSize}px Georgia, "Times New Roman", serif`;
         const titleWidth = Math.max(1, safeArea.width - titleFontSize * .18);
         const titleLines = wrapPimTextLines(context, title, titleWidth, { breakWords });
         const titleHasOverflow = !breakWords && titleLines.some(line => measuredTextWidth(context, line) > titleWidth);
@@ -173,7 +173,7 @@ export function fitPimTextBlock(context, options = {}) {
         let detailLines = [];
         let detailLineHeight = 0;
         if (hasDetail) {
-            context.font = `500 ${detailFontSize}px system-ui, sans-serif`;
+            context.font = `500 ${detailFontSize}px Georgia, "Times New Roman", serif`;
             const detailWidth = Math.max(1, safeArea.width - detailFontSize * .16);
             detailLines = wrapPimTextLines(context, detail, detailWidth, { breakWords });
             const detailHasOverflow = !breakWords && detailLines.some(line => measuredTextWidth(context, line) > detailWidth);
@@ -234,7 +234,7 @@ export function fitPimTextBlock(context, options = {}) {
     // all of its wrapped lines fit rather than being clipped or discarded.
     if (options.strictMinimum) {
         const size = Math.max(14, titleRange.minimum);
-        context.font = `650 ${size}px system-ui, sans-serif`;
+        context.font = `600 ${size}px Georgia, "Times New Roman", serif`;
         const lines = wrapPimTextLines(context, title, safeArea.width, {breakWords:true}).slice(0, 3);
         const fit = line => { let value=line; while(value.length && context.measureText(value+'…').width>safeArea.width) value=value.slice(0,-1); return value+'…'; };
         if(lines.length) lines[lines.length-1]=fit(lines[lines.length-1]);
@@ -411,7 +411,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         });
         context.fillStyle = options.softSurface ? '#243d30' : '#fff';
         context.strokeStyle = options.softSurface ? 'rgba(246,248,239,.8)' : 'rgba(0, 0, 0, .94)';
-        context.font = `650 ${textLayout.titleFontSize}px system-ui, sans-serif`;
+        context.font = `600 ${textLayout.titleFontSize}px Georgia, "Times New Roman", serif`;
         context.lineWidth = Math.max(2, Math.round(textLayout.titleFontSize * .13));
         drawOutlinedLines(
             context,
@@ -421,7 +421,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             textLayout.titleLineHeight
         );
         if (textLayout.detailLines.length) {
-            context.font = `500 ${textLayout.detailFontSize}px system-ui, sans-serif`;
+            context.font = `500 ${textLayout.detailFontSize}px Georgia, "Times New Roman", serif`;
             context.lineWidth = Math.max(1.5, Math.round(textLayout.detailFontSize * .1));
             context.fillStyle = options.softSurface ? '#425b4a' : 'rgba(255, 255, 255, .96)';
             context.shadowColor = 'transparent';
@@ -464,7 +464,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         heightFactor: .78
     });
     const coreLines = coreTextLayout.titleLines;
-    context.font = `650 ${coreTextLayout.titleFontSize}px system-ui, sans-serif`;
+    context.font = `600 ${coreTextLayout.titleFontSize}px Georgia, "Times New Roman", serif`;
     context.lineWidth = Math.max(2, Math.round(coreTextLayout.titleFontSize * .14));
     drawOutlinedLines(context, coreLines, center.x, center.y + coreTextLayout.titleOffsetY, coreTextLayout.titleLineHeight);
     context.restore();

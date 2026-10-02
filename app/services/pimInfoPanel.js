@@ -283,6 +283,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
         if(action==='Settings'){
             settingsOpen=!settingsOpen;
+            if(settingsOpen){mediaCollapsed=true;mediaDetached=false;mediaPose=null;mediaPosition=null;}
             renderSettings();
         }
         if(action==='Previous')page=Math.max(0,page-1);
@@ -815,7 +816,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
             if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=isContinue?'rgba(235,246,240,.9)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=isContinue?7:button.primary?3:2.5;ctx.stroke();}
             if(button.selected){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
-            ctx.fillStyle=button.disabled?'#899297':button.primary?'#f3fbf4':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(button.primary?'680 ':button.kind==='toggle'||button.kind==='handle'?'650 ':'600 ')+(isContinue?'36px':button.primary?'28px':button.kind==='toggle'||button.kind==='handle'?'26px':'21px')+' system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-(isContinue?44:button.primary?34:button.kind==='toggle'||button.kind==='handle'?30:28))/2,button.width-16);
+            ctx.fillStyle=button.disabled?'#899297':button.primary?'#f3fbf4':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(button.primary?'680 ':button.kind==='toggle'||button.kind==='handle'?'650 ':'600 ')+(isContinue?'40px':button.primary?'28px':button.kind==='toggle'||button.kind==='handle'?'26px':'21px')+' system-ui';ctx.textAlign='center';ctx.fillText(isContinue?button.label.toUpperCase():button.label,button.x+button.width/2,button.y+(button.height-(isContinue?44:button.primary?34:button.kind==='toggle'||button.kind==='handle'?30:28))/2,button.width-16);
         });return c;
     }
     function hit(ray){if(!pose || !renderer || detached)return null;return renderer.hit(ray);}

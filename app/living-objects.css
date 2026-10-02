@@ -2216,3 +2216,19 @@ body[data-project-theme] .creator-ar-context-toolbar button {
     -webkit-backdrop-filter:blur(14px) saturate(.9);
     backdrop-filter:blur(14px) saturate(.9);
 }
+
+/* Calm glass Continue control and botanical PIMO typography. */
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"] {
+ background:rgba(17,29,34,.10)!important;color:#f8f6ed!important;
+ border:3px solid rgba(239,239,225,.82);box-shadow:none!important;
+ font-size:clamp(1.8rem,2.8vw,2.15rem);font-weight:600;
+ text-transform:uppercase;letter-spacing:.055em;
+}
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):is(:hover,:focus-visible),
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"]:is(:hover,:focus-visible) {
+ background:rgba(239,239,225,.14)!important;
+}
+:is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] :is(.plant-knowledge-cell-copy b,.plant-knowledge-cell-copy small,.plant-knowledge-core-copy strong) {
+ font-family:Georgia,"Times New Roman",serif;font-weight:600;
+}
