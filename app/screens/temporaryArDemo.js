@@ -19,6 +19,7 @@ import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
 import { beePointerAvoidance, demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
+import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from '../services/spatialObjectVisuals.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
@@ -591,6 +592,7 @@ function syncDemoPanelActions() {
         trigger.classList.toggle('is-phone-footer-action',phoneFooterAction);
         if(simulatedMode && primary?.id==='continue' && mainScreen && desktopPreview)mainScreen.append(trigger);
         else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
+        if(placementReady && simulatedMode)refreshSimulatedPlacementAim();
     }
     // Journey progression always belongs to the main experience surface.
     // The Control panel keeps only persistent tools and navigation.
@@ -909,21 +911,22 @@ function demoTotemCards(record) {
         const dx=Number(item?.position?.x)-Number(record.position?.x);
         const dz=Number(item?.position?.z)-Number(record.position?.z);
         if(Number.isFinite(dx) && Number.isFinite(dz) && Math.hypot(dx,dz)>.05)return dx*right.x+dz*right.z<0?'left':'right';
-        return Number(item?.simulatedAnchor?.x)<Number(record.simulatedAnchor?.x)?'left':'right';
+        return '';
     };
-    const pointedTitle=(title,side)=>side==='left'?`← ${title}`:`${title} →`;
+    const pointedTitle=(title,side)=>side==='left'?`← ${title}`:side==='right'?`${title} →`:title;
+    const shortPlantName=item=>String(item?.name || 'Plant').replace(/\s+(Grass|Tree)$/i,'');
     const zoneName=record.demoZoneName || record.demoContent?.title || record.name || 'This zone';
     const header={...totemKnowledgeCards({title:zoneName,introduction:`Welcome to ${zoneName}.`,
         plants:plants.map(item=>({id:item.id,name:item.name,knowledge:demoOrbKnowledge(item)})),
         notes:notes.map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),compact:true})[0],eyebrow:'ZONE'};
     const plantSigns=second
-        ? ['left','right'].map(side=>({side,pair:plants.filter(item=>directionFor(item)===side)})).filter(group=>group.pair.length).map(({side,pair})=>({id:`plants-${side}`,eyebrow:'',title:pointedTitle(`Plant Orb · ${pair.map(item=>item.name).join(' · ')}`,side),summary:'',plaque:true,boardSide:side,references:pair.map(item=>item.id)}))
+        ? ['left','right'].map(side=>({side,pair:plants.filter(item=>directionFor(item)===side)})).filter(group=>group.pair.length).map(({side,pair})=>({id:`plants-${side}`,eyebrow:'',title:pointedTitle(pair.map(shortPlantName).join(' · '),side),summary:`Plant Orbs · ${pair.map(item=>item.name).join(', ')}`,plaque:true,boardSide:side,references:pair.map(item=>item.id)}))
         : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'',title:pointedTitle(`Plant Orb · ${item.name}`,directionFor(item)),summary:'',plaque:true,boardSide:directionFor(item),references:[item.id]}));
     const note=notes[0];
     const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
     const destination=partner?.demoZoneName || '';
     const navigation=resolveTotemNavigation(record,partner);
-    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:pointedTitle(destination,directionFor(partner)),summary:'',body:'Follow this sign to the neighbouring Totem.',boardSide:directionFor(partner),plaque:true,navigation:{...navigation,destinationId:partner.id}} : null;
+    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:navigation.reliable?pointedTitle(destination,navigation.side):`Explore ${destination}`,summary:'',body:navigation.reliable?'Follow this sign to the neighbouring Totem.':'Explore the neighbouring Area.',boardSide:navigation.side,plaque:true,navigation:{...navigation,destinationId:partner.id}} : null;
     return [header,...(neighbour ? [neighbour] : []),...plantSigns,
         ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:pointedTitle(note.name,directionFor(note)),summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
     ].slice(0,5);
@@ -957,10 +960,21 @@ function clearHiddenDemoAreaState(area) {
 
 function setDemoAreaFaded(area,faded) {
     if(!area || area.demoType!=='zone')return;
+    if(area.demoTotemFaded!==Boolean(faded)){
+        const now=performance.now();
+        area.demoTotemFadeFrom=demoTotemVisualOpacity(area,now);
+        area.demoTotemFadeStartedAt=now;
+    }
     area.demoTotemFaded=Boolean(faded);
     area.totemSelectedCard='';
     if(area.demoTotemFaded)clearHiddenDemoAreaState(area);
     updateSimulatedMarkers();
+}
+function demoTotemVisualOpacity(record,now=performance.now()) {
+    const target=record.demoTotemFaded ? .18 : .98;
+    if(!Number.isFinite(record.demoTotemFadeStartedAt))return target;
+    const progress=spatialTransitionProgress(now,record.demoTotemFadeStartedAt,SPATIAL_OBJECT_VISUALS.totem.fadeTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    return (record.demoTotemFadeFrom ?? target)*(1-progress)+target*progress;
 }
 function selectDemoTotemSign(record,cardId) {
     record.totemSelectedCard=record.totemSelectedCard===cardId ? '' : cardId;
@@ -983,6 +997,7 @@ function activateDemoTotemCard(hit) {
     infoPanel?.setMediaCollapsed(true);
     if(hit.card?.id==='__signs'){
         hit.record.demoTotemSignsVisible=!hit.record.demoTotemSignsVisible;
+        hit.record.demoSignsChangedAt=performance.now();
         setDemoAreaFaded(hit.record,false);
         hit.record.totemSelectedCard='';
         hit.record.totemCardsRefreshed=0;
@@ -2623,7 +2638,23 @@ function demoControlPanelRect() {
 
 function keepDemoAnchorClear(anchor, radius) {
     const { width, height } = demoViewportDimensions();
-    return avoidDemoPanelOverlap(anchor, radius, demoControlPanelRect(), width, height);
+    const panel=demoControlPanelRect();
+    const clear=avoidDemoPanelOverlap(anchor, radius, panel, width, height);
+    const footer=appRoot?.querySelector('.tryit-context-trigger.is-phone-footer-action');
+    // Reserve the future Continue action while aiming, even before that
+    // action is shown. The chosen position is the placed Orb's stable anchor.
+    const footerTop=footer && !footer.hidden ? footer.getBoundingClientRect().top
+        : footer && width<=620 ? height*.74 : NaN;
+    if(Number.isFinite(footerTop)){
+        clear.y=Math.min(clear.y,Math.max(8,(footerTop-radius-12)/height*100));
+        const x=clear.x*width/100,y=clear.y*height/100,inset=radius+12;
+        if(panel && x>panel.left-inset && x<panel.right+inset && y>panel.top-inset && y<panel.bottom+inset){
+            const right=panel.right+inset,left=panel.left-inset;
+            if(right<=width-radius)clear.x=right/width*100;
+            else if(left>=radius)clear.x=left/width*100;
+        }
+    }
+    return clear;
 }
 
 function refreshSimulatedPlacementAim() {
@@ -2831,10 +2862,10 @@ function capturedSimulatedAnchor() {
     const place = appRoot?.querySelector('[data-tryit-place]');
     const x = Number(place?.dataset.aimX);
     const y = Number(place?.dataset.aimY);
-    return {
+    return keepDemoAnchorClear({
         x: Number.isFinite(x) ? x : 50,
         y: Number.isFinite(y) ? y : 50
-    };
+    },34);
 }
 
 function demoPlantKnowledgeMarkup(record, anchor = record?.simulatedAnchor || { x: 50, y: 50 }) {
@@ -2897,6 +2928,9 @@ function showDemoPlantPhoto(record) {
 function toggleDemoPlantProfile(record) {
     if(demoKnowledgeWorkspace) return;
     if (!record || record.demoType !== 'plant') return;
+    const now=performance.now();
+    if(now-(record.demoLastProfileToggleAt ?? -Infinity)<280)return;
+    record.demoLastProfileToggleAt=now;
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     const opening=!record.demoExpanded;
@@ -2911,7 +2945,7 @@ function toggleDemoPlantProfile(record) {
         infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,plantMedia);
         if(!ambientNeighbour)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
         setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
-        record.profileRevealStarted = performance.now();
+        record.profileRevealStarted = now;
         const firstOpen = !record.demoProfileOpened;
         record.demoProfileOpened = true;
         record.demoActiveBranch ||= '';
@@ -3238,7 +3272,7 @@ function bindSimulatedInformationPanels(layer) {
         }
         if (record.demoType === 'zone') {
             compactMarker.querySelector('[data-totem-signs]')?.addEventListener('pointerdown',event=>event.stopPropagation());
-            compactMarker.querySelector('[data-totem-signs]')?.addEventListener('click',event=>{event.stopPropagation();infoPanel?.setMediaCollapsed(true);record.demoTotemSignsVisible=!record.demoTotemSignsVisible;setDemoAreaFaded(record,false);record.totemSelectedCard='';record.totemCardsRefreshed=0;updateSimulatedMarkers();});
+            compactMarker.querySelector('[data-totem-signs]')?.addEventListener('click',event=>{event.stopPropagation();infoPanel?.setMediaCollapsed(true);record.demoTotemSignsVisible=!record.demoTotemSignsVisible;record.demoSignsChangedAt=performance.now();setDemoAreaFaded(record,false);record.totemSelectedCard='';record.totemCardsRefreshed=0;updateSimulatedMarkers();});
             compactMarker.querySelector('[data-totem-fade]')?.addEventListener('pointerdown',event=>event.stopPropagation());
             compactMarker.querySelector('[data-totem-fade]')?.addEventListener('click',event=>{event.stopPropagation();infoPanel?.setMediaCollapsed(true);setDemoAreaFaded(record,!record.demoTotemFaded);});
             compactMarker.querySelectorAll('[data-totem-card]').forEach(button=>{
@@ -4099,7 +4133,7 @@ function setupRenderer() {
     sphereRenderer = createSpatialSphereRenderer(gl);
     // Totem cards share the Totem's placement heading. They must not turn with
     // the viewer after the buttons have been aimed during placement.
-    totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false});
+    totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false,ray:()=>latestControllerRay});
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
@@ -5077,7 +5111,7 @@ function drawMarker(view) {
 
     const hoveredPlant=latestControllerRay ? demoRecordAtPointer()?.record : null;
     const signTargets=selectedDemoTotemTargets();
-    markers.forEach(record => {
+    markers.forEach((record,index) => {
         const orbType = record.demoType === 'plant' ? 'plant' : record.demoType === 'marker' ? 'marker' : '';
         if (!orbType || !demoAreaVisible(record)) return;
         const material = DEMO_ORB_MATERIALS[record.demoOrbColor];
@@ -5100,12 +5134,13 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1),
-            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, held:demoHeldIndex===markers.indexOf(record), grabReady:demoGrabPreparingIndex===markers.indexOf(record), highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===markers.indexOf(record) || demoGrabPreparingIndex===markers.indexOf(record), time:performance.now()/1000 }
+            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {
         if (record.demoType !== 'zone' || !demoAreaVisible(record)) return;
-        const totemColour=demoHexColour(record.demoTotemColor || record.demoContent?.accent);
+        const totemColour=demoHexColour(record.demoTotemColor || record.demoContent?.accent)
+            .map(channel=>Math.min(.95,channel*SPATIAL_OBJECT_VISUALS.totem.postContrast+SPATIAL_OBJECT_VISUALS.totem.postLift));
         const totemHighlight=totemColour.map(channel=>Math.min(.96,channel*.48+.48));
         const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
@@ -5119,7 +5154,7 @@ function drawMarker(view) {
             color: totemColour,
             topColor: totemHighlight,
             topTaper: .96,
-            alpha: arrival*(record.demoTotemFaded ? .18 : .98),
+            alpha: arrival*demoTotemVisualOpacity(record),
             rotationY
         });
         if(signTargets.has(record.id))drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY+bodyHalfHeight},bodyHalfHeight*.9,{color:[.75,.96,.65],alpha:.16,emissive:.25});
@@ -5127,11 +5162,12 @@ function drawMarker(view) {
         for(const [offset,shade] of [[-.048,[.17,.12,.09,.25]],[-.016,[.16,.11,.08,.18]],[.037,[.82,.69,.52,.16]]]){
             const x=record.position.x+right.x*offset+front.x*(bodyHalfDepth+.002);
             const z=record.position.z+right.z*offset+front.z*(bodyHalfDepth+.002);
-            drawSpatialTether(gl,tetherRenderer,view,{x,y:groundBaseY+.035,z},{x,y:groundBaseY+bodyHalfHeight*2-.035,z},{segments:2,width:.002,curve:0,lift:0,color:shade});
+            drawSpatialTether(gl,tetherRenderer,view,{x,y:groundBaseY+.035,z},{x,y:groundBaseY+bodyHalfHeight*2-.035,z},{segments:2,width:.004,curve:0,lift:0,color:shade});
         }
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,
-            signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival
+            signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival,
+            fadeOpacity:record.demoTotemFaded ? Math.max(.78,demoTotemVisualOpacity(record)) : 1
         });
     });
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible && demoAreaVisible(record));

@@ -1,3 +1,5 @@
+import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
+
 const DEFAULT_MARKER_COLOR = Object.freeze([0.39, 0.48, 0.23]);
 const DEFAULT_PLANT_COLOR = Object.freeze([0.42, 0.72, 0.34]);
 const PLANT_RING_COLOR = Object.freeze([0.88, 0.8, 0.56]);
@@ -80,7 +82,7 @@ export function createOrbCrownGeometry() {
         for(const [angle,r] of [[a,radius-width],[a,radius+width],[b,radius+width],[b,radius-width]])vertices.push(Math.cos(angle)*r,Math.sin(angle)*r,.04,0,0,1);
         indices.push(start,start+1,start+2,start,start+2,start+3);
     }};
-    band(1.18,.022,0,Math.PI*2,96);
+    band(1.16,SPATIAL_OBJECT_VISUALS.orb.rimWidth,0,Math.PI*2,96);
     return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
 }
 
@@ -111,6 +113,8 @@ export function createSpatialSphereRenderer(gl) {
         uniform float emissive;
         uniform float haloPass;
         uniform float livingTime;
+        uniform float roughness;
+        uniform float metalness;
         void main() {
             if(haloPass > .5){
                 float angle=atan(localPosition.y,localPosition.x);
@@ -124,13 +128,13 @@ export function createSpatialSphereRenderer(gl) {
             float diffuse = max(dot(normal, lightDirection), 0.0);
             float facing = max(dot(normal, viewer), 0.0);
             float rim = pow(1.0 - facing, 2.4);
-            float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 20.0);
+            float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), mix(42.0, 8.0, roughness));
             float pearl = 0.5 + 0.5 * sin(normal.y * 4.2 + normal.x * 2.6);
-            vec3 shaded = color * (0.52 + diffuse * 0.42);
+            vec3 shaded = color * (0.62 + diffuse * 0.36);
             shaded = mix(shaded, mix(color, vec3(0.88, 0.94, 0.9), 0.42), pearl * 0.09);
-            shaded += vec3(0.22) * highlight;
+            shaded += mix(vec3(.26),color*.55+vec3(.14),metalness) * highlight;
             shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
-            shaded += mix(color, vec3(0.72, 0.86, 0.76), 0.45) * rim * 0.18;
+            shaded += mix(color, vec3(0.82, 0.91, 0.82), 0.55) * rim * 0.23;
             gl_FragColor = vec4(shaded, alpha);
         }
     `;
@@ -176,7 +180,8 @@ export function createSpatialSphereRenderer(gl) {
         colorLocation: gl.getUniformLocation(program, 'color'),
         alphaLocation: gl.getUniformLocation(program, 'alpha'),
         emissiveLocation: gl.getUniformLocation(program, 'emissive'),
-        haloLocation:gl.getUniformLocation(program,'haloPass'),timeLocation:gl.getUniformLocation(program,'livingTime')
+        haloLocation:gl.getUniformLocation(program,'haloPass'),timeLocation:gl.getUniformLocation(program,'livingTime'),
+        roughnessLocation:gl.getUniformLocation(program,'roughness'),metalnessLocation:gl.getUniformLocation(program,'metalness')
     };
 }
 
@@ -189,12 +194,12 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     if(material.billboard && material.rotation){const a=material.rotation,c=Math.cos(a),s=Math.sin(a);for(let row=0;row<3;row++){const x=model[row],y=model[4+row];model[row]=x*c+y*s;model[4+row]=y*c-x*s;}}
     const modelView = multiplyMatrices(viewMatrix, model);
     gl.useProgram(renderer.program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, renderer.vertexBuffer);
+    gl.bindBuffer(gl.ARRAY_BUFFER, material.crown ? renderer.crownVertexBuffer : renderer.vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);
     gl.vertexAttribPointer(renderer.positionLocation, 3, gl.FLOAT, false, 24, 0);
     gl.enableVertexAttribArray(renderer.normalLocation);
     gl.vertexAttribPointer(renderer.normalLocation, 3, gl.FLOAT, false, 24, 12);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, renderer.indexBuffer);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, material.crown ? renderer.crownIndexBuffer : renderer.indexBuffer);
     gl.uniformMatrix4fv(renderer.projectionLocation, false, projectionMatrix);
     gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
     gl.uniform3fv(renderer.colorLocation, material.color || DEFAULT_MARKER_COLOR);
@@ -203,7 +208,9 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     gl.uniform1f(renderer.emissiveLocation, Number.isFinite(material.emissive) ? material.emissive : 0.12);
     gl.uniform1f(renderer.haloLocation,material.halo ? 1 : 0);
     gl.uniform1f(renderer.timeLocation,material.time || 0);
-    gl.drawElements(gl.TRIANGLES, renderer.indexCount, gl.UNSIGNED_SHORT, 0);
+    gl.uniform1f(renderer.roughnessLocation,Number.isFinite(material.roughness)?material.roughness:.6);
+    gl.uniform1f(renderer.metalnessLocation,Number.isFinite(material.metalness)?material.metalness:.04);
+    gl.drawElements(gl.TRIANGLES, material.crown ? renderer.crownIndexCount : renderer.indexCount, gl.UNSIGNED_SHORT, 0);
 }
 
 export function drawSpatialOrb(gl, renderer, view, position, radius, options = {}) {
@@ -211,6 +218,9 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     const plant = options.type === 'plant';
     const shellColor = options.color || (plant ? DEFAULT_PLANT_COLOR : DEFAULT_MARKER_COLOR);
     const ringColor = options.ringColor || PLANT_RING_COLOR;
+    const visual=SPATIAL_OBJECT_VISUALS.orb;
+    const selected=options.knowledge?.state==='expanded';
+    const moving=Boolean(options.held),targeted=Boolean(options.highlighted || options.grabReady);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.CULL_FACE);
@@ -227,19 +237,20 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? 0.96 : 0.92, emissive: options.highlighted ? 0.72 : plant ? 0.22 : 0.24, opacity: options.opacity }
+        { color: shellColor, alpha: plant ? .98 : .94, emissive: moving ? .65 : selected ? .53 : targeted ? .43 : plant ? .27 : .24,
+            roughness:visual.shellRoughness,metalness:visual.shellMetalness,opacity: options.opacity }
     );
 
     if (plant) {
         gl.depthMask(false);
         const still=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
         const time=still ? 0 : (options.time ?? performance.now()/1000);
-        drawSpatialSphere(gl, { ...renderer, vertexBuffer:renderer.crownVertexBuffer,
-            indexBuffer:renderer.crownIndexBuffer, indexCount:renderer.crownIndexCount },
+        drawSpatialSphere(gl, renderer,
             view.projectionMatrix, view.transform.inverse.matrix, position,
-            radius * (options.knowledge?.state === 'expanded' ? 1.04 : 1), {
-                billboard:true, halo:true, time, rotation:0, color:options.knowledge?.draftOnly ? [.72,.61,.38] : ringColor,
-                alpha:options.highlighted ? .96 : options.knowledge?.state === 'expanded' ? .86 : .78, emissive:.2, opacity:options.opacity
+            radius * (selected ? 1.04 : 1), {
+                crown:true,billboard:true, halo:true, time, rotation:0, color:options.knowledge?.draftOnly ? [.72,.61,.38] : ringColor,
+                alpha:moving || selected ? visual.selectedRimAlpha : targeted ? visual.targetRimAlpha : visual.idleRimAlpha,
+                emissive:.2, opacity:options.opacity
             });
         gl.depthMask(true);
     }
@@ -247,12 +258,12 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     // Draw the halo after the opaque shell and without writing depth. Drawing
     // it first caused the larger transparent sphere to occlude the marker,
     // which made a hovered Quest marker look faded instead of selected.
-    if (options.highlighted) {
+    if (moving || selected || targeted) {
         gl.depthMask(false);
-        const reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-        const pulse=reducedMotion ? 0 : Math.sin((options.time ?? performance.now()/1000)*3.2);
-        drawSpatialSphere(gl, renderer, view.projectionMatrix, view.transform.inverse.matrix, position, radius * (1.2+.045*pulse), {
-            color:options.held ? [.62,1,.28] : options.grabReady ? [.55,.86,1] : plant ? [0.9, 0.84, 0.58] : [0.82, 1, 0.28], alpha:options.held ? .42 : options.grabReady ? .34 : plant ? .22+.06*pulse : .22, emissive: 1, opacity: options.opacity
+        drawSpatialSphere(gl, renderer, view.projectionMatrix, view.transform.inverse.matrix, position, radius * visual.haloScale, {
+            color:moving ? [.62,1,.52] : options.grabReady ? [.55,.86,1] : plant ? [.92,.83,.58] : [.82,1,.28],
+            alpha:moving ? visual.movingHaloAlpha : selected ? visual.selectedHaloAlpha : visual.targetHaloAlpha,
+            emissive:.75,opacity:options.opacity
         });
         gl.depthMask(true);
     }

@@ -1,6 +1,7 @@
 import { drawSpatialSphere } from './spatialSphereRenderer.js';
 import { drawSpatialPrism } from './spatialPrismRenderer.js';
 import { totemHeightPreset } from './totemAppearance.js';
+import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from './spatialObjectVisuals.js';
 
 const TOTEM_BUTTON_WIDTH = .104;
 const TOTEM_BUTTON_RADIUS = .052;
@@ -55,11 +56,11 @@ export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatr
     const bodyHalfDepth = Number(state.bodyHalfDepth) || bodyHalfWidth * .5;
     const bodyHalfHeight = Number(state.bodyHalfHeight) || .69;
     const layout = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
-    const opacity = (state.faded ? .18 : 1) * (Number.isFinite(state.arrivalOpacity) ? state.arrivalOpacity : 1);
+    const opacity = (Number.isFinite(state.fadeOpacity) ? state.fadeOpacity : state.faded ? .78 : 1) * (Number.isFinite(state.arrivalOpacity) ? state.arrivalOpacity : 1);
     for (const button of layout) {
         const pressed = button.id === '__signs' ? Boolean(state.signsVisible && !state.faded) : Boolean(state.faded);
         drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, button.center, button.radius, {
-            color: [.14, .15, .16], alpha: opacity, emissive: .015,
+            color: [.13, .17, .17], alpha: opacity, emissive: .015,roughness:.48,metalness:.42,
             scale: { x: 1, y: 1, z: .25 }, rotationY
         });
         const faceCenter = {
@@ -68,7 +69,7 @@ export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatr
             z: button.center.z + button.front.z * .004
         };
         drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, faceCenter, button.faceRadius, {
-            color: pressed ? [.79, .72, .60] : [.61, .64, .62], alpha: opacity, emissive: .025,
+            color: pressed ? [.83, .73, .54] : [.63, .69, .66], alpha: opacity, emissive: .025,roughness:.42,metalness:.48,
             scale: { x: 1, y: 1, z: .25 }, rotationY
         });
     }
@@ -113,15 +114,17 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,demoZone ? 5 : 3);
+    const signOpacity=typeof state==='object' && Number.isFinite(state.signOpacity) ? state.signOpacity : 1;
+    const signInteractive=typeof state==='object' ? state.signInteractive!==false : true;
     const surfaces=[
-        ...buttons.map((button,index)=>({center:button.faceCenter,right,width:.16,height:.16,card:index===0?signs:fade,detail:false,opacity:faded ? .18 : 1})),
+        ...buttons.map((button,index)=>({center:button.faceCenter,right,width:.16,height:.16,card:index===0?signs:fade,detail:false,opacity:faded ? .82 : 1})),
         ...(signsVisible && !faded ? [
             headerBoard,
             ...signCards.map((card,index)=>signBoard(card,index,signCards.length))
-        ].filter(Boolean) : [])
+        ].filter(Boolean).map(surface=>({...surface,opacity:signOpacity,interactive:signInteractive})) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && selected.id!==cards[0]?.id && signsVisible && !faded) surfaces.push(place(0,2.04*demoScale,1.18,.58,{...selected,boardStyle:'header-detail'},true));
+    if(selected && selected.id!==cards[0]?.id && signsVisible && !faded) surfaces.push({...place(0,2.04*demoScale,1.18,.58,{...selected,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
     return surfaces;
 }
 
@@ -133,8 +136,13 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     const bodyHalfHeight=record?.demoType==='zone'
         ? .56
         : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-bodyHalfWidth*.35);
+    const now=performance.now(),visual=SPATIAL_OBJECT_VISUALS.totem;
+    const signProgress=spatialTransitionProgress(now,record?.demoSignsChangedAt,visual.signTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    const signsVisible=Boolean(record?.demoTotemSignsVisible);
+    const closing=!signsVisible && Number.isFinite(record?.demoSignsChangedAt) && now-record.demoSignsChangedAt<visual.signTransitionMs;
     return totemCardSurfaces(position,right,cards,selectedId,{
-        signsVisible:Boolean(record?.demoTotemSignsVisible),faded:Boolean(record?.demoTotemFaded),
+        signsVisible:signsVisible || closing,faded:Boolean(record?.demoTotemFaded),
+        signOpacity:signsVisible ? signProgress : 1-signProgress,signInteractive:signsVisible && !record?.demoTotemFaded,
         bodyHalfWidth,bodyHalfDepth:record?.demoType==='zone' ? .075 : bodyHalfWidth*.5,bodyHalfHeight,demoZone:record?.demoType==='zone'
     });
 }
@@ -159,11 +167,12 @@ export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view,
         const right=surface.right,front={x:-right.z,y:0,z:right.x};
         const rotationY=Math.atan2(-right.z,right.x),halfDepth=header ? .014 : .009;
         const centerDepth={x:surface.center.x-front.x*(halfDepth+.003),z:surface.center.z-front.z*(halfDepth+.003)};
-        const colour=header ? [.26,.35,.41] : [.42,.29,.20];
-        const highlight=header ? [.49,.59,.65] : [.68,.52,.35];
+        const visual=SPATIAL_OBJECT_VISUALS.totem;
+        const colour=header ? visual.boardHeader : visual.boardWood;
+        const highlight=header ? visual.boardHeaderEdge : visual.boardWoodEdge;
         drawSpatialPrism(gl,prismRenderer,view,{x:centerDepth.x,y:surface.center.y-surface.height/2,z:centerDepth.z},{
             halfWidth:surface.width/2,halfHeight:surface.height/2,halfDepth,
-            color:colour,topColor:highlight,topTaper:header ? .97 : .985,alpha:opacity,rotationY
+            color:colour,topColor:highlight,topTaper:header ? .96 : .975,alpha:opacity*(surface.opacity ?? 1),rotationY
         });
         const fixingOffsets=header ? [-surface.height*.27,surface.height*.27] : [0];
         for(const yOffset of fixingOffsets) {
@@ -173,7 +182,7 @@ export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view,
                 z:surface.center.z+front.z*.006
             };
             drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,fixingCenter,.013,{
-                color:[.55,.57,.56],alpha:opacity,emissive:.018,scale:{x:1,y:1,z:.32},rotationY
+                color:[.66,.67,.60],alpha:opacity*(surface.opacity ?? 1),emissive:.018,roughness:.4,metalness:.55,scale:{x:1,y:1,z:.32},rotationY
             });
         }
     }
@@ -189,6 +198,7 @@ export function hitTotemSurface(ray, surfaces) {
     if(!ray?.origin || !ray.direction)return null;
     const hits=[];
     for(const surface of surfaces) {
+        if(surface.interactive===false)continue;
         const {center,width,height}=surface, right={y:0,...surface.right}, up=surface.up || {x:0,y:1,z:0};
         const normal=surface.normal || {x:right.y*up.z-right.z*up.y,y:right.z*up.x-right.x*up.z,z:right.x*up.y-right.y*up.x};
         const denominator=ray.direction.x*normal.x+ray.direction.y*normal.y+ray.direction.z*normal.z;
@@ -240,7 +250,8 @@ function cardCanvas(card, detail) {
         return canvas;
     }
     if(boardStyle==='attached-sign'){
-        ctx.fillStyle='#fff9ec';ctx.font=`700 ${String(card.title||'').length>26?48:64}px ${face}`;ctx.fillText(card.title,512,128,890);
+        ctx.shadowColor='rgba(15,12,9,.42)';ctx.shadowBlur=1;ctx.shadowOffsetY=1;
+        ctx.fillStyle='#fffaf0';ctx.font=`750 ${String(card.title||'').length>26?54:72}px ${face}`;ctx.fillText(card.title,512,128,900);
         return canvas;
     }
     if(boardStyle==='header' || boardStyle==='header-detail'){
@@ -258,11 +269,11 @@ function cardCanvas(card, detail) {
 
 export function createSpatialTotemCards(gl, options = {}) {
     const vs=shader(gl,gl.VERTEX_SHADER,'attribute vec2 p;uniform mat4 projection;uniform mat4 view;uniform vec3 center;uniform vec3 right;uniform vec3 up;uniform vec2 size;varying vec2 uv;void main(){uv=vec2(p.x+.5,.5-p.y);vec3 world=center+right*p.x*size.x+up*p.y*size.y;gl_Position=projection*view*vec4(world,1.0);}');
-    const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;uniform sampler2D artwork;uniform float opacity;varying vec2 uv;void main(){vec4 c=texture2D(artwork,uv);if(c.a<.01)discard;gl_FragColor=vec4(c.rgb,c.a*opacity);}');
+    const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;uniform sampler2D artwork;uniform float opacity;uniform float feedback;uniform vec3 feedbackColor;varying vec2 uv;void main(){vec4 c=texture2D(artwork,uv);float edge=1.0-smoothstep(.015,.06,min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y)));float accent=feedback*edge*.42;float a=max(c.a,accent);if(a<.01)discard;vec3 ink=c.a>.01?c.rgb:feedbackColor;gl_FragColor=vec4(ink,a*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-.5,-.5,.5,-.5,.5,.5,-.5,-.5,.5,.5,-.5,.5]),gl.STATIC_DRAW);
-    const locations=Object.fromEntries(['projection','view','center','right','up','size','artwork','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const locations=Object.fromEntries(['projection','view','center','right','up','size','artwork','opacity','feedback','feedbackColor'].map(name=>[name,gl.getUniformLocation(program,name)]));
     const p=gl.getAttribLocation(program,'p'),textures=new Map(),used=new Set();
     const anisotropy=gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
     let surfaces=[];
@@ -283,17 +294,20 @@ export function createSpatialTotemCards(gl, options = {}) {
                 ? {x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)}
                 : stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
             const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemLayoutForRecord(record,position,cards,selectedId,rotationY);
+            const aimed=hitTotemSurface(options.ray?.(),layout);
+            const now=performance.now(),reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);
+            gl.uniform3fv(locations.feedbackColor,SPATIAL_OBJECT_VISUALS.totem.aimTint);
             gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthMask(false);
             for(const surface of layout) {
                 const key=String(record.marker?.id || record.id)+':'+surface.card.id+':'+surface.detail;
-                const content=JSON.stringify([surface.card,selectedId===surface.card.id]),cached=textures.get(key);
+                const content=JSON.stringify(surface.card),cached=textures.get(key);
                 let entry=cached;
                 if(!entry || entry.content!==content) {
                     if(entry)gl.deleteTexture(entry.texture);
                     const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
-                    const artwork=(options.canvas || cardCanvas)(surface.card,surface.detail,selectedId===surface.card.id);
+                    const artwork=(options.canvas || cardCanvas)(surface.card,surface.detail);
                     gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,artwork);
                     const mipmapped=textureSupportsMipmaps(artwork);
                     if(mipmapped)gl.generateMipmap(gl.TEXTURE_2D);
@@ -301,16 +315,16 @@ export function createSpatialTotemCards(gl, options = {}) {
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
                     if(mipmapped && anisotropy){const maximum=gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,maximum));}
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-                    entry={texture,content,started:entry?.started ?? performance.now(),fadeDuration:entry?.fadeDuration ?? surface.card.fadeDuration ?? 450};textures.set(key,entry);
+                    entry={texture,content,started:entry?.started ?? now,fadeDuration:entry?.fadeDuration ?? surface.card.fadeDuration ?? SPATIAL_OBJECT_VISUALS.totem.signTransitionMs};textures.set(key,entry);
                 }
                 used.add(key);surfaces.push({...surface,record});
                 gl.uniform3f(locations.center,surface.center.x,surface.center.y,surface.center.z);gl.uniform3f(locations.right,surface.right.x,surface.right.y || 0,surface.right.z);
                 const up=surface.up || {x:0,y:1,z:0};gl.uniform3f(locations.up,up.x,up.y,up.z);
                 gl.uniform2f(locations.size,surface.width,surface.height);
-                const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
                 const fadeOpacity = Number.isFinite(surface.opacity) ? surface.opacity : 1;
-                const arrival=record?.demoArriveAt ? Math.min(1,Math.max(0,(performance.now()-record.demoArriveAt)/900)) : 1;
-                gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(performance.now()-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
+                const arrival=record?.demoArriveAt ? Math.min(1,Math.max(0,(now-record.demoArriveAt)/900)) : 1;
+                gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(now-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
+                gl.uniform1f(locations.feedback,selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id ? .55 : 0));
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }
             gl.depthMask(true);

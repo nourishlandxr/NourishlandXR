@@ -301,7 +301,7 @@ test('simulated and immersive plant orbs use the shared crowned renderer', () =>
     assert.match(styles, /\.tryit-sim-orb\.is-plant::before/);
     assert.match(DEMO_ORB_MATERIALS.pigeonPea.style,/--demo-orb-size:56px/);
     assert.match(creator, /shape === 4 \? \.72 : 1/);
-    assert.match(renderer, /band\(1\.18,\.022,0,Math\.PI\*2,96\)/);
+    assert.match(renderer, /band\(1\.16,SPATIAL_OBJECT_VISUALS\.orb\.rimWidth,0,Math\.PI\*2,96\)/);
     assert.match(styles, /border:2px solid var\(--demo-orb-ring/);
     assert.match(styles, /content:none;\s*display:none;/);
 });

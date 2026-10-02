@@ -2150,6 +2150,48 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p.is-revealed { opacity:1; transform:none; }
 .tryit-demo .tryit-guided-choice.is-welcome-board.is-copy-ready:not(.is-typing) .tryit-board-text-window p { opacity:1; transform:none; }
 @media(prefers-reduced-motion:reduce) { .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p { transition:none; transform:none; } }
+
+/* Totem and Plant Orb finish. These variables tune the desktop preview while
+   spatialObjectVisuals.js holds the matching custom-WebGL values. */
+.tryit-demo { --object-sign-duration:380ms;--object-fade-duration:460ms;--object-aim-ink:#f6e8bd;--object-rim-ink:rgba(246,236,204,.92); }
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
+    background:linear-gradient(100deg,#322a25 0%,#675541 16%,#8a7153 42%,#5b4938 72%,#302923 100%);
+    border:1px solid rgba(222,196,153,.42);
+    box-shadow:inset 4px 0 8px rgba(255,233,191,.12),inset -7px 0 11px rgba(15,12,10,.28),0 14px 23px rgba(8,15,11,.34);
+}
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] {
+    height:46px;min-height:46px;padding:5px 9px;
+    border:1px solid rgba(58,43,29,.72);border-radius:8px;
+    background:linear-gradient(110deg,#866d51,#b89a71 48%,#786047);
+    box-shadow:inset 0 1px rgba(255,244,218,.58),inset 0 -3px rgba(48,32,20,.18),0 6px 13px rgba(5,12,8,.26);
+    transition:background .22s ease,box-shadow .22s ease,border-color .22s ease;
+}
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] strong { color:#211b16;font-size:13px;line-height:1.12;font-weight:760; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque]:is(:hover,:focus-visible,[aria-expanded="true"]) {
+    border-color:var(--object-aim-ink);background:linear-gradient(110deg,#a48760,#d5b789 48%,#90744f);
+    box-shadow:inset 0 1px rgba(255,250,231,.72),0 0 0 3px rgba(246,232,189,.24),0 9px 17px rgba(5,12,8,.3);
+}
+.tryit-sim-totem-system .nlxr-totem-cards > button:first-child { background:linear-gradient(145deg,#627b80,#405b62 55%,#263f46);border-color:rgba(223,240,232,.74); }
+.nlxr-totem-system.is-signs-arriving .nlxr-totem-cards { animation:nlxr-sign-show var(--object-sign-duration) ease-out both; }
+.nlxr-totem-system.is-signs-closing .nlxr-totem-cards,
+.nlxr-totem-system.is-totem-fading.is-signs-open .nlxr-totem-cards { display:grid;pointer-events:none;animation:nlxr-sign-hide var(--object-sign-duration) ease-in both; }
+.nlxr-totem-system.is-totem-fading .tryit-sim-totem-pillar { animation:nlxr-totem-dim var(--object-fade-duration) ease-in-out both; }
+.nlxr-totem-system.is-totem-waking .tryit-sim-totem-pillar { animation:nlxr-totem-wake var(--object-fade-duration) ease-in-out both; }
+@keyframes nlxr-sign-show { from {opacity:0;transform:translateY(5px)} to {opacity:1;transform:none} }
+@keyframes nlxr-sign-hide { from {opacity:1;transform:none} to {opacity:0;transform:translateY(4px)} }
+@keyframes nlxr-totem-dim { from {opacity:1;filter:none} to {opacity:.18;filter:saturate(.45)} }
+@keyframes nlxr-totem-wake { from {opacity:.18;filter:saturate(.45)} to {opacity:1;filter:none} }
+.tryit-sim-marker-plant .tryit-sim-orb.is-plant {
+    border:2px solid var(--object-rim-ink);
+    background:radial-gradient(circle at 30% 23%,rgba(255,255,243,.86) 0 4%,var(--demo-orb-light,#c5d5b7) 11%,var(--demo-orb-mid,#496b52) 48%,var(--demo-orb-dark,#10271c) 86%,#0a1d16 100%);
+    box-shadow:inset -8px -9px 15px rgba(4,19,13,.48),inset 5px 5px 8px rgba(255,255,255,.19),0 3px 10px rgba(4,17,12,.42),0 0 0 3px rgba(20,38,28,.36);
+    filter:none;animation:none!important;transition:box-shadow .26s ease,border-color .26s ease,filter .26s ease!important;
+}
+.tryit-sim-marker-plant:is(:hover,:focus-visible,.is-pointer-hover) .tryit-sim-orb.is-plant { animation:none!important;border-color:#fff4cd;box-shadow:inset -6px -8px 13px rgba(4,19,13,.39),inset 5px 5px 8px rgba(255,255,255,.2),0 0 0 4px rgba(255,240,186,.23),0 4px 16px rgba(8,24,15,.42); }
+.tryit-sim-marker-plant[data-knowledge-state="expanded"] .tryit-sim-orb.is-plant { border-color:#f9dfad;box-shadow:inset -6px -8px 13px rgba(4,19,13,.35),0 0 0 4px rgba(251,220,160,.27),0 4px 16px rgba(8,24,15,.44); }
+.tryit-sim-marker-plant.is-held .tryit-sim-orb.is-plant { animation:none!important;border-color:#d7f7cf;box-shadow:inset -6px -8px 13px rgba(4,19,13,.3),0 0 0 5px rgba(183,242,195,.3),0 6px 18px rgba(8,24,15,.5); }
+.tryit-sim-marker-plant .nlxr-orb-label { color:#fffdf2;background:rgba(20,37,29,.91);border:1px solid rgba(237,240,205,.65);font:650 13px/1.3 Manrope,"Segoe UI",system-ui,sans-serif;padding:5px 10px;box-shadow:0 3px 9px rgba(5,17,12,.38); }
+@media(prefers-reduced-motion:reduce) { .nlxr-totem-system :is(.nlxr-totem-cards,.tryit-sim-totem-pillar),.tryit-sim-marker-plant .tryit-sim-orb.is-plant { animation:none!important;transition:none!important; } }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) { min-height:62px; font-size:clamp(1rem,1.6vw,1.2rem); }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) {
     min-height:72px;

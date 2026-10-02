@@ -422,7 +422,7 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     const styles = read('app/style.css');
     assert.match(sphereSource, /gl\.drawElements\(gl\.TRIANGLES/);
     assert.doesNotMatch(sphereSource, /radius \* 0\.38/);
-    assert.match(sphereSource, /alpha: plant \? 0\.96 : 0\.92/);
+    assert.match(sphereSource, /alpha: plant \? \.98 : \.94/);
     assert.match(sphereSource, /gl\.enable\(gl\.DEPTH_TEST\)/);
     assert.match(creatorSource, /shape !== 0 && shape !== 4/);
     assert.doesNotMatch(creatorSource, /hoverVibration|livingRadius|profileHovered/);
@@ -1582,7 +1582,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /board\.click\(\);/);
     assert.match(geometrySource, /export function demoPointerScreenPoint\(rect/);
     assert.match(geometrySource, /const hasVisibleRect = Number\.isFinite\(width\) && width > 0/);
-    assert.match(source, /profileRevealStarted = performance\.now\(\)/);
+    assert.match(source, /profileRevealStarted = now/);
     assert.match(source, /uniform float opacity/);
     assert.match(source, /record\.demoDistance = Math\.max\(\.4, Math\.min\(4, 1 \+ verticalTravel \/ 120\)\)/);
     assert.match(source, /function captureDemoGrabPose\(record, origin, ray\)/);
@@ -1662,7 +1662,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.plant-knowledge-map\[data-pim-layout="honeycomb"\] \.plant-knowledge-cell b/);
     assert.match(source, /function renderSimulatedTotem/);
     assert.match(previewSource, /totemCardsMarkup\(cards, record\.totemSelectedCard\)/);
-    assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:false\}\)/);
+    assert.match(source, /createSpatialTotemCards\(gl,\{faceTotemToViewer:false,ray:\(\)=>latestControllerRay\}\)/);
     assert.match(source, /rotationY: demoTotemRotationForPosition\(position\)/);
     assert.match(source, /function demoTotemRotationY\(record\)\{[\s\S]*record\?\.rotationY/);
     assert.match(styles, /\.tryit-sim-totem-pillar/);
