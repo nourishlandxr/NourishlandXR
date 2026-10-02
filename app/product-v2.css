@@ -444,3 +444,36 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
  #app .settings-screen .setting-row input[type="range"]{width:min(160px,40vw)}
  #app .settings-screen .build-information{overflow-wrap:anywhere}
 }
+
+/* Keep project dashboard copy as readable as the SPACE 1.1 orientation screen. */
+#app .nlxr-db-v2 {
+ --v2-muted:#465749;
+ font-size:1.05rem;
+}
+#app .nlxr-db-v2 :is(p:not(.nlxr-db-v2-eyebrow),small,label,dt,dd,li,.nlxr-db-v2-eyebrow,.nlxr-db-v2-sync,.nlxr-db-v2-preview-badge,.nlxr-db-v2-return,.nlxr-db-v2-text-action,.nlxr-db-v2-mode-nav button,.nlxr-db-v2-map-count,.nlxr-db-v2-map-footer,.nlxr-db-v2-map-note,.nlxr-db-v2-status-heading span,.nlxr-db-v2-status-item span,.nlxr-db-v2-health-score span,.nlxr-db-v2-health-grid strong,.nlxr-db-v2-activity-list strong,.nlxr-db-v2-notice,.nlxr-db-v2-map-summary,.nlxr-db-v2-map-toolbar button,.nlxr-db-v2-map-legend,.nlxr-db-v2-map-status,.nlxr-db-v2-map-photo-state,.nlxr-db-v2-map-area-links-section strong,.nlxr-db-v2-map-controls-empty,.nlxr-db-v2-map-export-badge,.nlxr-db-v2-map-status-text,.nlxr-db-v2-readiness-state) {
+ font-size:1rem;
+ line-height:1.45;
+}
+#app .nlxr-db-v2 :is(.nlxr-db-v2-ar-button strong,.nlxr-db-v2-ar-button small,.nlxr-db-v2-map-node strong,.nlxr-db-v2-map-node small,.nlxr-db-v2-map-footer strong,.nlxr-db-v2-health-grid small,.nlxr-db-v2-activity-list small,.nlxr-db-v2-tools-grid strong,.nlxr-db-v2-area-row strong,.nlxr-db-v2-area-row small,.nlxr-db-v2-area-state,.nlxr-db-v2-map-action strong,.nlxr-db-v2-map-action small,.nlxr-db-v2-map-export strong,.nlxr-db-v2-map-export small,.nlxr-db-v2-map-area-link strong,.nlxr-db-v2-map-area-link small,.nlxr-db-v2-map-area-links-section small) {
+ font-size:.96rem;
+ line-height:1.4;
+}
+#app .nlxr-db-v2 :is(.nlxr-db-v2-ar-meta b,.nlxr-db-v2-metric>span:last-child,.nlxr-db-v2-primary-actions button,.nlxr-db-v2-overflow button,.nlxr-db-v2-map-node em,.nlxr-db-v2-map-compass) {
+ font-size:.95rem;
+ line-height:1.4;
+}
+#app .nlxr-db-v2 :is(.nlxr-db-v2-card-heading h2,.nlxr-db-v2-map-section-heading h3,.nlxr-db-v2-status-heading h2,.nlxr-db-v2-map-controls-heading h3,.nlxr-db-v2-map-workspace-heading h2,.nlxr-db-v2-mode-preview>h2) {
+ font-size:clamp(1.25rem,2vw,1.45rem);
+ font-weight:750;
+ line-height:1.2;
+}
+#app .nlxr-db-v2 .nlxr-db-v2-ar-button small { color:#3f5968; }
+#app .nlxr-db-v2 .nlxr-db-v2-map-section-heading p:not(.nlxr-db-v2-eyebrow) { color:#dce9d5; }
+#app .nlxr-db-v2 .nlxr-db-v2-map-note { color:#d4e4d2; }
+#app .nlxr-db-v2 .nlxr-db-v2-map-action small,
+#app .nlxr-db-v2 .nlxr-db-v2-map-export small,
+#app .nlxr-db-v2 .nlxr-db-v2-map-area-link small { color:#485b4b; }
+@media(max-width:720px) {
+ #app .nlxr-db-v2 .nlxr-db-v2-map-node strong { font-size:.9rem; }
+ #app .nlxr-db-v2 .nlxr-db-v2-map-node small { font-size:.82rem; }
+}

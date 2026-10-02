@@ -1712,6 +1712,38 @@
 #app .nlxr-settings-companion :is(h2,h3) { color:#f8faf7!important; }
 #app .nlxr-settings-companion p { color:rgba(248,250,247,.84)!important; }
 
+/* Keep the identity in the quiet upper-left rail and give reading copy room. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) { position:relative; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-brand {
+    position:absolute;left:14px;top:14px;z-index:3;
+    color:#f4fbf7;font:700 14px/1.03 -apple-system,BlinkMacSystemFont,"Segoe UI Variable",system-ui,sans-serif;
+    letter-spacing:.07em;text-align:left;pointer-events:none;
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs { padding-top:68px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-progress { margin-top:12px;padding-top:10px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-progress-heading { justify-content:flex-start; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) [role="tabpanel"] h3 { margin:12px 0 17px;line-height:1.24; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) [role="tabpanel"] .nlxr-info-body { margin-top:0; }
+.nlxr-settings-companion .nlxr-settings-actions { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px; }
+.nlxr-settings-companion .nlxr-setting-row {
+    display:flex;flex-direction:column;align-items:flex-start;gap:9px;min-width:0;
+    padding:12px;border:1px solid rgba(255,255,255,.14);border-radius:17px;
+    background:rgba(13,27,29,.28);
+}
+.nlxr-settings-companion .nlxr-setting-row[data-setting-group="opacity"],
+.nlxr-settings-companion .nlxr-setting-row[data-setting-group="position"] { grid-column:1/-1; }
+.nlxr-settings-companion .nlxr-setting-options { display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%; }
+.nlxr-settings-companion .nlxr-settings-actions button {
+    flex:0 0 auto;width:auto;min-width:44px;min-height:42px;padding:8px 13px;
+    border-radius:999px!important;background:rgba(248,253,247,.11)!important;
+    backdrop-filter:blur(12px);font-size:14px;
+}
+.nlxr-settings-companion .nlxr-setting-options input[type="range"] { flex:1;min-width:130px;accent-color:#dfff9b; }
+.nlxr-settings-companion .nlxr-setting-options output { min-width:40px;text-align:right;font:650 14px system-ui;color:#f5fbf5; }
+.nlxr-settings-companion header { display:flex;justify-content:space-between;align-items:center;gap:12px; }
+.nlxr-settings-companion .nlxr-settings-close { min-height:42px;padding:8px 16px;border:1px solid rgba(255,255,255,.25);border-radius:999px;background:rgba(248,253,247,.14);color:#f8fbf8;font:650 14px system-ui;cursor:pointer; }
+.nlxr-settings-companion:not([hidden]) { z-index:13000!important; }
+
 /* Retraction is a small, labelled capsule rather than a miniature console. */
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-hidden {
     width:fit-content!important;
@@ -1940,6 +1972,25 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 .nxr-desktop-ar-option button { align-self:start;margin-top:auto; }
 .nxr-desktop-ar-option.is-recommended { border-color:#a8bbaa;background:#f2f7f0; }
 .nxr-desktop-ar-tag { font:700 11px/1.3 system-ui,sans-serif;letter-spacing:.12em;color:#526d58; }
+
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header::before { content:none; }
+@media(max-width:700px) {
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel),
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-media-collapsed,
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-rail-collapsed,
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-media-collapsed.is-rail-collapsed {
+        grid-template-columns:minmax(0,1fr) 42px!important;
+        grid-template-areas:"header media" "rail media" "content media" "tools media" "page media";
+        height:min(62dvh,520px);max-height:62dvh;
+    }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header { min-height:72px;padding:11px 50px 8px 110px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-brand { top:13px;left:12px;font-size:12px; }
+    .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs { padding:5px 8px; }
+    .nlxr-settings-companion:not([hidden]) {
+        position:fixed!important;top:12px!important;left:12px!important;bottom:auto!important;
+        z-index:13000;width:min(340px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;
+    }
+}
 .nxr-desktop-ar-back { margin-top:5px; }
 
 .nxr-guide {

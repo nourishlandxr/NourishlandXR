@@ -381,7 +381,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             point.x,
             point.y,
             radius,
-            options.softSurface ? `hsla(${hue}, 23%, ${active ? 84 : 92}%, ${active ? .52 : .38})` : `hsla(${hue}, 31%, 19%, ${active ? .66 : .5})`,
+            `hsla(${hue}, 31%, 12%, ${active ? .82 : .7})`,
             options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
             active ? 4 : 2
         );
@@ -398,7 +398,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
         context.save();
-        context.globalAlpha = (node.depth > 0 ? (.35 + .65 * nodeBloom) : 1) * cellOpacity;
+        context.globalAlpha = node.depth > 0 ? (.35 + .65 * nodeBloom) : 1;
         const hasDescription = node.depth > 0 && Boolean(node.value);
         const textLayout = fitPimTextBlock(context, {
             title: options.compactLabels ? String(node.label).slice(0, 54) : node.label,
@@ -441,10 +441,10 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.globalAlpha=cellOpacity;
     context.shadowColor = 'rgba(76, 108, 166, .18)';
     context.shadowBlur = 8;
-    drawHexagon(context, center.x, center.y, coreRadius, options.softSurface ? 'rgba(211,223,201,.48)' : 'rgba(39,58,92,.5)', options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);
+    drawHexagon(context, center.x, center.y, coreRadius, 'rgba(22,35,55,.82)', options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);
     context.restore();
     context.save();
-    context.globalAlpha = cellOpacity;
+    context.globalAlpha = 1;
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
     if(options.softSurface) {context.fillStyle='#294534';context.strokeStyle='#d3dfc9';}

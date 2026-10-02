@@ -96,7 +96,7 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
     const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:sprite,powerPreference:'low-power'});
     renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,30);
-    camera.position.z=sprite?3.5:6;
+    camera.position.z=sprite?4.6:6;
     scene.add(new THREE.HemisphereLight(0xfff7db,0x566c67,2.2));
     const sun=new THREE.DirectionalLight(0xffe2aa,2.4);sun.position.set(-3,5,6);scene.add(sun);
     const fill=new THREE.DirectionalLight(0xc9eaff,1.1);fill.position.set(4,-1,-2);scene.add(fill);
@@ -110,10 +110,10 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
         renderSprite(elapsed,startedAt){
             if(!sprite || !ready || !Number.isFinite(startedAt))return null;
             if(elapsed-lastSpritePaint<70)return canvas;
-            renderer.setPixelRatio(1);renderer.setSize(256,256,false);
+            renderer.setPixelRatio(1);renderer.setSize(384,384,false);
             bee.wrapper.position.set(0,0,0);
             bee.wrapper.scale.setScalar(bee.baseScale*2.1);
-            bee.wrapper.rotation.y=.35+Math.sin(elapsed*.0007)*.35;
+            bee.wrapper.rotation.y=.08+Math.sin(elapsed*.0007)*.1;
             bee.wrapper.rotation.z=Math.sin(elapsed*.0013)*.12;
             bee.mixer.update(Number.isFinite(lastElapsed)?Math.max(0,Math.min(.1,(elapsed-lastElapsed)/1000)):0);
             lastElapsed=elapsed;lastSpritePaint=elapsed;

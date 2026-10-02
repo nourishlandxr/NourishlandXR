@@ -17,7 +17,7 @@ import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_O
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
+import { beePointerAvoidance, demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
@@ -245,7 +245,7 @@ let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration
 let arWelcomeRenderedFrames=[];
 let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=null,nativeConnectionEffectLastAt=0;
-let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientLastPaint=0;
+let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientLastPaint=0;
 let rainV2Canvas=null,rainV2LastPaint=0;
 let demoRainIntensity=1;
 let demoRainStyle='v2';
@@ -417,7 +417,7 @@ function clearSessionState() {
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;limInputSuppressSource=null;
-    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
+    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFrame=null;ambientEncounterOrigin=null;ambientBeeAvoidance=[];ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -4831,6 +4831,7 @@ function drawSpatialAmbientLife(view){
     if(!sphereRenderer || !viewerMatrix || !Number.isFinite(ambientBeesStartedAt))return;
     if(!ambientWorldAnchor){
         introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
+        ambientWorldFrame=introWorldAnchor || new Float32Array(viewerMatrix);
         ambientWorldAnchor=introWorldAnchor
             ? introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition)
             : {x:viewerMatrix[12]-viewerMatrix[8]*2.4,y:viewerMatrix[13],z:viewerMatrix[14]-viewerMatrix[10]*2.4};
@@ -4846,7 +4847,7 @@ function drawSpatialAmbientLife(view){
         gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.disable(gl.CULL_FACE);
         for(let index=0;index<2;index++){
             const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion});if(!bee)continue;
-            const position=ambientBeeWorldPosition(bee);
+            const position=ambientBeeWorldPosition(bee,index);
             const spriteScale=.28*(1+bee.flyby*.3);
             const model=billboardMatrix(position,spriteScale,spriteScale,viewerMatrix);
             gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
@@ -4864,7 +4865,7 @@ function drawSpatialAmbientLife(view){
         // Referencing the old `base` name here threw on every immersive frame as
         // soon as the Meet a Plant Orb step enabled the bees. Because the frame
         // had already been cleared, that made the whole AR scene disappear.
-        const position=ambientBeeWorldPosition(bee);
+        const position=ambientBeeWorldPosition(bee,index);
         const flybyScale=1+bee.flyby*.3;
         drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018*flybyScale,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
         const flap=(.025+Math.abs(bee.wing)*.013)*flybyScale;
@@ -4874,11 +4875,12 @@ function drawSpatialAmbientLife(view){
     drawDemoAmbientLines(view,wings,[.9,.97,.93,.53]);
 }
 
-function ambientBeeWorldPosition(bee){
-    const rightLength=Math.hypot(viewerMatrix[0],viewerMatrix[2])||1;
-    const forwardLength=Math.hypot(viewerMatrix[8],viewerMatrix[10])||1;
-    const rightX=viewerMatrix[0]/rightLength,rightZ=viewerMatrix[2]/rightLength;
-    const forwardX=-viewerMatrix[8]/forwardLength,forwardZ=-viewerMatrix[10]/forwardLength;
+function ambientBeeWorldPosition(bee,index=0){
+    const frame=ambientWorldFrame || viewerMatrix;
+    const rightLength=Math.hypot(frame[0],frame[2])||1;
+    const forwardLength=Math.hypot(frame[8],frame[10])||1;
+    const rightX=frame[0]/rightLength,rightZ=frame[2]/rightLength;
+    const forwardX=-frame[8]/forwardLength,forwardZ=-frame[10]/forwardLength;
     const across=(bee.x-.5)*AR_PHONE_COMFORT.boardScale[0];
     const vertical=(bee.y-.5)*AR_PHONE_COMFORT.boardScale[1];
     const behindScreen=.18+((bee.depth+1)*.5)*.42;
@@ -4888,20 +4890,32 @@ function ambientBeeWorldPosition(bee){
         z:ambientWorldAnchor.z+rightZ*across+forwardZ*behindScreen
     };
     const flyby=Math.max(0,Math.min(1,Number(bee.flyby)||0));
-    if(!flyby)return ambientPosition;
+    if(!flyby)return beeWorldAvoidance(ambientPosition,index);
     const progress=Math.max(0,Math.min(1,Number(bee.flybyProgress)||0));
+    if(!ambientEncounterOrigin || ambientEncounterOrigin.index!==bee.encounterIndex){
+        ambientEncounterOrigin={index:bee.encounterIndex,x:viewerMatrix[12],y:viewerMatrix[13],z:viewerMatrix[14]};
+    }
     const faceDistance=.72+Math.abs(progress-.5)*.34;
     const faceAcross=(.5-progress)*.24;
     const facePosition={
-        x:viewerMatrix[12]+rightX*faceAcross+forwardX*faceDistance,
-        y:viewerMatrix[13]-.035-Math.sin(Math.PI*progress)*.025,
-        z:viewerMatrix[14]+rightZ*faceAcross+forwardZ*faceDistance
+        x:ambientEncounterOrigin.x+rightX*faceAcross+forwardX*faceDistance,
+        y:ambientEncounterOrigin.y-.035-Math.sin(Math.PI*progress)*.025,
+        z:ambientEncounterOrigin.z+rightZ*faceAcross+forwardZ*faceDistance
     };
-    return {
+    const blended={
         x:ambientPosition.x+(facePosition.x-ambientPosition.x)*flyby,
         y:ambientPosition.y+(facePosition.y-ambientPosition.y)*flyby,
         z:ambientPosition.z+(facePosition.z-ambientPosition.z)*flyby
     };
+    return beeWorldAvoidance(blended,index);
+}
+
+function beeWorldAvoidance(position,index){
+    const target=beePointerAvoidance(position,latestControllerRay);
+    const offset=ambientBeeAvoidance[index] || {x:0,y:0,z:0};
+    const eased={x:offset.x+(target.x-offset.x)*.14,y:offset.y+(target.y-offset.y)*.14,z:offset.z+(target.z-offset.z)*.14};
+    ambientBeeAvoidance[index]=eased;
+    return {x:position.x+eased.x,y:position.y+eased.y,z:position.z+eased.z};
 }
 
 function drawNativeConnectionSpatial(view){

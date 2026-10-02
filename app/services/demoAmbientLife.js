@@ -7,7 +7,11 @@ function seededUnit(index){let value=(index+1)*0x9e3779b1;value^=value>>>16;valu
 export function demoBeeEncounter(age,{enabled=true}={}){
     if(!enabled || age<BEE_FIRST_ENCOUNTER_MS)return null;
     let start=BEE_FIRST_ENCOUNTER_MS,index=0;
-    while(age>start+BEE_ENCOUNTER_DURATION_MS && index<1000){start+=BEE_ENCOUNTER_DURATION_MS+35000+seededUnit(index)*40000;index++;}
+    while(age>start+BEE_ENCOUNTER_DURATION_MS && index<1000){
+        const easing=Math.min(index,5);
+        start+=BEE_ENCOUNTER_DURATION_MS+(30000-easing*3000)+seededUnit(index)*Math.max(8000,27000-easing*2500);
+        index++;
+    }
     if(age<start || age>start+BEE_ENCOUNTER_DURATION_MS)return null;
     const progress=clamp01((age-start)/BEE_ENCOUNTER_DURATION_MS);
     const phase=progress<.38?'approach':progress<.52?'inspect':progress<.8?'pass':'exit';
@@ -30,7 +34,7 @@ export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encoun
         x:orbitX*(1-flyby)+(.82-flybyProgress*.64)*flyby,
         y:orbitY*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,
         depth:orbitDepth*(1-flyby)+(.5+.5*Math.sin(Math.PI*flybyProgress))*flyby,
-        heading:(phase+Math.PI/2)*(1-flyby)+(encounter?.phase==='inspect'?Math.PI:Math.PI/2)*flyby,
+        heading:(phase+Math.PI/2)*(1-flyby)+.12*flyby,
         wing:Math.sin(time*27+index),
         opacity:clamp01(age/1700)*.92,
         flyby,
@@ -38,6 +42,20 @@ export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encoun
         encounterPhase:encounter?.phase || 'ambient',
         encounterIndex:encounter?.index ?? -1
     };
+}
+
+export function beePointerAvoidance(position,ray,clearance=.34){
+    if(!position || !ray?.origin || !ray?.direction)return {x:0,y:0,z:0};
+    const direction=ray.direction,origin=ray.origin;
+    const lengthSquared=direction.x**2+direction.y**2+direction.z**2;
+    if(lengthSquared<1e-8)return {x:0,y:0,z:0};
+    const projection=Math.max(0,Math.min(4,((position.x-origin.x)*direction.x+(position.y-origin.y)*direction.y+(position.z-origin.z)*direction.z)/lengthSquared));
+    const away={x:position.x-origin.x-direction.x*projection,y:position.y-origin.y-direction.y*projection,z:position.z-origin.z-direction.z*projection};
+    const distance=Math.hypot(away.x,away.y,away.z);
+    if(distance>=clearance)return {x:0,y:0,z:0};
+    const strength=(1-distance/clearance)*.28;
+    const normal=distance>1e-5?{x:away.x/distance,y:away.y/distance,z:away.z/distance}:{x:0,y:1,z:0};
+    return {x:normal.x*strength,y:normal.y*strength,z:normal.z*strength};
 }
 
 function drawBee(ctx,x,y,size,wing,opacity){
