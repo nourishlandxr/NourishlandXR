@@ -1,3 +1,4 @@
+import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../services/totemSignSelection.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { bindSpatialPimHold, createPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
@@ -773,9 +774,22 @@ function creatorTotemCards(record) {
     });
 }
 
+function creatorSignDestinationIds(){
+    return selectedTotemDestinationIds(sessionMarkers.filter(record=>record.marker?.type==='area_checkpoint'),creatorTotemCards);
+}
+function drawCreatorSignDestinations(view){
+    const targets=creatorSignDestinationIds();
+    for(const record of activeAreaMarkers()){
+        if(!targets.has(record.marker.id) || !hasRenderableSpatialPosition(record) || hiddenStructuralMarkerIds.has(record.marker.id))continue;
+        const [halfWidth,halfHeight]=markerDimensions(record.marker),totem=record.marker.type==='area_checkpoint';
+        const position=totem?{...groundedTotemPosition(record.position),y:groundedTotemPosition(record.position).y+halfHeight}:record.position;
+        drawSignDestinationHighlight(gl,controllerPointerRenderer,view,position,{width:halfWidth*2,height:halfHeight*2,shape:totem || record.marker.type==='note'?'box':'ellipse'});
+    }
+}
+
 function activateCreatorTotemCard(hit) {
     if(!hit)return false;
-    hit.record.totemSelectedCard=hit.detail || hit.record.totemSelectedCard===hit.card.id ? '' : hit.card.id;
+    selectTotemSign(hit.record,hit.detail?'':hit.card.id,sessionMarkers);
     renderSessionMarkers();
     return true;
 }
@@ -4022,6 +4036,7 @@ function drawSpatialMarkers(view) {
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    const signDestinations=creatorSignDestinationIds();
     const colors = { plant: [.42, .72, .34], note: [.66, .69, .64], sub_checkpoint: [.39, .48, .23], intro_checkpoint: [.26, .82, .62], area_checkpoint: [.443, .353, .275] };
 
     activeAreaMarkers().forEach(record => {
@@ -4030,7 +4045,7 @@ function drawSpatialMarkers(view) {
         const shape = markerShape(record.marker.type);
         const isNoteMarker = record.marker.type === 'note';
         const markerForm = record.marker.type === 'plant' ? markerAppearanceShape(record.marker) : 'orb';
-        const highlighted = record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id;
+        const highlighted = signDestinations.has(record.marker.id) || record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id;
         const needsShapeHalo = !isNoteMarker && record.marker.type !== 'area_checkpoint'
             && (shape === 1 || shape === 3 || Boolean(record.marker.special_symbol) || markerForm !== 'orb');
         if (highlighted && needsShapeHalo) {
@@ -4138,7 +4153,7 @@ function drawSpatialMarkers(view) {
             knowledge: shape === 4 ? creatorOrbKnowledge(record) : null,
             color: markerRgb(record.marker, baseColor),
             opacity: arrivalEase * markerAppearanceOpacity(record.marker),
-            highlighted: record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id
+            highlighted: signDestinations.has(record.marker.id) || record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id
         });
     });
 
@@ -4509,6 +4524,7 @@ function positionCreatorTotemInformation(record, markerX, markerY, view = latest
 function renderSessionMarkers() {
     overlayRoot?.querySelectorAll(':scope > .nlxr-totem-detail').forEach(note=>note.remove());
     updateKnowledgeControls();
+    const signDestinations=creatorSignDestinationIds();
     const layer = overlayRoot?.querySelector('[data-ar-marker-layer]');
     if (!layer) return;
     const visibleMarkers = activeAreaMarkers();
@@ -4542,6 +4558,7 @@ function renderSessionMarkers() {
     renderableMarkers.forEach(record => setMarkerAncillaryVisibility(record, true));
     renderableMarkers.forEach(record => {
         const element = layer.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
+        element?.classList.toggle('is-sign-target',signDestinations.has(record.marker.id));
         if(element && record.marker.type==='plant') {
             const knowledge=creatorOrbKnowledge(record);
             element.dataset.knowledgeState=knowledge.state;
@@ -4555,7 +4572,7 @@ function renderSessionMarkers() {
         totemPanel?.querySelectorAll('[data-totem-card]').forEach(button=>{
             button.addEventListener('pointerdown',event=>event.stopPropagation());
             button.addEventListener('click',event=>{
-                event.stopPropagation();record.totemSelectedCard=record.totemSelectedCard===button.dataset.totemCard ? '' : button.dataset.totemCard;
+                event.stopPropagation();selectTotemSign(record,button.dataset.totemCard,sessionMarkers);
                 renderSessionMarkers();
             });
         });
@@ -6183,6 +6200,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                     totemCardsRenderer.end();
                 }
                 drawSpatialPlantProfiles(view);
+                drawCreatorSignDestinations(view);
                 infoPanel?.draw(view);
                 // Keep the controller laser and its contact marker in the
                 // foreground. A world-locked PIM panel is transparent, but

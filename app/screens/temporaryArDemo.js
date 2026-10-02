@@ -1,3 +1,4 @@
+import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../services/totemSignSelection.js';
 import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_INTRO_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
@@ -995,21 +996,17 @@ function demoTotemVisualOpacity(record,now=performance.now()) {
     return (record.demoTotemFadeFrom ?? target)*(1-progress)+target*progress;
 }
 function selectDemoTotemSign(record,cardId) {
-    record.totemSelectedCard=record.totemSelectedCard===cardId ? '' : cardId;
+    selectTotemSign(record,cardId,markers);
     const card=demoTotemCards(record).find(item=>item.id===record.totemSelectedCard);
     const target=markers.find(item=>item.id===(card?.navigation?.destinationId || card?.references?.[0]));
     if(target)setGuide(`Follow the ${card.boardSide || 'nearby'} sign to ${target.demoZoneName || target.name}. The destination is highlighted.`);
     updateSimulatedMarkers();
 }
 function selectedDemoTotemTargets() {
-    const ids=new Set();
-    for(const area of markers.filter(item=>item.demoType==='zone' && item.totemSelectedCard)) {
-        const card=demoTotemCards(area).find(item=>item.id===area.totemSelectedCard);
-        for(const id of card?.references || [])ids.add(id);
-        if(card?.navigation?.destinationId)ids.add(card.navigation.destinationId);
-    }
-    return ids;
+    return selectedTotemDestinationIds(markers.filter(item=>item.demoType==='zone'),demoTotemCards,
+        record=>demoAreaVisible(record) && !record.demoTotemFaded && record.demoTotemSignsVisible!==false);
 }
+
 function activateDemoTotemCard(hit) {
     if(!hit)return false;
     infoPanel?.setMediaCollapsed(true);
@@ -5189,7 +5186,7 @@ function drawMarker(view) {
             alpha: arrival*demoTotemVisualOpacity(record),
             rotationY
         });
-        if(signTargets.has(record.id))drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY+bodyHalfHeight},bodyHalfHeight*.9,{color:[.75,.96,.65],alpha:.16,emissive:.25});
+
         const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
         for(const [offset,shade] of [[-.048,[.17,.12,.09,.25]],[-.016,[.16,.11,.08,.18]],[.037,[.82,.69,.52,.16]]]){
             const x=record.position.x+right.x*offset+front.x*(bodyHalfDepth+.002);
@@ -5305,6 +5302,20 @@ function drawMarker(view) {
     }
     drawNativeConnectionSpatial(view);
     drawDemoControllerPointer(view);
+    for(const record of markers){
+        if(!signTargets.has(record.id) || !demoAreaVisible(record))continue;
+        if(record.demoType==='plant'){
+            const material=DEMO_ORB_MATERIALS[record.demoOrbColor],radius=(material?.radius || .068)*(sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1)*(record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1);
+            drawSignDestinationHighlight(gl,tetherRenderer,view,record.position,{width:radius*2.36,height:radius*2.36});
+        }else if(record.demoType==='note'){
+            const scale=record.demoAmbientNeighbour ? .62 : 1;
+            drawSignDestinationHighlight(gl,tetherRenderer,view,record.position,{width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x*scale,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y*scale,shape:'box'});
+        }else if(record.demoType==='zone'){
+            const ground=record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES;
+            drawSignDestinationHighlight(gl,tetherRenderer,view,{...record.position,y:ground+DEMO_TOTEM_HALF_HEIGHT_METRES},{width:.26,height:DEMO_TOTEM_HALF_HEIGHT_METRES*2,shape:'box'});
+        }
+    }
+
 }
 
 function drawDemoControllerPointer(view) {
