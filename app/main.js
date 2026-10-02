@@ -1,3 +1,5 @@
+import { isArActive as isVisitorArActive } from './services/arNote.js';
+import { launchCreatorArFromPage } from './services/creatorArNavigation.js';
 import { enhanceProductScreen } from './services/productExperience.js';
 import { renderVisitorExperience, clearVisitorCache, cancelVisitorExperience } from './screens/visitorExperience.js';
 import { SiteManager } from './managers/siteManager.js';
@@ -253,7 +255,7 @@ async function bootstrap() {
     }
 }
 
-window.renderLaunchScreen = () => { forgetCurrentView(); replaceViewHistory('welcome'); setExperienceRole('launch'); renderLaunchScreen(app); };
+window.renderLaunchScreen = () => { if (isArModeActive()) { exitArMode(() => window.renderLaunchScreen()); return; } if (isVisitorArActive()) return exitAr().then(() => window.renderLaunchScreen()); forgetCurrentView(); replaceViewHistory('welcome'); setExperienceRole('launch'); renderLaunchScreen(app); };
 window.renderHillyardsDemo = () => renderDemoHome(app);
 window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${escapeMainHtml(error.message)}</p></div>`; }); };
 window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
@@ -262,6 +264,8 @@ window.renderAnalogPlant = instanceId => renderAnalogPlant(app, instanceId).catc
 window.renderAnalogLibraryPlant = plantId => renderAnalogLibraryPlant(app, plantId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
 window.applyAnalogFilters = applyAnalogFilters;
 window.renderDemoProjects = async () => {
+    if (isArModeActive()) { exitArMode(() => window.renderDemoProjects()); return; }
+    if (isVisitorArActive()) return exitAr().then(() => window.renderDemoProjects());
     try {
         if (!await ensureCreatorAuthentication()) return;
         setExperienceRole('creator');
@@ -353,7 +357,7 @@ window.openProjectArMode = async (projectId, areaId = '') => {
     // launch should leave the dashboard in place so Quest never drops the
     // user into the creator setup picker; the explicit "Place in AR" action
     // remains the route for setup and placement configuration.
-    return startArMode(decodedProjectId, decodedAreaId);
+    return window.startArMode(projectId, areaId, '', '', '', 'project-dashboard');
 };
 window.openCreatorArCheckpointSetup = projectId => renderArAreaPicker(app, projectId);
 window.openCheckpointQuickSetup = projectId => openCheckpointQuickSetup(app, projectId);
@@ -658,31 +662,37 @@ window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = ''
     const decodedExistingMarkerId = decodeArArgument(existingMarkerId);
     const decodedReturnContext = decodeArArgument(returnContext);
     const decodedPreferredSiteId = decodeArArgument(preferredSiteId);
-    if (isProjectTutorialEnabled(decodedProjectId) && !hasArCameraSafetyAcknowledgement()) {
+    const launch = async () => {
+        const started = await launchCreatorArFromPage(app, () => startArMode(decodedProjectId, decodedAreaId, decodedCheckpointId, decodedInitialPlacementType, decodedExistingMarkerId, decodedReturnContext, decodedPreferredSiteId));
+        if (started && isProjectTutorialEnabled(decodedProjectId)) {
+            acknowledgeArCameraSafety();
+            recordTutorialEvent(decodedProjectId, 'ar_mode_launched');
+        }
+        return started;
+    };
+    if (navigator.xr && window.isSecureContext && isProjectTutorialEnabled(decodedProjectId) && !hasArCameraSafetyAcknowledgement()) {
+        const origin = app.firstElementChild;
+        const originScroll = window.scrollY;
         renderArSafetyScreen(app, {
-            onContinue: () => startArMode(decodedProjectId, decodedAreaId, decodedCheckpointId, decodedInitialPlacementType, decodedExistingMarkerId, decodedReturnContext, decodedPreferredSiteId),
-            onCancel: () => decodedReturnContext === 'dashboard' && decodedAreaId
-                ? renderProjectAreaDashboard(app, encodeURIComponent(decodedProjectId), encodeURIComponent(decodedAreaId))
-                : window.renderProjectDashboard(decodedProjectId)
+            onContinue: launch,
+            onCancel: () => {
+                if (origin) { app.replaceChildren(origin); window.scrollTo(0, originScroll); }
+                else window.renderProjectDashboard(encodeURIComponent(decodedProjectId));
+            }
         });
         return true;
     }
-    const started = await startArMode(decodedProjectId, decodedAreaId, decodedCheckpointId, decodedInitialPlacementType, decodedExistingMarkerId, decodedReturnContext, decodedPreferredSiteId);
-    if (started && isProjectTutorialEnabled(decodedProjectId)) {
-        acknowledgeArCameraSafety();
-        recordTutorialEvent(decodedProjectId, 'ar_mode_launched');
-    }
-    return started;
+    return launch();
 })();
 window.startExistingMarkerPlacement = async (projectId, siteId, areaId, markerId, markerType = 'sub_checkpoint') => {
-    const started = await startArMode(
-        decodeURIComponent(projectId),
-        decodeURIComponent(areaId),
+    const started = await window.startArMode(
+        projectId,
+        areaId,
         '',
         markerType,
-        decodeURIComponent(markerId),
+        markerId,
         'dashboard',
-        decodeURIComponent(siteId)
+        siteId
     );
     if (!started) {
         const status = document.getElementById('projectStartingError');

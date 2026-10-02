@@ -113,7 +113,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         ...place(0, 1.48*demoScale, demoZone ? .74 : Math.max(.88, boardWidth + .16), .30, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
         boardStyle:'header'
     } : null;
-    const signCards=cards.slice(1,demoZone ? 5 : 3);
+    const signCards=cards.slice(1,5);
     const signOpacity=typeof state==='object' && Number.isFinite(state.signOpacity) ? state.signOpacity : 1;
     const signInteractive=typeof state==='object' ? state.signInteractive!==false : true;
     const surfaces=[
@@ -140,9 +140,12 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     const signProgress=spatialTransitionProgress(now,record?.demoSignsChangedAt,visual.signTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
     const signsVisible=Boolean(record?.demoTotemSignsVisible);
     const closing=!signsVisible && Number.isFinite(record?.demoSignsChangedAt) && now-record.demoSignsChangedAt<visual.signTransitionMs;
+    const faded=Boolean(record?.demoTotemFaded);
+    const fadeProgress=spatialTransitionProgress(now,record?.demoTotemFadeStartedAt,visual.fadeTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    const fadeAlpha=faded?1-fadeProgress:fadeProgress;
     return totemCardSurfaces(position,right,cards,selectedId,{
-        signsVisible:signsVisible || closing,faded:Boolean(record?.demoTotemFaded),
-        signOpacity:signsVisible ? signProgress : 1-signProgress,signInteractive:signsVisible && !record?.demoTotemFaded,
+        signsVisible:signsVisible || closing,faded:faded && fadeProgress>=1,
+        signOpacity:(signsVisible ? signProgress : 1-signProgress)*fadeAlpha,signInteractive:signsVisible && !faded,
         bodyHalfWidth,bodyHalfDepth:record?.demoType==='zone' ? .075 : bodyHalfWidth*.5,bodyHalfHeight,demoZone:record?.demoType==='zone'
     });
 }

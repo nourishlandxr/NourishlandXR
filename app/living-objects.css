@@ -2268,3 +2268,24 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 .nlxr-settings-companion .nlxr-setting-row {background:rgba(9,25,27,.12);}
 
 .creator-ar-marker-hit-target.is-sign-target {outline:3px solid #fae09c!important;outline-offset:7px;box-shadow:0 0 0 8px rgba(36,48,29,.55),0 0 24px rgba(240,217,151,.3)!important;}
+
+/* Creator read surfaces follow the shared glass setting. Form fields retain
+   their own backing so authoring inputs stay readable at zero info opacity. */
+.creator-ar-overlay :is(.creator-ar-action-palette,.creator-ar-knowledge-context,.creator-ar-placement-actions,.creator-ar-context-toolbar,.creator-ar-location-note-board) {
+    background:rgba(12,28,29,var(--creator-info-opacity,.38))!important;
+    border:2px solid rgba(202,216,204,.62);color:#eef1e7;
+}
+.creator-ar-overlay :is(.creator-ar-action-palette,.creator-ar-knowledge-context,.creator-ar-placement-actions,.creator-ar-context-toolbar) button {
+    background:rgba(147,174,158,.14)!important;border:2px solid rgba(204,220,209,.55);color:#eef1e7!important;
+}
+.creator-ar-overlay :is(.creator-ar-action-palette,.creator-ar-knowledge-context,.creator-ar-placement-actions,.creator-ar-context-toolbar) button:is(:hover,:focus-visible,.is-active) {
+    background:rgba(178,204,187,.30)!important;border-color:#eee0bb;outline:2px solid rgba(236,220,176,.45);outline-offset:2px;
+}
+.creator-ar-overlay .creator-ar-context-toolbar button :is(span,small) {color:inherit;}
+
+.nlxr-info-panel.is-creator-panel :is(.nlxr-info-tools,.nlxr-tools-dock) button {
+    background:rgba(147,174,158,.14)!important;border:2px solid rgba(204,220,209,.55);color:#eef1e7!important;font-size:18px;
+}
+.nlxr-info-panel.is-creator-panel :is(.nlxr-info-tools,.nlxr-tools-dock) button:is(:hover,:focus-visible) {
+    background:rgba(178,204,187,.30)!important;border-color:#eee0bb;
+}

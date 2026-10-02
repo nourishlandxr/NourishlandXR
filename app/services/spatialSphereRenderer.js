@@ -286,7 +286,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     const model=plant?(ORB_MODELS[options.model]?options.model:currentOrbModel()):'basic';
     const appearance=ORB_MODELS[model];
     const shellColor=model==='basic'?sourceColor:sourceColor.map((value,i)=>value*(model==='advanced'?.78:.87)+[.025,.065,.07][i]);
-    const selected=options.knowledge?.state==='expanded';
+    const selected=Boolean(options.selected || options.knowledge?.state==='expanded');
     const moving=Boolean(options.held),targeted=Boolean(options.highlighted || options.grabReady);
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);

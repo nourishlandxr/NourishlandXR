@@ -860,8 +860,8 @@ test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard
     assert.match(arSource, /questSpatialDashboardMirror\.scrollBy/);
     assert.match(arSource, /function controllerSpatialSurfaceAtAim\(\)/);
     assert.match(arSource, /if \(surfaceHit\?\.position\) return surfaceHit\.position/);
-    assert.match(arSource, /color: surfaceHit[\s\S]*\[0\.65, 1, 0\.24, 1\]/);
-    assert.match(arSource, /surfaceHit \? \.019 : \.012/);
+    assert.match(arSource, /color: surfaceHit[\s\S]*XR_LASER_POINTER_CONFIG\.color,\.82/);
+    assert.match(arSource, /drawSpatialPointerContact\(gl,controllerPointerRenderer,view,point/);
     assert.match(arSource, /if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
     assert.doesNotMatch(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);
@@ -1178,10 +1178,12 @@ test('Plant Editor preview isolates the edited plant and returns to its PIM work
     assert.match(styles, /\.creator-ar-plant-editor-banner/);
 });
 
-test('Creator AR falls back to setup when WebXR cannot start', () => {
+test('Creator AR keeps direct entry separate from explicit checkpoint setup', () => {
     const dashboardSource = read('app/screens/projectDashboard.js');
-    assert.match(dashboardSource, /const started = await window\.startArMode/);
-    assert.match(dashboardSource, /if \(!started\) await renderArAreaPicker/);
+    const entry = dashboardSource.slice(dashboardSource.indexOf('export async function openCreatorArMode'), dashboardSource.indexOf('export async function openCheckpointQuickSetup'));
+    assert.match(entry, /window\.openProjectArMode\?\.\(encoded\(projectId\)\)/);
+    assert.doesNotMatch(entry, /renderArAreaPicker/);
+    assert.match(read('app/main.js'), /window\.openCreatorArCheckpointSetup = projectId => renderArAreaPicker/);
     assert.match(dashboardSource, /AR setup unavailable/);
 });
 
@@ -1756,7 +1758,7 @@ test('Creator AR supports temporary checkpoints and direct test sessions', () =>
     assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(webxrSource, /isSessionSupported\('immersive-ar'\)/);
     assert.match(webxrSource, /navigator\.xr\.requestSession\('immersive-ar'/);
-    assert.match(dashboardSource, /const started = await window\.startArMode/);
+    assert.match(dashboardSource, /return window\.openProjectArMode\?\.\(encoded\(projectId\)\)/);
     assert.match(dashboardSource, /Open Test AR/);
     assert.match(dashboardSource, /renderAreaCheckpointForm/);
     assert.match(dashboardSource, /saveAreaCheckpoint/);

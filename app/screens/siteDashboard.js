@@ -1,3 +1,4 @@
+import { dashboardIcon } from '../services/workspaceIcons.js';
 export function renderSiteDashboard(app, site, onBack) {
     const sections = [
         { key: 'overview', label: 'Overview' },
@@ -21,6 +22,7 @@ export function renderSiteDashboard(app, site, onBack) {
     `;
 
     sections.forEach(section => {
+        const icon = ({ overview: 'home', places: 'area', assets: 'plant', experiences: 'ar', map: 'area', publish: 'upload' })[section.key];
         const action = section.key === 'overview'
             ? `window.renderSiteOverview(${JSON.stringify(site)})`
             : section.key === 'places'
@@ -34,8 +36,8 @@ export function renderSiteDashboard(app, site, onBack) {
                             : `window.renderSitePublish(${JSON.stringify(site)})`;
 
         html += `
-        <div class="list-item">
-            <div>
+        <div class="list-item workspace-section-row">
+            <span class="workspace-place-icon" aria-hidden="true">${dashboardIcon(icon)}</span><div>
                 <strong>${section.label}</strong>
                 <p>Manage ${section.label.toLowerCase()}.</p>
             </div>

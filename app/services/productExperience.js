@@ -24,6 +24,7 @@ export function bindProductHeader(root) {
 export function enhanceProductScreen(screen) {
     if (!screen || screen.querySelector('.v2-masthead')) return;
     screen.classList.add('v2-unified');
+    if (document.body.dataset.experienceRole === 'creator') screen.classList.add('creator-workspace');
     screen.insertAdjacentHTML('afterbegin',productHeader(document.body.dataset.experienceRole === 'creator' ? 'Create & manage' : 'Explore'));
     bindProductHeader(screen);
 }

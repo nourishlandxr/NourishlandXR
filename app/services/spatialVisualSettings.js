@@ -6,18 +6,27 @@ export const ORB_MODELS = Object.freeze({
     advanced:Object.freeze({label:'Advanced',latitudeBands:32,longitudeBands:48,roughness:.34,metalness:.05,detail:2})
 });
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved'};
+let preferences={infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false};
+function validated(change){
+    const result={};
+    for(const [key,min,max] of [['infoOpacity',0,1],['cellOpacity',0,1],['spatialScale',.85,1.2]])if(Number.isFinite(change?.[key]))result[key]=Math.max(min,Math.min(max,change[key]));
+    if(ORB_MODELS[change?.orbModel])result.orbModel=change.orbModel;
+    if(['pointer','outline'].includes(change?.handMode))result.handMode=change.handMode;
+    for(const key of ['largeText','showFps'])if(typeof change?.[key]==='boolean')result[key]=change[key];
+    if(['auto',72,90,120].includes(change?.refreshRate))result.refreshRate=change.refreshRate;
+    return result;
+}
 try{
     const saved=JSON.parse(globalThis.localStorage?.getItem(storageKey) || 'null');
-    if(Number.isFinite(saved?.infoOpacity))preferences.infoOpacity=Math.max(0,Math.min(1,saved.infoOpacity));
-    if(ORB_MODELS[saved?.orbModel])preferences.orbModel=saved.orbModel;
+    Object.assign(preferences,validated(saved));
 }catch{ /* Storage is optional in restricted browser sessions. */ }
 export function getSpatialVisualSettings(){return {...preferences};}
 export function setSpatialVisualSettings(change){
-    if(Number.isFinite(change.infoOpacity))preferences.infoOpacity=Math.max(0,Math.min(1,change.infoOpacity));
-    if(ORB_MODELS[change.orbModel])preferences.orbModel=change.orbModel;
+    Object.assign(preferences,validated(change));
     try{globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}catch{ /* Keep the active session usable. */ }
     return getSpatialVisualSettings();
 }
 export function currentOrbModel(){return preferences.orbModel;}
 export function currentInfoOpacity(){return preferences.infoOpacity;}
+
+export function currentShowFps(){return preferences.showFps;}

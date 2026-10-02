@@ -1,8 +1,11 @@
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../services/totemSignSelection.js';
+import {getSpatialVisualSettings} from '../services/spatialVisualSettings.js';
+import {createXRPerformanceSettings} from '../services/xrPerformanceSettings.js';
+import {SPATIAL_OBJECT_VISUALS,spatialTransitionProgress} from '../services/spatialObjectVisuals.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { bindSpatialPimHold, createPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
-import { createSpatialTotemCards, drawSpatialTotemButtons } from '../services/spatialTotemCards.js';
+import { createSpatialTotemCards, drawSpatialTotemButtons,drawSpatialTotemPlaques,totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {liveNoteEnabled,liveNoteTopics,mountLiveNote} from '../services/liveNotes.js';
 import { applySpatialNoteTemplate, spatialNoteTemplate, spatialNoteTemplateOptions } from '../services/spatialNoteTemplates.js';
@@ -28,7 +31,7 @@ import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
-import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
+import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialGroundArrowPath, drawSpatialTether,drawSpatialPointerContact } from '../services/spatialTetherRenderer.js';
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
@@ -48,6 +51,14 @@ import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLink
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 
 let session = null;
+let creatorCellOpacity=getSpatialVisualSettings().cellOpacity;
+let creatorHandMode=getSpatialVisualSettings().handMode;
+const creatorPerformance=createXRPerformanceSettings({getSession:()=>session,publish:value=>infoPanel?.setXRPerformance(value)});
+let consumedMarkerSource=null;
+function pulseCreatorHaptics(source=null){
+    const inputs=source?[source]:Array.from(session?.inputSources || []);
+    for(const input of inputs){try{const actuator=input?.gamepad?.hapticActuators?.[0] || input?.gamepad?.vibrationActuator;if(typeof actuator?.pulse==='function')Promise.resolve(actuator.pulse(.28,45)).catch(()=>{});}catch{/* Haptics are optional. */}}
+}
 let sessionMode = 'immersive-ar';
 let questHeadsetSession = false;
 let creatorInputMode = 'touch';
@@ -79,6 +90,10 @@ let activeAreaDescription = '';
 let activeCheckpointId = '';
 let areaLensOpen = false;
 let startPromise = null;
+let exitPromise = null;
+let arExitRequested = false;
+let arExitDestination = null;
+const pendingMovePromises = new Set();
 let latestViewerMatrix = null;
 let latestView = null;
 let checkpointSessionOrigin = null;
@@ -627,7 +642,8 @@ function linkedTotemAreas(record) {
             distanceM: Number.isFinite(Number(link?.distanceMetres)) && Number(link.distanceMetres) > 0
                 ? Number(link.distanceMetres)
                 : null,
-            direction: index % 2 === 0 ? 'right' : 'left'
+            direction: creatorSignDirection(record,sessionMarkers.find(item=>item.marker.id===link.targetTotemId && hasRenderableSpatialPosition(item))?.position || calibratedTargetPosition(record,{...link,targetAreaId:link.toAreaId})).side || (index%2===0?'right':'left'),
+            directionReliable:creatorSignDirection(record,sessionMarkers.find(item=>item.marker.id===link.targetTotemId && hasRenderableSpatialPosition(item))?.position || calibratedTargetPosition(record,{...link,targetAreaId:link.toAreaId})).reliable
             };
         })
         .filter(link => link.targetAreaId && link.enabled);
@@ -765,17 +781,36 @@ function creatorOrbKnowledge(record) {
     });
 }
 
+function creatorSignDirection(record,position){
+    if(!position || !record.position)return {reliable:false,side:'',arrow:''};
+    const dx=position.x-record.position.x,dz=position.z-record.position.z;
+    if(!Number.isFinite(dx) || !Number.isFinite(dz) || Math.hypot(dx,dz)<.05)return {reliable:false,side:'',arrow:''};
+    const rotation=(Number(record.rotationDegrees)||24)*Math.PI/180;
+    const side=dx*Math.cos(rotation)-dz*Math.sin(rotation)<0?'left':'right';
+    return {reliable:true,side,arrow:side==='left'?'←':'→'};
+}
 function creatorTotemCards(record) {
-    const board=areaBoard(record.marker), areaRecords=sessionMarkers.filter(item=>item.areaId===record.areaId);
-    return totemKnowledgeCards({title:board.title,introduction:board.introduction,context:record.areaDescription,
+    const board=areaBoard(record.marker),areaRecords=sessionMarkers.filter(item=>item.areaId===record.areaId);
+    const cards=totemKnowledgeCards({title:board.title,introduction:board.introduction,context:record.areaDescription,compact:true,
         bubbles:board.informationBubbles,
         plants:areaRecords.filter(item=>item.marker.type==='plant').map(item=>({id:item.marker.id,name:item.marker.name,knowledge:creatorOrbKnowledge(item)})),
-        notes:areaRecords.filter(item=>item.marker.type==='note').map(item=>({id:item.marker.id,title:item.marker.name,body:item.marker.description || item.marker.notes}))
-    });
+        notes:areaRecords.filter(item=>item.marker.type==='note').map(item=>({id:item.marker.id,title:item.marker.name,body:item.marker.description || item.marker.notes}))});
+    for(const card of cards.slice(1)){
+        const target=areaRecords.find(item=>card.references?.includes(item.marker.id) && hasRenderableSpatialPosition(item));
+        const navigation=creatorSignDirection(record,target?.position);
+        card.boardSide=navigation.side;card.navigation={...navigation,destinationId:target?.marker.id};
+    }
+    for(const link of linkedTotemAreas(record).slice(0,2)){
+        const target=sessionMarkers.find(item=>item.marker.id===link.targetTotemId || (item.areaId===link.targetAreaId && item.marker.type==='area_checkpoint'));
+        const navigation=creatorSignDirection(record,target && hasRenderableSpatialPosition(target)?target.position:calibratedTargetPosition(record,link));
+        cards.push({id:'linked:'+link.targetAreaId,title:link.targetAreaName,summary:'Linked Area',body:'Follow this Area link using Totem tools.',boardSide:navigation.side,
+            navigation:{...navigation,destinationId:target?.marker.id},references:target?[target.marker.id]:[]});
+    }
+    return cards;
 }
 
 function creatorSignDestinationIds(){
-    return selectedTotemDestinationIds(sessionMarkers.filter(record=>record.marker?.type==='area_checkpoint'),creatorTotemCards);
+    return selectedTotemDestinationIds(sessionMarkers.filter(record=>record.marker?.type==='area_checkpoint'),creatorTotemCards,record=>!record.demoTotemFaded && record.demoTotemSignsVisible!==false);
 }
 function drawCreatorSignDestinations(view){
     const targets=creatorSignDestinationIds();
@@ -787,11 +822,23 @@ function drawCreatorSignDestinations(view){
     }
 }
 
+function creatorTotemOpacity(record,now=performance.now()){
+    const target=record.demoTotemFaded ? .18 : .98;
+    const progress=spatialTransitionProgress(now,record.demoTotemFadeStartedAt,SPATIAL_OBJECT_VISUALS.totem.fadeTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
+    return (record.demoTotemFadeFrom ?? target)*(1-progress)+target*progress;
+}
 function activateCreatorTotemCard(hit) {
     if(!hit)return false;
-    selectTotemSign(hit.record,hit.detail?'':hit.card.id,sessionMarkers);
-    renderSessionMarkers();
-    return true;
+    const record=hit.record,id=hit.card.id;infoPanel?.setMediaCollapsed(true);
+    if(id==='__signs'){
+        record.demoTotemSignsVisible=!record.demoTotemSignsVisible;record.demoSignsChangedAt=performance.now();
+        record.demoTotemFadeFrom=creatorTotemOpacity(record);record.demoTotemFadeStartedAt=performance.now();record.demoTotemFaded=false;
+        record.infoVisible=record.demoTotemSignsVisible;record.totemSelectedCard='';
+    }else if(id==='__fade'){
+        record.demoTotemFadeFrom=creatorTotemOpacity(record);record.demoTotemFadeStartedAt=performance.now();
+        record.demoTotemFaded=!record.demoTotemFaded;record.totemSelectedCard='';
+    }else selectTotemSign(record,hit.detail?'':id,sessionMarkers);
+    pulseCreatorHaptics();renderSessionMarkers();return true;
 }
 
 function creatorPlantKnowledge(record) {
@@ -939,7 +986,7 @@ function creatorPlantKnowledgeMarkup(record) {
     if (usesSpatialPimRenderer()) {
         const size = spatialPimSurfaceSize(record);
         return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
-            ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
+            ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,cellOpacity:creatorCellOpacity,
             selectedNodeId: record.pimSelectedNodeId,
             viewportWidth: size.layoutWidth,
             viewportHeight: size.layoutHeight,
@@ -965,7 +1012,7 @@ function creatorPlantKnowledgeMarkup(record) {
         { topInset, bottomInset }
     );
     return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
-        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
+        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,cellOpacity:creatorCellOpacity,
         selectedNodeId: record.pimSelectedNodeId,
         viewportWidth,
         viewportHeight,
@@ -996,10 +1043,10 @@ function creatorTotemInformationMarkup(record) {
     const isGeneratedWelcome = /^welcome to\s+[^.!?]+[.!?]?$/i.test(introduction);
     const areaContext = String(record.areaDescription || '').trim();
     const text = [isGeneratedWelcome ? '' : introduction, areaContext ? `Area context: ${areaContext}` : '', ...board.informationBubbles].filter(Boolean).slice(0, 6);
-    const linkedAreas = totemLinkGuideVisible ? linkedTotemAreas(record) : [];
+    const linkedAreas = totemLinkGuideVisible && !record.demoTotemFaded && record.demoTotemSignsVisible!==false ? linkedTotemAreas(record) : [];
 
-    const signs = linkedAreas.map(link => `<span class="creator-ar-totem-link-branch is-${escapeHtml(link.direction)}" data-ar-totem-link-branch="${escapeHtml(link.targetAreaId)}" aria-hidden="true"></span><button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Follow path to linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.direction === 'left' ? '←' : '→'}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>${escapeHtml(totemLinkMeasure(link) || 'FOLLOW PATH')}</small></span></button>`).join('');
-    const balloon = record.infoVisible && !questBeltUsesSpatialRenderer()
+    const signs = linkedAreas.map(link => `<span class="creator-ar-totem-link-branch is-${escapeHtml(link.direction)}" data-ar-totem-link-branch="${escapeHtml(link.targetAreaId)}" aria-hidden="true"></span><button type="button" class="creator-ar-totem-link-sign is-${escapeHtml(link.direction)}" data-ar-totem-link-area="${escapeHtml(link.targetAreaId)}" aria-label="Follow path to linked Area ${escapeHtml(link.targetAreaName)}"><span class="creator-ar-totem-link-arrow" aria-hidden="true">${link.directionReliable?(link.direction === 'left' ? '←' : '→'):''}</span><span><strong>${escapeHtml(link.targetAreaName)}</strong><small>${escapeHtml(totemLinkMeasure(link) || 'FOLLOW PATH')}</small></span></button>`).join('');
+    const balloon = record.infoVisible && !record.demoTotemFaded && !questBeltUsesSpatialRenderer()
         ? '<section class="creator-ar-location-note-board creator-ar-totem-balloon nlxr-totem-live-board">' + totemCardsMarkup(creatorTotemCards(record),record.totemSelectedCard) + '</section>'
         : '';
     return `<aside class="creator-ar-totem-information" data-ar-totem-information="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(board.title)} information">
@@ -1011,6 +1058,7 @@ function creatorTotemInformationMarkup(record) {
           <span class="creator-ar-totem-link-hub" aria-hidden="true"></span>
           ${signs}
         </div>
+        ${!questBeltUsesSpatialRenderer()?'<div class="creator-ar-totem-controls"><button type="button" data-creator-signs>Signs</button><button type="button" data-creator-fade>'+ (record.demoTotemFaded?'Wake':'Fade')+'</button></div>':''}
       </aside>`;
 }
 
@@ -1459,7 +1507,6 @@ function clearMarkerHoldGesture() {
 
 function beginMarkerHoldGesture(record, event) {
     if (!['neutral', 'view', 'grab', 'select'].includes(interactionMode) || readyPlacementType || dragState || markerHoldGesture) return false;
-    if (hasPlantProfile(record) && record.profileExpanded) return false;
     if (event.button != null && event.button !== 0) return false;
     const element = event.currentTarget;
     if (!element) return false;
@@ -1767,7 +1814,7 @@ function openSpatialWebWindow() {
     spatialWebWindow.dataset.arSpatialWebWindow = '';
     spatialWebWindow.dataset.arSpatialWebMode = 'quest';
     spatialWebWindow.setAttribute('aria-label', 'Spatial Web workspace');
-    spatialWebWindow.innerHTML = `<header class="creator-ar-spatial-web-header"><div><span>PROJECT DASHBOARD</span><strong>${escapeHtml(activeProjectName || activeProjectId)}</strong></div><button type="button" data-spatial-web-close aria-label="Close project dashboard">×</button></header>`;
+    spatialWebWindow.innerHTML = `<header class="creator-ar-spatial-web-header"><div><span>PROJECT DASHBOARD</span><strong>${escapeHtml(activeProjectName || activeProjectId)}</strong></div><button type="button" data-spatial-web-close aria-label="Return to AR">Return to AR</button></header>`;
     spatialWebWindow.append(content);
     overlayRoot.append(spatialWebWindow);
     overlayRoot.classList.add('has-spatial-web-window');
@@ -2050,6 +2097,7 @@ function controllerPointerEnd(surfaceHit = controllerSpatialSurfaceAtAim()) {
     // aimed at instead of stopping on the orb behind or in front of it.
     if (surfaceHit?.position) return surfaceHit.position;
     const spatialEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
+    if(spatialEnd?.distance>=XR_LASER_POINTER_CONFIG.length){const fallback=controllerRayEnd(latestControllerRay,[],2.5);Object.assign(spatialEnd,fallback);}
     const beltHit = controllerQuestBeltSurfaceHit();
     const candidates = [
         spatialEnd && {
@@ -2108,14 +2156,14 @@ function clearControllerMarkerPress() {
 function armControllerMarkerPress(record) {
     clearControllerMarkerPress();
     if (!record) return;
-    const press = { record, timer: null };
-    controllerPressState = press;
-    press.timer = setTimeout(() => {
-        if (controllerPressState !== press) return;
-        controllerPressState = null;
-        const target = controllerMarkerAtAim();
-        if (target?.marker?.id === record.marker.id) activateControllerTarget(true);
-    }, CREATOR_AR_HOLD_DELAY_MS);
+    controllerPressState={record,startedAt:performance.now()};
+}
+function tickControllerMarkerPress(time){
+    if (exitPromise || arExitRequested) return;
+    const press=controllerPressState;if(!press)return;
+    if(controllerMarkerAtAim()?.marker.id!==press.record.marker.id){clearControllerMarkerPress();return;}
+    if(time-press.startedAt<CREATOR_AR_HOLD_DELAY_MS)return;
+    clearControllerMarkerPress();activateControllerTarget(true);
 }
 
 function finishControllerMarkerPress() {
@@ -2126,8 +2174,9 @@ function finishControllerMarkerPress() {
         return true;
     }
     if (!press?.record) return false;
-    const target = controllerMarkerAtAim() || press.record;
-    if (hasPlantProfile(target)) {
+    const target = controllerMarkerAtAim();
+    if(target?.marker?.id!==press.record.marker.id)return true;
+    if (hasPlantProfile(target) || liveNoteEnabled(target.marker) || interactionMode==='view') {
         const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(target.marker.id)}"]`);
         if (element) {
             beginMarkerInteraction(target, {
@@ -2149,21 +2198,11 @@ function activateControllerTarget(directHold = interactionMode === 'grab') {
         setPlacementStatus('Aim at a placed element, then press and hold the controller trigger.');
         return false;
     }
-    if (directHold && hasPlantProfile(record) && record.profileExpanded) {
-        beginMarkerInteraction(record, {
-            preventDefault() {},
-            stopPropagation() {},
-            pointerId: 'xr-controller',
-            clientX: window.innerWidth / 2,
-            clientY: window.innerHeight / 2,
-            currentTarget: element
-        }, { element });
-        return true;
-    }
+
     beginMarkerInteraction(record, {
         preventDefault() {},
         stopPropagation() {},
-        pointerId: 'xr-controller',
+        pointerId: creatorInputMode==='hand'?'xr-hand':'xr-controller',
         clientX: window.innerWidth / 2,
         clientY: window.innerHeight / 2,
         currentTarget: element
@@ -2276,6 +2315,7 @@ function activateControllerSelection() {
 }
 
 function pollControllerInput(time = performance.now()) {
+    if (exitPromise || arExitRequested) return;
     const source = controllerInputSource();
     if (!source?.gamepad || creatorInputMode !== 'controller') return;
     const verticalCandidates = [Number(source.gamepad.axes?.[3]) || 0, Number(source.gamepad.axes?.[1]) || 0];
@@ -2391,7 +2431,7 @@ function updateControllerRay(frame, time = performance.now()) {
 }
 
 function drawHandTrackingLines(view) {
-    if (creatorInputMode !== 'hand' || !latestTrackedHandStates.length || !controllerPointerRenderer) return;
+    if (creatorHandMode!=='outline' || creatorInputMode !== 'hand' || !latestTrackedHandStates.length || !controllerPointerRenderer) return;
     for (const { state } of latestTrackedHandStates) {
         if (!state?.joints) continue;
         for (const [fromName, toName] of XR_HAND_JOINT_CONNECTIONS) {
@@ -2406,16 +2446,18 @@ function drawHandTrackingLines(view) {
 }
 
 function pollHandPinch() {
+    if (exitPromise || arExitRequested) { handPimHold.cancel(); return; }
     if (!latestHandState?.pointer) {handPimHold.cancel(); return;}
     const pinching = Boolean(latestHandState.pinch);
     if (handPimHold.active) {
-        if (!pinching) handPimHold.cancel();
+        if (!pinching){handPimHold.activateNow(spatialPimTargetAtAim({updateHover:false}));handPimHold.cancel();}
         else handPimHold.tick(spatialPimTargetAtAim({updateHover:false}),performance.now());
         handPinchActive=pinching;return;
     }
     if (pinching && !handPinchActive) {
         if(creatorKnowledgeRoot) {activateKnowledgeSelection();handPinchActive=pinching;return;}
         if(infoPanel?.activate(latestControllerRay)) {handPinchActive=pinching;return;}
+        if(activateCreatorTotemCard(totemCardsRenderer?.hit(latestControllerRay))){handPinchActive=pinching;return;}
         // Hand tracking has no controller select event. Once Note (or Plant)
         // is armed, a pinch is the placement press at the current aim point.
         if (readyPlacementType) {
@@ -2425,7 +2467,7 @@ function pollHandPinch() {
         }
         const pimTarget = spatialPimTargetAtAim({ updateHover: false });
         if (pimTarget) {
-            handPimHold.start(pimTarget,performance.now());
+            handPimHold.start(pimTarget,performance.now());handPimHold.activateNow(pimTarget);
             handPinchActive = pinching;
             return;
         }
@@ -2444,33 +2486,21 @@ function pollHandPinch() {
         const beltTarget = controllerBeltActionAtAim();
         const beltAction = beltTarget && questBeltActionElements()[beltTarget.index];
         if (beltAction) dispatchControllerAction(beltAction);
-        else if (interactionMode === 'view') {
-            const target = controllerMarkerAtAim();
-            const element = target && overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(target.marker.id)}"]`);
-            if (target && element) {
-                beginMarkerInteraction(target, {
-                    preventDefault() {},
-                    stopPropagation() {},
-                    currentTarget: element
-                }, { element });
-            }
-        }
-        else if (interactionMode !== 'view') {
-            const target = controllerMarkerAtAim();
-            if (target) {
-                activateControllerTarget(true);
-                if (dragState) dragState.pointerId = 'xr-hand';
-            }
+        else {
+            const target=controllerMarkerAtAim();
+            if(target)armControllerMarkerPress(target);
         }
     }
-    if (!pinching && handPinchActive && dragState?.pointerId === 'xr-hand') void finishMarkerDrag();
+    if (!pinching && handPinchActive){
+        if(dragState?.pointerId==='xr-hand')void finishMarkerDrag();
+        else if(controllerPressState)finishControllerMarkerPress();
+    }
     handPinchActive = pinching;
 }
 
 function drawControllerPointer(view) {
-    if (latestHandState) return;
-    const viewingPim = interactionMode === 'view' && sessionMarkers.some(record => record.profileExpanded);
-    if (creatorInputMode !== 'controller' || (interactionMode === 'view' && !viewingPim) || !latestControllerRay || !controllerPointerRenderer) return;
+    if (latestHandState && creatorHandMode==='outline') return;
+    if (!['controller','hand'].includes(creatorInputMode) || !latestControllerRay || !controllerPointerRenderer) return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
@@ -2486,34 +2516,29 @@ function drawControllerPointer(view) {
         curve: .001,
         lift: .001,
         color: surfaceHit
-            ? [0.65, 1, 0.24, 1]
+            ? [...XR_LASER_POINTER_CONFIG.color,.82]
             : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
 }
 
 function drawControllerPointerContact(view) {
-    if (latestHandState) return;
-    const viewingPim = interactionMode === 'view' && sessionMarkers.some(record => record.profileExpanded);
-    if (creatorInputMode !== 'controller'
-        || (interactionMode === 'view' && !viewingPim)
+    if (latestHandState && creatorHandMode==='outline') return;
+    if (!['controller','hand'].includes(creatorInputMode)
         || !latestControllerRay
-        || !sphereRenderer) return;
+        || !controllerPointerRenderer) return;
     const surfaceHit = controllerSpatialSurfaceAtAim();
     const point = controllerPointerEnd(surfaceHit);
     if (!point || !view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     // DOM overlay is optional on Quest. Keep the contact point in the XR
     // layer so a shortened laser always ends in a visible, actionable hit.
-    drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, point, surfaceHit ? .019 : .012, {
-        color: surfaceHit?.kind === 'pim' ? [0.76, 1, 0.28] : [0.35, 1, 0.2],
-        alpha: 1,
-        emissive: 1
-    });
+    const distance=Math.hypot(point.x-latestControllerRay.origin.x,point.y-latestControllerRay.origin.y,point.z-latestControllerRay.origin.z);
+    drawSpatialPointerContact(gl,controllerPointerRenderer,view,point,{radius:Math.max(.009,Math.min(.018,distance*.007))});
 }
 
 function positionControllerPointer(view = latestView) {
     const pointer = overlayRoot?.querySelector('[data-ar-controller-pointer]');
     if (!pointer) return;
-    if (creatorInputMode !== 'controller' || interactionMode === 'view' || !latestControllerRay) {
+    if (!['controller','hand'].includes(creatorInputMode) || interactionMode === 'view' || !latestControllerRay) {
         pointer.hidden = true;
         pointer.classList.remove('is-edge');
         return;
@@ -3541,13 +3566,13 @@ function ensureSpatialPimTexture(record) {
     const closingPaths = record.pimClosingNodePaths || [];
     const hoverPath = spatialPimHover.recordId === record.marker.id ? spatialPimHover.path : '';
     const animationFrame = bloomProgress < 1 ? Math.round(bloomProgress * 12) : 12;
-    const key = JSON.stringify([creatorPimExpandedNodeIds(record), closingPaths, record.pimSelectedNodeId || '', hoverPath, animationFrame, record.pimPressPath, record.pimPressProgress]);
+    const key = JSON.stringify([creatorPimExpandedNodeIds(record), closingPaths, record.pimSelectedNodeId || '', hoverPath, animationFrame, record.pimPressPath, record.pimPressProgress,creatorCellOpacity]);
     const cached = spatialPimTextures.get(record.marker.id);
     if (cached?.key === key && cached.knowledge === knowledge) return cached.texture;
     if (cached?.texture) gl.deleteTexture(cached.texture);
     const size = spatialPimSurfaceSize(record);
     const texture = createPlantInformationHoneycombTexture(gl, knowledge, creatorPimExpandedNodeIds(record), {
-        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,
+        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,cellOpacity:creatorCellOpacity,
         width: size.width,
         height: size.height,
         layoutWidth: size.layoutWidth,
@@ -4023,7 +4048,7 @@ function setupSpatialMarkerRenderer() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
     setupHomeSignRenderer();
     sphereRenderer = createSpatialSphereRenderer(gl);
-    totemCardsRenderer = createSpatialTotemCards(gl);
+    totemCardsRenderer = createSpatialTotemCards(gl,{ray:()=>latestControllerRay});
     infoPanel?.attach(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
@@ -4094,12 +4119,15 @@ function drawSpatialMarkers(view) {
             }
             const rotationY=(Number(record.rotationDegrees) || 24) * Math.PI / 180;
             const crownRadius=halfWidth,bodyHalfHeight=Math.max(.12,halfHeight-crownRadius*.35);
-            const totemHighlight=totemColor.map(channel=>Math.min(.92,channel*.74+.18));
+            const visual=SPATIAL_OBJECT_VISUALS.totem;
+            const totemHighlight=totemColor.map(channel=>Math.min(.92,channel*.62+.28));
+            const fadeOpacity=creatorTotemOpacity(record);
             drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
                 halfWidth,
                 halfHeight: bodyHalfHeight,
                 halfDepth: halfWidth * .5,
-                color: totemColor,
+                color: totemColor.map(channel=>channel*visual.postContrast+visual.postLift),
+                alpha:fadeOpacity,woodGrain:visual.woodGrain,
                 topColor: totemHighlight,
                 topTaper: .9,
                 rotationY
@@ -4109,13 +4137,13 @@ function drawSpatialMarkers(view) {
                 y:groundPosition.y+bodyHalfHeight*2
             }, crownRadius, {
                 color:totemColor,
-                alpha:.98,
+                alpha:fadeOpacity,
                 emissive:.035,
                 scale:{x:1,y:.7,z:.5},
                 rotationY
             });
             drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,groundPosition,rotationY,{
-                bodyHalfWidth:halfWidth,bodyHalfDepth:halfWidth*.5,bodyHalfHeight,signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded)
+                bodyHalfWidth:halfWidth,bodyHalfDepth:halfWidth*.5,bodyHalfHeight,signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),fadeOpacity:record.demoTotemFaded?Math.max(.78,fadeOpacity):1
             });
             return;
         }
@@ -4153,6 +4181,7 @@ function drawSpatialMarkers(view) {
             knowledge: shape === 4 ? creatorOrbKnowledge(record) : null,
             color: markerRgb(record.marker, baseColor),
             opacity: arrivalEase * markerAppearanceOpacity(record.marker),
+            targeted:record.marker.id===hoveredMarkerId,selected:record.profileExpanded || signDestinations.has(record.marker.id) || contextToolbarRecord?.marker?.id===record.marker.id,held:dragState?.record===record,
             highlighted: signDestinations.has(record.marker.id) || record.marker.id === hoveredMarkerId || contextToolbarRecord?.marker?.id === record.marker.id
         });
     });
@@ -4543,7 +4572,7 @@ function renderSessionMarkers() {
             : `<span class="creator-ar-spatial-name${record.marker.type === 'note' ? ' nourishland-spatial-note-surface creator-ar-demo-note' : ''}"${noteTemplate ? ` data-note-template="${escapeHtml(noteTemplate.id)}" style="--spatial-note-color:${escapeHtml(noteTemplate.color)}"` : ''}>${escapeHtml(record.marker.name)}${profileAvailable ? '<small>Plant Profile</small>' : `<small>${escapeHtml(informationSummary)}</small>`}</span>`;
         const profileLayer = profileAvailable && record.profileExpanded
             ? `<aside class="creator-ar-plant-profile is-anchored-profile${usesSpatialPimRenderer() ? ' is-spatial-pim-hit-layer' : ''}" data-ar-plant-profile="${escapeHtml(record.marker.id)}" aria-label="${escapeHtml(record.marker.name)} Plant Profile">${creatorPlantKnowledgeMarkup(record)}</aside>`
-             : record.marker.type === 'area_checkpoint' && (record.infoVisible || (totemLinkGuideVisible && linkedTotemAreas(record).length))
+             : record.marker.type === 'area_checkpoint'
                  ? creatorTotemInformationMarkup(record)
                 : '';
         // Keep every marker hidden until the first valid XR projection positions it.
@@ -4569,6 +4598,7 @@ function renderSessionMarkers() {
         }
         const totemPanel=layer.querySelector('[data-ar-totem-information="'+CSS.escape(record.marker.id)+'"]');
         totemPanel?.addEventListener('beforexrselect',event=>event.preventDefault());
+        for(const [selector,id] of [['[data-creator-signs]','__signs'],['[data-creator-fade]','__fade']])totemPanel?.querySelector(selector)?.addEventListener('click',event=>{event.stopPropagation();activateCreatorTotemCard({record,card:{id}});});
         totemPanel?.querySelectorAll('[data-totem-card]').forEach(button=>{
             button.addEventListener('pointerdown',event=>event.stopPropagation());
             button.addEventListener('click',event=>{
@@ -4905,11 +4935,11 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
         return;
     }
     if (!interactionMode) return;
-    if (directHold && hasPlantProfile(record) && record.profileExpanded) return;
     if (!directHold && interactionMode === 'view') {
         event.preventDefault();
         event.stopPropagation();
         record.infoVisible = !record.infoVisible;
+        if(record.marker.type==='area_checkpoint'){record.demoTotemSignsVisible=record.infoVisible;record.demoSignsChangedAt=performance.now();}
         renderSessionMarkers();
         setPlacementStatus('');
         return;
@@ -4952,6 +4982,7 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
     };
     element?.classList.add('is-adjusting');
     overlayRoot?.classList.add('is-holding-item');
+    pulseCreatorHaptics();
     element?.setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove', moveMarkerDrag);
     window.addEventListener('pointercancel', cancelMarkerDrag);
@@ -5030,23 +5061,28 @@ function updateGrabbedMarkerFromCamera() {
 async function finishMarkerDrag(event) {
     const state = dragState;
     if (!state || (event?.pointerId != null && event.pointerId !== state.pointerId)) return;
-    const operation = captureArOperationContext();
-    if (state.record.marker.type === 'area_checkpoint') {
-        state.record.position = groundedTotemPosition(state.record.position);
-    }
-    cleanupDrag();
-    updateInteractionControls();
-    setPlacementStatus(`Saving ${state.record.marker.name}… EDIT mode remains on.`);
-    try {
-        await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchorForRecord(state.record, operation));
-        if (!isArOperationCurrent(operation)) return;
-        setPlacementStatus(`${state.record.marker.name} moved. Select another glowing element, turn off Move, or choose View.`);
-    } catch (error) {
-        if (!isArOperationCurrent(operation)) return;
-        state.record.position = state.position;
-        positionSessionMarkers();
-        setPlacementStatus(`Could not save the move: ${error.message}`);
-    }
+    const completion = (async () => {
+        const operation = captureArOperationContext();
+        if (state.record.marker.type === 'area_checkpoint') {
+            state.record.position = groundedTotemPosition(state.record.position);
+        }
+        cleanupDrag();
+        updateInteractionControls();
+        setPlacementStatus(`Saving ${state.record.marker.name}… EDIT mode remains on.`);
+        try {
+            await saveMarkerAnchor(operation.projectId, state.record.siteId, state.record.areaId, state.record.marker.id, spatialAnchorForRecord(state.record, operation));
+            if (!isArOperationCurrent(operation)) return;
+            pulseCreatorHaptics();
+            setPlacementStatus(`${state.record.marker.name} moved. Select another glowing element, turn off Move, or choose View.`);
+        } catch (error) {
+            if (!isArOperationCurrent(operation)) return;
+            state.record.position = state.position;
+            positionSessionMarkers();
+            setPlacementStatus(`Could not save the move: ${error.message}`);
+        }
+    })();
+    pendingMovePromises.add(completion);
+    try { await completion; } finally { pendingMovePromises.delete(completion); }
 }
 
 function setHeldMarkerDepthOffset(value) {
@@ -5750,12 +5786,25 @@ function createOverlay() {
     document.body.append(overlayRoot);
     infoPanel?.destroy();
     creatorPanelActionSignature='';
-    infoPanel = createPimInfoPanel({root:overlayRoot,onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
-    infoPanel.element.classList.add('is-creator-panel');
+    createCreatorInfoPanel();
     bindCreatorPanelActions();
     bindCreatorViewportReflow();
     updateLocationNote();
     updatePlantEditorPreviewBanner();
+}
+
+function createCreatorInfoPanel(){
+    infoPanel?.destroy();creatorPanelActionSignature='';
+    creatorCellOpacity=getSpatialVisualSettings().cellOpacity;creatorHandMode=getSpatialVisualSettings().handMode;
+    infoPanel=createPimInfoPanel({root:overlayRoot,headset:questHeadsetSession,phoneAR:!questHeadsetSession,rainEnabled:false,
+        cellOpacity:creatorCellOpacity,handMode:creatorHandMode,onHandMode:value=>{creatorHandMode=value;},
+        panelHints:['Aim, then press once to open plant information.','Hold an Orb for 0.8 seconds to move it. Use the right joystick to adjust distance.','Press a cell once to read or expand its information.'],
+        onPerformanceAction:action=>creatorPerformance.action(action),onGrab:pulseCreatorHaptics,
+        onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
+        onCellOpacity:value=>{creatorCellOpacity=value;for(const record of sessionMarkers.filter(item=>item.profileExpanded))refreshCreatorPimProfile(record);},
+        onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
+    overlayRoot?.style.setProperty('--creator-info-opacity',String(getSpatialVisualSettings().infoOpacity));
+    infoPanel.element.classList.add('is-creator-panel');creatorPerformance.publish();syncCreatorPanelActions();
 }
 
 function cleanup() {
@@ -5763,7 +5812,7 @@ function cleanup() {
     creatorPanelControlsCleanup();creatorPanelControlsCleanup=()=>{};creatorPanelActionSignature='';
     creatorViewportCleanup?.();
     releaseArScreenRotation();
-    clearControllerMarkerPress();
+    clearControllerMarkerPress();consumedMarkerSource=null;
     cleanupDrag();
     closeAreaLens();
     closeSpatialWebWindow();
@@ -5887,8 +5936,10 @@ function cleanup() {
 }
 
 async function waitForPendingPlacement() {
+    if (dragState) await finishMarkerDrag();
     const pending = pendingPlacementPromise;
     if (pending) await pending;
+    await Promise.allSettled([...pendingMovePromises, ...sessionMarkers.map(record => record.appearanceSaveChain).filter(Boolean)]);
 }
 
 async function resolveAreaIdForExit(projectId, siteId, areaId, areaName) {
@@ -5908,8 +5959,11 @@ async function resolveAreaIdForExit(projectId, siteId, areaId, areaName) {
 }
 
 function navigateAfterAr(projectId, areaId, returnContext) {
-    if (!projectId) return;
+    const destination = arExitDestination;
+    arExitDestination = null; arExitRequested = false;
+    if (!projectId && !destination) return;
     queueMicrotask(() => {
+        if (destination) { destination(); return; }
         if (String(returnContext || '').startsWith('plant-editor-preview:')) {
             const markerId = String(returnContext).slice('plant-editor-preview:'.length);
             window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(markerId), false, 'plant-editor-preview', { workspace: 'pim' });
@@ -5919,6 +5973,8 @@ function navigateAfterAr(projectId, areaId, returnContext) {
             window.renderAreaCheckpointForm?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-totem:'.length)));
         } else if (String(returnContext || '').startsWith('web-area:')) {
             window.renderProjectAreaDashboard?.(encodeURIComponent(projectId), encodeURIComponent(String(returnContext).slice('web-area:'.length)));
+        } else if (returnContext === 'project-dashboard') {
+            window.renderProjectDashboard?.(encodeURIComponent(projectId), '', false, 'returning');
         } else if (returnContext === 'webhub') {
             window.renderFieldGuide?.(encodeURIComponent(projectId), true);
         } else if (returnContext && areaId && window.resumeAreaCreationFlow) {
@@ -5932,44 +5988,54 @@ function navigateAfterAr(projectId, areaId, returnContext) {
 }
 
 async function finishArExitToDashboard() {
-    const projectId = activeProjectId;
-    // Home is a protected holding Area, not a named Area dashboard. Returning
-    // with its id would send the dashboard router into the named-Area loader,
-    // which correctly rejects Home and displayed "Area data is unavailable".
-    const areaId = isDefaultHomeArea(activeAreaName || activeAreaId) ? '' : activeAreaId;
-    const areaName = activeAreaName;
-    const siteId = activeSiteId;
-    const returnContext = arReturnContext;
-    await waitForPendingPlacement();
-    const resolvedAreaId = await resolveAreaIdForExit(projectId, siteId, areaId, areaName);
-    const activeSession = session;
-    session = null;
-    cleanup();
-    activeSession?.end().catch(() => {});
-    navigateAfterAr(projectId, resolvedAreaId, returnContext);
+    if (exitPromise) return exitPromise;
+    exitPromise = (async () => {
+        const projectId = activeProjectId;
+        // Home is a protected holding Area, not a named Area dashboard. Returning
+        // with its id would send the dashboard router into the named-Area loader,
+        // which correctly rejects Home and displayed "Area data is unavailable".
+        const areaId = isDefaultHomeArea(activeAreaName || activeAreaId) ? '' : activeAreaId;
+        const areaName = activeAreaName;
+        const siteId = activeSiteId;
+        const returnContext = arReturnContext;
+        await waitForPendingPlacement();
+        const resolvedAreaId = await resolveAreaIdForExit(projectId, siteId, areaId, areaName);
+        const activeSession = session;
+        session = null;
+        cleanup();
+        await activeSession?.end().catch(() => {});
+        navigateAfterAr(projectId, resolvedAreaId, returnContext);
+    })();
+    try { await exitPromise; } finally { exitPromise = null; if (session) arExitRequested = false; }
+
 }
 
 async function finishArExitToProjectChooser() {
-    if (!session || !activeProjectId) return;
-    const controls = overlayRoot?.querySelectorAll('[data-ar-change-project], [data-ar-exit-creator]') || [];
-    controls.forEach(control => { control.disabled = true; });
-    setPlacementStatus('Finishing pending saves…');
-    await waitForPendingPlacement();
-    const activeSession = session;
-    const removeArHistoryEntry = arHistoryArmed && history.state?.nourishlandCreatorAr;
-    arHistoryArmed = false;
-    handlingArHistory = false;
-    window.removeEventListener('popstate', handleArHistoryBack);
-    session = null;
-    cleanup();
-    activeSession?.end().catch(() => {});
-    const openChooser = () => window.renderDemoProjects?.();
-    if (removeArHistoryEntry) {
-        window.addEventListener('popstate', openChooser, { once: true });
-        history.back();
-    } else {
-        queueMicrotask(openChooser);
-    }
+    if (exitPromise) return exitPromise;
+    exitPromise = (async () => {
+        if (!session || !activeProjectId) return;
+        const controls = overlayRoot?.querySelectorAll('[data-ar-change-project], [data-ar-exit-creator]') || [];
+        controls.forEach(control => { control.disabled = true; });
+        setPlacementStatus('Finishing pending saves…');
+        await waitForPendingPlacement();
+        const activeSession = session;
+        const removeArHistoryEntry = arHistoryArmed && history.state?.nourishlandCreatorAr;
+        arHistoryArmed = false;
+        handlingArHistory = false;
+        window.removeEventListener('popstate', handleArHistoryBack);
+        session = null;
+        cleanup();
+        await activeSession?.end().catch(() => {});
+        const openChooser = () => window.renderDemoProjects?.();
+        if (removeArHistoryEntry) {
+            window.addEventListener('popstate', openChooser, { once: true });
+            history.back();
+        } else {
+            queueMicrotask(openChooser);
+        }
+    })();
+    try { await exitPromise; } finally { exitPromise = null; if (session) arExitRequested = false; }
+
 }
 
 function handleArHistoryBack() {
@@ -5977,8 +6043,7 @@ function handleArHistoryBack() {
     handlingArHistory = true;
     arHistoryArmed = false;
     window.removeEventListener('popstate', handleArHistoryBack);
-    finishArExitToDashboard();
-    handlingArHistory = false;
+    void finishArExitToDashboard().finally(() => { handlingArHistory = false; });
 }
 
 function armArHistory() {
@@ -6003,7 +6068,10 @@ async function finishNaturalArExit(projectId, areaId, returnContext, areaName = 
     navigateAfterAr(projectId, resolvedAreaId, returnContext);
 }
 
-export function exitArMode() {
+export function exitArMode(destination = null) {
+    if (arExitRequested || exitPromise || handlingArHistory || !session) return;
+    arExitRequested = true;
+    arExitDestination = typeof destination === 'function' ? destination : null;
     if (arHistoryArmed && history.state?.nourishlandCreatorAr) {
         history.back();
         return;
@@ -6018,6 +6086,7 @@ export function isArModeActive() {
 }
 
 export async function startArMode(projectId, areaId = '', checkpointId = '', initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') {
+    if (exitPromise || arExitRequested) return false;
     if (session) return true;
     if (startPromise) return startPromise;
     startPromise = launchArMode(projectId, areaId, checkpointId, initialPlacementType, existingMarkerId, returnContext, preferredSiteId);
@@ -6074,7 +6143,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser })
         // DOM overlay remains preferred when supported, but cannot be a hard
         // startup requirement across Quest Browser and future glasses runtimes.
-        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser });
+        const arSession = await requestImmersiveArSession(overlayRoot, { requireDomOverlay: false, preferDomOverlay: questBrowser,targetFrameRate:getSpatialVisualSettings().refreshRate });
         session = arSession.session;
         // WebXR may enter its immersive display after the initial request. Ask
         // again once that display exists so Android can honour a later rotate.
@@ -6082,6 +6151,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         sessionMode = arSession.mode || 'immersive-ar';
         questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';
         const launchedSession = session;
+        createCreatorInfoPanel();
         document.body.classList.add('creator-ar-session-active');
         document.body.dataset.webxrMode = sessionMode;
         document.body.dataset.arDomOverlay = arSession.domOverlay ? 'true' : 'false';
@@ -6145,6 +6215,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         const draw = (_time, frame) => {
             if (frame.session !== session || !gl) return;
             frame.session.requestAnimationFrame(draw);
+            creatorPerformance.tick(_time);
             const pose = frame.getViewerPose(refSpace);
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
@@ -6156,6 +6227,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
             pollControllerInput(_time);
             updateControllerRay(frame, _time);
+            if(!latestHandState || latestHandState.pinch)tickControllerMarkerPress(_time);
             infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame); pimHold?.tick(_time);
             const hasSpatialRay = isSpatialRayInputMode() && latestControllerRay;
             const dashboardTarget = hasSpatialRay ? controllerSpatialDashboardAtAim() : null;
@@ -6191,11 +6263,13 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawSpatialMarkers(view);
                 if (questBeltUsesSpatialRenderer() && totemCardsRenderer) {
                     totemCardsRenderer.begin();
-                    activeAreaMarkers().filter(record=>record.marker.type==='area_checkpoint' && record.infoVisible && hasRenderableSpatialPosition(record)).forEach(record=>{
+                    activeAreaMarkers().filter(record=>record.marker.type==='area_checkpoint' && hasRenderableSpatialPosition(record) && !hiddenStructuralMarkerIds.has(record.marker.id)).forEach(record=>{
                         if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
                             record.liveTotemCards=creatorTotemCards(record);record.totemCardsRefreshed=performance.now();
                         }
-                        totemCardsRenderer.draw(view,record,groundedTotemPosition(record.position),record.liveTotemCards,record.totemSelectedCard);
+                        const base=groundedTotemPosition(record.position),rotation=(Number(record.rotationDegrees)||24)*Math.PI/180;
+                        drawSpatialTotemPlaques(gl,prismRenderer,sphereRenderer,view,totemLayoutForRecord(record,base,record.liveTotemCards,record.totemSelectedCard,rotation));
+                        totemCardsRenderer.draw(view,record,base,record.liveTotemCards,record.totemSelectedCard);
                     });
                     totemCardsRenderer.end();
                 }
@@ -6212,33 +6286,36 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         };
 
         launchedSession.addEventListener('end', async () => {
-            if (session !== launchedSession) return;
+            if (exitPromise || session !== launchedSession) return;
             const projectId = activeProjectId;
             const areaId = activeAreaId;
             const areaName = activeAreaName;
             const siteId = activeSiteId;
             const returnContext = arReturnContext;
             await waitForPendingPlacement();
-            if (session !== launchedSession) return;
+            if (exitPromise || session !== launchedSession) return;
             session = null;
             cleanup();
             await finishNaturalArExit(projectId, areaId, returnContext, areaName, siteId);
         });
+        launchedSession.addEventListener('visibilitychange',()=>{if(launchedSession.visibilityState==='hidden'){clearControllerMarkerPress();consumedMarkerSource=null;handPimHold.cancel();handPinchActive=false;}});
         launchedSession.addEventListener('inputsourceschange', () => {
+            clearControllerMarkerPress();consumedMarkerSource=null;
             setCreatorInputMode(availableCreatorInputMode());
         });
         infoPanel?.bindSession(launchedSession, refSpace);
         pimHold = bindSpatialPimHold({session:launchedSession,
-            enabled:()=>!latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay),
+            enabled:()=>!exitPromise && !arExitRequested && !latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay) && !totemCardsRenderer?.hit(latestControllerRay) && !controllerSpatialDashboardAtAim(),
             getTarget:()=>spatialPimTargetAtAim({updateHover:false}), activate:activateSpatialPimTarget,
             progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}
         });
         launchedSession.addEventListener('selectstart', event => {
             if(event.inputSource.hand) return;
+            if (exitPromise || arExitRequested) return;
+            consumedMarkerSource=null;
             if(creatorKnowledgeRoot) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource) || readyPlacementType) return;
-            if (interactionMode === 'view') return;
             if (controllerSpatialDashboardAtAim()) return;
             if (controllerSpecialPaletteActionAtAim()) return;
             if (controllerBeltActionAtAim()) return;
@@ -6246,10 +6323,11 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             // A short press selects a placed object; the delayed arm keeps
             // the same trigger useful for press-and-hold movement in neutral
             // Quest mode without making every tap start a drag.
-            if (target) armControllerMarkerPress(target);
+            if (target){consumedMarkerSource=event.inputSource;armControllerMarkerPress(target);}
         });
         launchedSession.addEventListener('selectend', event => {
             if(event.inputSource.hand) return;
+            if (exitPromise || arExitRequested) return;
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource)) return;
             if (dragState?.pointerId === 'xr-controller') {
                 clearControllerMarkerPress();
@@ -6260,7 +6338,9 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         });
         launchedSession.addEventListener('select', event => {
             if(event.inputSource.hand) return;
+            if (exitPromise || arExitRequested) return;
             if (session !== launchedSession) return;
+            if(consumedMarkerSource===event.inputSource){consumedMarkerSource=null;return;}
             const controllerSelect = isPrimaryControllerSource(event.inputSource);
             if (controllerSelect) {
                 if (dragState?.pointerId === 'xr-controller') return;

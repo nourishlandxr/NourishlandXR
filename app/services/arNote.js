@@ -6,7 +6,7 @@ import { readingPositions, hitReadingPlant, visitorTrackingCopy } from './visito
 import { html } from './productExperience.js';
 import { createPlantKnowledgeResolver } from './spatialKnowledgePresentation.js';
 
-let session=null, starting=false, resetReadingSpace=null;
+let session=null, starting=false, resetReadingSpace=null, endingPromise=null;
 const diagnostics=[];
 const AR_DIAGNOSTICS_STORAGE_KEY='nourishland-xr-last-diagnostics';
 const AR_DIAGNOSTICS_LIMIT=80;
@@ -52,7 +52,12 @@ export async function copyArDiagnostics(){
 }
 export function isArActive(){return Boolean(session);}
 export function resetArPlacement(){resetReadingSpace?.();}
-export async function exitAr(){if(session)await session.end();}
+export async function exitAr(){
+    if(endingPromise)return endingPromise;
+    if(!session)return;
+    endingPromise=session.end();
+    try { await endingPromise; } finally { endingPromise=null; }
+}
 
 function drawReadingPanel(context,width,height,plant) {
     context.clearRect(0,0,width,height);
@@ -79,7 +84,9 @@ export async function startArNote(marker,profile,options={}) {
     const plants=(options.plants?.length ? options.plants : marker ? [{...marker,description:profile?.overview || marker.description}] : []).slice(0,5);
     const resolveKnowledge=createPlantKnowledgeResolver();
     const plantKnowledge=plants.map(plant=>resolveKnowledge(plant.plant_profile || plant.profile || (plant.id===marker?.id ? profile : {}) || {},{includeDraft:false}));
+    let cleaned=false;
     const cleanup=()=>{
+        if(cleaned)return; cleaned=true;
         overlay?.remove();canvas?.remove();
         if(texture)gl?.deleteTexture(texture);
         if(renderer){gl?.deleteBuffer(renderer.buffer);gl?.deleteProgram(renderer.program);}
@@ -89,7 +96,14 @@ export async function startArNote(marker,profile,options={}) {
         if(session===owned)session=null;
         resetReadingSpace=null;starting=false;
     };
-    const finish=async action=>{returnAction=action;await owned?.end();};
+    let finishing=false;
+    const finish=async action=>{
+        if(finishing || session!==owned)return;
+        finishing=true;returnAction=action;
+        overlay?.querySelectorAll('button').forEach(button=>{button.disabled=true;});
+        try { await exitAr(); }
+        catch(error){finishing=false;returnAction=null;overlay?.querySelectorAll('button').forEach(button=>{button.disabled=false;});recordArFailure(error,'Exit');}
+    };
     const updateSelection=index=>{
         selected=index;
         if(texture)gl.deleteTexture(texture);

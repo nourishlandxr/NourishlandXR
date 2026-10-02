@@ -27,7 +27,9 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
-import { configureXRFrameRate, isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
+import { getSpatialVisualSettings } from '../services/spatialVisualSettings.js';
+import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
+import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
 import { renderDesktopLearningBook } from './desktopLearningBook.js';
@@ -76,24 +78,9 @@ let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=nul
 let demoKnowledgeScrollAt=0;
 let appRoot = null;
 let session = null;
-let demoRefreshRate=90, demoShowFps=false, demoRatePending=false;
-let observedRefreshRate=null;
-let fpsSession=null, fpsStarted=0, fpsFrames=0, measuredFps=null;
-function publishDemoPerformance(){
-    infoPanel?.setXRPerformance({rate:demoRefreshRate,showFps:demoShowFps,pending:demoRatePending,
-        supported:typeof session?.updateTargetFrameRate==='function'?Array.from(session.supportedFrameRates || []):[],
-        actual:session?.frameRate || null,label:`${measuredFps === null?'Measuring...':measuredFps+' FPS'} / ${session?.frameRate || '?'} Hz`});
-}
-async function handleDemoPerformanceAction(action){
-    if(action==='ShowFps'){demoShowFps=!demoShowFps;fpsStarted=0;fpsFrames=0;measuredFps=null;publishDemoPerformance();return;}
-    const activeSession=session;
-    if(!activeSession || demoRatePending)return;
-    const choices=['auto',...Array.from(activeSession.supportedFrameRates || []).filter(rate=>[72,90,120].includes(rate)).sort((a,b)=>a-b)];
-    const next=choices[(choices.indexOf(demoRefreshRate)+1)%choices.length];
-    demoRatePending=true;publishDemoPerformance();
-    try{const result=await configureXRFrameRate(activeSession,next);if(session===activeSession && result.requested!==null)demoRefreshRate=next==='auto'?next:result.requested;}
-    finally{demoRatePending=false;publishDemoPerformance();}
-}
+const demoPerformance=createXRPerformanceSettings({getSession:()=>session,publish:value=>infoPanel?.setXRPerformance(value)});
+function publishDemoPerformance(){demoPerformance.publish();}
+function handleDemoPerformanceAction(action){return demoPerformance.action(action);}
 let sessionMode = 'immersive-ar';
 let domOverlayEnabled = false;
 let canvas = null;
@@ -107,7 +94,7 @@ let hitMatrix = null;
 let latestControllerRay = null;
 let latestHandState = null;
 let latestTrackedHandStates = [];
-let demoHandMode = 'pointer';
+let demoHandMode = getSpatialVisualSettings().handMode;
 let spatialPointerInputSeen = false;
 let handPinchActive = false;
 let demoControllerDepthAt = 0;
@@ -271,7 +258,7 @@ let rainV2Canvas=null,rainV2LastPaint=0;
 let demoRainIntensity=1;
 let demoRainStyle='v2';
 let demoCloseStageWasInert=false;
-let demoCellOpacity=1;
+let demoCellOpacity=getSpatialVisualSettings().cellOpacity;
 let limHiddenCells=new Set();
 // Deeper LIM branches open only after their parent cell is explored. Keeping
 // these IDs separate from selection lets the visitor wander without a full
@@ -398,7 +385,7 @@ function clearSessionState() {
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-surface');
     closeDemoKnowledge(true);
-    demoPanelControlsCleanup();demoPanelControlsCleanup=()=>{};demoPanelActionSignature='';elementPanelActionSignature='';contextCellKey='';demoPimHover={record:null,path:''};demoOrientationStep=-1;demoControllerYSkipTracker?.reset();demoControllerYSkipTracker=null;limMeshVisible=true;demoCellOpacity=1;learningModule=null;learningModuleStep=0;activePimLimBridge=null;demoJourneyStage='why';demoRenderFailureReported=false;
+    demoPanelControlsCleanup();demoPanelControlsCleanup=()=>{};demoPanelActionSignature='';elementPanelActionSignature='';contextCellKey='';demoPimHover={record:null,path:''};demoOrientationStep=-1;demoControllerYSkipTracker?.reset();demoControllerYSkipTracker=null;limMeshVisible=true;demoCellOpacity=getSpatialVisualSettings().cellOpacity;learningModule=null;learningModuleStep=0;activePimLimBridge=null;demoJourneyStage='why';demoRenderFailureReported=false;
     arWelcomeRootMilestone=WELCOME_ROOT_MILESTONES.arrival;arWelcomeRootMilestoneStartedAt=0;arWelcomeRootsLastRefreshAt=-Infinity;
     limInteractionCleanup();limSessionCleanup();limInteractionCleanup=()=>{};limSessionCleanup=()=>{};limActivation=null;limActivationSessionSuppressUntil=0;
     releaseArScreenRotation();
@@ -412,7 +399,7 @@ function clearSessionState() {
     latestControllerRay = null;
     latestHandState = null;
     latestTrackedHandStates = [];
-    demoHandMode = 'pointer';
+    demoHandMode = getSpatialVisualSettings().handMode;
     spatialPointerInputSeen = false;
     groundYEstimate = null;
     marker = null;
@@ -1715,8 +1702,8 @@ function paintWelcomeLayer(now) {
         if(button){
             const pathwayCurrent=(node.limId || node.label)===currentPathwayCellId() && ['active','paused'].includes(limPathwayState.status);
             button.hidden=!limMeshVisible || node.opacity<=.01;
-            button.style.opacity=String(node.opacity*demoCellOpacity);
-            button.style.pointerEvents=demoCellOpacity>0 && node.opacity>=.85?'':'none';
+            button.style.opacity=String(node.opacity);
+            button.style.pointerEvents=node.opacity>=.85?'':'none';
             const linked=linkedIds.has(node.limId) && node.opacity>.55;
             button.style.setProperty('--lim-accent',linked?relationship.accent:(node.accent||'#719b62'));
             button.classList.toggle('is-lim-selected',selectedLimCell===node.key);
@@ -5387,7 +5374,7 @@ async function startImmersive() {
     if (!navigator.xr || !window.isSecureContext) return false;
     try {
         allowArScreenRotation();
-        const arSession = await requestImmersiveArSession(appRoot,{targetFrameRate:demoRefreshRate});
+        const arSession = await requestImmersiveArSession(appRoot,{targetFrameRate:getSpatialVisualSettings().refreshRate});
         session = arSession.session;
         demoControllerYSkipTracker = createControllerYSkipTracker(() => {
             if (skipCurrentDemoStep()) suppressSessionSelectUntil = performance.now() + 450;
@@ -5501,13 +5488,7 @@ async function startImmersive() {
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
             session.requestAnimationFrame(draw);
-            if(fpsSession!==session){fpsSession=session;fpsStarted=0;fpsFrames=0;measuredFps=null;}
-            if(observedRefreshRate!==session.frameRate){observedRefreshRate=session.frameRate;publishDemoPerformance();}
-            if(demoShowFps){
-                if(!fpsStarted)fpsStarted=_time;
-                else fpsFrames++;
-                if(_time-fpsStarted>=1000){measuredFps=Math.round(fpsFrames*1000/(_time-fpsStarted));fpsStarted=_time;fpsFrames=0;publishDemoPerformance();}
-            }
+            demoPerformance.tick(_time);
             introFrameToken = _time;
             let pose=null;
             try { pose=frame.getViewerPose(referenceSpace); }

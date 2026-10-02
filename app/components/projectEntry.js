@@ -1,15 +1,4 @@
-const DASHBOARD_ICON_PATHS = Object.freeze({
-    area: '<path d="M4 5.5 10 3l4 2 6-2v15.5L14 21l-4-2-6 2V5.5Z"/><path d="M10 3v16M14 5v16"/>',
-    webhub: '<path d="M4 19.5c2.4-2.2 5.1-2.7 8-1.5 2.9-1.2 5.6-.7 8 1.5"/><path d="M12 18V6"/><path d="M12 10c-3.4 0-5.7-1.5-6.8-4.5C8.6 5.1 10.9 6.6 12 10Zm0 2c3.4 0 5.7-1.5 6.8-4.5C15.4 7.1 13.1 8.6 12 12Z"/>',
-    settings: '<path d="m12 3 1.2 2.4 2.6.6 2.2-1.4 1.4 1.4-1.4 2.2.6 2.6L21 12l-2.4 1.2-.6 2.6 1.4 2.2-1.4 1.4-2.2-1.4-2.6.6L12 21l-1.2-2.4-2.6-.6L6 19.4l-1.4-1.4L6 15.8l-.6-2.6L3 12l2.4-1.2L6 8.2 4.6 6l1.4-1.4 2.2 1.4 2.6-.6L12 3Z"/><circle cx="12" cy="12" r="3"/>',
-    adjustments: '<path d="M4 6h16M4 12h16M4 18h16"/><circle cx="8" cy="6" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>',
-    help: '<path d="M5 4.5A2.5 2.5 0 0 1 7.5 2H20v17H7.5A2.5 2.5 0 0 0 5 21.5v-17Z"/><path d="M5 4.5A2.5 2.5 0 0 0 2.5 7v12A2.5 2.5 0 0 1 5 21.5M9 7h7M9 11h7"/>',
-    print: '<path d="M6 9V3h12v6M6 17H4a2 2 0 0 1-2-2v-4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v4a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v7H6z"/><path d="M18 12h.01"/>'
-});
-
-function dashboardIcon(name) {
-    return `<svg class="dashboard-inline-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" focusable="false">${DASHBOARD_ICON_PATHS[name] || DASHBOARD_ICON_PATHS.area}</svg>`;
-}
+import { dashboardIcon } from '../services/workspaceIcons.js';
 
 function actionCard(item, className = '') {
     const icon = item.icon ? `<span class="location-tool-icon" aria-hidden="true">${dashboardIcon(item.icon)}</span>` : '';

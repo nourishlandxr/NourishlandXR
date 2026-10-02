@@ -1,9 +1,9 @@
-import {ORB_MODELS,currentInfoOpacity,currentOrbModel,setSpatialVisualSettings} from './spatialVisualSettings.js';
+import {ORB_MODELS,getSpatialVisualSettings,currentInfoOpacity,currentOrbModel,setSpatialVisualSettings} from './spatialVisualSettings.js';
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 import { handTrackingState } from './xrPointer.js';
 
-export const INFO_HELP = `Aim at an object to highlight it. Hold a plant cell to read its details here. Select a Plant Orb to explore information connected to that plant.
+export const INFO_HELP = `Aim at an object to highlight it. Press a plant cell once to read or expand its information here. Select a Plant Orb to explore information connected to that plant.
 
 Build this in Project Creator
 Areas organise real places. Totems welcome and orient visitors. Plant Orbs connect PIMO to actual plants, while Notes preserve observations, instructions and provenance. Area links create routes between physical locations. Project maps can use plans, aerial images, hand-drawn layouts or mapped positions, and published information can be updated as a site changes.
@@ -145,7 +145,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({headset=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,ambientRain=1,ambientRainStyle='v2',performanceSettings=null,infoOpacity=.38,orbModel='improved'}={}){
+export function panelSettingsControls({headset=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,ambientRain=1,ambientRainStyle='v2',performanceSettings=null,infoOpacity=.38,orbModel='improved',rainEnabled=true}={}){
     const row=index=>90+index*54,shift=headset?1:0;
     return [
         ...(headset?[{action:'HandMode',label:handVisualMode==='pointer'?'Pointer':'Outline',ariaLabel:'Switch hand tracking visual mode',settingGroup:'hands',settingLabel:'Hands',x:756,y:row(0),width:188,height:42}]:[]),
@@ -163,7 +163,7 @@ export function panelSettingsControls({headset=false,handVisualMode='pointer',sp
             {action:'ShowFps',label:performanceSettings.showFps?'On':'Off',ariaLabel:'Show measured XR FPS',settingGroup:'fps',settingLabel:'Show FPS',x:756,y:row(shift+9),width:188,height:42}
         ]:[]),
         {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+7),width:188,height:42}
-    ].map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
+    ].filter(item=>rainEnabled || !['RainIntensity','RainStyle'].includes(item.action)).map(item=>!rainEnabled && item.y>=row(shift+7)?{...item,y:item.y-108}:item).map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
 }
 
 // The headset uses the same actions as the screen panel, but lays them out in
@@ -197,7 +197,7 @@ function controlDescription(item={}){
         Hide:'Collapse the Control panel. Reopen it from its small tab.',
         Restore:'Restore the Control panel.',
         Help:'Open the available help and tutorial options.',
-        Settings:'Adjust text size, panel scale, rain, and recentering.',
+        Settings:'Adjust text size, glass opacity, Orb model, panel scale and device settings.',
         Previous:'Show the previous page.',
         Next:'Show the next page.',
         ToggleMedia:'Show or hide the selected plant image.',
@@ -215,10 +215,10 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = 1, handMode='pointer', panelHints = [], onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel();
     const HEAVY_RAIN_INTENSITY=1.65;
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=false,settingsOpen=false,spatialScale=1,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
     let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let visibleMedia=null;
     const MEDIA_FADE_MS=650;
@@ -299,23 +299,23 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
-        if(action==='TextDown'){largeText=false;page=0;}
-        if(action==='TextUp'){largeText=true;page=0;}
-        if(action==='HandMode'){handVisualMode=handVisualMode==='pointer'?'outline':'pointer';onHandMode(handVisualMode);}
+        if(action==='TextDown'){largeText=false;page=0;setSpatialVisualSettings({largeText});}
+        if(action==='TextUp'){largeText=true;page=0;setSpatialVisualSettings({largeText});}
+        if(action==='HandMode'){handVisualMode=handVisualMode==='pointer'?'outline':'pointer';setSpatialVisualSettings({handMode:handVisualMode});onHandMode(handVisualMode);}
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
-        if(action==='ScaleDown')spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);
-        if(action==='ScaleUp')spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);
+        if(action==='ScaleDown'){spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);setSpatialVisualSettings({spatialScale});}
+        if(action==='ScaleUp'){spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);setSpatialVisualSettings({spatialScale});}
         if(action==='RainIntensity'){ambientRain=ambientRain>=HEAVY_RAIN_INTENSITY?0:ambientRain>=1?HEAVY_RAIN_INTENSITY:ambientRain<=0?.45:1;onRainIntensity(ambientRain);}
         if(action==='RainStyle'){ambientRainStyle=ambientRainStyle==='v1'?'v2':'v1';onRainStyle(ambientRainStyle);}
         if(action==='InfoOpacity'){infoOpacity=infoOpacity>=1?0:Math.min(1,Math.round((infoOpacity+.1)*10)/10);setSpatialVisualSettings({infoOpacity});onInfoOpacity(infoOpacity);}
         if(action==='OrbModel'){const models=Object.keys(ORB_MODELS);orbModel=models[(models.indexOf(orbModel)+1)%models.length];setSpatialVisualSettings({orbModel});onOrbModel(orbModel);}
-        if(action==='CellOpacity'){meshCellOpacity=meshCellOpacity>=1?0:Math.round((meshCellOpacity+.1)*10)/10;onCellOpacity(meshCellOpacity);}
+        if(action==='CellOpacity'){meshCellOpacity=meshCellOpacity>=1?0:Math.round((meshCellOpacity+.1)*10)/10;setSpatialVisualSettings({cellOpacity:meshCellOpacity});onCellOpacity(meshCellOpacity);}
         if(action.startsWith('Path')){onPathwayAction(action);return;}
         if(action.startsWith('Module:')){onModuleAction(action.slice(7));return;}
         if(action.startsWith('Utility:')){onUtilityAction(action.slice(8));return;}
         render();
     }
-    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle,performanceSettings,infoOpacity,orbModel});
+    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle,performanceSettings,infoOpacity,orbModel,rainEnabled});
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
@@ -355,7 +355,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             opacityRow.querySelector('button')?.remove();
             const slider=document.createElement('input');slider.type='range';slider.min='0';slider.max='100';slider.step='1';slider.value=String(Math.round(meshCellOpacity*100));slider.setAttribute('aria-label','Cell glass opacity');
             const value=document.createElement('output');value.textContent=slider.value+'%';
-            slider.addEventListener('input',()=>{meshCellOpacity=Number(slider.value)/100;value.textContent=slider.value+'%';onCellOpacity(meshCellOpacity);});
+            slider.addEventListener('input',()=>{meshCellOpacity=Number(slider.value)/100;value.textContent=slider.value+'%';setSpatialVisualSettings({cellOpacity:meshCellOpacity});onCellOpacity(meshCellOpacity);});
             opacityRow.querySelector('.nlxr-setting-options').append(slider,value);
         }
         settingsElement.scrollTop=scrollTop;
@@ -587,7 +587,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(!pager && !confirmation){pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');element.querySelector('.nlxr-tools-dock')?.prepend(pager);}
         if(pager)pager.replaceChildren(...controls().filter(item=>item.kind==='pager').map(makeButton));
         let history=element.querySelector('.nlxr-demo-history');
-        if(!history && !confirmation){history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');element.querySelector('.nlxr-control-tabs')?.append(history);}
+        if(!history && !confirmation){history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Experience history');element.querySelector('.nlxr-control-tabs')?.append(history);}
         if(history)history.replaceChildren(...controls().filter(item=>item.kind==='history').map(makeButton));
         let guides=content.querySelector('.nlxr-guide-actions');
         if(tab==='Help' && !guides){guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');content.append(guides);}
@@ -675,7 +675,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>['tab','menu'].includes(item.kind) && item.action!=='Hide').forEach(item=>tabs.append(makeButton(item)));
-            if(!confirmation){const history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');controls().filter(item=>item.kind==='history').forEach(item=>history.append(makeButton(item)));if(history.childElementCount)tabs.append(history);}
+            if(!confirmation){const history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Experience history');controls().filter(item=>item.kind==='history').forEach(item=>history.append(makeButton(item)));if(history.childElementCount)tabs.append(history);}
             element.append(tabs);
             if(pathwayContext){
                 const pathway=document.createElement('section');pathway.className='nlxr-pathway-context';pathway.setAttribute('aria-live','polite');

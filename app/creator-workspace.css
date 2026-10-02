@@ -1,0 +1,115 @@
+/* Calm authoring surfaces. Keep the botanical artwork outside reading areas.
+   Tune this palette and the two artwork opacities here. No XR scene effects. */
+#app :is(.creator-project-menu,.nlxr-db-v2,.project-entry,.area-dashboard,.creator-workspace) {
+    --workspace-ink: #243d31;
+    --workspace-muted: #66756b;
+    --workspace-line: #d8e1d6;
+    --workspace-paper: #fcfcf7;
+    --workspace-sage: #edf2e8;
+    --workspace-art-strength: .18;
+    color: var(--workspace-ink);
+    font-family: 'Manrope', system-ui, sans-serif;
+}
+#app .dashboard-inline-icon { width:24px; height:24px; flex:none; vertical-align:middle; }
+#app :is(.workspace-art-header,.creator-project-menu > .page-header,.creator-workspace > .page-header,.project-entry .location-dashboard-header) {
+    position:relative; isolation:isolate; overflow:hidden; padding:24px 28px 26px;
+    border:1px solid var(--workspace-line); border-radius:22px;
+    background:var(--workspace-paper); box-shadow:0 6px 24px #243d3106;
+    text-align:left;
+}
+#app :is(.workspace-art-header,.creator-project-menu > .page-header,.creator-workspace > .page-header,.project-entry .location-dashboard-header)::before {
+    content:''; position:absolute; z-index:-1; inset:0; pointer-events:none;
+    background:linear-gradient(90deg,var(--workspace-paper) 42%,transparent 100%),url('./assets/botanical-cell-mosaic.jpg') right center/680px auto no-repeat;
+    opacity:var(--workspace-art-strength,.18);
+}
+#app :is(.workspace-art-header,.creator-project-menu > .page-header,.creator-workspace > .page-header)::after {
+    content:''; position:absolute; inset:auto 0 0; height:5px;
+    background:url('./assets/botanical-cell-mosaic.jpg') center/620px auto;
+    opacity:.6; pointer-events:none;
+}
+#app .workspace-header-summary { margin:8px 0 0; color:var(--workspace-muted); font-size:.9rem; }
+#app .nlxr-db-v2 .nlxr-db-v2-header { display:block; }
+#app .nlxr-db-v2 :is(.nlxr-db-v2-ar-strip,.nlxr-db-v2-ar-button,.nlxr-db-v2-mode-nav) { width:100%; max-width:none; }
+#app .creator-workspace > .panel { border:1px solid var(--workspace-line); border-radius:18px; padding:22px; background:var(--workspace-paper); box-shadow:0 4px 18px #243d3104; }
+#app .creator-workspace .workspace-section-row { display:grid; grid-template-columns:48px minmax(0,1fr) auto; gap:16px; align-items:center; padding-block:18px; }
+#app .creator-workspace .workspace-section-row p { margin:6px 0 0; color:var(--workspace-muted); }
+#app .nlxr-db-v2 .nlxr-db-v2-header-copy { align-items:flex-start; justify-items:start; }
+#app :is(.nlxr-db-v2,.area-dashboard,.creator-project-menu) h1 { font-family:'Fraunces',Georgia,serif; font-weight:500; letter-spacing:-.035em; line-height:1.15; }
+#app .nlxr-db-v2 .nlxr-db-v2-mode-nav { display:flex; gap:6px; padding:6px; margin-block:20px; border:1px solid var(--workspace-line); border-radius:15px; background:var(--workspace-paper); }
+#app .nlxr-db-v2 .nlxr-db-v2-mode-nav button { flex:1; display:flex; align-items:center; justify-content:center; gap:9px; min-height:50px; color:var(--workspace-muted); border-radius:10px; background:transparent; border:0; font-size:.95rem; }
+#app .nlxr-db-v2 .nlxr-db-v2-mode-nav button.is-active { color:var(--workspace-ink); background:var(--workspace-sage); box-shadow:inset 0 0 0 1px #c9d7c6; }
+#app .nlxr-db-v2 :is(.nlxr-db-v2-card,.nlxr-db-v2-status-board,.nlxr-db-v2-map-controls) { border:1px solid var(--workspace-line); background:var(--workspace-paper); border-radius:20px; padding:22px; box-shadow:0 4px 18px #243d3104; }
+#app .nlxr-db-v2 .nlxr-db-v2-ar-button { border:1px solid #c4d3c4; border-radius:17px; padding:18px 22px; background:linear-gradient(110deg,#edf3e9,#f8f8ef); color:var(--workspace-ink); box-shadow:none; }
+#app .nlxr-db-v2 :is(.nlxr-db-v2-ar-icon,.nlxr-db-v2-section-icon,.nlxr-db-v2-area-icon,.nlxr-db-v2-activity-icon) { display:inline-flex; align-items:center; justify-content:center; color:#486c53; background:var(--workspace-sage); border:1px solid #d4dfcf; border-radius:12px; width:42px; height:42px; flex:none; }
+#app .nlxr-db-v2 .nlxr-db-v2-card-heading > div { display:flex; gap:12px; align-items:center; }
+#app .nlxr-db-v2 .nlxr-db-v2-area-row { display:grid; grid-template-columns:42px minmax(0,1fr) auto; gap:14px; min-height:80px; padding:16px 12px; border:0; border-bottom:1px solid var(--workspace-line); border-radius:0; background:transparent; text-align:left; }
+#app .nlxr-db-v2 .nlxr-db-v2-area-row:last-child { border-bottom:0; }
+#app .nlxr-db-v2 .nlxr-db-v2-area-row strong { font-size:1rem; color:var(--workspace-ink); }
+#app .nlxr-db-v2 .nlxr-db-v2-area-row small { display:block; margin-top:5px; color:var(--workspace-muted); line-height:1.5; }
+#app .nlxr-db-v2 .nlxr-db-v2-area-state { color:var(--workspace-muted); font-size:.8rem; }
+#app .nlxr-db-v2 .nlxr-db-v2-status-main { gap:10px; padding-top:14px; }
+#app .nlxr-db-v2 .nlxr-db-v2-status-item { padding:18px 8px; border:1px solid var(--workspace-line); background:var(--workspace-sage); border-radius:14px; }
+#app .nlxr-db-v2 .nlxr-db-v2-status-item strong { color:var(--workspace-ink); font-family:'Fraunces',Georgia,serif; font-weight:500; }
+#app .nlxr-db-v2 .nlxr-db-v2-tools-grid { gap:10px; margin-top:20px; }
+#app .nlxr-db-v2 .nlxr-db-v2-tools-grid button { min-height:68px; padding:14px; gap:12px; background:var(--workspace-sage); border-color:var(--workspace-line); border-radius:13px; color:var(--workspace-ink); }
+#app .nlxr-db-v2 .nlxr-db-v2-tools-grid strong { font-size:.87rem; }
+#app .nlxr-db-v2 .nlxr-db-v2-tools-grid span { display:flex; color:#63764c; }
+#app .creator-project-menu .project-selection-list { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+#app .creator-project-menu .project-selection-row { display:grid; grid-template-columns:48px minmax(0,1fr) 24px; gap:16px; align-items:center; text-align:left; padding:22px; min-height:110px; border:1px solid var(--workspace-line); background:var(--workspace-paper); border-radius:18px; }
+#app .creator-project-menu .project-selection-row::after { content:none; }
+#app .workspace-place-icon { display:grid; place-items:center; width:48px; height:48px; border-radius:14px; background:var(--workspace-sage); color:#486c53; }
+#app .workspace-place-copy { min-width:0; }
+#app .workspace-place-copy strong { display:block; font-size:1rem; }
+#app .workspace-place-copy small { display:block; margin-top:8px; font-size:.78rem; font-weight:400; color:var(--workspace-muted); line-height:1.5; }
+#app .workspace-place-arrow { color:#7c886c; }
+#app .creator-project-menu .create-project-action { min-height:100px; border:1px dashed #b9cbb4; background:var(--workspace-sage); color:var(--workspace-ink); border-radius:18px; }
+#app .area-dashboard .area-dashboard-title-row { display:flex; justify-content:space-between; gap:24px; align-items:center; }
+#app .area-dashboard .area-go-ar-compact { display:flex; align-items:center; gap:10px; flex:none; width:auto; min-width:144px; min-height:52px; padding:12px 18px; border:1px solid #b3c8b7; border-radius:14px; background:#e9f0e6; color:var(--workspace-ink); font-size:.95rem; font-weight:600; box-shadow:none; }
+/* Replace the old global 104px opaque AR square only in web authoring pages. */
+#app .creator-workspace button:is(.global-ar-action,.ar-square-action,.dashboard-open-ar,.area-go-ar-compact,.plant-profile-ar-button) {
+    display:inline-flex !important; align-items:center; justify-content:center; gap:10px;
+    flex:0 0 auto; width:auto !important; min-width:144px !important; max-width:100%;
+    height:auto !important; min-height:52px !important; max-height:none;
+    padding:12px 18px !important; border:1px solid #b3c8b7 !important; border-radius:14px !important;
+    background:#e9f0e6 !important; color:var(--workspace-ink) !important;
+    font:600 .95rem/1.4 'Manrope',system-ui,sans-serif; letter-spacing:0; box-shadow:none;
+}
+#app .creator-workspace button:is(.global-ar-action,.ar-square-action,.dashboard-open-ar,.area-go-ar-compact,.plant-profile-ar-button):hover { background:#dfead9 !important; }
+#app .creator-workspace button:is(.global-ar-action,.ar-square-action,.dashboard-open-ar,.area-go-ar-compact,.plant-profile-ar-button) > span { color:inherit !important; font:inherit; }
+#app .area-dashboard :is(.area-encyclopedia-card,.area-totem-section,.area-content-section,.home-template-card) { margin-top:22px; padding:24px; border:1px solid var(--workspace-line); border-radius:20px; background:var(--workspace-paper); box-shadow:none; }
+#app .area-dashboard .area-vital-grid > div { padding:16px; background:var(--workspace-sage); border:1px solid var(--workspace-line); border-radius:13px; }
+#app .area-dashboard .area-vital-grid strong { font-size:1rem; line-height:1.4; overflow-wrap:anywhere; }
+#app .area-dashboard .area-content-grid { gap:14px; padding-top:16px; }
+#app .area-dashboard .area-content-card { padding:18px; gap:14px; min-height:110px; background:var(--workspace-paper); border:1px solid var(--workspace-line); border-left:3px solid var(--area-entry-accent); border-radius:14px; box-shadow:none; }
+#app .area-dashboard .area-entry-icon { border-radius:14px; }
+#app .area-dashboard .area-entry-copy strong { font-size:1rem; line-height:1.4; }
+#app .area-dashboard .area-entry-copy :is(small,.placement-status) { line-height:1.5; }
+#app .area-dashboard .project-breadcrumb { margin-top:18px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+#app .area-dashboard .project-breadcrumb button { padding:6px 10px; background:#edf2e8; color:var(--workspace-ink); border-radius:8px; }
+#app :is(.creator-project-menu,.nlxr-db-v2,.area-dashboard,.creator-workspace) :is(button,[role=button]):focus-visible { outline:3px solid #819565; outline-offset:4px; }
+#app :is(.creator-project-menu,.nlxr-db-v2,.area-dashboard) :is(.project-selection-row,.nlxr-db-v2-area-row,.nlxr-db-v2-tools-grid button,.area-content-card,.nlxr-db-v2-ar-button):hover { background:#edf3e8; border-color:#a9bba5; }
+.workspace-ar-notice { margin:16px 0; padding:16px 18px; border:1px solid #d1c19f; border-radius:14px; background:#f8f2e5; color:#56472e; line-height:1.5; }
+.workspace-ar-notice[hidden] { display:none; }
+.creator-ar-spatial-web-header [data-spatial-web-close] { min-width:128px; font-size:14px; padding:12px 16px; }
+@media(max-width:640px) {
+    #app .creator-project-menu .project-selection-list { grid-template-columns:1fr; }
+    #app :is(.workspace-art-header,.creator-project-menu > .page-header,.creator-workspace > .page-header) { padding:22px 18px; }
+    #app .nlxr-db-v2 :is(.nlxr-db-v2-card,.nlxr-db-v2-status-board,.nlxr-db-v2-map-controls) { padding:18px; }
+    #app .nlxr-db-v2 .nlxr-db-v2-area-row { gap:10px; padding-inline:0; }
+    #app .nlxr-db-v2 .nlxr-db-v2-mode-nav button { gap:6px; font-size:.82rem; }
+    #app .nlxr-db-v2 .nlxr-db-v2-mode-nav .dashboard-inline-icon { width:20px; height:20px; }
+    #app .area-dashboard .area-dashboard-title-row { flex-direction:column; align-items:flex-start; gap:16px; }
+    #app .area-dashboard .area-profile-hero { grid-template-columns:1fr; gap:14px; padding:14px; }
+    #app .area-dashboard .area-profile-visual { min-height:96px; }
+    #app .area-dashboard .area-vital-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #app .area-dashboard .area-vital-grid > div { padding:12px; min-width:0; }
+    #app .area-dashboard .area-inline-edit { position:static; margin-top:6px; width:auto; }
+    #app .area-dashboard .area-vital-setting { grid-template-columns:1fr; }
+    #app .area-dashboard .area-vital-setting, #app .area-dashboard .area-vital-grid > div:last-child { grid-column:1 / -1; }
+    #app .area-dashboard .area-vital-setting > :is(small,strong,button) { grid-column:1; }
+    #app .area-dashboard .area-vital-grid strong { font-size:.88rem; }
+    #app .area-dashboard :is(.area-encyclopedia-card,.area-totem-section,.area-content-section,.home-template-card) { padding:18px; }
+}
+@media(prefers-reduced-motion:reduce) {
+    #app :is(.creator-project-menu,.nlxr-db-v2,.area-dashboard,.creator-workspace) * { scroll-behavior:auto; transition:none; animation:none; }
+}

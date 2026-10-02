@@ -455,17 +455,17 @@ test('Area AR actions fall back to the Area dashboard when WebXR cannot start', 
         dashboardSource.indexOf('export async function renderProjectAreaLocationForm')
     );
     assert.match(helperSource, /started = await window\.startArMode\?\.\(projectId, areaId, checkpointId, initialPlacementType, '', 'dashboard'\)/);
-    assert.match(helperSource, /if \(started\) return true;\s*await renderProjectAreaDashboard\(app, encoded\(projectId\), encoded\(areaId\)\);[\s\S]*projectAreaArStatus[\s\S]*AR could not start\. If camera access was denied[\s\S]*return false;/);
+    assert.match(helperSource, /if \(started\) return true;[\s\S]*currentArea\?\.dataset\.projectId[\s\S]*await renderProjectAreaDashboard\(app, encoded\(projectId\), encoded\(areaId\)\);[\s\S]*projectAreaArStatus[\s\S]*AR could not start\. If camera access was denied[\s\S]*return false;/);
     assert.match(mainSource, /window\.openProjectAreaAr = \(projectId, areaId, checkpointId = '', initialPlacementType = ''\) => openProjectAreaAr\(app, projectId, areaId, checkpointId, initialPlacementType\)/);
     assert.match(dashboardSource, /action: `window\.renderProjectAreaForm/);
     assert.match(dashboardSource, /action: `window\.renderLocationFieldMarker/);
-    assert.match(areaDashboardSource, /<button class="global-ar-action area-go-ar-compact"[^>]*>AR<\/button>/);
+    assert.match(areaDashboardSource, /<button class="global-ar-action area-go-ar-compact"[^>]*>[\s\S]*?<span>Open in AR<\/span><\/button>/);
     assert.match(areaDashboardSource, /projectBreadcrumbMarkup\(context\.project, context\.area\)/);
     assert.match(areaDashboardSource, /Area dashboard/);
     assert.match(areaDashboardSource, /const canonicalAreaEntries = areaEntries\.filter/);
     assert.match(areaDashboardSource, /<section class="area-totem-section"/);
     assert.match(areaDashboardSource, /Markers in this Area/);
-    assert.match(dashboardSource, /Home \$\{project\.name\}/);
+    assert.match(dashboardSource, /const projectLabel = project\.name/);
     assert.match(styles, /creator-ar-location-note-board\.creator-ar-totem-balloon[\s\S]*width:min\(58vw,320px\)[\s\S]*border-radius:28px 28px 28px 12px !important/);
     assert.match(styles, /\.area-go-ar-compact[\s\S]*width:58px[\s\S]*height:58px/);
     assert.doesNotMatch(styles, /BONUS PATH/);

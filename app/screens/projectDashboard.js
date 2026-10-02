@@ -1,4 +1,5 @@
-﻿import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
+import { dashboardIcon } from '../services/workspaceIcons.js';
+import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
 import { languageOptionsMarkup, setNxrLanguage } from '../services/i18n.js';
 import { renderProjectEntry } from '../components/projectEntry.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
@@ -81,20 +82,20 @@ function areaEntryPresentation(markerType, plantProfile = {}) {
         const layer = String(plantProfile.layer || '').trim();
         return {
             className: 'is-plant',
-            icon: '🌱',
+            icon: dashboardIcon('plant'),
             accent: PLANT_LAYER_COLORS[plantLayerKey(layer)] || PLANT_LAYER_COLORS.default,
             kind: 'Plant'
         };
     }
-    if (markerType === 'note') return { className: 'is-note', icon: '✎', accent: '#b47560', kind: 'Note · Information record' };
-    if (markerType === 'area_checkpoint') return { className: 'is-totem is-totem-entry', icon: '⌖', accent: '#4b7e77', kind: 'Totem Marker · Area anchor' };
-    if (markerType === 'intro_checkpoint') return { className: 'is-checkpoint is-trail-entrance', icon: '⚑', accent: '#8060a4', kind: 'Trail Entrance · Guided start' };
-    if (markerType === 'sub_checkpoint') return { className: 'is-checkpoint', icon: '⚑', accent: '#5d769b', kind: 'Checkpoint · Spatial record' };
+    if (markerType === 'note') return { className: 'is-note', icon: dashboardIcon('note'), accent: '#b47560', kind: 'Note · Information record' };
+    if (markerType === 'area_checkpoint') return { className: 'is-totem is-totem-entry', icon: dashboardIcon('totem'), accent: '#4b7e77', kind: 'Totem Marker · Area anchor' };
+    if (markerType === 'intro_checkpoint') return { className: 'is-checkpoint is-trail-entrance', icon: dashboardIcon('pin'), accent: '#8060a4', kind: 'Trail Entrance · Guided start' };
+    if (markerType === 'sub_checkpoint') return { className: 'is-checkpoint', icon: dashboardIcon('pin'), accent: '#5d769b', kind: 'Checkpoint · Spatial record' };
     return { className: 'is-record', icon: markerIcon(markerType), accent: '#68765d', kind: markerTypeLabel(markerType) };
 }
 const displayAreaName = area => isDefaultHomeArea(area) ? DEFAULT_HOME_AREA_NAME : String(area?.name || area || DEFAULT_HOME_AREA_NAME);
 function projectBreadcrumbMarkup(project, area, currentLabel = '') {
-    const projectLabel = `Home ${project.name}`;
+    const projectLabel = project.name;
     const areaLabel = displayAreaName(area);
     const projectAction = `window.renderProjectDashboard('${encoded(project.id)}')`;
     const areaAction = isDefaultHomeArea(area)
@@ -737,8 +738,7 @@ export async function advanceDashboardTutorial(app, encodedProjectId, currentSte
 export async function openCreatorArMode(app, encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     recordTutorialEvent(projectId, 'ar_mode_introduced');
-    const started = await window.startArMode?.(encoded(projectId));
-    if (!started) await renderArAreaPicker(app, encoded(projectId));
+    return window.openProjectArMode?.(encoded(projectId));
 }
 
 export async function openCheckpointQuickSetup(app, encodedProjectId) {
@@ -1222,9 +1222,9 @@ export async function renderPlatformHome(app) {
     const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
     const cards = projects.map(project => {
         const name = PROJECT_NAMES[project.id] || project.name;
-        return `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}', '${encoded(name)}')"><strong>${escapeHtml(name)}</strong></button>`;
+        return `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}', '${encoded(name)}')"><span class="workspace-place-icon" aria-hidden="true">${dashboardIcon('area')}</span><span class="workspace-place-copy"><strong>${escapeHtml(name)}</strong><small>Plants, Areas and connected knowledge</small></span><span class="workspace-place-arrow" aria-hidden="true">${dashboardIcon('arrow')}</span></button>`;
     }).join('');
-    app.innerHTML = `<div class="screen app-surface app-surface-selection platform-home creator-project-menu">
+    app.innerHTML = `<div class="screen app-surface app-surface-selection platform-home creator-project-menu creator-workspace">
         <div class="page-header">
             <button class="ghost" onclick="window.renderLaunchScreen()">Back</button>
             <p class="welcome-label">PROJECT SELECTION</p>
@@ -1446,11 +1446,11 @@ export async function renderProjectDashboard(app, encodedProjectId) {
             starterActions: nonPlantMode ? [
                 { icon: '◆', label: 'Add Dynamic Marker', description: 'Identify an object, asset or exhibit.', action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'sub_checkpoint', 'without-ar', true)` },
                 { icon: '▧', label: 'Create first Location', description: 'Organise a room, shelf, zone or display.', action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')` },
-                { icon: '⌖', label: 'Create first Totem', description: 'Give the Location an information centre.', action: firstArea ? `window.renderAreaCheckpointForm('${encoded(project.id)}', '${encoded(firstArea.id)}')` : `window.renderProjectAreaForm('${encoded(project.id)}', 'tutorial-totem')` },
-                { icon: '✎', label: 'Add Information Note', description: 'Attach instructions, provenance or a story.', action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)` }
+                { icon: dashboardIcon('totem'), label: 'Create first Totem', description: 'Give the Location an information centre.', action: firstArea ? `window.renderAreaCheckpointForm('${encoded(project.id)}', '${encoded(firstArea.id)}')` : `window.renderProjectAreaForm('${encoded(project.id)}', 'tutorial-totem')` },
+                { icon: dashboardIcon('note'), label: 'Add Information Note', description: 'Attach instructions, provenance or a story.', action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'note', 'without-ar', true)` }
             ] : [
                 {
-                    icon: '🌱',
+                    icon: dashboardIcon('plant'),
                     label: 'Add first Plant',
                     description: 'Identify one living thing and give it a Marker.',
                     action: `window.renderLocationFieldMarker('${encoded(project.id)}', 'plant', 'without-ar', true)`
@@ -1462,7 +1462,7 @@ export async function renderProjectDashboard(app, encodedProjectId) {
                     action: `window.renderProjectAreaForm('${encoded(project.id)}', 'dashboard')`
                 },
                 {
-                    icon: '⌖',
+                    icon: dashboardIcon('totem'),
                     label: 'Create first Totem',
                     description: 'Give an Area a welcoming information centre.',
                     action: firstArea
@@ -1824,7 +1824,10 @@ export async function openProjectAreaAr(app, encodedProjectId, encodedAreaId, en
         console.error('[Area AR]', error);
     }
     if (started) return true;
-    await renderProjectAreaDashboard(app, encoded(projectId), encoded(areaId));
+    const currentArea = app.querySelector('.area-dashboard');
+    if (currentArea?.dataset.projectId !== encoded(projectId) || currentArea?.dataset.areaId !== encoded(areaId)) {
+        await renderProjectAreaDashboard(app, encoded(projectId), encoded(areaId));
+    }
     const status = document.getElementById('projectAreaArStatus');
     if (status) status.textContent = 'AR could not start. If camera access was denied, allow it in your browser or site settings, then try again on site.';
     return false;
@@ -1935,9 +1938,9 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 ${totemBubbles.length ? `<div class="area-totem-bubbles"><strong>Additional information</strong><div>${totemBubbles.map((bubble, index) => `<span><b>${index + 1}</b>${escapeHtml(bubble)}</span>`).join('')}</div></div>` : ''}
                 ${linkedTotems.length ? `<div class="area-totem-links"><strong>Linked Totems</strong>${linkedTotems.map(link => `<span>${escapeHtml(context.area.name)} → ${escapeHtml(link.area.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</div>` : '<p class="area-totem-empty">No linked Area Totem yet. Add another Area, then connect them from the Totem editor.</p>'}` : '<p class="area-totem-empty">This Area has no Totem yet. A Totem can carry welcome text, information balloons and links to neighbouring Areas.</p>'}
         </section>`;
-        app.innerHTML = `<div class="screen area-dashboard database-record-page">
-            <header class="page-header area-dashboard-header">
-                <div class="area-dashboard-title-row"><div><p class="welcome-label">Area dashboard</p><h1>${escapeHtml(context.area.name)}</h1></div><button class="global-ar-action area-go-ar-compact" type="button" aria-label="Open ${escapeHtml(context.area.name)} in AR" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">AR</button></div>
+        app.innerHTML = `<div class="screen area-dashboard database-record-page" data-project-id="${encoded(context.project.id)}" data-area-id="${encoded(context.area.id)}">
+            <header class="page-header area-dashboard-header workspace-art-header">
+                <div class="area-dashboard-title-row"><div><p class="welcome-label">Area dashboard</p><h1>${escapeHtml(context.area.name)}</h1></div><button class="global-ar-action area-go-ar-compact" type="button" aria-label="Open ${escapeHtml(context.area.name)} in AR" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">${dashboardIcon('ar')}<span>Open in AR</span></button></div>
                 ${projectBreadcrumbMarkup(context.project, context.area)}
             </header>
             ${options.saveNotice ? `<p class="area-save-notice" role="status">${escapeHtml(options.saveNotice)}</p>` : ''}
