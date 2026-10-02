@@ -20,13 +20,13 @@ import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatial
 import { beePointerAvoidance, demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from '../services/spatialObjectVisuals.js';
-import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
+import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
-import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
+import { configureXRFrameRate, isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
 import { renderDesktopLearningBook } from './desktopLearningBook.js';
@@ -75,6 +75,24 @@ let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=nul
 let demoKnowledgeScrollAt=0;
 let appRoot = null;
 let session = null;
+let demoRefreshRate=90, demoShowFps=false, demoRatePending=false;
+let observedRefreshRate=null;
+let fpsSession=null, fpsStarted=0, fpsFrames=0, measuredFps=null;
+function publishDemoPerformance(){
+    infoPanel?.setXRPerformance({rate:demoRefreshRate,showFps:demoShowFps,pending:demoRatePending,
+        supported:typeof session?.updateTargetFrameRate==='function'?Array.from(session.supportedFrameRates || []):[],
+        actual:session?.frameRate || null,label:`${measuredFps === null?'Measuring...':measuredFps+' FPS'} / ${session?.frameRate || '?'} Hz`});
+}
+async function handleDemoPerformanceAction(action){
+    if(action==='ShowFps'){demoShowFps=!demoShowFps;fpsStarted=0;fpsFrames=0;measuredFps=null;publishDemoPerformance();return;}
+    const activeSession=session;
+    if(!activeSession || demoRatePending)return;
+    const choices=['auto',...Array.from(activeSession.supportedFrameRates || []).filter(rate=>[72,90,120].includes(rate)).sort((a,b)=>a-b)];
+    const next=choices[(choices.indexOf(demoRefreshRate)+1)%choices.length];
+    demoRatePending=true;publishDemoPerformance();
+    try{const result=await configureXRFrameRate(activeSession,next);if(session===activeSession && result.requested!==null)demoRefreshRate=next==='auto'?next:result.requested;}
+    finally{demoRatePending=false;publishDemoPerformance();}
+}
 let sessionMode = 'immersive-ar';
 let domOverlayEnabled = false;
 let canvas = null;
@@ -3951,7 +3969,8 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onPerformanceAction:handleDemoPerformanceAction,onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
@@ -4552,17 +4571,17 @@ function drawIntroNoteContent(ctx) {
     ctx.restore();
 }
 
-function createIntroControlTexture(labelText, texture = null) {
+function createIntroControlTexture(labelText, texture = null, aimed=false) {
     const label = document.createElement('canvas');
     label.width = 900;
     label.height = 360;
     const ctx = label.getContext('2d');
     const panel = ctx.createLinearGradient(50, 24, 850, 336);
-    panel.addColorStop(0, 'rgba(28,37,39,.05)');
+    panel.addColorStop(0, aimed?'rgba(210,230,210,.25)':'rgba(28,37,39,.05)');
     panel.addColorStop(1, 'rgba(28,37,39,.10)');
     ctx.fillStyle = panel;
-    ctx.strokeStyle = 'rgba(220,218,202,.72)';
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = aimed?'rgba(245,247,222,.96)':'rgba(220,218,202,.72)';
+    ctx.lineWidth = 12;
     ctx.beginPath();
     ctx.roundRect(12, 12, 876, 336, 64);
     ctx.fill();
@@ -4744,9 +4763,11 @@ function drawIntroSpatial(view) {
         ? (continueButton.textContent || 'Continue').trim()
         : '';
     if (controlLabel) {
-        if (!introControlTexture || introControlTextureLabel !== controlLabel) {
-            introControlTexture = createIntroControlTexture(controlLabel, introControlTexture);
-            introControlTextureLabel = controlLabel;
+        const aimed=Boolean(latestControllerRay && welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,360));
+        const textureKey=controlLabel+'|'+aimed;
+        if (!introControlTexture || introControlTextureLabel !== textureKey) {
+            introControlTexture = createIntroControlTexture(controlLabel, introControlTexture,aimed);
+            introControlTextureLabel = textureKey;
         }
         drawTexture(
             introControlTexture,
@@ -5340,24 +5361,21 @@ function drawDemoControllerPointer(view) {
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
-        width:latestTrackedHandStates.length ? .0024 : XR_LASER_POINTER_CONFIG.width,
+        width:latestTrackedHandStates.length ? .003 : XR_LASER_POINTER_CONFIG.width,
         curve: .001,
         lift: .001,
         color:latestTrackedHandStates.length ? [.78,.85,.84,handPinchActive ? .58 : .4] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
-    // A short illuminated tip confirms contact without covering the control.
-    if(surfacePoint){
-        const tipStart={x:end.x-direction.x*.014,y:end.y-direction.y*.014,z:end.z-direction.z*.014};
-        const tipEnd={x:end.x-direction.x*.002,y:end.y-direction.y*.002,z:end.z-direction.z*.002};
-        drawSpatialTether(gl,tetherRenderer,view,tipStart,tipEnd,{segments:2,width:.004,curve:0,lift:0,color:[.94,.91,.81,.86]});
-    }
+    // An open contact ring replaces the hard-to-aim vertical tip.
+    if(surfacePoint)drawSpatialPointerContact(gl,tetherRenderer,view,end,Math.max(.009,Math.min(.018,(surface.distance || 1)*.007)));
+
 }
 
 async function startImmersive() {
     if (!navigator.xr || !window.isSecureContext) return false;
     try {
         allowArScreenRotation();
-        const arSession = await requestImmersiveArSession(appRoot);
+        const arSession = await requestImmersiveArSession(appRoot,{targetFrameRate:demoRefreshRate});
         session = arSession.session;
         demoControllerYSkipTracker = createControllerYSkipTracker(() => {
             if (skipCurrentDemoStep()) suppressSessionSelectUntil = performance.now() + 450;
@@ -5471,6 +5489,13 @@ async function startImmersive() {
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
             session.requestAnimationFrame(draw);
+            if(fpsSession!==session){fpsSession=session;fpsStarted=0;fpsFrames=0;measuredFps=null;}
+            if(observedRefreshRate!==session.frameRate){observedRefreshRate=session.frameRate;publishDemoPerformance();}
+            if(demoShowFps){
+                if(!fpsStarted)fpsStarted=_time;
+                else fpsFrames++;
+                if(_time-fpsStarted>=1000){measuredFps=Math.round(fpsFrames*1000/(_time-fpsStarted));fpsStarted=_time;fpsFrames=0;publishDemoPerformance();}
+            }
             introFrameToken = _time;
             let pose=null;
             try { pose=frame.getViewerPose(referenceSpace); }

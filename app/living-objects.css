@@ -2236,3 +2236,19 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 /* Quest testing: welcoming glass action, with a quieter warm label. */
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"] {background:rgba(28,37,39,.06)!important;color:#e1dfd2!important;border-color:rgba(220,218,202,.72);font-size:clamp(1.9rem,3vw,2.25rem);font-weight:600;}
+
+/* Clear action boundary at Quest viewing distances. */
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"] {border-width:4px;}
+
+/* Aim feedback stays in place so the target never escapes the pointer. */
+.nlxr-setting-options button:is(:hover,:focus-visible),
+.nlxr-control-actions button:is(:hover,:focus-visible),
+.nlxr-info-panel nav button:is(:hover,:focus-visible),
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):is(:hover,:focus-visible),
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"]:is(:hover,:focus-visible) {
+ background:rgba(210,235,224,.25)!important;
+ border-color:rgba(245,247,222,.96)!important;
+ box-shadow:0 0 0 2px rgba(229,242,218,.5),0 0 16px rgba(215,237,220,.16);
+ transform:none;
+}

@@ -250,6 +250,43 @@ export function drawSpatialGroundArrowPath(gl, renderer, view, start, end, optio
     gl.depthMask(true);
 }
 
+const contactVertices = new WeakMap();
+const contactUnitVertices = (()=>{
+    const vertices=new Float32Array(24*6*2);
+    let offset=0;
+    for(let i=0;i<24;i++){
+        const a=i*Math.PI/12,b=(i+1)*Math.PI/12;
+        for(const [angle,r] of [[a,1],[b,1],[a,.68],[a,.68],[b,1],[b,.68]]){
+            vertices[offset++]=Math.cos(angle)*r;vertices[offset++]=Math.sin(angle)*r;
+        }
+    }
+    return vertices;
+})();
+
+// A camera-facing annulus makes contact readable without obscuring labels.
+export function drawSpatialPointerContact(gl, renderer, view, point, radius=.011) {
+    if(!renderer || !view?.transform?.matrix)return;
+    let vertices=contactVertices.get(renderer);
+    if(!vertices){vertices=new Float32Array(24*6*3);contactVertices.set(renderer,vertices);}
+    const matrix=view.transform.matrix;
+    for(let i=0,j=0;i<contactUnitVertices.length;i+=2,j+=3){
+        const x=contactUnitVertices[i]*radius,y=contactUnitVertices[i+1]*radius;
+        vertices[j]=point.x+matrix[0]*x+matrix[4]*y;
+        vertices[j+1]=point.y+matrix[1]*x+matrix[5]*y;
+        vertices[j+2]=point.z+matrix[2]*x+matrix[6]*y;
+    }
+    gl.useProgram(renderer.program);gl.bindBuffer(gl.ARRAY_BUFFER,renderer.buffer);
+    gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
+    gl.enableVertexAttribArray(renderer.positionLocation);
+    gl.vertexAttribPointer(renderer.positionLocation,3,gl.FLOAT,false,12,0);
+    gl.uniformMatrix4fv(renderer.projectionLocation,false,view.projectionMatrix);
+    gl.uniformMatrix4fv(renderer.viewLocation,false,view.transform.inverse.matrix);
+    gl.uniform4fv(renderer.colorLocation,[.94,.91,.81,.9]);
+    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);
+    gl.depthMask(false);gl.drawArrays(gl.TRIANGLES,0,vertices.length/3);gl.depthMask(true);
+}
+
 export function destroySpatialTetherRenderer(gl, renderer) {
     if (!gl || !renderer) return;
     gl.deleteBuffer(renderer.buffer);

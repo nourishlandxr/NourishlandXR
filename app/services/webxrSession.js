@@ -1,9 +1,13 @@
 export const WEBXR_SESSION_MODES = Object.freeze(['immersive-ar', 'immersive-vr']);
 export const PREFERRED_XR_FRAME_RATE = 90;
 
+const initialFrameRates = new WeakMap();
+
 export async function configureXRFrameRate(session, preferred = PREFERRED_XR_FRAME_RATE) {
     const supported = Array.from(session.supportedFrameRates || []).filter(rate => Number.isFinite(rate) && rate > 0);
-    const candidates = supported.filter(rate => rate <= preferred).sort((a,b) => b-a);
+    if (!initialFrameRates.has(session)) initialFrameRates.set(session, session.frameRate || null);
+    const target = preferred === 'auto' ? initialFrameRates.get(session) : preferred;
+    const candidates = supported.filter(rate => preferred === 'auto' ? rate === target : rate <= target).sort((a,b) => b-a);
     const result = { preferred, supported, requested: null, actual: session.frameRate || null };
     if (typeof session.updateTargetFrameRate === 'function') {
         for (const rate of candidates) {

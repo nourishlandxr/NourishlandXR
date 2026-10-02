@@ -6,10 +6,10 @@ export const XR_LASER_POINTER_CONFIG = Object.freeze({
     // Keep the idle ray visible across large real spaces. Actual surfaces
     // still terminate it at the exact hit point in the renderer.
     length: 1000,
-    width: 0.0015,
+    width: 0.003,
     segments: 8,
     color: Object.freeze([0.72, 0.78, 0.77]),
-    alpha: 0.32
+    alpha: 0.5
 });
 
 // Quest Touch controllers expose X/A at button 4 and Y/B at button 5 after the
