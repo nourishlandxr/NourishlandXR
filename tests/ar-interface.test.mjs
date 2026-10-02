@@ -1288,7 +1288,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Open Cultivation, then Maintenance/);
     assert.match(previewSource, /Select the plant to explore it, or grab it to reposition it/);
     assert.doesNotMatch(livingStyles,/Final welcome action geometry/);
-    assert.match(styles,/background:linear-gradient\(145deg,#6f8d70,#3c674f\)/);
+    assert.match(styles,/background:rgba\(9,25,28,\.08\);/);
+    assert.match(styles,/border:4px solid rgba\(234,246,240,\.88\);/);
     assert.match(source,/arWelcomeClusters=createArWelcomeClusters\(\);limHiddenCells=new Set\(\);limExpandedCells=new Set\(\);limExpandedAt=new Map\(\)/);
     assert.doesNotMatch(source, /WHY NOURISHLANDXR EXISTS/);
     assert.doesNotMatch(source, /130-inch|130 inch/);
