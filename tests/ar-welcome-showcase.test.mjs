@@ -174,7 +174,7 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
  measureText(text){return {width:text.length*parseFloat(this.font.split(' ')[1]||10)*.56};},
  fillText(text,x,y){labels.push({text,x,y,align:this.textAlign,baseline:this.textBaseline,width:this.measureText(text).width});},
  createLinearGradient(){return {addColorStop(){}};},createRadialGradient(){radials+=1;return {addColorStop(){}};}};
- for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','roundRect','arc','clip','fillRect','setLineDash'])ctx[method]=()=>{};
+ for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','fill','stroke','roundRect','arc','clip','fillRect','setLineDash','bezierCurveTo','ellipse'])ctx[method]=()=>{};
  ctx.quadraticCurveTo=()=>{curves+=1;};
  drawArWelcomeShowcase(ctx,64000,true,undefined,{drawRoots:false});
  const frame=welcomeExperienceFrames(64000,true).flatMap(frame=>frame.nodes).filter(node=>node.opacity>0);

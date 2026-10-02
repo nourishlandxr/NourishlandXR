@@ -1,0 +1,33 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Living frame preview</title>
+<style>
+body{margin:0;background:#24332d;color:#eee9d9;font:16px system-ui}header{position:sticky;top:0;padding:16px;background:#15221eee;display:flex;gap:16px;align-items:center;flex-wrap:wrap;z-index:2}input{width:200px}canvas{display:block;width:min(780px,100vw);height:auto;margin:auto}button{font:inherit;color:inherit;background:#fff1;border:1px solid #eee5;border-radius:8px;padding:8px 14px}
+</style>
+<header><strong>Living frame · five minutes</strong><label>Growth <input id="time" type="range" min="0" max="300" value="300"></label><output>5:00</output><button>Restart growth</button><label><input id="cells" type="checkbox" style="width:auto"> Show LIMO spacing</label></header>
+<canvas width="1400" height="1500"></canvas>
+<script type="module">
+import {drawArWelcomePanel} from '../app/services/arWelcomePanel.js';
+import {drawArWelcomeRoots} from '../app/services/arWelcomeRoots.js';
+import {drawArWelcomeShowcase} from '../app/services/arWelcomeShowcase.js';
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),slider=document.querySelector('input'),value=document.querySelector('output');let start=null;
+function paint(seconds){
+ if(document.querySelector('#cells').checked){
+  canvas.width=2500;canvas.height=2100;
+  drawArWelcomeShowcase(ctx,seconds*1000,matchMedia('(prefers-reduced-motion: reduce)').matches,undefined,{progression:{opening:true},drawContent:drawCopy});
+ }else{
+ canvas.width=1400;canvas.height=1500;
+ ctx.clearRect(0,0,1400,1500);drawArWelcomePanel(ctx,{elapsed:seconds*1000,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ drawArWelcomeRoots(ctx,{elapsed:seconds*1000,milestone:0,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches});
+ drawCopy(ctx);
+ }
+ value.textContent=Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0');
+}
+function drawCopy(ctx){
+ ctx.fillStyle='#f2f1e6';ctx.textAlign='center';ctx.font='600 54px Georgia,serif';ctx.fillText('A living world. A closer look.',700,470,820);
+ ctx.font='30px system-ui';ctx.fillText('A quiet window into the landscape.',700,555,780);
+}
+document.querySelector('#cells').addEventListener('change',()=>paint(Number(slider.value)));
+slider.addEventListener('input',()=>{start=null;paint(Number(slider.value));});
+document.querySelector('button').onclick=()=>{start=performance.now();requestAnimationFrame(tick);};
+function tick(now){if(start===null)return;const seconds=Math.min(300,(now-start)/1000);slider.value=seconds;paint(seconds);if(seconds<300)requestAnimationFrame(tick);else start=null;}
+paint(300);
+</script></html>

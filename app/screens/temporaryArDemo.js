@@ -7,7 +7,7 @@ import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaques, resolveTotemNavigation, totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
-import {drawArWelcomePanel} from '../services/arWelcomePanel.js';
+import {drawArWelcomePanel,WELCOME_RIM_MOTION} from '../services/arWelcomePanel.js';
 import { WELCOME_ROOT_MILESTONES, WELCOME_ROOT_REFRESH_MS, advanceWelcomeRootProgress, welcomeRootsNeedRefresh } from '../services/arWelcomeRoots.js';
 import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
@@ -1685,7 +1685,7 @@ function paintWelcomeLayer(now) {
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
         window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
             opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
-            drawRoots:false,
+            drawRoots:arWelcomeSharedBoard && introBoardVisible,
             rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
             drawCellLabels:true,cellOpacity:demoCellOpacity,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''
@@ -4427,10 +4427,10 @@ function createIntroNoteTexture(texture = null) {
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
     if(arWelcomeShowcaseActive){
-        arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,drawRoots:false,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},cellOpacity:demoCellOpacity,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
+        arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,drawRoots:arWelcomeSharedBoard && introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},cellOpacity:demoCellOpacity,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
         return canvasTexture(label,texture);
     }
-    drawArWelcomePanel(ctx);
+    drawArWelcomePanel(ctx,{elapsed:arWelcomeClock.elapsed,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);
 }
@@ -4551,10 +4551,10 @@ function createIntroControlTexture(labelText, texture = null) {
     label.height = 360;
     const ctx = label.getContext('2d');
     const panel = ctx.createLinearGradient(50, 24, 850, 336);
-    panel.addColorStop(0, 'rgba(100,137,101,.98)');
-    panel.addColorStop(1, 'rgba(54,91,69,.98)');
+    panel.addColorStop(0, 'rgba(28,37,39,.05)');
+    panel.addColorStop(1, 'rgba(28,37,39,.10)');
     ctx.fillStyle = panel;
-    ctx.strokeStyle = 'rgba(218,235,207,.68)';
+    ctx.strokeStyle = 'rgba(220,218,202,.72)';
     ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.roundRect(12, 12, 876, 336, 64);
@@ -4562,12 +4562,13 @@ function createIntroControlTexture(labelText, texture = null) {
     ctx.stroke();
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#e1dfd2';
     ctx.shadowColor = 'rgba(0,0,0,.38)';
     ctx.shadowBlur = 4;
-    let controlFontSize=76;ctx.font=`780 ${controlFontSize}px system-ui, sans-serif`;
-    while(controlFontSize>54 && ctx.measureText(String(labelText || 'Continue')).width>800){controlFontSize-=2;ctx.font=`780 ${controlFontSize}px system-ui, sans-serif`;}
-    ctx.fillText(String(labelText || 'Continue'), 450, 180,820);
+    const controlText=String(labelText || 'Continue').toUpperCase();
+    let controlFontSize=84;ctx.font=`600 ${controlFontSize}px system-ui, sans-serif`;
+    while(controlFontSize>54 && ctx.measureText(controlText).width>800){controlFontSize-=2;ctx.font=`600 ${controlFontSize}px system-ui, sans-serif`;}
+    ctx.fillText(controlText, 450, 180,820);
     ctx.shadowBlur = 0;
     return canvasTexture(label, texture);
 }
@@ -4683,7 +4684,7 @@ function drawIntroSpatial(view) {
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
-        if(limRevealIsAnimating() || rootsNeedRefresh || (!reducedMotion && (arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS || nativeConnectionState?.phase==='connected'))){
+        if(limRevealIsAnimating() || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh || (!reducedMotion && (arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS || nativeConnectionState?.phase==='connected'))){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }

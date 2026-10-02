@@ -15,7 +15,7 @@ export const WELCOME_ROOT_MILESTONES = Object.freeze({
     demoClosing: 9
 });
 export const WELCOME_ROOT_MAX_MILESTONE = WELCOME_ROOT_MILESTONES.demoClosing;
-export const WELCOME_ROOT_GROWTH_MS = 5600;
+export const WELCOME_ROOT_GROWTH_MS = 60000;
 export const WELCOME_ROOT_REFRESH_MS = 80;
 export const WELCOME_ROOTS_SETTLED_MS = WELCOME_ROOT_GROWTH_MS;
 
@@ -41,10 +41,10 @@ const polarPoint = (angle, radius) => ({
 });
 const rootAngle = point => Math.atan2(point.y - WELCOME_SHAPE.cy, point.x - WELCOME_SHAPE.cx);
 const rootRadius = point => Math.hypot(point.x - WELCOME_SHAPE.cx, point.y - WELCOME_SHAPE.cy);
-const readingRadius = angle => 1 / Math.hypot(Math.cos(angle) / 430, Math.sin(angle) / 315);
+const readingRadius = () => 500;
 function safeRootPoint(point) {
     const angle = rootAngle(point);
-    const radius = Math.min(532, Math.max(readingRadius(angle) + 27, rootRadius(point)));
+    const radius = Math.min(550, Math.max(readingRadius(angle) + 27, rootRadius(point)));
     return polarPoint(angle, radius);
 }
 const cubic = (a, b, c, d, t) => {
@@ -105,8 +105,8 @@ function createRootNetwork() {
     // Each trunk has a distinct origin, direction and length. The branches
     // inherit exact points on their parent so the network reads as growth.
     const trunks = [
-        { angle: Math.PI / 2, sweep: 2.13, direction: 1, tipRadius: 464, width: 19, stage: 0, palette: 'bark' },
-        { angle: Math.PI / 2, sweep: 1.70, direction: -1, tipRadius: 452, width: 15, stage: 0, palette: 'copper' }
+        { angle: Math.PI / 2, sweep: 2.13, direction: 1, tipRadius: 464, width: 7, stage: 0, palette: 'bark' },
+        { angle: Math.PI / 2, sweep: 1.70, direction: -1, tipRadius: 452, width: 5, stage: 0, palette: 'copper' }
     ];
     trunks.forEach((spec, trunkIndex) => {
         const trunk = add({
@@ -211,7 +211,7 @@ export function welcomeRootsAreGrowing(options = {}) {
 
 export function welcomeRootsNeedRefresh(options = {}) {
     if (options.reducedMotion) return false;
-    return welcomeRootsAreGrowing(options) || glimmerIsActive(Math.max(0, Number(options.elapsed) || 0));
+    return Number(options.elapsed)<300000 || welcomeRootsAreGrowing(options);
 }
 
 function fillRootRibbon(ctx, points, width, offset = 0) {
@@ -294,9 +294,16 @@ function drawAmberPoint(ctx, point, radius, alpha) {
     ctx.restore();
 }
 
-export function drawArWelcomeRoots(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false } = {}) {
+export function drawArWelcomeRoots(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false, cellClearance = [] } = {}) {
     const frame = welcomeRootFrame({ milestone, elapsed, milestoneStartedAt, reducedMotion });
     ctx.save();
+    // Clip each exclusion independently: overlapping cells must never cancel
+    // each other's clearance as overlapping holes in one even-odd path would.
+    for(const cell of cellClearance){
+        ctx.beginPath();ctx.roundRect(-200,-200,3000,2600,0);
+        ctx.moveTo(cell.x+cell.radius,cell.y);ctx.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);
+        ctx.clip('evenodd');
+    }
 
     const currentMilestone = Math.max(0, Math.min(WELCOME_ROOT_MAX_MILESTONE, Math.floor(Number(milestone) || 0)));
     const glimmerPhase = ((Number(elapsed) % 22000) + 22000) % 22000;
@@ -310,14 +317,148 @@ export function drawArWelcomeRoots(ctx, { milestone = 0, elapsed = 0, milestoneS
             drawAmberPoint(ctx, path.points.at(-1), path.kind === 'structural' ? 2.1 : 1.45, .28 + path.progress * .22);
         }
 
-        // Glints occur briefly at selected crossings; established roots remain still.
-        if (!reducedMotion && index % 11 === 3 && path.stage <= currentMilestone && path.points.length > 5 && glimmerPhase < 1150) {
-            const pulse = Math.sin(Math.PI * glimmerPhase / 1150);
-            const point = path.points[Math.floor((.27 + hash(index, 211) * .53) * (path.points.length - 1))];
-            drawAmberPoint(ctx, point, 1.25 + pulse * .7, pulse * .35);
-        }
         ctx.restore();
     });
+    drawLivingRim(ctx,{elapsed,reducedMotion});
     ctx.restore();
     return frame;
+}
+
+// A deterministic, asymmetric garden. Time controls growth, never frame count.
+// Decoration stays outside the reading window and does not create hit targets.
+export const LIVING_RIM = Object.freeze({cellGap:22,stemGrowthMs:47000,groundcoverAt:60000,darkCoverAt:80000,silverCoverAt:90000,vinesAt:65000,berriesAt:150000,berryGrowthMs:45000,flowersAt:100000,flowerGrowthMs:35000,aerialAt:90000,growthMs:60000});
+const RIM_PATCHES=Object.freeze(Array.from({length:13},(_,i)=>({
+ angle:-Math.PI/2+i*Math.PI*2/13+hash(i,301)*.17,
+ radius:532+hash(i,307)*17,seed:i,delay:hash(i,311)*13000,
+ leaves:3+Math.floor(hash(i,313)*4)
+})));
+function leaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)'){
+ ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=colour;
+ ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(size*.4,-size*.55,size,-size*.38,size,0);
+ ctx.bezierCurveTo(size*.65,size*.38,size*.25,size*.35,0,0);ctx.fill();
+ ctx.strokeStyle=vein;ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(1,0);ctx.lineTo(size*.8,0);ctx.stroke();ctx.restore();
+}
+function growRimStem(ctx,angle,target,progress,colour='#637448'){
+ if(progress<=0)return;
+ const base=polarPoint(angle,WELCOME_SHAPE.radius+2);
+ const bend=polarPoint(angle+.012,527);
+ ctx.strokeStyle=colour;ctx.lineWidth=1.65;ctx.beginPath();ctx.moveTo(base.x,base.y);
+ // Draw only the established portion, so the tip advances from the surface.
+ for(let i=1;i<=18;i++){
+  const t=progress*i/18,u=1-t;
+  ctx.lineTo(u*u*base.x+2*u*t*bend.x+t*t*target.x,u*u*base.y+2*u*t*bend.y+t*t*target.y);
+ }
+ ctx.stroke();
+}
+function drawLivingRim(ctx,{elapsed=0,reducedMotion=false}){
+ const grow=(at,delay=0)=>reducedMotion?1:stageEase((elapsed-at-delay)/LIVING_RIM.growthMs);
+ ctx.save();ctx.lineCap='round';
+ for(const patch of RIM_PATCHES){
+  // Uneven patch density; cell clearance reserves the required open spaces.
+  const stem=reducedMotion?1:stageEase((elapsed-patch.delay)/LIVING_RIM.stemGrowthMs);
+  for(let n=0;n<patch.leaves;n++){
+   const a=patch.angle+(n-2)*.018,r=patch.radius+hash(n+patch.seed*9,317)*17;
+   growRimStem(ctx,patch.angle,polarPoint(a,r),stem);
+  }
+  growRimStem(ctx,patch.angle,polarPoint(patch.angle,patch.radius+Math.sin(patch.seed)*7),stem);
+  if([0,4,7,10].includes(patch.seed))growRimStem(ctx,patch.angle,polarPoint(patch.angle,patch.radius+14),stem);
+  // Small darker companion clusters establish between the larger leaves.
+  // Paired leaves unfold along short stems, outside the circular inner edge.
+  if(patch.seed%3!==1){
+   growRimStem(ctx,patch.angle+.025,polarPoint(patch.angle+.055,patch.radius+9),stem,'#405c3b');
+   const cluster=grow(LIVING_RIM.darkCoverAt,patch.delay+hash(patch.seed,373)*9000);
+   if(cluster>0){
+    const a=patch.angle+.055,r=patch.radius+9;
+    const base=polarPoint(a,r),tip=polarPoint(a+.035*cluster,r+18*cluster);
+    ctx.strokeStyle='#405c3b';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(tip.x,tip.y);ctx.stroke();
+    for(let n=0;n<3;n++){
+     const unfold=grow(LIVING_RIM.darkCoverAt,patch.delay+hash(patch.seed,373)*9000+n*3400);
+     const p=polarPoint(a+n*.012*cluster,r+n*6*cluster);
+     for(const side of [-1,1]){
+      const size=(8+hash(patch.seed*7+n,379)*5)*unfold;
+      leaf(ctx,p.x,p.y,a+side*(.7+.35*unfold),size,side<0?'#345638':'#426344','rgba(143,171,119,.24)');
+     }
+    }
+   }
+  }
+  const cover=grow(LIVING_RIM.groundcoverAt,patch.delay),vine=grow(LIVING_RIM.vinesAt,patch.delay);
+  if(cover>0)for(let n=0;n<patch.leaves;n++){
+   const a=patch.angle+(n-2)*.018,r=patch.radius+hash(n+patch.seed*9,317)*17;
+   const p=polarPoint(a,r),size=(12+hash(n+patch.seed*5,319)*17)*cover;
+   leaf(ctx,p.x,p.y,a+(n%2?1.1:-1.2),size,n%2?'#607a43':'#839655');
+  }
+  if(vine>0){
+   const sweep=(.38+hash(patch.seed,331)*.42)*vine,direction=patch.seed%2?1:-1;
+   ctx.strokeStyle='#74814c';ctx.lineWidth=2.8;ctx.beginPath();
+   for(let j=0;j<=28;j++){const t=j/28,p=polarPoint(patch.angle+direction*sweep*t,patch.radius+Math.sin(t*5+patch.seed)*7);j?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);}
+   ctx.stroke();
+   for(let j=1;j<=3;j++){const p=polarPoint(patch.angle+direction*sweep*j/4,patch.radius);leaf(ctx,p.x,p.y,patch.angle+direction*.8,16*vine,'#647e46');}
+   const berries=reducedMotion?1:stageEase((elapsed-LIVING_RIM.berriesAt-patch.delay)/LIVING_RIM.berryGrowthMs);
+   if(berries>0 && [1,6,9].includes(patch.seed))for(let j=0;j<2;j++){
+    const a=patch.angle+direction*sweep*(.58+j*.15),p=polarPoint(a,patch.radius+Math.sin((.58+j*.15)*5+patch.seed)*7);
+    const fruit=polarPoint(a+.009,Math.hypot(p.x-WELCOME_SHAPE.cx,p.y-WELCOME_SHAPE.cy)+5);
+    ctx.strokeStyle='#596543';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(fruit.x,fruit.y);ctx.stroke();
+    ctx.fillStyle=j?'#8f3f39':'#a54c40';ctx.beginPath();ctx.arc(fruit.x,fruit.y,3.1*berries,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(227,171,133,.45)';ctx.beginPath();ctx.arc(fruit.x-.8,fruit.y-.9,.65*berries,0,Math.PI*2);ctx.fill();
+   }
+  }
+  if(patch.seed%4!==1)for(let n=0;n<3;n++){
+   const branch=grow(95000,patch.delay+n*2100);
+   const flower=reducedMotion?1:stageEase((elapsed-LIVING_RIM.flowersAt-patch.delay*.35-n*2300)/LIVING_RIM.flowerGrowthMs);
+   if(branch<=0)continue;
+   const a=patch.angle+(patch.seed%2?1:-1)*(.02+n*.025);
+   const base=polarPoint(a,patch.radius),target=polarPoint(a+.009,patch.radius+15+n*9);
+   const tip={x:mix(base.x,target.x,branch),y:mix(base.y,target.y,branch)};
+   ctx.strokeStyle=n%2?'#52714d':'#6d8051';ctx.lineWidth=1.2;
+   ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.quadraticCurveTo(base.x+Math.cos(a)*8,base.y+Math.sin(a)*8,tip.x,tip.y);ctx.stroke();
+   if(flower<=0)continue;
+   ctx.save();ctx.translate(tip.x,tip.y);ctx.rotate(patch.seed*.73+n);ctx.scale(flower,flower);
+   ctx.fillStyle=['#b477ab','#d199c3','#a76998','#ede0d9'][(patch.seed+n)%4];
+   for(let j=0;j<5;j++){
+    ctx.save();ctx.rotate(j*Math.PI*2/5);ctx.beginPath();ctx.moveTo(0,0);
+    ctx.quadraticCurveTo(-4,-4,-2.5,-8);ctx.lineTo(0,-6.8);ctx.lineTo(2.5,-8);
+    ctx.quadraticCurveTo(4,-4,0,0);ctx.fill();ctx.restore();
+   }
+   ctx.fillStyle='#dcc395';ctx.beginPath();ctx.arc(0,0,1.65,0,Math.PI*2);ctx.fill();ctx.restore();
+  }
+ }
+ // Low silver-green carpet occupies the intervals between taller patches.
+ // Narrow paired leaves and tiny ochre heads keep this layer subordinate.
+ for(let i=0;i<11;i++){
+  const a=-Math.PI/2+(i+.46)*Math.PI*2/11+hash(i,401)*.09;
+  const r=534+hash(i,409)*13,delay=hash(i,419)*13000;
+  const base=polarPoint(a,r),stem=reducedMotion?1:stageEase((elapsed-delay)/LIVING_RIM.stemGrowthMs);
+  growRimStem(ctx,a,base,stem,'#697b68');
+  const cover=grow(LIVING_RIM.silverCoverAt,delay);
+  if(cover<=0)continue;
+  for(let sprig=0;sprig<3;sprig++){
+   const direction=a+(sprig-1)*.52,length=(13+hash(i*3+sprig,421)*9)*cover;
+   const tip={x:base.x+Math.cos(direction)*length,y:base.y+Math.sin(direction)*length};
+   ctx.strokeStyle='#7b8b78';ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.lineTo(tip.x,tip.y);ctx.stroke();
+   for(let pair=1;pair<=2;pair++)for(const side of [-1,1]){
+    const x=mix(base.x,tip.x,pair/3),y=mix(base.y,tip.y,pair/3);
+    ctx.save();ctx.translate(x,y);ctx.rotate(direction+side*.72);ctx.scale(1,.36);
+    leaf(ctx,0,0,0,(9+hash(i+pair,431)*4)*cover,pair%2?'#96a18b':'#7e9281','rgba(206,213,183,.2)');ctx.restore();
+   }
+   const bloom=reducedMotion?1:stageEase((elapsed-120000-delay-sprig*2700)/45000);
+   if(bloom>0){
+    ctx.fillStyle=sprig%2?'#b5a14b':'#c8b25b';
+    for(let head=0;head<3;head++){
+     const turn=head*Math.PI*2/3;ctx.beginPath();
+     ctx.arc(tip.x+Math.cos(turn)*1.9*bloom,tip.y+Math.sin(turn)*1.9*bloom,1.8*bloom,0,Math.PI*2);ctx.fill();
+    }
+   }
+  }
+ }
+ // Fig-like aerial roots start along the lower arc, with varied ends and forks.
+ for(let i=0;i<9;i++){
+  const growth=grow(LIVING_RIM.aerialAt,i===0?0:hash(i,347)*20000);if(growth<=0)continue;
+  const angle=.73+i*.20,start=polarPoint(angle,531),length=(105+hash(i,349)*145)*growth;
+  const sway=0; // Established roots stay still; growth is the only motion.
+  const end={x:start.x+(hash(i,353)-.5)*22+sway,y:start.y+length};
+  ctx.strokeStyle=i%2?'#927454':'#ab8b66';ctx.lineWidth=1.8+hash(i,359)*3.5;ctx.beginPath();ctx.moveTo(start.x,start.y);
+  ctx.bezierCurveTo(start.x-8,start.y+length*.3,end.x+9,end.y-length*.2,end.x,end.y);ctx.stroke();
+  if(growth>.65 && i%2===0){ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(end.x,end.y-length*.22);ctx.quadraticCurveTo(end.x+12,end.y-length*.1,end.x+15,end.y+12*growth);ctx.stroke();}
+ }
+ ctx.restore();
 }

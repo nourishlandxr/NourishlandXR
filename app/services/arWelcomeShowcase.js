@@ -1,5 +1,5 @@
 import {drawArWelcomePanel,welcomeBoundary,WELCOME_SHAPE} from './arWelcomePanel.js';
-import {drawArWelcomeRoots} from './arWelcomeRoots.js';
+import {drawArWelcomeRoots,LIVING_RIM} from './arWelcomeRoots.js';
 import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLearning.js';
 
 // Presentation data only: no PIM records, stored IDs or navigation are modified.
@@ -524,10 +524,14 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // empty screen while the session clock waited for visibility updates.
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);
  if(options.drawPanel!==false){
- drawArWelcomePanel(ctx);
+ drawArWelcomePanel(ctx,{elapsed,reducedMotion});
  }
  if(options.drawRoots!==false){
- drawArWelcomeRoots(ctx,{milestone:options.rootMilestone||0,elapsed,milestoneStartedAt:options.rootMilestoneStartedAt||0,reducedMotion});
+ const reservedCells=revealFrames(graphs).flatMap(frame=>frame.nodes).map(node=>({
+  x:node.x-WELCOME_PANEL_DRAW_OFFSET.x,y:node.y-WELCOME_PANEL_DRAW_OFFSET.y,
+  radius:node.baseRadius+LIVING_RIM.cellGap
+ }));
+ drawArWelcomeRoots(ctx,{milestone:options.rootMilestone||0,elapsed,milestoneStartedAt:options.rootMilestoneStartedAt||0,reducedMotion,cellClearance:reservedCells});
  }
  if(options.drawPanel!==false){
  if(options.drawContent){options.drawContent(ctx);}else{

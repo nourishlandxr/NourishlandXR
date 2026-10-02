@@ -32,13 +32,13 @@ test('arrival grows two tapered trunks before later branches appear', () => {
     const early = welcomeRootFrame({ milestone: WELCOME_ROOT_MILESTONES.arrival, elapsed: 2600 });
     const visible = early.filter(root => root.stage === WELCOME_ROOT_MILESTONES.arrival && root.points.length > 1);
     assert.equal(visible.length, 2);
-    assert.ok(visible.every(root => root.kind === 'structural' && root.width > 10));
+    assert.ok(visible.every(root => root.kind === 'structural' && root.width >= 5 && root.width <= 7));
 
     const later = welcomeRootFrame({ milestone: WELCOME_ROOT_MILESTONES.arrival, elapsed: 4500 });
     assert.ok(visible.every(root => length(later.find(item => item.id === root.id).points) > length(root.points)));
     assert.ok(visible.every(root => length(root.points) > Math.abs(radius(root.points.at(-1)) - radius(root.points[0])) * 2));
     assert.equal(welcomeRootsAreGrowing({ milestone: 0, elapsed: 1200 }), true);
-    assert.equal(welcomeRootsAreGrowing({ milestone: 0, elapsed: 9000 }), false);
+    assert.equal(welcomeRootsAreGrowing({ milestone: 0, elapsed: 90000 }), false);
 });
 
 test('real demo milestones accumulate and rapid progress completes older phases', () => {
@@ -61,17 +61,17 @@ test('real demo milestones accumulate and rapid progress completes older phases'
     assert.ok(WELCOME_ROOT_GROWTH_MS >= 5000);
 });
 
-test('mature roots branch from parents, cross the glass rim and preserve the reading area', () => {
+test('mature roots branch from parents, follow the outside of the glass rim and preserve the reading area', () => {
     const mature = welcomeRootFrame({ milestone: WELCOME_ROOT_MAX_MILESTONE, elapsed: 100000, milestoneStartedAt: 0 });
     const visible = mature.filter(root => root.progress === 1 && root.points.length > 1);
     assert.ok(visible.length >= 18 && visible.length <= 25);
-    assert.ok(visible.some(root => root.kind === 'structural' && root.width > 10));
+    assert.ok(visible.some(root => root.kind === 'structural' && root.width >= 5 && root.width <= 7));
     assert.ok(visible.some(root => root.kind === 'medium'));
     assert.ok(visible.some(root => root.kind === 'feeder'));
     for (const root of visible) {
         assert.ok(root.points.every(point => Number.isFinite(point.x) && Number.isFinite(point.y)));
         assert.ok(root.points.every(point => !inReadingArea(point)));
-        assert.ok(root.points.every(point => radius(point) <= 532.001));
+        assert.ok(root.points.every(point => radius(point) <= 550.001 && radius(point) >= WELCOME_SHAPE.radius));
         if (root.parentId) {
             const parent = visible.find(item => item.id === root.parentId);
             assert.ok(parent);
@@ -95,7 +95,7 @@ test('reduced motion renders current progress as a static state without glimmers
     let amberPoints = 0;
     const context = {
         save() {}, restore() {}, beginPath() {}, moveTo() {}, lineTo() {}, quadraticCurveTo() {},
-        closePath() {}, clip() {}, stroke() {}, arc() { amberPoints++; }, fill() {}
+        closePath() {}, clip() {}, stroke() {}, arc() { if(this.fillStyle === 'rgba(233, 163, 77, .9)')amberPoints++; }, translate() {}, rotate() {}, scale() {}, ellipse() {}, bezierCurveTo() {}, fill() {}
     };
     drawArWelcomeRoots(context, { milestone: 4, elapsed: 500, reducedMotion: true });
     assert.equal(amberPoints, 0);

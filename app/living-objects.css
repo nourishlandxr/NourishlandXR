@@ -1622,7 +1622,7 @@
     position:absolute;
     z-index:0;
     inset:0;
-    clip-path:polygon(50% 25.7%,58% 27.6%,64.7% 32.9%,69.2% 41%,70.8% 50.5%,69.2% 60%,64.7% 68.1%,58% 73.4%,50% 75.2%,42% 73.4%,35.3% 68.1%,30.8% 60%,29.2% 50.5%,30.8% 41%,35.3% 32.9%,42% 27.6%);
+    clip-path:ellipse(20.8% 24.76% at 50% 50.48%);
     background:rgba(7,18,23,.12);
     -webkit-backdrop-filter:blur(18px) saturate(.9);
     backdrop-filter:blur(18px) saturate(.9);
@@ -2232,3 +2232,7 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] :is(.plant-knowledge-cell-copy b,.plant-knowledge-cell-copy small,.plant-knowledge-core-copy strong) {
  font-family:Georgia,"Times New Roman",serif;font-weight:600;
 }
+
+/* Quest testing: welcoming glass action, with a quieter warm label. */
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"] {background:rgba(28,37,39,.06)!important;color:#e1dfd2!important;border-color:rgba(220,218,202,.72);font-size:clamp(1.9rem,3vw,2.25rem);font-weight:600;}
