@@ -2252,3 +2252,17 @@ body[data-project-theme] .creator-ar-context-toolbar button {
  box-shadow:0 0 0 2px rgba(229,242,218,.5),0 0 16px rgba(215,237,220,.16);
  transform:none;
 }
+
+/* Shared information glass: opacity changes the backing, never the lettering. */
+.nlxr-info-panel,
+body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel),
+body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapsed,.is-rail-collapsed),
+.nlxr-settings-companion {
+ --nlxr-info-opacity:.38;
+ background:linear-gradient(145deg,rgba(15,29,34,var(--nlxr-info-opacity)),rgba(6,17,23,var(--nlxr-info-opacity)))!important;
+ backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) :is(.nlxr-control-tabs,.nlxr-tools-dock,.nlxr-control-header,[role="tabpanel"]) {
+ background:transparent!important;
+}
+.nlxr-settings-companion .nlxr-setting-row {background:rgba(9,25,27,.12);}

@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Information glass preview</title>
+<link rel="stylesheet" href="../app/living-objects.css">
+<style>
+body{margin:0;padding:24px;background:linear-gradient(120deg,#b8c9b1,#617e65 45%,#253e31);color:#fff;font:16px system-ui}h1{font-weight:500}.study{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:1400px;margin:auto}.study canvas{width:100%;height:auto}.study-panels .nlxr-info-panel,.study-panels .nlxr-settings-companion{position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;top:auto!important;transform:none!important;width:100%!important;max-height:none!important;height:auto!important;z-index:1!important;margin:0 0 20px!important}.study-panels .nlxr-info-panel{min-height:360px}.study-panels .nlxr-settings-companion[hidden]{display:none!important}@media(max-width:800px){.study{grid-template-columns:1fr}}
+</style><h1>Shared information glass</h1><p>Open Settings → Info background opacity. The control panel and circular screen update together; lettering and outlines stay intact.</p><div class="study"><canvas id="screen" width="1400" height="1200" aria-label="Circular information screen"></canvas><div class="study-panels" id="panels"></div></div>
+<script type="module">
+import {createPimInfoPanel} from '../app/services/pimInfoPanel.js';
+import {drawArWelcomePanel} from '../app/services/arWelcomePanel.js';
+const canvas=document.querySelector('#screen'),ctx=canvas.getContext('2d');
+function draw(){ctx.clearRect(0,0,1400,1200);drawArWelcomePanel(ctx,{elapsed:120000,reducedMotion:true});ctx.fillStyle='#f3f8ee';ctx.textAlign='center';ctx.font='600 52px system-ui';ctx.fillText('A living world of knowledge',700,500,850);ctx.font='400 36px system-ui';ctx.fillText('Calm, readable information glass',700,565,850);}
+const panel=createPimInfoPanel({root:document.querySelector('#panels'),onInfoOpacity:draw});panel.element.classList.add('is-demo-panel');panel.showLearning({title:'Your Control panel',body:'Information opens here. The background can be made clearer or darker, while the text remains fully readable.'});panel.setUtilityActions([{id:'continue',label:'Continue',primary:true}]);draw();
+</script></html>

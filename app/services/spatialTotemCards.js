@@ -172,7 +172,7 @@ export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view,
         const highlight=header ? visual.boardHeaderEdge : visual.boardWoodEdge;
         drawSpatialPrism(gl,prismRenderer,view,{x:centerDepth.x,y:surface.center.y-surface.height/2,z:centerDepth.z},{
             halfWidth:surface.width/2,halfHeight:surface.height/2,halfDepth,
-            color:colour,topColor:highlight,topTaper:header ? .96 : .975,alpha:opacity*(surface.opacity ?? 1),rotationY
+            color:colour,topColor:highlight,woodGrain:visual.woodGrain,grainDirection:1,topTaper:header ? .96 : .975,alpha:opacity*(surface.opacity ?? 1),rotationY
         });
         const fixingOffsets=header ? [-surface.height*.27,surface.height*.27] : [0];
         for(const yOffset of fixingOffsets) {
@@ -181,8 +181,8 @@ export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view,
                 y:surface.center.y+yOffset,
                 z:surface.center.z+front.z*.006
             };
-            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,fixingCenter,.013,{
-                color:[.66,.67,.60],alpha:opacity*(surface.opacity ?? 1),emissive:.018,roughness:.4,metalness:.55,scale:{x:1,y:1,z:.32},rotationY
+            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,fixingCenter,.009,{
+                color:[.44,.40,.30],alpha:opacity*(surface.opacity ?? 1),emissive:.018,roughness:.4,metalness:.55,scale:{x:1,y:1,z:.32},rotationY
             });
         }
     }

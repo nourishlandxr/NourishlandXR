@@ -44,7 +44,7 @@ export function prismModelMatrix(position, dimensions = {}, rotationY = Math.PI 
 
 export function createBeveledPrismGeometry() {
     const points=[];
-    for(let corner=0;corner<4;corner++)for(let step=0;step<6;step++){const a=corner*Math.PI/2+step*Math.PI/10;points.push([Math.cos(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.cos(a)*.28,Math.sin(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.sin(a)*.28]);}
+    for(let corner=0;corner<4;corner++)for(let step=0;step<10;step++){const a=corner*Math.PI/2+step*Math.PI/18;points.push([Math.cos(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.cos(a)*.28,Math.sin(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.sin(a)*.28]);}
     const rings = [[-1,.82],[-.98,1],[.98,1],[1,.82]];
     const vertices = [];
     const triangle = (a,b,c) => {
@@ -107,6 +107,8 @@ export function createSpatialPrismRenderer(gl) {
         uniform vec3 color;
         uniform vec3 topColor;
         uniform float alpha;
+        uniform float woodGrain;
+        uniform float grainDirection;
         void main() {
             vec3 normal = normalize(surfaceNormal);
             vec3 viewer = normalize(viewDirection);
@@ -124,6 +126,14 @@ export function createSpatialPrismRenderer(gl) {
             float base=smoothstep(-.95,-.94,localPosition.y)*(1.-smoothstep(-.90,-.89,localPosition.y));
             shaded=mix(shaded,shaded*.55,base*.65);
             shaded=mix(shaded,mix(topColor,vec3(.9,.97,.84),.6),collar*.9);
+            if(woodGrain > 0.0){
+                float along=mix(localPosition.y,localPosition.x,grainDirection);
+                float across=mix(localPosition.x,localPosition.y,grainDirection);
+                float grain=sin(across*22.0+sin(along*3.5+localPosition.z*2.0)*.9);
+                float fine=sin(across*46.0+sin(along*5.0)*1.4);
+                shaded*=1.0+woodGrain*(grain*.07+fine*.025);
+                shaded=mix(shaded,shaded*.78,woodGrain*collar);
+            }
             gl_FragColor = vec4(shaded, alpha);
         }
     `);
@@ -154,6 +164,7 @@ export function createSpatialPrismRenderer(gl) {
         topTaperLocation: gl.getUniformLocation(program, 'topTaper'),
         colorLocation: gl.getUniformLocation(program, 'color'),
         topColorLocation: gl.getUniformLocation(program, 'topColor'),
+        woodLocation:gl.getUniformLocation(program,'woodGrain'),grainLocation:gl.getUniformLocation(program,'grainDirection'),
         alphaLocation: gl.getUniformLocation(program, 'alpha')
     };
 }
@@ -183,6 +194,8 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.uniform1f(renderer.topTaperLocation, Number.isFinite(options.topTaper) ? options.topTaper : 1);
     gl.uniform3fv(renderer.colorLocation, options.color || [.34, .78, .7]);
     gl.uniform3fv(renderer.topColorLocation, options.topColor || [.58, .93, .84]);
+    gl.uniform1f(renderer.woodLocation,options.woodGrain || 0);
+    gl.uniform1f(renderer.grainLocation,options.grainDirection || 0);
     gl.uniform1f(renderer.alphaLocation, alpha);
     gl.drawArrays(gl.TRIANGLES, 0, renderer.vertexCount);
     gl.depthMask(true);

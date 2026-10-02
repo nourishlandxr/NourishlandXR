@@ -3969,7 +3969,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onPerformanceAction:handleDemoPerformanceAction,onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onPerformanceAction:handleDemoPerformanceAction,onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
@@ -5172,7 +5172,7 @@ function drawMarker(view) {
         if (record.demoType !== 'zone' || !demoAreaVisible(record)) return;
         const totemColour=demoHexColour(record.demoTotemColor || record.demoContent?.accent)
             .map(channel=>Math.min(.95,channel*SPATIAL_OBJECT_VISUALS.totem.postContrast+SPATIAL_OBJECT_VISUALS.totem.postLift));
-        const totemHighlight=totemColour.map(channel=>Math.min(.96,channel*.48+.48));
+        const totemHighlight=totemColour.map(channel=>Math.min(.96,channel*.62+.28));
         const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
@@ -5184,6 +5184,7 @@ function drawMarker(view) {
             halfDepth: bodyHalfDepth,
             color: totemColour,
             topColor: totemHighlight,
+            woodGrain:SPATIAL_OBJECT_VISUALS.totem.woodGrain,
             topTaper: .96,
             alpha: arrival*demoTotemVisualOpacity(record),
             rotationY

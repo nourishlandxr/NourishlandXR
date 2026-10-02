@@ -51,7 +51,7 @@ test('demo history arrows stay compact, adjacent and ray-selectable even when di
 test('Settings rows keep all existing actions in compact non-overlapping Quest hit regions',()=>{
     const desktop=panelSettingsControls({meshCellOpacity:.5,ambientRain:1.65,ambientRainStyle:'v1',spatialScale:1.1});
     const quest=panelSettingsControls({headset:true,handVisualMode:'outline'});
-    const actions=['TextDown','TextUp','ScaleDown','ScaleUp','CellOpacity','RainIntensity','RainStyle','Recenter'];
+    const actions=['TextDown','TextUp','ScaleDown','ScaleUp','CellOpacity','InfoOpacity','OrbModel','RainIntensity','RainStyle','Recenter'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
     assert.deepEqual(quest.map(item=>item.action),['HandMode',...actions]);
     assert.equal(desktop.find(item=>item.action==='CellOpacity').label,'Glass · 50%');

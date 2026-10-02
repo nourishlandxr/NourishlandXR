@@ -2,12 +2,13 @@
 // Values are intentionally local to these objects, not full-screen effects.
 export const SPATIAL_OBJECT_VISUALS = Object.freeze({
     totem: Object.freeze({
-        postLift: .105,
-        postContrast: .91,
-        boardWood: Object.freeze([.47,.32,.21]),
-        boardWoodEdge: Object.freeze([.70,.54,.36]),
-        boardHeader: Object.freeze([.30,.40,.45]),
-        boardHeaderEdge: Object.freeze([.58,.68,.70]),
+        postLift: .055,
+        postContrast: .84,
+        boardWood: Object.freeze([.34,.24,.16]),
+        boardWoodEdge: Object.freeze([.53,.40,.26]),
+        boardHeader: Object.freeze([.23,.34,.30]),
+        boardHeaderEdge: Object.freeze([.46,.57,.46]),
+        woodGrain: .8,
         aimTint: Object.freeze([.94,.84,.62]),
         signTransitionMs: 380,
         fadeTransitionMs: 460
