@@ -1386,6 +1386,14 @@
     box-shadow:0 22px 60px rgba(0,0,0,.52),inset 0 1px rgba(236,250,255,.24),inset 0 0 0 4px rgba(8,27,42,.45)!important;
     transition:box-shadow .14s ease,outline-color .14s ease;
 }
+
+#app .nlxr-info-panel.is-demo-panel .nlxr-tools-dock > .nlxr-info-hint {
+    margin:14px 12px 16px!important;
+    padding:10px 12px!important;
+    border:0!important;
+    font:600 16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI Variable",Inter,system-ui,sans-serif!important;
+    text-align:center;
+}
 .nlxr-media-floating::before {
     content:"";
     position:absolute;
@@ -1710,6 +1718,15 @@
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock > .nlxr-control-utilities { grid-column:1/-1;grid-row:3; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button { flex:0 0 44px;width:44px;min-width:44px;min-height:44px;padding:0;border-radius:10px;font-size:23px;font-weight:550; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button:disabled { opacity:.38;border-color:rgba(234,240,236,.12);background:rgba(234,240,236,.06)!important;box-shadow:none;cursor:default; }
+
+/* Keep reading centered and put navigation with Help, Settings and Close. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) :is([role="tabpanel"] h3,.nlxr-info-body,.nlxr-info-trail) { text-align:center;max-width:none; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs .nlxr-demo-history { display:flex;gap:7px;margin:10px 2px 0; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-tabs .nlxr-demo-history button { flex:1 1 0;min-width:0;min-height:40px;font-size:22px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock > .nlxr-info-hint { grid-column:1/-1;grid-row:4;margin:14px 12px 16px;padding:9px 12px;border:0;border-radius:10px;background:rgba(12,25,26,.24);font:600 16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI Variable",Inter,system-ui,sans-serif;text-align:center; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] { height:38px;min-height:38px;padding:3px 7px; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] small { display:none; }
+.tryit-sim-totem-system .nlxr-totem-cards > button[data-totem-plaque] strong { display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:750;line-height:1; }
 #app .nlxr-settings-companion :is(h2,h3) { color:#f8faf7!important; }
 #app .nlxr-settings-companion p { color:rgba(248,250,247,.84)!important; }
 
@@ -2129,6 +2146,10 @@ body[data-project-theme] .creator-ar-context-toolbar button {
     text-align:center!important;
 }
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window { width:min(100%,66ch); margin-inline:auto; }
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p { opacity:0; transform:translateY(5px); transition:opacity .8s ease,transform .8s ease; }
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p.is-revealed { opacity:1; transform:none; }
+.tryit-demo .tryit-guided-choice.is-welcome-board.is-copy-ready:not(.is-typing) .tryit-board-text-window p { opacity:1; transform:none; }
+@media(prefers-reduced-motion:reduce) { .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p { transition:none; transform:none; } }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) { min-height:62px; font-size:clamp(1rem,1.6vw,1.2rem); }
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]) {
     min-height:72px;

@@ -33,7 +33,10 @@ export function demoContentFor(record) {
 }
 
 export function demoPlantMedia(record) {
-    if (record?.demoAmbientNeighbour) return null;
+    if (record?.demoAmbientNeighbour) {
+        const identity=record.demoKnowledgeProfile?.pim?.identity;
+        return identity?.image ? {image:identity.image,alt:identity.imageAlt || record.name,caption:identity.imageCaption || record.name} : null;
+    }
     return record?.demoPlantPreset === 'moringa'
         ? { image: MORINGA_PROFILE_IMAGE, alt: 'Moringa tree with compound green leaves' }
         : { image: PIGEON_PEA_CONTROL_IMAGE, alt: 'Pigeon Pea flowers, green pods and peas', hint: 'Select the plant to explore it, or grab it to reposition it.' };

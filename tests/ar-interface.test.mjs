@@ -223,7 +223,7 @@ test('the demo keeps the three simple Totem forms and uses physical plaques and 
     assert.doesNotMatch(demoSource, /\bdrawSpatialTotem\s*\(/);
     assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     assert.match(demoSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
-    const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone')"),demoSource.indexOf('const linkedTotems'));
+    const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone' || !demoAreaVisible(record))"),demoSource.indexOf('const linkedTotems'));
     assert.match(demoTotemDraw,/bodyHalfWidth=\.095,bodyHalfDepth=\.075,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES/);
     assert.doesNotMatch(demoTotemDraw,/crownRadius|scale:\{x:1,y:\.7,z:\.5\}/);
     assert.match(demoSource,/drawSpatialTotemPlaques\(gl,prismRenderer,sphereRenderer/);
@@ -1204,7 +1204,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const hoveredRecordHit=/);
     assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016,\{color:\[\.12,\.19,\.18\],alpha:\.34,emissive:0\}\)/);
+    assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialSphere/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
@@ -1420,8 +1420,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
     assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
-    assert.match(source, /typeNextCharacter/);
-    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, 180\)/);
+    assert.match(source, /revealNextParagraph/);
+    assert.match(source, /boardTypingTimer = setTimeout\(revealParagraph, 320\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /record\.awaitingProfileReveal = true;[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready'\)/);
@@ -1488,7 +1488,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /PRESS CONTROLLER TRIGGER/);
     assert.doesNotMatch(source, /radius: \.96/);
-    assert.match(source, /drawSpatialSphere\(gl,sphereRenderer,view\.projectionMatrix,view\.transform\.inverse\.matrix,end,\.016,\{color:\[\.12,\.19,\.18\],alpha:\.34,emissive:0\}\)/);
+    assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialSphere/);
     assert.equal(DEMO_LIM_TEXTURE_INTERVAL_MS,64);
     assert.match(source, /introTextureUploadedAt >= textureInterval/);
     assert.match(source, /function shiftSimulatedSceneForStage\(type\)/);
@@ -1498,11 +1498,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /simulatedSceneShifts/);
     assert.match(source, /50 \+ comfortOffsetPercent/);
     assert.doesNotMatch(source, /createIntroTickerTexture|introTickerTexture/);
-    assert.match(source, /introBoardVisibleBody = bodyText\.slice\(0, typedLength\)/);
-    assert.match(source, /typedLength = nextDemoTextLength\(bodyText, typedLength\)/);
-    assert.match(source, /const typingDelay = demoTextTypingDelay\(bodyText, typedLength\)/);
+    assert.match(source, /introBoardVisibleBody = paragraphs\.slice\(0, paragraphIndex\)\.join/);
+    assert.match(source, /paragraphIndex\+\+/);
     assert.match(source, /return 62;/);
-    assert.match(source, /boardTypingTimer = setTimeout\(typeNextCharacter, typingDelay\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(revealNextParagraph, 1350\)/);
     assert.doesNotMatch(source, /boardControlTimer/);
     assert.doesNotMatch(source, /'▌'/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after,[\s\S]*?content:none;/);

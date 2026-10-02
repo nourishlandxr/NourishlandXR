@@ -917,8 +917,8 @@ function demoTotemCards(record) {
         plants:plants.map(item=>({id:item.id,name:item.name,knowledge:demoOrbKnowledge(item)})),
         notes:notes.map(item=>({id:item.id,title:item.name,body:(demoContentFor(item)?.lines || []).join(' · ')})),compact:true})[0],eyebrow:'ZONE'};
     const plantSigns=second
-        ? ['left','right'].map(side=>({side,pair:plants.filter(item=>directionFor(item)===side)})).filter(group=>group.pair.length).map(({side,pair})=>({id:`plants-${side}`,eyebrow:pair.length===1?'PLANT ORB':'PLANT ORBS',title:pointedTitle(pair.map(item=>item.name).join(' · '),side),summary:'',plaque:true,boardSide:side,references:pair.map(item=>item.id)}))
-        : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'PLANT ORB',title:pointedTitle(item.name,directionFor(item)),summary:'',plaque:true,boardSide:directionFor(item),references:[item.id]}));
+        ? ['left','right'].map(side=>({side,pair:plants.filter(item=>directionFor(item)===side)})).filter(group=>group.pair.length).map(({side,pair})=>({id:`plants-${side}`,eyebrow:'',title:pointedTitle(`Plant Orb · ${pair.map(item=>item.name).join(' · ')}`,side),summary:'',plaque:true,boardSide:side,references:pair.map(item=>item.id)}))
+        : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'',title:pointedTitle(`Plant Orb · ${item.name}`,directionFor(item)),summary:'',plaque:true,boardSide:directionFor(item),references:[item.id]}));
     const note=notes[0];
     const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
     const destination=partner?.demoZoneName || '';
@@ -928,7 +928,7 @@ function demoTotemCards(record) {
         ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:pointedTitle(note.name,directionFor(note)),summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
     ].slice(0,5);
 }
-function demoAreaVisible(record) { return demoAreaRecordVisible(record,markers); }
+function demoAreaVisible(record) { return !record?.demoHiddenForLimo && demoAreaRecordVisible(record,markers); }
 
 function clearHiddenDemoAreaState(area) {
     const owned=markers.filter(record=>record.demoAreaId===area?.id);
@@ -1105,11 +1105,10 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     finalActions?.setAttribute('hidden', '');
     choiceButtons.forEach(button => button.setAttribute('hidden', ''));
     revealTargets.forEach(target => target.classList.add('is-awaiting-text'));
-    let typedLength = 0;
+    let typing = Boolean(paragraph && fullText && !options.persistent);
     // Persistent boards sit alongside the live PIM. Their action must be
     // available immediately so a long narration cannot make the demo appear
     // stalled after the mesh opens.
-    let typing = Boolean(paragraph && fullText && !options.persistent);
     let completionNotified = false;
     const revealControls = () => {
         if (choiceButtons.length === 1 && continueButton) {
@@ -1140,21 +1139,20 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
             options.onTextComplete?.();
         }
     };
-    const typeNextCharacter = () => {
+    const revealParagraph = () => {
         if (!typing || !paragraph) return;
-        typedLength = nextDemoTextLength(fullText, typedLength);
-        paragraph.textContent = fullText.slice(0, typedLength);
-        introBoardVisibleBody = fullText.slice(0, typedLength);
+        paragraph.textContent = fullText;
+        paragraph.classList.add('is-revealed');
+        panel.classList.add('is-copy-ready');
+        introBoardVisibleBody = fullText;
         introBoardTextureDirty = true;
-        if (typedLength >= fullText.length) return finishTyping();
-        const typingDelay = demoTextTypingDelay(fullText, typedLength);
-        boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
+        boardTypingTimer = setTimeout(finishTyping, 800);
     };
     skipDemoNarration = finishTyping;
     if (typing) {
         paragraph.textContent = '';
         panel.classList.add('is-typing');
-        boardTypingTimer = setTimeout(typeNextCharacter, 180);
+        boardTypingTimer = setTimeout(revealParagraph, 320);
     } else {
         finishTyping();
     }
@@ -1226,7 +1224,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     const deferContinueUntilCopyReady = Boolean(options.deferContinueUntilCopyReady);
     rememberDemoSlide({stepLabel:introBoardStep,title:localizedTitle,body:bodyText,buttonLabel,onContinue,options:{...options},kind:'intro'});
     let typingStartDelay = 220;
-    let typedLength = 0;
+    let paragraphIndex = 0;
     let typing = true;
     let completionNotified = false;
     const paintBoardParagraphs = visibleText => {
@@ -1237,6 +1235,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             if (paragraphElements[index]) {
                 paragraphElements[index].textContent = visibleText.slice(start, end);
                 paragraphElements[index].classList.toggle('is-current', visibleText.length >= start && visibleText.length <= end);
+                paragraphElements[index].classList.toggle('is-revealed', visibleText.length >= end);
             }
             start = end + 2;
         });
@@ -1257,16 +1256,18 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             options.onTextComplete?.();
         }
     };
-    const typeNextCharacter = () => {
+    const revealNextParagraph = () => {
         if (!typing) return;
         board?.classList.add('is-copy-ready');
-        typedLength = nextDemoTextLength(bodyText, typedLength);
-        introBoardVisibleBody = bodyText.slice(0, typedLength);
+        paragraphIndex++;
+        introBoardVisibleBody = paragraphs.slice(0, paragraphIndex).join('\n\n');
         introBoardTextureDirty = true;
         paintBoardParagraphs(introBoardVisibleBody);
-        if (typedLength >= bodyText.length) return finishTyping();
-        const typingDelay = demoTextTypingDelay(bodyText, typedLength);
-        boardTypingTimer = setTimeout(typeNextCharacter, typingDelay);
+        if (paragraphIndex >= paragraphs.length) {
+            boardTypingTimer = setTimeout(finishTyping, 800);
+            return;
+        }
+        boardTypingTimer = setTimeout(revealNextParagraph, 1350);
     };
     skipDemoNarration = finishTyping;
     if (board) {
@@ -1300,10 +1301,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     syncDemoPanelActions();
-    boardTypingTimer = setTimeout(typeNextCharacter, typingStartDelay);
+    boardTypingTimer = setTimeout(revealNextParagraph, typingStartDelay);
     boardTypingWatchdogTimer = setTimeout(
         finishTyping,
-        Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + bodyText.length * 90)
+        Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + paragraphs.length * 2200)
     );
     setGuide('');
 }
@@ -1533,6 +1534,7 @@ function activateLimCell(key) {
     if(nativeConnectionState && nativeConnectionState.phase!=='connected')nativeConnectionPanelGuide();
     infoPanel?.suspend(false);
     infoPanel?.setCompact(false);
+    if(content.sketchImage || content.image)infoPanel?.setMediaCollapsed(false);
     if(learningModule){
         const step=learningModule.steps[learningModuleStep];
         if(step?.cellId===content.id){learningModuleStep+=1;paintLearningModuleBoard();}
@@ -1749,9 +1751,9 @@ function showArWelcomeShowcase() {
     limInteractionCleanup();limSessionCleanup();limActivationSessionSuppressUntil=0;
     limActivation=createLimActivationController({
         onProgress:()=>{introBoardTextureDirty=true;},
-        onStart:()=>{introBoardTextureDirty=true;},
+        onStart:(_key,source)=>{if(source?.startsWith('xr'))pulseDemoHaptics(limInputSource);introBoardTextureDirty=true;},
         onCancel:()=>{introBoardTextureDirty=true;},
-        onComplete:key=>{activateLimCell(key);introBoardTextureDirty=true;}
+        onComplete:key=>{if(limInputSource)pulseDemoHaptics(limInputSource);activateLimCell(key);introBoardTextureDirty=true;}
     });
     // The XR session is created before the showcase controller. Bind the
     // session interactions here, once the controller exists, so tracked
@@ -1781,7 +1783,7 @@ function showArWelcomeShowcase() {
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-lim-surface','true');
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-intro-pending','true');
     clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
-    let openingTypedLength=0,openingTyping=false;
+    let openingParagraphIndex=0,openingTyping=false;
     const openingTextWindow=panel.querySelector('.tryit-board-text-window');
     const paintOpeningCopy=visibleText=>{
         const paragraphs=[...panel.querySelectorAll('.tryit-board-text-window p:not(.tryit-board-next)')];
@@ -1791,10 +1793,10 @@ function showArWelcomeShowcase() {
             if(paragraphs[index]){
                 paragraphs[index].textContent=visibleText.slice(start,end);
                 paragraphs[index].classList.toggle('is-current',visibleText.length>=start && visibleText.length<=end);
+                paragraphs[index].classList.toggle('is-revealed',visibleText.length>=end);
             }
             start=end+2;
         });
-        if(openingTextWindow)openingTextWindow.scrollTop=openingTextWindow.scrollHeight;
     };
     const finishOpeningCopy=()=>{
         if(!openingTyping)return;
@@ -1802,12 +1804,12 @@ function showArWelcomeShowcase() {
         introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
         panel.classList.remove('is-typing');
     };
-    const typeOpeningCopy=()=>{
+    const revealOpeningParagraph=()=>{
         if(!openingTyping || !arWelcomeShowcaseActive)return;
-        openingTypedLength=nextDemoTextLength(introBoardBody,openingTypedLength);
-        introBoardVisibleBody=introBoardBody.slice(0,openingTypedLength);paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
-        if(openingTypedLength>=introBoardBody.length){finishOpeningCopy();return;}
-        boardTypingTimer=setTimeout(typeOpeningCopy,demoTextTypingDelay(introBoardBody,openingTypedLength));
+        openingParagraphIndex++;
+        introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
+        if(openingParagraphIndex>=openingParagraphs.length){boardTypingTimer=setTimeout(finishOpeningCopy,800);return;}
+        boardTypingTimer=setTimeout(revealOpeningParagraph,1350);
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
@@ -1816,7 +1818,7 @@ function showArWelcomeShowcase() {
         introBoardTitle=demoLocalizedText('EXTENDED REALITY, ROOTED IN PLACE');
         introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
         rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
-        introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
+        introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
         panel.querySelector('.tryit-board-text-window').innerHTML=openingParagraphs.map(()=>'<p></p>').join('');
@@ -1824,7 +1826,7 @@ function showArWelcomeShowcase() {
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         syncDemoPanelActions();
         panel.classList.add('is-typing');paintOpeningCopy('');
-        boardTypingTimer=setTimeout(typeOpeningCopy,320);
+        boardTypingTimer=setTimeout(revealOpeningParagraph,320);
     };
     rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitForOpeningCopy=()=>{
@@ -2286,6 +2288,8 @@ function showLinkedTotemsIntroduction() {
 
 function fadeMappedSceneForLimo() {
     markers.forEach(record=>{
+        record.demoHiddenForLimo=true;
+        if(record.demoType==='plant')record.demoExpanded=false;
         if(record.demoType==='zone'){
             record.demoTotemFaded=true;
             record.demoNarrativeFaded=true;
@@ -2298,6 +2302,11 @@ function fadeMappedSceneForLimo() {
             record.demoInteractive=false;
         }
     });
+    updateSimulatedMarkers();
+}
+
+function restoreMappedSceneAfterLimo(){
+    markers.forEach(record=>{record.demoHiddenForLimo=false;if(record.demoType==='zone' || record.demoType==='note'){record.demoNarrativeFaded=false;record.demoInteractive=true;}if(record.demoType==='zone')record.demoTotemFaded=false;});
     updateSimulatedMarkers();
 }
 
@@ -2366,11 +2375,21 @@ function nativeConnectionPanelGuide() {
         ? `Connecting ${state.sourceTitle} with ${state.targetTitle}…`
         : `${state.sourceTitle} is connected with ${state.targetTitle}. The highlighted cells share one relationship.`;
     const connectionText=`${state.explanation}\n\nIn this place: ${state.fieldQuestion}`;
-    infoPanel?.showLearning({id:'native-mesh-connection',title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:`${body}\n\n${connectionText}`,accent:'#dfff9b',mesh:'lim',editable:false});
+    const targetMedia=limLearningContent(state.targetId);
+    infoPanel?.showLearning({id:'native-mesh-connection',title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:`${body}\n\n${connectionText}`,image:targetMedia.image,imageAlt:targetMedia.imageAlt,accent:'#dfff9b',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
 function showNativeConnectionIntroduction() {
+    const plant=nativeConnectionPlant();
+    if(plant){
+        plant.demoHiddenForLimo=false;
+        plant.demoExpanded=false;
+        setDemoPimState(plant,pimCreateInteractionState([], '', plant.id || plant.name || ''));
+        plant.demoActiveBranch='';
+        toggleDemoPlantProfile(plant);
+        updateSimulatedMarkers();
+    }
     showIntroBoard('Connect plant knowledge to learning',
         ['Pigeon Pea and the learning mesh are available together. Their existing cells can form one connection.'],
         'Connect real cells',startNativeConnectionExperience,
@@ -2462,6 +2481,7 @@ async function acceptNativeLimCell(key) {
 function showLimoLearningModes() {
     setDemoJourneyStage('apply');
     prepareStableLimoSurface();
+    fadeMappedSceneForLimo();
     showDemoTutorialMedia('connection');
     showIntroBoard(
         'Learn here or as a standalone experience',
@@ -2513,6 +2533,7 @@ function showLimoArchetypes() {
 
 function showAudienceValue() {
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
+    restoreMappedSceneAfterLimo();
     setDemoJourneyStage('impact');
     showIntroBoard(
         'One place, different reasons to care',
@@ -3080,7 +3101,7 @@ function updateSimulatedMarkers() {
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
     const highlighted=selectedDemoTotemTargets();
-    layer.innerHTML = `${simulatedAreaLinkMarkup(markers)}${markers.map((record, index) => {
+    layer.innerHTML = `${simulatedAreaLinkMarkup(markers.filter(demoAreaVisible))}${markers.map((record, index) => {
         if(!demoAreaVisible(record))return '';
         const content = demoContentFor(record);
         const lines = content?.lines?.slice(0, record.revealLines ?? content.lines.length) || [];
@@ -4888,7 +4909,7 @@ function drawSpatialAmbientLife(view){
         for(let index=0;index<2;index++){
             const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion});if(!bee)continue;
             const position=ambientBeeWorldPosition(bee,index);
-            const spriteScale=.34*(1+bee.flyby*.3);
+            const spriteScale=.42*(1+bee.flyby*.3);
             const model=billboardMatrix(position,spriteScale,spriteScale,viewerMatrix);
             gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),bee.opacity);
@@ -5083,7 +5104,7 @@ function drawMarker(view) {
         );
     });
     markers.forEach(record => {
-        if (record.demoType !== 'zone') return;
+        if (record.demoType !== 'zone' || !demoAreaVisible(record)) return;
         const totemColour=demoHexColour(record.demoTotemColor || record.demoContent?.accent);
         const totemHighlight=totemColour.map(channel=>Math.min(.96,channel*.48+.48));
         const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
@@ -5113,7 +5134,7 @@ function drawMarker(view) {
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival
         });
     });
-    const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible);
+    const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible && demoAreaVisible(record));
     if (linkedTotems.length >= 2) {
         const [first, second] = linkedTotems;
         const route=demoGroundLinkRoute(first,second);
@@ -5193,7 +5214,7 @@ function drawMarker(view) {
     });
     if(totemCardsRenderer) {
         totemCardsRenderer.begin();
-        markers.filter(record=>record.demoType==='zone' && record.demoExpanded && !record.demoNarrativeFaded).forEach(record=>{
+        markers.filter(record=>record.demoType==='zone' && record.demoExpanded && !record.demoNarrativeFaded && demoAreaVisible(record)).forEach(record=>{
             if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
                 record.liveTotemCards=demoTotemCards(record);record.totemCardsRefreshed=performance.now();
             }
@@ -5269,7 +5290,7 @@ function drawDemoControllerPointer(view) {
         y:contactPoint.y-direction.y*.004,
         z:contactPoint.z-direction.z*.004
     } : null;
-    const end = surfacePoint || controllerRayEnd(latestControllerRay, [], XR_LASER_POINTER_CONFIG.length);
+    const end = surfacePoint || controllerRayEnd(latestControllerRay, [], Math.min(XR_LASER_POINTER_CONFIG.length,2.5));
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
@@ -5278,9 +5299,8 @@ function drawDemoControllerPointer(view) {
         lift: .001,
         color:latestTrackedHandStates.length ? [.78,.85,.84,handPinchActive ? .58 : .4] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
-    if(surface){
-        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.016,{color:[.12,.19,.18],alpha:.34,emissive:0});
-    }
+    // The thin ray ends at the panel surface; an opaque contact marker hid
+    // small controls and looked like a black disc in the headset.
 }
 
 async function startImmersive() {

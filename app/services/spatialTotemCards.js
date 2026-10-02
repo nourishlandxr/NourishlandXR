@@ -82,7 +82,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const demoZone=Boolean(state?.demoZone);
     const demoScale=demoZone ? (Number(state?.bodyHalfHeight) || .56)/.82 : 1;
     const boardWidth = Number(state?.boardWidth) || (demoZone ? .52 : .58);
-    const boardHeight = Number(state?.boardHeight) || (demoZone ? .18 : .22);
+    const boardHeight = Number(state?.boardHeight) || (demoZone ? .12 : .16);
     const boardAttach=bodyHalfWidth+boardWidth/2-.035;
     const place = (x,y,width,height,card,detail=false,offset=bodyHalfDepth+.018) => ({
         center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
@@ -240,8 +240,7 @@ function cardCanvas(card, detail) {
         return canvas;
     }
     if(boardStyle==='attached-sign'){
-        ctx.fillStyle='rgba(248,239,220,.96)';ctx.font=`750 34px ${face}`;ctx.fillText(String(card.eyebrow || '').toUpperCase(),512,66,860);
-        ctx.fillStyle='#fff9ec';ctx.font=`650 66px ${face}`;wrapped(ctx,card.title,512,136,890,68,2);
+        ctx.fillStyle='#fff9ec';ctx.font=`700 ${String(card.title||'').length>26?48:64}px ${face}`;ctx.fillText(card.title,512,128,890);
         return canvas;
     }
     if(boardStyle==='header' || boardStyle==='header-detail'){

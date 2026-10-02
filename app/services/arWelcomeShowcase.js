@@ -453,8 +453,8 @@ function drawOrganicTendril(ctx,node,frame){
  const curve=partialCubic(node.openingCurve,node.openingPathProgress);
  const dx=curve.to.x-curve.from.x,dy=curve.to.y-curve.from.y,length=Math.hypot(dx,dy)||1;
  const parent=node.openingMeta?.parent;
- const startInset=parent?.isAttachment?0:(parent?.baseRadius||0)*(parent?.scale||0)*.94;
- const endInset=(node.baseRadius||0)*(node.scale||0)*.94;
+ const startInset=parent?.isAttachment?0:Math.max(0,cellEdgeRadius(Math.atan2(dy,dx),(parent?.baseRadius||0)*(parent?.scale||1))-3);
+ const endInset=Math.max(0,cellEdgeRadius(Math.atan2(-dy,-dx),(node.baseRadius||0)*(node.scale||1))-3);
  if(length<=startInset+endInset)return;
  const start={x:curve.from.x+dx/length*startInset,y:curve.from.y+dy/length*startInset};
  const end={x:curve.to.x-dx/length*endInset,y:curve.to.y-dy/length*endInset};
@@ -598,7 +598,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
     const start=parent && parent.opacity>0?parent:node.attachment;
     if(start){
      const dx=node.x-start.x,dy=node.y-start.y,length=Math.hypot(dx,dy)||1;
-     const angle=Math.atan2(dy,dx),inset=parent?cellEdgeRadius(angle,parent.radius):0,endInset=cellEdgeRadius(angle+Math.PI,node.radius);
+     const angle=Math.atan2(dy,dx),inset=parent?Math.max(0,cellEdgeRadius(angle,parent.radius)-3):0,endInset=Math.max(0,cellEdgeRadius(angle+Math.PI,node.radius)-3);
      ctx.save();ctx.globalAlpha=node.opacity*.68;ctx.strokeStyle=node.accent||'#dcef95';ctx.lineWidth=5;
      ctx.beginPath();ctx.moveTo(start.x+dx/length*inset,start.y+dy/length*inset);
      ctx.lineTo(node.x-dx/length*endInset,node.y-dy/length*endInset);ctx.stroke();ctx.restore();
@@ -613,8 +613,9 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
    const dx=node.x-parent.x,dy=node.y-parent.y,length=Math.hypot(dx,dy)||1;
    ctx.save();ctx.globalAlpha=Math.min(parent.opacity,node.opacity)*.60;ctx.strokeStyle=node.accent||'#dcef95';ctx.lineWidth=4;
    const angle=Math.atan2(dy,dx);
-   ctx.beginPath();ctx.moveTo(parent.x+dx/length*cellEdgeRadius(angle,parent.radius),parent.y+dy/length*cellEdgeRadius(angle,parent.radius));
-   ctx.lineTo(node.x-dx/length*cellEdgeRadius(angle+Math.PI,node.radius),node.y-dy/length*cellEdgeRadius(angle+Math.PI,node.radius));ctx.stroke();ctx.restore();
+   const parentInset=Math.max(0,cellEdgeRadius(angle,parent.radius)-3),childInset=Math.max(0,cellEdgeRadius(angle+Math.PI,node.radius)-3);
+   ctx.beginPath();ctx.moveTo(parent.x+dx/length*parentInset,parent.y+dy/length*parentInset);
+   ctx.lineTo(node.x-dx/length*childInset,node.y-dy/length*childInset);ctx.stroke();ctx.restore();
   }
  }
  for(const node of frame.nodes){

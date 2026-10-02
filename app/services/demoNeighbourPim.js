@@ -4,6 +4,7 @@ import { PIM_COMPASS } from './pimCompass.js';
 const REFERENCE_DATE = '2026-09-29T00:00:00.000Z';
 const COMPASS = new Map(PIM_COMPASS.map(cell => [cell.id, cell]));
 const PLANT_MEDIA=Object.freeze({
+    vetiver:{image:new URL('../assets/demo-plants/vetiver-grass.jpg',import.meta.url).href,imageAlt:'Vetiver grass clump in the field',imageCaption:'Vetiver grass · Wikimedia Commons CC0 reference photo'},
     acacia:{image:new URL('../assets/demo-plants/acacia-fimbriata-illustrative.webp',import.meta.url).href,imageAlt:'Illustrative Acacia fimbriata botanical reference',imageCaption:'Illustrative only · Acacia fimbriata. The Totem plant remains identified as Acacia sp.'},
     jackfruit:{image:new URL('../assets/demo-plants/jackfruit-artocarpus-heterophyllus.webp',import.meta.url).href,imageAlt:'Jackfruit foliage, flowers, fruit and seed reference',imageCaption:'Jackfruit · Artocarpus heterophyllus'},
     lychee:{image:new URL('../assets/demo-plants/lychee-red-ball-illustrative.webp',import.meta.url).href,imageAlt:'Red Ball lychee foliage, flower and fruit reference',imageCaption:'Illustrative cultivar · Red Ball lychee. The Totem plant cultivar is not identified.'}

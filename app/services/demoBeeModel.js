@@ -122,7 +122,9 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
             const center=bounds.getCenter(new THREE.Vector3());
             const size=bounds.getSize(new THREE.Vector3());
             const halfHeight=Math.max(.25,size.y,size.x/camera.aspect)/2;
-            camera.position.set(center.x,center.y,bounds.max.z+halfHeight/Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*1.22);
+            // Animated wings extend beyond the rest-pose bounds. Leave generous
+            // transparent space in the sprite instead of cropping each flap.
+            camera.position.set(center.x,center.y,bounds.max.z+halfHeight/Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*1.8);
             camera.lookAt(center);
             camera.updateProjectionMatrix();
             lastSpritePaint=elapsed;

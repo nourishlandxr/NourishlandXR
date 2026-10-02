@@ -62,7 +62,7 @@ test('Demo Totem keeps one welcome header and four slim horizontal signs',()=>{
     const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'area',{signsVisible:true,faded:false,bodyHalfWidth:.095,bodyHalfDepth:.075,demoZone:true});
     assert.equal(surfaces.filter(surface=>surface.card.id==='area').length,1);
     assert.equal(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').length,4);
-    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.18));
+    assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.12));
     assert.deepEqual(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').map(surface=>Math.sign(surface.center.x)),[1,-1,1,-1]);
     assert.ok(!totemCardsMarkup(cards,'area').includes('nlxr-totem-detail'));
 });

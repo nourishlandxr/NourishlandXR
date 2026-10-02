@@ -126,7 +126,7 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
     menuUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='close'?'Close demo':item.label,ariaLabel:item.ariaLabel || item.label,title:item.description,description:item.description,kind:'menu',disabled:Boolean(item.disabled),x:18,y:284+index*62,width:174,height:54}));
     buttons.push({action:'Hide',label:'Hide',kind:'menu',x:18,y:284+menuUtilities.length*62,width:174,height:54});
     if(pageCount>1)buttons.push({action:'Previous',label:'‹',ariaLabel:'Previous page',kind:'pager',x:852,y:130,width:52,height:42,disabled:page===0},{action:'Next',label:'›',ariaLabel:'Next page',kind:'pager',x:910,y:130,width:52,height:42,disabled:page>=pageCount-1});
-    historyUtilities.filter(item=>item.id!=='forward' || !item.disabled).forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='back'?'‹':'›',ariaLabel:item.label,title:item.description,kind:'history',disabled:Boolean(item.disabled),x:238+index*56,y:130,width:48,height:42}));
+    historyUtilities.filter(item=>item.id!=='forward' || !item.disabled).forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='back'?'‹':'›',ariaLabel:item.label,title:item.description,kind:'history',disabled:Boolean(item.disabled),x:18+index*56,y:284+(menuUtilities.length+1)*62,width:48,height:42}));
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-moduleRows*58-62,width:226,height:48}));
     if(tab==='Help')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY-moduleRows*58+index*58,width:732,height:48}));
     secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:secondaryStart+Math.floor(index/2)*62,width:index%2?362:350,height:54}));
@@ -176,7 +176,7 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const primaryY=primary?height-82:height-20;
     if(primary)result.push(button(primary,left,primaryY,width,64));
     pager.forEach((item,index)=>result.push(button(item,left+width-(pager.length-index)*46,98,40,34)));
-    history.forEach((item,index)=>result.push(button(item,left+index*46,98,40,34)));
+    history.forEach((item,index)=>result.push(button(item,16+index*46,150+items.filter(menu=>['tab','menu'].includes(menu.kind)).length*50,40,38)));
     const rows=Math.ceil(secondary.length/2);
     let y=primaryY-(rows*40+module.length*42+pathway.length*42+8);
     for(const group of [pathway,module])for(const item of group){result.push(button(item,left,y,width,36));y+=40;}
@@ -556,15 +556,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const heading=content.querySelector('h3'),pathHeading=hasPimPathHeading();heading.textContent=panelHeading();heading.hidden=!heading.textContent;heading.classList.toggle('nlxr-pim-pathline',pathHeading);if(pathHeading)heading.title=heading.textContent;else heading.removeAttribute('title');
         const trail=content.querySelector('.nlxr-info-trail');trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?selection?.breadcrumb || '':'';
         content.querySelector('.nlxr-info-body').textContent=currentPages[page].join('\n');
-        let hint=content.querySelector('.nlxr-info-hint');
-        if(!hint){hint=document.createElement('p');hint.className='nlxr-info-hint';content.querySelector('.nlxr-info-body').after(hint);}
+        let hint=element.querySelector('.nlxr-info-hint');
+        if(!hint){hint=document.createElement('p');hint.className='nlxr-info-hint';element.querySelector('.nlxr-tools-dock')?.append(hint);}
         hint.textContent=currentHint();hint.hidden=!hint.textContent;
         content.querySelector('small').textContent=metadata();
         let pager=element.querySelector('.nlxr-content-pager');
         if(!pager && !confirmation){pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');element.querySelector('.nlxr-tools-dock')?.prepend(pager);}
         if(pager)pager.replaceChildren(...controls().filter(item=>item.kind==='pager').map(makeButton));
         let history=element.querySelector('.nlxr-demo-history');
-        if(!history && !confirmation){history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');element.querySelector('.nlxr-tools-dock')?.prepend(history);}
+        if(!history && !confirmation){history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');element.querySelector('.nlxr-control-tabs')?.append(history);}
         if(history)history.replaceChildren(...controls().filter(item=>item.kind==='history').map(makeButton));
         let guides=content.querySelector('.nlxr-guide-actions');
         if(tab==='Help' && !guides){guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');content.append(guides);}
@@ -652,6 +652,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
             controls().filter(item=>['tab','menu'].includes(item.kind) && item.action!=='Hide').forEach(item=>tabs.append(makeButton(item)));
+            if(!confirmation){const history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');controls().filter(item=>item.kind==='history').forEach(item=>history.append(makeButton(item)));if(history.childElementCount)tabs.append(history);}
             element.append(tabs);
             if(pathwayContext){
                 const pathway=document.createElement('section');pathway.className='nlxr-pathway-context';pathway.setAttribute('aria-live','polite');
@@ -669,14 +670,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?selection?.breadcrumb || '':'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const hint=document.createElement('p');hint.className='nlxr-info-hint';hint.textContent=currentHint();hint.hidden=!hint.textContent;
-            const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,hint,status);
+            const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);
             if(tab==='Help'){const guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');controls().filter(item=>item.kind==='module' && !item.disabled).forEach(item=>guides.append(makeButton(item)));if(guides.childElementCount)content.append(guides);}
             element.append(content);
             if(showMediaWing){
                 element.append(createMediaWing());
             }
             const tools=document.createElement('footer');tools.className='nlxr-tools-dock';tools.setAttribute('aria-label','Control panel tools');
-            if(!confirmation){const history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');controls().filter(item=>item.kind==='history').forEach(item=>history.append(makeButton(item)));if(history.childElementCount)tools.append(history);}
+            tools.append(hint);
             if(!confirmation){const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));tools.append(pager);}
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Reading controls');controls().filter(item=>!item.kind && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));if(nav.childElementCount)tools.append(nav);
             if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)tools.append(utilities);}
@@ -757,15 +758,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 infoPages(card.pathway.explanation,Math.max(26,Math.floor(width/13)),2)[0].forEach(line=>{ctx.fillText(line,left,y,width);y+=21;});y+=10;
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.fillRect(left,y-3,5,30);}
-            if(card.title){ctx.fillStyle='#f3f8fc';ctx.font='650 27px system-ui';ctx.fillText(card.title,left+10,y,width-10);y+=48;}
+            if(card.title){ctx.fillStyle='#f3f8fc';ctx.font='650 27px system-ui';ctx.textAlign='center';ctx.fillText(card.title,left+width/2,y,width-10);ctx.textAlign='left';y+=48;}
             if(card.trail){ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';ctx.fillText(card.trail,left,y,width);y+=32;}
             const actionTop=Math.min(...card.controls.filter(item=>item.kind==='utility'||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-76);
             const contentBottom=actionTop-14;
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
             ctx.fillStyle='#f3f8fc';ctx.font=(card.largeText?'500 31px':'500 27px')+' system-ui';
             const lineHeight=card.largeText?36:32;
-            card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
-            if(card.hint){ctx.fillStyle='#b8d2da';ctx.font='italic 400 16px system-ui';infoPages(card.hint,Math.max(24,Math.floor(width/11)),2)[0].forEach(line=>{ctx.fillText(line,left,y,width);y+=19;});}
+            ctx.textAlign='center';card.lines.forEach(line=>{ctx.fillText(line,left+width/2,y,width);y+=lineHeight;});ctx.restore();
+            if(card.hint){ctx.fillStyle='#d8e6e3';ctx.font='600 20px system-ui';ctx.textAlign='center';infoPages(card.hint,Math.max(24,Math.floor(width/11)),2)[0].forEach((line,index)=>ctx.fillText(line,left+width/2,actionTop-57+index*24,width-16));ctx.textAlign='left';}
             if(card.hoverHint){ctx.fillStyle='rgba(5,16,26,.88)';ctx.beginPath();ctx.roundRect(14,card.height-132,136,104,12);ctx.fill();ctx.strokeStyle='rgba(166,204,229,.32)';ctx.stroke();ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';infoPages(card.hoverHint,18,5)[0].forEach((line,index)=>ctx.fillText(line,24,card.height-120+index*18,116));}
             ctx.fillStyle='#d4e0dc';ctx.font='400 18px system-ui';ctx.fillText(card.metadata,left,card.height-23,width);
             if(card.tab==='Details' && card.page)ctx.fillText(card.page,right-65,card.height-20,65);
@@ -789,13 +790,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 contentTop+=imageHeight+20;
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.globalAlpha=.92;ctx.fillRect(titleX,contentTop-6,5,32);ctx.globalAlpha=1;}
-            ctx.fillStyle='#f1f4f4';ctx.font='600 26px system-ui';ctx.fillText(card.title,titleX,contentTop,titleWidth);
+            ctx.fillStyle='#f1f4f4';ctx.font='600 26px system-ui';ctx.textAlign='center';ctx.fillText(card.title,titleX+titleWidth/2,contentTop,titleWidth);ctx.textAlign='left';
             if(card.trail){ctx.fillStyle='#b4c3c7';ctx.font='400 18px system-ui';ctx.fillText(card.trail,200,contentTop+38,772);}
             const bodyOffset=card.trail?75:47;
-            card.lines.forEach((line,i)=>{ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 31px':'400 27px')+' system-ui';ctx.fillText(line,titleX,contentTop+bodyOffset+i*(card.largeText?36:32),titleWidth);});
-            if(card.hint){ctx.fillStyle='#b8d2da';ctx.font='italic 400 17px system-ui';infoPages(card.hint,82,2)[0].forEach((line,index)=>ctx.fillText(line,titleX,contentTop+bodyOffset+card.lines.length*32+index*21,titleWidth));}
+            card.lines.forEach((line,i)=>{ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 31px':'400 27px')+' system-ui';ctx.textAlign='center';ctx.fillText(line,titleX+titleWidth/2,contentTop+bodyOffset+i*(card.largeText?36:32),titleWidth);ctx.textAlign='left';});
             if(card.hoverHint){ctx.fillStyle='rgba(5,16,26,.88)';ctx.beginPath();ctx.roundRect(20,500,142,92,10);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 15px system-ui';infoPages(card.hoverHint,18,4)[0].forEach((line,index)=>ctx.fillText(line,30,512+index*18,122));}
             const footerY=card.pathway?card.height-190:card.height-86;
+            if(card.hint){ctx.fillStyle='#d8e6e3';ctx.font='600 21px system-ui';ctx.textAlign='center';infoPages(card.hint,72,2)[0].forEach((line,index)=>ctx.fillText(line,500,footerY-64+index*25,740));ctx.textAlign='left';}
             ctx.fillStyle='#b4c3c7';ctx.font='400 17px system-ui';ctx.fillText(card.metadata,200,footerY,600);
             if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
         }

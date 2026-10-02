@@ -74,7 +74,7 @@ test('main LIM renderer draws one lightweight connection beneath existing cell l
  assert.equal(beziers,0,'opening connections avoid expensive multi-pass curves');
  assert.ok(lines>0,'parent-child relationships retain a simple line');
  assert.match(showcaseSource,/startInset=parent\?\.isAttachment\?0:/);
- assert.match(showcaseSource,/endInset=\(node\.baseRadius\|\|0\)\*\(node\.scale\|\|0\)\*\.94/);
+ assert.match(showcaseSource,/endInset=Math\.max\(0,cellEdgeRadius\(Math\.atan2\(-dy,-dx\),\(node\.baseRadius\|\|0\)\*\(node\.scale\|\|1\)\)-3\)/);
 });
 
 test('minimal introduction reveals only four coloured primary pathways without connectors',()=>{

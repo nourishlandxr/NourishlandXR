@@ -77,9 +77,9 @@ test('the second Totem reads its Orb documents as live knowledge', () => {
 
 test('botanical media preserves identification boundaries',()=>{
     const acacia=demoNeighbourPim('acacia'),jackfruit=demoNeighbourPim('jackfruit'),lychee=demoNeighbourPim('lychee'),vetiver=demoNeighbourPim('vetiver');
-    for(const document of [acacia,jackfruit,lychee])assert.equal(existsSync(fileURLToPath(document.identity.image)),true);
+    for(const document of [acacia,jackfruit,lychee,vetiver])assert.equal(existsSync(fileURLToPath(document.identity.image)),true);
     assert.match(acacia.identity.imageCaption,/Illustrative only.*Acacia fimbriata.*Acacia sp\./);
     assert.match(lychee.identity.imageCaption,/Red Ball.*cultivar is not identified/);
     assert.match(jackfruit.identity.imageCaption,/Artocarpus heterophyllus/);
-    assert.equal(vetiver.identity.image,'','an unapproved generated Vetiver image must not enter the application');
+    assert.match(vetiver.identity.imageCaption,/Wikimedia Commons CC0 reference photo/);
 });
