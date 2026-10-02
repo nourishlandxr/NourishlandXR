@@ -576,7 +576,9 @@ function demoPanelActions() {
 function syncDemoPanelActions() {
     if(!infoPanel)return;
     const actions=demoPanelActions(),signature=JSON.stringify(actions);
-    const primary=actions.find(item=>item.primary || item.id==='continue');
+    // Exit confirmation stays in the panel beside Keep demo open; the stage
+    // is inert while confirming, so an external action can become unreachable.
+    const primary=demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE?actions.find(item=>item.id==='continue'):null;
     const externalTrigger=simulatedMode || domOverlayEnabled;
     const trigger=appRoot?.querySelector('[data-tryit-context-trigger]');
     if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');
@@ -1168,11 +1170,45 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     setGuide('');
 }
 
+// Visitor wording from the Quick Access / Edit table in data1/demo.docx.
+const DEMO_QUICK_ACCESS_COPY=Object.freeze({
+    'INTRO 1.1':'Welcome to NourishlandXR — where extended reality brings plant stories and knowledge into living landscapes.',
+    'INTRO 1.2':'Extended reality connects digital information with the world around you. Here, plants and places become starting points for discovery and learning.',
+    'SPACE 1.1':'This is your Control Panel. It shows the actions and help available at each step.',
+    'SPACE 1.2':'You arrive in a garden. A plant catches your attention — what is it, and what role does it play here?',
+    'SPACE 1.3':'A Project brings together the plants, observations and guidance for a real place. Areas organise different parts of that place.',
+    'SPACE 1.4':'In this demo, you’ll explore two plants, add an observation and see how Areas connect.',
+    'SPACE 1.5':'The same place can support a visitor’s curiosity, a school activity or a land steward’s work.',
+    'ELEMENTS 1.1':'A plant profile brings together its identity, ecology, care and uses, alongside local knowledge and sources.',
+    'ELEMENTS 1.2':'Totem signs help you find your way through an Area, pointing towards plants, Notes and other Areas.',
+    'ELEMENTS 1.3':'Start with Pigeon Pea. Aim at the plant, or choose a location for its digital tag.',
+    'ELEMENTS 1.4':'The tag connects this plant profile to a location in the landscape.',
+    'ELEMENTS 1.5':'Adjust the tag’s distance, then confirm its position.',
+    'ELEMENTS 1.6':'This digital tag is a Plant Orb. Select it to open the plant profile, or hold it to move it.',
+    'ELEMENTS 1.7':'Explore Pigeon Pea’s information cells to discover its characteristics and roles.',
+    'ELEMENTS 1.8':'The same plant profile is also available in Web Mode, as a standard browser page.',
+    'ELEMENTS 1.9':'Which of these characteristics could matter in this garden? Keep one in mind as you explore.',
+    'ELEMENTS 1.10':'Now meet Moringa. Compare its characteristics with Pigeon Pea and consider the different roles they might play here.',
+    'ELEMENTS 1.12':'Both plant profiles are now linked to this place, ready to explore and compare.',
+    'ELEMENTS 1.14':'What do you notice in the actual landscape?',
+    'ELEMENTS 1.15':'Create a Note to record an observation.',
+    'ELEMENTS 1.17':'Your Note now belongs to this location. It can hold an observation, image, memory or task.',
+    'ELEMENTS 1.18':'This Totem introduces the Area and points to nearby content. Use Show Signs to reveal its directions, or Fade to reduce its visibility.',
+    'ELEMENTS 1.21':'A route connects the two Areas. Each keeps its own plants and Notes.',
+    'ELEMENTS 1.22':'Linked Areas can form a garden tour, a learning trail or a route through a working landscape.',
+    'LEARNING 1.7':'Choose a learning pathway and explore the questions within it.',
+    'LEARNING 1.8':'Connect a plant characteristic to a learning question to explore it further.',
+    'LEARNING 1.10':'Your connection opens a new question. Follow it further, or try another connection.',
+    'LEARNING 1.12':'Take this question back to the landscape. What could you observe here to investigate it?',
+    'CLOSURE 1.1':'Thank you for exploring NourishlandXR. You’ve connected two plants, an observation and two Areas — the beginnings of a living map that can grow with the place.'
+});
+
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     useSharedWelcomeBoard(true);
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     const localizedTitle = demoLocalizedText(title);
-    const paragraphs = (Array.isArray(body) ? body : [body])
+    const quickAccessCopy=DEMO_QUICK_ACCESS_COPY[options.stepLabel];
+    const paragraphs = (quickAccessCopy ? [quickAccessCopy] : Array.isArray(body) ? body : [body])
         .map(value => demoLocalizedText(String(value || '').trim()))
         .filter(Boolean);
     const bodyText = paragraphs.join('\n\n');
@@ -1727,7 +1763,7 @@ function showArWelcomeShowcase() {
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='INTRO 1.1';
     introBoardTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
-    introBoardBody=demoLocalizedText('NLXR is an immersive information hub for living landscapes.');
+    introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
     introBoardVisibleBody='';
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
@@ -1778,7 +1814,7 @@ function showArWelcomeShowcase() {
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText('EXTENDED REALITY, ROOTED IN PLACE');
-        introBoardBody=`${demoLocalizedText('See the landscape come to life.')}\n\n${demoLocalizedText('In NourishlandXR, digital plant stories and place-based knowledge appear within the real landscape around you.')}`;
+        introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
         rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingTypedLength=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
@@ -1880,7 +1916,7 @@ function showArWelcomeShowcase() {
         arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
-    setGuide(`${demoLocalizedText('Welcome to the NourishlandXR demo')}. ${demoLocalizedText('NLXR is an immersive information hub for living landscapes.')}`);
+    setGuide(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -4372,7 +4408,7 @@ function drawIntroNoteContent(ctx) {
             ctx.globalAlpha*=fade;ctx.fillStyle='#f7fbf4';
             do {ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
             ctx.fillText(openingTitle,contentCenter,420);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font=`600 42px ${DEMO_PRESENTATION_FONT}`;drawWrappedTextureText(ctx,demoLocalizedText('NLXR is an immersive information hub for living landscapes.'),contentCenter,570,780,54,2);}
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font=`600 42px ${DEMO_PRESENTATION_FONT}`;drawWrappedTextureText(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentCenter,570,780,54,3);}
         }
         ctx.restore();return;
     }
@@ -5237,14 +5273,13 @@ function drawDemoControllerPointer(view) {
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
-        width:latestTrackedHandStates.length ? .0032 : XR_LASER_POINTER_CONFIG.width,
+        width:latestTrackedHandStates.length ? .0024 : XR_LASER_POINTER_CONFIG.width,
         curve: .001,
         lift: .001,
-        color:latestTrackedHandStates.length ? [.78,.91,.96,handPinchActive ? .76 : .54] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
+        color:latestTrackedHandStates.length ? [.78,.85,.84,handPinchActive ? .58 : .4] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
     if(surface){
-        if(surface===greenSurface)drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.024,{color:[.69,.94,.8],alpha:.10,emissive:.15});
-        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,surface===controlSurface?.022:surface===greenSurface?.009:.013,{color:surface===greenSurface?[.73,.94,.83]:latestTrackedHandStates.length?[.82,.94,.98]:[.82,1,.56],alpha:1,emissive:surface===greenSurface?.25:.65});
+        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,end,.016,{color:[.12,.19,.18],alpha:.34,emissive:0});
     }
 }
 

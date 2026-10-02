@@ -233,7 +233,7 @@ function revealFrames(graphs) {
   nodes.push({id:archetype.id,parent:null,label:archetype.label,depth:0,limId:archetype.limId,accent:archetype.accent,accessibilityLabel:`${archetype.label} archetype learning cell`,...rootPoint,baseRadius:LIM_CELL_SHAPE.archetypeRadius,radius:LIM_CELL_SHAPE.archetypeRadius,revealAt:archetype.at});
   archetype.children.forEach(([label,limId],index)=>{
    const position=foundationPoint(archetype.quadrant,index+1,rootPoint);
-   nodes.push({id:limId,parent:archetype.id,label,depth:1,limId,accent:archetype.accent,accessibilityLabel:`${label} foundational learning cell`,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:archetype.at+1800+index*700});
+   nodes.push({id:limId,parent:archetype.id,label,depth:1,limId,accent:childCellAccent(archetype.accent),accessibilityLabel:`${label} foundational learning cell`,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:archetype.at+1800+index*700});
   });
   let slot=5;
   const nextReservedPosition=()=>{
@@ -257,7 +257,7 @@ function revealFrames(graphs) {
     const position=nextReservedPosition(),id=idMap.get(cell.id);
     const parent=cell.parent===null?foundationParent:(idMap.get(cell.parent)||foundationParent);
     const parentNode=nodes.find(item=>item.id===parent);
-    nodes.push({id,parent,label:cell.label,depth:cell.parent===null?2:3,limId:cell.limId,accent:cell.accent||archetype.accent,accessibilityLabel:cell.accessibilityLabel,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:Math.max(faceAt+nodeIndex*560,(parentNode?.revealAt||0)+1700)});
+    nodes.push({id,parent,label:cell.label,depth:cell.parent===null?2:3,limId:cell.limId,accent:childCellAccent(cell.accent||archetype.accent),accessibilityLabel:cell.accessibilityLabel,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:Math.max(faceAt+nodeIndex*560,(parentNode?.revealAt||0)+1700)});
    });
   });
   return {corner,phase:0,cycle:0,nodes};
@@ -352,6 +352,21 @@ function learningCellPath(context,radius){
   if(index===0)context.moveTo(x,y);else context.lineTo(x,y);
  }
  context.closePath();
+}
+
+function childCellAccent(value){
+ const match=String(value||'').match(/^#([\da-f]{6})$/i);
+ if(!match)return '#a8c3bd';
+ const hex=match[1],target=[125,174,185];
+ const channels=[0,2,4].map((offset,index)=>Math.round(parseInt(hex.slice(offset,offset+2),16)*.57+target[index]*.43));
+ return `#${channels.map(channel=>channel.toString(16).padStart(2,'0')).join('')}`;
+}
+
+function cellEdgeRadius(angle,radius){
+ const step=Math.PI*2/LIM_CELL_SHAPE.sides;
+ const firstNormal=-Math.PI/2+step/2;
+ const delta=((angle-firstNormal+step/2)%step+step)%step-step/2;
+ return radius*Math.cos(step/2)/Math.cos(delta);
 }
 function drawLearningCell(context,radius,fill,stroke,lineWidth=2){
  learningCellPath(context,radius);
@@ -583,7 +598,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
     const start=parent && parent.opacity>0?parent:node.attachment;
     if(start){
      const dx=node.x-start.x,dy=node.y-start.y,length=Math.hypot(dx,dy)||1;
-     const inset=parent?parent.radius*.88:0,endInset=node.radius*.88;
+     const angle=Math.atan2(dy,dx),inset=parent?cellEdgeRadius(angle,parent.radius):0,endInset=cellEdgeRadius(angle+Math.PI,node.radius);
      ctx.save();ctx.globalAlpha=node.opacity*.68;ctx.strokeStyle=node.accent||'#dcef95';ctx.lineWidth=5;
      ctx.beginPath();ctx.moveTo(start.x+dx/length*inset,start.y+dy/length*inset);
      ctx.lineTo(node.x-dx/length*endInset,node.y-dy/length*endInset);ctx.stroke();ctx.restore();
@@ -597,8 +612,9 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
    if(!parent || parent.opacity<=0)continue;
    const dx=node.x-parent.x,dy=node.y-parent.y,length=Math.hypot(dx,dy)||1;
    ctx.save();ctx.globalAlpha=Math.min(parent.opacity,node.opacity)*.60;ctx.strokeStyle=node.accent||'#dcef95';ctx.lineWidth=4;
-   ctx.beginPath();ctx.moveTo(parent.x+dx/length*parent.radius*.94,parent.y+dy/length*parent.radius*.94);
-   ctx.lineTo(node.x-dx/length*node.radius*.94,node.y-dy/length*node.radius*.94);ctx.stroke();ctx.restore();
+   const angle=Math.atan2(dy,dx);
+   ctx.beginPath();ctx.moveTo(parent.x+dx/length*cellEdgeRadius(angle,parent.radius),parent.y+dy/length*cellEdgeRadius(angle,parent.radius));
+   ctx.lineTo(node.x-dx/length*cellEdgeRadius(angle+Math.PI,node.radius),node.y-dy/length*cellEdgeRadius(angle+Math.PI,node.radius));ctx.stroke();ctx.restore();
   }
  }
  for(const node of frame.nodes){
