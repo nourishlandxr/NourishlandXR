@@ -58,7 +58,7 @@ test('welcome stays concise and spatial controllers never fall back to head move
     assert.match(styles, /data-rain-stage="first-drops"/);
     assert.match(styles, /data-rain-stage="mist"/);
     assert.match(styles, /data-rain-intensity="heavy"/);
-    assert.match(read('app/services/pimInfoPanel.js'), /Rain · \$\{ambientRain<=0\?'Off':ambientRain<1\?'Light':ambientRain>1\?'Heavy':'Normal'\}/);
+    assert.match(read('app/services/pimInfoPanel.js'), /settingLabel:'Rain intensity'/);
     assert.match(styles, /z-index:12002; pointer-events:none/);
 });
 
@@ -1381,7 +1381,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /onUtilityAction:handleDemoPanelAction/);
     assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide learning cells':'Show learning cells'/);
     assert.match(source, /if\(action==='recenter'\)\{infoPanel\?\.recenter\(\)/);
-    assert.match(source, /demoOrientationStep>0[\s\S]{0,160}id:'back',label:'‹',ariaLabel:'Previous'/);
+    assert.match(source, /id:'back',label:'‹',ariaLabel:'Previous',description:'Previous',disabled:/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
     assert.match(immersiveSelectHandler, /captureDemoInputEventRay\(event\)[\s\S]*selectDemoProfileCell\(\)/);
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)\) return;[\s\S]*activateImmersiveDemoControl\(\)/);
@@ -1470,7 +1470,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'',hideTitle:true,imageFit:'contain'/);
     assert.match(source, /function prepareStableLimoSurface\(\)[\s\S]*record\.demoInteractive=true;[\s\S]*record\.demoAlive=true;/);
     assert.doesNotMatch(source.match(/function prepareStableLimoSurface\(\) \{[\s\S]*?\n\}/)?.[0] || '', /demoExpanded=false|demoExpandedNodeIds=\[\]/);
-    assert.match(source, /function startNativeConnectionExperience\(\) \{[\s\S]*prepareStableLimoSurface\(\);[\s\S]*limMeshVisible=true;[\s\S]*useSharedWelcomeBoard\(true\)/);
+    assert.match(source, /function startNativeConnectionExperience\(exampleId=[^)]*\) \{[\s\S]*prepareStableLimoSurface\(\);[\s\S]*limMeshVisible=true;[\s\S]*useSharedWelcomeBoard\(true\)/);
     assert.match(source, /minimalIntro:arWelcomeIntroPending/);
     assert.equal(DEMO_WELCOME_OPENING_MS,12000);
     assert.equal(DEMO_ARCHETYPE_START_MS,20500);
@@ -1481,7 +1481,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /hasPhoneScreenInput=Array\.from\(session\?\.inputSources \|\| \[\]\)/);
     assert.match(source, /phoneArPanel=Boolean\(!simulated && sessionMode==='immersive-ar'/);
     assert.match(source, /Begin with one plant/);
-    assert.match(source, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
+    assert.match(source, /limActivation\.start\(node\.key,performance\.now\(\),'xr-hold'\)/);
     assert.doesNotMatch(source, /Hold to open selected learning cell/);
     assert.doesNotMatch(livingStyles, /--lim-progress|is-lim-holding/);
     assert.match(source, /armDemoPlacement\('plant',\{explained:true\}\)/);

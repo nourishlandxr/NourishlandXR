@@ -2,6 +2,17 @@
 // source or target cards are created for this exercise.
 export const DEMO_NATIVE_SOURCE_ID = 'food-forest';
 export const DEMO_NATIVE_TARGET_ID = 'lim-food-forest';
+export const DEMO_NATIVE_CONNECTION_EXAMPLES=Object.freeze([
+    Object.freeze({id:'food-forest',label:'Food forest → Living Landscapes',sourceId:'food-forest',targetId:'lim-food-forest',
+        explanation:'A plant function becomes a question about layers, shelter and relationships in this real place.',
+        fieldQuestion:'What role does this Pigeon Pea actually play beside the plants around it?'}),
+    Object.freeze({id:'propagation',label:'Propagation → Propagation',sourceId:'propagation',targetId:'lim-plant-propagation',
+        explanation:'Seed and establishment information becomes a learning path for observing how a new plant could grow here.',
+        fieldQuestion:'Which local conditions would help or limit a new Pigeon Pea seedling?'}),
+    Object.freeze({id:'uses',label:'Uses → Uses and Making',sourceId:'uses',targetId:'lim-uses-making',
+        explanation:'Reference uses become a prompt to check what is relevant, safe and actually observed at this site.',
+        fieldQuestion:'Which uses are documented, and which are local observations that still need a source and date?'})
+]);
 
 export function demoNativeTargetLineage(frames,targetId=DEMO_NATIVE_TARGET_ID){
     for(const frame of frames || []){
@@ -22,16 +33,21 @@ export function demoNativeTargetLineage(frames,targetId=DEMO_NATIVE_TARGET_ID){
     return null;
 }
 
-export function demoNativeConnectionSpec(pimDocument, limCells) {
-    const source = pimDocument?.nodes?.find(node => node.id === DEMO_NATIVE_SOURCE_ID);
-    const target = limCells?.[DEMO_NATIVE_TARGET_ID];
+export function demoNativeConnectionSpec(pimDocument, limCells,exampleId=DEMO_NATIVE_CONNECTION_EXAMPLES[0].id) {
+    const example=DEMO_NATIVE_CONNECTION_EXAMPLES.find(item=>item.id===exampleId);
+    if(!example)throw new Error('That cell connection example is unavailable.');
+    const source = pimDocument?.nodes?.find(node => node.id === example.sourceId);
+    const target = limCells?.[example.targetId];
     if (!source?.title || !target?.title) throw new Error('The guided connection cells are unavailable.');
     return Object.freeze({
         sourceId: source.id,
         sourcePath: source.path || source.id,
         sourceTitle: source.title,
         targetId: target.id,
-        targetTitle: target.title
+        targetTitle: target.title,
+        exampleId:example.id,
+        explanation:example.explanation,
+        fieldQuestion:example.fieldQuestion
     });
 }
 

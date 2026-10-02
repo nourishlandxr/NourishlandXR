@@ -14,7 +14,8 @@ test('LIM short press cancels without activation', () => {
     assert.deepEqual(progress.at(-1),['lim-climate',0]);
 });
 
-test('LIM continuous hold completes once at 500 ms and suppresses its synthetic click', () => {
+test('LIM deliberate hold completes once after 850 ms and suppresses its synthetic click', () => {
+    assert.equal(LIM_ACTIVATION_MS,850);
     const completed=[];const hold=createLimActivationController({onComplete:key=>completed.push(key)});
     assert.equal(hold.start('lim-food-forest',0),true);
     assert.equal(hold.tick('lim-food-forest',LIM_ACTIVATION_MS-1),false);
@@ -29,10 +30,10 @@ test('starting another LIM cell cancels the first and transfers activation', () 
     const cancelled=[];const completed=[];
     const hold=createLimActivationController({onCancel:(key,reason)=>cancelled.push([key,reason]),onComplete:key=>completed.push(key)});
     hold.start('lim-plant',0);hold.tick('lim-plant',180);
-    hold.start('lim-pin',200);hold.tick('lim-pin',699);
+    hold.start('lim-pin',200);hold.tick('lim-pin',200+LIM_ACTIVATION_MS-1);
     assert.equal(completed.length,0);
     assert.deepEqual(cancelled,[['lim-plant','replaced']]);
-    assert.equal(hold.tick('lim-pin',700),true);
+    assert.equal(hold.tick('lim-pin',200+LIM_ACTIVATION_MS),true);
     assert.deepEqual(completed,['lim-pin']);
 });
 

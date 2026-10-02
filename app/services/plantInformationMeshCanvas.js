@@ -335,7 +335,9 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     const bloomPath=String(options.bloomPath || '');
     const bloomForNode=node=>bloomPath && (node?.parentPath===bloomPath || String(node?.path || '').startsWith(`${bloomPath}/`)) ? bloom : 1;
     const hoverPath = String(options.hoverPath || '');
-    const cellOpacity = Math.max(0, Math.min(1, Number(options.cellOpacity ?? 1)));
+    const requestedCellOpacity = Number(options.cellOpacity ?? 1);
+    const cellOpacity = Number.isFinite(requestedCellOpacity)
+        ? Math.max(0, Math.min(1, requestedCellOpacity)) : 1;
     const position = node => {
         const point = pimNodeVisualPosition(node, node.depth > 0 ? bloomForNode(node) : 1);
         return { x: point.x / 100 * width, y: point.y / 100 * height };
@@ -379,7 +381,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             point.x,
             point.y,
             radius,
-            options.softSurface ? `hsla(${hue}, 23%, ${active ? 84 : 92}%, ${active ? .14 : .045})` : `hsla(${hue}, 31%, 19%, ${active ? .12 : .035})`,
+            options.softSurface ? `hsla(${hue}, 23%, ${active ? 84 : 92}%, ${active ? .52 : .38})` : `hsla(${hue}, 31%, 19%, ${active ? .66 : .5})`,
             options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
             active ? 4 : 2
         );
@@ -395,6 +397,8 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         }
         context.restore();
         if (node.depth > 0 && nodeBloom < .72) return;
+        context.save();
+        context.globalAlpha = (node.depth > 0 ? (.35 + .65 * nodeBloom) : 1) * cellOpacity;
         const hasDescription = node.depth > 0 && Boolean(node.value);
         const textLayout = fitPimTextBlock(context, {
             title: options.compactLabels ? String(node.label).slice(0, 54) : node.label,
@@ -429,6 +433,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             );
             context.shadowBlur = 0;
         }
+        context.restore();
     });
 
     const coreRadius = Math.max(22, Number(nodes[0]?.layoutCellWidthPercent || 13.9) / 100 * width / 2);
@@ -436,8 +441,10 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.globalAlpha=cellOpacity;
     context.shadowColor = 'rgba(76, 108, 166, .18)';
     context.shadowBlur = 8;
-    drawHexagon(context, center.x, center.y, coreRadius, options.softSurface ? 'rgba(211,223,201,.10)' : 'rgba(39,58,92,.10)', options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);
+    drawHexagon(context, center.x, center.y, coreRadius, options.softSurface ? 'rgba(211,223,201,.48)' : 'rgba(39,58,92,.5)', options.softSurface ? '#6b8261' : 'rgba(137,165,213,.82)', 4);
     context.restore();
+    context.save();
+    context.globalAlpha = cellOpacity;
     context.fillStyle = '#fff';
     context.strokeStyle = 'rgba(0, 0, 0, .94)';
     if(options.softSurface) {context.fillStyle='#294534';context.strokeStyle='#d3dfc9';}
@@ -455,6 +462,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     context.font = `650 ${coreTextLayout.titleFontSize}px system-ui, sans-serif`;
     context.lineWidth = Math.max(2, Math.round(coreTextLayout.titleFontSize * .14));
     drawOutlinedLines(context, coreLines, center.x, center.y + coreTextLayout.titleOffsetY, coreTextLayout.titleLineHeight);
+    context.restore();
     if(options.readerControl) {
         const box=pimReaderControl(nodes,{layoutWidth:width,layoutHeight:height});
         context.fillStyle='#f3f5eb';context.fillRect(box.left/100*width,box.top/100*height,box.width/100*width,box.height/100*height);

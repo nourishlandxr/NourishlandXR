@@ -168,6 +168,68 @@ test('XR cell holds consume their select event without blocking later object sel
     binding.destroy();
 });
 
+test('Quest PIMO short presses activate once whether select arrives before or after selectend',()=>{
+    for(const order of [['selectend','select'],['select','selectend']]){
+        const session=new EventTarget(),source={targetRayMode:'tracked-pointer'};
+        const target={record:{id:'pigeon-pea'},target:{path:'food-forest'}};
+        let activated=0,ordinary=0;
+        const binding=bindSpatialPimHold({session,getTarget:()=>target,enabled:()=>true,activate:()=>activated++,progress:()=>{}});
+        session.addEventListener('select',()=>ordinary++);
+        const send=type=>{const event=new Event(type);event.inputSource=source;session.dispatchEvent(event);};
+        send('selectstart');
+        for(const type of order)send(type);
+        assert.equal(activated,1,`Pigeon Pea should open on ${order.join(' → ')}`);
+        assert.equal(ordinary,0,'the trailing XR select must not open another target');
+        binding.destroy();
+    }
+});
+
+test('Quest PIMO release survives a missing hover frame but never activates a different cell',()=>{
+    const session=new EventTarget(),source={targetRayMode:'tracked-pointer'};
+    const pigeon={record:{id:'pigeon-pea'},target:{path:'food-forest'}};
+    const other={record:pigeon.record,target:{path:'uses'}};
+    let target=pigeon,activated=[];
+    const binding=bindSpatialPimHold({session,getTarget:()=>target,enabled:()=>true,activate:cell=>activated.push(cell.target.path),progress:()=>{}});
+    const send=type=>{const event=new Event(type);event.inputSource=source;session.dispatchEvent(event);};
+    send('selectstart');target=null;binding.tick(performance.now()+20);target=pigeon;
+    send('selectend');send('select');
+    assert.deepEqual(activated,['food-forest']);
+    target=pigeon;send('selectstart');target=other;send('selectend');send('select');
+    assert.deepEqual(activated,['food-forest'],'releasing over a different cell cannot open either cell');
+    binding.destroy();
+});
+
+test('Quest PIMO release tests the event controller pose instead of a stale hover frame',()=>{
+    const session=new EventTarget(),source={targetRayMode:'tracked-pointer'};
+    const pigeon={record:{id:'pigeon-pea'},target:{path:'food-forest'}};
+    const other={record:pigeon.record,target:{path:'uses'}};
+    let target=pigeon,activated=0,captured=[];
+    const binding=bindSpatialPimHold({session,getTarget:()=>target,enabled:()=>true,
+        captureEvent:event=>{captured.push(event.type);target=event.releaseTarget || pigeon;},
+        activate:()=>activated++,progress:()=>{}});
+    const send=(type,releaseTarget)=>{const event=new Event(type);event.inputSource=source;event.releaseTarget=releaseTarget;session.dispatchEvent(event);};
+    send('selectstart');send('selectend',other);send('select',other);
+    assert.equal(activated,0,'release over Uses cannot activate the old Food Forest hover');
+    assert.deepEqual(captured,['selectstart','selectend']);
+    binding.destroy();
+});
+
+test('Quest PIMO holds survive visible-blurred and missing visibility state but cancel when hidden',()=>{
+    for(const visibilityState of ['visible-blurred',undefined]){
+        const session=new EventTarget(),source={targetRayMode:'tracked-pointer'};
+        const target={record:{id:'pigeon-pea'},target:{path:'uses'}};
+        let activated=0;
+        const binding=bindSpatialPimHold({session,getTarget:()=>target,enabled:()=>true,activate:()=>activated++,progress:()=>{}});
+        const send=type=>{const event=new Event(type);event.inputSource=source;session.dispatchEvent(event);};
+        session.visibilityState=visibilityState;
+        send('selectstart');send('visibilitychange');send('selectend');send('select');
+        assert.equal(activated,1,`a ${String(visibilityState)} session keeps a valid PIMO press`);
+        send('selectstart');session.visibilityState='hidden';send('visibilitychange');send('selectend');send('select');
+        assert.equal(activated,1,'an explicitly hidden session cancels the active press');
+        binding.destroy();
+    }
+});
+
 test('compact panel grows with content and keeps settings controls inside its surface',async()=>{const {controlPanelHeight}=await import('../app/services/pimInfoPanel.js');assert.ok(controlPanelHeight(2)<controlPanelHeight(7));assert.ok(controlPanelHeight(7,true)>controlPanelHeight(7));for(const large of [false,true]){const height=controlPanelHeight(7,large);for(const button of controlPanelControls({tab:'Settings',height,largeText:large})){assert.ok(button.y+button.height<=height);assert.ok(button.x+button.width<=1000);}}});
 
 test('side dots reveal mounted wings without rebuilding or resizing the panel',()=>{

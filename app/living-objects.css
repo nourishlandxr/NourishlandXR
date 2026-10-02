@@ -1093,21 +1093,18 @@
 .nlxr-settings-companion h2 { margin:5px 0 18px; font:700 26px/1.15 system-ui; }
 .nlxr-settings-companion h3 { margin:16px 0 5px; font:700 18px/1.25 system-ui; }
 .nlxr-settings-companion p { margin:0; color:#d2e0e8; font:500 16px/1.5 system-ui; }
-.nlxr-settings-actions { display:grid; grid-template-columns:64px minmax(0,1fr) 64px; align-items:center; gap:8px; margin:14px 0; }
-.nlxr-settings-actions button { min-height:50px; padding:8px; color:#f3f8fc; border:1px solid rgba(177,220,243,.66); border-radius:12px; background:#29465f; font:700 14px/1.25 system-ui; }
-.nlxr-settings-actions::before{content:'Text size';grid-column:2;grid-row:1;text-align:center;color:#d2e0e8;font:650 14px/1.2 system-ui}
-.nlxr-settings-actions::after{content:'Spatial scale';grid-column:2;grid-row:2;text-align:center;color:#d2e0e8;font:650 14px/1.2 system-ui}
-.nlxr-settings-actions button:nth-child(1){grid-column:1;grid-row:1}.nlxr-settings-actions button:nth-child(2){grid-column:3;grid-row:1}.nlxr-settings-actions button:nth-child(3){grid-column:1;grid-row:2}.nlxr-settings-actions button:nth-child(4){grid-column:3;grid-row:2}
-.nlxr-settings-actions button:nth-child(-n+4){min-height:54px;font-size:22px}.nlxr-settings-actions button:nth-child(5){grid-column:1/2;grid-row:3}.nlxr-settings-actions button:nth-child(6){grid-column:2/4;grid-row:3}
-.nlxr-scale-readout{text-align:center;color:#dfff9b!important;font-size:13px!important;font-weight:700!important}
+.nlxr-settings-actions { display:grid; gap:7px; margin:12px 0 16px; }
+.nlxr-setting-row { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:49px; padding:5px 6px 5px 12px; border:1px solid rgba(239,249,242,.15); border-radius:13px; background:rgba(10,25,23,.24); box-sizing:border-box; }
+.nlxr-setting-label { min-width:0; color:#eaf4ec; font:600 13px/1.25 system-ui; }
+.nlxr-setting-options { display:flex; flex:0 0 auto; align-items:center; gap:3px; padding:3px; border-radius:10px; background:rgba(6,19,20,.28); }
+.nlxr-settings-actions button { min-width:40px; min-height:38px; padding:5px 7px; color:#f3f8fc; border:1px solid rgba(243,250,246,.19); border-radius:8px; background:rgba(248,253,247,.10); font:650 13px/1.15 system-ui; cursor:pointer; }
+.nlxr-setting-options:has(button:only-child) button { min-width:78px; }
+.nlxr-settings-actions button:focus-visible { outline:2px solid #dfff9b; outline-offset:2px; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle { font-size:12px; letter-spacing:.04em; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-media-toggle::before { display:none; }
-.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager { display:flex; justify-content:flex-end; gap:8px; }
-.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button { min-width:48px; min-height:48px; padding:8px 14px; overflow:hidden; white-space:nowrap; transition:min-width .16s ease,background .16s ease; }
-.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Previous"]:is(:hover,:focus-visible),
-.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Next"]:is(:hover,:focus-visible) { min-width:118px; }
-.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Previous"]:is(:hover,:focus-visible)::after { content:" Previous"; }
-.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager [data-info-action="Next"]:is(:hover,:focus-visible)::before { content:"Next "; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager { display:flex; justify-content:flex-end; gap:5px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button { flex:0 0 44px; width:44px; min-width:44px; min-height:44px; padding:0; border-radius:10px; font-size:23px; line-height:1; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button:disabled { opacity:.38; background:rgba(234,240,236,.06)!important; border-color:rgba(234,240,236,.12); box-shadow:none; cursor:default; }
 @media(max-width:700px) {
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel),
     .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel).is-rail-collapsed,
@@ -1695,13 +1692,23 @@
 }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview { border-color:rgba(255,255,255,.17);border-radius:16px;background:rgba(13,27,26,.22);box-shadow:none; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-plant-preview figcaption { color:rgba(246,250,247,.83);background:rgba(18,34,32,.38); }
-.nlxr-settings-companion .nlxr-scale-readout { color:#e6f4e4!important; }
 .nlxr-settings-companion { width:min(340px,calc(100vw - 32px));max-height:min(66vh,520px);padding:17px 18px; }
 .nlxr-settings-companion h2 { margin:2px 0 12px;font-size:21px;font-weight:650;letter-spacing:-.025em; }
 .nlxr-settings-companion h3 { margin:14px 0 4px;font-size:14px;font-weight:650; }
 .nlxr-settings-companion p { font-size:13px;line-height:1.5;color:rgba(247,251,248,.84); }
-.nlxr-settings-companion .nlxr-settings-actions { margin:10px 0; }
-.nlxr-settings-companion .nlxr-settings-actions button:nth-child(-n+4) { min-height:44px;font-size:19px; }
+.nlxr-settings-companion .nlxr-settings-actions { margin:10px 0 17px; }
+.nlxr-settings-companion .nlxr-settings-actions button { min-width:40px;min-height:38px;padding:5px 7px;border-radius:8px;font-size:13px; }
+.nlxr-settings-companion .nlxr-setting-options:has(button:only-child) button { min-width:78px; }
+.nlxr-settings-companion .nlxr-settings-actions button:is(:hover,:focus-visible) { background:rgba(249,252,249,.21)!important; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock { display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:5px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock > .nlxr-content-pager { grid-column:2;grid-row:1;display:flex;flex:none;justify-content:flex-end;margin:0;padding:0; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock > .nlxr-demo-history { grid-column:1;grid-row:1;display:flex;flex:none;gap:5px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-demo-history button { flex:0 0 40px;width:40px;min-width:40px;min-height:40px;padding:0;border-radius:10px;font-size:22px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-demo-history button:disabled { opacity:.38;border-color:rgba(234,240,236,.12);background:rgba(234,240,236,.06)!important;box-shadow:none;cursor:default; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock > .nlxr-control-actions { grid-column:1/-1;grid-row:2;min-width:0; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-tools-dock > .nlxr-control-utilities { grid-column:1/-1;grid-row:3; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button { flex:0 0 44px;width:44px;min-width:44px;min-height:44px;padding:0;border-radius:10px;font-size:23px;font-weight:550; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-content-pager button:disabled { opacity:.38;border-color:rgba(234,240,236,.12);background:rgba(234,240,236,.06)!important;box-shadow:none;cursor:default; }
 #app .nlxr-settings-companion :is(h2,h3) { color:#f8faf7!important; }
 #app .nlxr-settings-companion p { color:rgba(248,250,247,.84)!important; }
 

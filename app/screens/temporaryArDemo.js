@@ -66,7 +66,7 @@ import { createMeshSourceResolver, limMeshRef, pimMeshRef } from '../services/me
 import { createPlaceholderKnowledgeGenerator } from '../services/meshGenerator.js';
 import { createMeshRelationshipService } from '../services/meshRelationships.js';
 import { createMeshCompositionState } from '../services/meshCompositionState.js';
-import { demoNativeConnectionSpec, demoNativeTargetLineage, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../services/demoNativeConnection.js';
+import { DEMO_NATIVE_CONNECTION_EXAMPLES, demoNativeConnectionSpec, demoNativeTargetLineage, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../services/demoNativeConnection.js';
 
 export { demoRainProgress, welcomeAutoAdvanceReady, MORINGA_PIM };
 
@@ -257,7 +257,7 @@ let limHiddenCells=new Set();
 // catalogue dumping onto the spatial board.
 let limExpandedCells=new Set(),limExpandedAt=new Map();
 let limMeshVisible=true;
-let limActivation=null, limActivationFrame=0, limInteractionCleanup=()=>{}, limSessionCleanup=()=>{}, limPointerKey='', limPointerId=null, limInputSource=null, limActivationSessionSuppressUntil=0;
+let limActivation=null, limActivationFrame=0, limInteractionCleanup=()=>{}, limSessionCleanup=()=>{}, limPointerKey='', limPointerId=null, limInputSource=null, limInputSuppressSource=null, limActivationSessionSuppressUntil=0;
 let limPathwayState=idleLimPathwayState(), pathwayNotePlacementPending=false, learningModule=null, learningModuleStep=0;
 let limPanelDiagnosticRecorded=false;
 const limRequestFrame=callback=>typeof requestAnimationFrame==='function'?requestAnimationFrame(callback):setTimeout(()=>callback(performance.now()),16);
@@ -416,7 +416,7 @@ function clearSessionState() {
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
-    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;
+    arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;limInputSuppressSource=null;
     ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
@@ -502,7 +502,7 @@ const demoExitLifecycle=createDemoExitLifecycle({
 });
 
 function cancelDemoInteractionState(reason='cancelled'){
-    limActivation?.cancel(reason);limInputSource=null;limPointerKey='';limPointerId=null;
+    limActivation?.cancel(reason);limInputSource=null;limInputSuppressSource=null;limPointerKey='';limPointerId=null;
     pimHold?.cancel?.();
     clearTimeout(demoHoldTimer);demoHoldTimer=null;demoGrabPreparingIndex=-1;demoGrabInputSource=null;
     if(demoHeldIndex>=0)releaseHeldDemoRecord();
@@ -556,8 +556,8 @@ function demoPanelActions() {
     const actions=[];
     const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
-    if(demoSlideHistoryIndex>0 || (demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME))actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous'});
-    if(demoSlideHistoryIndex>=0 && demoSlideHistoryIndex<demoSlideHistory.length-1)actions.push({id:'forward',label:'>',ariaLabel:'Next slide',description:'Next'});
+    actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous',disabled:!(demoSlideHistoryIndex>0 || demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)});
+    actions.push({id:'forward',label:'›',ariaLabel:'Next slide',description:'Next',disabled:!(demoSlideHistoryIndex>=0 && demoSlideHistoryIndex<demoSlideHistory.length-1)});
     if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
     if(arWelcomeShowcaseActive && ['apply','connect','impact'].includes(demoJourneyStage))actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
     if(!desktopDemo)actions.push({id:'safety',label:'Safety guidance'});
@@ -565,9 +565,11 @@ function demoPanelActions() {
     actions.push({id:'close',label:'Close demo'});
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
     if(continueButton && !continueButton.hidden)actions.push({id:'continue',label:continueButton.textContent.trim() || 'Continue',primary:true,disabled:continueButton.disabled});
+    const navigation=actions.filter(item=>item.id==='back' || item.id==='forward');
     const priorities=actions.filter(item=>item.id==='close' || item.id==='continue');
-    const ordinary=actions.filter(item=>!priorities.includes(item));
-    return [...ordinary,...priorities].slice(-8);
+    const ordinary=actions.filter(item=>!navigation.includes(item) && !priorities.includes(item));
+    const slots=Math.max(0,8-navigation.length-priorities.length);
+    return [...navigation,...(slots?ordinary.slice(-slots):[]),...priorities];
 }
 
 function syncDemoPanelActions() {
@@ -1471,6 +1473,7 @@ function endLearningModule(){
     if(demoOrientationStep>=0)runArWelcomeTutorial(demoOrientationStep);else{introBoardVisible=false;arWelcomeSharedBoard=false;introBoardTextureDirty=true;}
 }
 function handleLearningModuleAction(action){
+    if(action.startsWith('Connection:')){startNativeConnectionExperience(action.slice('Connection:'.length));return;}
     if(action==='end'){endLearningModule();return;}
     if(arWelcomeIntroPending)return;
     const module=LEARNING_MODULES[action];if(!module)return;
@@ -1566,10 +1569,11 @@ function bindLimCellInteractions() {
         const click=event=>{
             event.preventDefault();event.stopPropagation();
             if(limActivation.consumeSyntheticClick(key,performance.now()))return;
-            limActivation.activateNow(key,performance.now(),event.detail===0?'assistive-click':'click');
+            // Pointer clicks are generated even after an early release; only
+            // a completed hold selects a cell. Assistive clicks stay usable.
+            if(event.detail===0)limActivation.activateNow(key,performance.now(),'assistive-click');
         };
         const holdStart=event=>{
-            if(nativeConnectionState?.phase!=='target' || key!==nativeConnectionTargetKey())return;
             event.preventDefault();event.stopPropagation();limPointerKey=key;nativeLimHoldPointer=event.pointerId;
             button.setPointerCapture?.(event.pointerId);limActivation.start(key,performance.now(),'pointer-hold');startLimActivationFrame();
         };
@@ -1590,14 +1594,17 @@ function bindLimSessionInteractions(arSession) {
         if(!['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
         captureDemoInputEventRay(event);
         const resolved=resolveDemoCellTarget();if(resolved?.kind!=='lim-cell')return;const node=resolved.node;
-        limInputSource=event.inputSource;limActivation.start(node.key,performance.now(),'xr-hold');startLimActivationFrame();
+        limInputSuppressSource=null;limInputSource=event.inputSource;limActivation.start(node.key,performance.now(),'xr-hold');startLimActivationFrame();
         event.preventDefault?.();event.stopImmediatePropagation?.();
     };
     const selectEnd=event=>{
         if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE){event.stopImmediatePropagation?.();return;}
         if(event.inputSource!==limInputSource)return;
         captureDemoInputEventRay(event);
-        limActivation.end(limActivation.activeKey,performance.now());limInputSource=null;
+        const heldKey=limActivation.activeKey;
+        if(heldKey && currentLimPointerCell()?.key===heldKey)limActivation.end(heldKey,performance.now());
+        else limActivation.cancel('pointer-left');
+        limInputSuppressSource=limInputSource;limInputSource=null;limActivationSessionSuppressUntil=performance.now()+450;
         event.preventDefault?.();event.stopImmediatePropagation?.();
     };
     const select=event=>{
@@ -1605,11 +1612,11 @@ function bindLimSessionInteractions(arSession) {
         if(!arWelcomeShowcaseActive || !['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
         captureDemoInputEventRay(event);
         const resolved=resolveDemoCellTarget(),node=resolved?.kind==='lim-cell'?resolved.node:null;
-        if(node){event.preventDefault?.();event.stopImmediatePropagation?.();if(!limActivation.consumeSyntheticClick(node.key,performance.now()))limActivation.activateNow(node.key,performance.now(),'xr-select');limActivationSessionSuppressUntil=performance.now()+450;return;}
+        if(node || event.inputSource===limInputSource || event.inputSource===limInputSuppressSource && performance.now()<limActivationSessionSuppressUntil){event.preventDefault?.();event.stopImmediatePropagation?.();if(node)limActivation.consumeSyntheticClick(node.key,performance.now());return;}
     };
-    const visibility=()=>{if(arSession.visibilityState!=='visible'){limActivation.cancel('session-hidden');limInputSource=null;cancelDemoInteractionState('session-hidden');}};
+    const visibility=()=>{if(arSession.visibilityState==='hidden'){limActivation.cancel('session-hidden');limInputSource=null;cancelDemoInteractionState('session-hidden');}};
     arSession.addEventListener('selectstart',selectStart,true);arSession.addEventListener('selectend',selectEnd,true);arSession.addEventListener('select',select,true);arSession.addEventListener('visibilitychange',visibility);
-    limSessionCleanup=()=>{arSession.removeEventListener('selectstart',selectStart,true);arSession.removeEventListener('selectend',selectEnd,true);arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;};
+    limSessionCleanup=()=>{arSession.removeEventListener('selectstart',selectStart,true);arSession.removeEventListener('selectend',selectEnd,true);arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;limInputSuppressSource=null;};
 }
 
 function paintWelcomeLayer(now) {
@@ -2321,7 +2328,8 @@ function nativeConnectionPanelGuide() {
         : state.phase==='resolving'
         ? `Connecting ${state.sourceTitle} with ${state.targetTitle}…`
         : `${state.sourceTitle} is connected with ${state.targetTitle}. The highlighted cells share one relationship.`;
-    infoPanel?.showLearning({id:'native-mesh-connection',title:'Connect real cells',body:state.error?`${state.error} ${body}`:body,accent:'#dfff9b',mesh:'lim',editable:false});
+    const connectionText=`${state.explanation}\n\nIn this place: ${state.fieldQuestion}`;
+    infoPanel?.showLearning({id:'native-mesh-connection',title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:`${body}\n\n${connectionText}`,accent:'#dfff9b',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
@@ -2330,17 +2338,21 @@ function showNativeConnectionIntroduction() {
         ['Pigeon Pea and the learning mesh are available together. Their existing cells can form one connection.'],
         'Connect real cells',startNativeConnectionExperience,
         {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.8',nextGuide:'Continue to use the live Plant and Learning cells.'});
+    infoPanel?.setLearningModules({title:'Choose a cell connection',
+        body:'Three authored Pigeon Pea examples connect an existing Plant cell with an existing Learning cell. Choose one to try. The Control panel will explain that relationship and offer a question to check against the real place.',
+        actions:DEMO_NATIVE_CONNECTION_EXAMPLES.map(example=>({id:`Connection:${example.id}`,label:example.label}))},{open:true});
 }
 
-function startNativeConnectionExperience() {
+function startNativeConnectionExperience(exampleId=DEMO_NATIVE_CONNECTION_EXAMPLES[0].id) {
     const plant=nativeConnectionPlant();
     if(!plant){setGuide('Pigeon Pea is unavailable. Return to its Plant Orb and try again.');return;}
     let spec;
-    try{spec=demoNativeConnectionSpec(demoOrbKnowledge(plant).document,LIM_CELL_BY_ID);}catch(error){setGuide(error.message);return;}
+    try{spec=demoNativeConnectionSpec(demoOrbKnowledge(plant).document,LIM_CELL_BY_ID,exampleId);}catch(error){setGuide(error.message);return;}
     const targetLineage=demoNativeTargetLineage(welcomeFrames(),spec.targetId);
     if(!targetLineage){setGuide('The learning target is unavailable. Return to the pathway and try again.');return;}
     clearNativeConnectionHold();
     nativeConnectionState=createDemoNativeConnection(spec);
+    infoPanel?.setLearningModules(null);
     nativeConnectionState.targetKey=targetLineage.key;
     removeNativeConnectionEffect();
     meshComposition.clear();
@@ -2777,6 +2789,7 @@ function demoPlantKnowledgeMarkup(record, anchor = record?.simulatedAnchor || { 
         : 8;
     return plantInformationMeshMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), {
         ...demoSpatialPimLayoutOptions(),
+        cellOpacity: demoCellOpacity,
         selectedNodeId: record.demoSelectedNodeId,
         connectedPath:nativeConnectionState?.phase==='connected' && record===nativeConnectionPlant()?nativeConnectionState.sourcePath:'',
         viewportWidth: viewport.width,
@@ -5110,20 +5123,12 @@ function drawMarker(view) {
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, record.texture);
         gl.uniform1i(gl.getUniformLocation(program, 't'), 0);
-        const profileOpacity = plantProfile ? Math.min(1, Math.max(0, (performance.now() - (record.profileRevealStarted || 0)) / 1050)) : 1;
+        const profileOpacity = plantProfile ? Math.min(1, Math.max(0, (performance.now() - (record.profileRevealStarted || 0)) / 320)) : 1;
         const sceneOpacity=noteSign && record.demoNarrativeFaded ? .14 : record.demoAmbientNeighbour ? .72 : profileOpacity;
         gl.uniform1f(gl.getUniformLocation(program, 'opacity'), sceneOpacity);
         if (plantProfile) gl.depthMask(false);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         if (plantProfile) gl.depthMask(true);
-        if(noteSign && (demoHeldIndex===markers.indexOf(record) || demoGrabPreparingIndex===markers.indexOf(record))){
-            const point=(sx,sy)=>({x:model[12]+model[0]*sx+model[4]*sy,y:model[13]+model[1]*sx+model[5]*sy,z:model[14]+model[2]*sx+model[6]*sy});
-            const corners=[point(-.5,-.5),point(.5,-.5),point(.5,.5),point(-.5,.5)];
-            const ready=demoGrabPreparingIndex===markers.indexOf(record),edgeColor=ready?[.55,.86,1]:[.62,1,.28];
-            gl.depthMask(false);
-            for(let edge=0;edge<4;edge++)drawSpatialTether(gl,tetherRenderer,view,corners[edge],corners[(edge+1)%4],{segments:1,width:.009,curve:0,lift:0,color:edgeColor});
-            gl.depthMask(true);gl.useProgram(program);
-        }
         if (record.isBoundary) {
             record.boundaryTexture ||= createBoundaryTexture();
             const boundaryMvp = multiply(view.projectionMatrix, multiply(view.transform.inverse.matrix, groundMatrix(record.position, 4.6)));
@@ -5269,15 +5274,19 @@ async function startImmersive() {
             // not deliver capture-phase XRInputSourceEvents consistently.
             // Resolve the same nearest surface used by the visible laser so a
             // PIMO in front of LIMO receives the trigger the visitor sees.
-            if(performance.now()<limActivationSessionSuppressUntil && resolveDemoCellTarget()?.kind==='lim-cell')return;
+            if(event.inputSource===limInputSource || event.inputSource===limInputSuppressSource && performance.now()<limActivationSessionSuppressUntil)return;
             if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
-            if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
+            if (demoWebModeOpen) return;
             if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
             const cellTarget=resolveDemoCellTarget();
+            // Tutorial-button suppression prevents duplicate scene actions,
+            // but it must not make a newly opened Pigeon Pea cell unresponsive
+            // to a separate controller press during that broad timer window.
+            if(performance.now()<suppressSessionSelectUntil && cellTarget?.kind!=='pim-cell')return;
             if(cellTarget?.kind==='panel')return;
             if(cellTarget?.kind==='pim-cell' && selectDemoProfileCell(cellTarget))return;
-            if(cellTarget?.kind==='lim-cell' && selectWelcomeCell()){limActivationSessionSuppressUntil=performance.now()+450;return;}
+            if(cellTarget?.kind==='lim-cell')return;
             if (demoHeldIndex >= 0) return;
             if (activateDemoTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return;
             if (selectDemoProfileCell()) return;
@@ -5289,8 +5298,11 @@ async function startImmersive() {
             if (activateImmersiveDemoControl()) return;
             selectGuidedDemoOrb();
         });
-        pimHold=bindSpatialPimHold({session,enabled:()=>demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE && nativeConnectionState?.phase!=='source' && !demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady && !infoPanel?.hit(latestControllerRay),
-            getTarget:demoInfoTarget,activate:selectDemoProfileCell,
+        pimHold=bindSpatialPimHold({session,enabled:()=>demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE && nativeConnectionState?.phase!=='source' && !demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady,
+            // Use the same nearest visible surface as the laser and main XR
+            // select route. A Control panel hit behind a nearer PIMO cell must
+            // not disable the cell's hold/short-release interaction.
+            getTarget:()=>{const target=resolveDemoCellTarget();return target?.kind==='pim-cell'?target:null;},activate:selectDemoProfileCell,captureEvent:captureDemoInputEventRay,
             progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;queueDemoPimTextureRefresh(record);}
         });
         session.addEventListener('selectstart', event => {
@@ -5299,7 +5311,12 @@ async function startImmersive() {
             captureDemoInputEventRay(event);
             // If the capture-phase LIM listener is unavailable, still keep a
             // trigger aimed at the mesh out of the plant grab state machine.
-            if(['lim-cell','pim-cell','panel'].includes(resolveDemoCellTarget()?.kind))return;
+            const pressedCell=resolveDemoCellTarget();
+            if(pressedCell?.kind==='lim-cell'){
+                if(limInputSource!==event.inputSource){limInputSuppressSource=null;limInputSource=event.inputSource;limActivation.start(pressedCell.node.key,performance.now(),'xr-hold-fallback');startLimActivationFrame();}
+                return;
+            }
+            if(['pim-cell','panel'].includes(pressedCell?.kind))return;
             if(demoKnowledgeWorkspace) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
@@ -5310,6 +5327,13 @@ async function startImmersive() {
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
             captureDemoInputEventRay(event);
+            if(event.inputSource===limInputSource){
+                const heldKey=limActivation.activeKey;
+                if(heldKey && currentLimPointerCell()?.key===heldKey)limActivation.end(heldKey,performance.now());
+                else limActivation.cancel('pointer-left');
+                limInputSuppressSource=limInputSource;limInputSource=null;limActivationSessionSuppressUntil=performance.now()+450;
+                return;
+            }
             if (demoHeldIndex < 0) {
                 clearTimeout(demoHoldTimer);
                 demoHoldTimer = null;

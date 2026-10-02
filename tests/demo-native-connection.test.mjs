@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
 import { LIM_CELL_BY_ID } from '../app/services/limLearning.js';
-import { demoNativeConnectionSpec, demoNativeTargetLineage, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../app/services/demoNativeConnection.js';
+import { DEMO_NATIVE_CONNECTION_EXAMPLES, demoNativeConnectionSpec, demoNativeTargetLineage, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../app/services/demoNativeConnection.js';
 import { welcomeExperienceFrames, welcomeCellAtPoint } from '../app/services/arWelcomeShowcase.js';
 import { demoWelcomeSurfaceHit } from '../app/services/demoWelcomeHit.js';
 import { demoBillboardTextureLocalPoint } from '../app/features/ar-demo/demoGeometry.js';
@@ -10,6 +10,7 @@ import { createMeshRepository } from '../app/services/meshRepository.js';
 import { createMeshSourceResolver, limMeshRef, pimMeshRef } from '../app/services/meshReferences.js';
 import { createPlaceholderKnowledgeGenerator } from '../app/services/meshGenerator.js';
 import { createMeshRelationshipService } from '../app/services/meshRelationships.js';
+import { readFileSync } from 'node:fs';
 
 test('guided connection names and IDs come from authored PIMO and LIMO cells', () => {
     const spec = demoNativeConnectionSpec(PIGEON_PEA_PIM, LIM_CELL_BY_ID);
@@ -17,6 +18,33 @@ test('guided connection names and IDs come from authored PIMO and LIMO cells', (
     assert.equal(spec.targetTitle, 'Living Landscapes');
     assert.equal(PIGEON_PEA_PIM.nodes.find(node => node.id === spec.sourceId)?.path || spec.sourceId, spec.sourcePath);
     assert.equal(LIM_CELL_BY_ID[spec.targetId]?.title, spec.targetTitle);
+});
+
+test('three selectable examples use authored cells and disclose the real-place question',()=>{
+    assert.deepEqual(DEMO_NATIVE_CONNECTION_EXAMPLES.map(item=>item.id),['food-forest','propagation','uses']);
+    for(const example of DEMO_NATIVE_CONNECTION_EXAMPLES){
+        const spec=demoNativeConnectionSpec(PIGEON_PEA_PIM,LIM_CELL_BY_ID,example.id);
+        assert.equal(spec.exampleId,example.id);
+        assert.equal(spec.sourceId,example.sourceId);
+        assert.equal(spec.targetId,example.targetId);
+        assert.ok(spec.explanation && spec.fieldQuestion);
+        assert.equal(PIGEON_PEA_PIM.nodes.find(node=>node.id===spec.sourceId)?.title,spec.sourceTitle);
+        assert.equal(LIM_CELL_BY_ID[spec.targetId]?.title,spec.targetTitle);
+        const lineage=demoNativeTargetLineage(welcomeExperienceFrames(64000,false),spec.targetId);
+        assert.ok(lineage?.key && lineage.ancestors.length);
+        const frames=welcomeExperienceFrames(64000,false,undefined,undefined,{cellsActivatedAt:0,expandedLimIds:lineage.ancestors,expandedAt:Object.fromEntries(lineage.ancestors.map(id=>[id,0]))});
+        const target=frames.flatMap(frame=>frame.nodes).find(node=>node.key===lineage.key);
+        assert.ok(target?.opacity>.5,`${example.id} target must become visible`);
+    }
+    assert.throws(()=>demoNativeConnectionSpec(PIGEON_PEA_PIM,LIM_CELL_BY_ID,'unknown'));
+});
+
+test('demo Control Panel offers each example and explains the selected connection',()=>{
+    const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+    assert.match(source,/actions:DEMO_NATIVE_CONNECTION_EXAMPLES\.map\(example=>\(\{id:`Connection:\$\{example\.id\}`,label:example\.label\}\)\)/);
+    assert.match(source,/action\.startsWith\('Connection:'\)/);
+    assert.match(source,/startNativeConnectionExperience\(action\.slice\('Connection:'\.length\)\)/);
+    assert.match(source,/const connectionText=`\$\{state\.explanation\}\\n\\nIn this place: \$\{state\.fieldQuestion\}`/);
 });
 
 test('guided LIMO target becomes visible and ray-selectable after opening its authored ancestors',()=>{

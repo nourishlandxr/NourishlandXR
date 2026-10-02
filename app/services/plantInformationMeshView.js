@@ -571,6 +571,9 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
         gapPixels: metrics.gapPixels
     });
     const label = value => String(value || '');
+    const requestedCellOpacity = Number(options.cellOpacity ?? 1);
+    const cellOpacity = Number.isFinite(requestedCellOpacity)
+        ? Math.max(0, Math.min(1, requestedCellOpacity)) : 1;
     const layoutScale = nodes[0]?.layoutScale || 1;
     const renderedCellWidth = Number(nodes[0]?.layoutCellWidthPixels) || metrics.cellWidthPixels * layoutScale;
     // Dense phone layouts keep the full hierarchy and stable geometry, but
@@ -596,5 +599,5 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
     const box=pimReaderControl(nodes,{layoutWidth:metrics.layoutWidth,layoutHeight:metrics.layoutHeight});
     const reader=options.readerControl ? `<button type="button" data-pim-read-all class="pim-spatial-read-all" style="position:absolute;left:${box.left}%;top:${box.top}%;width:${box.width}%;height:${box.height}%">All topics · read & edit</button>` : '';
     const connections = '<svg class="plant-knowledge-connections" aria-hidden="true" focusable="false"></svg>';
-    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-palette="${options.softSurface ? 'soft' : 'default'}" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale}" aria-label="Plant Information Mesh">${connections}${cells}${core}${reader}</span>`;
+    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-palette="${options.softSurface ? 'soft' : 'default'}" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale};--pim-cell-opacity:${cellOpacity}" aria-label="Plant Information Mesh">${connections}${cells}${core}${reader}</span>`;
 }

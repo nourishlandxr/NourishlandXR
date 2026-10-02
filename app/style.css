@@ -903,6 +903,7 @@ button[onclick*="renderArPreparation"] { border-color: #2378bd; background: line
 .tryit-sim-marker-plant.has-information .tryit-sim-orb { box-shadow: inset -9px -11px 16px rgba(12,55,25,.42), inset 5px 5px 9px rgba(255,255,255,.16), 0 0 27px rgba(183,232,149,.56); }
 .tryit-sim-marker-plant.has-plant-profile:is(:hover, :focus-visible) .tryit-sim-orb { animation: tryit-plant-profile-ready .38s ease-in-out infinite alternate; }
 .tryit-demo .tryit-sim-marker:is(:hover, :focus-visible, .is-drag-ready) { outline: 2px solid rgba(226,244,181,.86); outline-offset: 7px; box-shadow: 0 0 0 8px rgba(226,244,181,.1), 0 0 24px rgba(192,230,151,.36); touch-action: none; }
+.tryit-demo .tryit-sim-marker-note:is(:hover,:focus-visible,.is-drag-ready,.is-held) { outline:0; box-shadow:none; }
 .tryit-demo .tryit-sim-marker-plant:not(.is-demo-triangle):is(:hover, :focus-visible, .is-drag-ready),
 .tryit-demo .tryit-sim-marker-marker:is(:hover, :focus-visible, .is-drag-ready) { border-radius: 50%; }
 .tryit-demo .tryit-sim-marker-plant.is-demo-triangle:is(:hover, :focus-visible, .is-drag-ready) { border-radius:8px; }
@@ -8460,6 +8461,7 @@ button.ar-square-action::before { display: none !important; }
     text-align: center;
     text-shadow: 0 1px 2px rgba(0,0,0,.98), 0 0 6px rgba(0,0,0,.9);
     pointer-events: auto;
+    opacity: var(--pim-cell-opacity, 1);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-core::before,
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-core::after {
@@ -8570,6 +8572,7 @@ button.ar-square-action::before { display: none !important; }
     pointer-events: auto;
     touch-action: none;
     user-select: none;
+    opacity: var(--pim-cell-opacity, 1);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::before,
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::after {
@@ -8587,7 +8590,7 @@ button.ar-square-action::before { display: none !important; }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell::after {
     inset: 2px;
     z-index: -1;
-    background: hsl(var(--pim-hue,112) 31% 19% / .035);
+    background: hsl(var(--pim-hue,112) 31% 19% / .5);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-press-fill {
     position: absolute;
@@ -8691,7 +8694,7 @@ button.ar-square-action::before { display: none !important; }
     background: hsl(var(--pim-hue,112) 65% 84% / .9);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell.is-selected::after {
-    background: hsl(var(--pim-hue,112) 34% 23% / .24);
+    background: hsl(var(--pim-hue,112) 34% 23% / .66);
 }
 .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-cell:focus-visible {
     z-index: 8;
@@ -8722,11 +8725,11 @@ button.ar-square-action::before { display: none !important; }
 }
 @keyframes pim-honeycomb-grow {
     from { opacity: 0; transform: translate(-50%,-50%) scale(.85); }
-    to { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    to { opacity: var(--pim-cell-opacity, 1); transform: translate(-50%,-50%) scale(1); }
 }
 @keyframes pim-cell-fade-in {
     from { opacity: 0; transform: translate(-50%,-50%) scale(.97); }
-    to { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+    to { opacity: var(--pim-cell-opacity, 1); transform: translate(-50%,-50%) scale(1); }
 }
 @media (prefers-reduced-motion: reduce) {
     .plant-knowledge-map[data-pim-layout="honeycomb"] .plant-knowledge-connection {

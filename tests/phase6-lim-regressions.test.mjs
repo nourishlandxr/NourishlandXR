@@ -100,13 +100,14 @@ test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
     assert.match(demoSource, /arWelcomeClock\.elapsed<AR_WELCOME_SETTLED_MS/);
 });
 
-test('screen and tracked-pointer selection activate LIM once while the hidden DOM layer stays idle', () => {
+test('screen and tracked-pointer LIMO requires a deliberate hold while the hidden DOM layer stays idle', () => {
     assert.match(demoSource, /\['screen','tracked-pointer'\]\.includes\(event\.inputSource\?\.targetRayMode\)/);
-    assert.match(demoSource, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
+    assert.match(demoSource, /limActivation\.start\(node\.key,performance\.now\(\),'xr-hold'\)/);
+    assert.doesNotMatch(demoSource, /limActivation\.activateNow\(node\.key,performance\.now\(\),'xr-select'\)/);
     const sessionInteractions = demoSource.slice(demoSource.indexOf('function bindLimSessionInteractions'), demoSource.indexOf('function paintWelcomeLayer'));
     assert.match(sessionInteractions, /captureDemoInputEventRay\(event\)/);
-    assert.doesNotMatch(sessionInteractions, /nativeConnectionState[\s\S]{0,180}return;if\(!limActivation\.consumeSyntheticClick/);
-    assert.match(demoSource, /event\.detail===0\?'assistive-click':'click'/);
+    assert.match(sessionInteractions, /limActivation\.end\(heldKey,performance\.now\(\)\)/);
+    assert.match(demoSource, /if\(event\.detail===0\)limActivation\.activateNow\(key,performance\.now\(\),'assistive-click'\)/);
     assert.match(demoSource, /if\(simulatedMode && now-last>=50/);
     assert.match(demoSource, /if\(simulatedMode && arWelcomeLayer\)arWelcomeShowcaseFrame=limRequestFrame\(frame\)/);
 });
@@ -114,9 +115,9 @@ test('screen and tracked-pointer selection activate LIM once while the hidden DO
 test('Quest main selection pipeline activates the nearest PIMO or LIMO surface', () => {
     const selectAt = demoSource.indexOf("session.addEventListener('select', event =>");
     const immersive = demoSource.slice(selectAt, demoSource.indexOf('pimHold=bindSpatialPimHold', selectAt));
-    assert.match(immersive, /resolveDemoCellTarget\(\)\?\.kind==='lim-cell'/);
+    assert.match(immersive, /event\.inputSource===limInputSource/);
     assert.match(immersive, /cellTarget\?\.kind==='pim-cell' && selectDemoProfileCell\(cellTarget\)/);
-    assert.match(immersive, /cellTarget\?\.kind==='lim-cell' && selectWelcomeCell\(\)/);
+    assert.match(immersive, /if\(cellTarget\?\.kind==='lim-cell'\)return/);
     assert.ok(immersive.indexOf("cellTarget?.kind==='pim-cell'") < immersive.indexOf("cellTarget?.kind==='lim-cell'"));
     const selectStartAt = demoSource.indexOf("session.addEventListener('selectstart', event =>", demoSource.indexOf('pimHold=bindSpatialPimHold'));
     const selectStart = demoSource.slice(selectStartAt, demoSource.indexOf("session.addEventListener('selectend', event =>", selectStartAt));

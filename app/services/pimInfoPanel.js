@@ -113,9 +113,10 @@ export function panelCenterFromGrab(ray, grab, axes) {
 export function controlPanelControls({hidden=false,tab='Details',selected=false,page=0,pageCount=1,height=680,largeText=false,contentKind='lim',pathwayActions=[],moduleActions=[],utilityActions=[]}={}) {
     if(hidden)return [{action:'Restore',label:'Control panel',x:150,y:28,width:700,height:104}];
     const utilities=utilityActions.slice(0,8),primary=utilities.find(item=>item.primary || item.id==='continue');
-    const menuUtilities=utilities.filter(item=>['close','back','lim-visibility'].includes(item.id))
-        .sort((a,b)=>({close:0,back:1,'lim-visibility':2}[a.id]-({close:0,back:1,'lim-visibility':2}[b.id])));
-    const secondary=utilities.filter(item=>item!==primary && !menuUtilities.includes(item));
+    const menuUtilities=utilities.filter(item=>['close','lim-visibility'].includes(item.id))
+        .sort((a,b)=>({close:0,'lim-visibility':1}[a.id]-({close:0,'lim-visibility':1}[b.id])));
+    const historyUtilities=utilities.filter(item=>['back','forward'].includes(item.id));
+    const secondary=utilities.filter(item=>item!==primary && !menuUtilities.includes(item) && !historyUtilities.includes(item));
     const secondaryRows=Math.ceil(secondary.length/2),primaryHeight=primary?68:0,moduleRows=tab==='Help'?moduleActions.length:0;
     const primaryY=height-22-primaryHeight,secondaryStart=primaryY-secondaryRows*62;
     const actionY=secondaryStart-moduleRows*58-62;
@@ -124,7 +125,8 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
     buttons.push({action:'Settings',label:'Settings',kind:'menu',x:18,y:216,width:174,height:56});
     menuUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='close'?'Close demo':item.label,ariaLabel:item.ariaLabel || item.label,title:item.description,description:item.description,kind:'menu',disabled:Boolean(item.disabled),x:18,y:284+index*62,width:174,height:54}));
     buttons.push({action:'Hide',label:'Hide',kind:'menu',x:18,y:284+menuUtilities.length*62,width:174,height:54});
-    if(tab==='Details' && pageCount>1)buttons.push({action:'Previous',label:'‹',ariaLabel:'Previous page',kind:'pager',x:852,y:130,width:52,height:42,disabled:page===0},{action:'Next',label:'›',ariaLabel:'Next page',kind:'pager',x:918,y:130,width:52,height:42,disabled:page>=pageCount-1});
+    buttons.push({action:'Previous',label:'‹',ariaLabel:'Previous page',kind:'pager',x:852,y:130,width:52,height:42,disabled:page===0},{action:'Next',label:'›',ariaLabel:'Next page',kind:'pager',x:918,y:130,width:52,height:42,disabled:page>=pageCount-1});
+    historyUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='back'?'‹':'›',ariaLabel:item.label,title:item.description,kind:'history',disabled:Boolean(item.disabled),x:238+index*56,y:130,width:48,height:42}));
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-moduleRows*58-62,width:226,height:48}));
     if(tab==='Help')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY-moduleRows*58+index*58,width:732,height:48}));
     secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:secondaryStart+Math.floor(index/2)*62,width:index%2?362:350,height:54}));
@@ -141,6 +143,22 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
     return Math.max(pathway?760:620,390+Math.min(7,lines)*(largeText?46:38)+(pathway?120:0))+(rows+moduleCount)*62+(hasPrimary?10:0);
 }
 
+// One row model drives both the DOM companion and the Quest canvas/hit regions.
+export function panelSettingsControls({headset=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,ambientRain=1,ambientRainStyle='v2'}={}){
+    const row=index=>90+index*54,shift=headset?1:0;
+    return [
+        ...(headset?[{action:'HandMode',label:handVisualMode==='pointer'?'Pointer':'Outline',ariaLabel:'Switch hand tracking visual mode',settingGroup:'hands',settingLabel:'Hands',x:756,y:row(0),width:188,height:42}]:[]),
+        {action:'TextDown',label:'A−',ariaLabel:'Decrease text size',settingGroup:'text',settingLabel:'Text size',x:756,y:row(shift),width:88,height:42},
+        {action:'TextUp',label:'A+',ariaLabel:'Increase text size',settingGroup:'text',x:856,y:row(shift),width:88,height:42},
+        {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',settingGroup:'scale',settingLabel:`Spatial scale · ${Math.round(spatialScale*100)}%`,x:756,y:row(shift+1),width:88,height:42},
+        {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',settingGroup:'scale',x:856,y:row(shift+1),width:88,height:42},
+        {action:'CellOpacity',label:`Cells · ${Math.round(meshCellOpacity*100)}%`,ariaLabel:'Change PIMO and LIMO cell opacity',settingGroup:'opacity',settingLabel:'Cell opacity',x:756,y:row(shift+2),width:188,height:42},
+        {action:'RainIntensity',label:ambientRain<=0?'Off':ambientRain<1?'Light':ambientRain>1?'Heavy':'Normal',ariaLabel:'Change rain intensity',settingGroup:'rain',settingLabel:'Rain intensity',x:756,y:row(shift+3),width:188,height:42},
+        {action:'RainStyle',label:ambientRainStyle.toUpperCase(),ariaLabel:'Switch rain visual style',settingGroup:'style',settingLabel:'Rain style',x:756,y:row(shift+4),width:188,height:42},
+        {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+5),width:188,height:42}
+    ];
+}
+
 // The headset uses the same actions as the screen panel, but lays them out in
 // three independently collapsible regions. These rectangles also drive ray hits.
 export function spatialPanelControls({hidden=false,height=800,railCollapsed=false,mediaCollapsed=true,items=[]}={}){
@@ -153,10 +171,12 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
     const secondary=items.filter(item=>item.kind==='utility' && item!==primary);
     const pager=items.filter(item=>item.kind==='pager');
+    const history=items.filter(item=>item.kind==='history');
     const module=items.filter(item=>item.kind==='module'),pathway=items.filter(item=>item.kind==='pathway');
     const primaryY=primary?height-60:height-20;
     if(primary)result.push(button(primary,left,primaryY,width,42));
     pager.forEach((item,index)=>result.push(button(item,left+width-88+index*46,98,40,34)));
+    history.forEach((item,index)=>result.push(button(item,left+index*46,98,40,34)));
     const rows=Math.ceil(secondary.length/2);
     let y=primaryY-(rows*40+module.length*42+pathway.length*42+8);
     for(const group of [pathway,module])for(const item of group){result.push(button(item,left,y,width,36));y+=40;}
@@ -283,30 +303,32 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action.startsWith('Utility:')){onUtilityAction(action.slice(8));return;}
         render();
     }
-    const settingsControls=()=>[
-        ...(headset?[{action:'HandMode',label:`Hands · ${handVisualMode==='pointer'?'Pointer':'Outline'}`,ariaLabel:'Switch hand tracking visual mode',x:300,y:190,width:400,height:50}]:[]),
-        {action:'TextDown',label:'A−',ariaLabel:'Decrease text size',x:64,y:190,width:160,height:50},
-        {action:'TextUp',label:'A+',ariaLabel:'Increase text size',x:776,y:190,width:160,height:50},
-        {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',x:64,y:274,width:160,height:50},
-        {action:'CellOpacity',label:`Cells · ${Math.round(meshCellOpacity*100)}%`,ariaLabel:'Change PIMO and LIMO cell opacity',x:300,y:274,width:400,height:50},
-        {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',x:776,y:274,width:160,height:50},
-        {action:'Recenter',label:'◎  Recenter panel',x:56,y:354,width:424,height:48},
-        {action:'RainIntensity',label:`Rain · ${ambientRain<=0?'Off':ambientRain<1?'Light':ambientRain>1?'Heavy':'Normal'}`,ariaLabel:'Change rain intensity',x:520,y:354,width:424,height:48},
-        {action:'RainStyle',label:`Rain style · ${ambientRainStyle.toUpperCase()}`,ariaLabel:'Switch rain visual style',x:520,y:418,width:424,height:48}
-    ];
+    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle});
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.classList.toggle('has-settings-companion',settingsOpen);
         if(settingsElement.hidden)return;
+        const scrollTop=settingsElement.scrollTop;
+        const focused=settingsElement.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
         if(!renderer && !globalThis.matchMedia?.('(max-width:700px)').matches){
             const main=element.getBoundingClientRect(),panelWidth=Math.min(390,Math.max(300,window.innerWidth-32));
             settingsElement.style.left=Math.max(8,main.left-panelWidth-6)+'px';
             settingsElement.style.top=Math.max(8,main.top)+'px';
             settingsElement.style.bottom='auto';
         }else if(!renderer){settingsElement.style.removeProperty('left');settingsElement.style.removeProperty('top');settingsElement.style.removeProperty('bottom');}
-        settingsElement.innerHTML='<header><h2>Settings</h2></header><section><div class="nlxr-settings-actions"></div><p class="nlxr-scale-readout">Spatial scale · '+Math.round(spatialScale*100)+'%</p><h3>Safety</h3><p>Keep a clear walking area and remain aware of people, plants, furniture and uneven ground around you.</p><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
+        settingsElement.innerHTML='<header><h2>Settings</h2></header><section><div class="nlxr-settings-actions"></div><h3>Safety</h3><p>Keep a clear walking area and remain aware of people, plants, furniture and uneven ground around you.</p><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
         const actions=settingsElement.querySelector('.nlxr-settings-actions');
-        settingsControls().forEach(item=>actions.append(makeButton(item)));
+        for(const item of settingsControls()){
+            let row=actions.querySelector(`[data-setting-group="${item.settingGroup}"]`);
+            if(!row){
+                row=document.createElement('div');row.className='nlxr-setting-row';row.dataset.settingGroup=item.settingGroup;
+                const label=document.createElement('span');label.className='nlxr-setting-label';label.textContent=item.settingLabel;
+                const choices=document.createElement('div');choices.className='nlxr-setting-options';row.append(label,choices);actions.append(row);
+            }
+            row.querySelector('.nlxr-setting-options').append(makeButton(item));
+        }
+        settingsElement.scrollTop=scrollTop;
+        if(focused)settingsElement.querySelector(`[data-info-action="${focused}"]`)?.focus({preventScroll:true});
     }
     function makeButton(item){
         const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.infoAction=item.action;button.disabled=Boolean(item.disabled);
@@ -531,9 +553,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(!hint){hint=document.createElement('p');hint.className='nlxr-info-hint';content.querySelector('.nlxr-info-body').after(hint);}
         hint.textContent=currentHint();hint.hidden=!hint.textContent;
         content.querySelector('small').textContent=metadata();
-        let pager=content.querySelector('.nlxr-content-pager');
-        if(!pager && currentPages.length>1){pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');content.append(pager);}
+        let pager=element.querySelector('.nlxr-content-pager');
+        if(!pager && !confirmation){pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');element.querySelector('.nlxr-tools-dock')?.prepend(pager);}
         if(pager)pager.replaceChildren(...controls().filter(item=>item.kind==='pager').map(makeButton));
+        let history=element.querySelector('.nlxr-demo-history');
+        if(!history && !confirmation){history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');element.querySelector('.nlxr-tools-dock')?.prepend(history);}
+        if(history)history.replaceChildren(...controls().filter(item=>item.kind==='history').map(makeButton));
         let guides=content.querySelector('.nlxr-guide-actions');
         if(tab==='Help' && !guides){guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');content.append(guides);}
         if(guides){if(tab==='Help')guides.replaceChildren(...controls().filter(item=>item.kind==='module' && !item.disabled).map(makeButton));else guides.remove();}
@@ -637,13 +662,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const hint=document.createElement('p');hint.className='nlxr-info-hint';hint.textContent=currentHint();hint.hidden=!hint.textContent;
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,hint,status);
-            const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));if(pager.childElementCount)content.append(pager);
             if(tab==='Help'){const guides=document.createElement('nav');guides.className='nlxr-guide-actions';guides.setAttribute('aria-label','Available guides');controls().filter(item=>item.kind==='module' && !item.disabled).forEach(item=>guides.append(makeButton(item)));if(guides.childElementCount)content.append(guides);}
             element.append(content);
             if(showMediaWing){
                 element.append(createMediaWing());
             }
             const tools=document.createElement('footer');tools.className='nlxr-tools-dock';tools.setAttribute('aria-label','Control panel tools');
+            if(!confirmation){const history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Demo history');controls().filter(item=>item.kind==='history').forEach(item=>history.append(makeButton(item)));if(history.childElementCount)tools.append(history);}
+            if(!confirmation){const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));tools.append(pager);}
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Reading controls');controls().filter(item=>!item.kind && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));if(nav.childElementCount)tools.append(nav);
             if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)tools.append(utilities);}
             element.append(tools);
@@ -678,16 +704,25 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(card.caption){ctx.fillStyle='#d2e0e8';ctx.font='600 20px system-ui';ctx.textAlign='center';ctx.fillText(card.caption,500,c.height-48,904);ctx.textAlign='left';}
             return c;
         }
-            if(card.settings){
-            ctx.fillStyle='#f3f8fc';ctx.font='700 36px system-ui';ctx.fillText('Settings',56,42,888);
-            ctx.fillStyle='#dfff9b';ctx.font='650 21px system-ui';ctx.textAlign='center';ctx.fillText('Text size',500,154,450);ctx.fillText(`Spatial scale · ${Math.round(spatialScale*100)}%`,500,238,450);ctx.textAlign='left';
-            ctx.fillStyle='#f3f8fc';ctx.font='650 21px system-ui';ctx.fillText('Safety',56,420,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 17px system-ui';infoPages('Keep a clear walking area and remain aware of people, plants, furniture and uneven ground.',82,2)[0].forEach((line,index)=>ctx.fillText(line,56,448+index*22,888));
-            ctx.fillStyle='#f3f8fc';ctx.font='650 21px system-ui';ctx.fillText('Help',56,508,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 16px system-ui';infoPages(INFO_HELP,92,2)[0].forEach((line,index)=>ctx.fillText(line,56,534+index*20,888));
-            if(card.hoverHint){ctx.fillStyle='rgba(5,16,26,.93)';ctx.beginPath();ctx.roundRect(252,420,696,56,10);ctx.fill();ctx.strokeStyle='rgba(166,204,229,.4)';ctx.stroke();ctx.fillStyle='#e0edf2';ctx.font='400 18px system-ui';ctx.fillText(card.hoverHint,270,438,660);}
-            card.controls.forEach(button=>{const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);face.addColorStop(0,button.primary?'#d5f4fb':'rgba(119,169,198,.56)');face.addColorStop(1,button.primary?'#60add1':'rgba(26,52,78,.84)');ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,16);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.stroke();ctx.fillStyle=button.primary?'#102b3a':'#f1f7fb';ctx.font='700 23px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+16,button.width-18);});
-            card.controls.forEach(button=>{const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);face.addColorStop(0,button.primary?'#d5f4fb':'rgba(119,169,198,.56)');face.addColorStop(1,button.primary?'#60add1':'rgba(26,52,78,.84)');ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,14);ctx.fill();ctx.strokeStyle='rgba(232,244,240,.48)';ctx.stroke();ctx.fillStyle=button.primary?'#102b3a':'#f1f7fb';ctx.font='700 23px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+16,button.width-18);});
+        if(card.settings){
+            ctx.fillStyle='#f3f8fc';ctx.font='700 34px system-ui';ctx.fillText('Settings',56,32,888);
+            const groups=new Map();
+            card.controls.forEach(button=>{if(!groups.has(button.settingGroup))groups.set(button.settingGroup,{label:button.settingLabel,y:button.y});});
+            groups.forEach(group=>{
+                ctx.fillStyle='rgba(9,25,27,.28)';ctx.beginPath();ctx.roundRect(40,group.y-4,920,50,12);ctx.fill();
+                ctx.strokeStyle='rgba(238,249,243,.17)';ctx.lineWidth=1;ctx.stroke();
+                ctx.fillStyle='#e6f2e9';ctx.font='600 20px system-ui';ctx.fillText(group.label,58,group.y+10,670);
+            });
+            card.controls.forEach(button=>{
+                ctx.fillStyle='rgba(238,250,242,.13)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,9);ctx.fill();
+                ctx.strokeStyle='rgba(239,251,244,.33)';ctx.lineWidth=1.5;ctx.stroke();
+                ctx.fillStyle='#f5fbf5';ctx.font='650 20px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+9,button.width-12);
+            });ctx.textAlign='left';
+            ctx.fillStyle='#f3f8fc';ctx.font='650 20px system-ui';ctx.fillText('Safety',56,480,888);
+            ctx.fillStyle='#c9e0ed';ctx.font='500 16px system-ui';infoPages('Keep a clear walking area and remain aware of people, plants, furniture and uneven ground.',90,2)[0].forEach((line,index)=>ctx.fillText(line,56,506+index*20,888));
+            ctx.fillStyle='#f3f8fc';ctx.font='650 20px system-ui';ctx.fillText('Help',56,548,888);
+            ctx.fillStyle='#c9e0ed';ctx.font='500 16px system-ui';infoPages(INFO_HELP,92,1)[0].forEach((line,index)=>ctx.fillText(line,56,573+index*20,888));
+            if(card.hoverHint){ctx.fillStyle='rgba(5,16,26,.93)';ctx.beginPath();ctx.roundRect(258,20,690,50,10);ctx.fill();ctx.strokeStyle='rgba(166,204,229,.4)';ctx.stroke();ctx.fillStyle='#e0edf2';ctx.font='400 18px system-ui';ctx.fillText(card.hoverHint,276,35,654);}
             return c;
         }
         if(card.headset && !card.hidden){
