@@ -49,7 +49,9 @@ export function createDemoFeedback() {
         if(destroyed || time-lastTick<120)return;
         lastTick=time;
         for(const source of sources){
-            if(source===heldSource)pulse(source,DEMO_FEEDBACK.holdStrength,95);
+            // Grab entry already sends one 100 ms confirmation. Let it finish;
+            // holding an object must never restart that vibration every frame.
+            if(source===heldSource)continue;
             else if(beeClose)pulse(source,DEMO_FEEDBACK.beeStrength,115);
             else if(pulsing.has(source))pulse(source,0,1);
         }

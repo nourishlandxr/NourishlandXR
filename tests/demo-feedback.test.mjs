@@ -10,7 +10,8 @@ test('demo music streams, touch tones release resources, haptics throttle and st
         const feedback=createDemoFeedback();feedback.start();assert.equal(plays,1);assert.equal(audio.preload,'metadata');assert.equal(audio.loop,true);assert.equal(audio.volume,DEMO_FEEDBACK.musicVolume);
         feedback.sound('cell');assert.equal(tones,2);feedback.sound('menu');assert.equal(tones,2);
         const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...args)=>{pulses.push(args);return Promise.resolve();}}]}};
-        feedback.tick(120,{sources:[source],heldSource:source});assert.equal(pulses[0][0],DEMO_FEEDBACK.holdStrength);
+        feedback.pulse(source,DEMO_FEEDBACK.holdStrength,100);
+        feedback.tick(120,{sources:[source],heldSource:source});assert.equal(pulses.length,1);assert.equal(pulses[0][0],DEMO_FEEDBACK.holdStrength);
         feedback.tick(121,{sources:[source],beeClose:true});assert.equal(pulses.length,1);
         feedback.tick(240,{sources:[source],beeClose:true});assert.equal(pulses[1][0],DEMO_FEEDBACK.beeStrength);
         feedback.tick(360,{sources:[source]});assert.equal(pulses[2][0],0);
