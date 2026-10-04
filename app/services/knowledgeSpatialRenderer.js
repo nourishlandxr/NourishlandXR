@@ -3,7 +3,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import {createKnowledgeObjectRenderer,knowledgeObjectSurfaces,knowledgeFaceCanvas} from './knowledgeObjectRenderer.js';
 import {pimVisibleNodes} from './plantInformationMesh.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,KNOWLEDGE_VISUALS} from './knowledgeExplorer.js';
-import {createSpatialTotemCards,hitTotemSurface} from './spatialTotemCards.js';
+import {createSpatialTotemCards,hitTotemSurface,hitTotemPoint} from './spatialTotemCards.js';
 import {drawSpatialTether} from './spatialTetherRenderer.js';
 import {currentInfoOpacity,currentGraphicsQuality} from './spatialVisualSettings.js';
 
@@ -69,7 +69,7 @@ function labelCanvas(card){
     if(card.identity)ctx.roundRect(18,62,476,388,34);
     else for(let i=0;i<6;i++){const angle=Math.PI/3*i,x=256+246*Math.cos(angle),y=256+284*Math.sin(angle);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();
     const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,`rgba(18,40,34,${card.infoOpacity})`);gradient.addColorStop(1,`rgba(7,21,24,${card.infoOpacity})`);ctx.fillStyle=gradient;ctx.fill();
-    ctx.lineJoin='round';ctx.lineWidth=card.selected?10:6;ctx.strokeStyle=card.selected?KNOWLEDGE_VISUALS.selectedBorder:card.branchColour;ctx.stroke();
+    ctx.lineJoin='round';ctx.lineWidth=card.selected || card.hovered?10:6;ctx.strokeStyle=card.hovered?'#f0fbf8':card.selected?KNOWLEDGE_VISUALS.selectedBorder:card.branchColour;ctx.stroke();
     // Keep power-of-two artwork for filtered distance viewing, but compensate
     // glyphs for the world card's aspect ratio so the type is not stretched.
     ctx.save();ctx.translate(256,256);ctx.scale(1,card.identity ? .43/.28:KNOWLEDGE_VISUALS.nodeWidth/KNOWLEDGE_VISUALS.nodeHeight);ctx.translate(-256,-256);
@@ -99,7 +99,7 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
                 const camera=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements));
                 recordSurfaces=knowledgeObjectSurfaces(record,knowledge,pose).filter(surface=>surface.normal.dot(camera.clone().sub(surface.center).normalize())>.16).map(surface=>({...surface,opacity:progress}));
                 surfaces.push(...recordSurfaces);recordSurfaces=[...recordSurfaces,...folded];
-                cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>surface.card));return;
+                cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverPath===surface.node.path;return surface.card;}));return;
             }
             surfaces.push(...recordSurfaces);
             const state=knowledgeExplorer(record),byId=new Map(recordSurfaces.map(surface=>[surface.node.path || 'core',surface]));
@@ -116,15 +116,22 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
                     if(d>.03)drawSpatialTether(gl,tether,view,edge(parent,b),edge(surface,a),{segments:4,width:KNOWLEDGE_VISUALS.bondWidth,curve:0,lift:0,color:[.68,.83,.70,(surface.node.contextual ? .28 : .62)*Math.max(surface.opacity,.08)]});
                 }gl.depthMask(true);
             }
-            cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>surface.card),record.demoSelectedNodeId || record.pimSelectedNodeId || '');
+            cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverPath===surface.node.path;return surface.card;}),record.demoSelectedNodeId || record.pimSelectedNodeId || '');
         },
         end(){cards.end();},
         bindSession(session,space,{canGrab=()=>true}={}){objectInput?.destroy();objectInput=bindKnowledgeObjectInteraction(session,space,{hit:(_source,inputRay)=>objects.hit(inputRay || ray()),near:point=>objects.near(point),canGrab});},
         updateInput(frame){objectInput?.update(frame);},
         get grabbing(){return Boolean(objectInput?.active);},
+        get grabbedSource(){return objectInput?.active?.source || null;},
         movingAtAim(){const target=objects.hit(ray());return Boolean(objectInput?.active || target?.record.knowledgeExplorer.objects?.interaction==='move');},
         hit(ray,record=null){
             const flat=hitKnowledgeSurface(ray,surfaces.filter(surface=>(!record || surface.record===record) && surface.record.knowledgeExplorer?.mode!=='explore')),object=objects.hit(ray,record);return [flat,object].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0] || null;
+        },
+        hitPoint(point){
+            const target=hitTotemPoint(point,surfaces,{front:.045,back:.025});
+            if(!target || target.interactive===false)return null;
+            if(!target.card.identity && !target.card.knowledgeFace && (Math.abs(target.localY)/(target.height/2)>.96 || Math.abs(target.localX)/(target.width/2)+Math.abs(target.localY)/target.height>.96))return null;
+            return target;
         },
         surface(record,path){return surfaces.find(surface=>surface.record===record && surface.node.path===path && surface.interactive!==false);},
         clear(record){const cache=caches.get(record);if(cache)cache.key='';},

@@ -43,7 +43,9 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { showArSafetyDialog } from '../services/arOnboarding.js';
-import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { createXRHandOutline } from '../services/xrHandOutline.js';
+import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimClosingNodePaths, pimCreateInteractionState, pimExpandedNodeIds, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimSpatialPoseFromStored, pimSpatialPoseFromViewer, pimToggleNodeState, pimViewportSafeArea } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_CELL_WIDTH, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
@@ -168,6 +170,8 @@ let prismRenderer = null;
 let totemSculptureRenderer = null;
 let triangleRenderer = null;
 let controllerPointerRenderer = null;
+let handOutlineRenderer = null;
+let nearHandInteraction=null,handHoverRecord=null;
 let placementArmedAt = 0;
 let arHistoryArmed = false;
 let handlingArHistory = false;
@@ -2417,7 +2421,8 @@ function updateControllerRay(frame, time = performance.now()) {
             .filter(entry => entry.state?.joints?.size)
         : [];
     latestTrackedHandStates = trackedHands;
-    const activeHand = trackedHands.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
+    const activeHand = trackedHands.find(entry => entry.state.pinch && entry.state.pointer)
+        || trackedHands.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
         || trackedHands.find(entry => entry.state.pointer)
         || trackedHands.find(entry => entry.source.handedness === 'right')
         || trackedHands[0]
@@ -2449,23 +2454,15 @@ function updateControllerRay(frame, time = performance.now()) {
 
 function drawHandTrackingLines(view) {
     if (creatorHandMode!=='outline' || creatorInputMode !== 'hand' || !latestTrackedHandStates.length || !controllerPointerRenderer) return;
-    for (const { state } of latestTrackedHandStates) {
-        if (!state?.joints) continue;
-        for (const [fromName, toName] of XR_HAND_JOINT_CONNECTIONS) {
-            const from = state.joints.get(fromName);
-            const to = state.joints.get(toName);
-            if (!from || !to) continue;
-            drawSpatialTether(gl, controllerPointerRenderer, view, from, to, {
-                segments: 3, width: .012, curve: 0, lift: 0, color: [0.5, 0.84, 1, .96]
-            });
-        }
-    }
+    handOutlineRenderer?.draw(view,latestTrackedHandStates);
 }
 
 function pollHandPinch() {
     if (exitPromise || arExitRequested) { handPimHold.cancel(); return; }
     if (!latestHandState?.pointer) {handPimHold.cancel(); return;}
     const pinching = Boolean(latestHandState.pinch);
+    const source=latestTrackedHandStates.find(entry=>entry.state===latestHandState)?.source;
+    if(infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPimHold.cancel();handPinchActive=pinching;return;}
     if (handPimHold.active) {
         if (!pinching){handPimHold.activateNow(spatialPimTargetAtAim({updateHover:false}));handPimHold.cancel();}
         else handPimHold.tick(spatialPimTargetAtAim({updateHover:false}),performance.now());
@@ -2473,7 +2470,7 @@ function pollHandPinch() {
     }
     if (pinching && !handPinchActive) {
         if(creatorKnowledgeRoot) {activateKnowledgeSelection();handPinchActive=pinching;return;}
-        if(infoPanel?.activate(latestControllerRay)) {handPinchActive=pinching;return;}
+        if(infoPanel?.activateHand(latestControllerRay,source,latestHandState)) {handPinchActive=pinching;return;}
         if(activateCreatorTotemCard(totemCardsRenderer?.hit(latestControllerRay))){handPinchActive=pinching;return;}
         // Hand tracking has no controller select event. Once Note (or Plant)
         // is armed, a pinch is the placement press at the current aim point.
@@ -3657,7 +3654,7 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
 function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHover: false })) {
     if (!candidate) return false;
     const { record, target } = candidate;
-    if(knowledgeRenderer?.grabbing)return true;
+    if(knowledgeRenderer?.grabbing && (!candidate.inputSource || candidate.inputSource===knowledgeRenderer.grabbedSource))return true;
     if(record.knowledgeExplorer?.mode==='explore' && target.pimKnowledgeFace){
         selectKnowledgeObjectFace(record,creatorPlantKnowledge(record),target);showCreatorInfo(record,target.path);refreshCreatorPimProfile(record);infoPanel?.refreshExplorer();return true;
     }
@@ -4079,6 +4076,20 @@ function setupSpatialMarkerRenderer() {
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
     controllerPointerRenderer = createSpatialTetherRenderer(gl);
+    try{handOutlineRenderer=createXRHandOutline(gl);}catch(error){console.warn('Hand outline unavailable:',error.message);}
+    nearHandInteraction=createHandSurfaceInteraction({
+        hitPoint:(point,source)=>{
+            if(infoPanel?.isHandInteracting(source))return null;
+            const target=[knowledgeRenderer?.hitPoint(point),totemCardsRenderer?.hitPoint(point,{front:.045,back:.025})].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+            return target?{...target,button:{action:String(target.record?.marker?.id || target.record?.id)+'|'+(target.node?.path || target.card?.id)}}:null;
+        },
+        onHover:target=>{
+            if(handHoverRecord){delete handHoverRecord.handHoverPath;delete handHoverRecord.handHoverCardId;}handHoverRecord=target?.record || null;
+            if(target?.node && target.record)target.record.handHoverPath=target.node.path;
+            else if(target?.record)target.record.handHoverCardId=target.card.id;
+        },
+        onPress:(target,source)=>{if(target.node)activateSpatialPimTarget({record:target.record,target:target.node,inputSource:source});else activateCreatorTotemCard(target);}
+    });
     knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:controllerPointerRenderer});
 }
 
@@ -5885,6 +5896,8 @@ function cleanup() {
     destroySpatialTotemSculpture(gl, totemSculptureRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
     destroySpatialTetherRenderer(gl, controllerPointerRenderer);
+    handOutlineRenderer?.destroy();handOutlineRenderer=null;
+    nearHandInteraction?.destroy();nearHandInteraction=null;
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
     questBeltTextures.forEach(texture => texture && gl?.deleteTexture(texture));
     questSpecialPaletteTextures.forEach(texture => texture && gl?.deleteTexture(texture));
@@ -6249,7 +6262,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             pollControllerInput(_time);
             updateControllerRay(frame, _time);
             if(!latestHandState || latestHandState.pinch)tickControllerMarkerPress(_time);
-            knowledgeRenderer?.updateInput(frame);infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame); pimHold?.tick(_time);
+            knowledgeRenderer?.updateInput(frame);infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame,source=>knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot)); pimHold?.tick(_time);
+            nearHandInteraction?.update(latestTrackedHandStates,_time,source=>knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot || readyPlacementType || exitPromise || arExitRequested));
             const hasSpatialRay = isSpatialRayInputMode() && latestControllerRay;
             const dashboardTarget = hasSpatialRay ? controllerSpatialDashboardAtAim() : null;
             const pimTarget = !dashboardTarget && hasSpatialRay ? spatialPimTargetAtAim() : null;
@@ -6279,7 +6293,6 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawQuestSpatialBelt(view);
                 drawQuestSpatialSpecialPalette(view);
                 drawQuestSpatialWebPanel(view);
-                drawHandTrackingLines(view);
                 drawCalibratedTotemPath(view);
                 drawSpatialMarkers(view);
                 if (questBeltUsesSpatialRenderer() && totemCardsRenderer) {
@@ -6298,6 +6311,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawSpatialPlantProfiles(view);
                 drawCreatorSignDestinations(view);
                 infoPanel?.draw(view);
+                drawHandTrackingLines(view);
                 // Keep the controller laser and its contact marker in the
                 // foreground. A world-locked PIM panel is transparent, but
                 // its quad can still cover a laser drawn before the panel.
@@ -6325,7 +6339,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             clearControllerMarkerPress();consumedMarkerSource=null;
             setCreatorInputMode(availableCreatorInputMode());
         });
-        knowledgeRenderer?.bindSession(launchedSession,refSpace,{canGrab:target=>{const panel=infoPanel?.hit(target.inputRay || latestControllerRay);return !creatorKnowledgeRoot && !readyPlacementType && (!panel || panel.distance>=target.distance);}});
+        nearHandInteraction?.bindSession(launchedSession);
+        knowledgeRenderer?.bindSession(launchedSession,refSpace,{canGrab:target=>{const panel=target.contactPoint?infoPanel?.hitPoint(target.contactPoint):infoPanel?.hit(target.inputRay || latestControllerRay);return !creatorKnowledgeRoot && !readyPlacementType && (!panel || panel.distance>=target.distance);}});
         infoPanel?.bindSession(launchedSession, refSpace);
         pimHold = bindSpatialPimHold({session:launchedSession,
             enabled:()=>!knowledgeRenderer?.movingAtAim() && !exitPromise && !arExitRequested && !latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay) && !totemCardsRenderer?.hit(latestControllerRay) && !controllerSpatialDashboardAtAim(),

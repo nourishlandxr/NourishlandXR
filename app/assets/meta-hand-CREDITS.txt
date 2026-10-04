@@ -1,0 +1,4 @@
+Standard generic-hand left/right models contributed by Meta to WebXR Input Profiles.
+Source: https://github.com/immersive-web/webxr-input-profiles/tree/main/packages/assets/profiles/generic-hand
+Licence: MIT, included in meta-hand-LICENSE.txt.
+Hand silhouettes use these meshes with WebXR joint poses; tracking itself is supplied by the headset and browser.

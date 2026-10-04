@@ -7,6 +7,7 @@ import {ORB_MODELS,TOTEM_MODELS,RAIN_QUALITIES,resolveGraphicsQuality,currentTot
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 import { handTrackingState } from './xrPointer.js';
+import { createHandPokeTracker,handIndexCanPoke } from './handPoke.js';
 
 export const INFO_HELP = `Aim at an object to highlight it. Press a plant cell once to read or expand its information here. Select a Plant Orb to explore information connected to that plant.
 
@@ -150,7 +151,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,demoSound=null}={}){
+export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='outline',spatialScale=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,demoSound=null}={}){
     const choice=(action,label,group,title,y,x=540,width=404)=>({action,label,ariaLabel:title || label,settingGroup:group,settingLabel:title,x,y,width,height:58});
     const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
     const navigation=choice('GraphicsMenu',graphicsOpen?'‹ General':'Graphics ›','navigation','',100,56,888);
@@ -173,7 +174,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),
         slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,264),
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
-        ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Outline','hands','Hands',424)]:[]),
+        ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
         ...(performanceSettings?[...rateControls,choice('ShowFps',`FPS · ${performanceSettings.showFps?'On':'Off'}`,'performance','Refresh rate / FPS',550,56+rates.length*(rateWidth+12),rateWidth)]:[]),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,888)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
@@ -239,7 +240,7 @@ function controlDescription(item={}){
         TextDown:'Reduce the reading text size.',
         TextUp:'Increase the reading text size.',
         Recenter:'Return the panel to its comfortable forward position.',
-        HandMode:'Switch between a subtle hand outline for direct interaction and an index-finger laser for aiming.'
+        HandMode:'Hand tracking: brush to highlight, press with your index fingertip to select. Pinch for distant controls. Pointer is optional.'
     };
     return item.description || descriptions[item.action] || item.ariaLabel || item.label || 'Activate this control.';
 }
@@ -251,7 +252,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     let floorOffset=getSpatialVisualSettings().floorOffset;
     let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel(),totemModel=currentTotemModel();
     const HEAVY_RAIN_INTENSITY=1.65;
-    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
+    let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='pointer'?'pointer':'outline';
     let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaRevision=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let visibleMedia=null;
     const MEDIA_FADE_MS=650;
@@ -264,6 +265,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     let sliderGrab=null,finishingSliderSource=null,graphicsOpen=false,soundOpen=false;
     let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,panelGestureSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
+    let handReferenceSpace=null;
+    const handPokes=new Map(),handContacts=new Map(),handSelections=new WeakMap();
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
     element.className='nlxr-info-panel';element.setAttribute('aria-label','Control panel');root?.append(element);
     settingsElement.className='nlxr-settings-companion';settingsElement.setAttribute('aria-label','Settings companion panel');settingsElement.hidden=true;root?.append(settingsElement);
@@ -948,6 +951,33 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         const y=(.5-target.localY/target.height)*logicalHeight;
         return controlsForTarget(target).find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height) || null;
     };
+    function updateHandContacts(frame,time,blocked=false){
+        handContacts.clear();
+        const sources=[...(frame?.session?.inputSources || [])].filter(source=>source.hand);
+        for(const [source,poke] of handPokes)if(!sources.includes(source)){poke.reset();handPokes.delete(source);}
+        if(blocked===true || !handReferenceSpace || !renderer || detached || frame?.session?.visibilityState==='hidden'){for(const poke of handPokes.values())poke.reset();return null;}
+        let hover=null;
+        for(const source of sources){
+            const state=handTrackingState(frame,source,handReferenceSpace),poke=handPokes.get(source) || createHandPokeTracker();handPokes.set(source,poke);
+            if(!state?.tracked || typeof blocked==='function' && blocked(source)){poke.reset();continue;}
+            for(const point of state.rawJoints.values()){
+                const target=renderer.hitPoint(point,{front:.045,back:.018});if(!target)continue;
+                handContacts.set(source,true);const button=targetButtonAtRay(target);
+                if(button && (!hover || target.distance<hover.distance))hover={...target,button};
+            }
+            const index=state.rawJoints.get('index-finger-tip'),surface=renderer.hitPoint(index),target=surface?{...surface,button:targetButtonAtRay(surface)}:null;
+            if(!handIndexCanPoke(state))poke.reset();
+            else if(poke.update(index,target,time)){
+                // A poke owns its press, including a simultaneous pinch event.
+                handContacts.set(source,true);
+                handSelections.set(source,state.pinchSequence+(state.pinch?0:1));
+                if(!slideAtTarget(target.button,target) && target.button.action!=='MoveMediaPanel')act(target.button.action);
+            }else if(poke.pressed && target?.button?.kind==='slider' && !target.button.disabled && poke.action===target.button.action){
+                slideAtTarget(target.button,target);
+            }
+        }
+        return hover;
+    }
     function explorerControls(){
         if(!knowledgeRecord)return [];const state=knowledgeExplorer(knowledgeRecord);
         const controls=[
@@ -1071,7 +1101,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
-        update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
+        update(matrix,time=performance.now(),inputRay=null,xrFrame=null,touchBlocked=false){
             const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
             const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
@@ -1110,7 +1140,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 }
                 firstPlacement=false;
             }
-            const hoverTarget=inputRay ? hit(inputRay) : null,hoverButton=targetButtonAtRay(hoverTarget);
+            const directHover=updateHandContacts(xrFrame,time,touchBlocked);
+            const hoverTarget=directHover || (inputRay ? hit(inputRay) : null),hoverButton=directHover?.button || targetButtonAtRay(hoverTarget);
             hoveredAction=hoverButton?.disabled?'':hoverButton?.action || '';
             const nextHoverDescription=hoverButton ? controlDescription(hoverButton) : '';
             const nextHoverPanelId=hoverTarget?.card?.id || '';
@@ -1135,13 +1166,25 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         refreshExplorer(){renderExplorer();},
         getHeldInputSource(){return spatialMove?.source || null;},
         activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
+        isHandInteracting(source){return Boolean(source && handContacts.get(source));},
+        hitPoint(point){return !pose || !renderer || detached?null:renderer.hitPoint(point,{front:.045,back:.025});},
+        activateHand(ray,source,state){
+            if(api.isHandInteracting(source))return true;
+            const target=hit(ray);if(!target)return false;
+            const button=targetButtonAtRay(target);if(!button || button.disabled)return true;
+            const sequence=state?.pinchSequence+(state?.pinch?0:1);
+            if(source && handSelections.get(source)===sequence)return true;
+            if(source)handSelections.set(source,sequence);
+            if(!slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;
+        },
         getPerchPose(side='right'){
             if(!pose || hidden || detached)return null;const {mainWidth,mainHeight}=spatialDimensions();
             // Feet sit on the extreme top-right edge, outside companion faces.
             const across=(side==='left'?-1:1)*mainWidth/2;
             return {...pose,center:{x:pose.center.x+pose.right.x*across+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*across+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*across+pose.up.z*mainHeight/2}};
         },
-        bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
+        bindSession(session,referenceSpace){removeXrControls();handReferenceSpace=referenceSpace;const handle=event=>{
+            if(event.inputSource?.hand && api.isHandInteracting(event.inputSource)){event.stopImmediatePropagation();return;}
             if(sliderGrab && sliderGrab.source!==event.inputSource)return;
             if(event.type==='selectstart')finishingSliderSource=null;
             if(event.type==='select' && finishingSliderSource===event.inputSource){finishingSliderSource=null;event.stopImmediatePropagation();return;}
@@ -1160,7 +1203,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(event.type==='select' && (spatialMove?.source===event.inputSource || finishingMoveSource===event.inputSource)){finishingMoveSource=null;event.stopImmediatePropagation();return;}
             if(event.type==='selectend' && panelGestureSource!==event.inputSource)return;
             if(event.type==='select' && panelGestureSource && panelGestureSource!==event.inputSource)return;
-            const handRay=event.inputSource?.hand ? handTrackingState(event.frame,event.inputSource,referenceSpace)?.pointer : null;
+            const handState=event.inputSource?.hand ? handTrackingState(event.frame,event.inputSource,referenceSpace) : null;
+            const handRay=handState?.pointer;
             const targetRaySpace=event.inputSource?.targetRaySpace;
             const transform=targetRaySpace ? event.frame?.getPose(targetRaySpace,referenceSpace)?.transform.matrix : null;
             if(!handRay && !transform)return;
@@ -1168,6 +1212,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const target=hit(ray);if(!target){if(event.type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
             event.stopImmediatePropagation();
             const button=targetButtonAtRay(target);
+            if(event.inputSource?.hand && event.type==='selectstart' && button && button.kind!=='slider'){
+                panelGestureSource=event.inputSource;api.activateHand(ray,event.inputSource,handState);return;
+            }
+            // The shared pinch edge already selects a hand button once.
+            if(event.inputSource?.hand && event.type==='select'){spatialGrabPending=null;panelGestureSource=null;return;}
             if(event.type==='selectstart' && target.card?.settings)panelGestureSource=event.inputSource;
             if(event.type==='selectstart' && button?.kind==='slider'){
                 sliderGrab={source:event.inputSource,referenceSpace,button,surface:{...target}};panelGestureSource=event.inputSource;slideAtTarget(button,target);return;
@@ -1186,7 +1235,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(event.type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
             if(event.type==='selectend')panelGestureSource=null;
         };const visibility=()=>{if(session.visibilityState!=='visible'){sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
-            removeXrControls=()=>{sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
+            removeXrControls=()=>{handReferenceSpace=null;handContacts.clear();handPokes.clear();sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
         destroy(){mediaLoadToken++;clearTimeout(mediaTransitionTimer);clearInterval(panelHintTimer);mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;panelCanvases.clear();mediaFloating?.remove();element.remove();settingsElement.remove();explorerElement.remove();if(simpleDesktop)root?.classList.remove('is-simple-desktop-ar');}
     };render();return api;
 }

@@ -48,33 +48,61 @@ export const XR_HAND_JOINT_CONNECTIONS = Object.freeze([
     ['wrist', 'pinky-finger-metacarpal'], ['pinky-finger-metacarpal', 'pinky-finger-phalanx-proximal'], ['pinky-finger-phalanx-proximal', 'pinky-finger-phalanx-intermediate'], ['pinky-finger-phalanx-intermediate', 'pinky-finger-phalanx-distal'], ['pinky-finger-phalanx-distal', 'pinky-finger-tip']
 ]);
 
+import * as THREE from '../vendor/three.module.min.js';
+
+const handSamples = new WeakMap();
+const handJointNames = [...new Set(XR_HAND_JOINT_CONNECTIONS.flat())];
+// One sample per XR frame, shared by visuals, pokes and pinch routing. Missing
+// poses are never extrapolated into interaction with a surface.
 export function handTrackingState(frame, source, referenceSpace) {
     const hand = source?.hand;
     if (!hand || !frame || !referenceSpace) return null;
-    const joints = new Map();
-    for (const name of new Set(XR_HAND_JOINT_CONNECTIONS.flat())) {
+    const lastSample=handSamples.get(source);let previous = lastSample;
+    if(previous?.frame===frame && previous.space===referenceSpace)return previous.state;
+    const time=globalThis.performance?.now?.() || Date.now();
+    if(previous?.space!==referenceSpace || time-previous.time>100)previous=null;
+    const joints = new Map(),rawJoints=new Map();
+    for (const name of handJointNames) {
         const space = hand.get?.(name);
         const pose = space ? frame.getJointPose?.(space, referenceSpace) : null;
         const matrix = pose?.transform?.matrix;
-        if (!matrix) continue;
-        joints.set(name, { x: matrix[12], y: matrix[13], z: matrix[14], radius: Number(pose.radius) || .012 });
+        if (!matrix || ![matrix[12],matrix[13],matrix[14]].every(Number.isFinite)) {
+            const last=previous?.state.joints.get(name);
+            if(last && time-last.lastSeenAt<70)joints.set(name,last);
+            continue;
+        }
+        const raw={x:matrix[12],y:matrix[13],z:matrix[14],radius:Number(pose.radius) || .008,matrix:Float32Array.from(matrix)};
+        rawJoints.set(name,raw);
+        const old=previous?.state.joints.get(name),dt=Math.max(.001,(time-(previous?.time || time-16))/1000);
+        const speed=old?Math.hypot(raw.x-old.x,raw.y-old.y,raw.z-old.z)/dt:0;
+        // Stronger filtering at rest, less delay when reaching for a button.
+        const alpha=old?1-Math.exp(-dt*(35+Math.min(100,speed*65))):1;
+        const rotation=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix));
+        if(old?.rotation)rotation.copy(old.rotation).slerp(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix)),alpha);
+        const joint={...raw,lastSeenAt:time,x:old?old.x+(raw.x-old.x)*alpha:raw.x,y:old?old.y+(raw.y-old.y)*alpha:raw.y,z:old?old.z+(raw.z-old.z)*alpha:raw.z,rotation};
+        joint.matrix=new THREE.Matrix4().compose(new THREE.Vector3(joint.x,joint.y,joint.z),rotation,new THREE.Vector3(1,1,1)).elements;
+        joints.set(name,joint);
     }
-    const thumb = joints.get('thumb-tip');
-    const index = joints.get('index-finger-tip');
-    const wrist = joints.get('wrist');
-    if (!index || !wrist) return { joints, connections: XR_HAND_JOINT_CONNECTIONS, pinch: false, pointer: null };
-    const pinchDistance = thumb && Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
-    const indexBase=joints.get('index-finger-metacarpal') || wrist;
-    const dx = index.x - indexBase.x;
-    const dy = index.y - indexBase.y;
-    const dz = index.z - indexBase.z;
+    const thumb = rawJoints.get('thumb-tip');
+    const index = rawJoints.get('index-finger-tip');
+    const wrist = rawJoints.get('wrist');
+    const pinchDistance = thumb && index && Math.hypot(thumb.x - index.x, thumb.y - index.y, thumb.z - index.z);
+    const tracked=Boolean(index && wrist && thumb);
+    const pinch=tracked && (source.gamepad?.buttons?.[0] ? Boolean(source.gamepad.buttons[0].pressed) : Number.isFinite(pinchDistance) && pinchDistance<(previous?.state.pinch?.038:.025));
+    const indexBase=joints.get('index-finger-metacarpal') || joints.get('wrist'),filteredIndex=joints.get('index-finger-tip');
+    const dx = filteredIndex && indexBase ? filteredIndex.x - indexBase.x : 0;
+    const dy = filteredIndex && indexBase ? filteredIndex.y - indexBase.y : 0;
+    const dz = filteredIndex && indexBase ? filteredIndex.z - indexBase.z : 0;
     const length = Math.hypot(dx, dy, dz) || 1;
-    return {
-        joints,
+    const pose=tracked && source.targetRaySpace?frame.getPose?.(source.targetRaySpace,referenceSpace):null;
+    const pointer=tracked?(controllerRayFromPose(pose,source.handedness) || {origin:filteredIndex,direction:{x:dx/length,y:dy/length,z:dz/length},handedness:source.handedness || 'right'}):null;
+    const state={
+        joints,rawJoints,time,tracked,visualConfidence:Math.min(1,...handJointNames.map(name=>rawJoints.has(name)?1:joints.has(name)?Math.max(0,1-(time-joints.get(name).lastSeenAt)/70):0)),
         connections: XR_HAND_JOINT_CONNECTIONS,
-        pinch: Number.isFinite(pinchDistance) && pinchDistance < .035,
-        pointer: { origin: index, direction: { x: dx / length, y: dy / length, z: dz / length }, handedness: source.handedness || 'right' }
+        pinch,pinchSequence:(lastSample?.state.pinchSequence || 0)+(pinch && !lastSample?.state.pinch?1:0),
+        pointer
     };
+    handSamples.set(source,{frame,space:referenceSpace,time,state});return state;
 }
 
 export function controllerRayEnd(ray, subjects = [], maxLength = XR_LASER_POINTER_CONFIG.length) {

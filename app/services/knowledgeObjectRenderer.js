@@ -6,7 +6,7 @@ import {drawSpatialTether} from './spatialTetherRenderer.js';
 export const KNOWLEDGE_OBJECT_INSTRUCTION='Turn to inspect. Press a face to explore. Move objects to organise connections.';
 export function knowledgeFaceCanvas(card){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=canvas.getContext('2d');
-    ctx.fillStyle='rgba(14,32,29,.97)';ctx.beginPath();ctx.roundRect(4,4,504,248,28);ctx.fill();ctx.strokeStyle=card.selected?'#dceabd':'#adc6bc';ctx.lineWidth=card.selected?8:3;ctx.stroke();
+    ctx.fillStyle='rgba(14,32,29,.97)';ctx.beginPath();ctx.roundRect(4,4,504,248,28);ctx.fill();ctx.strokeStyle=card.hovered?'#f0fbf8':card.selected?'#dceabd':'#adc6bc';ctx.lineWidth=card.selected || card.hovered?8:3;ctx.stroke();
     ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='600 56px Manrope, system-ui';
     const lines=[];let line='';for(const word of String(card.title).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>452 && line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
     lines.slice(0,3).forEach((text,i)=>ctx.fillText(text+(i===2 && lines.length>3?'…':''),256,100+(i-(Math.min(3,lines.length)-1)/2)*60,460));
@@ -71,7 +71,16 @@ export function createKnowledgeObjectRenderer(gl,{tether=null}={}){
         },
         hit(ray,record=null){return entries.filter(entry=>!record || entry.record===record).map(entry=>hitKnowledgeObject(ray,entry.record,entry.knowledge,entry.pose,geometry)).filter(Boolean).sort((a,b)=>a.distance-b.distance)[0] || null;},
         near(point){
-            let nearest=null;for(const entry of entries){const workspace=ensureKnowledgeObjects(entry.record,entry.knowledge),basis=knowledgePoseMatrix(entry.pose);for(const object of workspace.items){const centre=new THREE.Vector3(object.position.x,object.position.y,object.position.z).applyMatrix4(basis),distance=centre.distanceTo(new THREE.Vector3(point.x,point.y,point.z));if(distance<object.radius+.09 && (!nearest || distance<nearest.distance))nearest={...entry,object,distance};}}return nearest;
+            let nearest=null;const worldPoint=new THREE.Vector3(point.x,point.y,point.z),position=geometry.attributes.position,triangle=new THREE.Triangle(),closest=new THREE.Vector3();
+            for(const entry of entries){const workspace=ensureKnowledgeObjects(entry.record,entry.knowledge),basis=knowledgePoseMatrix(entry.pose);
+                for(const object of workspace.items){
+                    const matrix=basis.clone().multiply(localObjectMatrix(object)),localPoint=worldPoint.clone().applyMatrix4(matrix.clone().invert());
+                    if(localPoint.length()>object.radius+.045)continue;
+                    let distance=Infinity;
+                    for(let i=0;i<position.count;i+=3){triangle.a.fromBufferAttribute(position,i);triangle.b.fromBufferAttribute(position,i+1);triangle.c.fromBufferAttribute(position,i+2);triangle.closestPointToPoint(localPoint,closest);distance=Math.min(distance,closest.distanceTo(localPoint));}
+                    if(distance<=.035 && (!nearest || distance<nearest.distance))nearest={...entry,object,distance};
+                }
+            }return nearest;
         },
         destroy(){destroyed=true;image.onload=null;geometry.dispose();edges.dispose();buffers.forEach(value=>gl.deleteBuffer(value));gl.deleteTexture(atlas);gl.deleteProgram(program);entries=[];}
     };

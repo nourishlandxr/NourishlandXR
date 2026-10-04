@@ -58,7 +58,10 @@ import { demoContentFor, demoPlantMedia, simulatedAreaLinkMarkup, simulatedPlant
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
-import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { createXRHandOutline } from '../services/xrHandOutline.js';
+import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction.js';
+import { hitTotemPoint } from '../services/spatialTotemCards.js';
 import { spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea, pimVisibleNodes, pimNodeVisualPosition } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
@@ -254,6 +257,8 @@ function syncDemoPimHover(){
     for(const record of new Set([previous,nextRecord].filter(Boolean))) queueDemoPimTextureRefresh(record);
 }
 let tetherRenderer = null;
+let handOutlineRenderer = null;
+let nearHandInteraction=null,handHoverRecord=null;
 let prismRenderer = null;
 let totemSculptureRenderer = null;
 let triangleRenderer = null;
@@ -501,6 +506,8 @@ function clearSessionState() {
     totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;
     pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
+    handOutlineRenderer?.destroy();handOutlineRenderer=null;
+    nearHandInteraction?.destroy();nearHandInteraction=null;
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTotemSculpture(gl, totemSculptureRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
@@ -1971,6 +1978,16 @@ function showArWelcomeShowcase() {
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
+function welcomeHandTarget(point){
+    if(!arWelcomeShowcaseActive || !limMeshVisible || !introWorldAnchor)return null;
+    const scaleX=AR_PHONE_COMFORT.boardScale[0]*2500/1400,scaleY=AR_PHONE_COMFORT.boardScale[1]*2100/1080;
+    const position=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),matrix=billboardMatrix(position,scaleX,scaleY,introWorldAnchor),size=demoBillboardSurfaceSize(scaleX,scaleY);
+    const surface={center:position,right:{x:matrix[0]/scaleX,y:0,z:matrix[2]/scaleX},up:{x:0,y:1,z:0},normal:{x:matrix[8],y:0,z:matrix[10]},width:size.width,height:size.height,card:{id:'welcome'}};
+    const target=hitTotemPoint(point,[surface],{front:.045,back:.025});if(!target)return null;
+    const node=welcomeCellAtPoint(welcomeFrames(),(target.localX/size.width+.5)*2500,(.5-target.localY/size.height)*2100);
+    return node?{...target,node,kind:'lim-cell'}:null;
+}
+
 function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100,panelOnly=false) {
     if(!introWorldAnchor)return null;
     const matrix=billboardMatrix(position,scaleX,scaleY,introWorldAnchor);
@@ -3041,7 +3058,7 @@ function selectDemoProfileCell(selection=demoInfoTarget()) {
         setGuide('Aim at a visible plant information cell to explore it.');
         return false;
     }
-    if(knowledgeRenderer?.grabbing)return true;
+    if(knowledgeRenderer?.grabbing && (!selection.inputSource || selection.inputSource===knowledgeRenderer.grabbedSource))return true;
     if(record.knowledgeExplorer?.mode==='explore' && node.pimKnowledgeFace){
         selectKnowledgeObjectFace(record,knowledgeFor(record),node);showDemoInfo(record,node.path);refreshDemoPimProfile(record);infoPanel?.refreshExplorer();return true;
     }
@@ -4198,6 +4215,25 @@ function setupRenderer() {
     // the viewer after the buttons have been aimed during placement.
     totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false,ray:()=>latestControllerRay});
     tetherRenderer = createSpatialTetherRenderer(gl);
+    try{handOutlineRenderer=createXRHandOutline(gl);}catch(error){console.warn('Hand outline unavailable:',error.message);}
+    nearHandInteraction=createHandSurfaceInteraction({
+        hitPoint:(point,source)=>{
+            if(infoPanel?.isHandInteracting(source))return null;
+            const hits=[knowledgeRenderer?.hitPoint(point),totemCardsRenderer?.hitPoint(point,{front:.045,back:.025}),welcomeHandTarget(point)].filter(Boolean).sort((a,b)=>a.distance-b.distance);
+            const target=hits[0];return target?{...target,button:{action:target.kind==='lim-cell'?target.node.key:String(target.record?.id || target.record?.marker?.id)+'|'+(target.node?.path || target.card?.id),disabled:target.button?.disabled}}:null;
+        },
+        onHover:target=>{
+            if(handHoverRecord){delete handHoverRecord.handHoverPath;delete handHoverRecord.handHoverCardId;}handHoverRecord=target?.record || null;
+            if(target?.node && target.record)target.record.handHoverPath=target.node.path;
+            else if(target?.record)target.record.handHoverCardId=target.card.id;
+            if(target?.kind==='lim-cell' && contextCellKey!==target.node.key){contextCellKey=target.node.key;introBoardTextureDirty=true;}
+        },
+        onPress:(target,source)=>{
+            if(target.kind==='lim-cell'){limActivation?.cancel();toggleLimCell(target.node.key);}
+            else if(target.node)selectDemoProfileCell({record:target.record,target:{node:target.node},inputSource:source});
+            else activateDemoTotemCard(target);
+        }
+    });
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
@@ -4224,7 +4260,8 @@ function updateDemoControllerRay(frame) {
     latestTrackedHandStates = sources.filter(source => source.hand)
         .map(source => ({ source, state: handTrackingState(frame, source, referenceSpace) }))
         .filter(entry => entry.state?.joints?.size);
-    const activeHand = latestTrackedHandStates.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
+    const activeHand = latestTrackedHandStates.find(entry => entry.state.pinch && entry.state.pointer)
+        || latestTrackedHandStates.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
         || latestTrackedHandStates.find(entry => entry.state.pointer)
         || latestTrackedHandStates.find(entry => entry.source.handedness === 'right')
         || latestTrackedHandStates[0]
@@ -4285,8 +4322,10 @@ function pollDemoHandPinch() {
         return;
     }
     const pinching = Boolean(latestHandState.pinch);
+    const source=latestTrackedHandStates.find(entry=>entry.state===latestHandState)?.source;
+    if(infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPinchActive=pinching;return;}
     if (pinching && !handPinchActive) {
-        let handled=Boolean(infoPanel?.activate(latestControllerRay));
+        let handled=Boolean(infoPanel?.activateHand(latestControllerRay,source,latestHandState));
         if(!handled && placementReady){pressPlacementPointer();handled=true;}
         if(!handled)handled=Boolean(selectDemoProfileCell());
         if(!handled)handled=Boolean(selectDemoNoteTemplateAtPointer());
@@ -5370,14 +5409,7 @@ function drawMarker(view) {
 function drawDemoControllerPointer(view) {
     if (!tetherRenderer) return;
     if (latestTrackedHandStates.length && demoHandMode==='outline') {
-        for (const { state } of latestTrackedHandStates) {
-            if (!state?.joints) continue;
-            const engaged=Boolean(state.pinch || demoHeldIndex>=0 || handPinchActive);
-            for (const [fromName,toName] of XR_HAND_JOINT_CONNECTIONS) {
-                const from=state.joints.get(fromName),to=state.joints.get(toName);
-                if(from && to)drawSpatialTether(gl,tetherRenderer,view,from,to,{segments:2,width:engaged ? .0038 : .0025,curve:0,lift:0,color:[.82,.89,.92,engaged ? .40 : .24]});
-            }
-        }
+        handOutlineRenderer?.draw(view,latestTrackedHandStates);
         return;
     }
     const pointerSource = demoControllerInputSource();
@@ -5503,7 +5535,8 @@ async function startImmersive() {
             if (activateImmersiveDemoControl()) return;
             selectGuidedDemoOrb();
         });
-        knowledgeRenderer?.bindSession(session,referenceSpace,{canGrab:target=>{const panel=infoPanel?.hit(target.inputRay || latestControllerRay);return !arWelcomeIntroPending && !placementReady && !demoKnowledgeWorkspace && (!panel || panel.distance>=target.distance);}});
+        nearHandInteraction?.bindSession(session);
+        knowledgeRenderer?.bindSession(session,referenceSpace,{canGrab:target=>{const panel=target.contactPoint?infoPanel?.hitPoint(target.contactPoint):infoPanel?.hit(target.inputRay || latestControllerRay);return !arWelcomeIntroPending && !placementReady && !demoKnowledgeWorkspace && (!panel || panel.distance>=target.distance);}});
         pimHold=bindSpatialPimHold({session,enabled:()=>!knowledgeRenderer?.movingAtAim() && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE && nativeConnectionState?.phase!=='source' && !demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady,
             // Use the same nearest visible surface as the laser and main XR
             // select route. A Control panel hit behind a nearer PIMO cell must
@@ -5577,10 +5610,11 @@ async function startImmersive() {
             runXrFrameStep('PIM hover',syncDemoPimHover);
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
             runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
-            runXrFrameStep('hand pinch',()=>{if(!knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});
+            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace)));
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
+            runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
+            runXrFrameStep('hand pinch',()=>{if(!knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});
             runXrFrameStep('LIM activation',()=>tickLimActivation(_time));
-            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame));
             runXrFrameStep('panel diagnostic',()=>{
                 if(!limPanelDiagnosticRecorded && infoPanel?.getPosition?.()){
                     limDiagnostic('companion-panel-position',infoPanel.getPosition());

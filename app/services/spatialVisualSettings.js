@@ -24,7 +24,7 @@ export function currentGraphicsQuality(){return resolveGraphicsQuality(preferenc
 export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
 export function currentRainQuality(){return preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={totemDefaultRevision:2,floorOffset:0,insects:true,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+let preferences={totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,insects:true,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:1,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
@@ -44,6 +44,7 @@ try{
     if(preferences.refreshRate===120 || preferences.refreshRate==='auto')preferences.refreshRate=90;
     // Adopt the new default once; later deliberate style choices stay saved.
     if(saved && saved.totemDefaultRevision!==2){preferences.totemModel='botanical';globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}
+    if(saved && saved.handDefaultRevision!==1){preferences.handMode='outline';globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}
 }catch{ /* Storage is optional in restricted browser sessions. */ }
 function syncVisualCss(){globalThis.document?.documentElement?.style.setProperty('--nlxr-panels-opacity',String(preferences.infoOpacity));}
 syncVisualCss();

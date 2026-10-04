@@ -209,6 +209,23 @@ export function stableTotemCardRight(record, viewerRight) {
     return record.spatialCardRight;
 }
 
+export function hitTotemPoint(point,surfaces,{front=.055,back=.025,padding=0}={}){
+    if(!point)return null;
+    let nearest=null;
+    for(const surface of surfaces){
+        if(surface.interactive===false)continue;
+        const {center,width,height}=surface,right={y:0,...surface.right},up=surface.up || {x:0,y:1,z:0};
+        const normal=surface.normal || {x:right.y*up.z-right.z*up.y,y:right.z*up.x-right.x*up.z,z:right.x*up.y-right.y*up.x};
+        const offset={x:point.x-center.x,y:point.y-center.y,z:point.z-center.z};
+        const distance=offset.x*normal.x+offset.y*normal.y+offset.z*normal.z;
+        if(distance>front || distance < -back)continue;
+        const x=offset.x*right.x+offset.y*right.y+offset.z*right.z,y=offset.x*up.x+offset.y*up.y+offset.z*up.z;
+        if(Math.abs(x)>width/2+padding || Math.abs(y)>height/2+padding)continue;
+        if(!nearest || Math.abs(distance)<Math.abs(nearest.signedDistance))nearest={...surface,signedDistance:distance,distance:Math.abs(distance),localX:x,localY:y,point};
+    }
+    return nearest;
+}
+
 export function hitTotemSurface(ray, surfaces) {
     if(!ray?.origin || !ray.direction)return null;
     const hits=[];
@@ -358,13 +375,14 @@ export function createSpatialTotemCards(gl, options = {}) {
                 gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(now-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
                 gl.uniform1f(locations.isControl,surface.card.control || options.containedFeedback?1:0);
                 gl.uniform1f(locations.pressProgress,Math.max(0,Math.min(1,surface.pressProgress || 0)));
-                gl.uniform1f(locations.feedback,selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id ? .55 : 0));
+                gl.uniform1f(locations.feedback,selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id || record.handHoverCardId===surface.card.id ? .55 : 0));
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }
             gl.depthMask(true);
         },
         end(){for(const [key,entry] of textures)if(!used.has(key)){gl.deleteTexture(entry.texture);textures.delete(key);}},
         hit(ray){return hitTotemSurface(ray,surfaces);},
+        hitPoint(point,options){return hitTotemPoint(point,surfaces,options);},
         destroy(){for(const entry of textures.values())gl.deleteTexture(entry.texture);textures.clear();gl.deleteBuffer(buffer);gl.deleteProgram(program);surfaces=[];}
     };
 }
