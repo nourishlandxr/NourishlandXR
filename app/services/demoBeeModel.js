@@ -151,7 +151,7 @@ export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
             const visibleHeight=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*distance;
             bee.wrapper.position.set((pose.x-.5)*visibleHeight*camera.aspect,(.5-pose.y)*visibleHeight,6-distance);
             bee.wrapper.scale.setScalar(bee.baseScale*(.28+pose.depth*.075)*(pose.bodyScale || 1)*(1+pose.flyby*.28)*Math.min(1.35,Math.max(.7,width/1000)));
-            bee.wrapper.rotation.y=pose.flyby>.05?Math.PI+pose.headTurn:pose.heading;bee.wrapper.rotation.z=pose.bank;
+            bee.wrapper.rotation.y=pose.flyby>.05?pose.headTurn:pose.heading+Math.PI;bee.wrapper.rotation.z=pose.bank;
             bee.mixer.update(delta);}
             lastElapsed=elapsed;canvas.classList.toggle('is-behind',nearestDepth<0);canvas.classList.toggle('is-flyby',anyFlyby);
             renderer.render(scene,camera);

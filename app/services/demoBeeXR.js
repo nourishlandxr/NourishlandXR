@@ -61,7 +61,7 @@ export function createBeeXRRenderer(gl,model,bitmap){
             gl.uniformMatrix4fv(uniforms.bind,false,model.mesh.bindMatrix.elements);gl.uniformMatrix4fv(uniforms.normalise,false,normalise.elements);
             const camera=pose.viewer || view.transform.matrix;
             gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.size,.095*(pose.bodyScale || 1)*(1+pose.flyby*.3));
-            gl.uniform1f(uniforms.yaw,Math.atan2(camera[12]-origin.x,camera[14]-origin.z)+Math.PI+(pose.headTurn || 0));
+            gl.uniform1f(uniforms.yaw,Math.atan2(camera[12]-origin.x,camera[14]-origin.z)+(pose.headTurn || 0));
             gl.uniform1f(uniforms.pitch,pose.pitch || 0);gl.uniform1f(uniforms.bank,pose.bank || 0);
             gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.uniform1i(uniforms.colour,0);
             gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);gl.uniform1i(uniforms.bones,1);

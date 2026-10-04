@@ -25,7 +25,7 @@ test('floor clearance covers bee bodies and survives adjustment and close-up pos
 test('bee close inspection keeps moving in three dimensions, sizes vary and face correction uses the centre viewer',()=>{
  const a=beeCuriosity(.40),b=beeCuriosity(.50);for(const axis of ['x','y','z'])assert.notEqual(a[axis],b[axis]);
  const sizes=new Set(Array.from({length:4},(_,i)=>demoBeePose(30000,0,i).bodyScale));assert.equal(sizes.size,4);
- const shader=read('app/services/demoBeeXR.js');assert.match(shader,/camera=pose.viewer \|\| view.transform.matrix/);assert.match(shader,/\+Math.PI\+\(pose.headTurn/);
+ const shader=read('app/services/demoBeeXR.js');assert.match(shader,/camera=pose.viewer \|\| view.transform.matrix/);assert.match(shader,/origin.z\)\+\(pose.headTurn/);
  assert.ok(INSECT_VISUALS.beeSize<.2);
 });
 test('red perches 30 seconds, blue 60 seconds, and flight direction agrees with velocity',()=>{
