@@ -1,3 +1,4 @@
+import {getSpatialVisualSettings} from '../../services/spatialVisualSettings.js';
 import { AR_EXPERIENCE_CONFIG } from '../../services/arExperienceConfig.js';
 import { spatialPosition } from '../../services/spatialPlacement.js';
 import { DEMO_SHARED_QUAD_SIZE, DEMO_STABLE_EYE_HEIGHT_METRES } from './demoConfig.js';
@@ -62,6 +63,6 @@ export function demoGroundBaseY(hitPoseMatrix, cameraMatrix, previousGroundY = n
     const hasCameraY = Number.isFinite(cameraY);
     if (isDemoFloorHit(hitPoseMatrix, cameraMatrix)) return hitY;
     if (previousGroundY !== null && previousGroundY !== undefined && Number.isFinite(Number(previousGroundY))) return Number(previousGroundY);
-    if (hasCameraY) return cameraY - DEMO_STABLE_EYE_HEIGHT_METRES;
+    if (hasCameraY) return cameraY - getSpatialVisualSettings().eyeHeight;
     return 0;
 }

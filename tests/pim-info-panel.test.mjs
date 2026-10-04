@@ -245,8 +245,8 @@ test('side dots reveal mounted wings without rebuilding or resizing the panel',(
     assert.doesNotMatch(styles,/\.has-media:not\(\.is-media-collapsed\) \{ grid-template-columns:96px/);
     assert.match(panel,/mediaDockSide='top'/);
     assert.match(styles,/\[data-media-dock-side="top"\]:not\(\.is-media-collapsed\) > \.nlxr-media-wing/);
-    assert.match(panel,/!hidden && !mediaCollapsed && preview\?\.image && \(mediaDetached \|\| !settingsOpen\)/);
-    assert.match(panel,/mediaCollapsed \|\| mediaDetached \|\| \(settingsOpen && !mediaDetached\)/);
+    assert.match(panel,/!hidden && !mediaCollapsed && preview\?\.image/);
+    assert.doesNotMatch(panel,/mediaCollapsed \|\| mediaDetached \|\| \(settingsOpen && !mediaDetached\)/);
 });
 
 test('media movement uses the same hold gesture and settings expose shared mesh opacity',()=>{
@@ -255,9 +255,9 @@ test('media movement uses the same hold gesture and settings expose shared mesh 
     assert.match(panel,/if\(!mediaDetached\)detachMediaPanel\(\)/);
     assert.match(panel,/mediaPointerDrag\.timer=setTimeout/);
     assert.match(panel,/PANEL_GRAB_HOLD_MS/);
-    assert.match(panel,/action:'CellOpacity'/);
-    assert.match(panel,/Glass · \$\{Math\.round\(meshCellOpacity\*100\)\}%/);
-    assert.match(panel,/onCellOpacity\(meshCellOpacity\)/);
+    assert.match(panel,/slider\('CellOpacity'/);
+    assert.match(panel,/drawPanelSettingSlider/);
+    assert.match(panel,/onCellOpacity\(value\)/);
     assert.match(panel,/panel:'media',cardId:'media',startedAt:performance\.now\(\)/);
 });
 

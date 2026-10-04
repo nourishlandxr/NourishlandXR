@@ -1,0 +1,6 @@
+Animated Butterfly by Artistic_side (leorehman333)
+https://sketchfab.com/3d-models/animated-butterfly-d4fbcbaab845402999f30c5aa75851e6
+Licence: Creative Commons Attribution 4.0
+https://creativecommons.org/licenses/by/4.0/
+Original GLB provided by the project owner; bundled without modification.
+Presentation changes: reduced emissive appearance, folded Idle wings, animation blending and flight paths.

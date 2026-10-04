@@ -1,15 +1,17 @@
 const clamp01=value=>Math.max(0,Math.min(1,value));
 const smooth=value=>{const t=clamp01(value);return t*t*(3-2*t);};
+export const BEE_COUNT=4;
+export const BEE_WING_SPEED=58;
 export const BEE_ENCOUNTER_DURATION_MS=7000;
 export const BEE_FIRST_ENCOUNTER_MS=11000;
 
 function seededUnit(index){let value=(index+1)*0x9e3779b1;value^=value>>>16;value=Math.imul(value,0x21f0aaad);value^=value>>>15;return (value>>>0)/4294967295;}
-export function demoBeeEncounter(age,{enabled=true}={}){
+export function demoBeeEncounter(age,{enabled=true,seed=0}={}){
     if(!enabled || age<BEE_FIRST_ENCOUNTER_MS)return null;
     let start=BEE_FIRST_ENCOUNTER_MS,index=0;
     while(age>start+BEE_ENCOUNTER_DURATION_MS && index<1000){
         const easing=Math.min(index,5);
-        start+=BEE_ENCOUNTER_DURATION_MS+(30000-easing*3000)+seededUnit(index)*Math.max(8000,27000-easing*2500);
+        start+=BEE_ENCOUNTER_DURATION_MS+(30000-easing*3000)+seededUnit(index+seed)*Math.max(8000,27000-easing*2500);
         index++;
     }
     if(age<start || age>start+BEE_ENCOUNTER_DURATION_MS)return null;
@@ -19,13 +21,14 @@ export function demoBeeEncounter(age,{enabled=true}={}){
     return {index,start,progress,phase,envelope};
 }
 
-export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encounters=true}={}){
+export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encounters=true,encounterSeed=0}={}){
     if(!Number.isFinite(startedAt))return null;
     const age=elapsed-startedAt-index*850;
     if(age<0)return null;
     const time=age/1000,phase=time*.34+index*2.7;
     const gather=attention==='control'?1-clamp01((age-3600)/2400):0;
-    const encounter=index===0?demoBeeEncounter(age,{enabled:encounters}):null;
+    const candidate=demoBeeEncounter(elapsed-startedAt,{enabled:encounters,seed:encounterSeed});
+    const encounter=candidate && (candidate.index+encounterSeed)%BEE_COUNT===index ? candidate : null;
     const flybyProgress=encounter?.progress || 0,flyby=encounter?.envelope || 0;
     const orbitX=(.5+Math.cos(phase)*.30)*(1-gather)+(.25+Math.cos(phase*2)*.055)*gather;
     const orbitY=(.5+Math.sin(phase)*.30)*(1-gather)+(.72+Math.sin(phase*2)*.055)*gather;
@@ -35,7 +38,7 @@ export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encoun
         y:orbitY*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,
         depth:orbitDepth*(1-flyby)+(.5+.5*Math.sin(Math.PI*flybyProgress))*flyby,
         heading:(phase+Math.PI/2)*(1-flyby)+.12*flyby,
-        wing:Math.sin(time*27+index),
+        wing:Math.sin(time*BEE_WING_SPEED+index),
         opacity:clamp01(age/1700)*.92,
         flyby,
         flybyProgress,
@@ -69,11 +72,11 @@ function drawBee(ctx,x,y,size,wing,opacity){
     ctx.restore();
 }
 
-export function drawDemoAmbientLife(ctx,width,height,{elapsed=0,beesStartedAt=NaN,reducedMotion=false,attention='screen'}={}){
+export function drawDemoAmbientLife(ctx,width,height,{elapsed=0,beesStartedAt=NaN,reducedMotion=false,attention='screen',encounterSeed=0}={}){
     ctx.clearRect(0,0,width,height);
     if(!Number.isFinite(beesStartedAt))return;
-    for(let index=0;index<2;index++){
-        const bee=demoBeePose(elapsed,beesStartedAt,index,{attention,encounters:!reducedMotion});
+    for(let index=0;index<BEE_COUNT;index++){
+        const bee=demoBeePose(elapsed,beesStartedAt,index,{attention,encounters:!reducedMotion,encounterSeed});
         if(bee)drawBee(ctx,bee.x*width,bee.y*height,Math.max(4,Math.min(width,height)*(.009+bee.depth*.003))*(1+bee.flyby*.3),bee.wing,bee.opacity*(reducedMotion?.55:1));
     }
 }

@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>XR slider interaction check</title>
+<style>body{background:#263c32;color:#ecf1df;font:16px system-ui;margin:20px}button{padding:12px;font:inherit}canvas{display:block;width:min(100%,1000px);height:auto;background:#7c9080;margin-top:16px}#panels{display:none}</style>
+<h1>Production Settings · XR ray check</h1><p>Real production panel rendering and intersection, with a synthetic controller source. This checks event handling, not a physical headset.</p><button id="run">Run controller slider check</button><p id="result" role="status">Ready</p><canvas id="view" width="1400" height="1000" aria-label="Quest Settings sliders"></canvas><div id="panels"></div>
+<script type="module">
+import {createPimInfoPanel,panelSettingsControls,companionPanelPose,facePanelTowardEyes} from '../app/services/pimInfoPanel.js';
+import {getSpatialVisualSettings,setSpatialVisualSettings} from '../app/services/spatialVisualSettings.js';
+const canvas=document.querySelector('#view'),gl=canvas.getContext('webgl',{alpha:true,antialias:true});
+const identity=()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+const viewer=identity();viewer[13]=1.65;const inverse=identity();inverse[12]=1;inverse[13]=-1.35;const f=1/Math.tan(1.3/2),near=.05,far=30;
+const view={projectionMatrix:new Float32Array([f/(1.4),0,0,0,0,f,0,0,0,0,(far+near)/(near-far),-1,0,0,2*far*near/(near-far),0]),transform:{matrix:viewer,inverse:{matrix:inverse}}};
+let panel=null,paint=()=>{};
+function animate(){paint();requestAnimationFrame(animate);}requestAnimationFrame(animate);
+document.querySelector('#run').onclick=()=>{
+ const saved=getSpatialVisualSettings(),values=[],listeners=new Map(),source={targetRaySpace:{}},session={visibilityState:'visible',addEventListener:(type,listener)=>listeners.set(type,listener),removeEventListener:()=>{} };panel?.destroy();
+ panel=createPimInfoPanel({root:document.querySelector('#panels'),headset:true,onInfoOpacity:value=>values.push(value)});panel.showLearning({title:'Slider check',body:'Drag the sliders on the companion panel.'});panel.setXRPerformance({supported:[72,90,120],rate:90,actual:90,showFps:false});panel.element.querySelector('[data-info-action="Settings"]').click();panel.attach(gl);panel.update(viewer,0);
+ function draw(){gl.viewport(0,0,1400,1000);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);panel.draw(view);}paint=draw;draw();
+ const main={center:panel.getPosition(),...facePanelTowardEyes(panel.getPosition(),{x:0,y:1.65,z:0})},surface=companionPanelPose(main,'left',.84,.62,18,0);const height=.5*920/600;
+ const control=panelSettingsControls({headset:true}).find(item=>item.action==='InfoOpacity');
+ function ray(value){const x=(control.x+18+(control.width-36)*value)/1000-.5,y=.5-(control.y+21)/920;
+  const point={x:surface.center.x+surface.right.x*x*.62+surface.up.x*y*height,y:surface.center.y+surface.right.y*x*.62+surface.up.y*y*height,z:surface.center.z+surface.right.z*x*.62+surface.up.z*y*height};return {origin:{x:point.x+surface.normal.x*.6,y:point.y+surface.normal.y*.6,z:point.z+surface.normal.z*.6},direction:{x:-surface.normal.x,y:-surface.normal.y,z:-surface.normal.z}};}
+ let current=ray(.1);const frame={getPose:()=>{const matrix=identity();matrix[12]=current.origin.x;matrix[13]=current.origin.y;matrix[14]=current.origin.z;matrix[8]=-current.direction.x;matrix[9]=-current.direction.y;matrix[10]=-current.direction.z;return {transform:{matrix}};}};
+ const event=type=>({type,inputSource:source,frame,stopImmediatePropagation(){}});panel.bindSession(session,{});
+ listeners.get('selectstart')(event('selectstart'));current=ray(.8);panel.update(viewer,16,current,frame);draw();listeners.get('selectend')(event('selectend'));listeners.get('select')(event('select'));listeners.get('select')(event('select'));
+ const pass=values.length===2 && values[0]===.1 && values[1]===.8;
+ document.querySelector('#result').textContent=(pass?'PASS':'FAIL')+' · controller drag '+values.join(' → ')+'; release and trailing selects do not duplicate changes.';setSpatialVisualSettings(saved);
+};
+</script></html>

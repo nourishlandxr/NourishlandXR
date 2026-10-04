@@ -11870,3 +11870,6 @@ body:has(.app-surface) {
 .ar-preload-controls select { min-height:44px; margin:8px 0 8px 12px; padding:8px 18px; border:1px solid rgba(174,199,157,.6); border-radius:14px; background:rgba(28,49,40,.92); color:#edf0e4; font:inherit; }
 .ar-preload-controls progress { accent-color:#a6be8e; height:8px; }
 .ar-preload-controls [role="status"] { margin-top:10px; }
+
+.tryit-butterfly-model {position:fixed;width:120px;height:120px;pointer-events:none;z-index:12310;object-fit:contain;}
+.tryit-demo.is-immersive .tryit-butterfly-model {display:none;}

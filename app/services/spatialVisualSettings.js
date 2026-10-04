@@ -24,12 +24,12 @@ export function currentGraphicsQuality(){return resolveGraphicsQuality(preferenc
 export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
 export function currentRainQuality(){return preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'carved',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+let preferences={floorOffset:0,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'carved',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
     if(RAIN_QUALITIES[change?.rainQuality])result.rainQuality=change.rainQuality;
-    for(const [key,min,max] of [['infoOpacity',0,1],['cellOpacity',0,1],['spatialScale',.85,1.2]])if(Number.isFinite(change?.[key]))result[key]=Math.max(min,Math.min(max,change[key]));
+    for(const [key,min,max] of [['infoOpacity',0,1],['cellOpacity',0,1],['spatialScale',.85,1.2],['floorOffset',-1.5,1.5],['eyeHeight',.8,2.2]])if(Number.isFinite(change?.[key]))result[key]=Math.max(min,Math.min(max,change[key]));
     if(ORB_MODELS[change?.orbModel])result.orbModel=change.orbModel;
     if(TOTEM_MODELS[change?.totemModel])result.totemModel=change.totemModel;
     if(['pointer','outline'].includes(change?.handMode))result.handMode=change.handMode;

@@ -25,6 +25,7 @@ export const TOTEM_TONES = Object.freeze([
 export const TOTEM_HEIGHT_PRESETS = Object.freeze([
     Object.freeze({ id: 'low', label: 'Low', metres: .92, halfHeightMetres: .46, previewPixels: 72 }),
     Object.freeze({ id: 'standard', label: 'Standard', metres: 1.2, halfHeightMetres: .6, previewPixels: 92 }),
+    Object.freeze({ id: 'life-size', label: 'Life size', metres: 2, halfHeightMetres: 1, previewPixels: 152 }),
     Object.freeze({ id: 'tall', label: 'Tall', metres: 1.5, halfHeightMetres: .75, previewPixels: 116 })
 ]);
 

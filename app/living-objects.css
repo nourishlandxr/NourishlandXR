@@ -2307,3 +2307,6 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 .tryit-sim-totem-system .nlxr-totem-cards > button:first-child::after { display:none; }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-basic .tryit-sim-totem-pillar { clip-path:none;border-radius:14px 14px 7px 7px; }
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-botanical .tryit-sim-totem-pillar { clip-path:polygon(22% 0,78% 0,83% 12%,76% 35%,80% 64%,75% 88%,84% 100%,16% 100%,25% 88%,20% 64%,24% 35%,17% 12%);filter:saturate(.7) brightness(.85); }
+
+.nlxr-setting-options input[type="range"] {width:100%;min-width:140px;height:36px;accent-color:#b8ceaf;cursor:pointer;}
+.nlxr-setting-options:has(input[type="range"]) {flex:1;max-width:200px;}

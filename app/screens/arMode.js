@@ -358,11 +358,11 @@ function drawPlantTagStem(view, position, marker, opacity = 1) {
 }
 
 function currentGroundY() {
-    if (referenceSpaceHasFloor) return .02;
-    if (Number.isFinite(sessionGroundY)) return sessionGroundY;
+    if (referenceSpaceHasFloor) return .02+getSpatialVisualSettings().floorOffset;
+    if (Number.isFinite(sessionGroundY)) return sessionGroundY+getSpatialVisualSettings().floorOffset;
     if (!latestViewerMatrix) return 0;
-    sessionGroundY = latestViewerMatrix[13] - 1.55;
-    return sessionGroundY;
+    sessionGroundY = latestViewerMatrix[13] - getSpatialVisualSettings().eyeHeight;
+    return sessionGroundY+getSpatialVisualSettings().floorOffset;
 }
 
 function groundedTotemPosition(position) {
@@ -5792,7 +5792,7 @@ function createCreatorInfoPanel(){
         cellOpacity:creatorCellOpacity,handMode:creatorHandMode,onHandMode:value=>{creatorHandMode=value;},
         panelHints:['Aim, then press once to open plant information.','Hold an Orb for 0.8 seconds to move it. Use the right joystick to adjust distance.','Press a cell once to read or expand its information.'],
         onPerformanceAction:action=>creatorPerformance.action(action),onGrab:pulseCreatorHaptics,
-        onTotemModel:()=>renderSessionMarkers(),
+        onFloorOffset:()=>renderSessionMarkers(),onTotemModel:()=>renderSessionMarkers(),
         onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
         onCellOpacity:value=>{creatorCellOpacity=value;for(const record of sessionMarkers.filter(item=>item.profileExpanded))refreshCreatorPimProfile(record);},
         onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});

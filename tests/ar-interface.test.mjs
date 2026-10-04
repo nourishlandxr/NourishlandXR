@@ -101,7 +101,7 @@ test('demo ground placement prefers a floor hit and otherwise keeps a stable flo
     const floorHit = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, .02, -1, 1]);
     const wallHit = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1.1, -1, 1]);
     assert.equal(demoGroundBaseY(floorHit, viewer), .019999999552965164);
-    assert.ok(Math.abs(demoGroundBaseY(wallHit, viewer) - (viewer[13] - 1.55)) < 1e-6);
+    assert.ok(Math.abs(demoGroundBaseY(wallHit, viewer) - (viewer[13] - 1.65)) < 1e-6);
     assert.equal(demoGroundBaseY(wallHit, viewer, .04), .04);
 });
 
@@ -1886,7 +1886,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /createSpatialPrismRenderer/);
     assert.match(arSource, /shape === 1[\s\S]*drawTotemSculpture/);
     assert.match(arSource, /function groundedTotemPosition\(position\)/);
-    assert.match(arSource, /sessionGroundY = latestViewerMatrix\[13\] - 1\.55/);
+    assert.match(arSource, /sessionGroundY = latestViewerMatrix\[13\] - getSpatialVisualSettings\(\)\.eyeHeight/);
     assert.match(arSource, /totemStyle === 'organic'/);
     assert.match(arSource, /totemStyle === 'flat-disc'/);
     assert.match(arSource, /type === 'area_checkpoint'[\s\S]*groundedTotemPosition\(placementPosition\)/);

@@ -85,7 +85,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
     const bodyHalfWidth = Number(state?.bodyHalfWidth) || .07;
     const demoZone=Boolean(state?.demoZone);
-    const demoScale=(Number(state?.bodyHalfHeight) || (demoZone ? .56 : .69))/.82;
+    const demoScale=(Number(state?.bodyHalfHeight) || (demoZone ? 1 : .69))/.82;
     const boardWidth = Number(state?.boardWidth) || (demoZone ? .52 : .58);
     const boardHeight = Number(state?.boardHeight) || (demoZone ? .12 : .16);
     const boardAttach=bodyHalfWidth+boardWidth/2-.035;
@@ -98,7 +98,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const faded=typeof state==='object' ? Boolean(state.faded) : false;
     const signs={id:'__signs',title:'SIGNS',symbol:'↔',control:true,pressed:signsVisible && !faded};
     const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
-    const bodyHalfHeight = Number(state?.bodyHalfHeight) || (demoZone ? .56 : .69);
+    const bodyHalfHeight = Number(state?.bodyHalfHeight) || (demoZone ? 1 : .69);
     const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight,style:state.style || currentTotemModel() });
     const signBoard = (card, index, count) => {
         const side=card.boardSide==='left'?-1:card.boardSide==='right'?1:0;
@@ -137,7 +137,7 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     const sizeFactor=({tiny:.58,small:.76,medium:1,large:1.34,huge:1.82})[size] || 1;
     const bodyHalfWidth=record?.demoType==='zone' ? .095 : .07*sizeFactor;
     const bodyHalfHeight=record?.demoType==='zone'
-        ? .56
+        ? 1
         : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-bodyHalfWidth*.35);
     const now=performance.now(),visual=SPATIAL_OBJECT_VISUALS.totem;
     const signProgress=spatialTransitionProgress(now,record?.demoSignsChangedAt,visual.signTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);

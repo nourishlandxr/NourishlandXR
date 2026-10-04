@@ -147,22 +147,36 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({headset=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,ambientRain=1,ambientRainStyle='v2',performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='carved',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality}={}){
+export function panelSettingsControls({headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='carved',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0}={}){
     const row=index=>90+index*54,shift=headset?1:0;
+    const slider=(action,settingGroup,settingLabel,value,min,max,step,index)=>({action,settingGroup,settingLabel,ariaLabel:settingLabel,kind:'slider',value,min,max,step,x:576,y:row(index),width:368,height:42});
     return [
         ...(headset?[{action:'HandMode',label:handVisualMode==='pointer'?'Pointer':'Outline',ariaLabel:'Switch hand tracking visual mode',settingGroup:'hands',settingLabel:'Hands',x:756,y:row(0),width:188,height:42}]:[]),
-        {action:'TextDown',label:'A−',ariaLabel:'Decrease text size',settingGroup:'text',settingLabel:'Text size',x:756,y:row(shift),width:88,height:42},
-        {action:'TextUp',label:'A+',ariaLabel:'Increase text size',settingGroup:'text',x:856,y:row(shift),width:88,height:42},
-        {action:'ScaleDown',label:'−',ariaLabel:'Decrease spatial scale',settingGroup:'scale',settingLabel:`Spatial scale · ${Math.round(spatialScale*100)}%`,x:756,y:row(shift+1),width:88,height:42},
-        {action:'ScaleUp',label:'+',ariaLabel:'Increase spatial scale',settingGroup:'scale',x:856,y:row(shift+1),width:88,height:42},
-        {action:'CellOpacity',label:`Glass · ${Math.round(meshCellOpacity*100)}%`,ariaLabel:'Change PIMO plant cell background opacity',settingGroup:'opacity',settingLabel:'PIMO glass',x:756,y:row(shift+2),width:188,height:42},
-        {action:'InfoOpacity',label:`${Math.round(infoOpacity*100)}%`,ariaLabel:'Change main screen, Control panel and LIMO background opacity',settingGroup:'info-opacity',settingLabel:'Main / Control / LIMO glass',x:756,y:row(shift+3),width:188,height:42},
+        slider('TextSize','text','Text size',largeText?1:0,0,1,1,shift),
+        slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,shift+1),
+        slider('CellOpacity','opacity','PIMO glass',meshCellOpacity,0,1,.01,shift+2),
+        slider('InfoOpacity','info-opacity','Main / Control / LIMO glass',infoOpacity,0,1,.01,shift+3),
         {action:'OrbModel',label:ORB_MODELS[orbModel]?.label || 'Improved',ariaLabel:'Change Plant Orb model: Basic, Improved or Advanced',settingGroup:'orb-model',settingLabel:'Plant Orb model',x:756,y:row(shift+4),width:188,height:42},
         {action:'TotemModel',label:TOTEM_MODELS[totemModel]?.label || 'Carved timber',ariaLabel:'Change Totem style: Carved timber, Botanical column or Elemental',settingGroup:'totem-model',settingLabel:'Totem style',x:756,y:row(shift+5),width:188,height:42},
         {action:'GraphicsQuality',label:graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),ariaLabel:'Change graphics quality: Auto, LOW, MED, HIGH',settingGroup:'graphics',settingLabel:'Graphics quality',x:756,y:row(shift+6),width:188,height:42},
         {action:'RainQuality',label:RAIN_QUALITIES[rainQuality]?.label || 'Off',ariaLabel:'Change rain: Off, Low, High, HQ',settingGroup:'rain',settingLabel:'Rain quality',x:756,y:row(shift+7),width:188,height:42},
-        {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+8),width:188,height:42}
+        slider('FloorOffset','floor','Floor height adjustment',floorOffset,-1.5,1.5,.01,shift+8),
+        ...(performanceSettings ? [{action:'RefreshRate',label:performanceSettings.pending?'Applying…':`${performanceSettings.actual || '?'} Hz`,disabled:performanceSettings.pending || !performanceSettings.supported?.length,ariaLabel:'Choose supported XR refresh rate',settingGroup:'refresh',settingLabel:'Refresh rate',x:756,y:row(shift+10),width:188,height:42},{action:'ShowFps',label:performanceSettings.showFps?'On':'Off',ariaLabel:'Show FPS',settingGroup:'fps',settingLabel:'Show FPS',x:756,y:row(shift+11),width:188,height:42}]:[]),
+        {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+9),width:188,height:42}
     ].filter(item=>rainEnabled || item.action!=='RainQuality').map(item=>!rainEnabled && item.y>=row(shift+8)?{...item,y:item.y-54}:item).map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
+}
+export function panelSliderValue(control,x){
+    const fraction=Math.max(0,Math.min(1,(x-control.x-18)/(control.width-36)));
+    const value=control.min+fraction*(control.max-control.min);
+    return Math.max(control.min,Math.min(control.max,Number((control.min+Math.round((value-control.min)/control.step)*control.step).toFixed(3))));
+}
+export function drawPanelSettingSlider(ctx,item,aimed=false){
+    const left=item.x+18,right=item.x+item.width-18,y=item.y+item.height/2;
+    const value=(item.value-item.min)/(item.max-item.min),thumb=left+(right-left)*value;
+    ctx.lineCap='round';ctx.lineWidth=aimed?9:7;
+    ctx.strokeStyle='rgba(222,234,223,.25)';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(right,y);ctx.stroke();
+    ctx.strokeStyle=aimed?'#e4edcf':'#afc8ae';ctx.beginPath();ctx.moveTo(left,y);ctx.lineTo(thumb,y);ctx.stroke();
+    ctx.fillStyle=aimed?'#f0f3db':'#d0dfc9';ctx.beginPath();ctx.arc(thumb,y,aimed?16:13,0,Math.PI*2);ctx.fill();
 }
 
 // The headset uses the same actions as the screen panel, but lays them out in
@@ -214,8 +228,9 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     let graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality;
+    let floorOffset=getSpatialVisualSettings().floorOffset;
     let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel(),totemModel=currentTotemModel();
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
@@ -226,6 +241,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='',hoveredAction='';
     let confirmation=null,confirmationSnapshot=null;
+    let sliderGrab=null,finishingSliderSource=null;
     let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,panelGestureSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
@@ -291,7 +307,6 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='Help'){tab=tab==='Help'?'Details':'Help';page=0;}
         if(action==='Settings'){
             settingsOpen=!settingsOpen;
-            if(settingsOpen){mediaCollapsed=true;mediaDetached=false;mediaPose=null;mediaPosition=null;}
             renderSettings();
         }
         if(action==='Previous')page=Math.max(0,page-1);
@@ -322,7 +337,20 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action.startsWith('Utility:')){onUtilityAction(action.slice(8));return;}
         render();
     }
-    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality});
+    function setSliderValue(action,value){
+        if(action==='InfoOpacity'){infoOpacity=value;setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);}
+        if(action==='CellOpacity'){meshCellOpacity=value;setSpatialVisualSettings({cellOpacity:value});onCellOpacity(value);}
+        if(action==='SpatialScale'){spatialScale=value;setSpatialVisualSettings({spatialScale});}
+        if(action==='TextSize'){largeText=value>=.5;page=0;setSpatialVisualSettings({largeText});updateReading();}
+        if(action==='FloorOffset'){floorOffset=value;setSpatialVisualSettings({floorOffset});onFloorOffset(value);}
+    }
+    function slideAtTarget(button,target){
+        if(!target || button.kind!=='slider')return false;
+        const value=panelSliderValue(button,(target.localX/target.width+.5)*1000);
+        if(value!==settingsControls().find(item=>item.action===button.action)?.value)setSliderValue(button.action,value);
+        return true;
+    }
+    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset});
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
@@ -347,23 +375,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 const label=document.createElement('span');label.className='nlxr-setting-label';label.textContent=item.settingLabel;
                 const choices=document.createElement('div');choices.className='nlxr-setting-options';row.append(label,choices);actions.append(row);
             }
-            row.querySelector('.nlxr-setting-options').append(makeButton(item));
-        }
-        const infoOpacityRow=actions.querySelector('[data-setting-group="info-opacity"]');
-        if(infoOpacityRow){
-            infoOpacityRow.querySelector('button')?.remove();
-            const slider=document.createElement('input');slider.type='range';slider.min='0';slider.max='100';slider.step='1';slider.value=String(Math.round(infoOpacity*100));slider.setAttribute('aria-label','Info background opacity');
-            const value=document.createElement('output');value.textContent=slider.value+'%';
-            slider.addEventListener('input',()=>{infoOpacity=Number(slider.value)/100;value.textContent=slider.value+'%';setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);});
-            infoOpacityRow.querySelector('.nlxr-setting-options').append(slider,value);
-        }
-        const opacityRow=actions.querySelector('[data-setting-group="opacity"]');
-        if(opacityRow){
-            opacityRow.querySelector('button')?.remove();
-            const slider=document.createElement('input');slider.type='range';slider.min='0';slider.max='100';slider.step='1';slider.value=String(Math.round(meshCellOpacity*100));slider.setAttribute('aria-label','Cell glass opacity');
-            const value=document.createElement('output');value.textContent=slider.value+'%';
-            slider.addEventListener('input',()=>{meshCellOpacity=Number(slider.value)/100;value.textContent=slider.value+'%';setSpatialVisualSettings({cellOpacity:meshCellOpacity});onCellOpacity(meshCellOpacity);});
-            opacityRow.querySelector('.nlxr-setting-options').append(slider,value);
+            if(item.kind==='slider'){
+                const slider=document.createElement('input');slider.type='range';slider.min=String(item.min);slider.max=String(item.max);slider.step=String(item.step);slider.value=String(item.value);slider.dataset.infoAction=item.action;slider.setAttribute('aria-label',item.ariaLabel);
+                slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));
+                row.querySelector('.nlxr-setting-options').append(slider);
+            }else row.querySelector('.nlxr-setting-options').append(makeButton(item));
         }
         settingsElement.scrollTop=scrollTop;
         if(focused)settingsElement.querySelector(`[data-info-action="${focused}"]`)?.focus({preventScroll:true});
@@ -526,7 +542,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     function syncPanelWings(){
         if(isDesktopDemo())railCollapsed=false;
         element.classList.toggle('is-rail-collapsed',railCollapsed);
-        element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached || (settingsOpen && !mediaDetached));
+        element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached);
         element.classList.toggle('is-media-detached',mediaDetached);
         element.dataset.mediaDockSide=mediaDockSide;
         const railToggle=element.querySelector('.nlxr-rail-toggle');
@@ -632,7 +648,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(detached)return;
         renderSettings();
         const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
-        const needsMediaWing=showPlantPreview() && !mediaCollapsed && !mediaDetached && !settingsOpen && !element.querySelector('.nlxr-media-wing');
+        const needsMediaWing=showPlantPreview() && !mediaCollapsed && !mediaDetached && !element.querySelector('.nlxr-media-wing');
         if(!force && !hidden && !needsMediaWing && element.querySelector('.nlxr-control-header')){
             element.classList.toggle('is-large-text',largeText);
             syncPanelWings();
@@ -663,8 +679,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const plantPreviewAvailable=showPlantPreview();
         const desktopDemo=isDesktopDemo();
         if(desktopDemo)railCollapsed=false;
-        const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached && !settingsOpen;
-        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached || (settingsOpen && !mediaDetached));element.classList.toggle('is-media-detached',mediaDetached);element.dataset.mediaDockSide=mediaDockSide;element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
+        const showMediaWing=plantPreviewAvailable && !mediaCollapsed && !mediaDetached;
+        element.classList.toggle('is-rail-collapsed',railCollapsed);element.classList.toggle('is-media-collapsed',mediaCollapsed || mediaDetached);element.classList.toggle('is-media-detached',mediaDetached);element.dataset.mediaDockSide=mediaDockSide;element.classList.remove('is-tools-collapsed');element.classList.toggle('has-media',showMediaWing);
         element.dataset.contentKind=contentKind();
         element.dataset.primaryFaceId=contentKind()==='lim' ? (selection?.primaryFaceId || '') : '';
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
@@ -754,6 +770,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             });
             card.controls.forEach(button=>{
                 const aimed=card.hoverAction===button.action && !button.disabled;
+                if(button.kind==='slider'){drawPanelSettingSlider(ctx,button,aimed);return;}
                 ctx.fillStyle=aimed?'rgba(210,235,224,.3)':'rgba(238,250,242,.13)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,21);ctx.fill();
                 ctx.strokeStyle=aimed?'rgba(243,248,226,.95)':'rgba(239,251,244,.48)';ctx.lineWidth=aimed?5:2.5;ctx.stroke();
                 ctx.fillStyle='#f5fbf5';ctx.font='650 20px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+9,button.width-12);
@@ -938,18 +955,19 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
             const settingsWidth=.62*spatialScale,gap=0,companionHeight=mainHeight*.78;
             if(settingsOpen && !hidden && settingsCard)surfaces.push({...companionPanelPose(pose,'left',mainWidth,settingsWidth,18,gap),width:settingsWidth,height:mainHeight*(settingsCard.height/spatialHeight()),card:settingsCard});
-            if(!hidden && mediaCard && (mediaDetached || !settingsOpen)){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
+            if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
             const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
-            const grab=spatialMove || spatialGrabPending;
+            const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
             if(grab?.source?.hand && xrFrame){const pointer=handTrackingState(xrFrame,grab.source,grab.referenceSpace)?.pointer;handMoveRay=pointer?{...pointer,direction:grab.handDirection || pointer.direction}:null;}
             if(grab && !grab.source?.hand && xrFrame?.getPose && grab.source?.targetRaySpace && grab.referenceSpace){
                 try{heldTransform=xrFrame.getPose(grab.source.targetRaySpace,grab.referenceSpace)?.transform.matrix || null;}catch{heldTransform=null;}
             }
             const heldRay=handMoveRay || (heldTransform?{origin:{x:heldTransform[12],y:heldTransform[13],z:heldTransform[14]},direction:{x:-heldTransform[8],y:-heldTransform[9],z:-heldTransform[10]}}:xrFrame?null:inputRay);
+            if(sliderGrab && heldRay){const target=hitTotemSurface(heldRay,[sliderGrab.surface]);if(target?.card?.settings)slideAtTarget(sliderGrab.button,target);}
             if(spatialGrabPending && time-spatialGrabPending.startedAt>=PANEL_GRAB_HOLD_MS){
                 if(heldRay && hit(heldRay)?.card?.id===spatialGrabPending.cardId){
                     if(spatialGrabPending.panel==='media' && !mediaDetached){mediaPose=spatialMediaDockPose(mediaDockSide);mediaDetached=true;mediaCollapsed=false;render(true);}
@@ -993,11 +1011,19 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
-            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image && (mediaDetached || !settingsOpen))cards.push(mediaCard);
+            const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
-        activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && button.action!=='MoveMediaPanel')act(button.action);return true;},
+        activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
+        getPerchPose(){
+            if(!pose || hidden || detached)return null;const {mainWidth,mainHeight}=spatialDimensions();
+            return {...pose,center:{x:pose.center.x+pose.right.x*mainWidth*.38+pose.up.x*(mainHeight/2+.035),y:pose.center.y+pose.right.y*mainWidth*.38+pose.up.y*(mainHeight/2+.035),z:pose.center.z+pose.right.z*mainWidth*.38+pose.up.z*(mainHeight/2+.035)}};
+        },
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
+            if(sliderGrab && sliderGrab.source!==event.inputSource)return;
+            if(event.type==='selectstart')finishingSliderSource=null;
+            if(event.type==='select' && finishingSliderSource===event.inputSource){finishingSliderSource=null;event.stopImmediatePropagation();return;}
+            if(sliderGrab?.source===event.inputSource && event.type==='selectend'){sliderGrab=null;panelGestureSource=null;finishingSliderSource=event.inputSource;event.stopImmediatePropagation();return;}
             if(event.type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
             if(event.type==='selectend' && spatialMove?.source===event.inputSource){
                 const moving=spatialMove,candidate=moving.panel==='media'?spatialDockCandidate(mediaPose):null;
@@ -1020,6 +1046,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const target=hit(ray);if(!target){if(event.type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
             event.stopImmediatePropagation();
             const button=targetButtonAtRay(target);
+            if(event.type==='selectstart' && button?.kind==='slider'){
+                sliderGrab={source:event.inputSource,referenceSpace,button,surface:{...target}};panelGestureSource=event.inputSource;slideAtTarget(button,target);return;
+            }
             if(event.type==='selectstart' && target.card?.id==='media'){
                 panelGestureSource=event.inputSource;
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'media',cardId:'media',startedAt:performance.now(),handDirection:event.inputSource?.hand?{...ray.direction}:null};
@@ -1032,8 +1061,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             }
             if(event.type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
             if(event.type==='selectend')panelGestureSource=null;
-        };const visibility=()=>{if(session.visibilityState!=='visible'){spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
-            removeXrControls=()=>{spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
+        };const visibility=()=>{if(session.visibilityState!=='visible'){sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
+            removeXrControls=()=>{sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
         destroy(){mediaLoadToken++;clearTimeout(mediaTransitionTimer);clearInterval(panelHintTimer);mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;mediaFloating?.remove();element.remove();settingsElement.remove();}
     };render();return api;
 }
