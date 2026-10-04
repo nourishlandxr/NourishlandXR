@@ -97,7 +97,8 @@ test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
     assert.match(demoSource, /introTextureUploadedAt >= textureInterval/);
     assert.match(demoSource, /if\(label\.width!==width\)label\.width=width/);
     assert.match(demoSource, /if\(label\.height!==height\)label\.height=height/);
-    assert.match(demoSource, /arWelcomeClock\.elapsed<AR_WELCOME_SETTLED_MS/);
+    assert.match(demoSource, /limMeshVisible && limRevealIsAnimating\(\)/);
+    assert.doesNotMatch(demoSource, /arWelcomeClock\.elapsed<AR_WELCOME_SETTLED_MS/);
 });
 
 test('screen and tracked-pointer LIMO requires a deliberate hold while the hidden DOM layer stays idle', () => {

@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { BEE_COUNT, demoBeePose } from './demoAmbientLife.js';
 import {currentGraphicsQuality} from './spatialVisualSettings.js';
+import {createBeeXRRenderer} from './demoBeeXR.js';
 
 export const BEE_ANIMATION_SPEED=1.35;
 export const BEE_SPRITE_INTERVAL_MS=1000/60;
@@ -101,24 +102,25 @@ export function prepareDemoBeeModel(){
  return preparedModel;
 }
 
-export function mountDemoBeeModel(canvas,{sprite=false}={}){
+export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
     if(!canvas)return null;
-    const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:sprite,powerPreference:'low-power'});
-    renderer.setPixelRatio(sprite?1:Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
+    const renderer=gl?null:new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:sprite,powerPreference:'low-power'});
+    renderer?.setPixelRatio(sprite?1:Math.min(devicePixelRatio||1,1.5));if(renderer)renderer.outputColorSpace=THREE.SRGBColorSpace;
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,30);
     camera.position.z=6;
     scene.add(new THREE.HemisphereLight(0xfff7db,0x566c67,2.2));
     const sun=new THREE.DirectionalLight(0xffe2aa,2.4);sun.position.set(-3,5,6);scene.add(sun);
     const fill=new THREE.DirectionalLight(0xc9eaff,1.1);fill.position.set(4,-1,-2);scene.add(fill);
-    let bees=[],bee=null,resources=null,lastElapsed=NaN,lastSpritePaint=-Infinity,disposed=false,ready=false;
+    let bees=[],bee=null,resources=null,xr=null,lastElapsed=NaN,lastSpritePaint=-Infinity,disposed=false,ready=false;
     prepareDemoBeeModel().then(async gltf=>{
         const loaded=await beeResources(gltf);if(disposed){loaded.geometry.dispose();loaded.texture.dispose();loaded.material.dispose();loaded.bitmap.close();return;}
-        resources=loaded;bees=Array.from({length:sprite?1:BEE_COUNT},()=>makeBee(gltf,loaded));bee=bees[0];bees.forEach(item=>scene.add(item.wrapper));ready=true;canvas.dataset.modelReady='true';
+        resources=loaded;bees=Array.from({length:gl || sprite?1:BEE_COUNT},()=>makeBee(gltf,loaded));bee=bees[0];bees.forEach(item=>scene.add(item.wrapper));if(gl)xr=createBeeXRRenderer(gl,bee,loaded.bitmap);ready=Boolean(renderer || xr);canvas.dataset.modelReady=ready?'true':'fallback';
     }).catch(error=>{if(!disposed){console.warn('Bee model fallback:',error);canvas.dataset.modelReady='error';}});
     return {
         get ready(){return ready;},
+        drawXR(view,origin,elapsed,pose){if(!xr || !ready || currentGraphicsQuality()==='low')return false;xr.draw(view,origin,elapsed,pose);return true;},
         renderSprite(elapsed,startedAt){
-            if(!sprite || !ready || !Number.isFinite(startedAt))return null;
+            if(!renderer || !sprite || !ready || !Number.isFinite(startedAt))return null;
             if(elapsed>=lastSpritePaint && elapsed-lastSpritePaint<BEE_SPRITE_INTERVAL_MS)return canvas;
             const pixels=currentGraphicsQuality()==='high'?512:currentGraphicsQuality()==='low'?256:384;
             if(canvas.width!==pixels || canvas.height!==pixels)renderer.setSize(pixels,pixels,false);
@@ -136,7 +138,7 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
             return canvas;
         },
         draw(elapsed,startedAt,reducedMotion=false,{attention='screen',encounterSeed=0}={}){
-            if(!ready || !Number.isFinite(startedAt)){canvas.style.visibility='hidden';return;}
+            if(!renderer || !ready || !Number.isFinite(startedAt)){canvas.style.visibility='hidden';return;}
             const delta=Number.isFinite(lastElapsed)?Math.max(0,Math.min(.15,(elapsed-lastElapsed)/1000)):0;
             let nearestDepth=-1,anyFlyby=false;
             for(const [index,item] of bees.entries()){
@@ -153,6 +155,6 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
             lastElapsed=elapsed;canvas.classList.toggle('is-behind',nearestDepth<0);canvas.classList.toggle('is-flyby',anyFlyby);
             renderer.render(scene,camera);
         },
-        destroy(){disposed=true;ready=false;canvas.classList.remove('is-behind','is-flyby');resources?.geometry.dispose();resources?.texture.dispose();resources?.material.dispose();resources?.bitmap.close();renderer.dispose();renderer.forceContextLoss();}
+        destroy(){disposed=true;ready=false;xr?.destroy();bees.forEach(item=>{item.mixer.stopAllAction();item.mixer.uncacheRoot(item.root);});canvas.classList.remove('is-behind','is-flyby');resources?.geometry.dispose();resources?.texture.dispose();resources?.material.dispose();resources?.bitmap.close();renderer?.dispose();renderer?.forceContextLoss();}
     };
 }

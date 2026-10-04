@@ -378,8 +378,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(!renderer && !globalThis.matchMedia?.('(max-width:700px)').matches){
             const main=element.getBoundingClientRect(),media=element.querySelector('.nlxr-media-wing')?.getBoundingClientRect(),panelWidth=media?.width || Math.min(390,Math.max(300,main.width*.79));
             settingsElement.style.width=panelWidth+'px';settingsElement.style.height=(media?.height || main.height)+'px';
-            settingsElement.style.left=Math.max(8,main.left+(main.width-panelWidth)/2)+'px';
-            settingsElement.style.top=Math.max(8,main.top-(media?.height || main.height)-12)+'px';
+            const above=!mediaCollapsed && mediaDockSide==='left';
+            const left=main.left-panelWidth-12;
+            // A narrow desktop preview can have no room to the left. Use the
+            // free right side rather than clamping Settings over the reader.
+            const sideLeft=left>=8?left:main.right+12;
+            settingsElement.style.left=Math.max(8,above?main.left+(main.width-panelWidth)/2:sideLeft)+'px';
+            settingsElement.style.top=Math.max(8,above?main.top-(media?.height || main.height)-12:main.top)+'px';
             settingsElement.style.bottom='auto';
         }else if(!renderer){settingsElement.style.removeProperty('left');settingsElement.style.removeProperty('top');settingsElement.style.removeProperty('bottom');}
         settingsElement.innerHTML='<header><h2>'+(graphicsOpen?'Graphics':'Settings')+'</h2><button type="button" class="nlxr-settings-close" aria-label="Close settings">Done</button></header><section><div class="nlxr-settings-actions"></div></section>';
@@ -974,9 +979,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const {mainWidth,mainHeight,mediaWidth}=spatialDimensions();
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const settingsPose=spatialMediaDockPose('top');
+            const settingsPose=spatialMediaDockPose(mediaCard && mediaDockSide==='left'?'top':'left');
             if(settingsOpen && !hidden && settingsCard)surfaces.push({...settingsPose,width:mediaWidth,height:mainHeight,card:settingsCard});
-            if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const dockSide=settingsOpen && mediaDockSide==='top'?'left':mediaDockSide;const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(dockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
+            if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){

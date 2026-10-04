@@ -62,11 +62,11 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     const spatialDraw=source.slice(source.indexOf('function drawSpatialAmbientLife'),source.indexOf('function drawSpatialRain'));
     assert.match(source,/data-demo-ambient/);
     assert.match(source,/mountDemoBeeModel/);
-    assert.match(source,/mountDemoBeeModel\(modelCanvas,\{sprite:!simulated\}\)/);
+    assert.match(source,/mountDemoBeeModel\(modelCanvas,\{gl:simulated\?null:gl\}\)/);
     assert.match(source,/paintDemoAmbientLife\(now\)/);
     assert.match(source,/drawSpatialAmbientLife\(view\)/);
-    assert.match(spatialDraw,/ambientBeeModel\?\.renderSprite\?\.\(arWelcomeClock\.elapsed,ambientBeesStartedAt\)/);
-    assert.match(spatialDraw,/gl\.texImage2D\(gl\.TEXTURE_2D,0,gl\.RGBA,gl\.RGBA,gl\.UNSIGNED_BYTE,sprite\)/);
+    assert.match(spatialDraw,/ambientBeeModel\?\.drawXR\?\.\(view,position,arWelcomeClock\.elapsed,bee\)/);
+    assert.doesNotMatch(spatialDraw,/tex(?:Sub)?Image2D|renderSprite/);
     assert.match(spatialDraw,/ambientWorldAnchor\.x[\s\S]*ambientWorldAnchor\.y[\s\S]*ambientWorldAnchor\.z/);
     assert.match(spatialDraw,/bee\.flyby\*\.3/);
     assert.match(spatialDraw,/encounters:!reducedMotion/);

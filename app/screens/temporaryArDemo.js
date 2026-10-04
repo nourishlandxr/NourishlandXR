@@ -3980,7 +3980,7 @@ function renderInterface(simulated) {
     if(simulated || session){
         const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
         appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
-        import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{sprite:!simulated});}).catch(error=>console.warn('Bee model fallback:',error));
+        import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{gl:simulated?null:gl});}).catch(error=>console.warn('Bee model fallback:',error));
     }
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
@@ -4734,7 +4734,7 @@ function drawIntroSpatial(view) {
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
-        if((limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh || (!reducedMotion && (arWelcomeClock.elapsed<AR_WELCOME_SETTLED_MS || nativeConnectionState?.phase==='connected'))){
+        if((limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh || (!reducedMotion && nativeConnectionState?.phase==='connected')){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }
@@ -5017,33 +5017,6 @@ function drawSpatialAmbientLife(view){
             : {x:viewerMatrix[12]-viewerMatrix[8]*2.4,y:viewerMatrix[13],z:viewerMatrix[14]-viewerMatrix[10]*2.4};
     }
     const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const sprite=ambientBeeModel?.renderSprite?.(arWelcomeClock.elapsed,ambientBeesStartedAt);
-    if(sprite && program && buffer){
-        if(!ambientBeeSpriteTexture){ambientBeeSpriteTexture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
-        if(arWelcomeClock.elapsed-ambientBeeSpriteUploadedAt>=1000/60){
-            gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
-            const storage=demoTextureStorage.get(ambientBeeSpriteTexture);
-            if(storage?.width===sprite.width && storage?.height===sprite.height)gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,sprite);
-            else {gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,sprite);demoTextureStorage.set(ambientBeeSpriteTexture,{width:sprite.width,height:sprite.height});}
-            ambientBeeSpriteUploadedAt=arWelcomeClock.elapsed;
-        }
-        gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
-        const vertex=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');
-        gl.enableVertexAttribArray(vertex);gl.vertexAttribPointer(vertex,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
-        gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.disable(gl.CULL_FACE);
-        for(let index=0;index<BEE_COUNT;index++){
-            const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion,encounterSeed:ambientEncounterSeed});if(!bee)continue;
-            const position=ambientBeeWorldPosition(bee,index);
-            const spriteScale=.42*(1+bee.flyby*.3);
-            const model=billboardMatrix(position,spriteScale,spriteScale,viewerMatrix);
-            gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
-            gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),bee.opacity);
-            if(bee.flyby>.02)gl.disable(gl.DEPTH_TEST);else gl.enable(gl.DEPTH_TEST);
-            gl.drawArrays(gl.TRIANGLES,0,6);
-        }
-        gl.depthMask(true);gl.enable(gl.DEPTH_TEST);
-        return;
-    }
     const wings=[];
     for(let index=0;index<BEE_COUNT;index++){
         const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion,encounterSeed:ambientEncounterSeed});
@@ -5053,6 +5026,7 @@ function drawSpatialAmbientLife(view){
         // soon as the Meet a Plant Orb step enabled the bees. Because the frame
         // had already been cleared, that made the whole AR scene disappear.
         const position=ambientBeeWorldPosition(bee,index);
+        if(ambientBeeModel?.drawXR?.(view,position,arWelcomeClock.elapsed,bee))continue;
         const flybyScale=1+bee.flyby*.3;
         drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018*flybyScale,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
         const flap=(.025+Math.abs(bee.wing)*.013)*flybyScale;

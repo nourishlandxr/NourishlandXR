@@ -74,7 +74,7 @@ test('Quest panel source keeps progress separate and all three surfaces aligned'
     assert.match(panel,/target\.append\(region\)/);
     assert.doesNotMatch(panel,/Choose a topic|Explore → Details/);
     assert.match(panel,/mediaHeight=mainHeight,gap=\.035/);
-    assert.match(panel,/settingsPose=spatialMediaDockPose\('top'\)/);
+    assert.match(panel,/settingsPose=spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
     assert.match(panel,/settingsPose,width:mediaWidth,height:mainHeight/);
     assert.match(panel,/firstPlacement[\s\S]*pose\.center=\{x:pose\.center\.x-pose\.right\.x\*\.6/);
 });

@@ -300,7 +300,7 @@ function drawAmberPoint(ctx, point, radius, alpha) {
     ctx.restore();
 }
 
-function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false, cellClearance = [], quality = currentGraphicsQuality() } = {}) {
+function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false, cellClearance = [], cellOpenedAt = {}, quality = currentGraphicsQuality() } = {}) {
     const frame = welcomeRootFrame({ milestone, elapsed, milestoneStartedAt, reducedMotion });
     ctx.save();
     // Clip each exclusion independently: overlapping cells must never cancel
@@ -327,31 +327,34 @@ function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStar
     });
     drawLivingRim(ctx,{elapsed,reducedMotion,quality});
     ctx.restore();
-    drawLowCellGroundcover(ctx,{cellClearance,elapsed,reducedMotion,quality});
+    drawLowCellGroundcover(ctx,{cellClearance,cellOpenedAt,elapsed,quality});
     return frame;
 }
 
-// Low planting replaces empty clearance holes. Tall roots and vines stay
-// excluded, while this shallow carpet sits beneath the separate cell surface.
-function drawLowCellGroundcover(ctx,{cellClearance=[],elapsed=0,reducedMotion=false,quality='medium'}){
-    if(!cellClearance.length)return;
-    const growth=reducedMotion?1:Math.max(0,Math.min(1,(elapsed-47000)/85000));
-    if(growth<=0)return;
-    const budget=quality==='high'?480:quality==='low'?150:300;
-    const count=Math.min(quality==='high'?46:quality==='low'?18:30,Math.ceil(budget/cellClearance.length));
+// Opening a cell starts its own slow, shallow planting at the outer edge.
+// Nothing appears on arrival; the centre remains reserved for readable text.
+export function cellGroundcoverGrowth(elapsed,openedAt){
+    return Number.isFinite(openedAt)?stageEase((elapsed-openedAt-1500)/60000):0;
+}
+function drawLowCellGroundcover(ctx,{cellClearance=[],cellOpenedAt={},elapsed=0,quality='medium'}){
+    const cells=cellClearance.filter(cell=>cellGroundcoverGrowth(elapsed,cellOpenedAt[cell.id])>0);
+    if(!cells.length)return;
+    const count=quality==='high'?9:quality==='low'?4:6;
     ctx.save();ctx.beginPath();
-    for(const cell of cellClearance){ctx.moveTo(cell.x+cell.radius,cell.y);ctx.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);}
+    for(const cell of cells){ctx.moveTo(cell.x+cell.radius,cell.y);ctx.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);}
     ctx.clip();
-    cellClearance.forEach((cell,index)=>{
+    cells.forEach((cell,index)=>{
+        const growth=cellGroundcoverGrowth(elapsed,cellOpenedAt[cell.id]);
         for(let n=0;n<count;n++){
-            const seed=index*97+n,angle=hash(seed,701)*Math.PI*2,radius=Math.sqrt(hash(seed,709))*cell.radius;
-            const x=cell.x+Math.cos(angle)*radius,y=cell.y+Math.sin(angle)*radius;
-            if(Math.hypot(x-WELCOME_SHAPE.cx,y-WELCOME_SHAPE.cy)<WELCOME_SHAPE.radius+3)continue;
+            const seed=index*97+n,angle=.35+hash(seed,701)*2.4;
             const g=Math.max(0,Math.min(1,(growth-hash(seed,719)*.25)/.75));
             if(g<=0)continue;
-            const size=(7+hash(seed,727)*7)*g;
-            ctx.globalAlpha=.88*g;
-            for(let leaf=0;leaf<3;leaf++)drawRimLeaf(ctx,x,y,angle+leaf*2.1,size,['#344f35','#58744b','#738563'][n%3],'rgba(189,210,157,.28)',quality==='high'?2:1);
+            const edge=cell.radius-LIVING_RIM.cellGap-3,reach=(3+hash(seed,709)*5)*g;
+            const x=cell.x+Math.cos(angle)*(edge-reach),y=cell.y+Math.sin(angle)*(edge-reach);
+            ctx.globalAlpha=.65*g;ctx.strokeStyle='#435c3d';ctx.lineWidth=1.1;ctx.beginPath();
+            ctx.moveTo(cell.x+Math.cos(angle)*edge,cell.y+Math.sin(angle)*edge);ctx.lineTo(x,y);ctx.stroke();
+            const size=(3+hash(seed,727)*2)*g;
+            for(let leaf=0;leaf<2;leaf++)drawRimLeaf(ctx,x,y,angle+leaf*1.6,size,['#344f35','#58744b','#738563'][n%3],'rgba(189,210,157,.28)',quality==='high'?2:1);
         }
     });ctx.restore();
 }
@@ -560,7 +563,7 @@ export function drawArWelcomeRoots(ctx,options={}){
  let entry=livingFrameCache.get(ctx);
  const quality=options.quality || currentGraphicsQuality(), scale=(GRAPHICS_PRESETS[quality] || GRAPHICS_PRESETS.medium).frameScale;
  if(!entry || entry.scale!==scale){const canvas=document.createElement('canvas');canvas.width=1400*scale;canvas.height=1500*scale;entry={scale,canvas,context:canvas.getContext('2d'),key:null,clearance:null,frame:null};livingFrameCache.set(ctx,entry);}
- const key=[quality,Math.floor((options.elapsed||0)/WELCOME_ROOT_REFRESH_MS),options.milestone||0,options.milestoneStartedAt||0,Boolean(options.reducedMotion)].join(':');
+ const key=[quality,Math.floor((options.elapsed||0)/WELCOME_ROOT_REFRESH_MS),options.milestone||0,options.milestoneStartedAt||0,Boolean(options.reducedMotion),JSON.stringify(options.cellOpenedAt || {})].join(':');
  if(entry.key!==key || entry.clearance!==options.cellClearance){
   const paint=entry.context;paint.imageSmoothingEnabled=true;paint.imageSmoothingQuality='high';paint.setTransform?.(1,0,0,1,0,0);paint.clearRect(0,0,entry.canvas.width,entry.canvas.height);paint.setTransform?.(scale,0,0,scale,0,0);
   entry.frame=drawWelcomeRootsDirect(paint,{...options,quality,cellClearance:[]});

@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Native AR bee renderer check</title>
+<style>body{margin:0;background:#14201f;color:#e7ebe4;font:16px system-ui}canvas{width:100vw;height:85vh;display:block}output{display:block;padding:16px}</style>
+<canvas></canvas><output>Loading the original bee model into one WebGL context…</output>
+<script type="module">
+import * as THREE from '../app/vendor/three.module.min.js';
+import {mountDemoBeeModel} from '../app/services/demoBeeModel.js';
+const canvas=document.querySelector('canvas'),output=document.querySelector('output');
+const gl=canvas.getContext('webgl',{alpha:true,antialias:true});
+const model=mountDemoBeeModel(canvas,{gl});
+const camera=new THREE.PerspectiveCamera(38,1,.1,10);camera.position.set(0,0,1.1);camera.updateMatrixWorld();
+let frames=0,total=0,last=performance.now(),boneUploads=0,imageUploads=0,error=0;
+const sub=gl.texSubImage2D.bind(gl),image=gl.texImage2D.bind(gl);
+gl.texSubImage2D=(...args)=>{boneUploads++;return sub(...args);};gl.texImage2D=(...args)=>{imageUploads++;return image(...args);};
+function draw(time){
+ const start=performance.now();
+ const width=Math.round(innerWidth*Math.min(devicePixelRatio,1.5)),height=Math.round(innerHeight*.85*Math.min(devicePixelRatio,1.5));
+ if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;camera.aspect=width/height;camera.updateProjectionMatrix();}
+ gl.viewport(0,0,width,height);gl.clearColor(.045,.065,.06,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};
+ if(model.ready)for(let i=0;i<4;i++)model.drawXR(view,{x:(i-1.5)*.19,y:Math.sin(time/1200+i)*.025,z:0},time,{opacity:1,flyby:i===0?.6:0});
+ error ||= gl.getError();frames++;total+=performance.now()-start;
+ if(time-last>=1000){output.textContent=`${model.ready?'Ready · 4 original animated bees':'Loading'} · ${(frames*1000/(time-last)).toFixed(0)} callbacks/s · CPU ${(total/frames).toFixed(2)} ms · GL error ${error} · image allocations ${imageUploads} · rig updates ${boneUploads}`;last=time;frames=0;total=0;}
+ requestAnimationFrame(draw);
+}requestAnimationFrame(draw);
+</script></html>

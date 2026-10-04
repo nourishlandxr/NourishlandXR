@@ -535,9 +535,9 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  let reservedCells=vegetationClearanceCache.get(graphs);
  if(!reservedCells){reservedCells=revealFrames(graphs).flatMap(frame=>frame.nodes).map(node=>({
   x:node.x-WELCOME_PANEL_DRAW_OFFSET.x,y:node.y-WELCOME_PANEL_DRAW_OFFSET.y,
-  radius:node.baseRadius+LIVING_RIM.cellGap
+  radius:node.baseRadius+LIVING_RIM.cellGap,id:node.limId || node.id
  }));vegetationClearanceCache.set(graphs,reservedCells);}
- drawArWelcomeRoots(ctx,{milestone:options.rootMilestone||0,elapsed,milestoneStartedAt:options.rootMilestoneStartedAt||0,reducedMotion,cellClearance:reservedCells});
+ drawArWelcomeRoots(ctx,{milestone:options.rootMilestone||0,elapsed,milestoneStartedAt:options.rootMilestoneStartedAt||0,reducedMotion,cellClearance:reservedCells,cellOpenedAt:options.drawCells===false?{}:options.progression?.expandedAt || {}});
  }
  if(options.drawPanel!==false){
  if(options.drawContent){options.drawContent(ctx);}else{

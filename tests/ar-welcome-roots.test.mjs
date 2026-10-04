@@ -121,7 +121,7 @@ test('living decoration reuses its raster within a slow growth interval', () => 
         drawArWelcomeRoots(destination,{elapsed:150100,cellClearance});
         assert.equal(paints,1,'interaction redraws must not regenerate vegetation');
         assert.equal(blits,2);
-        assert.equal(clips,1,'low groundcover uses one shared clip after the subtractive tall-growth mask');
+        assert.equal(clips,0,'unopened cells must not produce corner groundcover');
         drawArWelcomeRoots(destination,{elapsed:151000,cellClearance});
         assert.equal(paints,2,'growth refreshes at the next one-second interval');
     } finally {

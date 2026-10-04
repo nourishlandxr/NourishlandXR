@@ -72,7 +72,7 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.ok(settings.x < 200);
     assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
     const panelSource=read('app/services/pimInfoPanel.js');
-    assert.match(panelSource, /settingsPose=spatialMediaDockPose\('top'\)/);
+    assert.match(panelSource, /settingsPose=spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
     assert.match(panelSource, /settingsPose,width:mediaWidth,height:mainHeight/);
     assert.match(panelSource, /companionPanelPose\(pose,side,mainWidth,mediaWidth,18,gap\)/);
     assert.match(panelSource, /angleDegrees = 18, gap = 0/);
