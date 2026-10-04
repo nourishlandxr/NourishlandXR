@@ -76,7 +76,7 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.match(panelSource, /settingsPose,width:mediaWidth,height:mainHeight/);
     assert.match(panelSource, /companionPanelPose\(pose,side,mainWidth,mediaWidth,18,gap\)/);
     assert.match(panelSource, /angleDegrees = 18, gap = 0/);
-    assert.match(panelSource, /gap=0/);
+    assert.match(panelSource, /gap=\.035/);
     assert.doesNotMatch(panelSource, /const card=\{[^\n]*image:showPlantPreview/);
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });

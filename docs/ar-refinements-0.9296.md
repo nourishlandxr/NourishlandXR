@@ -1,6 +1,6 @@
-# Quest interface refinement — V0.9294
+# Quest interface refinement — V0.9296
 
-Release follow-up: V0.9295 updates six existing assertions for the intentionally changed Settings dock, demo height, foliage mask and visitor wording. V0.9294 was stopped by those assertions before deployment; V0.9295 is the release candidate.
+Release follow-ups align existing assertions with the intentionally changed Settings dock, 0.035 m gap, demo height, foliage mask and visitor wording. Earlier candidates were stopped by those obsolete assertions before deployment; V0.9296 is the release candidate.
 
 ## Confirmed source findings and changes
 
