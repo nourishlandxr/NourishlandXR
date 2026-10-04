@@ -58,7 +58,7 @@ test('welcome stays concise and spatial controllers never fall back to head move
     assert.match(styles, /data-rain-stage="first-drops"/);
     assert.match(styles, /data-rain-stage="mist"/);
     assert.match(styles, /data-rain-intensity="heavy"/);
-    assert.match(read('app/services/pimInfoPanel.js'), /settingLabel:'Rain quality'/);
+    assert.match(read('app/services/pimInfoPanel.js'), /choice\('RainQuality',[^\n]*'rain','Rain quality'/);
     assert.match(styles, /z-index:12002; pointer-events:none/);
 });
 
@@ -72,7 +72,8 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.ok(settings.x < 200);
     assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
     const panelSource=read('app/services/pimInfoPanel.js');
-    assert.match(panelSource, /companionPanelPose\(pose,'left',mainWidth,settingsWidth,18,gap\)/);
+    assert.match(panelSource, /settingsPose=spatialMediaDockPose\('top'\)/);
+    assert.match(panelSource, /settingsPose,width:mediaWidth,height:mainHeight/);
     assert.match(panelSource, /companionPanelPose\(pose,side,mainWidth,mediaWidth,18,gap\)/);
     assert.match(panelSource, /angleDegrees = 18, gap = 0/);
     assert.match(panelSource, /gap=0/);
@@ -1692,7 +1693,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const noteScale = noteSign \? record\.demoAmbientNeighbour/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\) \{ width:min\(72vw,210px\); height:82px;/);
     assert.match(source, /groundBaseY = pairedDemoTotemGroundY\(\)/);
-    assert.match(source, /y:groundBaseY\+DEMO_TOTEM_HALF_HEIGHT_METRES/);
+    assert.match(source, /y:groundBaseY\+initialDemoTotemHalfHeight\(groundBaseY\)/);
     assert.match(read('app/screens/arMode.js'), /function totemRotationDegreesForPosition\(position, viewer = latestViewerMatrix\)/);
     assert.match(read('app/screens/arMode.js'), /type === 'area_checkpoint' \? totemRotationDegreesForPosition\(position\) : 0/);
     assert.match(source, /type: type === 'note' \? 'note' : 'plant'/);

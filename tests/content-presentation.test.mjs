@@ -46,7 +46,7 @@ test('post-LIMO discovery connects the authored Pigeon Pea and Living Landscapes
     assert.match(demo, /limMeshVisible=false/);
     assert.match(demo, /deferContinueUntilCopyReady:index===0/);
     assert.match(demo, /stepLabel:'LEARNING 1\.9'[\s\S]*Select \$\{nativeConnectionState\.sourceTitle\} in Pigeon Pea to continue/);
-    assert.match(demo, /stepLabel:'LEARNING 1\.10'[\s\S]*Select \$\{state\.targetTitle\} in LIMO to continue/);
+    assert.match(demo, /stepLabel:'LEARNING 1\.10'[\s\S]*Select the \$\{state\.targetTitle\} learning cell to continue/);
     assert.doesNotMatch(demo, /stepLabel:'LEARNING 1\.9',nextGuide:''/);
     assert.deepEqual(LIM_INTRO_BRANCHES.map(branch => branch.title),
         ['Read Nature', 'Understand the Land', 'Design the Forest', 'Shape the Outcome']);

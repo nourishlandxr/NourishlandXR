@@ -73,8 +73,9 @@ test('Quest panel source keeps progress separate and all three surfaces aligned'
     const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
     assert.match(panel,/target\.append\(region\)/);
     assert.doesNotMatch(panel,/Choose a topic|Explore → Details/);
-    assert.match(panel,/companionHeight=mainHeight/);
-    assert.match(panel,/companionPanelPose\(pose,'left',mainWidth,settingsWidth,18,gap\)/);
+    assert.match(panel,/mediaHeight=mainHeight,gap=\.035/);
+    assert.match(panel,/settingsPose=spatialMediaDockPose\('top'\)/);
+    assert.match(panel,/settingsPose,width:mediaWidth,height:mainHeight/);
     assert.match(panel,/firstPlacement[\s\S]*pose\.center=\{x:pose\.center\.x-pose\.right\.x\*\.6/);
 });
 

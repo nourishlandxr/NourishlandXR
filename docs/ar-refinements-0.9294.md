@@ -1,5 +1,7 @@
 # Quest interface refinement — V0.9294
 
+Release follow-up: V0.9295 updates six existing assertions for the intentionally changed Settings dock, demo height, foliage mask and visitor wording. V0.9294 was stopped by those assertions before deployment; V0.9295 is the release candidate.
+
 ## Confirmed source findings and changes
 
 - Settings shared the image's left dock, and its many rows compressed Help. It now uses the top dock with the image's 0.66 m width, Control panel/image height and 0.035 m gap. General and Graphics are separate views. Orb/Totem and refresh/FPS share paired rows. Help opens the full reading page. The only visible glass slider is Main / Control glass; learning cell backgrounds continue to follow it. Font size and contrast increased without fading lettering or outlines.
