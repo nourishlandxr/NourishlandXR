@@ -306,6 +306,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
     const expanded = new Set(expandedPaths);
     const closingPaths = [...new Set((Array.isArray(options.closingPaths) ? options.closingPaths : []).map(String))];
     const layoutOptions = {
+        ...options,
         selectedNodeId: options.selectedNodeId,
         safeArea: options.safeArea,
         viewportWidth: options.viewportWidth,
@@ -513,6 +514,7 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
     const bloomProgress = Number.isFinite(Number(options.bloomProgress)) ? Number(options.bloomProgress) : 1;
     const bloomPath=String(options.bloomPath || '');
     const nodes = pimVisibleNodes(knowledge, expandedPaths, {
+        ...options,
         selectedNodeId: options.selectedNodeId,
         safeArea: options.safeArea,
         viewportWidth: options.viewportWidth,
@@ -526,8 +528,8 @@ export function pimHoneycombTargetAtPercent(knowledge, expandedPaths, xPercent, 
         bottomInset: options.bottomInset
     });
     const center = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
-    const coreWidth = Math.max(.1, Number(nodes[0]?.layoutCellWidthPercent || 0) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
-    const coreHeight = Math.max(.1, Number(nodes[0]?.layoutCellHeightPercent || 0) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
+    const coreWidth = Math.max(.1, Number(nodes[0]?.layoutCellWidthPercent || (options.cellWidthPixels || PIM_TEXTURE_CELL_WIDTH)/(options.layoutWidth || PIM_TEXTURE_SIZE.width)*100) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
+    const coreHeight = Math.max(.1, Number(nodes[0]?.layoutCellHeightPercent || (options.cellHeightPixels || PIM_TEXTURE_CELL_WIDTH*.866)/(options.layoutHeight || PIM_TEXTURE_SIZE.height)*100) / 2 * PIM_SPATIAL_CONFIG.colliderScale);
     const coreDistance = Math.hypot(
         (xPercent - center.x) / coreWidth,
         (yPercent - center.y) / coreHeight

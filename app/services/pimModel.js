@@ -589,6 +589,7 @@ export function pimToArKnowledge(document, options = {}) {
         plantId: source.plantId,
         title: source.identity.commonName || source.identity.scientificName || source.plantId,
         scientificName: source.identity.scientificName,
+        roles: source.identity.tags.slice(0,3),
         identityStatement: source.identity.identityStatement,
         image: source.identity.image,
         sources: clone(source.sources || []),

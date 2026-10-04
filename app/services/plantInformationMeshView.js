@@ -133,6 +133,8 @@ export function syncPimConnectionLayer(map) {
     if (!map) return null;
     const layer = ensurePimConnectionLayer(map);
     if (!layer) return null;
+    layer.hidden=map.dataset.knowledgeConnections==='off';
+    layer.style.display=layer.hidden?'none':'';
     const { geometry, nodes, core, corePosition } = pimDomConnectionNodes(map);
     layer.setAttribute('viewBox', `0 0 ${geometry.width} ${geometry.height}`);
     layer.setAttribute('width', String(geometry.width));
@@ -239,7 +241,7 @@ function fitPimDomTextBlock(block) {
     const compactNameOnly = block.classList.contains('plant-knowledge-cell-copy')
         && block.closest('.plant-knowledge-map[data-pim-density="compact"]')
         && textElements.length === 1;
-    if (compactNameOnly && title.textContent.trim().length <= 24) return;
+    if (compactNameOnly && !block.closest('[data-knowledge-mode]') && title.textContent.trim().length <= 24) return;
     const fits = () => {
         const blockRect = block.getBoundingClientRect();
         return textElements.every(element => {
@@ -248,6 +250,7 @@ function fitPimDomTextBlock(block) {
                 && rect.right <= blockRect.right + .5
                 && rect.top >= blockRect.top - .5
                 && rect.bottom <= blockRect.bottom + .5
+                && element.scrollWidth <= element.clientWidth + 1
                 && (element.scrollHeight <= element.clientHeight + 1
                     || element === detail && Number.parseInt(computedStyle?.(element)?.webkitLineClamp, 10) > 0);
         });
@@ -531,7 +534,7 @@ export function bindPlantInformationMeshPress(container, options = {}) {
  * primary mesh and appends descendants beside their real parent.
  */
 export function plantInformationMeshMarkup(knowledge, expandedPaths = [], options = {}) {
-    const source = knowledge || { title: 'Plant Information Mesh', categories: [] };
+    const source = knowledge || { title: 'Plant knowledge', categories: [] };
     const expanded = new Set(expandedPaths instanceof Set ? expandedPaths : (Array.isArray(expandedPaths) ? expandedPaths : []));
     const visualViewport = typeof window !== 'undefined' ? window.visualViewport : null;
     const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
@@ -561,6 +564,8 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
             : { selectedNodeId: options.selectedNodeId };
     const nodes = pimVisibleNodes(source, expanded, {
         ...layoutOptions,
+        explorer:options.explorer,
+        connectedPath:options.connectedPath,
         includeAllChildren: options.includeAllChildren === true,
         viewportWidth: viewportWidth || undefined,
         viewportHeight: viewportHeight || undefined,
@@ -585,7 +590,7 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
         const open = expanded.has(node.path);
         const selected = String(options.selectedNodeId || '') === node.path;
         const connected = String(options.connectedPath || '') === node.path;
-        const detailsVisible = options.compactLabels || node.depth > 0;
+        const detailsVisible = !options.explorer && (options.compactLabels || node.depth > 0);
         const snippet = options.compactLabels ? String(node.description || node.value || 'Hold for +Info').slice(0, 58) : node.value;
         const role = node.depth === 0 ? 'primary' : 'child';
         const depthClass = node.depth ? ` plant-knowledge-child plant-knowledge-child-depth-${Math.min(node.depth, 3)}` : '';
@@ -593,11 +598,14 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
         const style = `--pim-node-x:${node.position.x}%;--pim-node-y:${node.position.y}%;--pim-parent-x:${parentPosition.x}%;--pim-parent-y:${parentPosition.y}%;--pim-node-scale:${node.layoutScale || 1};--pim-child-index:${Number(node.childIndex) || 0};--pim-hue:${pimNodeHue(node)}`;
         return `<button type="button" class="plant-knowledge-cell${depthClass}${open ? ' is-open' : ''}${selected ? ' is-selected' : ''}${connected ? ' is-connected' : ''}${detailsVisible ? ' is-detail-visible' : ''}" data-pim-role="${role}" data-pim-depth="${node.depth}" data-pim-node="${escapeHtml(node.path)}" data-pim-node-id="${escapeHtml(node.nodeId || node.path)}" data-pim-parent-id="${escapeHtml(node.parentId || '')}" data-pim-direction="${escapeHtml(node.rootDirection || node.direction)}" data-plant-branch="${escapeHtml(node.path)}" data-ar-plant-branch="${escapeHtml(node.path)}" style="${style}" aria-label="${escapeHtml(label(node.label))}${hasChildren ? ' information cell' : ''}" aria-expanded="${hasChildren ? open : false}" aria-selected="${selected}"><span class="plant-knowledge-press-fill" aria-hidden="true"></span><span class="plant-knowledge-cell-copy"><b>${escapeHtml(label(node.label))}</b><small aria-hidden="${!detailsVisible}">${escapeHtml(snippet)}</small></span></button>`;
     }).join('');
-    const handleLabel = options.handleLabel || `Drag the ${label(source.title)} Plant Information Mesh`;
+    const handleLabel = options.handleLabel || `Drag ${label(source.title)} plant knowledge`;
     const center = nodes[0]?.layoutCenterPosition || { x: 50, y: 50 };
-    const core = `<span class="plant-knowledge-core" data-pim-role="center" data-plant-profile-handle tabindex="0" style="--pim-core-x:${center.x}%;--pim-core-y:${center.y}%" aria-label="${escapeHtml(handleLabel)}"><span class="plant-knowledge-core-copy"><strong>${escapeHtml(source.title)}</strong></span></span>`;
+    const tag=options.explorer?.mode==='tag';
+    const essentials=tag?`<em>${escapeHtml(source.scientificName || '')}</em><small>${escapeHtml((source.roles || []).slice(0,3).join(' · '))}</small><p>${escapeHtml(source.identityStatement || '')}</p>`:'';
+    const core = `<span class="plant-knowledge-core${tag?' is-knowledge-tag':''}" data-pim-role="center" data-plant-profile-handle tabindex="0" style="--pim-core-x:${center.x}%;--pim-core-y:${center.y}%" aria-label="${escapeHtml(handleLabel)}"><span class="plant-knowledge-core-copy"><strong>${escapeHtml(source.title)}</strong>${essentials}</span></span>`;
     const box=pimReaderControl(nodes,{layoutWidth:metrics.layoutWidth,layoutHeight:metrics.layoutHeight});
     const reader=options.readerControl ? `<button type="button" data-pim-read-all class="pim-spatial-read-all" style="position:absolute;left:${box.left}%;top:${box.top}%;width:${box.width}%;height:${box.height}%">All topics · read & edit</button>` : '';
     const connections = '<svg class="plant-knowledge-connections" aria-hidden="true" focusable="false"></svg>';
-    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" data-pim-layout="honeycomb" data-pim-palette="${options.softSurface ? 'soft' : 'default'}" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale};--pim-cell-opacity:${cellOpacity}" aria-label="Plant Information Mesh">${connections}${cells}${core}${reader}</span>`;
+    const explorerAttributes=options.explorer?`data-knowledge-mode="${options.explorer.mode}" data-knowledge-connections="${options.explorer.connections===false?'off':'on'}"`:'';
+    return `<span class="plant-knowledge-map${expanded.size ? ' is-expanded' : ''}" ${explorerAttributes} data-pim-layout="honeycomb" data-pim-palette="${options.softSurface ? 'soft' : 'default'}" data-pim-density="${density}" data-pim-shared-layout="true" data-pim-renderer="canonical" style="--pim-cell-size:${metrics.cellWidthPixels}px;--pim-mesh-scale:${layoutScale};--pim-cell-opacity:${cellOpacity}" aria-label="Plant knowledge">${connections}${cells}${core}${reader}</span>`;
 }

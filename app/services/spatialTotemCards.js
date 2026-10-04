@@ -301,11 +301,11 @@ function cardCanvas(card, detail) {
 
 export function createSpatialTotemCards(gl, options = {}) {
     const vs=shader(gl,gl.VERTEX_SHADER,'attribute vec2 p;uniform mat4 projection;uniform mat4 view;uniform vec3 center;uniform vec3 right;uniform vec3 up;uniform vec2 size;varying vec2 uv;void main(){uv=vec2(p.x+.5,.5-p.y);vec3 world=center+right*p.x*size.x+up*p.y*size.y;gl_Position=projection*view*vec4(world,1.0);}');
-    const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;uniform sampler2D artwork;uniform float opacity;uniform float feedback,isControl;uniform vec3 feedbackColor;varying vec2 uv;void main(){vec4 c=texture2D(artwork,uv);float edge=1.0-smoothstep(.015,.06,min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y)));float accent=feedback*edge*.42*(1.0-isControl);float a=max(c.a,accent);if(a<.01)discard;vec3 ink=c.a>.01?c.rgb:feedbackColor;ink=mix(ink,feedbackColor,feedback*isControl*.38);gl_FragColor=vec4(ink,a*opacity);}');
+    const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;uniform sampler2D artwork;uniform float opacity;uniform float feedback,isControl,pressProgress;uniform vec3 feedbackColor;varying vec2 uv;void main(){vec4 c=texture2D(artwork,uv);float edge=1.0-smoothstep(.015,.06,min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y)));float accent=feedback*edge*.42*(1.0-isControl);float a=max(c.a,accent);if(a<.01)discard;vec3 ink=c.a>.01?c.rgb:feedbackColor;ink=mix(ink,feedbackColor,feedback*isControl*.38);ink=mix(ink,feedbackColor,step(1.0-pressProgress,uv.y)*step(.001,pressProgress)*.22);gl_FragColor=vec4(ink,a*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-.5,-.5,.5,-.5,.5,.5,-.5,-.5,.5,.5,-.5,.5]),gl.STATIC_DRAW);
-    const locations=Object.fromEntries(['projection','view','center','right','up','size','artwork','opacity','feedback','feedbackColor','isControl'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const locations=Object.fromEntries(['projection','view','center','right','up','size','artwork','opacity','feedback','feedbackColor','isControl','pressProgress'].map(name=>[name,gl.getUniformLocation(program,name)]));
     const p=gl.getAttribLocation(program,'p'),textures=new Map(),used=new Set();
     const anisotropy=gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
     let surfaces=[];
@@ -326,7 +326,7 @@ export function createSpatialTotemCards(gl, options = {}) {
                 ? {x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)}
                 : stableTotemCardRight(record,{x:m[0]/rightLength,y:0,z:m[8]/rightLength});
             const layout=options.surfaces ? options.surfaces(position,right,cards,selectedId) : totemLayoutForRecord(record,position,cards,selectedId,rotationY);
-            const aimed=hitTotemSurface(options.ray?.(),layout);
+            const aimed=(options.hitSurface || hitTotemSurface)(options.ray?.(),layout);
             const now=performance.now(),reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
             gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,2,gl.FLOAT,false,0,0);
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,m);
@@ -356,7 +356,8 @@ export function createSpatialTotemCards(gl, options = {}) {
                 const fadeOpacity = Number.isFinite(surface.opacity) ? surface.opacity : 1;
                 const arrival=record?.demoArriveAt ? Math.min(1,Math.max(0,(now-record.demoArriveAt)/900)) : 1;
                 gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(now-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
-                gl.uniform1f(locations.isControl,surface.card.control?1:0);
+                gl.uniform1f(locations.isControl,surface.card.control || options.containedFeedback?1:0);
+                gl.uniform1f(locations.pressProgress,Math.max(0,Math.min(1,surface.pressProgress || 0)));
                 gl.uniform1f(locations.feedback,selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id ? .55 : 0));
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }

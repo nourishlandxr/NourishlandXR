@@ -41,10 +41,16 @@ function interactiveTarget(target) {
     return target instanceof Element && Boolean(target.closest('button,[role="button"],input,select,textarea,a,.nlxr-info-panel,.tryit-guided-choice,.tryit-virtual-tag-mode'));
 }
 
-export function mountDesktopSpatialPreview(root, { simulated = false, quest = false } = {}) {
+export function mountDesktopSpatialPreview(root, { simulated = false, quest = false, flat = false } = {}) {
     const demo = root?.querySelector?.('.tryit-demo');
     const stage = demo?.querySelector?.('.tryit-stage');
     if (!demo || !stage || !isDesktopSpatialPreviewEnvironment({ simulated, quest })) return () => {};
+
+    if(flat){
+        const sync=()=>demo.classList.toggle('is-desktop-spatial-preview',isDesktopSpatialPreviewEnvironment({simulated,quest}));
+        sync();globalThis.addEventListener?.('resize',sync,{passive:true});
+        return ()=>{globalThis.removeEventListener?.('resize',sync);demo.classList.remove('is-desktop-spatial-preview');};
+    }
 
     stage.insertAdjacentHTML('afterbegin', controlMarkup());
     const chrome = stage.querySelector('[data-desktop-spatial-chrome]');

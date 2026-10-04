@@ -62,7 +62,7 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
     app.querySelector('[data-ar-safety-cancel]')?.addEventListener('click', () => onCancel?.());
 }
 
-export function renderArIntroductionPreparation(app, { onContinue, onCancel } = {}) {
+export function renderArIntroductionPreparation(app, { onContinue, onCancel, simpleDesktop=false } = {}) {
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
         <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">On desktop, we recommend the plain NLXR introduction. For the full spatial experience, use a compatible Android phone or spatial device*.</p></div>
@@ -77,12 +77,12 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel } = 
             <p class="ar-spatial-device-note">* Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p>
             <p class="meta">You can leave at any time. Camera access, when available, begins only after you continue and grant permission.</p>
         </section>
-        ${arPreparationControlsMarkup()}
+        ${arPreparationControlsMarkup({simpleDesktop})}
         <label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time on this device</span></label>
         <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary global-ar-action" type="button" data-ar-introduction-continue>Begin introduction</button></div>
     </div>`;
     bindBotanicalTexture(app);
-    bindArPreparationControls(app,app.querySelector('[data-ar-introduction-continue]'),{nearFuture:true});
+    bindArPreparationControls(app,app.querySelector('[data-ar-introduction-continue]'),{nearFuture:!simpleDesktop,simpleDesktop});
     app.querySelector('[data-ar-introduction-continue]')?.addEventListener('click', async event => {
         const button = event.currentTarget;
         button.disabled = true;

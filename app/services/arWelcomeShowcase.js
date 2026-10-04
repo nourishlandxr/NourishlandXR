@@ -522,7 +522,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  // empty screen while the session clock waited for visibility updates.
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);
  if(options.drawPanel!==false){
- drawArWelcomePanel(ctx,{elapsed,reducedMotion});
+ drawArWelcomePanel(ctx,{elapsed,reducedMotion,...(options.simpleDesktop?{backgroundOpacity:1,simple:true}:{})});
  }
  if(options.drawRoots!==false){
  let reservedCells=vegetationClearanceCache.get(graphs);

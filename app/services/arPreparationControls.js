@@ -1,6 +1,7 @@
 import {getSpatialVisualSettings,setSpatialVisualSettings,resolveGraphicsQuality} from './spatialVisualSettings.js';
 import {prepareArAssets,prepareNearFutureArAssets} from './arAssetPreparation.js';
-export function arPreparationControlsMarkup(){
+export function arPreparationControlsMarkup({simpleDesktop=false}={}){
+ if(simpleDesktop)return `<section class="panel ar-preload-controls" data-ar-preload><h2>Prepare the introduction</h2><p>Desktop uses a simple 2D demo: information, plant knowledge and learning pathways. Immersive graphics and insects are available in AR.</p><progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1" style="width:100%"></progress><p role="status" data-ar-preload-status>Preparing the introduction…</p><button type="button" data-ar-preload-retry hidden>Retry preparation</button></section>`;
  const eyeHeight=getSpatialVisualSettings().eyeHeight;
  const choice=getSpatialVisualSettings().graphicsQuality,suggested=resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED');
  return `<section class="panel ar-preload-controls" data-ar-preload><h2>Prepare your experience</h2>
@@ -12,7 +13,7 @@ export function arPreparationControlsMarkup(){
  <progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1" style="width:100%"></progress>
  <p role="status" data-ar-preload-status>Preparing Nourishland…</p><button type="button" data-ar-preload-retry hidden>Retry preparation</button></section>`;
 }
-export function bindArPreparationControls(root,enterButton,{nearFuture=false}={}){
+export function bindArPreparationControls(root,enterButton,{nearFuture=false,simpleDesktop=false}={}){
  const section=root?.querySelector('[data-ar-preload]');if(!section || !enterButton)return;
  section.querySelector('[data-ar-graphics]')?.addEventListener('change',event=>{setSpatialVisualSettings({graphicsQuality:event.target.value});begin();});
  section.querySelector('[data-ar-eye-height]')?.addEventListener('input',event=>{const eyeHeight=Number(event.target.value);setSpatialVisualSettings({eyeHeight});section.querySelector('[data-ar-eye-value]').textContent=eyeHeight.toFixed(2)+' m';});
@@ -21,13 +22,13 @@ export function bindArPreparationControls(root,enterButton,{nearFuture=false}={}
  function begin(isRetry=false){
   const token=++preparationToken;
   enterButton.disabled=true;retry.hidden=true;section.setAttribute('aria-busy','true');const start=performance.now();
-  prepareArAssets({retry:isRetry,experience:nearFuture?'demo':'creator',onProgress:value=>{if(!section.isConnected || token!==preparationToken)return;bar.max=value.total||1;bar.value=value.loaded;status.textContent=`Preparing Nourishland · ${value.loaded} / ${value.total}`;}}).then(result=>{
+  prepareArAssets({retry:isRetry,experience:simpleDesktop?'desktop':nearFuture?'demo':'creator',onProgress:value=>{if(!section.isConnected || token!==preparationToken)return;bar.max=value.total||1;bar.value=value.loaded;status.textContent=`Preparing Nourishland · ${value.loaded} / ${value.total}`;}}).then(result=>{
    if(!section.isConnected || token!==preparationToken)return;
    const failed=result.failures.some(item=>item.critical);section.setAttribute('aria-busy','false');enterButton.disabled=failed;retry.hidden=!failed;
    status.textContent=failed?'Preparation could not finish. Check your connection and retry.':'Ready to enter. More information loads as you explore.';
    // Local diagnostic evidence only, readable in preparation studies. Never transmitted.
    section.dataset.preparedMs=String(Math.round(performance.now()-start));section.dataset.preparedAssets=String(result.loaded);section.dataset.ready=String(!failed);
-   if(!failed && nearFuture)prepareNearFutureArAssets();
+   if(!failed && nearFuture && !simpleDesktop)prepareNearFutureArAssets();
   });
  }
  retry.addEventListener('click',()=>begin(true));begin();

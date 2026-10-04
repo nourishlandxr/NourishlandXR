@@ -1,3 +1,7 @@
+import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction} from '../services/knowledgeExplorer.js';
+import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
+import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
+let knowledgeRenderer=null;
 import {INSECT_VISUALS,insectFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
 import {demoTotemHeightForScreen,shiftDemoAreaToFloor} from '../services/demoFloorPlacement.js';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../services/demoFeedback.js';
@@ -376,12 +380,12 @@ function pulseDemoHaptics(inputSource=null,held=false){
     demoFeedback?.pulse(inputSource || demoFeedbackInputSource,held?DEMO_FEEDBACK.holdStrength:DEMO_FEEDBACK.selectionStrength,held?100:35);
 }
 const knowledgeFor = record => record.demoKnowledgeProjection || (record.demoPlantPreset === 'moringa' ? MORINGA_KNOWLEDGE : PIGEON_PEA_AR_KNOWLEDGE);
-const demoSpatialPimLayoutOptions = () => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS });
+const demoSpatialPimLayoutOptions = record => ({ ...PIM_SPATIAL_LAYOUT_OPTIONS,...(record?knowledgeExplorerOptions(record):{}) });
 function demoPimSurfaceSize(record) {
-    const knowledge=knowledgeFor(record), expanded=demoPimExpandedNodeIds(record), key=JSON.stringify(expanded);
+    const knowledge=knowledgeFor(record), expanded=demoPimExpandedNodeIds(record), key=JSON.stringify([expanded,record.knowledgeExplorer?.revision,record.demoSelectedNodeId]);
     if(record.pimSurfaceCache?.knowledge===knowledge && record.pimSurfaceCache.key===key) return record.pimSurfaceCache.size;
     const size=pimHoneycombTextureSize(knowledge, expanded, {
-        ...demoSpatialPimLayoutOptions(),
+        ...demoSpatialPimLayoutOptions(record),
         width: PIM_TEXTURE_SIZE.width,
         height: PIM_TEXTURE_SIZE.height
     });
@@ -397,6 +401,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    disposeKnowledgeDesktopViews(appRoot);
     demoFeedback?.destroy();demoFeedback=null;demoFeedbackInputSource=null;
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-surface');
@@ -492,7 +497,7 @@ function clearSessionState() {
     });
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
-    totemCardsRenderer?.destroy(); totemCardsRenderer = null;
+    totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;
     pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
@@ -1419,10 +1424,10 @@ function showPersistentPimPrompt(record) {
     const plantName = record?.name || 'Plant';
     const title = demoLocalizedText('Explore this plant');
     const body = record?.tutorialStage==='plant'
-        ? demoLocalizedText(`Open plant information cells to see how knowledge branches from the plant. When you find Pruning, it can connect with an idea about the wider landscape. Continue whenever you are ready.`)
-        : demoLocalizedText(`This connected view brings together what is known about ${plantName}. Open any cell to follow a topic such as food, growing, uses or ecological roles.`);
+        ? demoLocalizedText(`Choose Curiosity in Explorer to see how knowledge branches from the plant. When you find Pruning, it can connect with an idea about the wider landscape. Continue whenever you are ready.`)
+        : simulatedMode?demoLocalizedText(`Use Tag for the essentials about ${plantName}, or Curiosity to follow its relationships. Click a cell to read it. Spatial Explore is available in immersive AR.`):demoLocalizedText(`Explorer gives you three ways to learn about ${plantName}: Tag for essentials, Curiosity for immediate relationships and Explore for spatial knowledge. Open a cell to follow a topic such as food, growing, uses or ecological roles.`);
     panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide('Press and hold the Orb to move it. While holding it, move the right joystick to bring it closer or further away. Press a cell once to expand plant information.');
+    setIntroBoardNextGuide(simulatedMode?'Click a cell once to read or expand it. Scroll the knowledge field to follow deeper branches.':'Press and hold the Orb to move it. While holding it, move the right joystick to bring it closer or further away. Press a cell once to expand plant information.');
     panel.hidden = false;
     panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
     panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
@@ -1444,7 +1449,7 @@ function showPersistentPimPrompt(record) {
     skipDemoNarration = () => {
         continueButton.click();
     };
-    setGuide(record?.tutorialStage==='plant'?`${plantName} information opened. Select any visible cell to explore it.`:`${plantName} information opened. Select topics to explore.`);
+    setGuide(record?.tutorialStage==='plant'?`${plantName} information opened. Choose Curiosity in Explorer, then select a cell.`:`${plantName} information opened. Select topics to explore.`);
 }
 
 function useSharedWelcomeBoard(visible) {
@@ -1701,19 +1706,19 @@ function bindLimSessionInteractions(arSession) {
 function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
     arWelcomeClock.tick(Date.now(),!document.hidden);
-    const rainStage=demoRainIntensity<=0?'':demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
+    const rainStage=simulatedMode || demoRainIntensity<=0?'':demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
     const demoRoot=appRoot?.querySelector('.tryit-demo');
     if(demoRoot && demoRoot.dataset.rainStage!==rainStage)demoRoot.dataset.rainStage=rainStage;
     const context=arWelcomeCanvas.getContext('2d');
     context.save();
     context.scale(arWelcomeCanvas.width/2500,arWelcomeCanvas.height/2100);
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
-        window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
-            drawRoots:arWelcomeSharedBoard && introBoardVisible,
+        simulatedMode || window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
+            simpleDesktop:simulatedMode,opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            drawRoots:!simulatedMode && arWelcomeSharedBoard && introBoardVisible,
             rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
-            drawCellLabels:true,cellOpacity:currentInfoOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''
+            drawCellLabels:true,cellOpacity:simulatedMode?1:currentInfoOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''
         });
     arWelcomeRenderedFrames=frames;
     context.restore();
@@ -1915,7 +1920,7 @@ function showArWelcomeShowcase() {
         if(simulatedMode && now-last>=50 && (!reduced || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
-        if(simulatedMode){paintDemoAmbientLife(now);paintSimulatedRainV2(now);}
+
         if(simulatedMode)syncNativeConnectionEffect(now);
         // XRSession frames drive immersive textures; a hidden DOM canvas need
         // not render a second copy. Reduced motion repaints only changed copy.
@@ -2432,7 +2437,7 @@ function nativeConnectionPanelGuide() {
         : `${state.sourceTitle} is connected with ${state.targetTitle}. The highlighted cells share one relationship.`;
     const connectionText=`${state.explanation}\n\nIn this place: ${state.fieldQuestion}`;
     const targetMedia=limLearningContent(state.targetId);
-    infoPanel?.showLearning({id:'native-mesh-connection',title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:state.phase==='connected'?`${connectionText}\n\n${body}`:`${body}\n\n${connectionText}`,image:targetMedia.image,imageAlt:targetMedia.imageAlt,accent:'#dfff9b',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'native-mesh-connection',keepExplorerContext:true,title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:state.phase==='connected'?`${connectionText}\n\n${body}`:`${body}\n\n${connectionText}`,image:targetMedia.image,imageAlt:targetMedia.imageAlt,accent:'#dfff9b',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
@@ -2464,12 +2469,13 @@ function startNativeConnectionExperience(exampleId=DEMO_NATIVE_CONNECTION_EXAMPL
     if(!targetLineage){setGuide('The learning target is unavailable. Return to the pathway and try again.');return;}
     clearNativeConnectionHold();
     nativeConnectionState=createDemoNativeConnection(spec);
+    plant.knowledgeConnectedPath=spec.sourcePath;
     infoPanel?.setLearningModules(null);
     nativeConnectionState.targetKey=targetLineage.key;
     removeNativeConnectionEffect();
     meshComposition.clear();
     prepareStableLimoSurface();
-    if(!plant.demoExpanded)toggleDemoPlantProfile(plant);
+    if(!plant.demoExpanded)toggleDemoPlantProfile(plant);knowledgeExplorerAction(plant,'KnowledgeMode:curiosity');knowledgeRenderer?.clear(plant);
     limMeshVisible=true;
     limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SETTLED_MS;
     for(const id of targetLineage.ancestors){limExpandedCells.add(id);limExpandedAt.set(id,arWelcomeClock.elapsed-8000);}
@@ -2918,7 +2924,7 @@ function demoPlantKnowledgeMarkup(record, anchor = record?.simulatedAnchor || { 
         ? Math.max(8, surface.panelTop + surface.panelHeight - (markerY - markerClearance))
         : 8;
     return plantInformationMeshMarkup(knowledgeFor(record), demoPimExpandedNodeIds(record), {
-        ...demoSpatialPimLayoutOptions(),
+        ...demoSpatialPimLayoutOptions(record),
         cellOpacity: demoCellOpacity,
         selectedNodeId: record.demoSelectedNodeId,
         connectedPath:nativeConnectionState?.phase==='connected' && record===nativeConnectionPlant()?nativeConnectionState.sourcePath:'',
@@ -2974,7 +2980,7 @@ function toggleDemoPlantProfile(record) {
     record.demoLastProfileToggleAt=now;
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
-    const opening=!record.demoExpanded;
+    const opening=!record.demoExpanded;knowledgeExplorer(record);
     record.demoExpanded = opening;
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
@@ -3118,6 +3124,7 @@ function ensureDemoPimPose(record) {
 }
 
 function demoPimPointerTarget(record) {
+    if(record?.knowledgeExplorer && knowledgeRenderer){const target=knowledgeRenderer.hit(latestControllerRay || {origin:demoPointerWorldOrigin(),direction:demoPointerWorldRay()},record);return target?{...target,panelHit:true,node:target.node}:null;}
     const origin = demoPointerWorldOrigin();
     const direction = demoPointerWorldRay();
     if (!origin || !direction || !record) return null;
@@ -3156,7 +3163,7 @@ function demoPimPointerTarget(record) {
         xPercent,
         yPercent,
         node: pimHoneycombTargetAtPercent(knowledge, demoPimExpandedNodeIds(record), xPercent, yPercent, {
-            ...demoSpatialPimLayoutOptions(),
+            ...demoSpatialPimLayoutOptions(record),
             readerControl:false,
             softSurface:false,
             layoutWidth: size.layoutWidth,
@@ -3177,6 +3184,7 @@ function updateSimulatedMarkers() {
     const layer = appRoot?.querySelector('[data-tryit-sim-markers]');
     if (!layer || !simulatedMode) return;
     const highlighted=selectedDemoTotemTargets();
+    disposeKnowledgeDesktopViews(layer);
     layer.innerHTML = `${simulatedAreaLinkMarkup(markers.filter(demoAreaVisible))}${markers.map((record, index) => {
         if(!demoAreaVisible(record))return '';
         const content = demoContentFor(record);
@@ -3383,6 +3391,7 @@ function bindSimulatedInformationPanels(layer) {
     layer.querySelectorAll('[data-demo-plant-profile]').forEach(profile => {
         const index = Number(profile.dataset.demoPlantProfile);
         const record = markers[index];
+        if(record && simulatedMode)mountKnowledgeDesktopView(profile,{record,knowledge:knowledgeFor(record),expanded:demoPimExpandedNodeIds(record),onSelect:node=>{selectDemoProfileCell({record,target:{node}});refreshDemoPimProfile(record,profile);}});
         const handles = profile.querySelectorAll('[data-desktop-pim-move-handle],[data-plant-profile-handle]');
         if (!record || !handles.length) return;
         let draggedCenter=false;
@@ -3519,7 +3528,9 @@ function refreshDemoPimProfile(record, profile = null) {
     const liveProfile = profile
         || appRoot?.querySelector(`[data-demo-plant-profile="${recordIndex}"]`);
     if (!liveProfile) return null;
-    return reconcilePlantInformationMesh(liveProfile, demoPlantKnowledgeMarkup(record));
+    const mesh=reconcilePlantInformationMesh(liveProfile, demoPlantKnowledgeMarkup(record));
+    if(simulatedMode)mountKnowledgeDesktopView(liveProfile,{record,knowledge:knowledgeFor(record),expanded:demoPimExpandedNodeIds(record),onSelect:node=>{selectDemoProfileCell({record,target:{node}});refreshDemoPimProfile(record,liveProfile);}});
+    infoPanel?.refreshExplorer();return mesh;
 }
 
 function demoViewerPointerFallbackActive() {
@@ -3977,17 +3988,11 @@ function renderInterface(simulated) {
     const biomapMarkup=INTRO_KNOWLEDGE_KEYWORDS.map((keyword,index)=>`<span class="biomap-branch" style="--knowledge-index:${index}"><button type="button" data-biomap-category="${keyword}" aria-expanded="false">${keyword}</button>${BIOMAP_CATEGORIES[keyword].length?`<span class="biomap-children" aria-label="${keyword} filters">${BIOMAP_CATEGORIES[keyword].map(child=>`<span>${child}</span>`).join('')}</span>`:''}</span>`).join('');
     appRoot.innerHTML = `<div class="tryit-demo ${simulated ? 'is-simulated' : 'is-immersive'}"><div class="tryit-stage"><canvas class="tryit-ambient-life" data-demo-ambient aria-hidden="true"></canvas><div class="tryit-spatial-intro" data-tryit-intro><div class="tryit-intro-knowledge" aria-label="BIOMAP interactive plant attributes">${biomapMarkup}</div></div><button class="tryit-place creator-ar-placement-guide" type="button" data-tryit-place aria-label="Place item" hidden>${placementPointerMarkup('')}</button>${spatialMoveControlMarkup('demo')}<button class="tryit-demo-action" type="button" data-tryit-action hidden></button><section class="tryit-guided-choice tryit-tutorial-board" data-tryit-guided-choice aria-live="polite" hidden></section><div class="tryit-final-actions" data-tryit-final-actions hidden><button type="button" data-tryit-reset>Try again</button><button type="button" data-tryit-finish>Finish demo</button></div><p class="tryit-guide" data-tryit-guide aria-live="polite">NourishlandXR demo.</p><div data-tryit-sim-markers></div><button type="button" class="tryit-ar-safety-control" data-tryit-safety-help aria-label="Show AR safety">Safety</button><div class="tryit-demo-footer"><p class="tryit-drag-hint">Hold and drag any element to reposition it.</p><nav class="tryit-demo-taskbar" aria-label="Demo controls"><button type="button" class="tryit-intro-continue" data-tryit-intro-continue hidden>Continue</button><button type="button" data-tryit-open-live-tag hidden>Open Plant Live Tag</button><button type="button" data-tryit-skip>Skip</button><button type="button" data-tryit-exit>Close</button></nav></div></div><button type="button" class="tryit-context-trigger" data-tryit-context-trigger hidden></button><section class="tryit-virtual-tag-mode" data-demo-virtual-tag aria-live="polite" hidden></section></div>`;
     appRoot.querySelector('.tryit-demo')?.addEventListener('click',event=>{if(event.target.closest('button')){demoFeedback?.start();demoFeedback?.sound('menu');}}, {capture:true});
-    desktopSpatialPreviewCleanup=mountDesktopSpatialPreview(appRoot,{simulated,quest:isQuestHeadsetBrowser()});
+    desktopSpatialPreviewCleanup=mountDesktopSpatialPreview(appRoot,{simulated,quest:isQuestHeadsetBrowser(),flat:true});
     appRoot.querySelector('[data-tryit-safety-help]')?.remove();
-    ambientCanvas=simulated?appRoot.querySelector('[data-demo-ambient]'):null;
+    appRoot.querySelector('[data-demo-ambient]')?.remove();ambientCanvas=null;
     rainV2Canvas=null;rainV2LastPaint=0;
-    if(simulated){
-        rainV2Canvas=document.createElement('canvas');
-        rainV2Canvas.className='tryit-rain-v2';
-        rainV2Canvas.setAttribute('aria-hidden','true');
-        appRoot.querySelector('.tryit-stage')?.prepend(rainV2Canvas);
-    }
-    if(simulated || session){
+    if(!simulated && session){
         const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
         appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
         import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{gl:simulated?null:gl});}).catch(error=>console.warn('Bee model fallback:',error));
@@ -3995,10 +4000,10 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},demoSound:demoFeedback,onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);if(action==='KnowledgeResume' && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
-    for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
+    if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
         const insect={...variant,model:null,startedAt:NaN,flightAnchor:null,encounter:null,lastElapsed:NaN,position:null,pose:null,canvas:document.createElement('canvas')};
         insect.canvas.className='tryit-butterfly-model';insect.canvas.dataset.butterflyVariant=variant.red?'red':'blue';insect.canvas.setAttribute('aria-hidden','true');insect.canvas.style.visibility='hidden';appRoot.querySelector('.tryit-stage')?.append(insect.canvas);butterflyCompanions.push(insect);
         import('../services/demoButterflyModel.js').then(({mountDemoButterflyModel})=>{if(insect.canvas.isConnected)insect.model=mountDemoButterflyModel(insect.canvas,{gl:simulated?null:gl,red:insect.red});}).catch(error=>console.warn('Butterfly unavailable:',error));
@@ -4190,7 +4195,7 @@ function setupRenderer() {
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
-    triangleRenderer = createSpatialTriangleRenderer(gl);
+    triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
 }
 
 function demoControllerInputSource() {
@@ -4369,6 +4374,7 @@ function createSpatialKnowledgeTexture(record) {
     label.height = record.demoType === 'zone' ? 1120 : PIM_TEXTURE_SIZE.height;
     const ctx = label.getContext('2d');
     if (record.demoType === 'plant') {
+        if(record.knowledgeExplorer && !simulatedMode)return null;
         const bloomProgress = record.pimBloomStarted
             ? (performance.now() - record.pimBloomStarted) / PIM_BLOOM_DURATION_MS
             : 1;
@@ -4377,7 +4383,7 @@ function createSpatialKnowledgeTexture(record) {
         const size = demoPimSurfaceSize(record);
         record.pimTextureSize = size;
         return createPlantInformationHoneycombTexture(gl, knowledgeFor(record), demoPimExpandedNodeIds(record), {
-            ...demoSpatialPimLayoutOptions(),
+            ...demoSpatialPimLayoutOptions(record),
             width: size.width,
             height: size.height,
             layoutWidth: size.layoutWidth,
@@ -5129,13 +5135,14 @@ function drawNativeConnectionSpatial(view){
     const layoutKey=`${size.layoutWidth}:${size.layoutHeight}:${demoPimExpandedNodeIds(record).join('|')}:${record.demoSelectedNodeId || ''}`;
     if(state.sourceLayoutKey!==layoutKey){
         state.sourceLayoutKey=layoutKey;
-        state.sourceVisualNode=pimVisibleNodes(knowledgeFor(record),demoPimExpandedNodeIds(record),{...demoSpatialPimLayoutOptions(),selectedNodeId:record.demoSelectedNodeId,layoutWidth:size.layoutWidth,layoutHeight:size.layoutHeight}).find(node=>node.nodeId===state.sourceId || node.path===state.sourcePath) || null;
+        state.sourceVisualNode=pimVisibleNodes(knowledgeFor(record),demoPimExpandedNodeIds(record),{...demoSpatialPimLayoutOptions(record),selectedNodeId:record.demoSelectedNodeId,layoutWidth:size.layoutWidth,layoutHeight:size.layoutHeight}).find(node=>node.nodeId===state.sourceId || node.path===state.sourcePath) || null;
     }
     const sourceNode=state.sourceVisualNode?pimNodeVisualPosition(state.sourceVisualNode):null;
     const targetNode=arWelcomeRenderedFrames.flatMap(frame=>frame.nodes).find(node=>node.limId===state.targetId && node.opacity>.5);
-    if(!panel || !sourceNode || !targetNode)return;
-    const sx=(sourceNode.x/100-.5)*panel.width,sy=(.5-sourceNode.y/100)*panel.height;
-    const source={x:panel.center.x+panel.right.x*sx+panel.up.x*sy,y:panel.center.y+panel.right.y*sx+panel.up.y*sy,z:panel.center.z+panel.right.z*sx+panel.up.z*sy};
+    const sourceSurface=knowledgeRenderer?.surface(record,state.sourcePath);
+    if(!panel || (!sourceNode && !sourceSurface) || !targetNode)return;
+    const sx=((sourceNode?.x || 50)/100-.5)*panel.width,sy=(.5-(sourceNode?.y || 50)/100)*panel.height;
+    const source=sourceSurface?.center || {x:panel.center.x+panel.right.x*sx+panel.up.x*sy,y:panel.center.y+panel.right.y*sx+panel.up.y*sy,z:panel.center.z+panel.right.z*sx+panel.up.z*sy};
     const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
     const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
     const targetLocal=demoBillboardTextureLocalPoint(targetNode.x,targetNode.y,2500,2100);
@@ -5239,6 +5246,7 @@ function drawMarker(view) {
         }
         if(!demoAreaVisible(record) || demoKnowledgeWorkspace && record.demoType === 'plant' && record.demoExpanded) return;
         if (record.demoType === 'zone') return;
+        if(record.demoType==='plant' && record.demoExpanded && record.knowledgeExplorer)return;
         if (!record.texture) return;
         const orbOnly = ['marker', 'plant'].includes(record.demoType) && !record.demoExpanded;
         if (orbOnly) return;
@@ -5311,6 +5319,15 @@ function drawMarker(view) {
             totemCardsRenderer.draw(view,record,base,record.liveTotemCards,record.totemSelectedCard);
         });
         totemCardsRenderer.end();
+    }
+    if(knowledgeRenderer){
+        knowledgeRenderer.begin();
+        for(const plant of markers){
+            if(plant.demoType!=='plant' || !plant.demoExpanded || !plant.knowledgeExplorer || !demoAreaVisible(plant) || demoKnowledgeWorkspace)continue;
+            plant.knowledgeFloor=calibratedDemoGroundY();
+            knowledgeRenderer.draw(view,plant,knowledgeFor(plant),demoPimExpandedNodeIds(plant),ensureDemoPimPose(plant),performance.now());
+        }
+        knowledgeRenderer.end();
     }
     drawNativeConnectionSpatial(view);
     for(const record of markers){
@@ -5597,19 +5614,19 @@ async function startImmersive() {
 
 export function openTemporaryArDemoWindow(app) {
     // Start preparation while choosing the introduction, without consuming an XR entry gesture.
-    prepareArAssets().catch(error=>console.warn('AR preparation:',error));
+    prepareArAssets({experience:isDesktopLearningBookTarget()?'desktop':'demo'}).catch(error=>console.warn('AR preparation:',error));
     if (isDesktopLearningBookTarget()) {
         app.innerHTML = `<div class="screen ar-safety-screen nxr-desktop-ar-choice" data-desktop-ar-choice>
             <div class="page-header"><p class="welcome-label">NourishlandXR · desktop introduction</p><h1>See how NLXR works</h1><p class="subtitle">Start with a place, follow its plant information, then see how learning can guide practical action. On desktop, we recommend this plain, interactive introduction.</p></div>
             <div class="nxr-desktop-ar-options">
-                <section class="panel nxr-desktop-ar-option is-recommended"><span class="nxr-desktop-ar-tag">RECOMMENDED ON DESKTOP</span><h2>NLXR introduction</h2><p>A short, practical tour of Projects, Areas, directional Totems, plant information, learning, connected databases and field guides. PIMO and LIMO open on a flat canvas with explanations beside them.</p><button class="primary" type="button" data-desktop-learning-book>Start the introduction</button></section>
+                <section class="panel nxr-desktop-ar-option is-recommended"><span class="nxr-desktop-ar-tag">RECOMMENDED ON DESKTOP</span><h2>NLXR introduction</h2><p>A short, practical tour of Projects, Areas, directional Totems, plant information, learning, connected databases and field guides. Plant knowledge and learning pathways open with explanations beside them.</p><button class="primary" type="button" data-desktop-learning-book>Start the introduction</button></section>
                 <section class="panel nxr-desktop-ar-option"><span class="nxr-desktop-ar-tag">OPTIONAL · WEBXR OR EMULATOR</span><h2>AR introduction</h2><p>Open the plain browser version, or use a WebXR-capable browser or emulator. The immersive experience is designed for compatible phones and headsets; we do not recommend this route for ordinary desktop use.</p><button type="button" data-desktop-plain-ar>Open AR introduction</button></section>
             </div><button class="nxr-desktop-ar-back" type="button" data-desktop-ar-back>← Back to welcome</button>
         </div>`;
         app.querySelector('[data-desktop-learning-book]')?.addEventListener('click', () => renderDesktopLearningBook(app, { moringaDocument: MORINGA_PIM, onExit: () => window.renderLaunchScreen?.() }), { once: true });
         app.querySelector('[data-desktop-plain-ar]')?.addEventListener('click', () => {
-            if (shouldSkipArIntroductionPreparation() && arAssetsReady()) startTemporaryArDemo(app);
-            else renderArIntroductionPreparation(app, { onContinue: () => startTemporaryArDemo(app), onCancel: () => openTemporaryArDemoWindow(app) });
+            if (shouldSkipArIntroductionPreparation() && arAssetsReady('desktop')) startTemporaryArDemo(app);
+            else renderArIntroductionPreparation(app, { simpleDesktop:true,onContinue: () => startTemporaryArDemo(app), onCancel: () => openTemporaryArDemoWindow(app) });
         }, { once: true });
         app.querySelector('[data-desktop-ar-back]')?.addEventListener('click', () => window.renderLaunchScreen?.(), { once: true });
         return;

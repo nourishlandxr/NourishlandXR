@@ -1,3 +1,7 @@
+import {knowledgeExplorer,knowledgeExplorerOptions,rememberKnowledgeSelection} from '../services/knowledgeExplorer.js';
+import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
+import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
+let knowledgeRenderer=null;
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,drawTotemDestinationBeacon} from '../services/totemSignSelection.js';
 import {getSpatialVisualSettings} from '../services/spatialVisualSettings.js';
@@ -972,6 +976,7 @@ function creatorPimState(record) {
 function setCreatorPimState(record, state) {
     if (!record) return state;
     record.pimSelectedNodeId = state.selectedNodeId;
+    rememberKnowledgeSelection(record,state.selectedNodeId);
     record.pimExpandedNodeIds = pimExpandedNodeIds(state);
     record.pimClosingNodePaths = pimClosingNodePaths(state);
     record.pimFocusedPlantId = state.focusedPlantId || record.marker?.plantId || record.marker?.id || '';
@@ -995,7 +1000,7 @@ function creatorPlantKnowledgeMarkup(record) {
     if (usesSpatialPimRenderer()) {
         const size = spatialPimSurfaceSize(record);
         return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
-            ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,cellOpacity:creatorCellOpacity,
+            ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,...knowledgeExplorerOptions(record),cellOpacity:creatorCellOpacity,
             selectedNodeId: record.pimSelectedNodeId,
             viewportWidth: size.layoutWidth,
             viewportHeight: size.layoutHeight,
@@ -1021,7 +1026,7 @@ function creatorPlantKnowledgeMarkup(record) {
         { topInset, bottomInset }
     );
     return plantInformationMeshMarkup(creatorPlantKnowledge(record), creatorPimExpandedNodeIds(record), {
-        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,cellOpacity:creatorCellOpacity,
+        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,...knowledgeExplorerOptions(record),cellOpacity:creatorCellOpacity,
         selectedNodeId: record.pimSelectedNodeId,
         viewportWidth,
         viewportHeight,
@@ -1042,6 +1047,8 @@ function refreshCreatorPimProfile(record, profile = null) {
         || overlayRoot?.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
     if (!liveProfile) return null;
     const mesh = reconcilePlantInformationMesh(liveProfile, creatorPlantKnowledgeMarkup(record));
+    if(!usesSpatialPimRenderer())mountKnowledgeDesktopView(liveProfile,{record,knowledge:creatorPlantKnowledge(record),expanded:creatorPimExpandedNodeIds(record),onSelect:node=>activateSpatialPimTarget({record,target:node})});
+    infoPanel?.refreshExplorer();
     positionSessionMarkers();
     return mesh;
 }
@@ -3581,7 +3588,7 @@ function ensureSpatialPimTexture(record) {
     if (cached?.texture) gl.deleteTexture(cached.texture);
     const size = spatialPimSurfaceSize(record);
     const texture = createPlantInformationHoneycombTexture(gl, knowledge, creatorPimExpandedNodeIds(record), {
-        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,cellOpacity:creatorCellOpacity,
+        ...CREATOR_SPATIAL_PIM_LAYOUT_OPTIONS,...knowledgeExplorerOptions(record),cellOpacity:creatorCellOpacity,
         width: size.width,
         height: size.height,
         layoutWidth: size.layoutWidth,
@@ -3601,6 +3608,7 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
     const candidate = renderableAreaMarkers()
         .filter(record => record.marker.type === 'plant' && record.profileExpanded)
         .map(record => {
+            if(record.knowledgeExplorer && knowledgeRenderer){const hit=knowledgeRenderer.hit(latestControllerRay,record);return hit?{record,target:hit.node,hit}:null;}
             const pose = ensureSpatialPimPose(record);
             const size = spatialPimSurfaceSize(record);
             const panel = pimSpatialPanel(pose, {
@@ -3650,10 +3658,11 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
     const { record, target } = candidate;
     if(target.pimRead) {openCreatorKnowledge(record);return true;}
     if (target.pimCore) {
+        if(record.knowledgeExplorer){infoPanel?.focusPlant(record,creatorKnowledgeDocument(record));return true;}
         setCreatorPimState(record, pimResetInteractionState(creatorPimState(record)));
         record.pimBloomStarted = 0;
         invalidateSpatialPimTexture(record);
-        renderSessionMarkers();
+        if(record.knowledgeExplorer)refreshCreatorPimProfile(record);else renderSessionMarkers();
         setPlacementStatus('Plant flower reset.');
         return true;
     }
@@ -3661,8 +3670,8 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
         toggleCreatorPimNode(record, target.path);
         record.pimBloomStarted = performance.now();
         invalidateSpatialPimTexture(record);
-        renderSessionMarkers();
-        setPlacementStatus('Returned to the previous PIM honeycomb.');
+        if(record.knowledgeExplorer)refreshCreatorPimProfile(record);else renderSessionMarkers();
+        setPlacementStatus('Returned to the previous knowledge group.');
         return true;
     }
     showCreatorInfo(record, target.path);
@@ -3670,7 +3679,7 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
     if (!children.length) {
         setCreatorPimState(record, pimToggleNodeState(creatorPlantKnowledge(record), creatorPimState(record), target.path));
         invalidateSpatialPimTexture(record);
-        renderSessionMarkers();
+        if(record.knowledgeExplorer)refreshCreatorPimProfile(record);else renderSessionMarkers();
 
         return true;
     }
@@ -3678,7 +3687,7 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
     toggleCreatorPimNode(record, target.path);
     record.pimBloomStarted = performance.now();
     invalidateSpatialPimTexture(record);
-    renderSessionMarkers();
+    if(record.knowledgeExplorer)refreshCreatorPimProfile(record);else renderSessionMarkers();
     setPlacementStatus(wasOpen ? `${target.label} remains open.` : `${target.label} opened outward.`);
     return true;
 }
@@ -3686,7 +3695,8 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
 function drawSpatialPlantProfiles(view) {
     if (creatorKnowledgeWorkspace || !usesSpatialPimRenderer() || !homeSignProgram || !homeSignBuffer) return;
     const records = renderableAreaMarkers().filter(record => record.marker.type === 'plant' && record.profileExpanded);
-    if (!records.length) return;
+    if (!records.length){knowledgeRenderer?.begin();knowledgeRenderer?.end();return;}
+    if(knowledgeRenderer){knowledgeRenderer.begin();for(const record of records){knowledgeExplorer(record);record.knowledgeFloor=currentGroundY();knowledgeRenderer.draw(view,record,creatorPlantKnowledge(record),creatorPimExpandedNodeIds(record),ensureSpatialPimPose(record),performance.now());}knowledgeRenderer.end();return;}
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
@@ -4064,6 +4074,7 @@ function setupSpatialMarkerRenderer() {
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
     controllerPointerRenderer = createSpatialTetherRenderer(gl);
+    knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:controllerPointerRenderer});
 }
 
 function drawSpatialMarkers(view) {
@@ -4555,6 +4566,7 @@ function renderSessionMarkers() {
     if (!layer) return;
     const visibleMarkers = activeAreaMarkers();
     const renderableMarkers = visibleMarkers.filter(hasRenderableSpatialPosition);
+    disposeKnowledgeDesktopViews(layer);
     layer.innerHTML = visibleMarkers.map(record => {
         if (!hasRenderableSpatialPosition(record)) return '';
         const profileAvailable = hasPlantProfile(record);
@@ -4619,6 +4631,7 @@ function renderSessionMarkers() {
             beginMarkerInteraction(record, event);
         });
         const profilePanel = layer.querySelector(`[data-ar-plant-profile="${CSS.escape(record.marker.id)}"]`);
+        if(profilePanel && !usesSpatialPimRenderer())mountKnowledgeDesktopView(profilePanel,{record,knowledge:creatorPlantKnowledge(record),expanded:creatorPimExpandedNodeIds(record),onSelect:node=>activateSpatialPimTarget({record,target:node})});
         // Keep the PIM tap inside the profile without cancelling the browser's
         // native click synthesis. Android Chrome/PWA can drop that click when
         // preventDefault() is called during pointerdown, leaving Creator's
@@ -4641,6 +4654,7 @@ function renderSessionMarkers() {
             if (core && profilePanel.contains(core)) {
                 event.stopPropagation();
                 clearPimFocus(core);
+                if(record.knowledgeExplorer){infoPanel?.focusPlant(record,creatorKnowledgeDocument(record));return;}
                 setCreatorPimState(record, pimResetInteractionState(creatorPimState(record)));
                 record.pimBloomStarted = 0;
                 refreshCreatorPimProfile(record, profilePanel);
@@ -4654,7 +4668,7 @@ function renderSessionMarkers() {
                 toggleCreatorPimNode(record, back.dataset.pimBack);
                 record.pimBloomStarted = performance.now();
                 refreshCreatorPimProfile(record, profilePanel);
-                setPlacementStatus('Returned to the previous PIM bloom.');
+                setPlacementStatus('Returned to the previous knowledge group.');
                 return;
             }
             const cell = event.target.closest?.('[data-pim-node]');
@@ -4909,7 +4923,7 @@ function beginMarkerInteraction(record, event, { directHold = false, element = e
     if (hasPlantProfile(record) && !directHold) {
         event.preventDefault();
         event.stopPropagation();
-        const opening = !record.profileExpanded;
+        const opening = !record.profileExpanded;knowledgeExplorer(record);
         sessionMarkers.forEach(candidate => {
             if (candidate !== record && candidate.marker.type === 'plant') {
                 candidate.profileExpanded = false;
@@ -5793,19 +5807,20 @@ function createOverlay() {
 function createCreatorInfoPanel(){
     infoPanel?.destroy();creatorPanelActionSignature='';
     creatorCellOpacity=getSpatialVisualSettings().cellOpacity;creatorHandMode=getSpatialVisualSettings().handMode;
-    infoPanel=createPimInfoPanel({root:overlayRoot,headset:questHeadsetSession,phoneAR:!questHeadsetSession,rainEnabled:true,onGraphicsQuality:()=>renderSessionMarkers(),
+    infoPanel=createPimInfoPanel({root:overlayRoot,headset:questHeadsetSession,phoneAR:Boolean(session && !questHeadsetSession),simpleDesktop:!session,rainEnabled:true,onGraphicsQuality:()=>renderSessionMarkers(),
         cellOpacity:creatorCellOpacity,handMode:creatorHandMode,onHandMode:value=>{creatorHandMode=value;},
         panelHints:['Aim, then press once to open plant information.','Hold an Orb for 0.8 seconds to move it. Use the right joystick to adjust distance.','Press a cell once to read or expand its information.'],
         onPerformanceAction:action=>creatorPerformance.action(action),onGrab:pulseCreatorHaptics,
         onFloorOffset:()=>renderSessionMarkers(),onTotemModel:()=>renderSessionMarkers(),
         onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
         onCellOpacity:value=>{creatorCellOpacity=value;for(const record of sessionMarkers.filter(item=>item.profileExpanded))refreshCreatorPimProfile(record);},
-        onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
+        onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);invalidateSpatialPimTexture(record);if(action==='KnowledgeResume' && record.pimSelectedNodeId)showCreatorInfo(record,record.pimSelectedNodeId);refreshCreatorPimProfile(record);},onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
     overlayRoot?.style.setProperty('--creator-info-opacity',String(getSpatialVisualSettings().infoOpacity));
     infoPanel.element.classList.add('is-creator-panel');creatorPerformance.publish();syncCreatorPanelActions();
 }
 
 function cleanup() {
+    disposeKnowledgeDesktopViews(overlayRoot);
     closeCreatorKnowledge({force:true});
     creatorPanelControlsCleanup();creatorPanelControlsCleanup=()=>{};creatorPanelActionSignature='';
     creatorViewportCleanup?.();
@@ -5859,7 +5874,7 @@ function cleanup() {
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
-    totemCardsRenderer?.destroy(); totemCardsRenderer = null;
+    totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;
     pimHold?.destroy(); pimHold = null; handPimHold.cancel(); infoPanel?.destroy(); infoPanel = null;
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTotemSculpture(gl, totemSculptureRenderer);
