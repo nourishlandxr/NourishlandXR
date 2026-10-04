@@ -1,8 +1,11 @@
 // Shared destination selection for desktop, touch and XR Totem boards.
+import {drawSpatialTether} from './spatialTetherRenderer.js';
+
 export function selectTotemSign(record,cardId,records=[]){
     const next=record.totemSelectedCard===cardId?'':cardId;
     if(next)for(const other of records)if(other!==record)other.totemSelectedCard='';
     record.totemSelectedCard=next;
+    record.signSelectionStartedAt=next?performance.now():NaN;
     return next;
 }
 
@@ -12,12 +15,26 @@ export function selectedTotemDestinationIds(records,cardsFor,isActive=()=>true){
         if(!record.totemSelectedCard || !isActive(record))continue;
         const card=cardsFor(record).find(item=>item.id===record.totemSelectedCard);
         for(const id of card?.references || [])if(id)targets.add(id);
-        if(card?.navigation?.destinationId)targets.add(card.navigation.destinationId);
+        if(card?.navigation?.destinationId){
+            targets.add(card.navigation.destinationId);
+            const destination=records.find(item=>(item.marker?.id || item.id)===card.navigation.destinationId);
+            if(destination)destination.signBeaconStartedAt=record.signSelectionStartedAt;
+        }
     }
     return targets;
 }
 
 export const SIGN_DESTINATION_HIGHLIGHT=Object.freeze({color:Object.freeze([.98,.88,.61,.94]),inset:.95,padding:1.12});
+
+export function drawTotemDestinationBeacon(gl,renderer,view,record,surface,now=performance.now()){
+    const age=now-record?.signBeaconStartedAt;
+    if(!surface || !Number.isFinite(age) || age<0 || age>12000)return;
+    const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const strength=reduced?.8:.55+.35*(.5+.5*Math.sin(age/620));
+    const center={...surface.center,y:surface.center.y+surface.height/2+.008};
+    const half=surface.width*.49;
+    drawSpatialTether(gl,renderer,view,{x:center.x-surface.right.x*half,y:center.y,z:center.z-surface.right.z*half},{x:center.x+surface.right.x*half,y:center.y,z:center.z+surface.right.z*half},{segments:2,width:.009,curve:0,lift:0,color:[.83,.98,.62,strength*Math.min(1,(12000-age)/900)]});
+}
 const buffers=new WeakMap();
 const unitShapes=Object.fromEntries(['ellipse','box'].map(shape=>{
     const points=[];

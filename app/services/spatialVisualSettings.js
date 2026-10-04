@@ -24,7 +24,7 @@ export function currentGraphicsQuality(){return resolveGraphicsQuality(preferenc
 export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
 export function currentRainQuality(){return preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={floorOffset:0,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'carved',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+let preferences={totemDefaultRevision:2,floorOffset:0,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
@@ -40,10 +40,15 @@ function validated(change){
 try{
     const saved=JSON.parse(globalThis.localStorage?.getItem(storageKey) || 'null');
     Object.assign(preferences,validated(saved));
+    // Adopt the new default once; later deliberate style choices stay saved.
+    if(saved && saved.totemDefaultRevision!==2){preferences.totemModel='botanical';globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}
 }catch{ /* Storage is optional in restricted browser sessions. */ }
+function syncVisualCss(){globalThis.document?.documentElement?.style.setProperty('--nlxr-panels-opacity',String(preferences.infoOpacity));}
+syncVisualCss();
 export function getSpatialVisualSettings(){return {...preferences};}
 export function setSpatialVisualSettings(change){
     Object.assign(preferences,validated(change));
+    syncVisualCss();
     try{globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}catch{ /* Keep the active session usable. */ }
     return getSpatialVisualSettings();
 }

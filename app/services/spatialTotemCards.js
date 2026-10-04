@@ -1,7 +1,7 @@
 import { drawSpatialSphere } from './spatialSphereRenderer.js';
 import { drawSpatialPrism } from './spatialPrismRenderer.js';
 import { totemSculpturePoint } from './spatialTotemSculpture.js';
-import { currentTotemModel } from './spatialVisualSettings.js';
+import { currentTotemModel, currentInfoOpacity } from './spatialVisualSettings.js';
 import { totemHeightPreset, renderedTotemStyle } from './totemAppearance.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from './spatialObjectVisuals.js';
 
@@ -103,8 +103,9 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const signBoard = (card, index, count) => {
         const side=card.boardSide==='left'?-1:card.boardSide==='right'?1:0;
         return {
-            ...place(side*boardAttach, Math.min(.60,.74*demoScale)-index*(count>3?.20:.24)*demoScale, boardWidth, boardHeight, {
+            ...place(side*boardAttach, .18+(count-1-index)*Math.min(.20,bodyHalfHeight*.21), boardWidth, boardHeight, {
                 ...card,
+                glassOpacity:currentInfoOpacity(),
                 boardStyle:'attached-sign',
                 boardSide:card.boardSide || '',
                 directional:Boolean(card.navigation?.reliable)
@@ -113,7 +114,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         };
     };
     const headerBoard = cards[0] ? {
-        ...place(0,1.48*demoScale,demoZone ? .56 : .62,.15,{...cards[0],boardStyle:'header-compact',stats:undefined}),
+        ...place(0,1.48*demoScale,demoZone ? .56 : .62,.15,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
@@ -127,7 +128,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         ].filter(Boolean).map(surface=>({...surface,opacity:signOpacity,interactive:signInteractive})) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.36,2.04*demoScale),1.18,.58,{...selected,body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
+    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.36,2.04*demoScale),1.18,.58,{...selected,glassOpacity:currentInfoOpacity(),body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
     return surfaces;
 }
 
@@ -137,7 +138,7 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     const sizeFactor=({tiny:.58,small:.76,medium:1,large:1.34,huge:1.82})[size] || 1;
     const bodyHalfWidth=record?.demoType==='zone' ? .095 : .07*sizeFactor;
     const bodyHalfHeight=record?.demoType==='zone'
-        ? 1
+        ? Number(record.demoHalfHeight) || 1
         : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-bodyHalfWidth*.35);
     const now=performance.now(),visual=SPATIAL_OBJECT_VISUALS.totem;
     const signProgress=spatialTransitionProgress(now,record?.demoSignsChangedAt,visual.signTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
@@ -168,7 +169,9 @@ export function resolveTotemNavigation(record, partner) {
 
 export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view, surfaces, opacity = 1) {
     for(const surface of surfaces) {
-        if(surface.card?.control)continue;
+        // Glass backgrounds and outlines live in the text texture. An opaque
+        // timber backing would defeat the shared opacity preference.
+        if(surface.card?.control || Number.isFinite(surface.card?.glassOpacity))continue;
         const style=surface.card?.boardStyle || surface.boardStyle;
         const header=style==='header' || style==='header-detail' || style==='header-compact';
         const right=surface.right,front={x:-right.z,y:0,z:right.x};
@@ -251,14 +254,21 @@ function cardCanvas(card, detail) {
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.shadowColor='rgba(5,10,8,.72)';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
     const face='Manrope, "Segoe UI", system-ui, sans-serif';
+    if(Number.isFinite(card.glassOpacity)){
+        const width=canvas.width/2,height=canvas.height/2;
+        ctx.save();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+        ctx.beginPath();ctx.roundRect(7,7,width-14,height-14,boardStyle==='attached-sign'?24:30);
+        ctx.fillStyle=`rgba(8,30,28,${card.glassOpacity})`;ctx.fill();
+        ctx.strokeStyle='rgba(213,232,207,.84)';ctx.lineWidth=5;ctx.stroke();ctx.restore();
+    }
     if(card.control){
         ctx.fillStyle='#f8f1e4';ctx.font=`650 146px ${face}`;ctx.fillText(card.symbol || '●',256,218,250);
         ctx.shadowBlur=2;ctx.fillStyle='rgba(249,244,234,.92)';ctx.font=`750 46px ${face}`;ctx.fillText(card.title,256,386,390);
         return canvas;
     }
     if(boardStyle==='attached-sign'){
-        ctx.shadowColor='rgba(15,12,9,.42)';ctx.shadowBlur=1;ctx.shadowOffsetY=1;
-        ctx.fillStyle='#fffaf0';ctx.font=`750 ${String(card.title||'').length>26?54:72}px ${face}`;ctx.fillText(card.title,512,128,900);
+        ctx.shadowColor='rgba(3,15,12,.85)';ctx.shadowBlur=4;ctx.shadowOffsetY=2;
+        ctx.fillStyle='#fffdf2';ctx.font=`750 ${String(card.title||'').length>26?66:86}px ${face}`;ctx.fillText(card.title,512,128,900);
         return canvas;
     }
     if(boardStyle==='header-compact'){

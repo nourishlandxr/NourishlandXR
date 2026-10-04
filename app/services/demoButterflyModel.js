@@ -52,25 +52,55 @@ function buildButterfly({gltf,bitmap}){
     mixer.setTime(0);idle.setEffectiveWeight(0);flying.setEffectiveWeight(1);mixer.update(.2);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getCenter(center);bounds.getSize(size);
     const centered=new THREE.Group();centered.add(root);root.position.sub(center);const wrapper=new THREE.Group();wrapper.add(centered);wrapper.scale.setScalar(1/Math.max(size.x,size.y,size.z));
     idle.setEffectiveWeight(1);flying.setEffectiveWeight(0);mixer.setTime(0);
-    return {wrapper,mixer,idle,flying,nodes,hinges,closed,texture,materials,geometries};
+    return {wrapper,mixer,idle,flying,nodes,hinges,closed,texture,materials,geometries,meshes,bitmap};
 }
-export function mountDemoButterflyModel(canvas){
+// Bake the small animated mesh at the existing quality cadence. The same
+// vertices are reused by both eyes; no offscreen sprite or extra XR context.
+function butterflyXRRenderer(gl,model){
+    const compile=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
+    const vertex=compile(gl.VERTEX_SHADER,'attribute vec3 p,n;attribute vec2 uv;uniform mat4 projection,view;uniform vec3 origin;uniform float scale,foot;varying vec2 v;varying float light;void main(){vec3 local=p;local.y-=foot;v=uv;light=.58+.42*abs(dot(normalize(n),normalize(vec3(-.3,.65,.7))));gl_Position=projection*view*vec4(origin+local*scale,1.);}');
+    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D wing;uniform vec3 colour;uniform float mapped,opacity;varying vec2 v;varying float light;void main(){vec4 c=mix(vec4(colour,1.),texture2D(wing,v),mapped);if(c.a<.02)discard;gl_FragColor=vec4(c.rgb*light,c.a*opacity);}');
+    const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
+    const buffer=gl.createBuffer(),texture=gl.createTexture(),attributes=['p','n','uv'].map(name=>gl.getAttribLocation(program,name)),uniforms=Object.fromEntries(['projection','view','origin','scale','foot','wing','colour','mapped','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,model.bitmap);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    const parts=model.meshes.map(mesh=>({mesh,positions:new Float32Array(mesh.geometry.attributes.position.count*3),vertices:new Float32Array(mesh.geometry.index.count*8),start:0}));
+    const packed=new Float32Array(parts.reduce((sum,part)=>sum+part.vertices.length,0));let lastPaint=-Infinity,foot=0;
+    const point=new THREE.Vector3(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),ab=new THREE.Vector3(),ac=new THREE.Vector3(),ids=new Uint32Array(3);
+    function update(elapsed,pose){
+        if(elapsed>=lastPaint && elapsed-lastPaint<BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval)return;
+        model.wrapper.updateMatrixWorld(true);foot=Infinity;let offset=0;
+        for(const part of parts){const {mesh,positions,vertices}=part,g=mesh.geometry;mesh.skeleton.update();
+            for(let i=0;i<g.attributes.position.count;i++){point.fromBufferAttribute(g.attributes.position,i);mesh.applyBoneTransform(i,point);point.applyMatrix4(mesh.matrixWorld);positions[i*3]=point.x;positions[i*3+1]=point.y;positions[i*3+2]=point.z;foot=Math.min(foot,point.y);}
+            for(let i=0;i<g.index.count;i+=3){ids[0]=g.index.getX(i);ids[1]=g.index.getX(i+1);ids[2]=g.index.getX(i+2);a.fromArray(positions,ids[0]*3);b.fromArray(positions,ids[1]*3);c.fromArray(positions,ids[2]*3);normal.crossVectors(ab.subVectors(b,a),ac.subVectors(c,a)).normalize();
+                for(let j=0;j<3;j++){const id=ids[j],k=(i+j)*8;vertices[k]=positions[id*3];vertices[k+1]=positions[id*3+1];vertices[k+2]=positions[id*3+2];vertices[k+3]=normal.x;vertices[k+4]=normal.y;vertices[k+5]=normal.z;vertices[k+6]=g.attributes.uv?.getX(id)||0;vertices[k+7]=g.attributes.uv?.getY(id)||0;}
+            }part.start=offset/8;packed.set(vertices,offset);offset+=vertices.length;
+        }
+        foot*=1-pose.flight;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.DYNAMIC_DRAW);lastPaint=elapsed;
+    }
+    return {draw(view,origin,elapsed,pose){update(elapsed,pose);gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);attributes.forEach((location,i)=>{gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,i===2?2:3,gl.FLOAT,false,32,[0,12,24][i]);});gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.scale,.14);gl.uniform1f(uniforms.foot,foot);gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.wing,0);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);if(pose.close>.02)gl.disable(gl.DEPTH_TEST);else gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
+        for(const part of parts){gl.uniform1f(uniforms.mapped,part.mesh.material.map?1:0);gl.uniform3f(uniforms.colour,part.mesh.material.color.r,part.mesh.material.color.g,part.mesh.material.color.b);gl.drawArrays(gl.TRIANGLES,part.start,part.vertices.length/8);}gl.depthMask(true);gl.enable(gl.DEPTH_TEST);},destroy(){gl.deleteBuffer(buffer);gl.deleteTexture(texture);gl.deleteProgram(program);}};
+}
+export function mountDemoButterflyModel(canvas,{gl=null}={}){
     if(!canvas)return null;
-    const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:true,powerPreference:'low-power'});renderer.setPixelRatio(1);renderer.outputColorSpace=THREE.SRGBColorSpace;
+    const renderer=gl?null:new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:true,powerPreference:'low-power'});renderer?.setPixelRatio(1);if(renderer)renderer.outputColorSpace=THREE.SRGBColorSpace;
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,15);camera.position.set(0,.08,2.7);camera.lookAt(0,0,0);
     scene.add(new THREE.HemisphereLight(0xfff3dc,0x405a56,2));const sun=new THREE.DirectionalLight(0xffedcc,2.1);sun.position.set(-2,3,4);scene.add(sun);
-    let model=null,disposed=false,lastElapsed=NaN,lastPaint=-Infinity;
-    prepareDemoButterflyModel().then(value=>{if(disposed)return;model=buildButterfly(value);scene.add(model.wrapper);canvas.dataset.modelReady='true';}).catch(error=>{if(!disposed){canvas.dataset.modelReady='error';console.warn('Butterfly model:',error);}});
+    let model=null,xr=null,disposed=false,lastElapsed=NaN,lastPaint=-Infinity;
+    prepareDemoButterflyModel().then(value=>{if(disposed)return;model=buildButterfly(value);scene.add(model.wrapper);if(gl)xr=butterflyXRRenderer(gl,model);canvas.dataset.modelReady='true';}).catch(error=>{if(!disposed){canvas.dataset.modelReady='error';console.warn('Butterfly model:',error);}});
+    function updatePose(elapsed,pose){
+        if(elapsed===lastElapsed)return;const delta=Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0;lastElapsed=elapsed;
+        model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);model.mixer.update(delta);
+        const fold=(1-pose.flight)*(.92+Math.sin(elapsed/1800)*.025);
+        for(const [i,index] of model.hinges.entries())model.nodes[index].quaternion.slerp(model.closed[i],fold);
+        model.wrapper.rotation.set(pose.flight*.12,pose.state==='landed'?.85:pose.yaw,pose.bank);model.wrapper.updateMatrixWorld(true);
+    }
     return {get ready(){return Boolean(model);},get interval(){return BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval;},
         renderSprite(elapsed,pose){
-            if(!model || !pose)return null;const budget=BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()];if(canvas.dataset.insectState!==pose.state)canvas.dataset.insectState=pose.state;
+            if(!model || !pose || !renderer)return null;const budget=BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()];if(canvas.dataset.insectState!==pose.state)canvas.dataset.insectState=pose.state;
             if(elapsed>=lastPaint && elapsed-lastPaint<budget.interval)return canvas;
             renderer.setSize(budget.pixels,budget.pixels,false);
-            const delta=Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0;lastElapsed=elapsed;
-            model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);model.mixer.update(delta);
-            for(const [i,index] of model.hinges.entries())model.nodes[index].quaternion.slerp(model.closed[i],(1-pose.flight)*.96);
-            model.wrapper.rotation.set(0,pose.state==='landed'?.85:pose.yaw,pose.bank);model.wrapper.updateMatrixWorld(true);
+            updatePose(elapsed,pose);
             renderer.render(scene,camera);lastPaint=elapsed;return canvas;
-        },destroy(){disposed=true;if(model){model.mixer.stopAllAction();model.mixer.uncacheRoot(model.wrapper.children[0].children[0]);model.geometries.forEach(geometry=>geometry.dispose());model.materials.forEach(material=>material.dispose());model.texture.dispose();}renderer.dispose();renderer.forceContextLoss();}
+        },drawXR(view,origin,elapsed,pose){if(!model || !xr || !pose)return;updatePose(elapsed,pose);xr.draw(view,origin,elapsed,pose);},destroy(){disposed=true;xr?.destroy();if(model){model.mixer.stopAllAction();model.mixer.uncacheRoot(model.wrapper.children[0].children[0]);model.geometries.forEach(geometry=>geometry.dispose());model.materials.forEach(material=>material.dispose());model.texture.dispose();}renderer?.dispose();renderer?.forceContextLoss();}
     };
 }

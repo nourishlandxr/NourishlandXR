@@ -48,20 +48,25 @@ test('demo history arrows stay compact, adjacent and ray-selectable even when di
     assert.deepEqual(initial.filter(item=>item.kind==='history').map(item=>item.action),['Utility:back']);
 });
 
-test('Settings rows keep all existing actions in compact non-overlapping Quest hit regions',()=>{
+test('General and Graphics settings fit readable non-overlapping Quest hit regions',()=>{
     const desktop=panelSettingsControls({infoOpacity:.5,ambientRain:1.65,ambientRainStyle:'v1',rainQuality:'hq',graphicsQuality:'high',spatialScale:1.1});
     const quest=panelSettingsControls({headset:true,handVisualMode:'outline'});
-    const actions=['TextSize','SpatialScale','InfoOpacity','OrbModel','TotemModel','GraphicsQuality','RainQuality','FloorOffset','Recenter'];
+    const graphics=panelSettingsControls({graphicsOpen:true,rainQuality:'hq',graphicsQuality:'high'});
+    const performance=panelSettingsControls({headset:true,performanceSettings:{actual:120,supported:[72,90,120],showFps:true}});
+    const actions=['GraphicsMenu','InfoOpacity','TextSize','SpatialScale','FloorOffset','SettingsHelp','CloseSettings'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
-    assert.deepEqual(quest.map(item=>item.action),['HandMode',...actions]);
+    assert.deepEqual(quest.map(item=>item.action),[...actions.slice(0,5),'HandMode',...actions.slice(5)]);
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').value,.5);
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').kind,'slider');
-    assert.equal(desktop.find(item=>item.action==='RainQuality').label,'HQ');
-    assert.equal(desktop.find(item=>item.action==='GraphicsQuality').label,'HIGH');
+    assert.equal(desktop.find(item=>item.action==='InfoOpacity').settingLabel,'Main / Control glass');
+    assert.equal(graphics.find(item=>item.action==='RainQuality').label,'HQ');
+    assert.equal(graphics.find(item=>item.action==='GraphicsQuality').label,'HIGH');
+    assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality','RainQuality','OrbModel','TotemModel','SettingsHelp','CloseSettings']);
+    assert.equal(performance.find(item=>item.action==='RefreshRate').y,performance.find(item=>item.action==='ShowFps').y);
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Outline');
-    for(const items of [desktop,quest]){
+    for(const items of [desktop,quest,graphics,performance]){
         for(const [index,a] of items.entries()){
-            assert.ok(a.width>=88 && a.height>=42 && a.x>=0 && a.x+a.width<=1000 && a.y>=0 && a.y+a.height<=730);
+            assert.ok(a.width>=88 && a.height>=42 && a.x>=0 && a.x+a.width<=1000 && a.y>=0 && a.y+a.height<=760);
             assert.ok(a.settingGroup && a.ariaLabel);
             for(const b of items.slice(index+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
         }

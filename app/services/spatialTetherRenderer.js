@@ -65,9 +65,9 @@ export function createTetherRibbonGeometry(start, end, cameraPosition, options =
         { x: 1, y: 0, z: 0 }
     );
     const control = {
-        x: midpoint.x + horizontal.x * (Number(options.curve) || 0.035),
-        y: midpoint.y + (Number(options.lift) || 0.055),
-        z: midpoint.z + horizontal.z * (Number(options.curve) || 0.035)
+        x: midpoint.x + horizontal.x * (Number.isFinite(options.curve) ? options.curve : 0.035),
+        y: midpoint.y + (Number.isFinite(options.lift) ? options.lift : 0.055),
+        z: midpoint.z + horizontal.z * (Number.isFinite(options.curve) ? options.curve : 0.035)
     };
     const points = Array.from(
         { length: segments + 1 },

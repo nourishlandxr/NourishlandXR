@@ -147,22 +147,25 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='carved',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0}={}){
-    const row=index=>90+index*54,shift=headset?1:0;
-    const slider=(action,settingGroup,settingLabel,value,min,max,step,index)=>({action,settingGroup,settingLabel,ariaLabel:settingLabel,kind:'slider',value,min,max,step,x:576,y:row(index),width:368,height:42});
-    return [
-        ...(headset?[{action:'HandMode',label:handVisualMode==='pointer'?'Pointer':'Outline',ariaLabel:'Switch hand tracking visual mode',settingGroup:'hands',settingLabel:'Hands',x:756,y:row(0),width:188,height:42}]:[]),
-        slider('TextSize','text','Text size',largeText?1:0,0,1,1,shift),
-        slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,shift+1),
-        slider('InfoOpacity','info-opacity','Panels opacity',infoOpacity,0,1,.01,shift+2),
-        {action:'OrbModel',label:ORB_MODELS[orbModel]?.label || 'Improved',ariaLabel:'Change Plant Orb model: Basic, Improved or Advanced',settingGroup:'orb-model',settingLabel:'Plant Orb model',x:756,y:row(shift+4),width:188,height:42},
-        {action:'TotemModel',label:TOTEM_MODELS[totemModel]?.label || 'Carved timber',ariaLabel:'Change Totem style: Carved timber, Botanical column or Elemental',settingGroup:'totem-model',settingLabel:'Totem style',x:756,y:row(shift+5),width:188,height:42},
-        {action:'GraphicsQuality',label:graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),ariaLabel:'Change graphics quality: Auto, LOW, MED, HIGH',settingGroup:'graphics',settingLabel:'Graphics quality',x:756,y:row(shift+6),width:188,height:42},
-        {action:'RainQuality',label:RAIN_QUALITIES[rainQuality]?.label || 'Off',ariaLabel:'Change rain: Off, Low, High, HQ',settingGroup:'rain',settingLabel:'Rain quality',x:756,y:row(shift+7),width:188,height:42},
-        slider('FloorOffset','floor','Floor height adjustment',floorOffset,-1.5,1.5,.01,shift+8),
-        ...(performanceSettings ? [{action:'RefreshRate',label:performanceSettings.pending?'Applying…':`${performanceSettings.actual || '?'} Hz`,disabled:performanceSettings.pending || !performanceSettings.supported?.length,ariaLabel:'Choose supported XR refresh rate',settingGroup:'refresh',settingLabel:'Refresh rate',x:756,y:row(shift+10),width:188,height:42},{action:'ShowFps',label:performanceSettings.showFps?'On':'Off',ariaLabel:'Show FPS',settingGroup:'fps',settingLabel:'Show FPS',x:756,y:row(shift+11),width:188,height:42}]:[]),
-        {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+9),width:188,height:42}
-    ].map(item=>item.y>=row(shift+4)?{...item,y:item.y-54}:item).filter(item=>rainEnabled || item.action!=='RainQuality').map(item=>!rainEnabled && item.y>=row(shift+7)?{...item,y:item.y-54}:item).map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
+export function panelSettingsControls({headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,graphicsOpen=false}={}){
+    const choice=(action,label,group,title,y,x=540,width=404)=>({action,label,ariaLabel:title || label,settingGroup:group,settingLabel:title,x,y,width,height:58});
+    const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
+    const navigation=choice('GraphicsMenu',graphicsOpen?'‹ General':'Graphics ›','navigation','',100,56,888);
+    const close={...choice('CloseSettings','Done','close','Close settings',26,806,138),kind:'settings-close'};
+    if(graphicsOpen)return [navigation,
+        choice('GraphicsQuality',graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),'graphics','Graphics quality',202),
+        ...(rainEnabled?[choice('RainQuality',RAIN_QUALITIES[rainQuality]?.label || 'Off','rain','Rain quality',290)]:[]),
+        choice('OrbModel',`Orb · ${ORB_MODELS[orbModel]?.label || 'Improved'}`,'models','Object styles',408,56,420),
+        choice('TotemModel',`Totem · ${TOTEM_MODELS[totemModel]?.label || 'Botanical column'}`,'models','Object styles',408,496,448),
+        choice('SettingsHelp','Help','help','',642,56,888),close];
+    return [navigation,
+        slider('InfoOpacity','info-opacity','Main / Control glass',infoOpacity,0,1,.01,188),
+        slider('TextSize','text','Text size',largeText?1:0,0,1,1,270),
+        slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,352),
+        slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,434),
+        ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Outline','hands','Hands',516)]:[]),
+        ...(performanceSettings?[{...choice('RefreshRate',performanceSettings.pending?'Applying…':`${performanceSettings.actual || '?'} Hz`,'performance','Refresh rate / FPS',596,56,420),disabled:performanceSettings.pending || !performanceSettings.supported?.length},choice('ShowFps',`FPS · ${performanceSettings.showFps?'On':'Off'}`,'performance','Refresh rate / FPS',596,496,448)]:[]),
+        choice('SettingsHelp','Help','help','',686,56,888),close];
 }
 export function panelSliderValue(control,x){
     const fraction=Math.max(0,Math.min(1,(x-control.x-18)/(control.width-36)));
@@ -210,6 +213,9 @@ function controlDescription(item={}){
         Restore:'Restore the Control panel.',
         Help:'Open the available help and tutorial options.',
         Settings:'Adjust text size, glass opacity, Orb model, Totem style, panel scale and device settings.',
+        GraphicsMenu:'Open graphics quality, rain and object styles, or return to General settings.',
+        SettingsHelp:'Open the full Help page in the Control panel.',
+        CloseSettings:'Close Settings. The image stays open.',
         Previous:'Show the previous page.',
         Next:'Show the next page.',
         ToggleMedia:'Show or hide the selected plant image.',
@@ -240,7 +246,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='',hoveredAction='';
     let confirmation=null,confirmationSnapshot=null;
-    let sliderGrab=null,finishingSliderSource=null;
+    let sliderGrab=null,finishingSliderSource=null,graphicsOpen=false;
     let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,panelGestureSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
@@ -311,6 +317,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             // panel DOM, dock position and loading lifecycle intact.
             return;
         }
+        if(action==='CloseSettings'){settingsOpen=false;renderSettings();return;}
+        if(action==='GraphicsMenu'){graphicsOpen=!graphicsOpen;renderSettings();return;}
+        if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
         if(action==='Edit' && selection && selection.editable!==false)onEdit(record,selection.path || selection.id);
@@ -352,7 +361,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(value!==settingsControls().find(item=>item.action===button.action)?.value)setSliderValue(button.action,value);
         return true;
     }
-    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset});
+    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen});
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
@@ -362,15 +371,16 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         const scrollTop=settingsElement.scrollTop;
         const focused=settingsElement.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
         if(!renderer && !globalThis.matchMedia?.('(max-width:700px)').matches){
-            const main=element.getBoundingClientRect(),panelWidth=Math.min(390,Math.max(300,window.innerWidth-32));
-            settingsElement.style.left=Math.max(8,main.left-panelWidth-6)+'px';
-            settingsElement.style.top=Math.max(8,main.top)+'px';
+            const main=element.getBoundingClientRect(),media=element.querySelector('.nlxr-media-wing')?.getBoundingClientRect(),panelWidth=media?.width || Math.min(390,Math.max(300,main.width*.79));
+            settingsElement.style.width=panelWidth+'px';settingsElement.style.height=(media?.height || main.height)+'px';
+            settingsElement.style.left=Math.max(8,main.left+(main.width-panelWidth)/2)+'px';
+            settingsElement.style.top=Math.max(8,main.top-(media?.height || main.height)-12)+'px';
             settingsElement.style.bottom='auto';
         }else if(!renderer){settingsElement.style.removeProperty('left');settingsElement.style.removeProperty('top');settingsElement.style.removeProperty('bottom');}
-        settingsElement.innerHTML='<header><h2>Settings</h2><button type="button" class="nlxr-settings-close" aria-label="Close settings">Done</button></header><section><div class="nlxr-settings-actions"></div><h3>Safety</h3><p>Keep a clear walking area and remain aware of people, plants, furniture and uneven ground around you.</p><h3>Help</h3><p>'+INFO_HELP+'</p></section>';
+        settingsElement.innerHTML='<header><h2>'+(graphicsOpen?'Graphics':'Settings')+'</h2><button type="button" class="nlxr-settings-close" aria-label="Close settings">Done</button></header><section><div class="nlxr-settings-actions"></div></section>';
         settingsElement.querySelector('.nlxr-settings-close').addEventListener('click',()=>{settingsOpen=false;render(true);});
         const actions=settingsElement.querySelector('.nlxr-settings-actions');
-        for(const item of settingsControls()){
+        for(const item of settingsControls().filter(item=>item.action!=='CloseSettings')){
             let row=actions.querySelector(`[data-setting-group="${item.settingGroup}"]`);
             if(!row){
                 row=document.createElement('div');row.className='nlxr-setting-row';row.dataset.settingGroup=item.settingGroup;
@@ -762,27 +772,21 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             return c;
         }
         if(card.settings){
-            ctx.fillStyle='#f3f8fc';ctx.font='700 34px system-ui';ctx.fillText('Settings',56,32,888);
+            ctx.fillStyle='#fcfff7';ctx.font='700 42px Manrope, system-ui';ctx.fillText(card.graphicsOpen?'Graphics':'Settings',56,30,700);
             const groups=new Map();
-            card.controls.forEach(button=>{if(!groups.has(button.settingGroup))groups.set(button.settingGroup,{label:button.settingLabel,y:button.y});});
+            card.controls.forEach(button=>{if(button.settingLabel && button.action!=='CloseSettings' && !groups.has(button.settingGroup))groups.set(button.settingGroup,{label:button.settingLabel,y:button.y,paired:['models','performance'].includes(button.settingGroup)});});
             groups.forEach(group=>{
-                ctx.fillStyle='rgba(9,25,27,.28)';ctx.beginPath();ctx.roundRect(40,group.y-4,920,50,12);ctx.fill();
+                ctx.fillStyle='rgba(9,25,27,.18)';ctx.beginPath();ctx.roundRect(40,group.y-5,920,68,14);ctx.fill();
                 ctx.strokeStyle='rgba(238,249,243,.27)';ctx.lineWidth=2.5;ctx.stroke();
-                ctx.fillStyle='#e6f2e9';ctx.font='600 20px system-ui';ctx.fillText(group.label,58,group.y+10,670);
+                ctx.fillStyle='#fcfff4';ctx.font='650 30px Manrope, system-ui';ctx.fillText(group.label,58,group.paired?group.y-43:group.y+14,group.paired?880:460);
             });
             card.controls.forEach(button=>{
                 const aimed=card.hoverAction===button.action && !button.disabled;
                 if(button.kind==='slider'){drawPanelSettingSlider(ctx,button,aimed);return;}
                 ctx.fillStyle=aimed?'rgba(210,235,224,.3)':'rgba(238,250,242,.13)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,21);ctx.fill();
                 ctx.strokeStyle=aimed?'rgba(243,248,226,.95)':'rgba(239,251,244,.48)';ctx.lineWidth=aimed?5:2.5;ctx.stroke();
-                ctx.fillStyle='#f5fbf5';ctx.font='650 20px system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+9,button.width-12);
+                ctx.fillStyle='#fcfff4';ctx.font='650 30px Manrope, system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+14,button.width-24);
             });ctx.textAlign='left';
-            const footerY=Math.max(480,...card.controls.map(button=>button.y+button.height+32));
-            ctx.fillStyle='#f3f8fc';ctx.font='650 20px system-ui';ctx.fillText('Safety',56,footerY,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 16px system-ui';infoPages('Keep a clear walking area and remain aware of people, plants, furniture and uneven ground.',90,2)[0].forEach((line,index)=>ctx.fillText(line,56,footerY+26+index*20,888));
-            ctx.fillStyle='#f3f8fc';ctx.font='650 20px system-ui';ctx.fillText('Help',56,footerY+68,888);
-            ctx.fillStyle='#c9e0ed';ctx.font='500 16px system-ui';infoPages(INFO_HELP,92,1)[0].forEach((line,index)=>ctx.fillText(line,56,footerY+93+index*20,888));
-            if(card.hoverHint){ctx.fillStyle='rgba(5,16,26,.93)';ctx.beginPath();ctx.roundRect(258,20,690,50,10);ctx.fill();ctx.strokeStyle='rgba(166,204,229,.4)';ctx.stroke();ctx.fillStyle='#e0edf2';ctx.font='400 18px system-ui';ctx.fillText(card.hoverHint,276,35,654);}
             return c;
         }
         if(card.headset && !card.hidden){
@@ -864,8 +868,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             else if(button.kind==='toggle'||button.kind==='handle'){face.addColorStop(0,'rgba(174,232,252,.4)');face.addColorStop(1,'rgba(61,137,177,.2)');}
             else {face.addColorStop(0,'rgba(119,169,198,.34)');face.addColorStop(.5,'rgba(56,93,122,.56)');face.addColorStop(1,'rgba(26,52,78,.74)');}
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
-            if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=isContinue?12:button.primary?3:2.5;ctx.stroke();}
-            if(card.hoverAction===button.action && !button.disabled){ctx.fillStyle='rgba(219,237,216,.22)';ctx.fill();ctx.strokeStyle='rgba(245,247,222,.96)';ctx.lineWidth=isContinue?14:5;ctx.stroke();}
+            if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=isContinue?18:button.primary?3:2.5;ctx.stroke();}
+            if(card.hoverAction===button.action && !button.disabled){ctx.fillStyle='rgba(219,237,216,.22)';ctx.fill();ctx.strokeStyle='rgba(245,247,222,.96)';ctx.lineWidth=isContinue?22:5;ctx.stroke();}
             if(button.selected){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
             ctx.fillStyle=button.disabled?'#899297':isContinue?'#e1dfd2':button.primary?'#f3fbf4':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(isContinue?'600 ':button.primary?'680 ':button.kind==='toggle'||button.kind==='handle'?'650 ':'600 ')+(isContinue?'44px':button.primary?'28px':button.kind==='toggle'||button.kind==='handle'?'26px':'21px')+' system-ui';ctx.textAlign='center';ctx.fillText(isContinue?button.label.toUpperCase():button.label,button.x+button.width/2,button.y+(button.height-(isContinue?44:button.primary?34:button.kind==='toggle'||button.kind==='handle'?30:28))/2,button.width-16);
         });return c;
@@ -955,9 +959,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const {mainWidth,mainHeight,mediaWidth}=spatialDimensions();
             const surfaces=[{...pose,width:mainWidth,height:mainHeight,card:cards[0]}];
             const settingsCard=cards.find(card=>card.settings),mediaCard=cards.find(card=>card.media);
-            const settingsWidth=.62*spatialScale,gap=0,companionHeight=mainHeight*.78;
-            if(settingsOpen && !hidden && settingsCard)surfaces.push({...companionPanelPose(pose,'left',mainWidth,settingsWidth,18,gap),width:settingsWidth,height:mainHeight*(settingsCard.height/spatialHeight()),card:settingsCard});
-            if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
+            const settingsPose=spatialMediaDockPose('top');
+            if(settingsOpen && !hidden && settingsCard)surfaces.push({...settingsPose,width:mediaWidth,height:mainHeight,card:settingsCard});
+            if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const dockSide=settingsOpen && mediaDockSide==='top'?'left':mediaDockSide;const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(dockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null){
@@ -978,6 +982,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 spatialGrabPending=null;
             }
             if(spatialMove && heldRay?.origin && heldRay?.direction){
+                const depthSource=Array.from(xrFrame?.session?.inputSources || []).find(source=>source.handedness==='right' && source.gamepad) || spatialMove.source;
+                const axes=depthSource?.gamepad?.axes || [],stick=Number(axes.length>2?axes[3]:axes[1]) || 0;
+                if(Math.abs(stick)>.15)spatialMove.distance=Math.max(.4,Math.min(2.5,spatialMove.distance+stick*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.9));
                 pose ||= next;
                 if(spatialMove.panel==='media')mediaPose ||= spatialMediaDockPose(mediaDockSide);
                 const current=spatialMove.panel==='media'?mediaPose:pose;
@@ -1009,7 +1016,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',infoOpacity,headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
-            const settingsCard={id:'settings',settings:true,infoOpacity,height:Math.max(spatialHeight(),performanceSettings?920:820),controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
+            const settingsCard={id:'settings',settings:true,graphicsOpen,infoOpacity,height:760,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,mediaRevision,imageSource:preview?.image || '',height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
@@ -1019,7 +1026,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
         getPerchPose(){
             if(!pose || hidden || detached)return null;const {mainWidth,mainHeight}=spatialDimensions();
-            return {...pose,center:{x:pose.center.x+pose.right.x*mainWidth*.38+pose.up.x*(mainHeight/2+.035),y:pose.center.y+pose.right.y*mainWidth*.38+pose.up.y*(mainHeight/2+.035),z:pose.center.z+pose.right.z*mainWidth*.38+pose.up.z*(mainHeight/2+.035)}};
+            // Feet sit on the extreme top-right edge, outside companion faces.
+            return {...pose,center:{x:pose.center.x+pose.right.x*(mainWidth/2-.006)+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*(mainWidth/2-.006)+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*(mainWidth/2-.006)+pose.up.z*mainHeight/2}};
         },
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
             if(sliderGrab && sliderGrab.source!==event.inputSource)return;
@@ -1048,6 +1056,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const target=hit(ray);if(!target){if(event.type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
             event.stopImmediatePropagation();
             const button=targetButtonAtRay(target);
+            if(event.type==='selectstart' && target.card?.settings)panelGestureSource=event.inputSource;
             if(event.type==='selectstart' && button?.kind==='slider'){
                 sliderGrab={source:event.inputSource,referenceSpace,button,surface:{...target}};panelGestureSource=event.inputSource;slideAtTarget(button,target);return;
             }

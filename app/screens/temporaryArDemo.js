@@ -2,7 +2,7 @@ import {BEE_COUNT} from '../services/demoAmbientLife.js';
 import {demoButterflyPose} from '../services/demoButterflyPose.js';
 import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
-import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../services/totemSignSelection.js';
+import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,drawTotemDestinationBeacon} from '../services/totemSignSelection.js';
 import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_INTRO_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
@@ -25,7 +25,7 @@ import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatial
 import { beePointerAvoidance, demoBeePose, drawDemoAmbientLife } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from '../services/spatialObjectVisuals.js';
-import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialTether } from '../services/spatialTetherRenderer.js';
+import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTotemSculpture, destroySpatialTotemSculpture, drawTotemSculpture } from '../services/spatialTotemSculpture.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
@@ -51,7 +51,7 @@ import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, s
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
 import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, XR_HAND_JOINT_CONNECTIONS, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
-import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea, pimVisibleNodes } from '../services/plantInformationMesh.js';
+import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea, pimVisibleNodes, pimNodeVisualPosition } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
@@ -1001,7 +1001,7 @@ function selectDemoTotemSign(record,cardId) {
     selectTotemSign(record,cardId,markers);
     const card=demoTotemCards(record).find(item=>item.id===record.totemSelectedCard);
     const target=markers.find(item=>item.id===(card?.navigation?.destinationId || card?.references?.[0]));
-    if(target)setGuide(`Follow the ${card.boardSide || 'nearby'} sign to ${target.demoZoneName || target.name}. The destination is highlighted.`);
+    if(target){if(target.demoType==='zone')target.demoSignBeaconStartedAt=performance.now();setGuide(`Follow the ${card.boardSide || 'nearby'} sign to ${target.demoZoneName || target.name}. The destination is highlighted.`);}
     updateSimulatedMarkers();
 }
 function selectedDemoTotemTargets() {
@@ -2157,10 +2157,16 @@ function pairedDemoTotemPosition(side, groundBaseY) {
     const right={x:Number(anchor?.[0]) || 1,z:Number(anchor?.[2]) || 0};
     return {
         x:center.x+right.x*side,
-        y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES,
+        y:groundBaseY+initialDemoTotemHalfHeight(groundBaseY),
         z:center.z+right.z*side
     };
 }
+function initialDemoTotemHalfHeight(ground){
+    const anchor=introWorldAnchor || introWorldAnchorFromViewer(viewerMatrix);
+    const mainCenter=anchor?introLocalPosition(anchor,AR_PHONE_COMFORT.boardPosition):null;
+    return Math.max(.46,Math.min(DEMO_TOTEM_HALF_HEIGHT_METRES,((mainCenter?.y ?? ground+1.4)-ground)/2));
+}
+function demoTotemHalfHeight(record){return Number(record?.demoHalfHeight) || DEMO_TOTEM_HALF_HEIGHT_METRES;}
 function calibratedDemoGroundY(){
     const base=referenceSpaceHasFloor ? 0 : demoGroundBaseY(hitMatrix,viewerMatrix,groundYEstimate);
     return base+getSpatialVisualSettings().floorOffset;
@@ -2168,7 +2174,7 @@ function calibratedDemoGroundY(){
 function pairedDemoTotemGroundY(){return calibratedDemoGroundY();}
 function updateDemoFloor(){
     const base=calibratedDemoGroundY();
-    for(const record of markers.filter(item=>item.demoType==='zone')){record.groundBaseY=base;record.position.y=base+DEMO_TOTEM_HALF_HEIGHT_METRES;record.totemCardsRefreshed=0;}
+    for(const record of markers.filter(item=>item.demoType==='zone')){record.groundBaseY=base;record.position.y=base+demoTotemHalfHeight(record);record.totemCardsRefreshed=0;}
     updateSimulatedMarkers();
 }
 
@@ -2189,6 +2195,7 @@ function createDemoTotemExample() {
         position,
         rotationY: demoTotemRotationForPosition(position),
         groundBaseY,
+        demoHalfHeight:position.y-groundBaseY,
         type: 'area_checkpoint',
         demoType: 'zone',
         tutorialStage: 'totem',
@@ -2216,7 +2223,7 @@ function createDemoTotemExample() {
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.firstAreaShown);
     updateSimulatedMarkers();
     showDemoTutorialMedia('totem');
-    setGuide('Check that the two-metre Totem base meets your real floor. If needed, open Settings and drag Floor height adjustment before continuing.');
+    setGuide('The Totem stands on the estimated floor, with its top near the middle of the main screen. Check its base against your real floor; Settings → Floor height corrects any offset.');
     infoPanel?.setContextualHint('Check the Totem base against the real floor. Settings → Floor height adjustment corrects its height.');
     showSceneContinue('Show neighbouring Totem', createDemoSecondTotem, 'ELEMENTS 1.19');
 }
@@ -2226,7 +2233,7 @@ function createDemoSecondTotem() {
     const groundBaseY = first?.groundBaseY ?? demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY-getSpatialVisualSettings().floorOffset;
     const position = first?.demoPairRight
-        ? {x:first.position.x-first.demoPairRight.x*2,y:groundBaseY+DEMO_TOTEM_HALF_HEIGHT_METRES,z:first.position.z-first.demoPairRight.z*2}
+        ? {x:first.position.x-first.demoPairRight.x*2,y:groundBaseY+demoTotemHalfHeight(first),z:first.position.z-first.demoPairRight.z*2}
         : pairedDemoTotemPosition(-1,groundBaseY);
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
@@ -2237,6 +2244,7 @@ function createDemoSecondTotem() {
         position,
         rotationY: demoTotemRotationForPosition(position),
         groundBaseY,
+        demoHalfHeight:position.y-groundBaseY,
         type: 'area_checkpoint',
         demoType: 'zone',
         tutorialStage: 'totem2',
@@ -2262,7 +2270,7 @@ function createDemoSecondTotem() {
     createDemoNeighbourhood(totem);
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.secondAreaShown);
     updateSimulatedMarkers();
-    setGuide('Totem 2 shows a sample PIMO layout: local Plant Orbs and a Note placed around one Area. Connect the two Totems when ready.');
+    setGuide('Totem 2 shows local Plant Orbs and a Note placed around one Area. Connect the two Totems when ready.');
     showSceneContinue('Connect the Totems', connectDemoTotems, 'ELEMENTS 1.20');
 }
 
@@ -2406,15 +2414,15 @@ function syncNativeConnectionEffect(now=performance.now()) {
 function nativeConnectionPanelGuide() {
     const state=nativeConnectionState;if(!state)return;
     const body=state.phase==='source'
-        ? `1. Select Pigeon Pea’s ${state.sourceTitle} cell. 2. Direct the connection toward LIMO’s ${state.targetTitle} cell. 3. Hold ${state.targetTitle} to connect them.`
+        ? `1. Select Pigeon Pea’s ${state.sourceTitle} cell. 2. Direct the connection toward the ${state.targetTitle} learning cell. 3. Hold ${state.targetTitle} to connect them.`
         : state.phase==='target'
-        ? `The ${state.sourceTitle} cell is selected. Aim at LIMO’s ${state.targetTitle} cell and hold until its progress ring completes. Release early to cancel and try again.`
+        ? `The ${state.sourceTitle} cell is selected. Aim at the ${state.targetTitle} learning cell and hold until its progress ring completes. Release early to cancel and try again.`
         : state.phase==='resolving'
         ? `Connecting ${state.sourceTitle} with ${state.targetTitle}…`
         : `${state.sourceTitle} is connected with ${state.targetTitle}. The highlighted cells share one relationship.`;
     const connectionText=`${state.explanation}\n\nIn this place: ${state.fieldQuestion}`;
     const targetMedia=limLearningContent(state.targetId);
-    infoPanel?.showLearning({id:'native-mesh-connection',title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:`${body}\n\n${connectionText}`,image:targetMedia.image,imageAlt:targetMedia.imageAlt,accent:'#dfff9b',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'native-mesh-connection',title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:state.phase==='connected'?`${connectionText}\n\n${body}`:`${body}\n\n${connectionText}`,image:targetMedia.image,imageAlt:targetMedia.imageAlt,accent:'#dfff9b',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
@@ -2471,9 +2479,9 @@ function acceptNativePimCell(record,path) {
     record.demoSelectedNodeId=state.sourcePath;
     refreshDemoPimProfile(record);
     showIntroBoard('Connect a plant cell to a learning cell.',
-        [`Now select LIMO’s ${state.targetTitle} cell. A trigger press or short hold completes the connection.`],
+        [`Now select the ${state.targetTitle} learning cell. A trigger press or short hold completes the connection.`],
         '',()=>{},
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.10',nextGuide:`Select ${state.targetTitle} in LIMO to continue.`});
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.10',nextGuide:`Select the ${state.targetTitle} learning cell to continue.`});
     nativeConnectionPanelGuide();
     navigator.vibrate?.(12);
     return true;
@@ -3596,7 +3604,7 @@ function demoRecordRayHit(record) {
     }
     if(record.demoType==='zone'){
         const rotationY=demoTotemRotationY(record),right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
-        const ground=Number(record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES),centerY=ground+DEMO_TOTEM_HALF_HEIGHT_METRES;
+        const halfHeight=demoTotemHalfHeight(record),ground=Number(record.groundBaseY ?? record.position.y-halfHeight),centerY=ground+halfHeight;
         const denominator=ray.x*front.x+ray.y*front.y+ray.z*front.z;
         if(Math.abs(denominator)<1e-6)return null;
         const distance=((record.position.x-origin.x)*front.x+(centerY-origin.y)*front.y+(record.position.z-origin.z)*front.z)/denominator;
@@ -3604,7 +3612,7 @@ function demoRecordRayHit(record) {
         const point={x:origin.x+ray.x*distance,y:origin.y+ray.y*distance,z:origin.z+ray.z*distance};
         const offset={x:point.x-record.position.x,y:point.y-centerY,z:point.z-record.position.z};
         const localX=offset.x*right.x+offset.z*right.z;
-        if(Math.abs(localX)>.28 || point.y<ground-.04 || point.y>ground+DEMO_TOTEM_HALF_HEIGHT_METRES*2+.04)return null;
+        if(Math.abs(localX)>.28 || point.y<ground-.04 || point.y>ground+halfHeight*2+.04)return null;
         return {distance,point,position:point,localX,localY:point.y-centerY,radius:.28};
     }
     const offset={x:record.position.x-origin.x,y:record.position.y-origin.y,z:record.position.z-origin.z};
@@ -3651,11 +3659,11 @@ function updateHeldDemoRecordPosition() {
     record.position = {
         x: origin.x + ray.x * distance + lateral.x,
         y: record.demoType === 'zone'
-            ? calibratedDemoGroundY() + DEMO_TOTEM_HALF_HEIGHT_METRES
+            ? calibratedDemoGroundY() + demoTotemHalfHeight(record)
             : origin.y + ray.y * distance + lateral.y,
         z: origin.z + ray.z * distance + lateral.z
     };
-    if (record.demoType === 'zone') record.groundBaseY = record.position.y - DEMO_TOTEM_HALF_HEIGHT_METRES;
+    if (record.demoType === 'zone') record.groundBaseY = record.position.y - demoTotemHalfHeight(record);
     record.informationPosition = null;
     record.informationPose = null;
 }
@@ -3978,7 +3986,7 @@ function renderInterface(simulated) {
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     butterflyCanvas=document.createElement('canvas');butterflyCanvas.className='tryit-butterfly-model';butterflyCanvas.setAttribute('aria-hidden','true');butterflyCanvas.style.visibility='hidden';appRoot.querySelector('.tryit-stage')?.append(butterflyCanvas);
     butterflyStartedAt=NaN;
-    import('../services/demoButterflyModel.js').then(({mountDemoButterflyModel})=>{if(butterflyCanvas?.isConnected)butterflyModel=mountDemoButterflyModel(butterflyCanvas);}).catch(error=>console.warn('Butterfly unavailable:',error));
+    import('../services/demoButterflyModel.js').then(({mountDemoButterflyModel})=>{if(butterflyCanvas?.isConnected)butterflyModel=mountDemoButterflyModel(butterflyCanvas,{gl:simulated?null:gl});}).catch(error=>console.warn('Butterfly unavailable:',error));
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
@@ -4590,9 +4598,9 @@ function createIntroControlTexture(labelText, texture = null, aimed=false) {
     panel.addColorStop(1, 'rgba(28,37,39,.10)');
     ctx.fillStyle = panel;
     ctx.strokeStyle = aimed?'rgba(245,247,222,.96)':'rgba(220,218,202,.72)';
-    ctx.lineWidth = 12;
+    ctx.lineWidth = 22;
     ctx.beginPath();
-    ctx.roundRect(12, 12, 876, 336, 64);
+    ctx.roundRect(16, 16, 868, 328, 64);
     ctx.fill();
     ctx.stroke();
     ctx.textAlign = 'center';
@@ -4969,13 +4977,13 @@ function paintDemoButterfly(now){
     const bounds=panel.getBoundingClientRect();if(!bounds.width || !bounds.height)return;
     if(!Number.isFinite(butterflyStartedAt))butterflyStartedAt=arWelcomeClock.elapsed;
     const pose=demoButterflyPose(arWelcomeClock.elapsed,butterflyStartedAt,{reducedMotion});
-    const perch={x:bounds.right-46,y:bounds.top-20};
+    const perch={x:bounds.right-4,y:bounds.top};
     if(pose.flight>0)butterflyFlightAnchor ||= perch;else butterflyFlightAnchor=null;
     const anchor=butterflyFlightAnchor || perch;
     butterflyModel.renderSprite(arWelcomeClock.elapsed,pose);
     const x=anchor.x+pose.x*220+(window.innerWidth*.53-anchor.x)*pose.close;
     const y=anchor.y-pose.y*200+(window.innerHeight*.45-anchor.y)*pose.close;
-    butterflyCanvas.style.visibility='visible';butterflyCanvas.style.opacity=String(pose.opacity);butterflyCanvas.style.left=x+'px';butterflyCanvas.style.top=y+'px';butterflyCanvas.style.transform=`translate(-50%,-50%) scale(${1+pose.close*.25})`;
+    butterflyCanvas.style.visibility='visible';butterflyCanvas.style.opacity=String(pose.opacity);butterflyCanvas.style.left=x+'px';butterflyCanvas.style.top=y+'px';butterflyCanvas.style.transform=`translate(-50%,${pose.flight>0?'-50%':'-78%'}) scale(${1+pose.close*.25})`;
 }
 function drawSpatialButterfly(view){
     if(!butterflyModel?.ready || !program || !buffer || !viewerMatrix)return;
@@ -4989,14 +4997,7 @@ function drawSpatialButterfly(view){
         if(butterflyEncounterOrigin?.index!==pose.encounterIndex)butterflyEncounterOrigin={index:pose.encounterIndex,x:viewerMatrix[12]-viewerMatrix[8]*.85+viewerMatrix[0]*.18,y:viewerMatrix[13]-.10,z:viewerMatrix[14]-viewerMatrix[10]*.85+viewerMatrix[2]*.18};
         position={x:position.x+(butterflyEncounterOrigin.x-position.x)*pose.close,y:position.y+(butterflyEncounterOrigin.y-position.y)*pose.close,z:position.z+(butterflyEncounterOrigin.z-position.z)*pose.close};
     }
-    const sprite=butterflyModel.renderSprite(arWelcomeClock.elapsed,pose);if(!sprite)return;
-    if(!butterflyTexture){butterflyTexture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,butterflyTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
-    if(arWelcomeClock.elapsed-butterflyUploadedAt>=butterflyModel.interval){gl.bindTexture(gl.TEXTURE_2D,butterflyTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,sprite);butterflyUploadedAt=arWelcomeClock.elapsed;}
-    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);const vertex=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');
-    gl.enableVertexAttribArray(vertex);gl.vertexAttribPointer(vertex,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
-    gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.disable(gl.CULL_FACE);
-    const model=billboardMatrix(position,.78,.78,viewerMatrix);
-    gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,butterflyTexture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),pose.opacity);gl.drawArrays(gl.TRIANGLES,0,6);gl.depthMask(true);
+    butterflyModel.drawXR(view,position,arWelcomeClock.elapsed,pose);
 }
 
 function drawSpatialAmbientLife(view){
@@ -5024,9 +5025,10 @@ function drawSpatialAmbientLife(view){
             const model=billboardMatrix(position,spriteScale,spriteScale,viewerMatrix);
             gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),bee.opacity);
+            if(bee.flyby>.02)gl.disable(gl.DEPTH_TEST);else gl.enable(gl.DEPTH_TEST);
             gl.drawArrays(gl.TRIANGLES,0,6);
         }
-        gl.depthMask(true);
+        gl.depthMask(true);gl.enable(gl.DEPTH_TEST);
         return;
     }
     const wings=[];
@@ -5096,12 +5098,12 @@ function drawNativeConnectionSpatial(view){
     if(!state || !record?.demoExpanded || !introWorldAnchor || !tetherRenderer || !sphereRenderer || !viewerMatrix || state.phase==='source')return;
     const panel=demoPimPanel(record,ensureDemoPimPose(record));
     const size=record.pimTextureSize || demoPimSurfaceSize(record);
-    const layoutKey=`${size.layoutWidth}:${size.layoutHeight}:${demoPimExpandedNodeIds(record).join('|')}`;
+    const layoutKey=`${size.layoutWidth}:${size.layoutHeight}:${demoPimExpandedNodeIds(record).join('|')}:${record.demoSelectedNodeId || ''}`;
     if(state.sourceLayoutKey!==layoutKey){
         state.sourceLayoutKey=layoutKey;
-        state.sourceNodePosition=pimVisibleNodes(knowledgeFor(record),demoPimExpandedNodeIds(record),{...demoSpatialPimLayoutOptions(),layoutWidth:size.layoutWidth,layoutHeight:size.layoutHeight}).find(node=>node.nodeId===state.sourceId || node.path===state.sourcePath)?.position || null;
+        state.sourceVisualNode=pimVisibleNodes(knowledgeFor(record),demoPimExpandedNodeIds(record),{...demoSpatialPimLayoutOptions(),selectedNodeId:record.demoSelectedNodeId,layoutWidth:size.layoutWidth,layoutHeight:size.layoutHeight}).find(node=>node.nodeId===state.sourceId || node.path===state.sourcePath) || null;
     }
-    const sourceNode=state.sourceNodePosition;
+    const sourceNode=state.sourceVisualNode?pimNodeVisualPosition(state.sourceVisualNode):null;
     const targetNode=arWelcomeRenderedFrames.flatMap(frame=>frame.nodes).find(node=>node.limId===state.targetId && node.opacity>.5);
     if(!panel || !sourceNode || !targetNode)return;
     const sx=(sourceNode.x/100-.5)*panel.width,sy=(.5-sourceNode.y/100)*panel.height;
@@ -5166,8 +5168,8 @@ function drawMarker(view) {
         const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
-            : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
-        const bodyHalfWidth=.095,bodyHalfDepth=.075,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES,rotationY=demoTotemRotationY(record);
+            : Number(record.position?.y || 0) - demoTotemHalfHeight(record);
+        const bodyHalfWidth=.095,bodyHalfDepth=.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
         const style=currentTotemModel();
         const postOptions={halfWidth:bodyHalfWidth,halfHeight:bodyHalfHeight,halfDepth:bodyHalfDepth,
             color:totemColour,alpha:arrival*demoTotemVisualOpacity(record),rotationY,style,
@@ -5185,7 +5187,7 @@ function drawMarker(view) {
     if (linkedTotems.length >= 2) {
         const [first, second] = linkedTotems;
         const route=demoGroundLinkRoute(first,second);
-        if(route)drawSpatialTether(gl,tetherRenderer,view,route.start,route.end,{width:.008,color:[.4,.9,.72,.72],curve:0,lift:0});
+        if(route){const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;const alpha=reduced?.76:.72+Math.sin(performance.now()/1800)*.07;drawSpatialGroundArrowPath(gl,tetherRenderer,view,route.start,route.end,{width:.026,dashLength:.25,gapLength:.12,arrowSpacing:.65,arrowLength:.16,arrowWidth:.10,color:[.70,.84,.67,alpha]});}
     }
 
     gl.useProgram(program);
@@ -5265,7 +5267,7 @@ function drawMarker(view) {
             if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
                 record.liveTotemCards=demoTotemCards(record);record.totemCardsRefreshed=performance.now();
             }
-            const base={...record.position,y:record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES};
+            const base={...record.position,y:record.groundBaseY ?? record.position.y-demoTotemHalfHeight(record)};
             const rotationY=demoTotemRotationY(record);
             const surfaces=totemLayoutForRecord(record,base,record.liveTotemCards,record.totemSelectedCard,rotationY);
             const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
@@ -5283,7 +5285,6 @@ function drawMarker(view) {
         totemCardsRenderer.end();
     }
     drawNativeConnectionSpatial(view);
-    drawDemoControllerPointer(view);
     for(const record of markers){
         if(!signTargets.has(record.id) || !demoAreaVisible(record))continue;
         if(record.demoType==='plant'){
@@ -5293,8 +5294,11 @@ function drawMarker(view) {
             const scale=record.demoAmbientNeighbour ? .62 : 1;
             drawSignDestinationHighlight(gl,tetherRenderer,view,record.position,{width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x*scale,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y*scale,shape:'box'});
         }else if(record.demoType==='zone'){
-            const ground=record.groundBaseY ?? record.position.y-DEMO_TOTEM_HALF_HEIGHT_METRES;
-            drawSignDestinationHighlight(gl,tetherRenderer,view,{...record.position,y:ground+DEMO_TOTEM_HALF_HEIGHT_METRES},{width:.26,height:DEMO_TOTEM_HALF_HEIGHT_METRES*2,shape:'box'});
+            const halfHeight=demoTotemHalfHeight(record),ground=record.groundBaseY ?? record.position.y-halfHeight;
+            drawSignDestinationHighlight(gl,tetherRenderer,view,{...record.position,y:ground+halfHeight},{width:.26,height:halfHeight*2,shape:'box'});
+            const surfaces=totemLayoutForRecord(record,{...record.position,y:ground},demoTotemCards(record),record.totemSelectedCard,demoTotemRotationY(record));
+            const right={x:Math.cos(demoTotemRotationY(record)),z:-Math.sin(demoTotemRotationY(record))};
+            drawTotemDestinationBeacon(gl,tetherRenderer,view,record,surfaces.find(surface=>surface.card?.boardStyle==='header-compact') || {center:{...record.position,y:ground+halfHeight*1.805},right,width:.56,height:.15});
         }
     }
 
@@ -5531,11 +5535,12 @@ async function startImmersive() {
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
                 runXrFrameStep('startup surface',()=>drawXrRecoverySurface(view));
                 runXrFrameStep('rain render',()=>drawSpatialRain(view, _time));
-                runXrFrameStep('butterfly render',()=>drawSpatialButterfly(view));
-                runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));
                 if(runXrFrameStep('marker render',()=>drawMarker(view)))markXrFirstContentRendered();
                 runXrFrameStep('PIM render',()=>drawDemoKnowledge(view));
                 runXrFrameStep('Control panel render',()=>infoPanel?.draw(view));
+                runXrFrameStep('butterfly render',()=>drawSpatialButterfly(view));
+                runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));
+                runXrFrameStep('pointer render',()=>drawDemoControllerPointer(view));
                 if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));
             }
             gl.disable(gl.SCISSOR_TEST);

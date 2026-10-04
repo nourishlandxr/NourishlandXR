@@ -4,7 +4,7 @@ export const DEMO_NATIVE_SOURCE_ID = 'food-forest';
 export const DEMO_NATIVE_TARGET_ID = 'lim-food-forest';
 export const DEMO_NATIVE_CONNECTION_EXAMPLES=Object.freeze([
     Object.freeze({id:'food-forest',label:'Food forest → Living Landscapes',sourceId:'food-forest',targetId:'lim-food-forest',
-        explanation:'A plant function becomes a question about layers, shelter and relationships in this real place.',
+        explanation:'Pigeon Pea can be a fast-growing pioneer in a young living landscape. It fixes nitrogen, adds leaf litter and pruning material to the soil, and can shelter young trees while they establish. Its flowers provide forage for bees, and its growth creates habitat that birds and other wildlife can use. These roles help turn an exposed planting into a more sheltered, connected place.',
         fieldQuestion:'What role does this Pigeon Pea actually play beside the plants around it?'}),
     Object.freeze({id:'propagation',label:'Propagation → Propagation',sourceId:'propagation',targetId:'lim-plant-propagation',
         explanation:'Seed and establishment information becomes a learning path for observing how a new plant could grow here.',

@@ -255,7 +255,7 @@ test('media movement uses the same hold gesture and settings expose shared mesh 
     assert.match(panel,/if\(!mediaDetached\)detachMediaPanel\(\)/);
     assert.match(panel,/mediaPointerDrag\.timer=setTimeout/);
     assert.match(panel,/PANEL_GRAB_HOLD_MS/);
-    assert.match(panel,/slider\('InfoOpacity','info-opacity','Panels opacity'/);
+    assert.match(panel,/slider\('InfoOpacity','info-opacity','Main \/ Control glass'/);
     assert.match(panel,/drawPanelSettingSlider/);
     assert.match(panel,/onCellOpacity\(value\)/);
     assert.match(panel,/panel:'media',cardId:'media',startedAt:performance\.now\(\)/);

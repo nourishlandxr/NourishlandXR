@@ -11871,5 +11871,5 @@ body:has(.app-surface) {
 .ar-preload-controls progress { accent-color:#a6be8e; height:8px; }
 .ar-preload-controls [role="status"] { margin-top:10px; }
 
-.tryit-butterfly-model {position:fixed;width:120px;height:120px;pointer-events:none;z-index:12310;object-fit:contain;}
+.tryit-butterfly-model {position:fixed;width:86px;height:86px;pointer-events:none;z-index:12310;object-fit:contain;}
 .tryit-demo.is-immersive .tryit-butterfly-model {display:none;}

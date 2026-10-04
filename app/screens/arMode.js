@@ -1,5 +1,5 @@
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
-import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../services/totemSignSelection.js';
+import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,drawTotemDestinationBeacon} from '../services/totemSignSelection.js';
 import {getSpatialVisualSettings} from '../services/spatialVisualSettings.js';
 import {createXRPerformanceSettings} from '../services/xrPerformanceSettings.js';
 import {SPATIAL_OBJECT_VISUALS,spatialTransitionProgress} from '../services/spatialObjectVisuals.js';
@@ -823,6 +823,11 @@ function drawCreatorSignDestinations(view){
         const [halfWidth,halfHeight]=markerDimensions(record.marker),totem=record.marker.type==='area_checkpoint';
         const position=totem?{...groundedTotemPosition(record.position),y:groundedTotemPosition(record.position).y+halfHeight}:record.position;
         drawSignDestinationHighlight(gl,controllerPointerRenderer,view,position,{width:halfWidth*2,height:halfHeight*2,shape:totem || record.marker.type==='note'?'box':'ellipse'});
+        if(totem){
+            const ground=groundedTotemPosition(record.position),rotationY=Number(record.rotationY) || 0;
+            const surfaces=totemLayoutForRecord(record,ground,creatorTotemCards(record),record.totemSelectedCard,rotationY);
+            drawTotemDestinationBeacon(gl,controllerPointerRenderer,view,record,surfaces.find(surface=>surface.card?.boardStyle==='header-compact') || {center:{...ground,y:ground.y+halfHeight*1.805},right:{x:Math.cos(rotationY),z:-Math.sin(rotationY)},width:.62,height:.15});
+        }
     }
 }
 
@@ -3977,7 +3982,7 @@ function drawCalibratedTotemPath(view) {
     drawSpatialGroundArrowPath(gl, controllerPointerRenderer, view,
         { ...startGround, y: startGround.y + .05 },
         { ...endGround, y: endGround.y + .05 },
-        { width: .024, dashLength: .13, gapLength: .11, arrowLength: .14, arrowWidth: .105, arrowSpacing: .72, color: [0.55, 1, 0.42, .92] });
+        { width:.026,dashLength:.25,gapLength:.12,arrowLength:.16,arrowWidth:.10,arrowSpacing:.65,color:[.70,.84,.67,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?.76:.72+Math.sin(performance.now()/1800)*.07] });
     drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix,
         { ...endGround, y: endGround.y + .045 }, .065,
         { color: [.55, 1, .42], alpha: .7, emissive: 1 });

@@ -327,7 +327,33 @@ function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStar
     });
     drawLivingRim(ctx,{elapsed,reducedMotion,quality});
     ctx.restore();
+    drawLowCellGroundcover(ctx,{cellClearance,elapsed,reducedMotion,quality});
     return frame;
+}
+
+// Low planting replaces empty clearance holes. Tall roots and vines stay
+// excluded, while this shallow carpet sits beneath the separate cell surface.
+function drawLowCellGroundcover(ctx,{cellClearance=[],elapsed=0,reducedMotion=false,quality='medium'}){
+    if(!cellClearance.length)return;
+    const growth=reducedMotion?1:Math.max(0,Math.min(1,(elapsed-47000)/85000));
+    if(growth<=0)return;
+    const budget=quality==='high'?480:quality==='low'?150:300;
+    const count=Math.min(quality==='high'?46:quality==='low'?18:30,Math.ceil(budget/cellClearance.length));
+    ctx.save();ctx.beginPath();
+    for(const cell of cellClearance){ctx.moveTo(cell.x+cell.radius,cell.y);ctx.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);}
+    ctx.clip();
+    cellClearance.forEach((cell,index)=>{
+        for(let n=0;n<count;n++){
+            const seed=index*97+n,angle=hash(seed,701)*Math.PI*2,radius=Math.sqrt(hash(seed,709))*cell.radius;
+            const x=cell.x+Math.cos(angle)*radius,y=cell.y+Math.sin(angle)*radius;
+            if(Math.hypot(x-WELCOME_SHAPE.cx,y-WELCOME_SHAPE.cy)<WELCOME_SHAPE.radius+3)continue;
+            const g=Math.max(0,Math.min(1,(growth-hash(seed,719)*.25)/.75));
+            if(g<=0)continue;
+            const size=(7+hash(seed,727)*7)*g;
+            ctx.globalAlpha=.88*g;
+            for(let leaf=0;leaf<3;leaf++)drawRimLeaf(ctx,x,y,angle+leaf*2.1,size,['#344f35','#58744b','#738563'][n%3],'rgba(189,210,157,.28)',quality==='high'?2:1);
+        }
+    });ctx.restore();
 }
 
 // A deterministic, asymmetric garden. Time controls growth, never frame count.
@@ -543,6 +569,7 @@ export function drawArWelcomeRoots(ctx,options={}){
   if(options.cellClearance?.length){paint.save();paint.globalCompositeOperation='destination-out';paint.beginPath();
    for(const cell of options.cellClearance){paint.moveTo(cell.x+cell.radius,cell.y);paint.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);}
    paint.fill();paint.restore();
+   drawLowCellGroundcover(paint,{...options,quality});
   }
   entry.key=key;entry.clearance=options.cellClearance;
  }
