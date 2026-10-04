@@ -1,7 +1,16 @@
 // Demo-only streamed music and lightweight, original touch tones.
 export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeStrength: .075 });
 export function createDemoFeedback() {
-    let music=null, context=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
+    let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
+    const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35};
+    try{const saved=JSON.parse(globalThis.localStorage?.getItem('nxr-demo-sound') || '{}');for(const key of ['music','fx'])if(Number.isFinite(saved[key]))levels[key]=Math.max(0,Math.min(1,saved[key]));}catch{}
+    function setVolume(kind,value){
+        if(!['music','fx'].includes(kind) || !Number.isFinite(value))return;
+        levels[kind]=Math.max(0,Math.min(1,value));
+        if(music)music.volume=levels.music;
+        if(fxGain)fxGain.gain.setTargetAtTime(levels.fx,context.currentTime,.025);
+        try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}
+    }
     const pulsing=new Set();
     function pulse(source,strength=DEMO_FEEDBACK.selectionStrength,duration=35) {
         if(destroyed || !source?.gamepad)return;
@@ -15,13 +24,13 @@ export function createDemoFeedback() {
     function start() {
         if(destroyed)return;
         // HTMLAudio streams the album; never decode its full duration into RAM.
-        if(!music){music=new Audio(new URL('../assets/demo-wet-land.mp3',import.meta.url).href);music.preload='metadata';music.loop=true;music.volume=DEMO_FEEDBACK.musicVolume;}
+        if(!music){music=new Audio(new URL('../assets/demo-wet-land.mp3',import.meta.url).href);music.preload='metadata';music.loop=true;music.volume=levels.music;}
         music.play()?.catch(()=>{});
         const AudioContext=globalThis.AudioContext || globalThis.webkitAudioContext;
-        try {if(!context && AudioContext)context=new AudioContext();context?.resume()?.catch(()=>{});}catch{}
+        try {if(!context && AudioContext){context=new AudioContext();fxGain=context.createGain();fxGain.gain.value=levels.fx;fxGain.connect(context.destination);}context?.resume()?.catch(()=>{});}catch{}
     }
     function sound(kind='menu') {
-        if(destroyed || !context || context.state!=='running')return;
+        if(destroyed || !context || context.state!=='running' || levels.fx===0)return;
         const now=context.currentTime;
         if(now-lastSound<.065)return;
         lastSound=now;
@@ -30,9 +39,9 @@ export function createDemoFeedback() {
         notes.forEach((frequency,index)=>{
             const oscillator=context.createOscillator(),gain=context.createGain(),start=now+index*.025;
             oscillator.type='sine';oscillator.frequency.value=frequency;
-            gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(DEMO_FEEDBACK.touchVolume/notes.length,start+.008);
+            gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.1/notes.length,start+.008);
             gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
-            oscillator.connect(gain);gain.connect(context.destination);oscillator.start(start);oscillator.stop(start+duration+.01);
+            oscillator.connect(gain);gain.connect(fxGain);oscillator.start(start);oscillator.stop(start+duration+.01);
             oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
         });
     }
@@ -51,5 +60,5 @@ export function createDemoFeedback() {
         context?.close()?.catch(()=>{});context=null;
     }
     const status=()=>({playing:Boolean(music && !music.paused),ready:music?.readyState || 0,error:music?.error?.code || 0,touchReady:context?.state==='running'});
-    return {start,sound,pulse,tick,destroy,status};
+    return {start,sound,pulse,tick,destroy,status,setVolume,volumes:()=>({...levels})};
 }

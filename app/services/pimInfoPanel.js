@@ -147,11 +147,12 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false}={}){
+export function panelSettingsControls({headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,demoSound=null}={}){
     const choice=(action,label,group,title,y,x=540,width=404)=>({action,label,ariaLabel:title || label,settingGroup:group,settingLabel:title,x,y,width,height:58});
     const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
     const navigation=choice('GraphicsMenu',graphicsOpen?'‹ General':'Graphics ›','navigation','',100,56,888);
     const close={...choice('CloseSettings','Done','close','Close settings',26,806,138),kind:'settings-close'};
+    if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),close];
     if(graphicsOpen)return [navigation,
         choice('GraphicsQuality',graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),'graphics','Graphics quality',202),
         ...(rainEnabled?[choice('RainQuality',RAIN_QUALITIES[rainQuality]?.label || 'Off','rain','Rain quality',290)]:[]),
@@ -170,6 +171,7 @@ export function panelSettingsControls({headset=false,largeText=false,handVisualM
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Outline','hands','Hands',424)]:[]),
         ...(performanceSettings?[...rateControls,choice('ShowFps',`FPS · ${performanceSettings.showFps?'On':'Off'}`,'performance','Refresh rate / FPS',550,56+rates.length*(rateWidth+12),rateWidth)]:[]),
+        ...(demoSound?[choice('SoundMenu','Sound ›','sound','',614,56,888)]:[]),
         {...navigation,y:686,width:420},choice('SettingsHelp','Help','help','',686,496,448),close];
 }
 export function panelSliderValue(control,x){
@@ -239,7 +241,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onInteract = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onInteract = () => {}, demoSound=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     let graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality;
     let floorOffset=getSpatialVisualSettings().floorOffset;
     let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel(),totemModel=currentTotemModel();
@@ -253,7 +255,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='',hoveredAction='';
     const panelCanvases=new Map();
     let confirmation=null,confirmationSnapshot=null;
-    let sliderGrab=null,finishingSliderSource=null,graphicsOpen=false;
+    let sliderGrab=null,finishingSliderSource=null,graphicsOpen=false,soundOpen=false;
     let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,panelGestureSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null;
     let removeXrControls=()=>{};
     const element=document.createElement('aside'),settingsElement=document.createElement('aside'),contentId='control-panel-content-'+(++panelInstance);
@@ -325,7 +327,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             return;
         }
         if(action==='CloseSettings'){settingsOpen=false;renderSettings();return;}
-        if(action==='GraphicsMenu'){graphicsOpen=!graphicsOpen;renderSettings();return;}
+        if(action==='GraphicsMenu'){graphicsOpen=!graphicsOpen;soundOpen=false;renderSettings();return;}
+        if(action==='SoundMenu'){soundOpen=!soundOpen;graphicsOpen=false;renderSettings();return;}
         if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
@@ -357,6 +360,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         render();
     }
     function setSliderValue(action,value){
+        if(action==='MusicVolume' || action==='FxVolume')demoSound?.setVolume(action==='MusicVolume'?'music':'fx',value);
         if(action==='InfoOpacity'){infoOpacity=value;setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);}
         if(action==='CellOpacity'){meshCellOpacity=value;setSpatialVisualSettings({cellOpacity:value});onCellOpacity(value);}
         if(action==='SpatialScale'){spatialScale=value;setSpatialVisualSettings({spatialScale});}
@@ -369,7 +373,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(value!==settingsControls().find(item=>item.action===button.action)?.value)setSliderValue(button.action,value);
         return true;
     }
-    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen});
+    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,demoSound:demoSound?.volumes()});
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
@@ -390,7 +394,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             settingsElement.style.top=Math.max(8,above?main.top-(media?.height || main.height)-12:main.top)+'px';
             settingsElement.style.bottom='auto';
         }else if(!renderer){settingsElement.style.removeProperty('left');settingsElement.style.removeProperty('top');settingsElement.style.removeProperty('bottom');}
-        settingsElement.innerHTML='<header><h2>'+(graphicsOpen?'Graphics':'Settings')+'</h2><button type="button" class="nlxr-settings-close" aria-label="Close settings">Done</button></header><section><div class="nlxr-settings-actions"></div></section>';
+        settingsElement.innerHTML='<header><h2>'+(soundOpen?'Sound':graphicsOpen?'Graphics':'Settings')+'</h2><button type="button" class="nlxr-settings-close" aria-label="Close settings">Done</button></header><section><div class="nlxr-settings-actions"></div></section>';
         settingsElement.querySelector('.nlxr-settings-close').addEventListener('click',()=>{settingsOpen=false;render(true);});
         const actions=settingsElement.querySelector('.nlxr-settings-actions');
         for(const item of settingsControls().filter(item=>item.action!=='CloseSettings')){
@@ -406,7 +410,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 row.querySelector('.nlxr-setting-options').append(slider);
             }else row.querySelector('.nlxr-setting-options').append(makeButton(item));
         }
-        if(!graphicsOpen && performanceSettings){const status=document.createElement('p');status.className='nlxr-settings-status';status.textContent=performanceStatus();status.setAttribute('role','status');actions.append(status);}
+        if(!graphicsOpen && !soundOpen && performanceSettings){const status=document.createElement('p');status.className='nlxr-settings-status';status.textContent=performanceStatus();status.setAttribute('role','status');actions.append(status);}
         settingsElement.scrollTop=scrollTop;
         if(focused)settingsElement.querySelector(`[data-info-action="${focused}"]`)?.focus({preventScroll:true});
     }
@@ -794,7 +798,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             return c;
         }
         if(card.settings){
-            ctx.fillStyle='#fcfff7';ctx.font='700 42px Manrope, system-ui';ctx.fillText(card.graphicsOpen?'Graphics':'Settings',56,30,700);
+            ctx.fillStyle='#fcfff7';ctx.font='700 42px Manrope, system-ui';ctx.fillText(card.soundOpen?'Sound':card.graphicsOpen?'Graphics':'Settings',56,30,700);
             const groups=new Map();
             card.controls.forEach(button=>{if(button.settingLabel && button.action!=='CloseSettings' && !groups.has(button.settingGroup))groups.set(button.settingGroup,{label:button.settingLabel,y:button.y,paired:['models','performance'].includes(button.settingGroup)});});
             groups.forEach(group=>{
@@ -809,7 +813,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
                 ctx.strokeStyle=aimed?'rgba(243,248,226,.95)':'rgba(239,251,244,.48)';ctx.lineWidth=aimed?5:2.5;ctx.stroke();
                 ctx.fillStyle='#fcfff4';ctx.font='650 30px Manrope, system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+14,button.width-24);
             });ctx.textAlign='left';
-            if(!card.graphicsOpen && card.performanceMessage){ctx.fillStyle='#dfebe0';ctx.font='500 25px Manrope, system-ui';infoPages(card.performanceMessage,68,2)[0].forEach((line,index)=>ctx.fillText(line,56,626+index*30,888));}
+            if(!card.graphicsOpen && !card.soundOpen && card.performanceMessage){ctx.fillStyle='#dfebe0';ctx.font='500 25px Manrope, system-ui';infoPages(card.performanceMessage,68,2)[0].forEach((line,index)=>ctx.fillText(line,56,626+index*30,888));}
             return c;
         }
         if(card.headset && !card.hidden){
@@ -1039,7 +1043,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',infoOpacity,headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
-            const settingsCard={id:'settings',settings:true,graphicsOpen,performanceMessage:performanceStatus(),infoOpacity,height:760,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
+            const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,performanceMessage:performanceStatus(),infoOpacity,height:760,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
