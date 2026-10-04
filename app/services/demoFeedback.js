@@ -2,18 +2,24 @@
 export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeStrength: .075 });
 export function createDemoFeedback() {
     let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
-    const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35};
-    try{const saved=JSON.parse(globalThis.localStorage?.getItem('nxr-demo-sound') || '{}');for(const key of ['music','fx'])if(Number.isFinite(saved[key]))levels[key]=Math.max(0,Math.min(1,saved[key]));}catch{}
+    const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35,haptics:true};
+    try{const saved=JSON.parse(globalThis.localStorage?.getItem('nxr-demo-sound') || '{}');for(const key of ['music','fx'])if(Number.isFinite(saved[key]))levels[key]=Math.max(0,Math.min(1,saved[key]));if(typeof saved.haptics==='boolean')levels.haptics=saved.haptics;}catch{}
+    const save=()=>{try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}};
+    function setHaptics(enabled){
+        levels.haptics=Boolean(enabled);
+        if(!levels.haptics)for(const source of pulsing)pulse(source,0,1);
+        save();
+    }
     function setVolume(kind,value){
         if(!['music','fx'].includes(kind) || !Number.isFinite(value))return;
         levels[kind]=Math.max(0,Math.min(1,value));
         if(music)music.volume=levels.music;
         if(fxGain)fxGain.gain.setTargetAtTime(levels.fx,context.currentTime,.025);
-        try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}
+        save();
     }
     const pulsing=new Set();
     function pulse(source,strength=DEMO_FEEDBACK.selectionStrength,duration=35) {
-        if(destroyed || !source?.gamepad)return;
+        if(destroyed || !source?.gamepad || !levels.haptics && strength>0)return;
         try {
             const actuator=source.gamepad.hapticActuators?.[0] || source.gamepad.vibrationActuator;
             const result=actuator?.pulse ? actuator.pulse(strength,duration) : actuator?.playEffect?.('dual-rumble',{duration,strongMagnitude:strength,weakMagnitude:strength*.7});
@@ -62,5 +68,5 @@ export function createDemoFeedback() {
         context?.close()?.catch(()=>{});context=null;
     }
     const status=()=>({playing:Boolean(music && !music.paused),ready:music?.readyState || 0,error:music?.error?.code || 0,touchReady:context?.state==='running'});
-    return {start,sound,pulse,tick,destroy,status,setVolume,volumes:()=>({...levels})};
+    return {start,sound,pulse,tick,destroy,status,setVolume,setHaptics,volumes:()=>({...levels})};
 }

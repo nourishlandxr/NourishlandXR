@@ -2,7 +2,7 @@
 import {createDemoFeedback} from '../app/services/demoFeedback.js';
 import {createPimInfoPanel} from '../app/services/pimInfoPanel.js';
 let feedback=createDemoFeedback();
-const panel=createPimInfoPanel({root:document.body,demoSound:{volumes:()=>feedback.volumes(),setVolume:(kind,value)=>feedback.setVolume(kind,value)}});
+const panel=createPimInfoPanel({root:document.body,demoSound:{volumes:()=>feedback.volumes(),setVolume:(kind,value)=>feedback.setVolume(kind,value),setHaptics:enabled=>feedback.setHaptics(enabled)}});
 panel.showLearning({id:'sound-preview',title:'Demo sound settings',body:'Open Settings, then Sound, to adjust music and FX independently.',mesh:'lim'});
 document.querySelector('#begin').onclick=()=>{feedback.start();document.querySelector('#status').textContent='Music requested · streaming';};
 setInterval(()=>{const state=feedback.status();if(state.playing)document.querySelector('#status').textContent=`Music playing · media ready ${state.ready} · error ${state.error} · touch audio ${state.touchReady?'ready':'waiting'}`;},1000);

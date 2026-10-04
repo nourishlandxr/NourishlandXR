@@ -152,7 +152,7 @@ export function panelSettingsControls({headset=false,largeText=false,handVisualM
     const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
     const navigation=choice('GraphicsMenu',graphicsOpen?'‹ General':'Graphics ›','navigation','',100,56,888);
     const close={...choice('CloseSettings','Done','close','Close settings',26,806,138),kind:'settings-close'};
-    if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),close];
+    if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),close];
     if(graphicsOpen)return [navigation,
         choice('GraphicsQuality',graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),'graphics','Graphics quality',202),
         ...(rainEnabled?[choice('RainQuality',RAIN_QUALITIES[rainQuality]?.label || 'Off','rain','Rain quality',290)]:[]),
@@ -329,6 +329,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='CloseSettings'){settingsOpen=false;renderSettings();return;}
         if(action==='GraphicsMenu'){graphicsOpen=!graphicsOpen;soundOpen=false;renderSettings();return;}
         if(action==='SoundMenu'){soundOpen=!soundOpen;graphicsOpen=false;renderSettings();return;}
+        if(action==='Haptics'){demoSound?.setHaptics(!demoSound.volumes().haptics);renderSettings();return;}
         if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
