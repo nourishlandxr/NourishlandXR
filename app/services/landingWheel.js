@@ -1,3 +1,4 @@
+import {createHeroDiceGeometry,HERO_DICE_STYLE} from './heroDiceGeometry.js';
 import * as THREE from '../vendor/three.module.min.js';
 import {scrollTurn,gestureIntent,wheelGestureVelocity,decayWheelVelocity,WHEEL_DRAG_RADIANS_PER_PIXEL,WHEEL_TOUCH_RADIANS_PER_PIXEL,WHEEL_TOUCH_MAX_VELOCITY,discoveryOrientation,discoveryMomentumFactor} from './wheel-model.js';
 
@@ -44,9 +45,8 @@ try{
  if(disposed){texture.dispose();return;}
  keep(texture);texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=THREE.RepeatWrapping;texture.wrapT=THREE.ClampToEdgeWrapping;texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
 
- const indexed=new THREE.SphereGeometry(1.72,12,6);
- const polyhedron=keep(indexed.toNonIndexed());indexed.dispose();polyhedron.computeVertexNormals();
- const skin=keep(new THREE.MeshStandardMaterial({map:texture,color:0xffffff,roughness:.78,metalness:.025}));
+ const polyhedron=keep(createHeroDiceGeometry());
+ const skin=keep(new THREE.MeshStandardMaterial({map:texture,color:0xffffff,roughness:HERO_DICE_STYLE.roughness,metalness:HERO_DICE_STYLE.metalness}));
  wheel.add(new THREE.Mesh(polyhedron,skin));
  const faceEdges=keep(new THREE.EdgesGeometry(polyhedron,4));
  const edgeMaterial=keep(new THREE.LineBasicMaterial({color:0x304534,transparent:true,opacity:.2,depthWrite:false}));

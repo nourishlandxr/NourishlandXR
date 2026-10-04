@@ -71,7 +71,11 @@ export function createTetherRibbonGeometry(start, end, cameraPosition, options =
     };
     const points = Array.from(
         { length: segments + 1 },
-        (_, index) => quadraticPoint(start, control, end, index / segments)
+        (_, index) => {
+            const t=index/segments,u=1-t;if(!options.startNormal || !options.endNormal)return quadraticPoint(start,control,end,t);
+            const length=Math.min(.22,Math.hypot(end.x-start.x,end.y-start.y,end.z-start.z)*.30),a=add(start,scale(normalize(options.startNormal),length)),b=add(end,scale(normalize(options.endNormal),length));
+            return {x:u*u*u*start.x+3*u*u*t*a.x+3*u*t*t*b.x+t*t*t*end.x,y:u*u*u*start.y+3*u*u*t*a.y+3*u*t*t*b.y+t*t*t*end.y,z:u*u*u*start.z+3*u*u*t*a.z+3*u*t*t*b.z+t*t*t*end.z};
+        }
     );
     const edges = points.map((point, index) => {
         const previous = points[Math.max(0, index - 1)];

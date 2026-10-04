@@ -25,7 +25,7 @@ export function createBeeXRRenderer(gl,model,bitmap){
                 vec3 norm=normalize(mat3(normalise*skin*bind)*n);
                 light=.68+.32*abs(dot(norm,normalize(vec3(-.3,.65,.7))));v=uv;
                 gl_Position=projection*view*vec4(origin+turned*size,1.);}`);
-        const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D colour;uniform float opacity;varying vec2 v;varying float light;void main(){vec4 c=texture2D(colour,v);if(c.a<.08)discard;gl_FragColor=vec4(c.rgb*light,c.a*opacity);}');
+        const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D colour;uniform float opacity,solid;varying vec2 v;varying float light;void main(){vec4 c=texture2D(colour,v);if(solid<.5 && c.a<.08)discard;gl_FragColor=vec4(c.rgb*light,mix(c.a*opacity,1.,solid));}');
         program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
         const attributes=Object.entries({p:'position',n:'normal',uv:'uv',joints:'skinIndex',weights:'skinWeight'}).map(([name,source])=>{
             const attribute=model.mesh.geometry.attributes[source],buffer=gl.createBuffer();buffers.push(buffer);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
@@ -33,8 +33,11 @@ export function createBeeXRRenderer(gl,model,bitmap){
             return {buffer,location:gl.getAttribLocation(program,name),size:attribute.itemSize};
         });
         const index=gl.createBuffer();buffers.push(index);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,index);
-        const indices=new Uint16Array(model.mesh.geometry.index.array);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
-        const uniforms=Object.fromEntries(['projection','view','bind','normalise','origin','size','yaw','pitch','bank','bones','colour','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
+        const indices=model.mesh.geometry.index.array;
+        const bodyIndexCount=model.mesh.geometry.groups.find(group=>group.materialIndex===0)?.count ?? indices.length;
+        const wingIndexCount=model.mesh.geometry.groups.find(group=>group.materialIndex===1)?.count ?? 0;
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
+        const uniforms=Object.fromEntries(['projection','view','bind','normalise','origin','size','yaw','pitch','bank','bones','colour','opacity','solid'].map(name=>[name,gl.getUniformLocation(program,name)]));
         const colour=gl.createTexture(),bones=gl.createTexture();textures.push(colour,bones);
         gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bitmap);
@@ -65,10 +68,13 @@ export function createBeeXRRenderer(gl,model,bitmap){
             gl.uniform1f(uniforms.pitch,pose.pitch || 0);gl.uniform1f(uniforms.bank,pose.bank || 0);
             gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.uniform1i(uniforms.colour,0);
             gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);gl.uniform1i(uniforms.bones,1);
-            gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);gl.depthMask(false);
-            if(pose.flyby>.02)gl.disable(gl.DEPTH_TEST);else gl.enable(gl.DEPTH_TEST);
-            gl.drawElements(gl.TRIANGLES,indices.length,gl.UNSIGNED_SHORT,0);
-            gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.activeTexture(gl.TEXTURE0);
+            gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.depthMask(true);
+            gl.uniform1f(uniforms.solid,1);gl.drawElements(gl.TRIANGLES,bodyIndexCount,gl.UNSIGNED_SHORT,0);
+            if(wingIndexCount){
+                gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.uniform1f(uniforms.solid,0);
+                gl.drawElements(gl.TRIANGLES,wingIndexCount,gl.UNSIGNED_SHORT,bodyIndexCount*Uint16Array.BYTES_PER_ELEMENT);
+            }
+            gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.activeTexture(gl.TEXTURE0);
         },destroy:cleanup};
     }catch(error){cleanup();console.warn('Native bee unavailable; using the lightweight bee:',error);return null;}
 }

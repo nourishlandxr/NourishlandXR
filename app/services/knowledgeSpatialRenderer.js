@@ -1,3 +1,6 @@
+import {bindKnowledgeObjectInteraction} from './knowledgeObjectInteraction.js';
+import * as THREE from '../vendor/three.module.min.js';
+import {createKnowledgeObjectRenderer,knowledgeObjectSurfaces,knowledgeFaceCanvas} from './knowledgeObjectRenderer.js';
 import {pimVisibleNodes} from './plantInformationMesh.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,KNOWLEDGE_VISUALS} from './knowledgeExplorer.js';
 import {createSpatialTotemCards,hitTotemSurface} from './spatialTotemCards.js';
@@ -11,12 +14,7 @@ const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 const world=(pose,p)=>({x:pose.position.x+pose.right.x*p.x+pose.up.x*p.y+pose.normal.x*p.z,y:pose.position.y+pose.right.y*p.x+pose.up.y*p.y+pose.normal.y*p.z,z:pose.position.z+pose.right.z*p.x+pose.up.z*p.y+pose.normal.z*p.z});
 function nodePoint(node,spatial){
     const p=node.knowledgeLocal || {x:0,y:0},x=p.x*KNOWLEDGE_VISUALS.planarPitch,y=-p.y*KNOWLEDGE_VISUALS.planarPitch;
-    if(!spatial)return {x,y,z:0};
-    // Semantic radial shells: specific knowledge expands out and away from
-    // the subject plane. This is stable XYZ geometry, not random Z jitter.
-    const depth=node.depth || 0,radius=KNOWLEDGE_VISUALS.shellRadius+Math.min(depth,8)*KNOWLEDGE_VISUALS.shellStep,angle=Math.atan2(y,x),elevation=Math.max(-.82,Math.min(.82,Math.sin(angle)*.75));
-    const lateral=Math.sqrt(1-elevation*elevation)*radius;
-    return {x:Math.cos(angle)*lateral*(1+depth*.08),y:elevation*radius,z:-radius*(.28+depth*.12)};
+    return {x,y,z:0};
 }
 export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performance.now()){
     if(!pose?.position)return [];
@@ -29,11 +27,11 @@ export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performanc
     let cache=caches.get(record);
     if(!cache || cache.key!==key || cache.knowledge!==knowledge){
         const nodes=pimVisibleNodes(knowledge,expanded,{...knowledgeExplorerOptions(record),layoutWidth:1440,layoutHeight:1080,cellWidthPixels:200,cellHeightPixels:173.2});
-        const source=cache?.local || new Map(),targets=new Map([['core',{x:0,y:0,z:0}]]);
+        const source=cache?.mode==='explore' && state.mode==='curiosity'?new Map((cache.nodes || []).map(node=>[node.path,{x:0,y:0,z:0}])):cache?.local || new Map(),targets=new Map([['core',{x:0,y:0,z:0}]]);
         const remembered=cache?.mode===state.mode?cache.targets:null;
         const occupied=[{x:0,y:0,z:0,path:'core'},...nodes.filter(node=>remembered?.has(node.path)).map(node=>({...remembered.get(node.path),path:node.path}))];
         nodes.forEach(node=>{
-            const point=remembered?.has(node.path)?{...remembered.get(node.path)}:nodePoint(node,state.mode==='explore');
+            const point=remembered?.has(node.path)?{...remembered.get(node.path)}:nodePoint(node,false);
             const previous=occupied.findIndex(other=>other.path===node.path);if(previous>=0)occupied.splice(previous,1);
             const floor=()=>{if(Number.isFinite(record.knowledgeFloor))point.y=Math.max(point.y,(record.knowledgeFloor+.13-pose.position.y-pose.normal.y*point.z-pose.right.y*point.x)/Math.max(.5,pose.up.y));};
             floor();
@@ -65,6 +63,7 @@ export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performanc
     return surfaces;
 }
 function labelCanvas(card){
+    if(card.knowledgeFace)return knowledgeFaceCanvas(card);
     const canvas=document.createElement('canvas');canvas.width=card.resolution;canvas.height=card.resolution;const ctx=canvas.getContext('2d');ctx.scale(canvas.width/512,canvas.height/512);
     ctx.beginPath();
     if(card.identity)ctx.roundRect(18,62,476,388,34);
@@ -85,25 +84,23 @@ function hitKnowledgeSurface(ray,surfaces){
     const hits=surfaces.map(surface=>hitTotemSurface(ray,[surface])).filter(Boolean).filter(hit=>hit.card.identity || (Math.abs(hit.localY)/(hit.height/2)<=.96 && Math.abs(hit.localX)/(hit.width/2)+Math.abs(hit.localY)/hit.height<=.96));
     return hits.sort((a,b)=>a.distance-b.distance)[0] || null;
 }
-function readableFacing(surface,view){
-    const m=view.transform.inverse.matrix,transform=view.transform.matrix;
-    const camera=transform?{x:transform[12],y:transform[13],z:transform[14]}:{x:-(m[0]*m[12]+m[1]*m[13]+m[2]*m[14]),y:-(m[4]*m[12]+m[5]*m[13]+m[6]*m[14]),z:-(m[8]*m[12]+m[9]*m[13]+m[10]*m[14])};
-    const n={x:camera.x-surface.center.x,y:camera.y-surface.center.y,z:camera.z-surface.center.z},length=Math.hypot(n.x,n.y,n.z) || 1;
-    for(const axis of ['x','y','z'])n[axis]/=length;
-    const horizontal=Math.hypot(n.x,n.z);if(horizontal<.01)return;
-    const right={x:n.z/horizontal,y:0,z:-n.x/horizontal};
-    surface.normal=n;surface.right=right;surface.up={x:-n.y*right.z,y:n.z*right.x-n.x*right.z,z:-n.y*right.x};
-}
 export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={}){
-    let surfaces=[],recordSurfaces=[];
+    let surfaces=[],recordSurfaces=[],objectInput=null;
+    const objects=createKnowledgeObjectRenderer(gl,{tether});
     const cards=createSpatialTotemCards(gl,{canvas:labelCanvas,ray,surfaces:()=>recordSurfaces,containedFeedback:true,hitSurface:hitKnowledgeSurface});
     return {
-        begin(){surfaces=[];cards.begin();},
+        begin(){surfaces=[];cards.begin();objects.begin();},
         draw(view,record,knowledge,expanded,pose,time=performance.now()){
             recordSurfaces=knowledgeSurfaces(record,knowledge,expanded,pose,time);
-            // Label planes face the reader. Their world positions and bonds
-            // remain anchored, so walking around never relocates the graph.
-            if(knowledgeExplorer(record).mode==='explore')recordSurfaces.forEach(surface=>readableFacing(surface,view));
+            if(knowledgeExplorer(record).mode==='explore'){
+                const state=knowledgeExplorer(record),progress=motionPreference?.matches?1:smooth((time-state.changedAt)/KNOWLEDGE_VISUALS.transitionMs);
+                const folded=progress<1?recordSurfaces.map(surface=>({...surface,interactive:false,opacity:1-progress,center:{x:pose.position.x+(surface.center.x-pose.position.x)*(1-progress),y:pose.position.y+(surface.center.y-pose.position.y)*(1-progress),z:pose.position.z+(surface.center.z-pose.position.z)*(1-progress)}})):[];
+                objects.draw(view,record,knowledge,pose,progress);
+                const camera=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements));
+                recordSurfaces=knowledgeObjectSurfaces(record,knowledge,pose).filter(surface=>surface.normal.dot(camera.clone().sub(surface.center).normalize())>.16).map(surface=>({...surface,opacity:progress}));
+                surfaces.push(...recordSurfaces);recordSurfaces=[...recordSurfaces,...folded];
+                cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>surface.card));return;
+            }
             surfaces.push(...recordSurfaces);
             const state=knowledgeExplorer(record),byId=new Map(recordSurfaces.map(surface=>[surface.node.path || 'core',surface]));
             if(state.connections && tether){
@@ -122,11 +119,15 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
             cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>surface.card),record.demoSelectedNodeId || record.pimSelectedNodeId || '');
         },
         end(){cards.end();},
+        bindSession(session,space,{canGrab=()=>true}={}){objectInput?.destroy();objectInput=bindKnowledgeObjectInteraction(session,space,{hit:(_source,inputRay)=>objects.hit(inputRay || ray()),near:point=>objects.near(point),canGrab});},
+        updateInput(frame){objectInput?.update(frame);},
+        get grabbing(){return Boolean(objectInput?.active);},
+        movingAtAim(){const target=objects.hit(ray());return Boolean(objectInput?.active || target?.record.knowledgeExplorer.objects?.interaction==='move');},
         hit(ray,record=null){
-            return hitKnowledgeSurface(ray,record?surfaces.filter(surface=>surface.record===record):surfaces);
+            const flat=hitKnowledgeSurface(ray,surfaces.filter(surface=>(!record || surface.record===record) && surface.record.knowledgeExplorer?.mode!=='explore')),object=objects.hit(ray,record);return [flat,object].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0] || null;
         },
         surface(record,path){return surfaces.find(surface=>surface.record===record && surface.node.path===path && surface.interactive!==false);},
         clear(record){const cache=caches.get(record);if(cache)cache.key='';},
-        destroy(){cards.destroy();surfaces=[];}
+        destroy(){objectInput?.destroy();cards.destroy();objects.destroy();surfaces=[];}
     };
 }

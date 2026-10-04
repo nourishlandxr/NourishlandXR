@@ -31,9 +31,9 @@ export function drawTotemDestinationBeacon(gl,renderer,view,record,surface,now=p
     if(!surface || !Number.isFinite(age) || age<0 || age>12000)return;
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     const strength=reduced?.8:.55+.35*(.5+.5*Math.sin(age/620));
-    const center={...surface.center,y:surface.center.y+surface.height/2+.008};
-    const half=surface.width*.49;
-    drawSpatialTether(gl,renderer,view,{x:center.x-surface.right.x*half,y:center.y,z:center.z-surface.right.z*half},{x:center.x+surface.right.x*half,y:center.y,z:center.z+surface.right.z*half},{segments:2,width:.009,curve:0,lift:0,color:[.83,.98,.62,strength*Math.min(1,(12000-age)/900)]});
+    const center={...surface.center,y:surface.center.y+surface.height/2-.022};
+    const half=surface.width*.32;
+    drawSpatialTether(gl,renderer,view,{x:center.x-surface.right.x*half,y:center.y,z:center.z-surface.right.z*half},{x:center.x+surface.right.x*half,y:center.y,z:center.z+surface.right.z*half},{segments:2,width:.007,curve:0,lift:0,color:[.22,.82,.86,strength*Math.min(1,(12000-age)/900)]});
 }
 const buffers=new WeakMap();
 const unitShapes=Object.fromEntries(['ellipse','box'].map(shape=>{

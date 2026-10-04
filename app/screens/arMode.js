@@ -1,3 +1,4 @@
+import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,rememberKnowledgeSelection} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
@@ -3656,6 +3657,10 @@ function spatialPimTargetAtAim({ updateHover = true } = {}) {
 function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHover: false })) {
     if (!candidate) return false;
     const { record, target } = candidate;
+    if(knowledgeRenderer?.grabbing)return true;
+    if(record.knowledgeExplorer?.mode==='explore' && target.pimKnowledgeFace){
+        selectKnowledgeObjectFace(record,creatorPlantKnowledge(record),target);showCreatorInfo(record,target.path);refreshCreatorPimProfile(record);infoPanel?.refreshExplorer();return true;
+    }
     if(target.pimRead) {openCreatorKnowledge(record);return true;}
     if (target.pimCore) {
         if(record.knowledgeExplorer){infoPanel?.focusPlant(record,creatorKnowledgeDocument(record));return true;}
@@ -5814,7 +5819,7 @@ function createCreatorInfoPanel(){
         onFloorOffset:()=>renderSessionMarkers(),onTotemModel:()=>renderSessionMarkers(),
         onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
         onCellOpacity:value=>{creatorCellOpacity=value;for(const record of sessionMarkers.filter(item=>item.profileExpanded))refreshCreatorPimProfile(record);},
-        onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);invalidateSpatialPimTexture(record);if(action==='KnowledgeResume' && record.pimSelectedNodeId)showCreatorInfo(record,record.pimSelectedNodeId);refreshCreatorPimProfile(record);},onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
+        onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);invalidateSpatialPimTexture(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.pimSelectedNodeId)showCreatorInfo(record,record.pimSelectedNodeId);refreshCreatorPimProfile(record);},onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
     overlayRoot?.style.setProperty('--creator-info-opacity',String(getSpatialVisualSettings().infoOpacity));
     infoPanel.element.classList.add('is-creator-panel');creatorPerformance.publish();syncCreatorPanelActions();
 }
@@ -6244,7 +6249,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             pollControllerInput(_time);
             updateControllerRay(frame, _time);
             if(!latestHandState || latestHandState.pinch)tickControllerMarkerPress(_time);
-            infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame); pimHold?.tick(_time);
+            knowledgeRenderer?.updateInput(frame);infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame); pimHold?.tick(_time);
             const hasSpatialRay = isSpatialRayInputMode() && latestControllerRay;
             const dashboardTarget = hasSpatialRay ? controllerSpatialDashboardAtAim() : null;
             const pimTarget = !dashboardTarget && hasSpatialRay ? spatialPimTargetAtAim() : null;
@@ -6320,9 +6325,10 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             clearControllerMarkerPress();consumedMarkerSource=null;
             setCreatorInputMode(availableCreatorInputMode());
         });
+        knowledgeRenderer?.bindSession(launchedSession,refSpace,{canGrab:target=>{const panel=infoPanel?.hit(target.inputRay || latestControllerRay);return !creatorKnowledgeRoot && !readyPlacementType && (!panel || panel.distance>=target.distance);}});
         infoPanel?.bindSession(launchedSession, refSpace);
         pimHold = bindSpatialPimHold({session:launchedSession,
-            enabled:()=>!exitPromise && !arExitRequested && !latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay) && !totemCardsRenderer?.hit(latestControllerRay) && !controllerSpatialDashboardAtAim(),
+            enabled:()=>!knowledgeRenderer?.movingAtAim() && !exitPromise && !arExitRequested && !latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay) && !totemCardsRenderer?.hit(latestControllerRay) && !controllerSpatialDashboardAtAim(),
             getTarget:()=>spatialPimTargetAtAim({updateHover:false}), activate:activateSpatialPimTarget,
             progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}
         });

@@ -47,7 +47,29 @@ async function beeResources(gltf){
         const index=primitive.attributes[semantic];if(index===undefined)continue;
         const {data,components}=accessorData(gltf,index);geometry.setAttribute(name,new THREE.BufferAttribute(data,components));
     }
-    geometry.setIndex(new THREE.BufferAttribute(accessorData(gltf,primitive.indices).data,1));
+    const indices=accessorData(gltf,primitive.indices).data;
+    const skin=gltf.json.skins?.[0];
+    const wingJointIds=new Set((skin?.joints || []).flatMap((nodeIndex,jointIndex)=>
+        gltf.json.nodes[nodeIndex]?.name?.includes('_wing') ? [jointIndex] : []));
+    const jointIds=geometry.attributes.skinIndex?.array;
+    const jointWeights=geometry.attributes.skinWeight?.array;
+    const bodyIndices=[],wingIndices=[];
+    if(wingJointIds.size && jointIds && jointWeights){
+        for(let triangle=0;triangle<indices.length;triangle+=3){
+            let wingWeight=0;
+            for(let corner=0;corner<3;corner++){
+                const vertex=indices[triangle+corner];
+                for(let influence=0;influence<4;influence++){
+                    if(wingJointIds.has(jointIds[vertex*4+influence]))wingWeight+=jointWeights[vertex*4+influence]/3;
+                }
+            }
+            (wingWeight>.5 ? wingIndices : bodyIndices).push(indices[triangle],indices[triangle+1],indices[triangle+2]);
+        }
+    }else bodyIndices.push(...indices);
+    const groupedIndices=new Uint16Array([...bodyIndices,...wingIndices]);
+    geometry.setIndex(new THREE.BufferAttribute(groupedIndices,1));
+    geometry.addGroup(0,bodyIndices.length,0);
+    if(wingIndices.length)geometry.addGroup(bodyIndices.length,wingIndices.length,1);
     geometry.computeBoundingSphere();
     const materialData=gltf.json.materials[primitive.material];
     const diffuseIndex=materialData?.extensions?.KHR_materials_pbrSpecularGlossiness?.diffuseTexture?.index;
@@ -58,8 +80,18 @@ async function beeResources(gltf){
     const blob=new Blob([gltf.binary.slice(imageView.byteOffset,imageView.byteOffset+imageView.byteLength)],{type:imageData.mimeType});
     const bitmap=await createImageBitmap(blob);
     const texture=new THREE.Texture(bitmap);texture.needsUpdate=true;texture.flipY=false;texture.colorSpace=THREE.SRGBColorSpace;
-    const material=new THREE.MeshStandardMaterial({map:texture,roughness:.86,metalness:0,side:THREE.DoubleSide,transparent:true});
-    return {geometry,texture,material,bitmap};
+    const bodyMaterial=new THREE.MeshStandardMaterial({map:texture,roughness:.86,metalness:0,side:THREE.DoubleSide,transparent:false,depthWrite:true});
+    bodyMaterial.onBeforeCompile=shader=>{
+        shader.fragmentShader=shader.fragmentShader.replace(
+            '#include <opaque_fragment>',
+            '#include <opaque_fragment>\ngl_FragColor.a=1.0;'
+        );
+    };
+    const materials=[
+        bodyMaterial,
+        new THREE.MeshStandardMaterial({map:texture,roughness:.86,metalness:0,side:THREE.DoubleSide,transparent:true,depthWrite:false,alphaTest:.02})
+    ];
+    return {geometry,texture,materials,bitmap};
 }
 
 function makeBee(gltf,resources){
@@ -73,7 +105,7 @@ function makeBee(gltf,resources){
     gltf.json.nodes.forEach((node,index)=>node.children?.forEach(child=>nodes[index].add(nodes[child])));
     const root=nodes[gltf.json.scenes[gltf.json.scene||0].nodes[0]];
     const meshNode=gltf.json.nodes.findIndex(node=>node.mesh!==undefined);
-    const mesh=new THREE.SkinnedMesh(resources.geometry,resources.material);
+    const mesh=new THREE.SkinnedMesh(resources.geometry,resources.materials);
     mesh.name=nodes[meshNode].name;mesh.frustumCulled=false;
     nodes[meshNode].add(mesh);
     root.updateMatrixWorld(true);
@@ -113,7 +145,7 @@ export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
     const fill=new THREE.DirectionalLight(0xc9eaff,1.1);fill.position.set(4,-1,-2);scene.add(fill);
     let bees=[],bee=null,resources=null,xr=null,lastElapsed=NaN,lastSpritePaint=-Infinity,disposed=false,ready=false;
     prepareDemoBeeModel().then(async gltf=>{
-        const loaded=await beeResources(gltf);if(disposed){loaded.geometry.dispose();loaded.texture.dispose();loaded.material.dispose();loaded.bitmap.close();return;}
+        const loaded=await beeResources(gltf);if(disposed){loaded.geometry.dispose();loaded.texture.dispose();loaded.materials.forEach(material=>material.dispose());loaded.bitmap.close();return;}
         resources=loaded;bees=Array.from({length:gl || sprite?1:BEE_COUNT},()=>makeBee(gltf,loaded));bee=bees[0];bees.forEach(item=>scene.add(item.wrapper));if(gl)xr=createBeeXRRenderer(gl,bee,loaded.bitmap);ready=Boolean(renderer || xr);canvas.dataset.modelReady=ready?'true':'fallback';
     }).catch(error=>{if(!disposed){console.warn('Bee model fallback:',error);canvas.dataset.modelReady='error';}});
     return {
@@ -156,6 +188,6 @@ export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
             lastElapsed=elapsed;canvas.classList.toggle('is-behind',nearestDepth<0);canvas.classList.toggle('is-flyby',anyFlyby);
             renderer.render(scene,camera);
         },
-        destroy(){disposed=true;ready=false;xr?.destroy();bees.forEach(item=>{item.mixer.stopAllAction();item.mixer.uncacheRoot(item.root);});canvas.classList.remove('is-behind','is-flyby');resources?.geometry.dispose();resources?.texture.dispose();resources?.material.dispose();resources?.bitmap.close();renderer?.dispose();renderer?.forceContextLoss();}
+        destroy(){disposed=true;ready=false;xr?.destroy();bees.forEach(item=>{item.mixer.stopAllAction();item.mixer.uncacheRoot(item.root);});canvas.classList.remove('is-behind','is-flyby');resources?.geometry.dispose();resources?.texture.dispose();resources?.materials.forEach(material=>material.dispose());resources?.bitmap.close();renderer?.dispose();renderer?.forceContextLoss();}
     };
 }

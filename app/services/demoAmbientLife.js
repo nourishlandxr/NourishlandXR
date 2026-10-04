@@ -49,7 +49,8 @@ export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encoun
         flyby,
         flybyProgress,
         encounterPhase:encounter?.phase || 'ambient',
-        encounterIndex:encounter?.index ?? -1
+        encounterIndex:encounter?.index ?? -1,
+        encounterEndAt:encounter ? encounter.start+BEE_ENCOUNTER_DURATION_MS : NaN
     };
 }
 

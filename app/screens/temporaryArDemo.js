@@ -1,3 +1,4 @@
+import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
@@ -276,7 +277,7 @@ let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=
 let butterflyCompanions=[];
 let ambientBeeAvoidanceTime=[];
 let ambientEncounterSeed=Math.floor(Math.random()*10000);
-let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientLastPaint=0;
+let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientBeeReturn=[],ambientLastPaint=0;
 let rainV2Canvas=null,rainV2LastPaint=0;
 let demoRainIntensity=RAIN_QUALITIES[currentRainQuality()].intensity;
 let demoRainStyle=RAIN_QUALITIES[currentRainQuality()].style;
@@ -447,7 +448,7 @@ function clearSessionState() {
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;limInputSuppressSource=null;
     for(const insect of butterflyCompanions){insect.model?.destroy();insect.canvas?.remove();}butterflyCompanions=[];
-    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFrame=null;ambientEncounterOrigin=null;ambientBeeAvoidance=[];ambientBeeAvoidanceTime=[];ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
+    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFrame=null;ambientEncounterOrigin=null;ambientBeeAvoidance=[];ambientBeeReturn=[];ambientBeeAvoidanceTime=[];ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -3040,6 +3041,10 @@ function selectDemoProfileCell(selection=demoInfoTarget()) {
         setGuide('Aim at a visible plant information cell to explore it.');
         return false;
     }
+    if(knowledgeRenderer?.grabbing)return true;
+    if(record.knowledgeExplorer?.mode==='explore' && node.pimKnowledgeFace){
+        selectKnowledgeObjectFace(record,knowledgeFor(record),node);showDemoInfo(record,node.path);refreshDemoPimProfile(record);infoPanel?.refreshExplorer();return true;
+    }
     // Some Quest runtimes deliver the same trigger through both the capture
     // listener and the general select fallback. Do not toggle the branch shut
     // on that duplicate event, even if the first activation revealed children.
@@ -4000,7 +4005,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);if(action==='KnowledgeResume' && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
@@ -5004,7 +5009,7 @@ function paintDemoButterfly(now){
         if(!Number.isFinite(insect.startedAt))insect.startedAt=arWelcomeClock.elapsed;
         const pose=demoButterflyPose(arWelcomeClock.elapsed,insect.startedAt,{reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,perchMs:insect.perchMs,seed:insect.seed});
         pose.wingPhase=insect.seed*1.9;pose.size=insect.size;
-        const perch={x:insect.side==='left'?bounds.left+4:bounds.right-4,y:bounds.top};
+        const perch={x:insect.side==='left'?bounds.left:bounds.right,y:bounds.top};
         if(pose.flight>0)insect.flightAnchor ||= perch;else insect.flightAnchor=null;
         const anchor=insect.flightAnchor || perch;insect.model.renderSprite(arWelcomeClock.elapsed,pose);
         let x=anchor.x+pose.x*220+(window.innerWidth*.53-anchor.x)*pose.close,y=anchor.y-pose.y*200+(window.innerHeight*.45-anchor.y)*pose.close;
@@ -5034,7 +5039,7 @@ function drawSpatialButterfly(view){
                 position={x:position.x+(insect.encounter.x-position.x)*pose.close,y:position.y+(insect.encounter.y-position.y)*pose.close,z:position.z+(insect.encounter.z-position.z)*pose.close};
             }
             position=keepInsectAboveFloor(position,calibratedDemoGroundY());
-            if(pose.state!=='landed' && insect.position){const dx=position.x-insect.position.x,dy=position.y-insect.position.y,dz=position.z-insect.position.z;if(Math.hypot(dx,dy,dz)>.000001){pose.yaw=Math.atan2(dx,dz);pose.pitch=-Math.atan2(dy,Math.hypot(dx,dz))*.4;}}
+            if(pose.state!=='landed' && insect.position){const dx=position.x-insect.position.x,dy=position.y-insect.position.y,dz=position.z-insect.position.z,horizontal=Math.hypot(dx,dz);if(horizontal>.0001){pose.yaw=Math.atan2(dx,dz);pose.pitch=-Math.atan2(dy,horizontal)*.4;}}
             if(pose.state==='landed')pose.yaw=insect.red?-.85:.85;
             insect.position=position;insect.pose=pose;insect.lastElapsed=elapsed;
         }
@@ -5046,7 +5051,7 @@ function blendInsectWithFlower(position,visit){
     const flowers=livingFrameFlowerSites(arWelcomeClock.elapsed);if(!flowers.length)return position;
     const flower=flowers[visit.index%flowers.length],center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
     const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
-    const local=demoBillboardTextureLocalPoint(flower.x+550,flower.y+510,2500,2100),target=introLocalPosition(board,[local.x,local.y,.018]);
+    const local=demoBillboardTextureLocalPoint(flower.x+550,flower.y+510,2500,2100),target=introLocalPosition(board,[local.x,local.y,.09]);
     return {x:position.x+(target.x-position.x)*visit.amount,y:position.y+(target.y-position.y)*visit.amount,z:position.z+(target.z-position.z)*visit.amount};
 }
 
@@ -5082,19 +5087,33 @@ function drawSpatialAmbientLife(view){
 function ambientBeeWorldPosition(bee,index=0){
     const frame=ambientWorldFrame || viewerMatrix;
     const rightLength=Math.hypot(frame[0],frame[2])||1;
-    const forwardLength=Math.hypot(frame[8],frame[10])||1;
     const rightX=frame[0]/rightLength,rightZ=frame[2]/rightLength;
-    const forwardX=-frame[8]/forwardLength,forwardZ=-frame[10]/forwardLength;
+    const frontLength=Math.hypot(frame[8],frame[10])||1;
+    const frontX=frame[8]/frontLength,frontZ=frame[10]/frontLength;
     const across=(bee.x-.5)*AR_PHONE_COMFORT.boardScale[0]*.4;
     const vertical=(.5-bee.y)*AR_PHONE_COMFORT.boardScale[1]*.16;
-    const behindScreen=.10+((bee.depth+1)*.5)*2.8;
+    // Keep the flight loop just in front of the Living Frame. Sending it
+    // metres behind the board made depth testing erase bees without a fade.
+    const hoverDepth=.085+((bee.depth+1)*.5)*.05;
     let ambientPosition={
-        x:ambientWorldAnchor.x+rightX*across+forwardX*behindScreen,
+        x:ambientWorldAnchor.x+rightX*across+frontX*hoverDepth,
         y:ambientWorldAnchor.y+vertical,
-        z:ambientWorldAnchor.z+rightZ*across+forwardZ*behindScreen
+        z:ambientWorldAnchor.z+rightZ*across+frontZ*hoverDepth
     };
     const age=arWelcomeClock.elapsed-ambientBeesStartedAt;
-    const visit=insectFlowerVisit(age,index,{enabled:!window.matchMedia('(prefers-reduced-motion: reduce)').matches && !bee.flyby});
+    const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let visit=insectFlowerVisit(age,index,{enabled:!reducedMotion});
+    if(reducedMotion)ambientBeeReturn[index]=null;
+    else if(bee.flyby>.02 && bee.flybyProgress>=.72 && Number.isFinite(bee.encounterEndAt)){
+        ambientBeeReturn[index]={endAt:ambientBeesStartedAt+bee.encounterEndAt,flowerIndex:bee.encounterIndex*BEE_COUNT+index};
+    }
+    const returning=ambientBeeReturn[index];
+    if(returning){
+        const returnProgress=Math.max(0,Math.min(1,(arWelcomeClock.elapsed-returning.endAt)/4600));
+        const returnAmount=1-returnProgress*returnProgress*(3-2*returnProgress);
+        if(arWelcomeClock.elapsed>returning.endAt+4600)ambientBeeReturn[index]=null;
+        else if(returnAmount>visit.amount)visit={amount:returnAmount,index:returning.flowerIndex};
+    }
     ambientPosition=blendInsectWithFlower(ambientPosition,visit);
     const flyby=Math.max(0,Math.min(1,Number(bee.flyby)||0));
     if(!flyby)return beeWorldAvoidance(ambientPosition,index);
@@ -5340,7 +5359,6 @@ function drawMarker(view) {
             drawSignDestinationHighlight(gl,tetherRenderer,view,record.position,{width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x*scale,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y*scale,shape:'box'});
         }else if(record.demoType==='zone'){
             const halfHeight=demoTotemHalfHeight(record),ground=record.groundBaseY ?? record.position.y-halfHeight;
-            drawSignDestinationHighlight(gl,tetherRenderer,view,{...record.position,y:ground+halfHeight},{width:.26,height:halfHeight*2,shape:'box'});
             const surfaces=totemLayoutForRecord(record,{...record.position,y:ground},demoTotemCards(record),record.totemSelectedCard,demoTotemRotationY(record));
             const right={x:Math.cos(demoTotemRotationY(record)),z:-Math.sin(demoTotemRotationY(record))};
             drawTotemDestinationBeacon(gl,tetherRenderer,view,record,surfaces.find(surface=>surface.card?.boardStyle==='header-compact') || {center:{...record.position,y:ground+halfHeight*1.805},right,width:.56,height:.15});
@@ -5485,7 +5503,8 @@ async function startImmersive() {
             if (activateImmersiveDemoControl()) return;
             selectGuidedDemoOrb();
         });
-        pimHold=bindSpatialPimHold({session,enabled:()=>demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE && nativeConnectionState?.phase!=='source' && !demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady,
+        knowledgeRenderer?.bindSession(session,referenceSpace,{canGrab:target=>{const panel=infoPanel?.hit(target.inputRay || latestControllerRay);return !arWelcomeIntroPending && !placementReady && !demoKnowledgeWorkspace && (!panel || panel.distance>=target.distance);}});
+        pimHold=bindSpatialPimHold({session,enabled:()=>!knowledgeRenderer?.movingAtAim() && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE && nativeConnectionState?.phase!=='source' && !demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady,
             // Use the same nearest visible surface as the laser and main XR
             // select route. A Control panel hit behind a nearer PIMO cell must
             // not disable the cell's hold/short-release interaction.
@@ -5557,7 +5576,8 @@ async function startImmersive() {
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
-            runXrFrameStep('hand pinch',pollDemoHandPinch);
+            runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
+            runXrFrameStep('hand pinch',()=>{if(!knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
             runXrFrameStep('LIM activation',()=>tickLimActivation(_time));
             runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame));

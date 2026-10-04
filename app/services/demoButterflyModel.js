@@ -95,7 +95,7 @@ export function mountDemoButterflyModel(canvas,{gl=null,red=false}={}){
     function updatePose(elapsed,pose){
         if(elapsed===lastElapsed)return;const delta=Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0;lastElapsed=elapsed;
         model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);model.mixer.update(delta);
-        const fold=(1-pose.flight)*(.80+Math.sin(elapsed/350+(pose.wingPhase || 0))*.12);
+        const fold=(1-pose.flight)*(.88+Math.sin(elapsed/350+(pose.wingPhase || 0))*.035);
         for(const [i,index] of model.hinges.entries())model.nodes[index].quaternion.slerp(model.closed[i],fold);
         model.wrapper.rotation.set((pose.pitch || 0)*pose.flight,pose.state==='landed'?.85:pose.yaw,pose.bank);model.wrapper.updateMatrixWorld(true);
     }
