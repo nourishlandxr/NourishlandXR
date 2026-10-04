@@ -17,11 +17,11 @@ test('AR launch preserves the click gesture and deduplicates repeated input', as
     const {root,control,notice}=page(t);
     let resolve, calls=0;
     const pending=new Promise(done=>{resolve=done;});
-    const first=launchCreatorArFromPage(root,()=>{calls++;return pending;});
+    const first=launchCreatorArFromPage(root,()=>{calls++;return pending;},true);
     assert.equal(calls,1,'launch must be called synchronously, before capability/data awaits');
     assert.equal(control.disabled,true);
     assert.equal(control.attributes['aria-busy'],'true');
-    assert.equal(launchCreatorArFromPage(root,()=>{calls++;return true;}),first);
+    assert.equal(launchCreatorArFromPage(root,()=>{calls++;return true;},true),first);
     resolve(true);
     assert.equal(await first,true);
     assert.equal(calls,1);
@@ -32,19 +32,19 @@ test('AR launch preserves the click gesture and deduplicates repeated input', as
 test('failed and rejected AR launches show a readable failure and remain retryable', async t => {
     const {root,control,notice}=page(t);
     window.__nxrArStartError=new Error('Immersive AR is unavailable on this device.');
-    assert.equal(await launchCreatorArFromPage(root,()=>false),false);
+    assert.equal(await launchCreatorArFromPage(root,()=>false,true),false);
     assert.match(notice.textContent,/Immersive AR is unavailable.*project stays open/);
     assert.equal(control.disabled,false);
-    assert.equal(await launchCreatorArFromPage(root,()=>{throw new Error('Camera access denied');}),false);
+    assert.equal(await launchCreatorArFromPage(root,()=>{throw new Error('Camera access denied');},true),false);
     assert.match(notice.textContent,/Camera access denied/);
-    assert.equal(await launchCreatorArFromPage(root,()=>true),true);
+    assert.equal(await launchCreatorArFromPage(root,()=>true,true),true);
 });
 
 test('launch cleanup preserves a control that was already disabled', async t => {
     const {root,control,notice}=page(t);
     control.disabled=true;
     navigator.xr=null;
-    assert.equal(await launchCreatorArFromPage(root,()=>false),false);
+    assert.equal(await launchCreatorArFromPage(root,()=>false,true),false);
     assert.match(notice.textContent,/Meta Quest Browser.*HTTPS/);
     assert.equal(control.disabled,true);
 });

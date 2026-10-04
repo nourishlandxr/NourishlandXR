@@ -1,4 +1,4 @@
-import {ORB_MODELS,currentOrbModel} from './spatialVisualSettings.js';
+import {ORB_MODELS,GRAPHICS_PRESETS,currentGraphicsQuality,currentGraphicsPreset,currentOrbModel} from './spatialVisualSettings.js';
 import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
 
 const DEFAULT_MARKER_COLOR = Object.freeze([0.39, 0.48, 0.23]);
@@ -57,9 +57,9 @@ export function createUvSphereGeometry(latitudeBands = 12, longitudeBands = 16) 
 }
 
 // Each model has its own reusable geometry, with the same interaction centre.
-export function createPlantOrbGeometry(model='improved') {
-    const settings=ORB_MODELS[model] || ORB_MODELS.improved;
-    const geometry=createUvSphereGeometry(settings.latitudeBands,settings.longitudeBands);
+export function createPlantOrbGeometry(model='improved',quality='medium') {
+    const budget=GRAPHICS_PRESETS[quality] || GRAPHICS_PRESETS.medium;
+    const geometry=createUvSphereGeometry(budget.orbLatitude,budget.orbLongitude);
     if(model!=='advanced')return geometry;
     const surface=(phi,theta)=>{
         const sin=Math.sin(phi),radial=.82+.10*sin*sin+.05*sin*sin*Math.cos(theta*6+.12*Math.sin(phi));
@@ -208,14 +208,14 @@ export function createSpatialSphereRenderer(gl) {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW);
 
     const modelBuffers={};
-    for(const model of ['improved','advanced']){
-        const shape=createPlantOrbGeometry(model),vertices=gl.createBuffer(),indices=gl.createBuffer();
+    for(const quality of Object.keys(GRAPHICS_PRESETS))for(const model of ['basic','improved','advanced']){
+        const shape=createPlantOrbGeometry(model,quality),vertices=gl.createBuffer(),indices=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,vertices);gl.bufferData(gl.ARRAY_BUFFER,shape.vertices,gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,shape.indices,gl.STATIC_DRAW);
         const rim=createOrbCrownGeometry(model==='advanced'?.018:.022),crownVertices=gl.createBuffer(),crownIndices=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,crownVertices);gl.bufferData(gl.ARRAY_BUFFER,rim.vertices,gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,crownIndices);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,rim.indices,gl.STATIC_DRAW);
-        modelBuffers[model]={vertexBuffer:vertices,indexBuffer:indices,indexCount:shape.indices.length,crownVertexBuffer:crownVertices,crownIndexBuffer:crownIndices,crownIndexCount:rim.indices.length};
+        modelBuffers[model+':'+quality]={vertexBuffer:vertices,indexBuffer:indices,indexCount:shape.indices.length,crownVertexBuffer:crownVertices,crownIndexBuffer:crownIndices,crownIndexCount:rim.indices.length};
     }
     const sepals=createOrbSepalGeometry(),sepalVertices=gl.createBuffer(),sepalIndices=gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER,sepalVertices);gl.bufferData(gl.ARRAY_BUFFER,sepals.vertices,gl.STATIC_DRAW);
@@ -256,7 +256,7 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     if(material.billboard && material.rotation){const a=material.rotation,c=Math.cos(a),s=Math.sin(a);for(let row=0;row<3;row++){const x=model[row],y=model[4+row];model[row]=x*c+y*s;model[4+row]=y*c-x*s;}}
     const modelView = multiplyMatrices(viewMatrix, model);
     gl.useProgram(renderer.program);
-    const buffers=renderer.modelBuffers[material.orbModel] || renderer;
+    const buffers=renderer.modelBuffers[material.orbModel] || renderer.modelBuffers[material.orbModel+':'+currentGraphicsQuality()] || renderer;
     gl.bindBuffer(gl.ARRAY_BUFFER, material.crown ? buffers.crownVertexBuffer : buffers.vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);
     gl.vertexAttribPointer(renderer.positionLocation, 3, gl.FLOAT, false, 24, 0);
@@ -305,10 +305,10 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         position,
         radius,
         { color: shellColor, alpha: plant ? .98 : .94, emissive: moving ? .65 : selected ? .53 : targeted ? .43 : plant ? .27 : .24,
-            orbModel:model,detail:appearance.detail,roughness:appearance.roughness,metalness:appearance.metalness,opacity: options.opacity }
+            orbModel:model,detail:Math.min(appearance.detail,currentGraphicsPreset().detail),roughness:appearance.roughness,metalness:appearance.metalness,opacity: options.opacity }
     );
 
-    if(plant && model==='advanced'){
+    if(plant && model==='advanced' && currentGraphicsPreset().detail>0){
         gl.disable(gl.CULL_FACE);
         drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:'sepals',color:[.22,.38,.25],alpha:.98,roughness:.6,emissive:.12,opacity:options.opacity});
         gl.enable(gl.CULL_FACE);
@@ -324,7 +324,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
                 alpha:moving || selected ? visual.selectedRimAlpha : targeted ? visual.targetRimAlpha : visual.idleRimAlpha,
                 emissive:.2, opacity:options.opacity
             });
-        if(model==='advanced')drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.9,{
+        if(model==='advanced' && currentGraphicsPreset().detail>1)drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.9,{
             crown:true,orbModel:model,billboard:true,halo:true,time,color:[.49,.64,.44],alpha:targeted?.65:.36,opacity:options.opacity
         });
         gl.depthMask(true);

@@ -1,3 +1,4 @@
+import {currentInfoOpacity} from './spatialVisualSettings.js';
 import {drawArWelcomePanel,welcomeBoundary,WELCOME_SHAPE} from './arWelcomePanel.js';
 import {drawArWelcomeRoots,LIVING_RIM} from './arWelcomeRoots.js';
 import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLearning.js';
@@ -384,14 +385,17 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  const accent=node.accent || '';
  // Keep cells deliberately flat in XR: one face and one outline, with no
  // false rear rim, bevel, perspective edge or drop shadow.
- drawLearningCell(ctx,r,accentRgba(accent,hue,hollow?.035:.10),`hsla(${hue},28%,84%,${hollow?.64:.78})`,hollow?4:5);
+ ctx.save();ctx.globalAlpha*=visual.backgroundOpacity ?? currentInfoOpacity();
+ drawLearningCell(ctx,r,'#102b22',null,0);ctx.restore();
+ drawLearningCell(ctx,r,null,`hsla(${hue},28%,84%,${hollow?.64:.78})`,hollow?4:5);
  if(visual.pathway && !selected){
   ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;
   learningCellPath(ctx,r-7);ctx.stroke();ctx.setLineDash([]);
  }
  if(selected || visual.hovered){
   const hoverOnly=visual.hovered && !selected;
-  drawLearningCell(ctx,r-4,accentRgba(accent,hue,hoverOnly?.24:.28),'rgba(255,255,255,0)',0);
+  ctx.save();ctx.globalAlpha*=visual.backgroundOpacity ?? currentInfoOpacity();
+  drawLearningCell(ctx,r-4,accentRgba(accent,hue,hoverOnly?.24:.28),'rgba(255,255,255,0)',0);ctx.restore();
   ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?6:5;
   learningCellPath(ctx,r-2);ctx.stroke();ctx.shadowBlur=0;
  }
@@ -572,8 +576,8 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
   })})).filter(frame=>frame.nodes.length);
  }
  if(options.drawCells===false){ctx.restore();return frames;}
- const cellOpacity=Math.max(0,Math.min(1,Number(options.cellOpacity ?? 1)));
- ctx.save();ctx.globalAlpha*=cellOpacity;
+ const cellOpacity=Math.max(0,Math.min(1,Number(options.cellOpacity ?? currentInfoOpacity())));
+ ctx.save();
  const allNodes=frames.flatMap(frame=>frame.nodes);
  const selectedNode=allNodes.find(node=>node.key===options.selectedKey);
  const relationship=welcomeRelationshipFor(selectedNode?.limId);
@@ -627,7 +631,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  for(const node of frame.nodes){
   const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
   const linked=linkedKeys.has(node.key),linkedCurrent=linked?{...current,accent:relationship.accent}:current;
-  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{selected:options.selectedKey===node.key,hovered:options.hoverKey===node.key,pathway,holdProgress:options.holdKey===node.key?options.holdProgress:0,connected:options.connectedKey===node.key});
+  if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{backgroundOpacity:cellOpacity,selected:options.selectedKey===node.key,hovered:options.hoverKey===node.key,pathway,holdProgress:options.holdKey===node.key?options.holdProgress:0,connected:options.connectedKey===node.key});
  }
  }
  ctx.restore();

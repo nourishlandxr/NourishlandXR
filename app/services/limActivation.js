@@ -1,6 +1,6 @@
 // Shared deliberate activation state for Learning Information Mesh cells.
 // Plant PIM continues to use pimActivationHold.js and its own interaction state.
-export const LIM_ACTIVATION_MS = 500;
+export const LIM_ACTIVATION_MS = 300;
 
 export function createLimActivationController({
     duration = LIM_ACTIVATION_MS,

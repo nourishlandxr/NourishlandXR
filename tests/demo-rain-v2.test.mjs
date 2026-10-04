@@ -8,7 +8,7 @@ test('Rain V2 is deterministic, layered and Quest-budgeted',()=>{
     assert.deepEqual(first,second);
     assert.deepEqual(first.layers.map(layer=>layer.id),['near','middle','distant']);
     assert.ok(first.layers[0].count<first.layers[2].count,'foreground drops remain sparse');
-    assert.ok(first.dropCount>112 && first.dropCount<=224,'V2 is visible while retaining a fixed Quest budget');
+    assert.ok(first.dropCount>224 && first.dropCount<=480,'HQ is richer but bounded');
     assert.ok(first.splashes.length>0 && first.mistOpacity>0);
 });
 
@@ -17,7 +17,7 @@ test('Rain Off suppresses every V2 effect and mobile degrades gracefully',()=>{
     assert.ok(demoRainV2Field(1000,1,{mobile:true}).dropCount<demoRainV2Field(1000,1).dropCount);
 });
 
-test('Rain V2 preview paints layered drops, while Off and style switch leave V1 separate',()=>{
+test('Rain V2 preview paints layered drops, with HQ streaks and a unified immersive renderer',()=>{
     const calls=[];
     const context={
         beginPath(){calls.push('begin');},moveTo(){calls.push('move');},lineTo(){calls.push('line');},
@@ -31,6 +31,6 @@ test('Rain V2 preview paints layered drops, while Off and style switch leave V1 
     const styles=fs.readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
     assert.match(demo,/if\(demoRainStyle!=='v2' \|\| demoRainIntensity<=0/);
     assert.match(demo,/paintDemoRainV2Preview\(context,width,height,demoRainV2Field/);
-    assert.match(demo,/function drawSpatialRain\(view,time\)\{if\(demoRainStyle==='v1'\)drawSpatialRainV1\(view,time\);else drawSpatialRainV2\(view,time\);\}/);
+    assert.match(demo,/drawSpatialRainField\(gl,rainRenderer,view,time/);
     assert.match(styles,/data-rain-style="v2"\] \.tryit-stage::before,[^\n]*opacity:0 !important/);
 });

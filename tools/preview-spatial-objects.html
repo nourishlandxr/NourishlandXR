@@ -4,13 +4,14 @@
 <style>
 body{margin:0;padding:28px;background:#202c27;color:#e8ece3;font:16px system-ui}main{max-width:1100px;margin:auto}h1{font-weight:500}p{color:#bcc8bf;line-height:1.5}canvas{width:100%;height:auto;display:block;border-radius:24px;background:linear-gradient(135deg,#59695c,#263932)}.names{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;margin:16px 0 28px}.names span{color:#bdc8be;font-size:13px;display:block;margin-top:6px}label{margin-right:20px}button{border:1px solid #869580;border-radius:20px;background:#ffffff0d;color:inherit;padding:8px 16px}#state{padding:15px 0}#errors{color:#ffccad}
 </style><main><h1>Plant Orbs · three forms</h1><p>Shared production renderers, viewed independently. The hit centre and information flow stay the same in every model.</p>
-<div id="state"><label><input id="aim" type="checkbox"> Targeted</label><label><input id="selected" type="checkbox"> Selected</label><label><input id="moving" type="checkbox"> Moving</label><button id="background">Bright / dark background</button></div>
+<div id="state"><label>Graphics <select id="quality"><option value="low">LOW</option><option value="medium" selected>MED</option><option value="high">HIGH</option></select></label><label><input id="aim" type="checkbox"> Targeted</label><label><input id="selected" type="checkbox"> Selected</label><label><input id="moving" type="checkbox"> Moving</label><button id="background">Bright / dark background</button></div>
 <canvas id="orbs" width="1800" height="650" aria-label="Basic, Improved and Advanced Plant Orbs"></canvas>
 <div class="names"><div>Basic<span>Original smooth sphere</span></div><div>Improved<span>Satin pearl · smooth silhouette</span></div><div>Advanced<span>Six botanical lobes · layered collar</span></div></div>
 <h1>Crafted Totem</h1><p>Sculpted timber, flowing flutes and restrained botanical bronze inlay. <a href="preview-totem.html" style="color:inherit">Open the larger Totem study</a>. Directional boards remain attached to the post.</p>
 <p>Select a sign to highlight its destination. Select it again to clear.</p><div id="sign-choices"><button data-sign="plant">Plant Orb</button> <button data-sign="notes">Field Note</button> <button data-sign="neighbour">Other Totem</button> <span id="destination-status" role="status">No destination selected</span></div>
 <canvas id="totem" width="1800" height="950" aria-label="Crafted timber Totem and directional signs"></canvas><p id="errors" role="status"></p></main>
 <script type="module">
+import {setSpatialVisualSettings,currentGraphicsQuality} from '../app/services/spatialVisualSettings.js';
 import {createSpatialSphereRenderer,drawSpatialOrb} from '../app/services/spatialSphereRenderer.js';
 import {createSpatialTotemSculpture,drawTotemSculpture} from '../app/services/spatialTotemSculpture.js';
 import {createSpatialPrismRenderer,drawSpatialPrism} from '../app/services/spatialPrismRenderer.js';
@@ -18,6 +19,8 @@ import {createSpatialTotemCards,totemCardSurfaces,drawSpatialTotemPlaques,drawSp
 import {createSpatialTetherRenderer} from '../app/services/spatialTetherRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../app/services/totemSignSelection.js';
 import {SPATIAL_OBJECT_VISUALS} from '../app/services/spatialObjectVisuals.js';
+document.querySelector('#quality').value=currentGraphicsQuality();
+document.querySelector('#quality').onchange=event=>setSpatialVisualSettings({graphicsQuality:event.target.value});
 const identity=()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
 function view(canvas,y,z){const f=1/Math.tan(.57/2),a=canvas.width/canvas.height,n=.05,far=30,m=identity(),inverse=identity();m[13]=y;m[14]=z;inverse[13]=-y;inverse[14]=-z;return {projectionMatrix:new Float32Array([f/a,0,0,0,0,f,0,0,0,0,(far+n)/(n-far),-1,0,0,2*far*n/(n-far),0]),transform:{matrix:m,inverse:{matrix:inverse}}};}
 try{

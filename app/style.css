@@ -11864,3 +11864,9 @@ body:has(.app-surface) {
 .totem-style-preview-carved,.totem-profile-visual.is-style-carved span { clip-path:polygon(20% 0,76% 0,85% 14%,70% 35%,85% 57%,70% 82%,88% 100%,12% 100%,25% 82%,15% 57%,28% 35%,17% 14%);background:linear-gradient(100deg,#453426,#a98a60 40%,#71523a 70%,#392b21);border:0; }
 .totem-style-preview-botanical,.totem-profile-visual.is-style-botanical span { clip-path:polygon(22% 0,78% 0,82% 18%,74% 50%,82% 80%,84% 100%,16% 100%,18% 80%,26% 50%,18% 18%);background:linear-gradient(95deg,#34372d,#8b815a 35%,#554d37 75%,#252b24);border:0; }
 .totem-profile-visual:is(.is-style-carved,.is-style-botanical) span::before,.totem-profile-visual:is(.is-style-carved,.is-style-botanical) span::after { display:none; }
+
+/* Shared pre-AR graphics/readiness control; no extra loading animation. */
+.ar-preload-controls { margin-block: 18px; }
+.ar-preload-controls select { min-height:44px; margin:8px 0 8px 12px; padding:8px 18px; border:1px solid rgba(174,199,157,.6); border-radius:14px; background:rgba(28,49,40,.92); color:#edf0e4; font:inherit; }
+.ar-preload-controls progress { accent-color:#a6be8e; height:8px; }
+.ar-preload-controls [role="status"] { margin-top:10px; }

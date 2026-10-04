@@ -1,3 +1,4 @@
+import {arPreparationControlsMarkup,bindArPreparationControls} from './arPreparationControls.js';
 import { botanicalTextureMarkup, bindBotanicalTexture } from './botanicalTexture.js';
 
 const CAMERA_SAFETY_ACK_KEY = 'nourishlandxr.camera-safety-ack.v1';
@@ -47,8 +48,10 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
             <p>${AR_CAMERA_SAFETY_COPY.body}</p>
             <p class="meta">Your browser will ask for camera access after you choose to continue. NourishlandXR cannot bypass that permission.</p>
         </section>
+        ${arPreparationControlsMarkup()}
         <div class="button-row ar-safety-actions"><button class="primary" type="button" data-ar-safety-continue>Continue and allow camera</button><button type="button" data-ar-safety-cancel>Not now</button></div>
     </div>`;
+    bindArPreparationControls(app,app.querySelector('[data-ar-safety-continue]'));
     app.querySelector('[data-ar-safety-continue]')?.addEventListener('click', async event => {
         const button = event.currentTarget;
         button.disabled = true;
@@ -74,10 +77,12 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel } = 
             <p class="ar-spatial-device-note">* Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p>
             <p class="meta">You can leave at any time. Camera access, when available, begins only after you continue and grant permission.</p>
         </section>
+        ${arPreparationControlsMarkup()}
         <label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time on this device</span></label>
         <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary global-ar-action" type="button" data-ar-introduction-continue>Begin introduction</button></div>
     </div>`;
     bindBotanicalTexture(app);
+    bindArPreparationControls(app,app.querySelector('[data-ar-introduction-continue]'),{nearFuture:true});
     app.querySelector('[data-ar-introduction-continue]')?.addEventListener('click', async event => {
         const button = event.currentTarget;
         button.disabled = true;

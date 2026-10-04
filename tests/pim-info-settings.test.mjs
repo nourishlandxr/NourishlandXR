@@ -49,14 +49,14 @@ test('demo history arrows stay compact, adjacent and ray-selectable even when di
 });
 
 test('Settings rows keep all existing actions in compact non-overlapping Quest hit regions',()=>{
-    const desktop=panelSettingsControls({meshCellOpacity:.5,ambientRain:1.65,ambientRainStyle:'v1',spatialScale:1.1});
+    const desktop=panelSettingsControls({meshCellOpacity:.5,ambientRain:1.65,ambientRainStyle:'v1',rainQuality:'hq',graphicsQuality:'high',spatialScale:1.1});
     const quest=panelSettingsControls({headset:true,handVisualMode:'outline'});
-    const actions=['TextDown','TextUp','ScaleDown','ScaleUp','CellOpacity','InfoOpacity','OrbModel','TotemModel','RainIntensity','RainStyle','Recenter'];
+    const actions=['TextDown','TextUp','ScaleDown','ScaleUp','CellOpacity','InfoOpacity','OrbModel','TotemModel','GraphicsQuality','RainQuality','Recenter'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
     assert.deepEqual(quest.map(item=>item.action),['HandMode',...actions]);
     assert.equal(desktop.find(item=>item.action==='CellOpacity').label,'Glass · 50%');
-    assert.equal(desktop.find(item=>item.action==='RainIntensity').label,'Heavy');
-    assert.equal(desktop.find(item=>item.action==='RainStyle').label,'V1');
+    assert.equal(desktop.find(item=>item.action==='RainQuality').label,'HQ');
+    assert.equal(desktop.find(item=>item.action==='GraphicsQuality').label,'HIGH');
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Outline');
     for(const items of [desktop,quest]){
         for(const [index,a] of items.entries()){

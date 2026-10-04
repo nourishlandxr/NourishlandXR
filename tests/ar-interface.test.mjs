@@ -58,7 +58,7 @@ test('welcome stays concise and spatial controllers never fall back to head move
     assert.match(styles, /data-rain-stage="first-drops"/);
     assert.match(styles, /data-rain-stage="mist"/);
     assert.match(styles, /data-rain-intensity="heavy"/);
-    assert.match(read('app/services/pimInfoPanel.js'), /settingLabel:'Rain intensity'/);
+    assert.match(read('app/services/pimInfoPanel.js'), /settingLabel:'Rain quality'/);
     assert.match(styles, /z-index:12002; pointer-events:none/);
 });
 

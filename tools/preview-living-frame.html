@@ -3,8 +3,10 @@
 body{margin:0;background:#24332d;color:#eee9d9;font:16px system-ui}header{position:sticky;top:0;padding:16px;background:#15221eee;display:flex;gap:16px;align-items:center;flex-wrap:wrap;z-index:2}input{width:200px}canvas{display:block;width:min(780px,100vw);height:auto;margin:auto}button{font:inherit;color:inherit;background:#fff1;border:1px solid #eee5;border-radius:8px;padding:8px 14px}
 </style>
 <header><strong>Living frame · five minutes</strong><label>Growth <input id="time" type="range" min="0" max="300" value="300"></label><output>5:00</output><button>Restart growth</button><label><input id="cells" type="checkbox" style="width:auto"> Show LIMO spacing</label></header>
+<p style="margin:12px;text-align:center">Graphics <select id="quality"><option value="low">LOW</option><option value="medium" selected>MED</option><option value="high">HIGH</option></select> · Detail and cache resolution only; growth and spacing stay the same.</p>
 <canvas width="1400" height="1500"></canvas>
 <script type="module">
+import {setSpatialVisualSettings,currentGraphicsQuality} from '../app/services/spatialVisualSettings.js';
 import {drawArWelcomePanel} from '../app/services/arWelcomePanel.js';
 import {drawArWelcomeRoots} from '../app/services/arWelcomeRoots.js';
 import {drawArWelcomeShowcase} from '../app/services/arWelcomeShowcase.js';
@@ -25,6 +27,8 @@ function drawCopy(ctx){
  ctx.fillStyle='#f2f1e6';ctx.textAlign='center';ctx.font='600 54px Georgia,serif';ctx.fillText('A living world. A closer look.',700,470,820);
  ctx.font='30px system-ui';ctx.fillText('A quiet window into the landscape.',700,555,780);
 }
+document.querySelector('#quality').value=currentGraphicsQuality();
+document.querySelector('#quality').addEventListener('change',event=>{setSpatialVisualSettings({graphicsQuality:event.target.value});paint(Number(slider.value));});
 document.querySelector('#cells').addEventListener('change',()=>paint(Number(slider.value)));
 slider.addEventListener('input',()=>{start=null;paint(Number(slider.value));});
 document.querySelector('button').onclick=()=>{start=performance.now();requestAnimationFrame(tick);};

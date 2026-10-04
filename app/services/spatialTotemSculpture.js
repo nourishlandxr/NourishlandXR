@@ -1,3 +1,4 @@
+import {GRAPHICS_PRESETS,currentGraphicsQuality} from './spatialVisualSettings.js';
 import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
 const VERTEX_ATTRIBUTES=Object.freeze([['position',0,3],['normal',12,3],['uv',24,2]]);
 
@@ -48,9 +49,9 @@ export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='
     return { vertices:new Float32Array(vertices), indices:new Uint16Array(indices) };
 }
 
-function materialCanvas() {
-    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=1024;
-    const ctx=canvas.getContext('2d');
+function materialCanvas(scale=1) {
+    const canvas=document.createElement('canvas');canvas.width=512*scale;canvas.height=1024*scale;
+    const ctx=canvas.getContext('2d');ctx.scale(scale,scale);
     ctx.fillStyle='#a68b6a';ctx.fillRect(0,0,512,1024);
     // Deterministic, seamless growth lines; no noisy pixel stippling.
     for(let i=-6;i<134;i++) {
@@ -62,6 +63,14 @@ function materialCanvas() {
         }
         ctx.strokeStyle=i%7===0?'rgba(50,28,14,.18)':'rgba(59,34,20,.08)';
         ctx.lineWidth=i%7===0?1.8:.75;ctx.stroke();
+    }
+    if(scale>1){
+        // Fine secondary grain is below the broad timber lines, never a noisy overlay.
+        ctx.strokeStyle='rgba(42,29,18,.055)';ctx.lineWidth=.28;
+        for(let i=0;i<256;i++){
+            const x=i*2+1,phase=i*2.399;ctx.beginPath();
+            for(let y=0;y<=1024;y+=6){const px=x+Math.sin(y*.007+phase)*1.5;if(y===0)ctx.moveTo(px,y);else ctx.lineTo(px,y);}ctx.stroke();
+        }
     }
     // Front-facing botanical inlay: fern/leaf marks, contained below the boards.
     const x=102,y=550;
@@ -129,22 +138,17 @@ export function createSpatialTotemSculpture(gl) {
     gl.deleteShader(vertex);gl.deleteShader(fragment);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS)){const error=gl.getProgramInfoLog(program);gl.deleteProgram(program);throw new Error(error);}
     const meshes={};
-    for(const style of ['carved','botanical']){
-        const geometry=createTotemSculptureGeometry(48,32,style),buffer=gl.createBuffer(),indexBuffer=gl.createBuffer();
+    for(const [quality,budget] of Object.entries(GRAPHICS_PRESETS))for(const style of ['carved','botanical']){
+        const geometry=createTotemSculptureGeometry(budget.totemRadial,budget.totemVertical,style),buffer=gl.createBuffer(),indexBuffer=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,geometry.vertices,gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,geometry.indices,gl.STATIC_DRAW);
-        meshes[style]={buffer,indexBuffer,count:geometry.indices.length};
+        meshes[style+':'+quality]={buffer,indexBuffer,count:geometry.indices.length};
     }
-    const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
-    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,materialCanvas());
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.generateMipmap(gl.TEXTURE_2D);
-    const anisotropy=gl.getExtension('EXT_texture_filter_anisotropic');
-    if(anisotropy)gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(4,gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+    // Material atlases are uploaded once on first use of each tier.
+    const textures={};
     const attributes=Object.fromEntries(['position','normal','uv'].map(key=>[key,gl.getAttribLocation(program,key)]));
     const uniforms=Object.fromEntries(['projection','modelView','inverseScale','timber','tint','alpha','aim','twist','controlOpacity','signsActive','fadeActive','form','dimensions','controls'].map(key=>[key,gl.getUniformLocation(program,key)]));
-    return {program,meshes,texture,attributes,uniforms,model:new Float32Array(16),modelView:new Float32Array(16),inverseScale:new Float32Array(3)};
+    return {program,meshes,textures,attributes,uniforms,model:new Float32Array(16),modelView:new Float32Array(16),inverseScale:new Float32Array(3)};
 }
 
 export function drawTotemSculpture(gl,renderer,view,position,options={}) {
@@ -156,7 +160,7 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     model[8]=s*depth;model[10]=c*depth;model[12]=position.x;model[13]=position.y+height;model[14]=position.z;model[15]=1;
     renderer.inverseScale[0]=1/width;renderer.inverseScale[1]=1/height;renderer.inverseScale[2]=1/depth;
     for(let c=0;c<4;c++)for(let r=0;r<4;r++)out[c*4+r]=inverse[r]*model[c*4]+inverse[4+r]*model[c*4+1]+inverse[8+r]*model[c*4+2]+inverse[12+r]*model[c*4+3];
-    const alpha=options.alpha ?? 1,style=options.style || 'carved',mesh=renderer.meshes[style] || renderer.meshes.carved,visual=SPATIAL_OBJECT_VISUALS.totem;
+    const alpha=options.alpha ?? 1,style=options.style || 'carved',mesh=renderer.meshes[style+':'+currentGraphicsQuality()] || renderer.meshes['carved:medium'],visual=SPATIAL_OBJECT_VISUALS.totem;
     const signsY=Math.min(visual.controlHeights[0],height*1.50),fadeY=Math.min(visual.controlHeights[1],height*1.26);
     gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.frontFace(gl.CCW);
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(alpha>=.95);
@@ -164,7 +168,19 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     for(const [key,offset,size] of VERTEX_ATTRIBUTES){gl.enableVertexAttribArray(renderer.attributes[key]);gl.vertexAttribPointer(renderer.attributes[key],size,gl.FLOAT,false,32,offset);}
     const u=renderer.uniforms;gl.uniformMatrix4fv(u.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(u.modelView,false,out);
     gl.uniform3fv(u.inverseScale,renderer.inverseScale);
-    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,renderer.texture);gl.uniform1i(u.timber,0);
+    gl.activeTexture(gl.TEXTURE0);
+    const quality=currentGraphicsQuality();
+    if(!renderer.textures[quality]){
+        const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,materialCanvas(GRAPHICS_PRESETS[quality].textureScale));
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.generateMipmap(gl.TEXTURE_2D);
+        const anisotropy=gl.getExtension('EXT_texture_filter_anisotropic');
+        if(anisotropy)gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(quality==='high'?8:2,gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT)));
+        renderer.textures[quality]=texture;
+    }
+    gl.bindTexture(gl.TEXTURE_2D,renderer.textures[quality]);gl.uniform1i(u.timber,0);
     gl.uniform3fv(u.tint,options.color || SPATIAL_OBJECT_VISUALS.totem.sculptureTint);gl.uniform1f(u.alpha,alpha);gl.uniform1f(u.aim,options.highlighted?1:0);
     gl.uniform1f(u.twist,(visual[style] || visual.carved).twist);gl.uniform2f(u.dimensions,width,height*2);gl.uniform2f(u.controls,signsY/(height*2),fadeY/(height*2));
     gl.uniform1f(u.signsActive,options.signsVisible?1:0);gl.uniform1f(u.fadeActive,options.faded?1:0);gl.uniform1f(u.controlOpacity,options.controlOpacity ?? 1);gl.uniform1f(u.form,style==='botanical'?1:0);
@@ -173,5 +189,5 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
 
 export function destroySpatialTotemSculpture(gl,renderer) {
     if(!gl || !renderer)return;
-    for(const mesh of Object.values(renderer.meshes)){gl.deleteBuffer(mesh.buffer);gl.deleteBuffer(mesh.indexBuffer);}gl.deleteTexture(renderer.texture);gl.deleteProgram(renderer.program);
+    for(const mesh of Object.values(renderer.meshes)){gl.deleteBuffer(mesh.buffer);gl.deleteBuffer(mesh.indexBuffer);}for(const texture of Object.values(renderer.textures))gl.deleteTexture(texture);gl.deleteProgram(renderer.program);
 }

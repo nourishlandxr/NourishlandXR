@@ -1,3 +1,4 @@
+import {prepareArAssets} from './services/arAssetPreparation.js';
 import { isArActive as isVisitorArActive } from './services/arNote.js';
 import { launchCreatorArFromPage } from './services/creatorArNavigation.js';
 import { enhanceProductScreen } from './services/productExperience.js';
@@ -39,6 +40,8 @@ import { isDefaultHomeArea } from './services/arExperienceConfig.js';
 import { applyNxrLanguage, translateApp } from './services/i18n.js';
 
 const app = document.getElementById('app');
+// Only common fonts on the welcome page; garden data and demo media remain scoped.
+prepareArAssets({experience:'creator'}).catch(error=>console.warn('AR preparation:',error));
 const CURRENT_VIEW_KEY = 'nourishland-xr-current-view-v1';
 function rememberCurrentView(view, args = []) {
     try { sessionStorage.setItem(CURRENT_VIEW_KEY, JSON.stringify({ view, args })); }

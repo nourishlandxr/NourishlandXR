@@ -22,7 +22,7 @@ Header always set Content-Security-Policy "object-src 'none'; base-uri 'self'; f
 <FilesMatch "\.(?:js|css)$">
 Header set Cache-Control "no-cache, must-revalidate"
 </FilesMatch>
-<FilesMatch "\.(?:png|jpg|jpeg|gif|svg|webp|ico)$">
+<FilesMatch "\.(?:png|jpg|jpeg|gif|svg|webp|avif|ico|glb|gltf|woff|woff2|mp3|ogg)$">
 Header set Cache-Control "public, max-age=3600"
 </FilesMatch>
 <FilesMatch "\.html$">

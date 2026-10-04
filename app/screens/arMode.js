@@ -1,3 +1,4 @@
+import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../services/totemSignSelection.js';
 import {getSpatialVisualSettings} from '../services/spatialVisualSettings.js';
 import {createXRPerformanceSettings} from '../services/xrPerformanceSettings.js';
@@ -151,6 +152,7 @@ let creatorKnowledgeReturnFocus = null;
 const creatorKnowledgeCache = new WeakMap();
 let spatialPimHover = { recordId: '', path: '' };
 let sphereRenderer = null;
+let rainRenderer=null;
 let totemCardsRenderer = null;
 let infoPanel = null;
 let creatorPanelControlsCleanup=()=>{},creatorPanelActionSignature='';
@@ -4050,6 +4052,7 @@ function setupSpatialMarkerRenderer() {
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, 1,1, -1,-1, 1,1, -1,1]), gl.STATIC_DRAW);
     setupHomeSignRenderer();
     sphereRenderer = createSpatialSphereRenderer(gl);
+    rainRenderer=createSpatialRainRenderer(gl);
     totemCardsRenderer = createSpatialTotemCards(gl,{ray:()=>latestControllerRay});
     infoPanel?.attach(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
@@ -5785,7 +5788,7 @@ function createOverlay() {
 function createCreatorInfoPanel(){
     infoPanel?.destroy();creatorPanelActionSignature='';
     creatorCellOpacity=getSpatialVisualSettings().cellOpacity;creatorHandMode=getSpatialVisualSettings().handMode;
-    infoPanel=createPimInfoPanel({root:overlayRoot,headset:questHeadsetSession,phoneAR:!questHeadsetSession,rainEnabled:false,
+    infoPanel=createPimInfoPanel({root:overlayRoot,headset:questHeadsetSession,phoneAR:!questHeadsetSession,rainEnabled:true,onGraphicsQuality:()=>renderSessionMarkers(),
         cellOpacity:creatorCellOpacity,handMode:creatorHandMode,onHandMode:value=>{creatorHandMode=value;},
         panelHints:['Aim, then press once to open plant information.','Hold an Orb for 0.8 seconds to move it. Use the right joystick to adjust distance.','Press a cell once to read or expand its information.'],
         onPerformanceAction:action=>creatorPerformance.action(action),onGrab:pulseCreatorHaptics,
@@ -5850,6 +5853,7 @@ function cleanup() {
     contextToolbarRecord = null;
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
+    destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
     totemCardsRenderer?.destroy(); totemCardsRenderer = null;
     pimHold?.destroy(); pimHold = null; handPimHold.cancel(); infoPanel?.destroy(); infoPanel = null;
     destroySpatialPrismRenderer(gl, prismRenderer);
@@ -6265,6 +6269,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                     });
                     totemCardsRenderer.end();
                 }
+                if(!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)drawSpatialRainField(gl,rainRenderer,view,_time,{origin:pose.transform.matrix,groundY:currentGroundY()});
                 drawSpatialPlantProfiles(view);
                 drawCreatorSignDestinations(view);
                 infoPanel?.draw(view);

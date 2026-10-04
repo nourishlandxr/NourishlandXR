@@ -1,3 +1,4 @@
+import {currentGraphicsQuality} from './spatialVisualSettings.js';
 import { WELCOME_SHAPE } from './arWelcomePanel.js';
 
 // These values are raised only by real actions in the guided demo. Keeping the
@@ -294,7 +295,7 @@ function drawAmberPoint(ctx, point, radius, alpha) {
     ctx.restore();
 }
 
-function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false, cellClearance = [] } = {}) {
+function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStartedAt = 0, reducedMotion = false, cellClearance = [], quality = currentGraphicsQuality() } = {}) {
     const frame = welcomeRootFrame({ milestone, elapsed, milestoneStartedAt, reducedMotion });
     ctx.save();
     // Clip each exclusion independently: overlapping cells must never cancel
@@ -319,7 +320,7 @@ function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStar
 
         ctx.restore();
     });
-    drawLivingRim(ctx,{elapsed,reducedMotion});
+    drawLivingRim(ctx,{elapsed,reducedMotion,quality});
     ctx.restore();
     return frame;
 }
@@ -332,7 +333,7 @@ const RIM_PATCHES=Object.freeze(Array.from({length:13},(_,i)=>({
  radius:532+hash(i,307)*17,seed:i,delay:hash(i,311)*13000,
  leaves:3+Math.floor(hash(i,313)*4)
 })));
-function leaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)'){
+function drawRimLeaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)',detail=1){
  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=colour;
  ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(size*.4,-size*.55,size,-size*.38,size,0);
  ctx.bezierCurveTo(size*.65,size*.38,size*.25,size*.35,0,0);ctx.fill();
@@ -340,9 +341,14 @@ function leaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)'){
  ctx.fillStyle='rgba(211,224,165,.10)';ctx.beginPath();ctx.moveTo(0,0);
  ctx.bezierCurveTo(size*.4,-size*.55,size,-size*.38,size,0);ctx.quadraticCurveTo(size*.45,-size*.045,0,0);ctx.fill();
  ctx.strokeStyle=vein;ctx.lineWidth=.65;ctx.beginPath();ctx.moveTo(1,0);ctx.quadraticCurveTo(size*.42,-size*.035,size*.86,0);ctx.stroke();
- if(size>9)for(let n=1;n<=3;n++){
-  const x=size*(.22+n*.15);ctx.beginPath();ctx.moveTo(x,0);ctx.quadraticCurveTo(x+size*.04,-size*.12,x+size*.12,-size*.2);ctx.stroke();
+ if(size>9 && detail>0)for(let n=1;n<=(detail>1?5:3);n++){
+  const x=size*(.16+n*(detail>1?.12:.15));ctx.beginPath();ctx.moveTo(x,0);ctx.quadraticCurveTo(x+size*.04,-size*.12,x+size*.12,-size*.2);ctx.stroke();
   ctx.beginPath();ctx.moveTo(x,0);ctx.quadraticCurveTo(x+size*.02,size*.08,x+size*.09,size*.14);ctx.stroke();
+ }
+ if(detail>1 && size>6){
+  ctx.strokeStyle='rgba(219,232,187,.24)';ctx.lineWidth=.42;ctx.beginPath();ctx.moveTo(size*.12,-size*.13);
+  ctx.bezierCurveTo(size*.42,-size*.43,size*.77,-size*.28,size*.96,-size*.015);ctx.stroke();
+  ctx.strokeStyle='rgba(9,32,19,.25)';ctx.beginPath();ctx.moveTo(size*.15,size*.10);ctx.quadraticCurveTo(size*.61,size*.27,size*.9,size*.035);ctx.stroke();
  }
  ctx.restore();
 }
@@ -357,9 +363,23 @@ function growRimStem(ctx,angle,target,progress,colour='#637448'){
   u*u*base.x+2*u*t*bend.x+t*t*target.x,u*u*base.y+2*u*t*bend.y+t*t*target.y);
  ctx.stroke();
 }
-function drawLivingRim(ctx,{elapsed=0,reducedMotion=false}){
+function drawLivingRim(ctx,{elapsed=0,reducedMotion=false,quality=currentGraphicsQuality()}){
+ const detail=quality==='high'?2:quality==='low'?0:1;
+ const leaf=(context,x,y,angle,size,colour,vein)=>drawRimLeaf(context,x,y,angle,size,colour,vein,detail);
+
  const grow=(at,delay=0)=>reducedMotion?1:stageEase((elapsed-at-delay)/LIVING_RIM.growthMs);
  ctx.save();ctx.lineCap='round';
+ // Relief follows the rim, outside the perfectly circular reading aperture.
+ if(detail>0){
+  const established=reducedMotion?1:stageEase(elapsed/60000);
+  for(let i=0;i<(detail>1?180:72);i++){
+   const angle=i*2.399963, r=525+hash(i,601)*26, p=polarPoint(angle,r);
+   const size=(1.2+hash(i,607)*2.4)*established;
+   ctx.fillStyle=i%3===0?'rgba(113,100,69,.38)':i%3===1?'rgba(23,30,19,.52)':'rgba(58,69,39,.42)';
+   ctx.beginPath();ctx.ellipse(p.x,p.y,size*1.8,size*.55,angle,0,Math.PI*2);ctx.fill();
+   if(detail>1){ctx.strokeStyle='rgba(154,135,87,.20)';ctx.lineWidth=.55;ctx.beginPath();ctx.arc(p.x,p.y,size,.1,2.4);ctx.stroke();}
+  }
+ }
  for(const patch of RIM_PATCHES){
   // Uneven patch density; cell clearance reserves the required open spaces.
   const stem=reducedMotion?1:stageEase((elapsed-patch.delay)/LIVING_RIM.stemGrowthMs);
@@ -465,8 +485,16 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false}){
   const angle=.73+i*.20,start=polarPoint(angle,531),length=(105+hash(i,349)*145)*growth;
   const sway=0; // Established roots stay still; growth is the only motion.
   const end={x:start.x+(hash(i,353)-.5)*22+sway,y:start.y+length};
-  ctx.strokeStyle=i%2?'#927454':'#ab8b66';ctx.lineWidth=1.8+hash(i,359)*3.5;ctx.beginPath();ctx.moveTo(start.x,start.y);
+  ctx.strokeStyle=i%2?'#69513a':'#806449';ctx.lineWidth=1.8+hash(i,359)*3.5;ctx.beginPath();ctx.moveTo(start.x,start.y);
   ctx.bezierCurveTo(start.x-8,start.y+length*.3,end.x+9,end.y-length*.2,end.x,end.y);ctx.stroke();
+  if(detail>0){
+   ctx.strokeStyle='rgba(185,157,111,.34)';ctx.lineWidth=.65;ctx.beginPath();ctx.moveTo(start.x-.6,start.y);
+   ctx.bezierCurveTo(start.x-8.6,start.y+length*.3,end.x+8.4,end.y-length*.2,end.x-.6,end.y);ctx.stroke();
+   if(detail>1)for(let n=1;n<=4;n++){
+    const t=n/5,x=start.x+(end.x-start.x)*t,y=start.y+length*t,side=n%2?1:-1;
+    ctx.strokeStyle='rgba(104,82,55,.58)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(x+side*6,y+5,x+side*(9+hash(i+n,619)*7),y+16*growth);ctx.stroke();
+   }
+  }
   if(growth>.65 && i%2===0){ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(end.x,end.y-length*.22);ctx.quadraticCurveTo(end.x+12,end.y-length*.1,end.x+15,end.y+12*growth);ctx.stroke();}
  }
  ctx.restore();
@@ -477,11 +505,12 @@ const livingFrameCache=new WeakMap();
 export function drawArWelcomeRoots(ctx,options={}){
  if(typeof document==='undefined' || typeof ctx.drawImage!=='function')return drawWelcomeRootsDirect(ctx,options);
  let entry=livingFrameCache.get(ctx);
- if(!entry){const canvas=document.createElement('canvas');canvas.width=1400;canvas.height=1500;entry={canvas,context:canvas.getContext('2d'),key:null,clearance:null,frame:null};livingFrameCache.set(ctx,entry);}
- const key=[Math.floor((options.elapsed||0)/WELCOME_ROOT_REFRESH_MS),options.milestone||0,options.milestoneStartedAt||0,Boolean(options.reducedMotion)].join(':');
+ const quality=options.quality || currentGraphicsQuality(), scale=quality==='high'?1.5:quality==='low'?.75:1;
+ if(!entry || entry.scale!==scale){const canvas=document.createElement('canvas');canvas.width=1400*scale;canvas.height=1500*scale;entry={scale,canvas,context:canvas.getContext('2d'),key:null,clearance:null,frame:null};livingFrameCache.set(ctx,entry);}
+ const key=[quality,Math.floor((options.elapsed||0)/WELCOME_ROOT_REFRESH_MS),options.milestone||0,options.milestoneStartedAt||0,Boolean(options.reducedMotion)].join(':');
  if(entry.key!==key || entry.clearance!==options.cellClearance){
-  const paint=entry.context;paint.clearRect(0,0,1400,1500);
-  entry.frame=drawWelcomeRootsDirect(paint,{...options,cellClearance:[]});
+  const paint=entry.context;paint.setTransform?.(1,0,0,1,0,0);paint.clearRect(0,0,entry.canvas.width,entry.canvas.height);paint.setTransform?.(scale,0,0,scale,0,0);
+  entry.frame=drawWelcomeRootsDirect(paint,{...options,quality,cellClearance:[]});
   // Subtract all cell discs in one operation. Their union stays excluded,
   // including overlaps, without a deep stack of expensive canvas clips.
   if(options.cellClearance?.length){paint.save();paint.globalCompositeOperation='destination-out';paint.beginPath();
@@ -490,5 +519,5 @@ export function drawArWelcomeRoots(ctx,options={}){
   }
   entry.key=key;entry.clearance=options.cellClearance;
  }
- ctx.drawImage(entry.canvas,0,0);return entry.frame;
+ ctx.drawImage(entry.canvas,0,0,1400,1500);return entry.frame;
 }

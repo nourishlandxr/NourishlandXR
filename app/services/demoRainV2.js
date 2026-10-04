@@ -1,10 +1,10 @@
 const clamp01=value=>Math.max(0,Math.min(1,value));
 function unit(index,salt){const value=Math.sin((index+1)*12.9898+salt*78.233)*43758.5453;return value-Math.floor(value);}
 
-export function demoRainV2Field(time,intensity=1,{mobile=false}={}){
+export function demoRainV2Field(time,intensity=1,{mobile=false,quality='hq'}={}){
     const strength=clamp01(Number(intensity)/1.65);
     if(strength<=0)return {layers:[],splashes:new Float32Array(),mistOpacity:0,dropCount:0};
-    const budgets=mobile?[20,46,70]:[36,78,110];
+    const budgets=quality==='hq'?(mobile?[48,120,192]:[72,168,240]):mobile?[20,46,70]:[36,78,110];
     const definitions=[
         {id:'near',inner:.8,outer:2.1,length:.19,speed:.00105,alpha:.40,gust:.018},
         {id:'middle',inner:1.8,outer:4.6,length:.13,speed:.00082,alpha:.30,gust:.012},
@@ -26,10 +26,10 @@ export function demoRainV2Field(time,intensity=1,{mobile=false}={}){
     });
     const splashCount=Math.round((mobile?4:8)*strength),splashes=new Float32Array(splashCount*12);
     for(let index=0;index<splashCount;index++){
-        const angle=unit(index,31)*Math.PI*2,radius=1+unit(index,32)*4,x=Math.cos(angle)*radius,z=Math.sin(angle)*radius,size=.018+unit(index,33)*.025;
+        const angle=unit(index,31)*Math.PI*2,radius=1+unit(index,32)*4,x=Math.cos(angle)*radius,z=Math.sin(angle)*radius,size=.018+((time*.00075+unit(index,33))%1)*.12;
         splashes.set([x-size,.012,z,x+size,.012,z,x,.012,z-size,x,.012,z+size],index*12);
     }
-    return {layers,splashes,mistOpacity:.025+.055*strength,dropCount};
+    return {layers,splashes,time,quality,mistOpacity:.025+.055*strength,dropCount};
 }
 
 // Use the same deterministic three-layer field in the simulated preview.
@@ -51,7 +51,9 @@ export function paintDemoRainV2Preview(ctx,width,height,field){
             ctx.moveTo(from.x,from.y);ctx.lineTo(to.x,to.y);strokes++;
         }
         ctx.strokeStyle=`rgba(215,243,238,${layer.alpha})`;
-        ctx.lineWidth=layer.id==='near'?1.4:layer.id==='middle'?1:.7;
+        ctx.lineWidth=layer.id==='near'?3.2:layer.id==='middle'?1.8:1;
+        // Soft highlight over a wider translucent streak, matching HQ ribbons.
+        ctx.strokeStyle=`rgba(172,201,197,${layer.alpha*.28})`;ctx.lineWidth*=2;ctx.stroke();ctx.lineWidth*=.5;ctx.strokeStyle=`rgba(225,243,239,${layer.alpha})`;
         ctx.stroke();
     }
     ctx.strokeStyle='rgba(202,233,222,.16)';ctx.lineWidth=.8;
@@ -60,8 +62,10 @@ export function paintDemoRainV2Preview(ctx,width,height,field){
         if(z>=-.3)continue;
         const point=project(x,-1.25,z);
         if(!point || point.x<0 || point.x>width || point.y<height*.55 || point.y>height)continue;
-        ctx.beginPath();ctx.ellipse(point.x,point.y,4,1.2,0,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();const phase=((field.time||0)*.00075+unit(index,33))%1;ctx.globalAlpha=(1-phase)*(1-phase);
+        ctx.ellipse(point.x,point.y,2+phase*10,.6+phase*2.5,0,0,Math.PI*2);ctx.stroke();
     }
+    ctx.globalAlpha=1;
     const mist=ctx.createLinearGradient(0,height*.66,0,height);
     mist.addColorStop(0,'rgba(190,226,215,0)');
     mist.addColorStop(1,`rgba(190,226,215,${field.mistOpacity})`);

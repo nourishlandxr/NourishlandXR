@@ -91,6 +91,12 @@ function makeBee(gltf,resources){
     return {wrapper,mixer,root,baseScale:wrapper.scale.x};
 }
 
+let preparedModel=null;
+export function prepareDemoBeeModel(){
+ if(!preparedModel)preparedModel=fetch(BEE_URL,{signal:AbortSignal.timeout(30000)}).then(response=>{if(!response.ok)throw Error('Bee model could not be loaded');return response.arrayBuffer();}).then(parseGlb).catch(error=>{preparedModel=null;throw error;});
+ return preparedModel;
+}
+
 export function mountDemoBeeModel(canvas,{sprite=false}={}){
     if(!canvas)return null;
     const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:sprite,powerPreference:'low-power'});
@@ -101,7 +107,7 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
     const sun=new THREE.DirectionalLight(0xffe2aa,2.4);sun.position.set(-3,5,6);scene.add(sun);
     const fill=new THREE.DirectionalLight(0xc9eaff,1.1);fill.position.set(4,-1,-2);scene.add(fill);
     let bee=null,resources=null,lastElapsed=NaN,lastSpritePaint=-Infinity,disposed=false,ready=false;
-    fetch(BEE_URL).then(response=>{if(!response.ok)throw Error('Bee model could not be loaded');return response.arrayBuffer();}).then(parseGlb).then(async gltf=>{
+    prepareDemoBeeModel().then(async gltf=>{
         const loaded=await beeResources(gltf);if(disposed){loaded.geometry.dispose();loaded.texture.dispose();loaded.material.dispose();loaded.bitmap.close();return;}
         resources=loaded;bee=makeBee(gltf,loaded);scene.add(bee.wrapper);ready=true;canvas.dataset.modelReady='true';
     }).catch(error=>{if(!disposed){console.warn('Bee model fallback:',error);canvas.dataset.modelReady='error';}});

@@ -321,3 +321,16 @@ test('hiding a cell removes only its descendants and stays dismissed',async()=>{
 });
 
 test('shared welcome silhouette matches the regular 16-sided reference',async()=>{const {WELCOME_SHAPE_POINTS,WELCOME_SHAPE}=await import('../app/services/arWelcomePanel.js');assert.equal(WELCOME_SHAPE_POINTS.length,16);assert.equal(new Set(WELCOME_SHAPE_POINTS.map(p=>p.x+','+p.y)).size,16);assert.ok(WELCOME_SHAPE_POINTS.every(point=>Math.abs(Math.hypot(point.x-WELCOME_SHAPE.cx,point.y-WELCOME_SHAPE.cy)-WELCOME_SHAPE.radius)<.001));});
+
+
+test('LIMO opacity hides only its background, preserving label and outline alpha',()=>{
+ function paint(opacity){
+  const fills=[],text=[],strokes=[],stack=[];
+  const ctx={globalAlpha:1,fillStyle:'',strokeStyle:'',font:'',save(){stack.push({globalAlpha:this.globalAlpha,fillStyle:this.fillStyle,strokeStyle:this.strokeStyle});},restore(){Object.assign(this,stack.pop());},fill(){fills.push([this.fillStyle,this.globalAlpha]);},fillText(){text.push(this.globalAlpha);},stroke(){strokes.push(this.globalAlpha);},measureText(value){return {width:value.length*12};}};
+  for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','arc','setLineDash','quadraticCurveTo','bezierCurveTo'])ctx[method]=()=>{};
+  drawArWelcomeShowcase(ctx,300000,true,undefined,{drawPanel:false,drawRoots:false,cellOpacity:opacity,progression:{opening:true}});
+  return {fills:fills.filter(([colour])=>colour==='#102b22').map(([,alpha])=>alpha),text,strokes};
+ }
+ const clear=paint(0),opaque=paint(1);assert.ok(clear.fills.length>0);assert.ok(clear.fills.every(alpha=>alpha===0));assert.ok(opaque.fills.every(alpha=>alpha>0));
+ assert.deepEqual(clear.text,opaque.text);assert.deepEqual(clear.strokes,opaque.strokes);assert.ok(clear.text.some(alpha=>alpha>0));
+});

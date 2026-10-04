@@ -1,3 +1,5 @@
+import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
+import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../services/totemSignSelection.js';
 import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_INTRO_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
@@ -28,7 +30,7 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
-import { getSpatialVisualSettings, currentTotemModel } from '../services/spatialVisualSettings.js';
+import { getSpatialVisualSettings, currentTotemModel, currentInfoOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
@@ -108,6 +110,7 @@ let contextCellKey = '';
 let program = null;
 let buffer = null;
 let sphereRenderer = null;
+let rainRenderer=null;
 let totemCardsRenderer = null;
 let infoPanel = null;
 let pimHold = null;
@@ -257,8 +260,8 @@ let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=null,nativeConnectionEffectLastAt=0;
 let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientLastPaint=0;
 let rainV2Canvas=null,rainV2LastPaint=0;
-let demoRainIntensity=1;
-let demoRainStyle='v2';
+let demoRainIntensity=RAIN_QUALITIES[currentRainQuality()].intensity;
+let demoRainStyle=RAIN_QUALITIES[currentRainQuality()].style;
 let demoCloseStageWasInert=false;
 let demoCellOpacity=getSpatialVisualSettings().cellOpacity;
 let limHiddenCells=new Set();
@@ -476,6 +479,7 @@ function clearSessionState() {
         if (record.boundaryTexture) gl?.deleteTexture(record.boundaryTexture);
     });
     destroySpatialSphereRenderer(gl, sphereRenderer);
+    destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
     totemCardsRenderer?.destroy(); totemCardsRenderer = null;
     pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
@@ -1694,7 +1698,7 @@ function paintWelcomeLayer(now) {
             drawRoots:arWelcomeSharedBoard && introBoardVisible,
             rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
-            drawCellLabels:true,cellOpacity:demoCellOpacity,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''
+            drawCellLabels:true,cellOpacity:currentInfoOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''
         });
     arWelcomeRenderedFrames=frames;
     context.restore();
@@ -3957,7 +3961,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onPerformanceAction:handleDemoPerformanceAction,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
@@ -4140,6 +4144,7 @@ function setupRenderer() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-.20,-.08,0,0,1, .20,-.08,0,1,1, .20,.08,0,1,0, -.20,-.08,0,0,1, .20,.08,0,1,0, -.20,.08,0,0,0]), gl.STATIC_DRAW);
     sphereRenderer = createSpatialSphereRenderer(gl);
+    rainRenderer=createSpatialRainRenderer(gl);
     // Totem cards share the Totem's placement heading. They must not turn with
     // the viewer after the buttons have been aimed during placement.
     totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false,ray:()=>latestControllerRay});
@@ -4442,7 +4447,7 @@ function createIntroNoteTexture(texture = null) {
     const ctx = label.getContext('2d');
     ctx.clearRect(0, 0, label.width, label.height);
     if(arWelcomeShowcaseActive){
-        arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,drawRoots:arWelcomeSharedBoard && introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},cellOpacity:demoCellOpacity,selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
+        arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,drawRoots:arWelcomeSharedBoard && introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},cellOpacity:currentInfoOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
         return canvasTexture(label,texture);
     }
     drawArWelcomePanel(ctx,{elapsed:arWelcomeClock.elapsed,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});
@@ -5061,66 +5066,10 @@ function drawNativeConnectionSpatial(view){
     gl.depthMask(true);
 }
 
-function drawSpatialRainV1(view, time) {
-    if (!tetherRenderer || !viewerMatrix || !view?.projectionMatrix || !view?.transform?.inverse?.matrix
-        || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const rainProgress=demoRainProgress(arWelcomeClock.elapsed)*demoRainIntensity;
-    if(rainProgress<=0)return;
-    // A world-up field surrounds the viewer in every direction, rather than
-    // occupying a small forward-facing patch that disappears at the FOV edge.
-    const dropCount=rainProgress<=0?0:Math.round(8+220*rainProgress);
-    const vertices = new Float32Array(dropCount * 6);
-    for (let index = 0; index < dropCount; index += 1) {
-        const angle=index*2.399963229728653;
-        const radius=.85+(((index*67)%229)/229)*7.15;
-        const x=viewerMatrix[12]+Math.cos(angle)*radius;
-        const z=viewerMatrix[14]+Math.sin(angle)*radius;
-        const fall = ((time * .00065 + index * .173) % 1) * 2.5;
-        const y = viewerMatrix[13] + .95 - fall;
-        vertices.set([x, y, z, x + .012, y - .09, z], index * 6);
-    }
-    gl.useProgram(tetherRenderer.program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, tetherRenderer.buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(tetherRenderer.positionLocation);
-    gl.vertexAttribPointer(tetherRenderer.positionLocation, 3, gl.FLOAT, false, 12, 0);
-    gl.uniformMatrix4fv(tetherRenderer.projectionLocation, false, view.projectionMatrix);
-    gl.uniformMatrix4fv(tetherRenderer.viewLocation, false, view.transform.inverse.matrix);
-    gl.uniform4fv(tetherRenderer.colorLocation, [.81, .92, .90, .12+.17*rainProgress]);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
-    gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthMask(false);
-    gl.drawArrays(gl.LINES, 0, vertices.length / 3);
-    gl.depthMask(true);
+function drawSpatialRain(view,time){
+    if(!viewerMatrix || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+    drawSpatialRainField(gl,rainRenderer,view,time,{quality:currentRainQuality(),progress:demoRainProgress(arWelcomeClock.elapsed),origin:viewerMatrix,groundY:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.6});
 }
-
-function drawRainV2Vertices(view,source,base,color){
-    if(!source?.length)return;
-    const vertices=new Float32Array(source.length);
-    for(let index=0;index<source.length;index+=3){vertices[index]=source[index]+base.x;vertices[index+1]=source[index+1]+base.y;vertices[index+2]=source[index+2]+base.z;}
-    gl.useProgram(tetherRenderer.program);gl.bindBuffer(gl.ARRAY_BUFFER,tetherRenderer.buffer);gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);
-    gl.enableVertexAttribArray(tetherRenderer.positionLocation);gl.vertexAttribPointer(tetherRenderer.positionLocation,3,gl.FLOAT,false,12,0);
-    gl.uniformMatrix4fv(tetherRenderer.projectionLocation,false,view.projectionMatrix);gl.uniformMatrix4fv(tetherRenderer.viewLocation,false,view.transform.inverse.matrix);gl.uniform4fv(tetherRenderer.colorLocation,color);
-    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.drawArrays(gl.LINES,0,vertices.length/3);gl.depthMask(true);
-}
-
-function drawSpatialRainV2(view,time){
-    if(!tetherRenderer || !viewerMatrix || !view?.projectionMatrix || !view?.transform?.inverse?.matrix || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
-    const progress=demoRainProgress(arWelcomeClock.elapsed)*demoRainIntensity;if(progress<=0)return;
-    const mobile=sessionMode!=='immersive-vr' && navigator.maxTouchPoints>0;
-    const field=demoRainV2Field(time,progress,{mobile});
-    const eye={x:viewerMatrix[12],y:viewerMatrix[13],z:viewerMatrix[14]};
-    for(const layer of field.layers)drawRainV2Vertices(view,layer.vertices,eye,[.78,.9,.9,layer.alpha]);
-    const ground={x:eye.x,y:Number.isFinite(groundYEstimate)?groundYEstimate:eye.y-1.6,z:eye.z};
-    drawRainV2Vertices(view,field.splashes,ground,[.68,.85,.83,.13]);
-    const mist=new Float32Array(12*6);
-    for(let index=0;index<12;index++){const angle=index*Math.PI*2/12,radius=2.1+(index%3)*.7,x=Math.cos(angle)*radius,z=Math.sin(angle)*radius,tangent=.22;mist.set([x-Math.sin(angle)*tangent,.07,z+Math.cos(angle)*tangent,x+Math.sin(angle)*tangent,.07,z-Math.cos(angle)*tangent],index*6);}
-    drawRainV2Vertices(view,mist,ground,[.72,.86,.82,field.mistOpacity]);
-}
-
-function drawSpatialRain(view,time){if(demoRainStyle==='v1')drawSpatialRainV1(view,time);else drawSpatialRainV2(view,time);}
 
 function drawMarker(view) {
     if (!program || !buffer || !sphereRenderer || !tetherRenderer || !prismRenderer || !triangleRenderer) return;
@@ -5547,6 +5496,8 @@ async function startImmersive() {
 }
 
 export function openTemporaryArDemoWindow(app) {
+    // Start preparation while choosing the introduction, without consuming an XR entry gesture.
+    prepareArAssets().catch(error=>console.warn('AR preparation:',error));
     if (isDesktopLearningBookTarget()) {
         app.innerHTML = `<div class="screen ar-safety-screen nxr-desktop-ar-choice" data-desktop-ar-choice>
             <div class="page-header"><p class="welcome-label">NourishlandXR · desktop introduction</p><h1>See how NLXR works</h1><p class="subtitle">Start with a place, follow its plant information, then see how learning can guide practical action. On desktop, we recommend this plain, interactive introduction.</p></div>
@@ -5557,13 +5508,13 @@ export function openTemporaryArDemoWindow(app) {
         </div>`;
         app.querySelector('[data-desktop-learning-book]')?.addEventListener('click', () => renderDesktopLearningBook(app, { moringaDocument: MORINGA_PIM, onExit: () => window.renderLaunchScreen?.() }), { once: true });
         app.querySelector('[data-desktop-plain-ar]')?.addEventListener('click', () => {
-            if (shouldSkipArIntroductionPreparation()) startTemporaryArDemo(app);
+            if (shouldSkipArIntroductionPreparation() && arAssetsReady()) startTemporaryArDemo(app);
             else renderArIntroductionPreparation(app, { onContinue: () => startTemporaryArDemo(app), onCancel: () => openTemporaryArDemoWindow(app) });
         }, { once: true });
         app.querySelector('[data-desktop-ar-back]')?.addEventListener('click', () => window.renderLaunchScreen?.(), { once: true });
         return;
     }
-    if (shouldSkipArIntroductionPreparation()) return startTemporaryArDemo(app);
+    if (shouldSkipArIntroductionPreparation() && arAssetsReady()) return startTemporaryArDemo(app);
     renderArIntroductionPreparation(app, {
         onContinue: () => startTemporaryArDemo(app),
         onCancel: () => window.renderLaunchScreen?.()
@@ -5574,6 +5525,7 @@ export async function startTemporaryArDemo(app) {
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
+    const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = await startImmersive();
     if (!immersive) {

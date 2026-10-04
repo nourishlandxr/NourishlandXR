@@ -6,10 +6,29 @@ export const ORB_MODELS = Object.freeze({
     improved:Object.freeze({label:'Improved',latitudeBands:32,longitudeBands:48,roughness:.28,metalness:.08,detail:1}),
     advanced:Object.freeze({label:'Advanced',latitudeBands:32,longitudeBands:48,roughness:.34,metalness:.05,detail:2})
 });
+// Budgets are independent of object style and XR refresh rate.
+export const GRAPHICS_PRESETS=Object.freeze({
+ low:Object.freeze({label:'LOW',orbLatitude:16,orbLongitude:24,detail:0,totemRadial:24,totemVertical:16,textureScale:.5,frameScale:.75,rain:'off'}),
+ medium:Object.freeze({label:'MED',orbLatitude:32,orbLongitude:48,detail:1,totemRadial:48,totemVertical:32,textureScale:1,frameScale:1,rain:'low'}),
+ high:Object.freeze({label:'HIGH',orbLatitude:48,orbLongitude:72,detail:2,totemRadial:72,totemVertical:48,textureScale:2,frameScale:1.5,rain:'hq'})
+});
+export const RAIN_QUALITIES=Object.freeze({off:{label:'Off',intensity:0,style:'v1',drops:0},low:{label:'Low',intensity:.45,style:'v1',drops:60},high:{label:'High',intensity:1,style:'v1',drops:220},hq:{label:'HQ',intensity:1.65,style:'v2',drops:480}});
+export function resolveGraphicsQuality(choice='auto',device=globalThis.navigator){
+ if(GRAPHICS_PRESETS[choice])return choice;
+ // Missing hints and Quest default to MED. Manual HIGH is never downgraded.
+ if(/Quest|OculusBrowser/i.test(device?.userAgent || ''))return 'medium';
+ if(device && ((device.deviceMemory>0 && device.deviceMemory<=4) || (device.hardwareConcurrency>0 && device.hardwareConcurrency<=4)))return 'low';
+ return 'medium';
+}
+export function currentGraphicsQuality(){return resolveGraphicsQuality(preferences.graphicsQuality);}
+export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
+export function currentRainQuality(){return preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'carved',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false};
+let preferences={infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'carved',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
+    if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
+    if(RAIN_QUALITIES[change?.rainQuality])result.rainQuality=change.rainQuality;
     for(const [key,min,max] of [['infoOpacity',0,1],['cellOpacity',0,1],['spatialScale',.85,1.2]])if(Number.isFinite(change?.[key]))result[key]=Math.max(min,Math.min(max,change[key]));
     if(ORB_MODELS[change?.orbModel])result.orbModel=change.orbModel;
     if(TOTEM_MODELS[change?.totemModel])result.totemModel=change.totemModel;
