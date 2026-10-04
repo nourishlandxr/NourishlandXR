@@ -8,9 +8,9 @@ export const ORB_MODELS = Object.freeze({
 });
 // Budgets are independent of object style and XR refresh rate.
 export const GRAPHICS_PRESETS=Object.freeze({
- low:Object.freeze({label:'LOW',orbLatitude:16,orbLongitude:24,detail:0,totemRadial:24,totemVertical:16,textureScale:.5,frameScale:.75,rain:'off'}),
- medium:Object.freeze({label:'MED',orbLatitude:32,orbLongitude:48,detail:1,totemRadial:48,totemVertical:32,textureScale:1,frameScale:1,rain:'low'}),
- high:Object.freeze({label:'HIGH',orbLatitude:48,orbLongitude:72,detail:2,totemRadial:72,totemVertical:48,textureScale:2,frameScale:1.5,rain:'hq'})
+ low:Object.freeze({label:'LOW',orbLatitude:16,orbLongitude:24,detail:0,totemRadial:24,totemVertical:16,textureScale:.5,frameScale:.75,frameLeafPixels:0,frameRootSamples:0,rain:'off'}),
+ medium:Object.freeze({label:'MED',orbLatitude:32,orbLongitude:48,detail:1,totemRadial:48,totemVertical:32,textureScale:1,frameScale:1,frameLeafPixels:0,frameRootSamples:0,rain:'low'}),
+ high:Object.freeze({label:'HIGH',orbLatitude:48,orbLongitude:72,detail:2,totemRadial:72,totemVertical:48,textureScale:2,frameScale:1.5,frameLeafPixels:256,frameRootSamples:36,rain:'hq'})
 });
 export const RAIN_QUALITIES=Object.freeze({off:{label:'Off',intensity:0,style:'v1',drops:0},low:{label:'Low',intensity:.45,style:'v1',drops:60},high:{label:'High',intensity:1,style:'v1',drops:220},hq:{label:'HQ',intensity:1.65,style:'v2',drops:480}});
 export function resolveGraphicsQuality(choice='auto',device=globalThis.navigator){

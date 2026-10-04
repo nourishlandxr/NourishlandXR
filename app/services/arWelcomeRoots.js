@@ -1,4 +1,5 @@
-import {currentGraphicsQuality} from './spatialVisualSettings.js';
+import {drawLivingLeafArtwork} from './livingFrameArtwork.js';
+import {GRAPHICS_PRESETS,currentGraphicsQuality} from './spatialVisualSettings.js';
 import { WELCOME_SHAPE } from './arWelcomePanel.js';
 
 // These values are raised only by real actions in the guided demo. Keeping the
@@ -240,7 +241,7 @@ function fillRootRibbon(ctx, points, width, offset = 0) {
     return true;
 }
 
-function strokeRoot(ctx, path, points, alpha) {
+function strokeRoot(ctx, path, points, alpha, quality='medium') {
     const palette = ROOT_PALETTE[path.palette] || ROOT_PALETTE.copper;
     const inheritedAlpha = Number.isFinite(ctx.globalAlpha) ? ctx.globalAlpha : 1;
     ctx.globalAlpha = inheritedAlpha * alpha * .46;
@@ -251,6 +252,10 @@ function strokeRoot(ctx, path, points, alpha) {
     ctx.shadowBlur = 0;
     ctx.globalAlpha = inheritedAlpha * alpha * (path.kind === 'structural' ? .94 : .86);
     ctx.fillStyle = palette.body;
+    if(quality==='high' && typeof ctx.createLinearGradient==='function'){
+        const start=points[0],end=points.at(-1),shade=ctx.createLinearGradient(start.x,start.y,end.x+path.width*2,end.y);
+        shade.addColorStop(0,palette.shade);shade.addColorStop(.3,palette.body);shade.addColorStop(.58,palette.light);shade.addColorStop(.7,palette.body);shade.addColorStop(1,palette.shade);ctx.fillStyle=shade;
+    }
     fillRootRibbon(ctx, points, path.width);
     if (path.kind !== 'feeder') {
         ctx.globalAlpha = inheritedAlpha * alpha * .36;
@@ -311,7 +316,7 @@ function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStar
     frame.forEach((path, index) => {
         if (path.points.length < 2) return;
         ctx.save();
-        strokeRoot(ctx, path, path.points, path.stage === currentMilestone ? .9 : .76);
+        strokeRoot(ctx, path, path.points, path.stage === currentMilestone ? .9 : .76,quality);
 
         // A few new roots carry a tiny warm tip while their current phase grows.
         if (!reducedMotion && path.stage === currentMilestone && path.progress < 1 && index % 5 === 0) {
@@ -334,6 +339,7 @@ const RIM_PATCHES=Object.freeze(Array.from({length:13},(_,i)=>({
  leaves:3+Math.floor(hash(i,313)*4)
 })));
 function drawRimLeaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)',detail=1){
+ if(detail>1 && drawLivingLeafArtwork(ctx,x,y,angle,size,colour))return;
  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=colour;
  ctx.beginPath();ctx.moveTo(0,0);ctx.bezierCurveTo(size*.4,-size*.55,size,-size*.38,size,0);
  ctx.bezierCurveTo(size*.65,size*.38,size*.25,size*.35,0,0);ctx.fill();
@@ -485,6 +491,7 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false,quality=currentGraphic
   const angle=.73+i*.20,start=polarPoint(angle,531),length=(105+hash(i,349)*145)*growth;
   const sway=0; // Established roots stay still; growth is the only motion.
   const end={x:start.x+(hash(i,353)-.5)*22+sway,y:start.y+length};
+  if(detail>1 && typeof ctx.createLinearGradient==='function'){drawDetailedAerialRoot(ctx,start,end,length,growth,i,GRAPHICS_PRESETS[quality].frameRootSamples);continue;}
   ctx.strokeStyle=i%2?'#69513a':'#806449';ctx.lineWidth=1.8+hash(i,359)*3.5;ctx.beginPath();ctx.moveTo(start.x,start.y);
   ctx.bezierCurveTo(start.x-8,start.y+length*.3,end.x+9,end.y-length*.2,end.x,end.y);ctx.stroke();
   if(detail>0){
@@ -500,16 +507,36 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false,quality=currentGraphic
  ctx.restore();
 }
 
+// Rootlets attach to actual points on the growing cubic, then taper to a fine
+// curved end. Sampling occurs only when the cached decoration refreshes.
+export function livingAerialRootPoints(start,end,length,samples=36){
+ return Array.from({length:samples+1},(_,n)=>{const t=n/samples;return {x:cubic(start.x,start.x-8,end.x+9,end.x,t),y:cubic(start.y,start.y+length*.3,end.y-length*.2,end.y,t)};});
+}
+function drawDetailedAerialRoot(ctx,start,end,length,growth,seed,samples){
+ const points=livingAerialRootPoints(start,end,length,samples),width=1.8+hash(seed,359)*3.5;
+ ctx.save();
+ const shade=ctx.createLinearGradient(start.x-width,start.y,end.x+width,end.y);
+ shade.addColorStop(0,'#403326');shade.addColorStop(.32,'#786349');shade.addColorStop(.57,'#8d7655');shade.addColorStop(.73,'#66503b');shade.addColorStop(1,'#483c2b');
+ ctx.fillStyle=shade;fillRootRibbon(ctx,points,width);
+ ctx.globalAlpha*=.29;ctx.fillStyle='#c2a87a';fillRootRibbon(ctx,points,width*.14,-.3);ctx.restore();
+ for(let n=1;n<=4;n++){
+  const origin=points[Math.round(samples*n/5)],side=n%2?1:-1,reach=(8+hash(seed+n,619)*8)*growth;
+  const tip={x:origin.x+side*reach,y:origin.y+(14+hash(seed+n,627)*12)*growth};
+  const branch=Array.from({length:15},(_,index)=>{const t=index/14;return {x:cubic(origin.x,origin.x+side*reach*.45,tip.x-side*2,tip.x,t),y:cubic(origin.y,origin.y+3,tip.y-8,tip.y,t)};});
+  ctx.fillStyle=n%2?'#705b40':'#625039';fillRootRibbon(ctx,branch,.8*(1-n*.1));
+ }
+}
+
 // Cache only decoration, keeping text and LIMO feedback on their own cadence.
 const livingFrameCache=new WeakMap();
 export function drawArWelcomeRoots(ctx,options={}){
  if(typeof document==='undefined' || typeof ctx.drawImage!=='function')return drawWelcomeRootsDirect(ctx,options);
  let entry=livingFrameCache.get(ctx);
- const quality=options.quality || currentGraphicsQuality(), scale=quality==='high'?1.5:quality==='low'?.75:1;
+ const quality=options.quality || currentGraphicsQuality(), scale=(GRAPHICS_PRESETS[quality] || GRAPHICS_PRESETS.medium).frameScale;
  if(!entry || entry.scale!==scale){const canvas=document.createElement('canvas');canvas.width=1400*scale;canvas.height=1500*scale;entry={scale,canvas,context:canvas.getContext('2d'),key:null,clearance:null,frame:null};livingFrameCache.set(ctx,entry);}
  const key=[quality,Math.floor((options.elapsed||0)/WELCOME_ROOT_REFRESH_MS),options.milestone||0,options.milestoneStartedAt||0,Boolean(options.reducedMotion)].join(':');
  if(entry.key!==key || entry.clearance!==options.cellClearance){
-  const paint=entry.context;paint.setTransform?.(1,0,0,1,0,0);paint.clearRect(0,0,entry.canvas.width,entry.canvas.height);paint.setTransform?.(scale,0,0,scale,0,0);
+  const paint=entry.context;paint.imageSmoothingEnabled=true;paint.imageSmoothingQuality='high';paint.setTransform?.(1,0,0,1,0,0);paint.clearRect(0,0,entry.canvas.width,entry.canvas.height);paint.setTransform?.(scale,0,0,scale,0,0);
   entry.frame=drawWelcomeRootsDirect(paint,{...options,quality,cellClearance:[]});
   // Subtract all cell discs in one operation. Their union stays excluded,
   // including overlaps, without a deep stack of expensive canvas clips.

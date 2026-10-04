@@ -5,8 +5,10 @@ body{margin:0;background:#24332d;color:#eee9d9;font:16px system-ui}header{positi
 <header><strong>Living frame · five minutes</strong><label>Growth <input id="time" type="range" min="0" max="300" value="300"></label><output>5:00</output><button>Restart growth</button><label><input id="cells" type="checkbox" style="width:auto"> Show LIMO spacing</label></header>
 <p style="margin:12px;text-align:center">Graphics <select id="quality"><option value="low">LOW</option><option value="medium" selected>MED</option><option value="high">HIGH</option></select> · Detail and cache resolution only; growth and spacing stay the same.</p>
 <canvas width="1400" height="1500"></canvas>
+<details id="artwork-detail" style="max-width:780px;margin:auto"><summary>Inspect HIGH leaf artwork</summary><canvas id="leaf-detail" width="1400" height="380"></canvas><p>Enlarged production leaf artwork. Growth, leaf positions and LIMO clearance are unchanged.</p></details>
 <script type="module">
 import {setSpatialVisualSettings,currentGraphicsQuality} from '../app/services/spatialVisualSettings.js';
+import {drawLivingLeafArtwork} from '../app/services/livingFrameArtwork.js';
 import {drawArWelcomePanel} from '../app/services/arWelcomePanel.js';
 import {drawArWelcomeRoots} from '../app/services/arWelcomeRoots.js';
 import {drawArWelcomeShowcase} from '../app/services/arWelcomeShowcase.js';
@@ -21,8 +23,16 @@ function paint(seconds){
  drawArWelcomeRoots(ctx,{elapsed:seconds*1000,milestone:0,reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches});
  drawCopy(ctx);
  }
+ paintLeafDetail();
  value.textContent=Math.floor(seconds/60)+':'+String(Math.floor(seconds%60)).padStart(2,'0');
 }
+function paintLeafDetail(){
+ const detail=document.querySelector('#artwork-detail');if(!detail.open)return;
+ const ctx=document.querySelector('#leaf-detail').getContext('2d');ctx.clearRect(0,0,1400,380);
+ if(currentGraphicsQuality()!=='high'){ctx.fillStyle='#edeadd';ctx.font='32px system-ui';ctx.fillText('Choose HIGH to inspect the shaded leaf artwork.',70,150);return;}
+ for(const [index,colour] of ['#345638','#839655','#7e9281'].entries())drawLivingLeafArtwork(ctx,110+index*440,210,-.2,290,colour);
+}
+document.querySelector('#artwork-detail').addEventListener('toggle',paintLeafDetail);
 function drawCopy(ctx){
  ctx.fillStyle='#f2f1e6';ctx.textAlign='center';ctx.font='600 54px Georgia,serif';ctx.fillText('A living world. A closer look.',700,470,820);
  ctx.font='30px system-ui';ctx.fillText('A quiet window into the landscape.',700,555,780);

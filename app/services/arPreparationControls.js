@@ -11,12 +11,14 @@ export function arPreparationControlsMarkup(){
 }
 export function bindArPreparationControls(root,enterButton,{nearFuture=false}={}){
  const section=root?.querySelector('[data-ar-preload]');if(!section || !enterButton)return;
- section.querySelector('[data-ar-graphics]')?.addEventListener('change',event=>setSpatialVisualSettings({graphicsQuality:event.target.value}));
+ section.querySelector('[data-ar-graphics]')?.addEventListener('change',event=>{setSpatialVisualSettings({graphicsQuality:event.target.value});begin();});
  const bar=section.querySelector('progress'),status=section.querySelector('[data-ar-preload-status]'),retry=section.querySelector('[data-ar-preload-retry]');
+ let preparationToken=0;
  function begin(isRetry=false){
+  const token=++preparationToken;
   enterButton.disabled=true;retry.hidden=true;section.setAttribute('aria-busy','true');const start=performance.now();
-  prepareArAssets({retry:isRetry,experience:nearFuture?'demo':'creator',onProgress:value=>{if(!section.isConnected)return;bar.max=value.total||1;bar.value=value.loaded;status.textContent=`Preparing Nourishland · ${value.loaded} / ${value.total}`;}}).then(result=>{
-   if(!section.isConnected)return;
+  prepareArAssets({retry:isRetry,experience:nearFuture?'demo':'creator',onProgress:value=>{if(!section.isConnected || token!==preparationToken)return;bar.max=value.total||1;bar.value=value.loaded;status.textContent=`Preparing Nourishland · ${value.loaded} / ${value.total}`;}}).then(result=>{
+   if(!section.isConnected || token!==preparationToken)return;
    const failed=result.failures.some(item=>item.critical);section.setAttribute('aria-busy','false');enterButton.disabled=failed;retry.hidden=!failed;
    status.textContent=failed?'Preparation could not finish. Check your connection and retry.':'Ready to enter. More information loads as you explore.';
    // Local diagnostic evidence only, readable in preparation studies. Never transmitted.

@@ -1,3 +1,4 @@
+import {prepareLivingFrameArtwork} from './livingFrameArtwork.js';
 import {loadPreparedImage} from './arAssetPreparation.js';
 import {ORB_MODELS,TOTEM_MODELS,RAIN_QUALITIES,resolveGraphicsQuality,currentTotemModel,getSpatialVisualSettings,currentInfoOpacity,currentOrbModel,setSpatialVisualSettings} from './spatialVisualSettings.js';
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
@@ -305,6 +306,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='GraphicsQuality'){
             const values=['auto','low','medium','high'];graphicsQuality=values[(values.indexOf(graphicsQuality)+1)%values.length];
             rainQuality=setSpatialVisualSettings({graphicsQuality}).rainQuality;
+            prepareLivingFrameArtwork(resolveGraphicsQuality(graphicsQuality));
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);onGraphicsQuality(graphicsQuality);
         }
         if(action==='RainQuality'){

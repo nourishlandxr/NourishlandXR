@@ -1,3 +1,5 @@
+import {currentGraphicsQuality} from './spatialVisualSettings.js';
+import {prepareLivingFrameArtwork} from './livingFrameArtwork.js';
 // Small shared registry: bounded decoded images, concurrent request deduplication,
 // retryable failures, and real settled-asset progress. Project/API data is never cached here.
 const images=new Map(),pendingImages=new Map();
@@ -30,13 +32,14 @@ export const AR_PRELOAD_ASSETS=Object.freeze({
  // Remaining tutorial/LIMO illustrations, project media and optional audio stay on demand.
 });
 const sessions=new Map();
-function stateFor(experience){if(!sessions.has(experience))sessions.set(experience,{prepared:false,active:null,progress:{loaded:0,total:0,failures:[]},listeners:new Set()});return sessions.get(experience);}
+function stateFor(experience){const key=experience+':'+currentGraphicsQuality();if(!sessions.has(key))sessions.set(key,{prepared:false,active:null,progress:{loaded:0,total:0,failures:[]},listeners:new Set()});return sessions.get(key);}
 export function arAssetsReady(experience='demo'){return stateFor(experience).prepared;}
 export function prepareArAssets({onProgress=()=>{},retry=false,experience='demo'}={}){
  const state=stateFor(experience);state.listeners.add(onProgress);onProgress(state.progress);
  if(retry && !state.active)state.prepared=false;
  if(!state.active && !state.prepared){
   const assets=(experience==='demo'?AR_PRELOAD_ASSETS.critical:[]).map(path=>({id:path,critical:true,load:()=>loadPreparedImage(assetURL(path))}));
+  if(currentGraphicsQuality()==='high')assets.push({id:'living-frame-artwork',critical:false,load:()=>prepareLivingFrameArtwork('high')});
   // Fonts can fall back to system faces when offline. No audio autoplay.
   for(const face of ['600 24px Fraunces','500 24px Manrope','400 24px Marcellus'])assets.push({id:face,critical:false,load:()=>new Promise(resolve=>{
    const timer=setTimeout(resolve,4000);Promise.resolve(globalThis.document?.fonts?.load(face)).catch(()=>{}).finally(()=>{clearTimeout(timer);resolve();});
