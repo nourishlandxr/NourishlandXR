@@ -282,7 +282,7 @@ let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=
 let butterflyCompanions=[];
 let ambientBeeAvoidanceTime=[];
 let ambientEncounterSeed=Math.floor(Math.random()*10000);
-let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientBeeReturn=[],ambientLastPaint=0;
+let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientBeeReturn=[],ambientBeeFlowerVisits=[],ambientLastPaint=0;
 let rainV2Canvas=null,rainV2LastPaint=0;
 let demoRainIntensity=RAIN_QUALITIES[currentRainQuality()].intensity;
 let demoRainStyle=RAIN_QUALITIES[currentRainQuality()].style;
@@ -453,7 +453,7 @@ function clearSessionState() {
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;limInputSuppressSource=null;
     for(const insect of butterflyCompanions){insect.model?.destroy();insect.canvas?.remove();}butterflyCompanions=[];
-    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFrame=null;ambientEncounterOrigin=null;ambientBeeAvoidance=[];ambientBeeReturn=[];ambientBeeAvoidanceTime=[];ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
+    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFrame=null;ambientEncounterOrigin=null;ambientBeeAvoidance=[];ambientBeeReturn=[];ambientBeeFlowerVisits=[];ambientBeeAvoidanceTime=[];ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -5072,7 +5072,7 @@ function drawSpatialButterfly(view){
             const anchor=insect.flightAnchor || perch;if(!anchor)continue;
             let position={x:anchor.center.x+anchor.right.x*pose.x+anchor.normal.x*pose.z,y:anchor.center.y+pose.y,z:anchor.center.z+anchor.right.z*pose.x+anchor.normal.z*pose.z};
             const visit=insectFlowerVisit(elapsed-insect.startedAt-insect.perchMs,insect.seed+4,{enabled:pose.flight===1 && !pose.close && !reducedMotion,period:59000});
-            position=blendInsectWithFlower(position,visit);pose.flight*=1-visit.amount*.65;
+            position=blendInsectWithFlower(position,visit,insect);pose.flight*=1-visit.amount*.65;
             if(pose.close>0){
                 if(insect.encounter?.index!==pose.encounterIndex)insect.encounter={index:pose.encounterIndex,x:viewerMatrix[12]-viewerMatrix[8]*.85+viewerMatrix[0]*(insect.red?-.18:.18),y:viewerMatrix[13]-.10,z:viewerMatrix[14]-viewerMatrix[10]*.85+viewerMatrix[2]*(insect.red?-.18:.18)};
                 position={x:position.x+(insect.encounter.x-position.x)*pose.close,y:position.y+(insect.encounter.y-position.y)*pose.close,z:position.z+(insect.encounter.z-position.z)*pose.close};
@@ -5085,13 +5085,31 @@ function drawSpatialButterfly(view){
         insect.model.drawXR(view,insect.position,elapsed,insect.pose);
     }
 }
-function blendInsectWithFlower(position,visit){
-    if(!visit.amount || !introWorldAnchor || !introBoardVisible || !arWelcomeSharedBoard)return position;
-    const flowers=livingFrameFlowerSites(arWelcomeClock.elapsed);if(!flowers.length)return position;
-    const flower=flowers[visit.index%flowers.length],center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
-    const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
-    const local=demoBillboardTextureLocalPoint(flower.x+550,flower.y+510,2500,2100),target=introLocalPosition(board,[local.x,local.y,.09]);
-    return {x:position.x+(target.x-position.x)*visit.amount,y:position.y+(target.y-position.y)*visit.amount,z:position.z+(target.z-position.z)*visit.amount};
+function blendInsectWithFlower(position,visit,visitor){
+    const elapsed=arWelcomeClock.elapsed;
+    let offset={x:0,y:0,z:0};
+    if(visit.amount && introWorldAnchor && introBoardVisible && arWelcomeSharedBoard){
+        const flowers=livingFrameFlowerSites(elapsed);
+        if(flowers.length){
+            // Pin the destination while new flower sites appear around it.
+            if(visitor && visitor.flowerVisit?.index!==visit.index)visitor.flowerVisit={index:visit.index,flower:{...flowers[visit.index%flowers.length]},startedAt:elapsed};
+            const flower=visitor?.flowerVisit?.flower || flowers[visit.index%flowers.length],center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
+            const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
+            const local=demoBillboardTextureLocalPoint(flower.x+550,flower.y+510,2500,2100),target=introLocalPosition(board,[local.x,local.y,.09]);
+            const arrival=visitor?Math.max(0,Math.min(1,(elapsed-visitor.flowerVisit.startedAt)/4000)):1;
+            const amount=visit.amount*arrival*arrival*(3-2*arrival);
+            offset={x:(target.x-position.x)*amount,y:(target.y-position.y)*amount,z:(target.z-position.z)*amount};
+        }
+    }else if(visitor)visitor.flowerVisit=null;
+    if(visitor){
+        // Ease the handoff between a curious return and the next flower visit,
+        // including release to the flight ring. Both eyes share one update.
+        const previous=visitor.flowerOffset || {x:0,y:0,z:0};
+        const delta=Math.max(0,Math.min(100,elapsed-(visitor.flowerOffsetAt ?? elapsed-16))),blend=1-Math.exp(-delta/350);
+        offset={x:previous.x+(offset.x-previous.x)*blend,y:previous.y+(offset.y-previous.y)*blend,z:previous.z+(offset.z-previous.z)*blend};
+        visitor.flowerOffset=offset;visitor.flowerOffsetAt=elapsed;
+    }
+    return {x:position.x+offset.x,y:position.y+offset.y,z:position.z+offset.z};
 }
 
 function drawSpatialAmbientLife(view){
@@ -5129,8 +5147,10 @@ function ambientBeeWorldPosition(bee,index=0){
     const rightX=frame[0]/rightLength,rightZ=frame[2]/rightLength;
     const frontLength=Math.hypot(frame[8],frame[10])||1;
     const frontX=frame[8]/frontLength,frontZ=frame[10]/frontLength;
-    const across=(bee.x-.5)*AR_PHONE_COMFORT.boardScale[0]*.4;
-    const vertical=(.5-bee.y)*AR_PHONE_COMFORT.boardScale[1]*.16;
+    // Map the flight ring to the Living Frame's roughly 540 px flower rim,
+    // using the same original 1400 x 1080 board coordinates as its artwork.
+    const across=(bee.x-.5)*AR_PHONE_COMFORT.boardScale[0]*.4*1800/1400;
+    const vertical=(.5-bee.y)*AR_PHONE_COMFORT.boardScale[1]*.16*1800/1080;
     // Keep the flight loop just in front of the Living Frame. Sending it
     // metres behind the board made depth testing erase bees without a fade.
     const hoverDepth=.085+((bee.depth+1)*.5)*.05;
@@ -5153,7 +5173,8 @@ function ambientBeeWorldPosition(bee,index=0){
         if(arWelcomeClock.elapsed>returning.endAt+4600)ambientBeeReturn[index]=null;
         else if(returnAmount>visit.amount)visit={amount:returnAmount,index:returning.flowerIndex};
     }
-    ambientPosition=blendInsectWithFlower(ambientPosition,visit);
+    const flowerVisitor=ambientBeeFlowerVisits[index] ||= {};
+    ambientPosition=blendInsectWithFlower(ambientPosition,visit,flowerVisitor);
     const flyby=Math.max(0,Math.min(1,Number(bee.flyby)||0));
     if(!flyby)return beeWorldAvoidance(ambientPosition,index);
     const progress=Math.max(0,Math.min(1,Number(bee.flybyProgress)||0));
@@ -5164,9 +5185,9 @@ function ambientBeeWorldPosition(bee,index=0){
     const faceDistance=.72+Math.abs(progress-.5)*.34+curious.z;
     const faceAcross=(.5-progress)*.24+curious.x;
     const facePosition={
-        x:ambientEncounterOrigin.x+rightX*faceAcross+forwardX*faceDistance,
+        x:ambientEncounterOrigin.x+rightX*faceAcross-frontX*faceDistance,
         y:ambientEncounterOrigin.y-.035-Math.sin(Math.PI*progress)*.025+curious.y,
-        z:ambientEncounterOrigin.z+rightZ*faceAcross+forwardZ*faceDistance
+        z:ambientEncounterOrigin.z+rightZ*faceAcross-frontZ*faceDistance
     };
     const blended={
         x:ambientPosition.x+(facePosition.x-ambientPosition.x)*flyby,

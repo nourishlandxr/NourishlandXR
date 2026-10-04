@@ -21,20 +21,23 @@ export function demoBeeEncounter(age,{enabled=true,seed=0}={}){
     return {index,start,progress,phase,envelope};
 }
 
-export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encounters=true,encounterSeed=0}={}){
+export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounterSeed=0}={}){
     if(!Number.isFinite(startedAt))return null;
     const age=elapsed-startedAt-index*850;
     if(age<0)return null;
-    const time=age/1000,phase=time*.34+index*2.7;
-    const gather=attention==='control'?1-clamp01((age-3600)/2400):0;
+    // Start in separate sectors of the Living Frame. The session seed varies
+    // their sources and speeds while keeping each flight path continuous.
+    const variation=seededUnit(encounterSeed+index*17);
+    const time=age/1000,phase=time*(.30+variation*.08)
+        +seededUnit(encounterSeed+101)*Math.PI*2+index*Math.PI*2/BEE_COUNT+(variation-.5)*.4;
     const candidate=demoBeeEncounter(elapsed-startedAt,{enabled:encounters,seed:encounterSeed});
     const encounter=candidate && (candidate.index+encounterSeed)%BEE_COUNT===index ? candidate : null;
     const flybyProgress=encounter?.progress || 0,flyby=encounter?.envelope || 0;
-    const orbitX=(.5+Math.cos(phase)*.30)*(1-gather)+(.25+Math.cos(phase*2)*.055)*gather;
-    const orbitY=(.5+Math.sin(phase)*.30)*(1-gather)+(.72+Math.sin(phase*2)*.055)*gather;
+    const orbitX=.5+Math.cos(phase)*.30;
+    const orbitY=.5+Math.sin(phase)*.30;
     const orbitDepth=Math.sin(phase-.9);
-    const wanderingX=Math.sin(phase*.63+index)*.023*(1-gather);
-    const wanderingY=Math.sin(phase*1.37+index)*.025*(1-gather);
+    const wanderingX=Math.sin(phase*.63+index)*.023;
+    const wanderingY=Math.sin(phase*1.37+index)*.025;
     return {
         x:(orbitX+wanderingX)*(1-flyby)+(.82-flybyProgress*.64)*flyby,
         y:(orbitY+wanderingY)*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,
