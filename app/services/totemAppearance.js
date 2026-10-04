@@ -1,7 +1,10 @@
+import { currentTotemModel } from './spatialVisualSettings.js';
 export const DEFAULT_TOTEM_COLOR = '#715a46';
 
 export const TOTEM_STYLES = Object.freeze([
     Object.freeze({ id: 'basic', label: 'Elemental Totem', description: 'Slim softly rounded post' }),
+    Object.freeze({ id: 'carved', label: 'Carved timber', description: 'Flowing timber with engraved controls' }),
+    Object.freeze({ id: 'botanical', label: 'Botanical column', description: 'Quiet flutes and bronze leaf inlay' }),
     Object.freeze({ id: 'organic', label: 'Light Bulb', description: 'Round orb marker' }),
     Object.freeze({ id: 'flat-disc', label: 'Disk Totem', description: 'Flat round marker' })
 ]);
@@ -50,4 +53,10 @@ export function normalizeTotemStyle(value) {
 export function totemStylePreset(value) {
     const id = normalizeTotemStyle(value);
     return TOTEM_STYLES.find(style => style.id === id);
+}
+
+// Global experiments affect the standard post, without changing stored project data.
+export function renderedTotemStyle(value){
+    const stored=normalizeTotemStyle(value);
+    return stored==='basic' ? currentTotemModel() : stored;
 }

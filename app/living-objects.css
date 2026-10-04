@@ -2289,3 +2289,21 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 .nlxr-info-panel.is-creator-panel :is(.nlxr-info-tools,.nlxr-tools-dock) button:is(:hover,:focus-visible) {
     background:rgba(178,204,187,.30)!important;border-color:#eee0bb;
 }
+
+/* Sculptural timber silhouette for the existing DOM fallback. */
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
+    clip-path:polygon(20% 0,76% 0,86% 9%,77% 21%,68% 34%,73% 45%,88% 57%,83% 69%,68% 82%,75% 92%,90% 100%,10% 100%,18% 91%,27% 80%,20% 66%,12% 55%,21% 41%,28% 28%,17% 14%);
+    background:repeating-linear-gradient(93deg,transparent 0 5px,#37221118 6px,transparent 7px 10px),linear-gradient(105deg,#48382a,var(--demo-totem-color,#715a46) 23%,#b99b70 39%,#806345 60%,#392d22 95%);
+    border:0;border-radius:0;box-shadow:inset 0 -10px #28312990;
+}
+.nlxr-totem-system .nlxr-totem-controls button { border-radius:44% 44% 38% 38%;background:linear-gradient(130deg,#665237,#2e392e);border-color:#b99b67;color:#f1e9d5; }
+
+/* Reachable controls and a compact welcome entry, matching the spatial layout. */
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .nlxr-totem-controls button:first-child { top:16%; }
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .nlxr-totem-controls button:last-child { top:31%; }
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .nlxr-totem-controls button { background:transparent;border:1px solid #b49762;box-shadow:inset 0 2px 3px #23170d99,0 1px #cab28055;border-radius:50%; }
+.tryit-sim-totem-system .nlxr-totem-cards > button:first-child { width:64%;height:48px;min-height:48px;padding:8px 16px;border-radius:12px;background:linear-gradient(135deg,#415447,#26392e); }
+.tryit-sim-totem-system .nlxr-totem-cards > button:first-child :is(small,span) { display:none; }
+.tryit-sim-totem-system .nlxr-totem-cards > button:first-child::after { display:none; }
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-basic .tryit-sim-totem-pillar { clip-path:none;border-radius:14px 14px 7px 7px; }
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-botanical .tryit-sim-totem-pillar { clip-path:polygon(22% 0,78% 0,83% 12%,76% 35%,80% 64%,75% 88%,84% 100%,16% 100%,25% 88%,20% 64%,24% 35%,17% 12%);filter:saturate(.7) brightness(.85); }

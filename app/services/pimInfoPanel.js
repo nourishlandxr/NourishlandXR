@@ -1,4 +1,4 @@
-import {ORB_MODELS,getSpatialVisualSettings,currentInfoOpacity,currentOrbModel,setSpatialVisualSettings} from './spatialVisualSettings.js';
+import {ORB_MODELS,TOTEM_MODELS,currentTotemModel,getSpatialVisualSettings,currentInfoOpacity,currentOrbModel,setSpatialVisualSettings} from './spatialVisualSettings.js';
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 import { handTrackingState } from './xrPointer.js';
@@ -145,7 +145,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({headset=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,ambientRain=1,ambientRainStyle='v2',performanceSettings=null,infoOpacity=.38,orbModel='improved',rainEnabled=true}={}){
+export function panelSettingsControls({headset=false,handVisualMode='pointer',spatialScale=1,meshCellOpacity=1,ambientRain=1,ambientRainStyle='v2',performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='carved',rainEnabled=true}={}){
     const row=index=>90+index*54,shift=headset?1:0;
     return [
         ...(headset?[{action:'HandMode',label:handVisualMode==='pointer'?'Pointer':'Outline',ariaLabel:'Switch hand tracking visual mode',settingGroup:'hands',settingLabel:'Hands',x:756,y:row(0),width:188,height:42}]:[]),
@@ -156,14 +156,15 @@ export function panelSettingsControls({headset=false,handVisualMode='pointer',sp
         {action:'CellOpacity',label:`Glass · ${Math.round(meshCellOpacity*100)}%`,ariaLabel:'Change PIMO and LIMO cell glass opacity',settingGroup:'opacity',settingLabel:'Cell glass',x:756,y:row(shift+2),width:188,height:42},
         {action:'InfoOpacity',label:`${Math.round(infoOpacity*100)}%`,ariaLabel:'Change control panel and main screen background opacity',settingGroup:'info-opacity',settingLabel:'Info background opacity',x:756,y:row(shift+3),width:188,height:42},
         {action:'OrbModel',label:ORB_MODELS[orbModel]?.label || 'Improved',ariaLabel:'Change Plant Orb model: Basic, Improved or Advanced',settingGroup:'orb-model',settingLabel:'Plant Orb model',x:756,y:row(shift+4),width:188,height:42},
-        {action:'RainIntensity',label:ambientRain<=0?'Off':ambientRain<1?'Light':ambientRain>1?'Heavy':'Normal',ariaLabel:'Change rain intensity',settingGroup:'rain',settingLabel:'Rain intensity',x:756,y:row(shift+5),width:188,height:42},
-        {action:'RainStyle',label:ambientRainStyle.toUpperCase(),ariaLabel:'Switch rain visual style',settingGroup:'style',settingLabel:'Rain style',x:756,y:row(shift+6),width:188,height:42},
+        {action:'TotemModel',label:TOTEM_MODELS[totemModel]?.label || 'Carved timber',ariaLabel:'Change Totem style: Carved timber, Botanical column or Elemental',settingGroup:'totem-model',settingLabel:'Totem style',x:756,y:row(shift+5),width:188,height:42},
+        {action:'RainIntensity',label:ambientRain<=0?'Off':ambientRain<1?'Light':ambientRain>1?'Heavy':'Normal',ariaLabel:'Change rain intensity',settingGroup:'rain',settingLabel:'Rain intensity',x:756,y:row(shift+6),width:188,height:42},
+        {action:'RainStyle',label:ambientRainStyle.toUpperCase(),ariaLabel:'Switch rain visual style',settingGroup:'style',settingLabel:'Rain style',x:756,y:row(shift+7),width:188,height:42},
         ...(headset && performanceSettings ? [
-            {action:'RefreshRate',label:performanceSettings.pending?'Applying...':performanceSettings.rate==='auto'?'Auto':`${performanceSettings.rate} Hz`,disabled:performanceSettings.pending || !performanceSettings.supported.length,ariaLabel:'Cycle supported XR refresh rates',settingGroup:'refresh',settingLabel:`Refresh rate / ${performanceSettings.actual || 'unknown'} Hz active`,x:756,y:row(shift+8),width:188,height:42},
-            {action:'ShowFps',label:performanceSettings.showFps?'On':'Off',ariaLabel:'Show measured XR FPS',settingGroup:'fps',settingLabel:'Show FPS',x:756,y:row(shift+9),width:188,height:42}
+            {action:'RefreshRate',label:performanceSettings.pending?'Applying...':performanceSettings.rate==='auto'?'Auto':`${performanceSettings.rate} Hz`,disabled:performanceSettings.pending || !performanceSettings.supported.length,ariaLabel:'Cycle supported XR refresh rates',settingGroup:'refresh',settingLabel:`Refresh rate / ${performanceSettings.actual || 'unknown'} Hz active`,x:756,y:row(shift+9),width:188,height:42},
+            {action:'ShowFps',label:performanceSettings.showFps?'On':'Off',ariaLabel:'Show measured XR FPS',settingGroup:'fps',settingLabel:'Show FPS',x:756,y:row(shift+10),width:188,height:42}
         ]:[]),
-        {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+7),width:188,height:42}
-    ].filter(item=>rainEnabled || !['RainIntensity','RainStyle'].includes(item.action)).map(item=>!rainEnabled && item.y>=row(shift+7)?{...item,y:item.y-108}:item).map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
+        {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+8),width:188,height:42}
+    ].filter(item=>rainEnabled || !['RainIntensity','RainStyle'].includes(item.action)).map(item=>!rainEnabled && item.y>=row(shift+8)?{...item,y:item.y-108}:item).map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
 }
 
 // The headset uses the same actions as the screen panel, but lays them out in
@@ -197,7 +198,7 @@ function controlDescription(item={}){
         Hide:'Collapse the Control panel. Reopen it from its small tab.',
         Restore:'Restore the Control panel.',
         Help:'Open the available help and tutorial options.',
-        Settings:'Adjust text size, glass opacity, Orb model, panel scale and device settings.',
+        Settings:'Adjust text size, glass opacity, Orb model, Totem style, panel scale and device settings.',
         Previous:'Show the previous page.',
         Next:'Show the next page.',
         ToggleMedia:'Show or hide the selected plant image.',
@@ -215,8 +216,8 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
-    let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel();
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+    let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel(),totemModel=currentTotemModel();
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
     let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
@@ -309,13 +310,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='RainStyle'){ambientRainStyle=ambientRainStyle==='v1'?'v2':'v1';onRainStyle(ambientRainStyle);}
         if(action==='InfoOpacity'){infoOpacity=infoOpacity>=1?0:Math.min(1,Math.round((infoOpacity+.1)*10)/10);setSpatialVisualSettings({infoOpacity});onInfoOpacity(infoOpacity);}
         if(action==='OrbModel'){const models=Object.keys(ORB_MODELS);orbModel=models[(models.indexOf(orbModel)+1)%models.length];setSpatialVisualSettings({orbModel});onOrbModel(orbModel);}
+        if(action==='TotemModel'){const models=Object.keys(TOTEM_MODELS);totemModel=models[(models.indexOf(totemModel)+1)%models.length];setSpatialVisualSettings({totemModel});onTotemModel(totemModel);}
         if(action==='CellOpacity'){meshCellOpacity=meshCellOpacity>=1?0:Math.round((meshCellOpacity+.1)*10)/10;setSpatialVisualSettings({cellOpacity:meshCellOpacity});onCellOpacity(meshCellOpacity);}
         if(action.startsWith('Path')){onPathwayAction(action);return;}
         if(action.startsWith('Module:')){onModuleAction(action.slice(7));return;}
         if(action.startsWith('Utility:')){onUtilityAction(action.slice(8));return;}
         render();
     }
-    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle,performanceSettings,infoOpacity,orbModel,rainEnabled});
+    const settingsControls=()=>panelSettingsControls({headset,handVisualMode,spatialScale,meshCellOpacity,ambientRain,ambientRainStyle,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled});
     function renderSettings(){
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));

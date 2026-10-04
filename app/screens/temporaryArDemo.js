@@ -23,11 +23,12 @@ import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialO
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from '../services/spatialObjectVisuals.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
+import { createSpatialTotemSculpture, destroySpatialTotemSculpture, drawTotemSculpture } from '../services/spatialTotemSculpture.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
-import { getSpatialVisualSettings } from '../services/spatialVisualSettings.js';
+import { getSpatialVisualSettings, currentTotemModel } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
@@ -236,6 +237,7 @@ function syncDemoPimHover(){
 }
 let tetherRenderer = null;
 let prismRenderer = null;
+let totemSculptureRenderer = null;
 let triangleRenderer = null;
 let demoStage = 'plant';
 let boardTypingTimer = null;
@@ -478,10 +480,12 @@ function clearSessionState() {
     pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
     destroySpatialPrismRenderer(gl, prismRenderer);
+    destroySpatialTotemSculpture(gl, totemSculptureRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
     sphereRenderer = null;
     tetherRenderer = null;
     prismRenderer = null;
+    totemSculptureRenderer = null;
     triangleRenderer = null;
     markers = [];
     program = null;
@@ -3148,7 +3152,7 @@ function updateSimulatedMarkers() {
             const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
             return renderSimulatedPlant(record, index, anchor, offset).replace('tryit-sim-marker tryit-sim-marker-plant',`tryit-sim-marker tryit-sim-marker-plant${highlighted.has(record.id)?' is-sign-target':''}`);
         }
-        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
+        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('nlxr-totem-system',`nlxr-totem-system is-totem-${currentTotemModel()}`).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         return simulatedRecordMarkup({
@@ -3953,7 +3957,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onPerformanceAction:handleDemoPerformanceAction,onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onPerformanceAction:handleDemoPerformanceAction,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onGrab:pulseDemoHaptics,onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
@@ -4141,6 +4145,7 @@ function setupRenderer() {
     totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false,ray:()=>latestControllerRay});
     tetherRenderer = createSpatialTetherRenderer(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
+    totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
 }
 
@@ -5156,32 +5161,20 @@ function drawMarker(view) {
         if (record.demoType !== 'zone' || !demoAreaVisible(record)) return;
         const totemColour=demoHexColour(record.demoTotemColor || record.demoContent?.accent)
             .map(channel=>Math.min(.95,channel*SPATIAL_OBJECT_VISUALS.totem.postContrast+SPATIAL_OBJECT_VISUALS.totem.postLift));
-        const totemHighlight=totemColour.map(channel=>Math.min(.96,channel*.62+.28));
         const arrival=Math.max(0,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/900));
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - DEMO_TOTEM_HALF_HEIGHT_METRES;
         const bodyHalfWidth=.095,bodyHalfDepth=.075,bodyHalfHeight=DEMO_TOTEM_HALF_HEIGHT_METRES,rotationY=demoTotemRotationY(record);
-        drawSpatialPrism(gl, prismRenderer, view, { ...record.position, y:groundBaseY }, {
-            halfWidth: bodyHalfWidth,
-            halfHeight: bodyHalfHeight,
-            halfDepth: bodyHalfDepth,
-            color: totemColour,
-            topColor: totemHighlight,
-            woodGrain:SPATIAL_OBJECT_VISUALS.totem.woodGrain,
-            topTaper: .96,
-            alpha: arrival*demoTotemVisualOpacity(record),
-            rotationY
-        });
-
-        const right={x:Math.cos(rotationY),y:0,z:-Math.sin(rotationY)},front={x:-right.z,y:0,z:right.x};
-        for(const [offset,shade] of [[-.048,[.17,.12,.09,.25]],[-.016,[.16,.11,.08,.18]],[.037,[.82,.69,.52,.16]]]){
-            const x=record.position.x+right.x*offset+front.x*(bodyHalfDepth+.002);
-            const z=record.position.z+right.z*offset+front.z*(bodyHalfDepth+.002);
-            drawSpatialTether(gl,tetherRenderer,view,{x,y:groundBaseY+.035,z},{x,y:groundBaseY+bodyHalfHeight*2-.035,z},{segments:2,width:.004,curve:0,lift:0,color:shade});
-        }
+        const style=currentTotemModel();
+        const postOptions={halfWidth:bodyHalfWidth,halfHeight:bodyHalfHeight,halfDepth:bodyHalfDepth,
+            color:totemColour,alpha:arrival*demoTotemVisualOpacity(record),rotationY,style,
+            signsVisible:record.demoTotemSignsVisible,faded:record.demoTotemFaded,controlOpacity:arrival,
+            highlighted:Boolean(record.totemSelectedCard)};
+        if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,{...record.position,y:groundBaseY},{...postOptions,topColor:totemColour,woodGrain:.8,topTaper:.96});
+        else drawTotemSculpture(gl, totemSculptureRenderer, view, { ...record.position, y:groundBaseY },postOptions);
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
-            bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,
+            bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,style,
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival,
             fadeOpacity:record.demoTotemFaded ? Math.max(.78,demoTotemVisualOpacity(record)) : 1
         });

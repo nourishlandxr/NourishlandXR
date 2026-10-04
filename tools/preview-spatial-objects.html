@@ -7,11 +7,12 @@ body{margin:0;padding:28px;background:#202c27;color:#e8ece3;font:16px system-ui}
 <div id="state"><label><input id="aim" type="checkbox"> Targeted</label><label><input id="selected" type="checkbox"> Selected</label><label><input id="moving" type="checkbox"> Moving</label><button id="background">Bright / dark background</button></div>
 <canvas id="orbs" width="1800" height="650" aria-label="Basic, Improved and Advanced Plant Orbs"></canvas>
 <div class="names"><div>Basic<span>Original smooth sphere</span></div><div>Improved<span>Satin pearl · smooth silhouette</span></div><div>Advanced<span>Six botanical lobes · layered collar</span></div></div>
-<h1>Crafted Totem</h1><p>Dark timber, softly bevelled edges, restrained grain and bronze fixings. Directional boards remain attached to the post.</p>
+<h1>Crafted Totem</h1><p>Sculpted timber, flowing flutes and restrained botanical bronze inlay. <a href="preview-totem.html" style="color:inherit">Open the larger Totem study</a>. Directional boards remain attached to the post.</p>
 <p>Select a sign to highlight its destination. Select it again to clear.</p><div id="sign-choices"><button data-sign="plant">Plant Orb</button> <button data-sign="notes">Field Note</button> <button data-sign="neighbour">Other Totem</button> <span id="destination-status" role="status">No destination selected</span></div>
 <canvas id="totem" width="1800" height="950" aria-label="Crafted timber Totem and directional signs"></canvas><p id="errors" role="status"></p></main>
 <script type="module">
 import {createSpatialSphereRenderer,drawSpatialOrb} from '../app/services/spatialSphereRenderer.js';
+import {createSpatialTotemSculpture,drawTotemSculpture} from '../app/services/spatialTotemSculpture.js';
 import {createSpatialPrismRenderer,drawSpatialPrism} from '../app/services/spatialPrismRenderer.js';
 import {createSpatialTotemCards,totemCardSurfaces,drawSpatialTotemPlaques,drawSpatialTotemButtons} from '../app/services/spatialTotemCards.js';
 import {createSpatialTetherRenderer} from '../app/services/spatialTetherRenderer.js';
@@ -23,7 +24,7 @@ try{
 const orbCanvas=document.querySelector('#orbs'),totemCanvas=document.querySelector('#totem');
 const orbGl=orbCanvas.getContext('webgl',{alpha:true,antialias:true}),gl=totemCanvas.getContext('webgl',{alpha:true,antialias:true});
 if(!orbGl || !gl)throw new Error('WebGL is unavailable in this preview.');
-const orbs=createSpatialSphereRenderer(orbGl),spheres=createSpatialSphereRenderer(gl),prisms=createSpatialPrismRenderer(gl);
+const orbs=createSpatialSphereRenderer(orbGl),spheres=createSpatialSphereRenderer(gl),prisms=createSpatialPrismRenderer(gl),sculpture=createSpatialTotemSculpture(gl);
 const camera=view(orbCanvas,0,2.8),totemCamera=view(totemCanvas,.64,2.6),position={x:0,y:0,z:0},yaw=.12,right={x:Math.cos(yaw),y:0,z:-Math.sin(yaw)};
 const cards=[{id:'home',eyebrow:'NOURISHLAND',title:'Food Forest',summary:'A living place to learn'},
  {id:'plant',title:'Plant Orbs →',boardSide:'right',references:['plant-target'],navigation:{reliable:true}},
@@ -46,7 +47,7 @@ function draw(time){
  orbGl.viewport(0,0,orbCanvas.width,orbCanvas.height);orbGl.clearColor(0,0,0,0);orbGl.clear(orbGl.COLOR_BUFFER_BIT|orbGl.DEPTH_BUFFER_BIT);
  ['basic','improved','advanced'].forEach((model,i)=>drawSpatialOrb(orbGl,orbs,camera,{x:(i-1)*1.45,y:0,z:0},.38,{type:'plant',model,highlighted:aimed.checked,held:moving.checked,knowledge:{state:selected.checked?'expanded':'idle'},time:time/1000}));
  gl.viewport(0,0,totemCanvas.width,totemCanvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
- drawSpatialPrism(gl,prisms,totemCamera,position,{halfWidth:.095,halfHeight:.56,halfDepth:.075,rotationY:yaw,color:[.28,.37,.25],topColor:[.45,.51,.38],woodGrain:SPATIAL_OBJECT_VISUALS.totem.woodGrain,topTaper:.96,alpha:1});
+ drawTotemSculpture(gl,sculpture,totemCamera,position,{halfWidth:.095,halfHeight:.56,halfDepth:.075,rotationY:yaw,color:SPATIAL_OBJECT_VISUALS.totem.sculptureTint,topColor:[.45,.51,.38],woodGrain:SPATIAL_OBJECT_VISUALS.totem.woodGrain,topTaper:.96,alpha:1});
  drawSpatialTotemPlaques(gl,prisms,spheres,totemCamera,surfaces);
  drawSpatialTotemButtons(gl,spheres,totemCamera.projectionMatrix,totemCamera.transform.inverse.matrix,position,yaw,{bodyHalfWidth:.095,bodyHalfDepth:.075,bodyHalfHeight:.56,signsVisible:true});
  labels.begin();labels.draw(totemCamera,record,position,cards,record.totemSelectedCard);labels.end();
@@ -54,7 +55,7 @@ function draw(time){
  const plantPosition={x:1.05,y:.84,z:0},notePosition={x:-1.05,y:.65,z:0},otherPosition={x:1.05,y:.12,z:0};
  drawSpatialOrb(gl,spheres,totemCamera,plantPosition,.1,{type:'plant',highlighted:targets.has('plant-target')});
  drawSpatialPrism(gl,prisms,totemCamera,{...notePosition,y:notePosition.y-.065},{halfWidth:.17,halfHeight:.065,halfDepth:.006,color:[.38,.43,.34],topColor:[.6,.66,.53],rotationY:0});
- drawSpatialPrism(gl,prisms,totemCamera,otherPosition,{halfWidth:.055,halfHeight:.23,halfDepth:.045,color:[.32,.38,.27],topColor:[.53,.58,.39],woodGrain:.8,rotationY:yaw});
+ drawTotemSculpture(gl,sculpture,totemCamera,otherPosition,{halfWidth:.055,halfHeight:.23,halfDepth:.045,color:[.32,.38,.27],topColor:[.53,.58,.39],woodGrain:.8,rotationY:yaw});
  if(targets.has('plant-target'))drawSignDestinationHighlight(gl,tether,totemCamera,plantPosition,{width:.24,height:.24});
  if(targets.has('note-target'))drawSignDestinationHighlight(gl,tether,totemCamera,notePosition,{width:.34,height:.13,shape:'box'});
  if(targets.has('totem-target'))drawSignDestinationHighlight(gl,tether,totemCamera,{...otherPosition,y:otherPosition.y+.23},{width:.13,height:.46,shape:'box'});

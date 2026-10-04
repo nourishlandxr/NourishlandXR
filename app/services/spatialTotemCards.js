@@ -1,6 +1,8 @@
 import { drawSpatialSphere } from './spatialSphereRenderer.js';
 import { drawSpatialPrism } from './spatialPrismRenderer.js';
-import { totemHeightPreset } from './totemAppearance.js';
+import { totemSculpturePoint } from './spatialTotemSculpture.js';
+import { currentTotemModel } from './spatialVisualSettings.js';
+import { totemHeightPreset, renderedTotemStyle } from './totemAppearance.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from './spatialObjectVisuals.js';
 
 const TOTEM_BUTTON_WIDTH = .104;
@@ -13,23 +15,24 @@ export function textureSupportsMipmaps(source) {
     return powerOfTwo(source?.width) && powerOfTwo(source?.height);
 }
 
-function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9) {
-    const localY = Math.max(-1, Math.min(1, (y - bodyHalfHeight) / bodyHalfHeight));
-    const t = Math.max(0, Math.min(1, (localY + .35) / 1.35));
-    const eased = t * t * (3 - 2 * t);
-    return bodyHalfDepth * (1 - (1 - topTaper) * eased);
+function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9, style=currentTotemModel()) {
+    // Place both the visible control and its text/hit surface on the carved face.
+    const t=Math.max(0,Math.min(1,y/(bodyHalfHeight*2)));
+    if(style==='basic')return bodyHalfDepth*(1-(1-topTaper)*t);
+    const twist=(SPATIAL_OBJECT_VISUALS.totem[style] || SPATIAL_OBJECT_VISUALS.totem.carved).twist*Math.sin(t*Math.PI-.6);
+    return bodyHalfDepth*totemSculpturePoint(t,Math.PI/2-twist,style)[2];
 }
 
-export function totemControlButtonLayout(position, right, { bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9 } = {}) {
+export function totemControlButtonLayout(position, right, { bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9, style=currentTotemModel() } = {}) {
     const front = { x: -right.z, y: 0, z: right.x };
     const rotationY = Math.atan2(-right.z, right.x);
     return [
-        { id: '__signs', y: .28, symbol: '↔', title: 'SIGNS' },
-        { id: '__fade', y: .10, symbol: '◐', title: 'FADE' }
+        { id: '__signs', y: Math.min(SPATIAL_OBJECT_VISUALS.totem.controlHeights[0],bodyHalfHeight*1.50), symbol: '↔', title: 'SIGNS' },
+        { id: '__fade', y: Math.min(SPATIAL_OBJECT_VISUALS.totem.controlHeights[1],bodyHalfHeight*1.26), symbol: '◐', title: 'FADE' }
     ].map(button => {
-        const face = totemFaceDepth(button.y, bodyHalfDepth, bodyHalfHeight, topTaper);
-        const centerOffset = face + .002;
-        const faceOffset = face + .014;
+        const face = totemFaceDepth(button.y, bodyHalfDepth, bodyHalfHeight, topTaper,style);
+        const centerOffset = face + .001;
+        const faceOffset = face + (style==='basic'?.014:.002);
         const point = offset => ({
             x: position.x + front.x * offset,
             y: position.y + button.y,
@@ -51,17 +54,18 @@ export function totemControlButtonLayout(position, right, { bodyHalfDepth = .035
 }
 
 export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatrix, position, rotationY = Math.PI / 7, state = {}) {
+    if((state.style || currentTotemModel())!=='basic')return; // The carved controls are rendered inside the post material.
     const right = { x: Math.cos(rotationY), y: 0, z: -Math.sin(rotationY) };
     const bodyHalfWidth = Number(state.bodyHalfWidth) || .07;
     const bodyHalfDepth = Number(state.bodyHalfDepth) || bodyHalfWidth * .5;
     const bodyHalfHeight = Number(state.bodyHalfHeight) || .69;
-    const layout = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
+    const layout = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight,style:state.style || currentTotemModel() });
     const opacity = (Number.isFinite(state.fadeOpacity) ? state.fadeOpacity : state.faded ? .78 : 1) * (Number.isFinite(state.arrivalOpacity) ? state.arrivalOpacity : 1);
     for (const button of layout) {
         const pressed = button.id === '__signs' ? Boolean(state.signsVisible && !state.faded) : Boolean(state.faded);
         drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, button.center, button.radius, {
-            color: [.13, .17, .17], alpha: opacity, emissive: .015,roughness:.48,metalness:.42,
-            scale: { x: 1, y: 1, z: .25 }, rotationY
+            color: SPATIAL_OBJECT_VISUALS.totem.controlBronze, alpha: opacity, emissive: .015,roughness:.48,metalness:.42,
+            scale: { x: .64, y: .78, z: .14 }, rotationY
         });
         const faceCenter = {
             x: button.center.x + button.front.x * .004,
@@ -69,8 +73,8 @@ export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatr
             z: button.center.z + button.front.z * .004
         };
         drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, faceCenter, button.faceRadius, {
-            color: pressed ? [.83, .73, .54] : [.63, .69, .66], alpha: opacity, emissive: .025,roughness:.42,metalness:.48,
-            scale: { x: 1, y: 1, z: .25 }, rotationY
+            color: pressed ? SPATIAL_OBJECT_VISUALS.totem.controlActive : [.25,.29,.23], alpha: opacity, emissive: .025,roughness:.42,metalness:.48,
+            scale: { x: .64, y: .78, z: .14 }, rotationY
         });
     }
 }
@@ -81,7 +85,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
     const bodyHalfWidth = Number(state?.bodyHalfWidth) || .07;
     const demoZone=Boolean(state?.demoZone);
-    const demoScale=demoZone ? (Number(state?.bodyHalfHeight) || .56)/.82 : 1;
+    const demoScale=(Number(state?.bodyHalfHeight) || (demoZone ? .56 : .69))/.82;
     const boardWidth = Number(state?.boardWidth) || (demoZone ? .52 : .58);
     const boardHeight = Number(state?.boardHeight) || (demoZone ? .12 : .16);
     const boardAttach=bodyHalfWidth+boardWidth/2-.035;
@@ -94,12 +98,12 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const faded=typeof state==='object' ? Boolean(state.faded) : false;
     const signs={id:'__signs',title:'SIGNS',symbol:'↔',control:true,pressed:signsVisible && !faded};
     const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
-    const bodyHalfHeight = Number(state?.bodyHalfHeight) || .69;
-    const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight });
+    const bodyHalfHeight = Number(state?.bodyHalfHeight) || (demoZone ? .56 : .69);
+    const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight,style:state.style || currentTotemModel() });
     const signBoard = (card, index, count) => {
         const side=card.boardSide==='left'?-1:card.boardSide==='right'?1:0;
         return {
-            ...place(side*boardAttach, (1.20-index*(count > 3 ? .25 : .28))*demoScale, boardWidth, boardHeight, {
+            ...place(side*boardAttach, Math.min(.60,.74*demoScale)-index*(count>3?.20:.24)*demoScale, boardWidth, boardHeight, {
                 ...card,
                 boardStyle:'attached-sign',
                 boardSide:card.boardSide || '',
@@ -108,23 +112,22 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
             boardSide:card.boardSide || ''
         };
     };
-    const headerSelected=selectedId===cards[0]?.id;
     const headerBoard = cards[0] ? {
-        ...place(0, 1.48*demoScale, demoZone ? .74 : Math.max(.88, boardWidth + .16), .30, {...cards[0],boardStyle:headerSelected?'header-detail':'header',stats:headerSelected?undefined:cards[0].stats}),
+        ...place(0,1.48*demoScale,demoZone ? .56 : .62,.15,{...cards[0],boardStyle:'header-compact',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
     const signOpacity=typeof state==='object' && Number.isFinite(state.signOpacity) ? state.signOpacity : 1;
     const signInteractive=typeof state==='object' ? state.signInteractive!==false : true;
     const surfaces=[
-        ...buttons.map((button,index)=>({center:button.faceCenter,right,width:.16,height:.16,card:index===0?signs:fade,detail:false,opacity:faded ? .82 : 1})),
+        ...buttons.map((button,index)=>({center:button.faceCenter,right,width:Math.min(.14,bodyHalfWidth*1.8),height:.12,card:index===0?signs:fade,detail:false,opacity:faded ? .82 : 1})),
         ...(signsVisible && !faded ? [
             headerBoard,
             ...signCards.map((card,index)=>signBoard(card,index,signCards.length))
         ].filter(Boolean).map(surface=>({...surface,opacity:signOpacity,interactive:signInteractive})) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && selected.id!==cards[0]?.id && signsVisible && !faded) surfaces.push({...place(0,2.04*demoScale,1.18,.58,{...selected,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
+    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.36,2.04*demoScale),1.18,.58,{...selected,body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
     return surfaces;
 }
 
@@ -146,6 +149,7 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     return totemCardSurfaces(position,right,cards,selectedId,{
         signsVisible:signsVisible || closing,faded:faded && fadeProgress>=1,
         signOpacity:(signsVisible ? signProgress : 1-signProgress)*fadeAlpha,signInteractive:signsVisible && !faded,
+        style:record?.demoType==='zone' ? currentTotemModel() : renderedTotemStyle(record?.marker || record),
         bodyHalfWidth,bodyHalfDepth:record?.demoType==='zone' ? .075 : bodyHalfWidth*.5,bodyHalfHeight,demoZone:record?.demoType==='zone'
     });
 }
@@ -164,9 +168,9 @@ export function resolveTotemNavigation(record, partner) {
 
 export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view, surfaces, opacity = 1) {
     for(const surface of surfaces) {
-        if(surface.card?.control || surface.detail)continue;
+        if(surface.card?.control)continue;
         const style=surface.card?.boardStyle || surface.boardStyle;
-        const header=style==='header' || style==='header-detail';
+        const header=style==='header' || style==='header-detail' || style==='header-compact';
         const right=surface.right,front={x:-right.z,y:0,z:right.x};
         const rotationY=Math.atan2(-right.z,right.x),halfDepth=header ? .014 : .009;
         const centerDepth={x:surface.center.x-front.x*(halfDepth+.003),z:surface.center.z-front.z*(halfDepth+.003)};
@@ -239,7 +243,7 @@ function cardCanvas(card, detail) {
     const boardStyle=card.boardStyle || (detail ? 'header-detail' : 'card');
     const resolution=card.control ? TOTEM_TEXT_RESOLUTION.control
         : detail ? TOTEM_TEXT_RESOLUTION.detail
-            : boardStyle==='header' || boardStyle==='header-detail' ? TOTEM_TEXT_RESOLUTION.header : TOTEM_TEXT_RESOLUTION.plaque;
+            : boardStyle==='header' || boardStyle==='header-detail' || boardStyle==='header-compact' ? TOTEM_TEXT_RESOLUTION.header : TOTEM_TEXT_RESOLUTION.plaque;
     const canvas=document.createElement('canvas');canvas.width=resolution[0];canvas.height=resolution[1];
     const ctx=canvas.getContext('2d');
     // Preserve the existing logical type layout while rasterizing at double density.
@@ -257,6 +261,16 @@ function cardCanvas(card, detail) {
         ctx.fillStyle='#fffaf0';ctx.font=`750 ${String(card.title||'').length>26?54:72}px ${face}`;ctx.fillText(card.title,512,128,900);
         return canvas;
     }
+    if(boardStyle==='header-compact'){
+        ctx.shadowBlur=1;ctx.fillStyle='#f7f1df';ctx.font=`650 ${String(card.title || '').length>20?82:104}px ${face}`;ctx.fillText(card.title,512,256,900);
+        return canvas;
+    }
+    if(boardStyle==='header-detail'){
+        ctx.fillStyle='#d7e0d3';ctx.font=`650 30px ${face}`;ctx.fillText(String(card.eyebrow || 'WELCOME').toUpperCase(),512,35,890);
+        ctx.fillStyle='#f7f3e7';ctx.font=`600 62px ${face}`;wrapped(ctx,card.title,512,98,890,64,2);
+        ctx.fillStyle='#e9eee4';ctx.font=`500 40px ${face}`;wrapped(ctx,card.body,512,218,880,44,6);
+        return canvas;
+    }
     if(boardStyle==='header' || boardStyle==='header-detail'){
         ctx.fillStyle='rgba(232,240,240,.88)';ctx.font=`750 38px ${face}`;ctx.fillText(String(card.eyebrow || 'ZONE').toUpperCase(),512,92,850);
         ctx.fillStyle='#f7f5eb';ctx.font=`650 76px ${face}`;wrapped(ctx,card.title,512,174,890,80,2);
@@ -272,11 +286,11 @@ function cardCanvas(card, detail) {
 
 export function createSpatialTotemCards(gl, options = {}) {
     const vs=shader(gl,gl.VERTEX_SHADER,'attribute vec2 p;uniform mat4 projection;uniform mat4 view;uniform vec3 center;uniform vec3 right;uniform vec3 up;uniform vec2 size;varying vec2 uv;void main(){uv=vec2(p.x+.5,.5-p.y);vec3 world=center+right*p.x*size.x+up*p.y*size.y;gl_Position=projection*view*vec4(world,1.0);}');
-    const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;uniform sampler2D artwork;uniform float opacity;uniform float feedback;uniform vec3 feedbackColor;varying vec2 uv;void main(){vec4 c=texture2D(artwork,uv);float edge=1.0-smoothstep(.015,.06,min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y)));float accent=feedback*edge*.42;float a=max(c.a,accent);if(a<.01)discard;vec3 ink=c.a>.01?c.rgb:feedbackColor;gl_FragColor=vec4(ink,a*opacity);}');
+    const fs=shader(gl,gl.FRAGMENT_SHADER,'precision highp float;uniform sampler2D artwork;uniform float opacity;uniform float feedback,isControl;uniform vec3 feedbackColor;varying vec2 uv;void main(){vec4 c=texture2D(artwork,uv);float edge=1.0-smoothstep(.015,.06,min(min(uv.x,1.0-uv.x),min(uv.y,1.0-uv.y)));float accent=feedback*edge*.42*(1.0-isControl);float a=max(c.a,accent);if(a<.01)discard;vec3 ink=c.a>.01?c.rgb:feedbackColor;ink=mix(ink,feedbackColor,feedback*isControl*.38);gl_FragColor=vec4(ink,a*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vs);gl.attachShader(program,fs);gl.linkProgram(program);gl.deleteShader(vs);gl.deleteShader(fs);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-.5,-.5,.5,-.5,.5,.5,-.5,-.5,.5,.5,-.5,.5]),gl.STATIC_DRAW);
-    const locations=Object.fromEntries(['projection','view','center','right','up','size','artwork','opacity','feedback','feedbackColor'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const locations=Object.fromEntries(['projection','view','center','right','up','size','artwork','opacity','feedback','feedbackColor','isControl'].map(name=>[name,gl.getUniformLocation(program,name)]));
     const p=gl.getAttribLocation(program,'p'),textures=new Map(),used=new Set();
     const anisotropy=gl.getExtension('EXT_texture_filter_anisotropic') || gl.getExtension('WEBKIT_EXT_texture_filter_anisotropic');
     let surfaces=[];
@@ -327,6 +341,7 @@ export function createSpatialTotemCards(gl, options = {}) {
                 const fadeOpacity = Number.isFinite(surface.opacity) ? surface.opacity : 1;
                 const arrival=record?.demoArriveAt ? Math.min(1,Math.max(0,(now-record.demoArriveAt)/900)) : 1;
                 gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(now-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
+                gl.uniform1f(locations.isControl,surface.card.control?1:0);
                 gl.uniform1f(locations.feedback,selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id ? .55 : 0));
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }

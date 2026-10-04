@@ -52,7 +52,7 @@ test('Totem header exposes zone counts and undirected cards stay centred',()=>{
     assert.deepEqual(cards[0].stats.map(stat=>stat.value),[2,1,1]);
     assert.match(totemCardsMarkup(cards),/nlxr-totem-stats/);
     const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'',{signsVisible:true,faded:false,bodyHalfWidth:.2,bodyHalfDepth:.14});
-    assert.equal(surfaces.find(surface=>surface.card.id==='area')?.card.boardStyle,'header');
+    assert.equal(surfaces.find(surface=>surface.card.id==='area')?.card.boardStyle,'header-compact');
     assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.center.x===0));
 });
 
@@ -60,11 +60,12 @@ test('Demo Totem keeps one welcome header and four slim horizontal signs',()=>{
     const cards=[{id:'area',title:'Welcome to this area',body:'Highlights and description',stats:[]},
         ...['Pigeon Pea','Moringa','Seasonal observation','Area 2'].map((title,index)=>({id:`sign-${index}`,title,eyebrow:'SIGN',summary:'',boardSide:index%2?'left':'right',signHeight:1.2-index*.22}))];
     const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'area',{signsVisible:true,faded:false,bodyHalfWidth:.095,bodyHalfDepth:.075,demoZone:true});
-    assert.equal(surfaces.filter(surface=>surface.card.id==='area').length,1);
+    assert.equal(surfaces.filter(surface=>surface.card.id==='area' && !surface.detail).length,1);
     assert.equal(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').length,4);
     assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.height===.12));
     assert.deepEqual(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').map(surface=>Math.sign(surface.center.x)),[1,-1,1,-1]);
-    assert.ok(!totemCardsMarkup(cards,'area').includes('nlxr-totem-detail'));
+    assert.ok(totemCardsMarkup(cards,'area').includes('nlxr-totem-detail'));
+    assert.ok(surfaces.some(surface=>surface.card.id==='area' && surface.detail),'welcome opens above the compact plaque');
 });
 
 test('Neighbouring zone direction appears only with linked positions and a known Totem heading',()=>{

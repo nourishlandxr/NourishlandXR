@@ -11860,3 +11860,7 @@ body:has(.app-surface) {
     .app-surface-intro .role-card:nth-child(even),
     .app-surface-intro .welcome-complementary-card { min-height: 84px; }
 }
+
+.totem-style-preview-carved,.totem-profile-visual.is-style-carved span { clip-path:polygon(20% 0,76% 0,85% 14%,70% 35%,85% 57%,70% 82%,88% 100%,12% 100%,25% 82%,15% 57%,28% 35%,17% 14%);background:linear-gradient(100deg,#453426,#a98a60 40%,#71523a 70%,#392b21);border:0; }
+.totem-style-preview-botanical,.totem-profile-visual.is-style-botanical span { clip-path:polygon(22% 0,78% 0,82% 18%,74% 50%,82% 80%,84% 100%,16% 100%,18% 80%,26% 50%,18% 18%);background:linear-gradient(95deg,#34372d,#8b815a 35%,#554d37 75%,#252b24);border:0; }
+.totem-profile-visual:is(.is-style-carved,.is-style-botanical) span::before,.totem-profile-visual:is(.is-style-carved,.is-style-botanical) span::after { display:none; }

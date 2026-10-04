@@ -30,6 +30,7 @@ import { plantInformationMeshSurfaceLayout } from '../services/plantInformationM
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
+import { createSpatialTotemSculpture, destroySpatialTotemSculpture, drawTotemSculpture } from '../services/spatialTotemSculpture.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialGroundArrowPath, drawSpatialTether,drawSpatialPointerContact } from '../services/spatialTetherRenderer.js';
 import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_PALETTE_ACTIONS, questSpatialBeltLayout, questSpatialBeltRayTarget, questSpatialPaletteLayout } from '../services/questSpatialBelt.js';
@@ -46,7 +47,7 @@ import { creatorArControlsMarkup, bindCreatorArControls } from '../services/crea
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { renderFieldGuide } from './fieldGuide.js';
-import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
+import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, renderedTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
 import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../services/totemLinkCalibration.js';
 import { bindPlantInformationMeshPress, plantInformationMeshMarkup, reconcilePlantInformationMesh } from '../services/plantInformationMeshView.js';
 
@@ -157,6 +158,7 @@ let pimHold = null;
 const handPimHold = createPimHold({activate:activateSpatialPimTarget,progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}});
 function showCreatorInfo(record, path) { infoPanel?.select(record, creatorKnowledgeDocument(record), path); }
 let prismRenderer = null;
+let totemSculptureRenderer = null;
 let triangleRenderer = null;
 let controllerPointerRenderer = null;
 let placementArmedAt = 0;
@@ -4051,6 +4053,7 @@ function setupSpatialMarkerRenderer() {
     totemCardsRenderer = createSpatialTotemCards(gl,{ray:()=>latestControllerRay});
     infoPanel?.attach(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
+    totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
     controllerPointerRenderer = createSpatialTetherRenderer(gl);
 }
@@ -4097,6 +4100,7 @@ function drawSpatialMarkers(view) {
             const [halfWidth, halfHeight] = markerDimensions(record.marker);
             const groundPosition = groundedTotemPosition(record.position);
             const totemStyle = normalizeTotemStyle(record.marker);
+            const style=renderedTotemStyle(record.marker);
             const totemColor = markerRgb(record.marker, colors.area_checkpoint);
             if (totemStyle === 'organic') {
                 const radius = Math.max(.12, Math.min(.36, halfHeight * .56));
@@ -4120,30 +4124,15 @@ function drawSpatialMarkers(view) {
             const rotationY=(Number(record.rotationDegrees) || 24) * Math.PI / 180;
             const crownRadius=halfWidth,bodyHalfHeight=Math.max(.12,halfHeight-crownRadius*.35);
             const visual=SPATIAL_OBJECT_VISUALS.totem;
-            const totemHighlight=totemColor.map(channel=>Math.min(.92,channel*.62+.28));
             const fadeOpacity=creatorTotemOpacity(record);
-            drawSpatialPrism(gl, prismRenderer, view, groundPosition, {
-                halfWidth,
-                halfHeight: bodyHalfHeight,
-                halfDepth: halfWidth * .5,
-                color: totemColor.map(channel=>channel*visual.postContrast+visual.postLift),
-                alpha:fadeOpacity,woodGrain:visual.woodGrain,
-                topColor: totemHighlight,
-                topTaper: .9,
-                rotationY
-            });
-            drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, {
-                ...groundPosition,
-                y:groundPosition.y+bodyHalfHeight*2
-            }, crownRadius, {
-                color:totemColor,
-                alpha:fadeOpacity,
-                emissive:.035,
-                scale:{x:1,y:.7,z:.5},
-                rotationY
-            });
+            const postOptions={halfWidth,halfHeight:bodyHalfHeight,halfDepth:halfWidth*.5,
+                color:totemColor.map(channel=>channel*visual.postContrast+visual.postLift),
+                alpha:fadeOpacity,rotationY,style,signsVisible:record.demoTotemSignsVisible,faded:record.demoTotemFaded,
+                highlighted:Boolean(record.totemSelectedCard)};
+            if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,groundPosition,{...postOptions,topColor:totemColor,woodGrain:visual.woodGrain,topTaper:.9});
+            else drawTotemSculpture(gl, totemSculptureRenderer, view, groundPosition,postOptions);
             drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,groundPosition,rotationY,{
-                bodyHalfWidth:halfWidth,bodyHalfDepth:halfWidth*.5,bodyHalfHeight,signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),fadeOpacity:record.demoTotemFaded?Math.max(.78,fadeOpacity):1
+                bodyHalfWidth:halfWidth,bodyHalfDepth:halfWidth*.5,bodyHalfHeight,style,signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),fadeOpacity:record.demoTotemFaded?Math.max(.78,fadeOpacity):1
             });
             return;
         }
@@ -5800,6 +5789,7 @@ function createCreatorInfoPanel(){
         cellOpacity:creatorCellOpacity,handMode:creatorHandMode,onHandMode:value=>{creatorHandMode=value;},
         panelHints:['Aim, then press once to open plant information.','Hold an Orb for 0.8 seconds to move it. Use the right joystick to adjust distance.','Press a cell once to read or expand its information.'],
         onPerformanceAction:action=>creatorPerformance.action(action),onGrab:pulseCreatorHaptics,
+        onTotemModel:()=>renderSessionMarkers(),
         onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
         onCellOpacity:value=>{creatorCellOpacity=value;for(const record of sessionMarkers.filter(item=>item.profileExpanded))refreshCreatorPimProfile(record);},
         onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
@@ -5863,6 +5853,7 @@ function cleanup() {
     totemCardsRenderer?.destroy(); totemCardsRenderer = null;
     pimHold?.destroy(); pimHold = null; handPimHold.cancel(); infoPanel?.destroy(); infoPanel = null;
     destroySpatialPrismRenderer(gl, prismRenderer);
+    destroySpatialTotemSculpture(gl, totemSculptureRenderer);
     destroySpatialTriangleRenderer(gl, triangleRenderer);
     destroySpatialTetherRenderer(gl, controllerPointerRenderer);
     if (gl && homeSignTexture) gl.deleteTexture(homeSignTexture);
@@ -5874,6 +5865,7 @@ function cleanup() {
     if (gl && homeSignProgram) gl.deleteProgram(homeSignProgram);
     sphereRenderer = null;
     prismRenderer = null;
+    totemSculptureRenderer = null;
     triangleRenderer = null;
     controllerPointerRenderer = null;
     markerProgram = null;

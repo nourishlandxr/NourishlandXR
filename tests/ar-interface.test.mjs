@@ -218,7 +218,7 @@ test('the demo keeps the three simple Totem forms and uses physical plaques and 
     assert.match(arSource, /totemStyle === 'organic'/);
     assert.match(arSource, /totemStyle === 'flat-disc'/);
     assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer/);
-    assert.match(demoSource, /drawSpatialPrism\(gl, prismRenderer/);
+    assert.match(demoSource, /drawTotemSculpture\(gl, totemSculptureRenderer/);
     assert.doesNotMatch(arSource, /\bdrawSpatialTotem\s*\(/);
     assert.doesNotMatch(demoSource, /\bdrawSpatialTotem\s*\(/);
     assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
@@ -792,7 +792,7 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(arSource, /locatedTotemRecord/);
     assert.match(arSource, /const requestedArea = operation\.areaId/);
     assert.match(arSource, /createSpatialPrismRenderer/);
-    assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer, view, groundPosition/);
+    assert.match(arSource, /drawTotemSculpture\(gl, totemSculptureRenderer, view, groundPosition/);
     assert.match(styles, /\.creator-ar-status \{[^}]*color: #fff !important/);
     assert.doesNotMatch(arSource, /What kind of Marker is this\?/);
     assert.match(configSource, /DEFAULT_HOME_AREA_NAME = 'Home'/);
@@ -1670,7 +1670,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-sim-totem-pillar/);
     assert.match(styles, /\.tryit-sim-totem-pillar::before[\s\S]*clip-path:polygon/);
     assert.match(styles, /\.tryit-sim-totem-pillar::after[\s\S]*clip-path:polygon/);
-    assert.match(source, /drawSpatialPrism\(gl, prismRenderer, view/);
+    assert.match(source, /drawTotemSculpture\(gl, totemSculptureRenderer, view/);
     assert.match(source, /cards: demoTotemCards\(record\)/);
     assert.doesNotMatch(source, /CITRUS · HERBS · POLLINATORS/);
     assert.match(styles, /\.tryit-sim-totem-card-5/);
@@ -1884,7 +1884,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /intro_checkpoint: \[\.42 \* factor, \.805 \* factor\]/);
     assert.match(arSource, /float jade/);
     assert.match(arSource, /createSpatialPrismRenderer/);
-    assert.match(arSource, /shape === 1[\s\S]*drawSpatialPrism/);
+    assert.match(arSource, /shape === 1[\s\S]*drawTotemSculpture/);
     assert.match(arSource, /function groundedTotemPosition\(position\)/);
     assert.match(arSource, /sessionGroundY = latestViewerMatrix\[13\] - 1\.55/);
     assert.match(arSource, /totemStyle === 'organic'/);

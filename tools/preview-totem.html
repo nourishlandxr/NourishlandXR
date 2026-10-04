@@ -1,0 +1,70 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sculpted Totem study</title>
+<style>body{margin:0;background:#202c27;color:#f1eadb;font:16px/1.5 system-ui}main{max-width:900px;margin:auto;padding:20px}h1{font:500 28px/1.2 Georgia,serif;margin:0 0 10px}p{color:#c0cabd;margin:8px 0 16px}canvas{width:100%;max-height:70vh;object-fit:contain;display:block;border-radius:22px;background:radial-gradient(ellipse at 45% 40%,#6e7a63,#273c34 85%)}nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}button,a{color:inherit}button{padding:9px 15px;border:1px solid #9a9f86;border-radius:24px;background:#ffffff0d;font:inherit;cursor:pointer}button[aria-pressed="true"],button:hover,button:focus-visible{background:#c8bf8c30;outline:2px solid #ceb780}#destination-status{display:block;min-height:24px;color:#d8cfb0}#errors{color:#ffccad}</style>
+<main><h1>Sculpted timber Totem</h1><p>Two timber studies: the flowing carved keeper and a quieter botanical column. The signs and their destinations use the production interaction layout.</p>
+<nav aria-label="Totem style"><button data-model="carved" aria-pressed="true">Carved timber</button><button data-model="botanical" aria-pressed="false">Botanical column</button><button data-model="basic" aria-pressed="false">Elemental</button></nav><nav aria-label="Totem height"><button data-height=".46">Low · 0.92 m</button><button data-height=".60">Standard · 1.2 m</button><button data-height=".75">Tall · 1.5 m</button><button data-sign="home">Open welcome</button></nav><nav aria-label="Totem appearance"><button id="reset">Face front</button><button id="left">Turn left</button><button id="right">Turn right</button><button id="signs">Hide signs</button><button id="fade">Fade Totem</button><button id="background">Bright / dark background</button></nav>
+<canvas id="totem" width="1000" height="1100" aria-label="Sculpted timber Totem with signs, Plant Orb, Field Note and other Totem"></canvas>
+<nav aria-label="Select a sign"><button data-sign="plant">Plant Orb</button><button data-sign="notes">Field Note</button><button data-sign="neighbour">Other Totem</button></nav><span id="destination-status" role="status">No destination selected</span><p id="errors" role="status"></p><p><a href="preview-spatial-objects.html">Return to Orb and Totem overview</a></p></main>
+<script type="module">
+import {createSpatialSphereRenderer,drawSpatialOrb} from '../app/services/spatialSphereRenderer.js';
+import {createSpatialTotemSculpture,drawTotemSculpture} from '../app/services/spatialTotemSculpture.js';
+import {createSpatialPrismRenderer,drawSpatialPrism} from '../app/services/spatialPrismRenderer.js';
+import {createSpatialTotemCards,totemCardSurfaces,drawSpatialTotemPlaques,drawSpatialTotemButtons} from '../app/services/spatialTotemCards.js';
+import {createSpatialTetherRenderer} from '../app/services/spatialTetherRenderer.js';
+import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight} from '../app/services/totemSignSelection.js';
+import {SPATIAL_OBJECT_VISUALS} from '../app/services/spatialObjectVisuals.js';
+const identity=()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+function view(canvas,y,z){const f=1/Math.tan(.67/2),a=canvas.width/canvas.height,n=.05,far=30,m=identity(),inverse=identity();m[13]=y;m[14]=z;inverse[13]=-y;inverse[14]=-z;return {projectionMatrix:new Float32Array([f/a,0,0,0,0,f,0,0,0,0,(far+n)/(n-far),-1,0,0,2*far*n/(n-far),0]),transform:{matrix:m,inverse:{matrix:inverse}}};}
+try{
+const totemCanvas=document.querySelector('#totem');
+const gl=totemCanvas.getContext('webgl',{alpha:true,antialias:true});
+if(!gl)throw new Error('WebGL is unavailable in this preview.');
+const spheres=createSpatialSphereRenderer(gl),prisms=createSpatialPrismRenderer(gl),sculpture=createSpatialTotemSculpture(gl);
+const totemCamera=view(totemCanvas,1,3.5),position={x:0,y:0,z:0};let yaw=.12,halfHeight=.60,model='carved';
+const cards=[{id:'home',eyebrow:'NOURISHLAND',title:'Food Forest',summary:'A living place to learn',body:'Welcome to the Food Forest. Discover its plants, follow the signs and share what you notice.',welcomeBody:'Welcome to the Food Forest. Discover its plants, follow the signs and share what you notice.\n\nLOCAL NOTE — Young Pigeon Pea offers shelter while the garden establishes.'},
+ {id:'plant',title:'Plant Orbs →',boardSide:'right',references:['plant-target'],navigation:{reliable:true}},
+ {id:'notes',title:'← Field Notes',boardSide:'left',references:['note-target'],navigation:{reliable:true}},
+ {id:'neighbour',title:'Next Totem →',boardSide:'right',navigation:{reliable:true,destinationId:'totem-target'}}];
+const record={id:'study-totem',demoType:'zone',rotationY:yaw};
+let signs=true,faded=false,signStart=-Infinity,fadeStart=-Infinity;
+const surfaceLayout=()=>totemCardSurfaces(position,{x:Math.cos(yaw),y:0,z:-Math.sin(yaw)},cards,record.totemSelectedCard,{demoZone:true,signsVisible:signs || performance.now()-signStart<380,faded:false,signOpacity:(signs?progress(signStart,380):1-progress(signStart,380))*(faded?1-progress(fadeStart,460):progress(fadeStart,460)),signInteractive:signs&&!faded,bodyHalfWidth:.095,bodyHalfDepth:.075,bodyHalfHeight:halfHeight,style:model});
+const surfaces=()=>surfaceLayout().map(surface=>surface.card.id==='__fade'?{...surface,card:{...surface.card,title:faded?'WAKE':'FADE',pressed:faded}}:surface);
+const tether=createSpatialTetherRenderer(gl),labels=createSpatialTotemCards(gl,{surfaces});
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function progress(start,duration){if(reduced)return 1;const t=Math.max(0,Math.min(1,(performance.now()-start)/duration));return t*t*(3-2*t);}
+function toggleSigns(){signs=!signs;signStart=performance.now();document.querySelector('#signs').textContent=signs?'Hide signs':'Show signs';}
+function toggleFade(){faded=!faded;fadeStart=performance.now();document.querySelector('#fade').textContent=faded?'Wake Totem':'Fade Totem';}
+document.querySelectorAll('[data-model]').forEach(button=>button.onclick=()=>{model=button.dataset.model;document.querySelectorAll('[data-model]').forEach(choice=>choice.setAttribute('aria-pressed',String(choice===button)));});
+document.querySelectorAll('[data-height]').forEach(button=>button.onclick=()=>{halfHeight=Number(button.dataset.height);});
+document.querySelector('#signs').onclick=toggleSigns;document.querySelector('#fade').onclick=toggleFade;
+document.querySelector('#reset').onclick=()=>{yaw=.12;record.rotationY=yaw;};
+document.querySelector('#left').onclick=()=>{yaw-=Math.PI/12;record.rotationY=yaw;};
+document.querySelector('#right').onclick=()=>{yaw+=Math.PI/12;record.rotationY=yaw;};
+function chooseSign(id){selectTotemSign(record,id,[record]);const card=cards.find(item=>item.id===record.totemSelectedCard);document.querySelector('#destination-status').textContent=card?(card.id==='home'?'Welcome and local notes open':'Highlighted: '+card.title):'No destination selected';}
+document.querySelectorAll('[data-sign]').forEach(button=>button.onclick=()=>chooseSign(button.dataset.sign));
+totemCanvas.addEventListener('pointerup',event=>{
+ const rect=totemCanvas.getBoundingClientRect(),x=(event.clientX-rect.left)/rect.width*2-1,y=1-(event.clientY-rect.top)/rect.height*2;
+ const direction={x:x/totemCamera.projectionMatrix[0],y:y/totemCamera.projectionMatrix[5],z:-1},length=Math.hypot(direction.x,direction.y,1);
+ for(const axis of ['x','y','z'])direction[axis]/=length;
+ const hit=labels.hit({origin:{x:0,y:1,z:3.5},direction});if(hit?.card.id==='__signs')toggleSigns();else if(hit?.card.id==='__fade')toggleFade();else if(hit?.detail)chooseSign(record.totemSelectedCard);else if(hit && cards.some(card=>card.id===hit.card.id))chooseSign(hit.card.id);
+});
+document.querySelector('#background').onclick=()=>document.querySelectorAll('canvas').forEach(canvas=>{canvas.style.background=canvas.dataset.bright?'': 'linear-gradient(135deg,#eee7ce,#b5cdbb)';canvas.dataset.bright=canvas.dataset.bright?'':'yes';});
+function draw(time){
+ gl.viewport(0,0,totemCanvas.width,totemCanvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ const options={halfWidth:.095,halfHeight,halfDepth:.075,rotationY:yaw,color:SPATIAL_OBJECT_VISUALS.totem.sculptureTint,style:model,signsVisible:signs,faded,alpha:faded?1-.82*progress(fadeStart,460):.18+.82*progress(fadeStart,460),highlighted:Boolean(record.totemSelectedCard)};
+ if(model==='basic')drawSpatialPrism(gl,prisms,totemCamera,position,{...options,woodGrain:.8,topColor:[.55,.42,.27]});else drawTotemSculpture(gl,sculpture,totemCamera,position,options);
+ drawSpatialTotemPlaques(gl,prisms,spheres,totemCamera,surfaces());
+ drawSpatialTotemButtons(gl,spheres,totemCamera.projectionMatrix,totemCamera.transform.inverse.matrix,position,yaw,{bodyHalfWidth:.095,bodyHalfDepth:.075,bodyHalfHeight:halfHeight,style:model,signsVisible:signs,faded,fadeOpacity:1});
+ labels.begin();labels.draw(totemCamera,record,position,cards,record.totemSelectedCard);labels.end();
+ const targets=faded?new Set():selectedTotemDestinationIds([record],()=>cards);
+ const plantPosition={x:.57,y:1.27,z:0},notePosition={x:-.55,y:.23,z:0},otherPosition={x:.57,y:.04,z:0};
+ drawSpatialOrb(gl,spheres,totemCamera,plantPosition,.1,{type:'plant',highlighted:targets.has('plant-target')});
+ drawSpatialPrism(gl,prisms,totemCamera,{...notePosition,y:notePosition.y-.065},{halfWidth:.17,halfHeight:.065,halfDepth:.006,color:[.38,.43,.34],topColor:[.6,.66,.53],rotationY:0});
+ drawTotemSculpture(gl,sculpture,totemCamera,otherPosition,{halfWidth:.055,halfHeight:.23,halfDepth:.045,style:model,color:[.32,.38,.27],topColor:[.53,.58,.39],woodGrain:.8,rotationY:yaw});
+ if(targets.has('plant-target'))drawSignDestinationHighlight(gl,tether,totemCamera,plantPosition,{width:.24,height:.24});
+ if(targets.has('note-target'))drawSignDestinationHighlight(gl,tether,totemCamera,notePosition,{width:.34,height:.13,shape:'box'});
+ if(targets.has('totem-target'))drawSignDestinationHighlight(gl,tether,totemCamera,{...otherPosition,y:otherPosition.y+.23},{width:.13,height:.46,shape:'box'});
+ requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+}catch(error){document.querySelector('#errors').textContent=error.message;console.error(error);}
+</script></html>

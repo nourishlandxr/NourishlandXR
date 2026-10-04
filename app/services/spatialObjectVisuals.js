@@ -2,6 +2,12 @@
 // Values are intentionally local to these objects, not full-screen effects.
 export const SPATIAL_OBJECT_VISUALS = Object.freeze({
     totem: Object.freeze({
+        controlHeights: Object.freeze([.96,.80]),
+        carved: Object.freeze({twist:.52,waist:.18,flutes:.16}),
+        botanical: Object.freeze({twist:.18,waist:.07,flutes:.12}),
+        sculptureTint: Object.freeze([.66,.48,.30]),
+        controlBronze: Object.freeze([.56,.42,.24]),
+        controlActive: Object.freeze([.82,.71,.48]),
         postLift: .055,
         postContrast: .84,
         boardWood: Object.freeze([.34,.24,.16]),
