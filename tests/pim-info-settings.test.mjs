@@ -53,9 +53,9 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     const quest=panelSettingsControls({headset:true,handVisualMode:'outline'});
     const graphics=panelSettingsControls({graphicsOpen:true,rainQuality:'hq',graphicsQuality:'high'});
     const performance=panelSettingsControls({headset:true,performanceSettings:{actual:120,supported:[72,90,120],showFps:true}});
-    const actions=['GraphicsMenu','InfoOpacity','TextSize','SpatialScale','FloorOffset','SettingsHelp','CloseSettings'];
+    const actions=['InfoOpacity','TextSize','SpatialScale','FloorOffset','GraphicsMenu','SettingsHelp','CloseSettings'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
-    assert.deepEqual(quest.map(item=>item.action),[...actions.slice(0,5),'HandMode',...actions.slice(5)]);
+    assert.deepEqual(quest.map(item=>item.action),[...actions.slice(0,4),'HandMode',...actions.slice(4)]);
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').value,.5);
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').kind,'slider');
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').settingLabel,'Main / Control glass');

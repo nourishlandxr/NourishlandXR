@@ -2,21 +2,34 @@ export const WEBXR_SESSION_MODES = Object.freeze(['immersive-ar', 'immersive-vr'
 export const PREFERRED_XR_FRAME_RATE = 90;
 
 const initialFrameRates = new WeakMap();
+const rateRequests = new WeakMap();
+export const XR_RATE_TIMEOUT_MS = 2500;
 
-export async function configureXRFrameRate(session, preferred = PREFERRED_XR_FRAME_RATE) {
+export function safeXRFrameRate(session) {
+    const rates=Array.from(session?.supportedFrameRates || []).filter(rate=>Number.isFinite(rate) && rate>0);
+    return Math.max(0,...rates.filter(rate=>rate<=90)) || (rates.length?Math.min(...rates):90);
+}
+
+export async function configureXRFrameRate(session, preferred = PREFERRED_XR_FRAME_RATE, {timeoutMs=XR_RATE_TIMEOUT_MS}={}) {
     const supported = Array.from(session.supportedFrameRates || []).filter(rate => Number.isFinite(rate) && rate > 0);
     if (!initialFrameRates.has(session)) initialFrameRates.set(session, session.frameRate || null);
-    const target = preferred === 'auto' ? initialFrameRates.get(session) : preferred;
+    const request=(rateRequests.get(session) || 0)+1;rateRequests.set(session,request);
+    const target = preferred === 'auto' ? Math.min(initialFrameRates.get(session) || 90,safeXRFrameRate(session)) : preferred;
     const candidates = supported.filter(rate => preferred === 'auto' ? rate === target : rate <= target).sort((a,b) => b-a);
-    const result = { preferred, supported, requested: null, actual: session.frameRate || null };
+    const result = { preferred, supported, requested: null, actual: session.frameRate || null, timedOut:false };
     if (typeof session.updateTargetFrameRate === 'function') {
         for (const rate of candidates) {
+            let timer;
             try {
-                await session.updateTargetFrameRate(rate);
+                await Promise.race([session.updateTargetFrameRate(rate),new Promise((_,reject)=>{
+                    timer=setTimeout(()=>{result.timedOut=true;reject(new Error('Refresh request timed out'));},timeoutMs);
+                })]);
+                if(rateRequests.get(session)!==request)break;
                 result.requested = rate;
                 result.actual = session.frameRate || null;
                 break;
-            } catch { /* Keep the session usable and try the next supported rate. */ }
+            } catch { if(result.timedOut || rateRequests.get(session)!==request)break; }
+            finally { clearTimeout(timer); }
         }
     }
     console.info('[WebXR refresh]', result);

@@ -1,5 +1,9 @@
 import * as THREE from '../vendor/three.module.min.js';
 import { BEE_COUNT, demoBeePose } from './demoAmbientLife.js';
+import {currentGraphicsQuality} from './spatialVisualSettings.js';
+
+export const BEE_ANIMATION_SPEED=1.35;
+export const BEE_SPRITE_INTERVAL_MS=1000/60;
 
 // Bee by etro313 (Sketchfab), CC BY 4.0. Source and licence are also stored in the GLB asset metadata.
 const BEE_URL=new URL('../assets/bee.glb',import.meta.url);
@@ -87,7 +91,7 @@ function makeBee(gltf,resources){
         const name='bee-node-'+channel.target.node+'.'+({translation:'position',rotation:'quaternion',scale:'scale'}[path]||path);
         tracks.push(path==='rotation'?new THREE.QuaternionKeyframeTrack(name,times,values):new THREE.VectorKeyframeTrack(name,times,values));
     });
-    const mixer=new THREE.AnimationMixer(root);mixer.clipAction(new THREE.AnimationClip('hover',-1,tracks)).setEffectiveTimeScale(3.2).play();
+    const mixer=new THREE.AnimationMixer(root);mixer.clipAction(new THREE.AnimationClip('hover',-1,tracks)).setEffectiveTimeScale(BEE_ANIMATION_SPEED).play();
     return {wrapper,mixer,root,mesh,baseScale:wrapper.scale.x};
 }
 
@@ -100,9 +104,9 @@ export function prepareDemoBeeModel(){
 export function mountDemoBeeModel(canvas,{sprite=false}={}){
     if(!canvas)return null;
     const renderer=new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:sprite,powerPreference:'low-power'});
-    renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
+    renderer.setPixelRatio(sprite?1:Math.min(devicePixelRatio||1,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,30);
-    camera.position.z=sprite?4.6:6;
+    camera.position.z=6;
     scene.add(new THREE.HemisphereLight(0xfff7db,0x566c67,2.2));
     const sun=new THREE.DirectionalLight(0xffe2aa,2.4);sun.position.set(-3,5,6);scene.add(sun);
     const fill=new THREE.DirectionalLight(0xc9eaff,1.1);fill.position.set(4,-1,-2);scene.add(fill);
@@ -115,25 +119,18 @@ export function mountDemoBeeModel(canvas,{sprite=false}={}){
         get ready(){return ready;},
         renderSprite(elapsed,startedAt){
             if(!sprite || !ready || !Number.isFinite(startedAt))return null;
-            if(elapsed>=lastSpritePaint && elapsed-lastSpritePaint<33)return canvas;
-            renderer.setPixelRatio(1);renderer.setSize(384,384,false);
+            if(elapsed>=lastSpritePaint && elapsed-lastSpritePaint<BEE_SPRITE_INTERVAL_MS)return canvas;
+            const pixels=currentGraphicsQuality()==='high'?512:currentGraphicsQuality()==='low'?256:384;
+            if(canvas.width!==pixels || canvas.height!==pixels)renderer.setSize(pixels,pixels,false);
             bee.wrapper.position.set(0,0,0);
             bee.wrapper.scale.setScalar(bee.baseScale*2.1);
-            bee.wrapper.rotation.y=.08+Math.sin(elapsed*.0007)*.1;
-            bee.wrapper.rotation.z=Math.sin(elapsed*.0013)*.12;
+            bee.wrapper.rotation.y=.08;
+            bee.wrapper.rotation.z=0;
             bee.mixer.update(Number.isFinite(lastElapsed)?Math.max(0,Math.min(.15,(elapsed-lastElapsed)/1000)):0);
             lastElapsed=elapsed;
             bee.wrapper.updateMatrixWorld(true);
-            bee.mesh.skeleton.update();bee.mesh.computeBoundingBox();
-            const bounds=new THREE.Box3().setFromObject(bee.wrapper);
-            const center=bounds.getCenter(new THREE.Vector3());
-            const size=bounds.getSize(new THREE.Vector3());
-            const halfHeight=Math.max(.25,size.y,size.x/camera.aspect)/2;
-            // Animated wings extend beyond the rest-pose bounds. Leave generous
-            // transparent space in the sprite instead of cropping each flap.
-            camera.position.set(center.x,center.y,bounds.max.z+halfHeight/Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*1.8);
-            camera.lookAt(center);
-            camera.updateProjectionMatrix();
+            // Fixed generous framing prevents camera pumping. No CPU reskinning
+            // of the 29,653-vertex bee just to measure its bounds on every paint.
             lastSpritePaint=elapsed;
             renderer.render(scene,camera);
             return canvas;

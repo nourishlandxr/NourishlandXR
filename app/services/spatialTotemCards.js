@@ -15,6 +15,11 @@ export function textureSupportsMipmaps(source) {
     return powerOfTwo(source?.width) && powerOfTwo(source?.height);
 }
 
+export function spatialCardTextureContent(card) {
+    // Quantise only the painted fade. Geometry, input and aim remain full cadence.
+    return JSON.stringify(card.media?{...card,imageFade:Math.round(card.imageFade*24)/24}:card);
+}
+
 function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9, style=currentTotemModel()) {
     // Place both the visible control and its text/hit surface on the carved face.
     const t=Math.max(0,Math.min(1,y/(bodyHalfHeight*2)));
@@ -329,20 +334,20 @@ export function createSpatialTotemCards(gl, options = {}) {
             gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.depthMask(false);
             for(const surface of layout) {
                 const key=String(record.marker?.id || record.id)+':'+surface.card.id+':'+surface.detail;
-                const content=JSON.stringify(surface.card),cached=textures.get(key);
+                const content=spatialCardTextureContent(surface.card),cached=textures.get(key);
                 let entry=cached;
                 if(!entry || entry.content!==content) {
-                    if(entry)gl.deleteTexture(entry.texture);
-                    const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+                    const texture=entry?.texture || gl.createTexture();gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
                     const artwork=(options.canvas || cardCanvas)(surface.card,surface.detail);
-                    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,artwork);
+                    if(entry?.width===artwork.width && entry?.height===artwork.height)gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,artwork);
+                    else gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,artwork);
                     const mipmapped=textureSupportsMipmaps(artwork);
                     if(mipmapped)gl.generateMipmap(gl.TEXTURE_2D);
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,mipmapped?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR);
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
                     if(mipmapped && anisotropy){const maximum=gl.getParameter(anisotropy.MAX_TEXTURE_MAX_ANISOTROPY_EXT);gl.texParameterf(gl.TEXTURE_2D,anisotropy.TEXTURE_MAX_ANISOTROPY_EXT,Math.min(8,maximum));}
                     gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-                    entry={texture,content,started:entry?.started ?? now,fadeDuration:entry?.fadeDuration ?? surface.card.fadeDuration ?? SPATIAL_OBJECT_VISUALS.totem.signTransitionMs};textures.set(key,entry);
+                    entry={texture,content,width:artwork.width,height:artwork.height,started:entry?.started ?? now,fadeDuration:entry?.fadeDuration ?? surface.card.fadeDuration ?? SPATIAL_OBJECT_VISUALS.totem.signTransitionMs};textures.set(key,entry);
                 }
                 used.add(key);surfaces.push({...surface,record});
                 gl.uniform3f(locations.center,surface.center.x,surface.center.y,surface.center.z);gl.uniform3f(locations.right,surface.right.x,surface.right.y || 0,surface.right.z);

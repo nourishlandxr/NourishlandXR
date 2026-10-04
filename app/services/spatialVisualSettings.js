@@ -34,12 +34,14 @@ function validated(change){
     if(TOTEM_MODELS[change?.totemModel])result.totemModel=change.totemModel;
     if(['pointer','outline'].includes(change?.handMode))result.handMode=change.handMode;
     for(const key of ['largeText','showFps'])if(typeof change?.[key]==='boolean')result[key]=change[key];
-    if(['auto',72,90,120].includes(change?.refreshRate))result.refreshRate=change.refreshRate;
+    if(['auto',60,72,90,120].includes(change?.refreshRate))result.refreshRate=change.refreshRate;
     return result;
 }
 try{
     const saved=JSON.parse(globalThis.localStorage?.getItem(storageKey) || 'null');
     Object.assign(preferences,validated(saved));
+    // HIGH refresh is a per-session trial. A reload recovers from a saved 120 Hz.
+    if(preferences.refreshRate===120 || preferences.refreshRate==='auto')preferences.refreshRate=90;
     // Adopt the new default once; later deliberate style choices stay saved.
     if(saved && saved.totemDefaultRevision!==2){preferences.totemModel='botanical';globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}
 }catch{ /* Storage is optional in restricted browser sessions. */ }

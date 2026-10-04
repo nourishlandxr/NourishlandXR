@@ -67,7 +67,7 @@ test('demo introduces the Control panel before explaining scattered plant inform
     assert.doesNotMatch(opening, /scattered/);
     assert.ok(orientation.indexOf("title:'Meet your Control panel'") < orientation.indexOf("title:'Every plant holds information'"));
     assert.ok(orientation.indexOf('NourishlandXR brings those layers together') < orientation.indexOf("title:'A Project holds information'"));
-    assert.match(demo, /'INTRO 1\.1':'Welcome to NourishlandXR — where extended reality brings plant stories and knowledge into living landscapes\.'/);
+    assert.match(demo, /'INTRO 1\.1':'Discover how extended reality brings plant stories and knowledge into living landscapes\.'/);
 });
 
 test('demo uses one continuous welcome before beginning the Why stage', () => {

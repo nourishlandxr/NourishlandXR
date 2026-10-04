@@ -84,6 +84,7 @@ let demoKnowledgeScrollAt=0;
 let appRoot = null;
 let session = null;
 const demoPerformance=createXRPerformanceSettings({getSession:()=>session,publish:value=>infoPanel?.setXRPerformance(value)});
+let measureXrFrame=false;
 function publishDemoPerformance(){demoPerformance.publish();}
 function handleDemoPerformanceAction(action){return demoPerformance.action(action);}
 let sessionMode = 'immersive-ar';
@@ -201,12 +202,14 @@ function reportDemoRenderFailure(error, phase = 'demo render') {
 
 function runXrFrameStep(phase, operation) {
     if(xrDisabledFrameSteps.has(phase))return false;
+    const started=measureXrFrame?performance.now():0;
     try { operation();return true; }
     catch(error){
         xrDisabledFrameSteps.add(phase);
         reportDemoRenderFailure(error,phase);
         return false;
     }
+    finally{if(measureXrFrame)demoPerformance.recordCpuCost(phase,performance.now()-started);}
 }
 
 function beginXrFirstContentWatchdog(){
@@ -255,6 +258,7 @@ let demoHoldTimer = null;
 let introNarrationTimer = null;
 let arWelcomeShowcaseActive=false, arWelcomeShowcaseFrame=0, arWelcomeClusters=[];
 let arWelcomeClock=createWelcomePresentationClock();
+let arWelcomeClockFrame=-Infinity;
 let arWelcomeRootMilestone=WELCOME_ROOT_MILESTONES.arrival, arWelcomeRootMilestoneStartedAt=0, arWelcomeRootsLastRefreshAt=-Infinity;
 let arWelcomeStartedAt=0, arWelcomeIntroPending=false, arWelcomeSharedBoard=false;
 let limMeshActivatedAt=NaN,arWelcomeOpeningActive=false,arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS,arWelcomeOpeningSeed=0;
@@ -1202,7 +1206,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 
 // Visitor wording from the Quick Access / Edit table in data1/demo.docx.
 const DEMO_QUICK_ACCESS_COPY=Object.freeze({
-    'INTRO 1.1':'Welcome to NourishlandXR — where extended reality brings plant stories and knowledge into living landscapes.',
+    'INTRO 1.1':'Discover how extended reality brings plant stories and knowledge into living landscapes.',
     'INTRO 1.2':'Extended reality connects digital information with the world around you. Here, plants and places become starting points for discovery and learning.',
     'SPACE 1.1':'This is your Control Panel. It shows the actions and help available at each step.',
     'SPACE 1.2':'You arrive in a garden. A plant catches your attention — what is it, and what role does it play here?',
@@ -4414,11 +4418,14 @@ function createSpatialKnowledgeTexture(record) {
 const demoTextureStorage=new WeakMap();
 function canvasTexture(label, texture = null, flipY = false) {
     texture ||= gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D, texture);
     // The PIM and other demo boards use explicit top-left UVs in the quad.
     // Callers opt into upload flipping only when a texture needs it.
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, Boolean(flipY));
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, label);
+    gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+    const storage=demoTextureStorage.get(texture);
+    if(storage?.width===label.width && storage?.height===label.height)gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,label);
+    else {gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,label);demoTextureStorage.set(texture,{width:label.width,height:label.height});}
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -4723,7 +4730,7 @@ function drawIntroSpatial(view) {
     if(arWelcomeShowcaseActive){
         // XR sessions may report visible-blurred (or omit visibilityState).
         // Only a truly hidden session should pause the opening clock.
-        arWelcomeClock.tick(Date.now(),session?.visibilityState!=='hidden');
+        if(arWelcomeClockFrame!==introFrameToken){arWelcomeClock.tick(Date.now(),session?.visibilityState!=='hidden');arWelcomeClockFrame=introFrameToken;}
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
@@ -5013,7 +5020,13 @@ function drawSpatialAmbientLife(view){
     const sprite=ambientBeeModel?.renderSprite?.(arWelcomeClock.elapsed,ambientBeesStartedAt);
     if(sprite && program && buffer){
         if(!ambientBeeSpriteTexture){ambientBeeSpriteTexture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
-        if(arWelcomeClock.elapsed-ambientBeeSpriteUploadedAt>=33){gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,sprite);ambientBeeSpriteUploadedAt=arWelcomeClock.elapsed;}
+        if(arWelcomeClock.elapsed-ambientBeeSpriteUploadedAt>=1000/60){
+            gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,ambientBeeSpriteTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
+            const storage=demoTextureStorage.get(ambientBeeSpriteTexture);
+            if(storage?.width===sprite.width && storage?.height===sprite.height)gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,sprite);
+            else {gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,sprite);demoTextureStorage.set(ambientBeeSpriteTexture,{width:sprite.width,height:sprite.height});}
+            ambientBeeSpriteUploadedAt=arWelcomeClock.elapsed;
+        }
         gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);
         const vertex=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');
         gl.enableVertexAttribArray(vertex);gl.vertexAttribPointer(vertex,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
@@ -5402,6 +5415,9 @@ async function startImmersive() {
         // the first XR frame is requested. Desktop fallback is rendered by the
         // caller only when session setup fails.
         renderInterface(false);
+        // Warm the welcome canvas and upload before headset frames begin.
+        introNoteTexture=createIntroNoteTexture(introNoteTexture);
+        introBoardTextureDirty=false;introTextureUploadedAt=performance.now();
         beginXrFirstContentWatchdog();
         session.addEventListener('select', event => {
             if(event.inputSource?.hand)return;
@@ -5487,6 +5503,8 @@ async function startImmersive() {
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
             session.requestAnimationFrame(draw);
+            measureXrFrame=getSpatialVisualSettings().showFps || session.frameRate>90;
+            const cpuStarted=measureXrFrame?performance.now():0;
             demoPerformance.tick(_time);
             introFrameToken = _time;
             let pose=null;
@@ -5527,15 +5545,16 @@ async function startImmersive() {
             gl.clearColor(0, 0, 0, transparentSession ? 0 : 1);
             if(!pose){gl.disable(gl.SCISSOR_TEST);gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);return;}
             gl.enable(gl.SCISSOR_TEST);
+            let renderedContent=false;
             for (const view of pose?.views || []) {
                 const viewport = layer.getViewport(view);
                 if (!viewport) continue;
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                runXrFrameStep('startup surface',()=>drawXrRecoverySurface(view));
+                // The welcome is already prepared. Show recovery only after a failure.
                 runXrFrameStep('rain render',()=>drawSpatialRain(view, _time));
-                if(runXrFrameStep('marker render',()=>drawMarker(view)))markXrFirstContentRendered();
+                if(runXrFrameStep('marker render',()=>drawMarker(view)))renderedContent=true;
                 runXrFrameStep('PIM render',()=>drawDemoKnowledge(view));
                 runXrFrameStep('Control panel render',()=>infoPanel?.draw(view));
                 runXrFrameStep('butterfly render',()=>drawSpatialButterfly(view));
@@ -5544,6 +5563,8 @@ async function startImmersive() {
                 if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));
             }
             gl.disable(gl.SCISSOR_TEST);
+            if(renderedContent)markXrFirstContentRendered();
+            if(measureXrFrame)demoPerformance.frameComplete(performance.now()-cpuStarted);
         };
         session.requestAnimationFrame(draw);
         return true;
