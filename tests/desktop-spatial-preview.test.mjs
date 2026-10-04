@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { isDesktopSpatialPreviewEnvironment } from '../app/services/desktopSpatialPreview.js';
+import { isDesktopSpatialPreviewEnvironment, mountDesktopSpatialPreview } from '../app/services/desktopSpatialPreview.js';
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 
@@ -45,7 +45,7 @@ test('desktop presentation is isolated from phone and Quest renderers', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/style.css');
     const immersive = read('app/screens/arMode.js');
-    assert.match(demo, /mountDesktopSpatialPreview\(appRoot,\{simulated,quest:isQuestHeadsetBrowser\(\)\}\)/);
+    assert.match(demo, /mountDesktopSpatialPreview\(appRoot,\{simulated,quest:isQuestHeadsetBrowser\(\),flat:true\}\)/);
     assert.match(service, /simulated\s*&&\s*!quest\s*&&\s*finePointer\s*&&\s*hover/);
     assert.match(service, /!demo \|\| !stage \|\| !isDesktopSpatialPreviewEnvironment\(\{ simulated, quest \}\)/);
     assert.match(service, /Drag open space to look around/);
@@ -55,6 +55,38 @@ test('desktop presentation is isolated from phone and Quest renderers', () => {
     assert.match(styles, /\.tryit-demo\.is-desktop-spatial-preview \[data-tryit-sim-markers\]/);
     assert.doesNotMatch(service, /requestImmersiveArSession|immersive-ar|immersive-vr/);
     assert.doesNotMatch(immersive, /desktopSpatialPreview/);
+});
+
+test('flat desktop layout installs no depth chrome or camera input handlers', () => {
+    const properties = ['innerWidth','innerHeight','matchMedia','addEventListener','removeEventListener'];
+    const original = properties.map(key => [key,Object.getOwnPropertyDescriptor(globalThis,key)]);
+    const classes = new Set(), listeners = new Map();
+    const stage = {
+        insertAdjacentHTML() { assert.fail('Flat mode must not create depth chrome.'); },
+        addEventListener() { assert.fail('Flat mode must not install orbit or zoom input.'); }
+    };
+    const demo = {
+        querySelector: () => stage,
+        classList: {
+            toggle(name,value) { value ? classes.add(name) : classes.delete(name); },
+            remove(...names) { names.forEach(name => classes.delete(name)); }
+        }
+    };
+    try {
+        Object.assign(globalThis,{
+            innerWidth:1440,innerHeight:900,matchMedia:() => ({matches:true}),
+            addEventListener:(type,listener) => listeners.set(type,listener),
+            removeEventListener:(type,listener) => { if(listeners.get(type)===listener)listeners.delete(type); }
+        });
+        const cleanup = mountDesktopSpatialPreview({querySelector:() => demo},{simulated:true,quest:false,flat:true});
+        assert.ok(classes.has('is-desktop-spatial-preview'));
+        assert.deepEqual([...listeners.keys()],['resize']);
+        cleanup();
+        assert.equal(classes.size,0);
+        assert.equal(listeners.size,0);
+    } finally {
+        for(const [key,descriptor] of original){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}
+    }
 });
 
 test('desktop PIM movement has a dedicated bounded handle', () => {
