@@ -121,7 +121,12 @@ test('WebXR hand tracking uses standard joint names and produces a visible hand 
     } };
     const state = handTrackingState(frame, source, {});
     assert.equal(state.joints.size, names.length);
-    assert.deepEqual(state.pointer.origin, { x:0, y:0, z:-.2, radius:.01 });
+    const {x,y,z,radius}=state.pointer.origin;
+    assert.deepEqual({x,y,z,radius}, { x:0, y:0, z:-.2, radius:.01 });
+    assert.ok(Number.isFinite(state.pointer.origin.lastSeenAt));
+    assert.equal(state.pointer.origin.matrix.length,16);
+    assert.equal(state.tracked,true);
+    assert.deepEqual(state.rawJoints.get('index-finger-tip').matrix.slice(12,15),new Float32Array([0,0,-.2]));
     assert.deepEqual(state.pointer.direction, { x:0, y:0, z:-1 });
     assert.equal(state.pinch, false);
 });

@@ -7,14 +7,19 @@ const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 
 test('four native bees and both eyes share static mesh storage and one small rig upload',()=>{
  const calls=[];
- const gl=new Proxy({getExtension:()=>({}),getParameter:()=>4,getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0},{get(target,key){return key in target?target[key]:key.startsWith('create')?()=>({}):key===key.toUpperCase()?key:(...args)=>calls.push([key,...args]);}});
+ const gl=new Proxy({getExtension:()=>({}),getParameter:()=>4,getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(_program,name)=>name},{get(target,key){return key in target?target[key]:key.startsWith('create')?()=>({}):key===key.toUpperCase()?key:(...args)=>calls.push([key,...args]);}});
  const matrix={elements:new Float32Array(16),clone(){return {...this};},copy(){return this;},multiply(){return this;}};
  const attribute=size=>({array:new Float32Array(size*3),itemSize:size});
  let updates=0;
- const model={mixer:{update(){updates++;}},wrapper:{updateMatrixWorld(){}},mesh:{matrixWorld:matrix,bindMatrix:matrix,bindMatrixInverse:matrix,geometry:{attributes:{position:attribute(3),normal:attribute(3),uv:attribute(2),skinIndex:attribute(4),skinWeight:attribute(4)},index:{array:[0,1,2]}},skeleton:{bones:new Array(108),boneMatrices:new Float32Array(108*16),update(){}}}};
+ const model={mixer:{update(){updates++;}},wrapper:{updateMatrixWorld(){}},mesh:{matrixWorld:matrix,bindMatrix:matrix,bindMatrixInverse:matrix,geometry:{attributes:{position:attribute(3),normal:attribute(3),uv:attribute(2),skinIndex:attribute(4),skinWeight:attribute(4)},index:{array:new Uint16Array([0,1,2,0,2,1])},groups:[{start:0,count:3,materialIndex:0},{start:3,count:3,materialIndex:1}]},skeleton:{bones:new Array(108),boneMatrices:new Float32Array(108*16),update(){}}}};
  const renderer=createBeeXRRenderer(gl,model,{}),view={projectionMatrix:matrix.elements,transform:{matrix:matrix.elements,inverse:{matrix:matrix.elements}}};
  for(let eye=0;eye<2;eye++)for(let bee=0;bee<4;bee++)renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0});
- assert.equal(updates,1);assert.equal(calls.filter(c=>c[0]==='drawElements').length,8);
+ assert.equal(updates,1);
+ const draws=calls.filter(c=>c[0]==='drawElements');
+ assert.equal(draws.length,16,'each bee and eye draws its solid body and transparent wings');
+ assert.deepEqual(draws.map(call=>call.slice(1)),Array.from({length:8},()=>[['TRIANGLES',3,'UNSIGNED_SHORT',0],['TRIANGLES',3,'UNSIGNED_SHORT',6]]).flat());
+ assert.deepEqual(calls.filter(c=>c[0]==='uniform1f' && c[1]==='solid').map(c=>c[2]),Array.from({length:8},()=>[1,0]).flat());
+ assert.deepEqual(calls.filter(c=>c[0]==='depthMask').map(c=>c[1]),Array.from({length:8},()=>[true,false,true]).flat());
  assert.equal(calls.filter(c=>c[0]==='bufferData').length,6,'geometry is uploaded once');
  const upload=calls.filter(c=>c[0]==='texSubImage2D');assert.equal(upload.length,1);assert.equal(upload[0].at(-1).byteLength,6912);
  renderer.destroy();assert.equal(calls.filter(c=>c[0]==='deleteTexture').length,2);

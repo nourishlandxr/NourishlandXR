@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
+import {createHeroDiceGeometry,HERO_DICE_STYLE} from '../app/services/heroDiceGeometry.js';
 import {decayWheelVelocity,discoveryMomentumFactor,discoveryOrientation,gestureIntent,scrollTurn,wheelGestureVelocity,WHEEL_TOUCH_MAX_VELOCITY,WHEEL_TOUCH_RADIANS_PER_PIXEL} from '../app/services/wheel-model.js';
 
 const root=path.resolve(import.meta.dirname,'..');
@@ -72,7 +73,16 @@ test('landing wheel uses one pointer path and removes obsolete spin controls',()
  assert.match(css,/overscroll-behavior:contain/);
  assert.match(wheel,/event\?\.type==='pointercancel'\)\{velocity=0;pitchVelocity=0/);
  assert.match(wheel,/roll\+=dt\*\.07/);
- assert.match(wheel,/new THREE\.SphereGeometry\(1\.72,12,6\)/);
+ assert.match(wheel,/from '\.\/heroDiceGeometry\.js'/);
+ assert.match(wheel,/createHeroDiceGeometry\(\)/);
+ const geometry=createHeroDiceGeometry();
+ try{
+  assert.equal(HERO_DICE_STYLE.radius,1.72);
+  assert.equal(geometry.index,null);
+  assert.equal(geometry.attributes.position.count/3,120);
+  const positions=geometry.attributes.position;
+  for(let vertex=0;vertex<positions.count;vertex++)assert.ok(Math.abs(Math.hypot(positions.getX(vertex),positions.getY(vertex),positions.getZ(vertex))-1.72)<.000001);
+ }finally{geometry.dispose();}
  assert.match(wheel,/Math\.max\(5\.9,2\.18\/\(Math\.tan/);
  assert.match(css,/\.v2-living-wheel canvas,\.v2-living-wheel img\{position:absolute;inset:0;width:100%;height:100%/);
  assert.match(wheel,/host\.dataset\.faceCount/);

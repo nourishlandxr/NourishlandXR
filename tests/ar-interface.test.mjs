@@ -212,7 +212,7 @@ test('calibrated Totem routes render as a segmented ground path with arrows', ()
 test('the demo keeps the three simple Totem forms and uses physical plaques and buttons', () => {
     const appearance = read('app/services/totemAppearance.js');
     const arSource = read('app/screens/arMode.js');
-    const demoSource = read('app/screens/temporaryArDemo.js');
+    const demoSource = read('app/screens/temporaryArDemo.js').replace(/\r\n/g,'\n');
     assert.match(appearance, /id: 'basic', label: 'Elemental Totem'/);
     assert.match(appearance, /id: 'organic', label: 'Light Bulb'/);
     assert.match(appearance, /id: 'flat-disc', label: 'Disk Totem'/);
