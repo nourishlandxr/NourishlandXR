@@ -154,8 +154,7 @@ export function panelSettingsControls({headset=false,largeText=false,handVisualM
         ...(headset?[{action:'HandMode',label:handVisualMode==='pointer'?'Pointer':'Outline',ariaLabel:'Switch hand tracking visual mode',settingGroup:'hands',settingLabel:'Hands',x:756,y:row(0),width:188,height:42}]:[]),
         slider('TextSize','text','Text size',largeText?1:0,0,1,1,shift),
         slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,shift+1),
-        slider('CellOpacity','opacity','PIMO glass',meshCellOpacity,0,1,.01,shift+2),
-        slider('InfoOpacity','info-opacity','Main / Control / LIMO glass',infoOpacity,0,1,.01,shift+3),
+        slider('InfoOpacity','info-opacity','Panels opacity',infoOpacity,0,1,.01,shift+2),
         {action:'OrbModel',label:ORB_MODELS[orbModel]?.label || 'Improved',ariaLabel:'Change Plant Orb model: Basic, Improved or Advanced',settingGroup:'orb-model',settingLabel:'Plant Orb model',x:756,y:row(shift+4),width:188,height:42},
         {action:'TotemModel',label:TOTEM_MODELS[totemModel]?.label || 'Carved timber',ariaLabel:'Change Totem style: Carved timber, Botanical column or Elemental',settingGroup:'totem-model',settingLabel:'Totem style',x:756,y:row(shift+5),width:188,height:42},
         {action:'GraphicsQuality',label:graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),ariaLabel:'Change graphics quality: Auto, LOW, MED, HIGH',settingGroup:'graphics',settingLabel:'Graphics quality',x:756,y:row(shift+6),width:188,height:42},
@@ -163,7 +162,7 @@ export function panelSettingsControls({headset=false,largeText=false,handVisualM
         slider('FloorOffset','floor','Floor height adjustment',floorOffset,-1.5,1.5,.01,shift+8),
         ...(performanceSettings ? [{action:'RefreshRate',label:performanceSettings.pending?'Applying…':`${performanceSettings.actual || '?'} Hz`,disabled:performanceSettings.pending || !performanceSettings.supported?.length,ariaLabel:'Choose supported XR refresh rate',settingGroup:'refresh',settingLabel:'Refresh rate',x:756,y:row(shift+10),width:188,height:42},{action:'ShowFps',label:performanceSettings.showFps?'On':'Off',ariaLabel:'Show FPS',settingGroup:'fps',settingLabel:'Show FPS',x:756,y:row(shift+11),width:188,height:42}]:[]),
         {action:'Recenter',label:'Recenter',ariaLabel:'Recenter panel',settingGroup:'position',settingLabel:'Panel position',x:756,y:row(shift+9),width:188,height:42}
-    ].filter(item=>rainEnabled || item.action!=='RainQuality').map(item=>!rainEnabled && item.y>=row(shift+8)?{...item,y:item.y-54}:item).map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
+    ].map(item=>item.y>=row(shift+4)?{...item,y:item.y-54}:item).filter(item=>rainEnabled || item.action!=='RainQuality').map(item=>!rainEnabled && item.y>=row(shift+7)?{...item,y:item.y-54}:item).map(item=>item.width!==188?item:{...item,width:Math.max(96,Math.min(188,item.label.length*12+32)),x:944-Math.max(96,Math.min(188,item.label.length*12+32))});
 }
 export function panelSliderValue(control,x){
     const fraction=Math.max(0,Math.min(1,(x-control.x-18)/(control.width-36)));
@@ -234,7 +233,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel(),totemModel=currentTotemModel();
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='outline'?'outline':'pointer';
-    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
+    let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaRevision=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
     let visibleMedia=null;
     const MEDIA_FADE_MS=650;
     let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
@@ -276,7 +275,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         : identity?.media?.image ? {...identity.media,caption:identity.media.caption || identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
     function loadPanelImage(source,{delayMs=0,discardPrevious=false}={}){
-        if(source===mediaImageSource)return;
+        if(source===mediaImageSource && (!source || mediaImage))return;
         const token=++mediaLoadToken;
         clearTimeout(mediaTransitionTimer);mediaTransitionTimer=0;
         mediaPreviewBlocked=delayMs>0;
@@ -284,7 +283,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(!source){mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource='';mediaFadeStartedAt=performance.now();return;}
         const beginLoad=()=>{
             if(token!==mediaLoadToken)return;
-            loadPreparedImage(source).then(image=>{if(token!==mediaLoadToken)return;if(discardPrevious)mediaPreviousImage=null;else mediaPreviousImage=mediaImage;mediaImage=image;mediaImageSource=source;mediaFadeStartedAt=performance.now();})
+            loadPreparedImage(source).then(image=>{if(token!==mediaLoadToken)return;if(discardPrevious)mediaPreviousImage=null;else mediaPreviousImage=mediaImage;mediaImage=image;mediaImageSource=source;mediaRevision++;mediaFadeStartedAt=performance.now();render(true);})
                 .catch(()=>{if(token!==mediaLoadToken)return;if(discardPrevious)mediaPreviousImage=null;else mediaPreviousImage=mediaImage;mediaImage=null;mediaImageSource=source;mediaFadeStartedAt=performance.now();});
         };
         if(delayMs>0){mediaTransitionTimer=setTimeout(()=>{mediaTransitionTimer=0;mediaPreviewBlocked=false;beginLoad();render(true);},delayMs);return;}
@@ -308,6 +307,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
         if(action==='Settings'){
             settingsOpen=!settingsOpen;
             renderSettings();
+            // The companion owns only its visibility; leave the image and main
+            // panel DOM, dock position and loading lifecycle intact.
+            return;
         }
         if(action==='Previous')page=Math.max(0,page-1);
         if(action==='Next')page=Math.min(pages().length-1,page+1);
@@ -1010,7 +1012,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const settingsCard={id:'settings',settings:true,infoOpacity,height:Math.max(spatialHeight(),performanceSettings?920:820),controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             const imageFade=Math.min(1,Math.max(0,(performance.now()-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
-            const preview=previewMedia(),mediaCard={id:'media',media:true,height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,mediaRevision,imageSource:preview?.image || '',height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,

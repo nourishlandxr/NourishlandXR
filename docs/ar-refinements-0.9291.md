@@ -12,7 +12,7 @@
 
 ## Source archive
 
-The supplied ZIP contains an editable Blender original and `BackWingCol.png`. Its 512 x 512 wing texture has identical decoded pixels to the GLB texture, so changing format adds no texture detail. The archive is retained at the supplied Downloads path and is not added to the deployed frontend. Attribution is bundled in `app/assets/butterfly-CREDITS.txt`.
+The supplied ZIP contains an editable Blender original and `BackWingCol.png`. Its 512 x 512 wing texture matches the GLB texture after a vertical flip, so changing format adds no texture detail. The archive is retained at the supplied Downloads path and is not added to the deployed frontend. Attribution is bundled in `app/assets/butterfly-CREDITS.txt`.
 
 ## Validation
 

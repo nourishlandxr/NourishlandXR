@@ -1749,6 +1749,7 @@
     background:rgba(13,27,29,.28);
 }
 .nlxr-settings-companion .nlxr-setting-row[data-setting-group="opacity"],
+.nlxr-settings-companion .nlxr-setting-row[data-setting-group="info-opacity"],
 .nlxr-settings-companion .nlxr-setting-row[data-setting-group="position"] { grid-column:1/-1; }
 .nlxr-settings-companion .nlxr-setting-options { display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%; }
 .nlxr-settings-companion .nlxr-settings-actions button {
