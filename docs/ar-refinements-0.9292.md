@@ -8,6 +8,6 @@
 
 ## Release checks
 
-Frontend build and whitespace checks passed. No local test suite or XR harness was run at the user's request. The existing deployment workflow runs its required checks automatically. Quest 3 interaction validation remains with the user.
+Frontend build and whitespace checks passed. No local test suite or XR harness was run at the user's request. The existing deployment workflow runs its required checks automatically. Its V0.9292 run found two older assertions requiring the removed PIMO opacity row; V0.9293 aligns those expectations with the single Panels opacity slider. Quest 3 interaction validation remains with the user.
 
 The document was saved with repeating table headers and sections kept together. The packaged Word renderer could not run because LibreOffice is unavailable on this Windows host; page layout has not been visually verified.

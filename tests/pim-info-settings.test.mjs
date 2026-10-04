@@ -49,13 +49,13 @@ test('demo history arrows stay compact, adjacent and ray-selectable even when di
 });
 
 test('Settings rows keep all existing actions in compact non-overlapping Quest hit regions',()=>{
-    const desktop=panelSettingsControls({meshCellOpacity:.5,ambientRain:1.65,ambientRainStyle:'v1',rainQuality:'hq',graphicsQuality:'high',spatialScale:1.1});
+    const desktop=panelSettingsControls({infoOpacity:.5,ambientRain:1.65,ambientRainStyle:'v1',rainQuality:'hq',graphicsQuality:'high',spatialScale:1.1});
     const quest=panelSettingsControls({headset:true,handVisualMode:'outline'});
-    const actions=['TextSize','SpatialScale','CellOpacity','InfoOpacity','OrbModel','TotemModel','GraphicsQuality','RainQuality','FloorOffset','Recenter'];
+    const actions=['TextSize','SpatialScale','InfoOpacity','OrbModel','TotemModel','GraphicsQuality','RainQuality','FloorOffset','Recenter'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
     assert.deepEqual(quest.map(item=>item.action),['HandMode',...actions]);
-    assert.equal(desktop.find(item=>item.action==='CellOpacity').value,.5);
-    assert.equal(desktop.find(item=>item.action==='CellOpacity').kind,'slider');
+    assert.equal(desktop.find(item=>item.action==='InfoOpacity').value,.5);
+    assert.equal(desktop.find(item=>item.action==='InfoOpacity').kind,'slider');
     assert.equal(desktop.find(item=>item.action==='RainQuality').label,'HQ');
     assert.equal(desktop.find(item=>item.action==='GraphicsQuality').label,'HIGH');
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Outline');
