@@ -36,5 +36,5 @@ test('butterfly preserves original mesh and attribution, with three skinned mesh
  const bytes=readFileSync(new URL('../app/assets/animated_butterfly.glb',import.meta.url));const gltf=JSON.parse(bytes.toString('utf8',20,20+bytes.readUInt32LE(12)));
  assert.equal(bytes.length,494064);assert.equal(gltf.meshes.length,3);assert.deepEqual(gltf.animations.map(clip=>clip.name),['Flying','Idle']);assert.match(gltf.asset.extras.license,/CC-BY-4.0/);assert.match(read('app/assets/butterfly-CREDITS.txt'),/Artistic_side/);
  const model=read('app/services/demoButterflyModel.js');assert.match(model,/low:\{pixels:192/);assert.match(model,/high:\{pixels:384/);assert.match(model,/setEffectiveWeight\(pose.flight\)/);
- const demo=read('app/screens/temporaryArDemo.js');assert.match(demo,/getPerchPose/);assert.match(demo,/butterflyFlightAnchor \|\|=/);assert.match(demo,/butterfly render/);
+ const demo=read('app/screens/temporaryArDemo.js');assert.match(demo,/getPerchPose/);assert.match(demo,/insect\.flightAnchor \|\|=/);assert.match(demo,/butterfly render/);
 });

@@ -24,7 +24,7 @@ export function currentGraphicsQuality(){return resolveGraphicsQuality(preferenc
 export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
 export function currentRainQuality(){return preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={totemDefaultRevision:2,floorOffset:0,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+let preferences={totemDefaultRevision:2,floorOffset:0,insects:true,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:1,handMode:'pointer',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
@@ -33,7 +33,7 @@ function validated(change){
     if(ORB_MODELS[change?.orbModel])result.orbModel=change.orbModel;
     if(TOTEM_MODELS[change?.totemModel])result.totemModel=change.totemModel;
     if(['pointer','outline'].includes(change?.handMode))result.handMode=change.handMode;
-    for(const key of ['largeText','showFps'])if(typeof change?.[key]==='boolean')result[key]=change[key];
+    for(const key of ['largeText','showFps','insects'])if(typeof change?.[key]==='boolean')result[key]=change[key];
     if(['auto',60,72,90,120].includes(change?.refreshRate))result.refreshRate=change.refreshRate;
     return result;
 }

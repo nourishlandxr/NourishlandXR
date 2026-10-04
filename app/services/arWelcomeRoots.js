@@ -305,9 +305,10 @@ function drawWelcomeRootsDirect(ctx, { milestone = 0, elapsed = 0, milestoneStar
     ctx.save();
     // Clip each exclusion independently: overlapping cells must never cancel
     // each other's clearance as overlapping holes in one even-odd path would.
-    for(const cell of cellClearance){
+    for(const cell of cellClearance.filter(cell=>Number.isFinite(cellOpenedAt[cell.id]))){
         ctx.beginPath();ctx.roundRect(-200,-200,3000,2600,0);
-        ctx.moveTo(cell.x+cell.radius,cell.y);ctx.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);
+        const radius=(cell.radius-LIVING_RIM.cellGap)*.52;
+        ctx.moveTo(cell.x+radius,cell.y);ctx.arc(cell.x,cell.y,radius,0,Math.PI*2);
         ctx.clip('evenodd');
     }
 
@@ -340,6 +341,17 @@ function drawLowCellGroundcover(ctx,{cellClearance=[],cellOpenedAt={},elapsed=0,
     const cells=cellClearance.filter(cell=>cellGroundcoverGrowth(elapsed,cellOpenedAt[cell.id])>0);
     if(!cells.length)return;
     const count=quality==='high'?9:quality==='low'?4:6;
+    // Rooted approach: a slender stem extends from the actual soil rim before
+    // tiny leaves unfold on the cell's lower edge. Never erase its full disc.
+    for(const cell of cells){
+        const growth=cellGroundcoverGrowth(elapsed,cellOpenedAt[cell.id]);
+        const angle=Math.atan2(cell.y-WELCOME_SHAPE.cy,cell.x-WELCOME_SHAPE.cx),start=polarPoint(angle,535);
+        const edge=cell.radius-LIVING_RIM.cellGap;
+        const tip={x:cell.x+Math.cos(angle)*edge,y:cell.y+Math.sin(angle)*edge};
+        const reach=stageEase(growth*3),end={x:mix(start.x,tip.x,reach),y:mix(start.y,tip.y,reach)};
+        ctx.save();ctx.globalAlpha=.55*growth;ctx.strokeStyle='#4e6644';ctx.lineWidth=1.6;
+        ctx.beginPath();ctx.moveTo(start.x,start.y);ctx.quadraticCurveTo((start.x+end.x)/2+8,(start.y+end.y)/2,end.x,end.y);ctx.stroke();ctx.restore();
+    }
     ctx.save();ctx.beginPath();
     for(const cell of cells){ctx.moveTo(cell.x+cell.radius,cell.y);ctx.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);}
     ctx.clip();
@@ -347,7 +359,7 @@ function drawLowCellGroundcover(ctx,{cellClearance=[],cellOpenedAt={},elapsed=0,
         const growth=cellGroundcoverGrowth(elapsed,cellOpenedAt[cell.id]);
         for(let n=0;n<count;n++){
             const seed=index*97+n,angle=.35+hash(seed,701)*2.4;
-            const g=Math.max(0,Math.min(1,(growth-hash(seed,719)*.25)/.75));
+            const g=Math.max(0,Math.min(1,(growth-.22-hash(seed,719)*.16)/.62));
             if(g<=0)continue;
             const edge=cell.radius-LIVING_RIM.cellGap-3,reach=(3+hash(seed,709)*5)*g;
             const x=cell.x+Math.cos(angle)*(edge-reach),y=cell.y+Math.sin(angle)*(edge-reach);
@@ -367,6 +379,15 @@ const RIM_PATCHES=Object.freeze(Array.from({length:13},(_,i)=>({
  radius:532+hash(i,307)*17,seed:i,delay:hash(i,311)*13000,
  leaves:3+Math.floor(hash(i,313)*4)
 })));
+let flowerSiteTime=-1,flowerSiteCache=[];
+export function livingFrameFlowerSites(elapsed=0){
+ const tick=Math.floor(elapsed/1000);if(tick===flowerSiteTime)return flowerSiteCache;flowerSiteTime=tick;
+ flowerSiteCache=RIM_PATCHES.filter(p=>p.seed%4!==1 && elapsed>LIVING_RIM.flowersAt+p.delay*.35+12000).map(p=>{
+  const angle=p.angle+(p.seed%2?1:-1)*.02,branch=stageEase((elapsed-95000-p.delay)/LIVING_RIM.growthMs);
+  const base=polarPoint(angle,p.radius),target=polarPoint(angle+.009,p.radius+15);
+  return {x:mix(base.x,target.x,branch),y:mix(base.y,target.y,branch)};
+ });return flowerSiteCache;
+}
 function drawRimLeaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)',detail=1){
  if(detail>1 && drawLivingLeafArtwork(ctx,x,y,angle,size,colour))return;
  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.fillStyle=colour;
@@ -570,7 +591,7 @@ export function drawArWelcomeRoots(ctx,options={}){
   // Subtract all cell discs in one operation. Their union stays excluded,
   // including overlaps, without a deep stack of expensive canvas clips.
   if(options.cellClearance?.length){paint.save();paint.globalCompositeOperation='destination-out';paint.beginPath();
-   for(const cell of options.cellClearance){paint.moveTo(cell.x+cell.radius,cell.y);paint.arc(cell.x,cell.y,cell.radius,0,Math.PI*2);}
+   for(const cell of options.cellClearance.filter(cell=>Number.isFinite(options.cellOpenedAt?.[cell.id]))){const radius=(cell.radius-LIVING_RIM.cellGap)*.52;paint.moveTo(cell.x+radius,cell.y);paint.arc(cell.x,cell.y,radius,0,Math.PI*2);}
    paint.fill();paint.restore();
    drawLowCellGroundcover(paint,{...options,quality});
   }

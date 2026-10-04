@@ -61,7 +61,7 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').settingLabel,'Main / Control glass');
     assert.equal(graphics.find(item=>item.action==='RainQuality').label,'HQ');
     assert.equal(graphics.find(item=>item.action==='GraphicsQuality').label,'HIGH');
-    assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality','RainQuality','OrbModel','TotemModel','SettingsHelp','CloseSettings']);
+    assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality','RainQuality','Insects','OrbModel','TotemModel','SettingsHelp','CloseSettings']);
     assert.equal(performance.find(item=>item.action==='RefreshRate').y,performance.find(item=>item.action==='ShowFps').y);
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Outline');
     for(const items of [desktop,quest,graphics,performance]){

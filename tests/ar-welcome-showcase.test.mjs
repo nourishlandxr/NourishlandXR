@@ -91,7 +91,7 @@ test('minimal introduction reveals only four coloured primary pathways without c
  const frames=drawArWelcomeShowcase(ctx,29800,false,createArWelcomeClusters(),pacing);
  const nodes=frames.flatMap(frame=>frame.nodes);
  assert.deepEqual(nodes.map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
- assert.ok(lines>0,'the four primary cells retain their faceted outlines');
+ assert.equal(lines,0,'round primary cells use arcs and have no faceted edge lines');
  const expansion={...pacing,progression:{expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':22000}}};
  const softChildren=drawArWelcomeShowcase(ctx,22500,false,createArWelcomeClusters(),expansion).flatMap(frame=>frame.nodes).filter(node=>node.depth===1);
  assert.ok(softChildren.some(node=>node.opacity>0 && node.opacity<1),'selected pathway introduces its children with opacity');

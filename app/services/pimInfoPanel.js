@@ -147,7 +147,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,graphicsOpen=false}={}){
+export function panelSettingsControls({headset=false,largeText=false,handVisualMode='pointer',spatialScale=1,performanceSettings=null,infoOpacity=.38,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false}={}){
     const choice=(action,label,group,title,y,x=540,width=404)=>({action,label,ariaLabel:title || label,settingGroup:group,settingLabel:title,x,y,width,height:58});
     const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
     const navigation=choice('GraphicsMenu',graphicsOpen?'‹ General':'Graphics ›','navigation','',100,56,888);
@@ -155,8 +155,9 @@ export function panelSettingsControls({headset=false,largeText=false,handVisualM
     if(graphicsOpen)return [navigation,
         choice('GraphicsQuality',graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),'graphics','Graphics quality',202),
         ...(rainEnabled?[choice('RainQuality',RAIN_QUALITIES[rainQuality]?.label || 'Off','rain','Rain quality',290)]:[]),
-        choice('OrbModel',`Orb · ${ORB_MODELS[orbModel]?.label || 'Improved'}`,'models','Object styles',408,56,420),
-        choice('TotemModel',`Totem · ${TOTEM_MODELS[totemModel]?.label || 'Botanical column'}`,'models','Object styles',408,496,448),
+        choice('Insects',insects?'On':'Off','insects','Insects',358),
+        choice('OrbModel',`Orb · ${ORB_MODELS[orbModel]?.label || 'Improved'}`,'models','Object styles',446,56,420),
+        choice('TotemModel',`Totem · ${TOTEM_MODELS[totemModel]?.label || 'Botanical column'}`,'models','Object styles',446,496,448),
         choice('SettingsHelp','Help','help','',642,56,888),close];
     const rates=Array.from(performanceSettings?.supported || []).filter(rate=>[60,72,90,120].includes(rate)).sort((a,b)=>a-b);
     const safeRate=Math.max(0,...rates.filter(rate=>rate<=90)) || rates[0];
@@ -227,6 +228,7 @@ function controlDescription(item={}){
         'Utility:close':'Close the current demo experience.',
         'Utility:continue':'Continue to the next demo step.',
         GraphicsQuality:'Set Orb, Totem and living-frame quality together. Changing preset also sets its default rain; styles stay as chosen.',
+        Insects:'Show or hide bees and butterflies.',
         RainQuality:'Cycle Off, Low, High and HQ rain. HQ adds soft streaks, glints and animated ground ripples.' ,
         TextDown:'Reduce the reading text size.',
         TextUp:'Increase the reading text size.',
@@ -237,7 +239,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onInteract = () => {}, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     let graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality;
     let floorOffset=getSpatialVisualSettings().floorOffset;
     let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel(),totemModel=currentTotemModel();
@@ -308,7 +310,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
     const spatialHeight=()=>phoneAR?900:headset?600:height();
     const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
     function act(action){
-        const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;
+        const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;onInteract(action);
         if(action==='ToggleMedia'){mediaCollapsed=!mediaCollapsed;mediaTouched=true;}
         if(action==='ToggleMediaDetach'){if(mediaDetached)dockMediaPanel();else detachMediaPanel();return;}
         if(action==='RefreshRate' || action.startsWith('RefreshRate:') || action==='ShowFps'){onPerformanceAction(action);return;}
@@ -340,6 +342,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             prepareLivingFrameArtwork(resolveGraphicsQuality(graphicsQuality));
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);onGraphicsQuality(graphicsQuality);
         }
+        if(action==='Insects')setSpatialVisualSettings({insects:!getSpatialVisualSettings().insects});
         if(action==='RainQuality'){
             const values=Object.keys(RAIN_QUALITIES);rainQuality=values[(values.indexOf(rainQuality)+1)%values.length];setSpatialVisualSettings({rainQuality});
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);
@@ -1044,11 +1047,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, rai
             const cards=[card];if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
+        getHeldInputSource(){return spatialMove?.source || null;},
         activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
-        getPerchPose(){
+        getPerchPose(side='right'){
             if(!pose || hidden || detached)return null;const {mainWidth,mainHeight}=spatialDimensions();
             // Feet sit on the extreme top-right edge, outside companion faces.
-            return {...pose,center:{x:pose.center.x+pose.right.x*(mainWidth/2-.006)+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*(mainWidth/2-.006)+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*(mainWidth/2-.006)+pose.up.z*mainHeight/2}};
+            const across=(side==='left'?-1:1)*(mainWidth/2-.006);
+            return {...pose,center:{x:pose.center.x+pose.right.x*across+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*across+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*across+pose.up.z*mainHeight/2}};
         },
         bindSession(session,referenceSpace){removeXrControls();const handle=event=>{
             if(sliderGrab && sliderGrab.source!==event.inputSource)return;

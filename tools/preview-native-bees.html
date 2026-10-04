@@ -4,9 +4,12 @@
 <script type="module">
 import * as THREE from '../app/vendor/three.module.min.js';
 import {mountDemoBeeModel} from '../app/services/demoBeeModel.js';
+import {mountDemoButterflyModel} from '../app/services/demoButterflyModel.js';
+import {demoButterflyPose} from '../app/services/demoButterflyPose.js';
 const canvas=document.querySelector('canvas'),output=document.querySelector('output');
 const gl=canvas.getContext('webgl',{alpha:true,antialias:true});
 const model=mountDemoBeeModel(canvas,{gl});
+const butterflies=[{red:false,model:mountDemoButterflyModel(canvas,{gl}),x:.22},{red:true,model:mountDemoButterflyModel(canvas,{gl,red:true}),x:-.22}];
 const camera=new THREE.PerspectiveCamera(38,1,.1,10);camera.position.set(0,0,1.1);camera.updateMatrixWorld();
 let frames=0,total=0,last=performance.now(),boneUploads=0,imageUploads=0,error=0;
 const sub=gl.texSubImage2D.bind(gl),image=gl.texImage2D.bind(gl);
@@ -18,6 +21,7 @@ function draw(time){
  gl.viewport(0,0,width,height);gl.clearColor(.045,.065,.06,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
  const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};
  if(model.ready)for(let i=0;i<4;i++)model.drawXR(view,{x:(i-1.5)*.19,y:Math.sin(time/1200+i)*.025,z:0},time,{opacity:1,flyby:i===0?.6:0});
+ for(const [i,b] of butterflies.entries())if(b.model.ready){const pose=demoButterflyPose(time,0,{perchMs:b.red?30000:60000,seed:i});pose.size=b.red?.11:.13;pose.wingPhase=i*1.9;b.model.drawXR(view,{x:b.x+pose.x*.2,y:-.16+pose.y*.2,z:pose.z*.2},time,pose);}
  error ||= gl.getError();frames++;total+=performance.now()-start;
  if(time-last>=1000){output.textContent=`${model.ready?'Ready · 4 original animated bees':'Loading'} · ${(frames*1000/(time-last)).toFixed(0)} callbacks/s · CPU ${(total/frames).toFixed(2)} ms · GL error ${error} · image allocations ${imageUploads} · rig updates ${boneUploads}`;last=time;frames=0;total=0;}
  requestAnimationFrame(draw);

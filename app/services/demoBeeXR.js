@@ -12,12 +12,15 @@ export function createBeeXRRenderer(gl,model,bitmap){
             precision highp float;
             attribute vec3 p,n;attribute vec2 uv;attribute vec4 joints,weights;
             uniform sampler2D bones;uniform mat4 projection,view,bind,normalise;
-            uniform vec3 origin;uniform float size,yaw;
+            uniform vec3 origin;uniform float size,yaw,pitch,bank;
             varying vec2 v;varying float light;
             mat4 bone(float id){float y=(id+.5)/${count}.;
                 return mat4(texture2D(bones,vec2(.125,y)),texture2D(bones,vec2(.375,y)),texture2D(bones,vec2(.625,y)),texture2D(bones,vec2(.875,y)));}
             void main(){mat4 skin=bone(joints.x)*weights.x+bone(joints.y)*weights.y+bone(joints.z)*weights.z+bone(joints.w)*weights.w;
                 vec3 local=(normalise*skin*bind*vec4(p,1.)).xyz;
+                float cp=cos(pitch),sp=sin(pitch),cb=cos(bank),sb=sin(bank);
+                local=vec3(local.x,cp*local.y-sp*local.z,sp*local.y+cp*local.z);
+                local=vec3(cb*local.x-sb*local.y,sb*local.x+cb*local.y,local.z);
                 float c=cos(yaw),s=sin(yaw);vec3 turned=vec3(c*local.x+s*local.z,local.y,-s*local.x+c*local.z);
                 vec3 norm=normalize(mat3(normalise*skin*bind)*n);
                 light=.68+.32*abs(dot(norm,normalize(vec3(-.3,.65,.7))));v=uv;
@@ -31,7 +34,7 @@ export function createBeeXRRenderer(gl,model,bitmap){
         });
         const index=gl.createBuffer();buffers.push(index);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,index);
         const indices=new Uint16Array(model.mesh.geometry.index.array);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
-        const uniforms=Object.fromEntries(['projection','view','bind','normalise','origin','size','yaw','bones','colour','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
+        const uniforms=Object.fromEntries(['projection','view','bind','normalise','origin','size','yaw','pitch','bank','bones','colour','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
         const colour=gl.createTexture(),bones=gl.createTexture();textures.push(colour,bones);
         gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bitmap);
@@ -56,9 +59,10 @@ export function createBeeXRRenderer(gl,model,bitmap){
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,index);
             gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
             gl.uniformMatrix4fv(uniforms.bind,false,model.mesh.bindMatrix.elements);gl.uniformMatrix4fv(uniforms.normalise,false,normalise.elements);
-            const camera=view.transform.matrix;
-            gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.size,.20*(1+pose.flyby*.3));
-            gl.uniform1f(uniforms.yaw,Math.atan2(camera[12]-origin.x,camera[14]-origin.z)+.08);
+            const camera=pose.viewer || view.transform.matrix;
+            gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.size,.095*(pose.bodyScale || 1)*(1+pose.flyby*.3));
+            gl.uniform1f(uniforms.yaw,Math.atan2(camera[12]-origin.x,camera[14]-origin.z)+Math.PI+(pose.headTurn || 0));
+            gl.uniform1f(uniforms.pitch,pose.pitch || 0);gl.uniform1f(uniforms.bank,pose.bank || 0);
             gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.uniform1i(uniforms.colour,0);
             gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);gl.uniform1i(uniforms.bones,1);
             gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);gl.depthMask(false);

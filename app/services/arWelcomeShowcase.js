@@ -347,11 +347,7 @@ function accentRgba(value,hue,alpha=.7){
 
 function learningCellPath(context,radius){
  context.beginPath();
- for(let index=0;index<LIM_CELL_SHAPE.sides;index++){
-  const angle=-Math.PI/2+index*Math.PI*2/LIM_CELL_SHAPE.sides;
-  const x=Math.cos(angle)*radius,y=Math.sin(angle)*radius;
-  if(index===0)context.moveTo(x,y);else context.lineTo(x,y);
- }
+ context.arc(0,0,radius,0,Math.PI*2);
  context.closePath();
 }
 
@@ -364,10 +360,7 @@ function childCellAccent(value){
 }
 
 function cellEdgeRadius(angle,radius){
- const step=Math.PI*2/LIM_CELL_SHAPE.sides;
- const firstNormal=-Math.PI/2+step/2;
- const delta=((angle-firstNormal+step/2)%step+step)%step-step/2;
- return radius*Math.cos(step/2)/Math.cos(delta);
+ return radius;
 }
 function drawLearningCell(context,radius,fill,stroke,lineWidth=2){
  learningCellPath(context,radius);

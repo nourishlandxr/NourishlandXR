@@ -33,11 +33,17 @@ export function demoBeePose(elapsed,startedAt,index=0,{attention='screen',encoun
     const orbitX=(.5+Math.cos(phase)*.30)*(1-gather)+(.25+Math.cos(phase*2)*.055)*gather;
     const orbitY=(.5+Math.sin(phase)*.30)*(1-gather)+(.72+Math.sin(phase*2)*.055)*gather;
     const orbitDepth=Math.sin(phase-.9);
+    const wanderingX=Math.sin(phase*.63+index)*.023*(1-gather);
+    const wanderingY=Math.sin(phase*1.37+index)*.025*(1-gather);
     return {
-        x:orbitX*(1-flyby)+(.82-flybyProgress*.64)*flyby,
-        y:orbitY*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,
+        x:(orbitX+wanderingX)*(1-flyby)+(.82-flybyProgress*.64)*flyby,
+        y:(orbitY+wanderingY)*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,
         depth:orbitDepth*(1-flyby)+(.5+.5*Math.sin(Math.PI*flybyProgress))*flyby,
         heading:(phase+Math.PI/2)*(1-flyby)+.12*flyby,
+        bodyScale:.82+index*.045+Math.sin(phase*.41+index)*.045,
+        headTurn:Math.sin(flybyProgress*Math.PI*4)*.24*flyby,
+        bank:Math.sin(phase*.83)*.10*(1-flyby)+Math.sin(flybyProgress*Math.PI*3)*.10*flyby,
+        pitch:Math.sin(phase*.61)*.08,
         wing:Math.sin(time*BEE_WING_SPEED+index),
         opacity:clamp01(age/1700)*.92,
         flyby,

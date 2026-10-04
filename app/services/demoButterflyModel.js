@@ -6,6 +6,7 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 const URL=new globalThis.URL('../assets/animated_butterfly.glb',import.meta.url);
 export const BUTTERFLY_RENDER_BUDGETS=Object.freeze({low:{pixels:192,interval:50},medium:{pixels:256,interval:42},high:{pixels:384,interval:33}});
 let prepared=null;
+const foldedPoseCache=new WeakMap();
 export function prepareDemoButterflyModel(){
     if(!prepared)prepared=fetch(URL,{signal:AbortSignal.timeout(30000)}).then(response=>{if(!response.ok)throw Error('Butterfly could not be loaded');return response.arrayBuffer();}).then(parseGlb).then(async gltf=>{
         const image=gltf.json.images[0],view=gltf.json.bufferViews[image.bufferView];
@@ -14,9 +15,10 @@ export function prepareDemoButterflyModel(){
     }).catch(error=>{prepared=null;throw error;});
     return prepared;
 }
-function buildButterfly({gltf,bitmap}){
+function buildButterfly({gltf,bitmap},red=false){
     const texture=new THREE.Texture(bitmap);texture.flipY=false;texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;
     const materials=gltf.json.materials.map(data=>{const pbr=data.pbrMetallicRoughness || {},colour=pbr.baseColorFactor || [1,1,1,1];return new THREE.MeshStandardMaterial({map:pbr.baseColorTexture?texture:null,color:new THREE.Color().fromArray(colour),roughness:.72,metalness:0,side:THREE.DoubleSide,transparent:true,depthWrite:true});});
+    if(red)for(const material of materials){material.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\nif(diffuseColor.b>diffuseColor.r*1.15 && diffuseColor.b>diffuseColor.g*.82)diffuseColor.rgb=vec3(diffuseColor.b*1.12,diffuseColor.r*.55,diffuseColor.g*.22);');};material.customProgramCacheKey=()=> 'red-butterfly';}
     // The supplied wing material has full white emissive. Use restrained,
     // light-reactive pigment so it does not become a flat glowing cutout.
     const joints=new Set(gltf.json.skins.flatMap(skin=>skin.joints));
@@ -40,28 +42,31 @@ function buildButterfly({gltf,bitmap}){
         return path==='rotation'?new THREE.QuaternionKeyframeTrack(name,times,values):new THREE.VectorKeyframeTrack(name,times,values);
     })));
     const mixer=new THREE.AnimationMixer(root),idle=mixer.clipAction(clips.find(clip=>clip.name==='Idle')),flying=mixer.clipAction(clips.find(clip=>clip.name==='Flying'));
-    idle.play();flying.play();flying.setEffectiveWeight(0);idle.setEffectiveTimeScale(.55);flying.setEffectiveTimeScale(1.1);
+    idle.play();flying.play();flying.setEffectiveWeight(0);idle.setEffectiveTimeScale(.85);flying.setEffectiveTimeScale(1.1);
     const bounds=new THREE.Box3(),center=new THREE.Vector3(),size=new THREE.Vector3();
     // Find a genuinely folded Idle pose from the asset rather than guessing
     // bone axes. Only the four wing hinges are constrained while perched.
     const hinges=[52,55,58,61],closed=[];let narrowest=Infinity;
+    const cached=foldedPoseCache.get(gltf);
+    if(cached){closed.push(...cached.closed);center.copy(cached.center);size.copy(cached.size);}else{
     for(let i=0;i<32;i++){
-        mixer.setTime(i/32*idle.getClip().duration/.55);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getSize(size);
+        mixer.setTime(i/32*idle.getClip().duration/.85);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getSize(size);
         if(size.x<narrowest){narrowest=size.x;closed.splice(0,closed.length,...hinges.map(index=>nodes[index].quaternion.clone()));}
     }
     mixer.setTime(0);idle.setEffectiveWeight(0);flying.setEffectiveWeight(1);mixer.update(.2);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getCenter(center);bounds.getSize(size);
+    foldedPoseCache.set(gltf,{closed:closed.map(q=>q.clone()),center:center.clone(),size:size.clone()});}
     const centered=new THREE.Group();centered.add(root);root.position.sub(center);const wrapper=new THREE.Group();wrapper.add(centered);wrapper.scale.setScalar(1/Math.max(size.x,size.y,size.z));
     idle.setEffectiveWeight(1);flying.setEffectiveWeight(0);mixer.setTime(0);
     return {wrapper,mixer,idle,flying,nodes,hinges,closed,texture,materials,geometries,meshes,bitmap};
 }
 // Bake the small animated mesh at the existing quality cadence. The same
 // vertices are reused by both eyes; no offscreen sprite or extra XR context.
-function butterflyXRRenderer(gl,model){
+function butterflyXRRenderer(gl,model,red=false){
     const compile=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
     const vertex=compile(gl.VERTEX_SHADER,'attribute vec3 p,n;attribute vec2 uv;uniform mat4 projection,view;uniform vec3 origin;uniform float scale,foot;varying vec2 v;varying float light;void main(){vec3 local=p;local.y-=foot;v=uv;light=.58+.42*abs(dot(normalize(n),normalize(vec3(-.3,.65,.7))));gl_Position=projection*view*vec4(origin+local*scale,1.);}');
-    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D wing;uniform vec3 colour;uniform float mapped,opacity;varying vec2 v;varying float light;void main(){vec4 c=mix(vec4(colour,1.),texture2D(wing,v),mapped);if(c.a<.02)discard;gl_FragColor=vec4(c.rgb*light,c.a*opacity);}');
+    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D wing;uniform vec3 colour;uniform float mapped,opacity,red;varying vec2 v;varying float light;void main(){vec4 c=mix(vec4(colour,1.),texture2D(wing,v),mapped);if(red>.5 && mapped>.5 && c.b>c.r*1.15 && c.b>c.g*.82)c.rgb=vec3(c.b*1.12,c.r*.55,c.g*.22);if(c.a<.02)discard;gl_FragColor=vec4(c.rgb*light,c.a*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
-    const buffer=gl.createBuffer(),texture=gl.createTexture(),attributes=['p','n','uv'].map(name=>gl.getAttribLocation(program,name)),uniforms=Object.fromEntries(['projection','view','origin','scale','foot','wing','colour','mapped','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const buffer=gl.createBuffer(),texture=gl.createTexture(),attributes=['p','n','uv'].map(name=>gl.getAttribLocation(program,name)),uniforms=Object.fromEntries(['projection','view','origin','scale','foot','wing','colour','mapped','opacity','red'].map(name=>[name,gl.getUniformLocation(program,name)]));
     gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,model.bitmap);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     const parts=model.meshes.map(mesh=>({mesh,positions:new Float32Array(mesh.geometry.attributes.position.count*3),vertices:new Float32Array(mesh.geometry.index.count*8),start:0}));
     const packed=new Float32Array(parts.reduce((sum,part)=>sum+part.vertices.length,0));let lastPaint=-Infinity,foot=0;
@@ -77,22 +82,22 @@ function butterflyXRRenderer(gl,model){
         }
         foot*=1-pose.flight;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.DYNAMIC_DRAW);lastPaint=elapsed;
     }
-    return {draw(view,origin,elapsed,pose){update(elapsed,pose);gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);attributes.forEach((location,i)=>{gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,i===2?2:3,gl.FLOAT,false,32,[0,12,24][i]);});gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.scale,.14);gl.uniform1f(uniforms.foot,foot);gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.wing,0);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);if(pose.close>.02)gl.disable(gl.DEPTH_TEST);else gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
+    return {draw(view,origin,elapsed,pose){update(elapsed,pose);gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);attributes.forEach((location,i)=>{gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,i===2?2:3,gl.FLOAT,false,32,[0,12,24][i]);});gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.scale,pose.size || .13);gl.uniform1f(uniforms.red,red?1:0);gl.uniform1f(uniforms.foot,foot);gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.wing,0);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);if(pose.close>.02)gl.disable(gl.DEPTH_TEST);else gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
         for(const part of parts){gl.uniform1f(uniforms.mapped,part.mesh.material.map?1:0);gl.uniform3f(uniforms.colour,part.mesh.material.color.r,part.mesh.material.color.g,part.mesh.material.color.b);gl.drawArrays(gl.TRIANGLES,part.start,part.vertices.length/8);}gl.depthMask(true);gl.enable(gl.DEPTH_TEST);},destroy(){gl.deleteBuffer(buffer);gl.deleteTexture(texture);gl.deleteProgram(program);}};
 }
-export function mountDemoButterflyModel(canvas,{gl=null}={}){
+export function mountDemoButterflyModel(canvas,{gl=null,red=false}={}){
     if(!canvas)return null;
     const renderer=gl?null:new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:true,powerPreference:'low-power'});renderer?.setPixelRatio(1);if(renderer)renderer.outputColorSpace=THREE.SRGBColorSpace;
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,15);camera.position.set(0,.08,2.7);camera.lookAt(0,0,0);
     scene.add(new THREE.HemisphereLight(0xfff3dc,0x405a56,2));const sun=new THREE.DirectionalLight(0xffedcc,2.1);sun.position.set(-2,3,4);scene.add(sun);
     let model=null,xr=null,disposed=false,lastElapsed=NaN,lastPaint=-Infinity;
-    prepareDemoButterflyModel().then(value=>{if(disposed)return;model=buildButterfly(value);scene.add(model.wrapper);if(gl)xr=butterflyXRRenderer(gl,model);canvas.dataset.modelReady='true';}).catch(error=>{if(!disposed){canvas.dataset.modelReady='error';console.warn('Butterfly model:',error);}});
+    prepareDemoButterflyModel().then(value=>{if(disposed)return;model=buildButterfly(value,red);scene.add(model.wrapper);if(gl)xr=butterflyXRRenderer(gl,model,red);canvas.dataset.modelReady='true';}).catch(error=>{if(!disposed){canvas.dataset.modelReady='error';console.warn('Butterfly model:',error);}});
     function updatePose(elapsed,pose){
         if(elapsed===lastElapsed)return;const delta=Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0;lastElapsed=elapsed;
         model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);model.mixer.update(delta);
-        const fold=(1-pose.flight)*(.92+Math.sin(elapsed/1800)*.025);
+        const fold=(1-pose.flight)*(.80+Math.sin(elapsed/350+(pose.wingPhase || 0))*.12);
         for(const [i,index] of model.hinges.entries())model.nodes[index].quaternion.slerp(model.closed[i],fold);
-        model.wrapper.rotation.set(pose.flight*.12,pose.state==='landed'?.85:pose.yaw,pose.bank);model.wrapper.updateMatrixWorld(true);
+        model.wrapper.rotation.set((pose.pitch || 0)*pose.flight,pose.state==='landed'?.85:pose.yaw,pose.bank);model.wrapper.updateMatrixWorld(true);
     }
     return {get ready(){return Boolean(model);},get interval(){return BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval;},
         renderSprite(elapsed,pose){

@@ -15,8 +15,8 @@ test('bees arrive after their introduction and orbit around the welcome screen',
     for(const elapsed of [2000,6000,10000,31000,39000]){
         const bee=demoBeePose(elapsed,2000,0);
         assert.ok(bee.x>.15 && bee.x<.85);
-        assert.ok(bee.y>.19 && bee.y<.81);
-        assert.ok(Math.abs(Math.hypot(bee.x-.5,bee.y-.5)-.3)<1e-9);
+        assert.ok(bee.y>.17 && bee.y<.83);
+        assert.ok(Math.abs(Math.hypot(bee.x-.5,bee.y-.5)-.3)<.04);
         assert.ok(bee.opacity>=0 && bee.opacity<=.92);
         depths.push(bee.depth);
     }
@@ -65,7 +65,7 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     assert.match(source,/mountDemoBeeModel\(modelCanvas,\{gl:simulated\?null:gl\}\)/);
     assert.match(source,/paintDemoAmbientLife\(now\)/);
     assert.match(source,/drawSpatialAmbientLife\(view\)/);
-    assert.match(spatialDraw,/ambientBeeModel\?\.drawXR\?\.\(view,position,arWelcomeClock\.elapsed,bee\)/);
+    assert.match(spatialDraw,/ambientBeeModel\?\.drawXR\?\.\(view,position,arWelcomeClock\.elapsed,\{\.\.\.bee,viewer:viewerMatrix\}\)/);
     assert.doesNotMatch(spatialDraw,/tex(?:Sub)?Image2D|renderSprite/);
     assert.match(spatialDraw,/ambientWorldAnchor\.x[\s\S]*ambientWorldAnchor\.y[\s\S]*ambientWorldAnchor\.z/);
     assert.match(spatialDraw,/bee\.flyby\*\.3/);

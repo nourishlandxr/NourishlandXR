@@ -118,6 +118,7 @@ export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
     }).catch(error=>{if(!disposed){console.warn('Bee model fallback:',error);canvas.dataset.modelReady='error';}});
     return {
         get ready(){return ready;},
+        hide(){canvas.style.visibility='hidden';},
         drawXR(view,origin,elapsed,pose){if(!xr || !ready || currentGraphicsQuality()==='low')return false;xr.draw(view,origin,elapsed,pose);return true;},
         renderSprite(elapsed,startedAt){
             if(!renderer || !sprite || !ready || !Number.isFinite(startedAt))return null;
@@ -149,8 +150,8 @@ export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
             const distance=6.5-pose.depth*1.3-pose.flyby*.75;
             const visibleHeight=2*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*distance;
             bee.wrapper.position.set((pose.x-.5)*visibleHeight*camera.aspect,(.5-pose.y)*visibleHeight,6-distance);
-            bee.wrapper.scale.setScalar(bee.baseScale*(.52+pose.depth*.16)*(1+pose.flyby*.28)*Math.min(1.35,Math.max(.7,width/1000)));
-            bee.wrapper.rotation.y=pose.heading;bee.wrapper.rotation.z=Math.sin(elapsed*.0009)*.13;
+            bee.wrapper.scale.setScalar(bee.baseScale*(.28+pose.depth*.075)*(pose.bodyScale || 1)*(1+pose.flyby*.28)*Math.min(1.35,Math.max(.7,width/1000)));
+            bee.wrapper.rotation.y=pose.flyby>.05?Math.PI+pose.headTurn:pose.heading;bee.wrapper.rotation.z=pose.bank;
             bee.mixer.update(delta);}
             lastElapsed=elapsed;canvas.classList.toggle('is-behind',nearestDepth<0);canvas.classList.toggle('is-flyby',anyFlyby);
             renderer.render(scene,camera);
