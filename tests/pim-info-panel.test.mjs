@@ -259,7 +259,7 @@ test('media movement uses the same hold gesture and settings expose shared mesh 
     assert.match(panel,/slider\('InfoOpacity','info-opacity','Main \/ Control glass'/);
     assert.match(panel,/drawPanelSettingSlider/);
     assert.match(panel,/onCellOpacity\(value\)/);
-    assert.match(panel,/panel:'media',cardId:'media',startedAt:event\.inputSource\?\.hand\?performance\.now\(\)-PANEL_GRAB_HOLD_MS:performance\.now\(\)/);
+    assert.match(panel,/panel:'media',cardId:'media',startedAt:performance\.now\(\)-PANEL_GRAB_HOLD_MS/);
 });
 
 test('cell selection updates reading content and remounts only when companion media changes',()=>{

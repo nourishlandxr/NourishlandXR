@@ -37,12 +37,12 @@ export const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
 ]);
 
 export const DEMO_JOURNEY_STAGES = Object.freeze([
-    Object.freeze({id:'why',label:'Why'}),
-    Object.freeze({id:'map',label:'Map'}),
-    Object.freeze({id:'know',label:'Know'}),
-    Object.freeze({id:'apply',label:'Apply'}),
-    Object.freeze({id:'connect',label:'Connect'}),
-    Object.freeze({id:'impact',label:'Impact'})
+    Object.freeze({id:'why',label:'Arrive'}),
+    Object.freeze({id:'map',label:'Plant'}),
+    Object.freeze({id:'know',label:'Discover'}),
+    Object.freeze({id:'apply',label:'Observe'}),
+    Object.freeze({id:'connect',label:'Areas'}),
+    Object.freeze({id:'impact',label:'Finish'})
 ]);
 
 export const DEMO_ORB_MATERIALS = Object.freeze({

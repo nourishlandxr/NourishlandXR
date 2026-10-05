@@ -2182,16 +2182,14 @@ function tickControllerMarkerPress(time){
     const press=controllerPressState;if(!press)return;
     if(controllerMarkerAtAim()?.marker.id!==press.record.marker.id){clearControllerMarkerPress();return;}
     if(time-press.startedAt<CREATOR_AR_HOLD_DELAY_MS)return;
-    clearControllerMarkerPress();activateControllerTarget(true);
+    // Trigger remains selection-only; the grip event starts movement immediately.
+    return;
 }
 
 function finishControllerMarkerPress() {
     const press = controllerPressState;
     clearControllerMarkerPress();
-    if (dragState?.pointerId === 'xr-controller') {
-        void finishMarkerDrag();
-        return true;
-    }
+    if (dragState?.pointerId === 'xr-controller') return true;
     if (!press?.record) return false;
     const target = controllerMarkerAtAim();
     if(target?.marker?.id!==press.record.marker.id)return true;
@@ -2214,7 +2212,7 @@ function activateControllerTarget(directHold = interactionMode === 'grab') {
     const record = controllerMarkerAtAim();
     const element = record && overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(record.marker.id)}"]`);
     if (!record || !element) {
-        setPlacementStatus('Aim at a placed element, then press and hold the controller trigger.');
+        setPlacementStatus('Aim at a placed element, then hold the controller grip to move it.');
         return false;
     }
 
@@ -6353,6 +6351,14 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             getTarget:()=>{const target=spatialPimTargetAtAim({updateHover:false});return target?.record?.knowledgeExplorer?.mode==='explore'?null:target;}, activate:activateSpatialPimTarget,
             progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}
         });
+        launchedSession.addEventListener('squeezestart',event=>{
+            if(event.inputSource.hand || !isPrimaryControllerSource(event.inputSource) || exitPromise || arExitRequested || creatorKnowledgeRoot || readyPlacementType || dragState)return;
+            if(infoPanel?.hit(latestControllerRay) || totemCardsRenderer?.hit(latestControllerRay) || controllerSpatialDashboardAtAim())return;
+            clearControllerMarkerPress();activateControllerTarget(true);
+        });
+        launchedSession.addEventListener('squeezeend',event=>{
+            if(!event.inputSource.hand && isPrimaryControllerSource(event.inputSource) && dragState?.pointerId==='xr-controller')void finishMarkerDrag();
+        });
         launchedSession.addEventListener('selectstart', event => {
             if(event.inputSource.hand) return;
             if (exitPromise || arExitRequested) return;
@@ -6364,20 +6370,14 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (controllerSpecialPaletteActionAtAim()) return;
             if (controllerBeltActionAtAim()) return;
             const target = controllerMarkerAtAim();
-            // A short press selects a placed object; the delayed arm keeps
-            // the same trigger useful for press-and-hold movement in neutral
-            // Quest mode without making every tap start a drag.
+            // Trigger selects; grip owns movement until grip release.
             if (target){consumedMarkerSource=event.inputSource;armControllerMarkerPress(target);}
         });
         launchedSession.addEventListener('selectend', event => {
             if(event.inputSource.hand) return;
             if (exitPromise || arExitRequested) return;
             if (session !== launchedSession || !isPrimaryControllerSource(event.inputSource)) return;
-            if (dragState?.pointerId === 'xr-controller') {
-                clearControllerMarkerPress();
-                void finishMarkerDrag();
-                return;
-            }
+            if (dragState?.pointerId === 'xr-controller') {clearControllerMarkerPress();return;}
             if (controllerPressState) finishControllerMarkerPress();
         });
         launchedSession.addEventListener('select', event => {

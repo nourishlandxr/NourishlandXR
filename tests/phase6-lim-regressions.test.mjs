@@ -122,5 +122,8 @@ test('Quest main selection pipeline activates the nearest PIMO or LIMO surface',
     assert.ok(immersive.indexOf("cellTarget?.kind==='pim-cell'") < immersive.indexOf("cellTarget?.kind==='lim-cell'"));
     const selectStartAt = demoSource.indexOf("session.addEventListener('selectstart', event =>", demoSource.indexOf('pimHold=bindSpatialPimHold'));
     const selectStart = demoSource.slice(selectStartAt, demoSource.indexOf("session.addEventListener('selectend', event =>", selectStartAt));
-    assert.match(selectStart, /captureDemoInputEventRay\(event\);[\s\S]*resolveDemoCellTarget\(\)[\s\S]*beginControllerDemoHold\(\)/);
+    assert.match(selectStart, /captureDemoInputEventRay\(event\);[\s\S]*resolveDemoCellTarget\(\)/);
+    assert.doesNotMatch(selectStart, /beginControllerDemoHold\(\)/);
+    const gripStart=demoSource.slice(demoSource.indexOf("session.addEventListener('squeezestart',event=>"),demoSource.indexOf("session.addEventListener('squeezeend',event=>"));
+    assert.match(gripStart,/captureDemoInputEventRay\(event\);[\s\S]*beginControllerDemoHold\(\)/);
 });

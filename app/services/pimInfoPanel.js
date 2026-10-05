@@ -249,7 +249,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
     let graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality;
     let floorOffset=getSpatialVisualSettings().floorOffset;
@@ -1015,6 +1015,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const selected=knowledgeDocument.nodes.find(n=>n.path===(knowledgeRecord.demoSelectedNodeId || knowledgeRecord.pimSelectedNodeId));
             if(selected){const parent=knowledgeDocument.nodes.find(n=>n.id===selected.parentId);add(parent?'KnowledgeRead:'+parent.id:'KnowledgeReadCore',parent?'Back to '+parent.title:'Back to plant',22,202,464);}
             add('KnowledgeConnections','Connections '+(state.connections?'On':'Off'),506,202,464,{selected:state.connections});
+            let branch=selected;
+            while(branch && knowledgeDocument.nodes.filter(n=>n.parentId===branch.id).length<=3)branch=knowledgeDocument.nodes.find(n=>n.id===branch.parentId);
+            if(branch){const count=knowledgeDocument.nodes.filter(n=>n.parentId===branch.id).length,pages=Math.ceil(count/3),page=Math.min(pages-1,state.pages['children:'+branch.path] || 0);
+                add('KnowledgeChildPage:'+page+':'+branch.path,'Previous topics',22,272,464,{disabled:page===0});
+                add('KnowledgeChildPage:'+(page+2)+':'+branch.path,'More topics '+(page+1)+' / '+pages,506,272,464,{disabled:page===pages-1});}
+
         }
         return controls;
     }
@@ -1203,59 +1209,65 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             return {...pose,center:{x:pose.center.x+pose.right.x*across+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*across+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*across+pose.up.z*mainHeight/2}};
         },
         bindSession(session,referenceSpace){removeXrControls();handReferenceSpace=referenceSpace;const handle=event=>{
-            if(event.inputSource?.hand && api.isHandInteracting(event.inputSource) && event.type==='select'){event.stopImmediatePropagation();return;}
+            const grip=event.type.startsWith('squeeze'),type=grip?(event.type==='squeezestart'?'selectstart':'selectend'):event.type;
+            if(grip && event.inputSource?.hand)return;
+            if(inputOccupied(event.inputSource))return;
+            if(grip && onGripEvent(event)){event.stopImmediatePropagation();return;}
+            if(!event.inputSource?.hand && !grip && (spatialMove?.source===event.inputSource || spatialGrabPending?.source===event.inputSource))return;
+            if(event.inputSource?.hand && api.isHandInteracting(event.inputSource) && type==='select'){event.stopImmediatePropagation();return;}
             if(sliderGrab && sliderGrab.source!==event.inputSource)return;
-            if(event.type==='selectstart')finishingSliderSource=null;
-            if(event.type==='select' && finishingSliderSource===event.inputSource){finishingSliderSource=null;event.stopImmediatePropagation();return;}
-            if(sliderGrab?.source===event.inputSource && event.type==='selectend'){sliderGrab=null;panelGestureSource=null;finishingSliderSource=event.inputSource;event.stopImmediatePropagation();return;}
-            if(event.type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
-            if(event.type==='selectend' && spatialMove?.source===event.inputSource){
+            if(type==='selectstart')finishingSliderSource=null;
+            if(type==='select' && finishingSliderSource===event.inputSource){finishingSliderSource=null;event.stopImmediatePropagation();return;}
+            if(sliderGrab?.source===event.inputSource && type==='selectend'){sliderGrab=null;panelGestureSource=null;finishingSliderSource=event.inputSource;event.stopImmediatePropagation();return;}
+            if(type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
+            if(type==='selectend' && spatialMove?.source===event.inputSource){
                 const moving=spatialMove,candidate=moving.panel==='media'?spatialDockCandidate(mediaPose):null;
                 finishingMoveSource=event.inputSource;spatialMove=null;
                 if(moving.panel==='media' && candidate)dockSpatialMedia(candidate.side);
                 event.stopImmediatePropagation();return;
             }
-            if(event.type==='selectend' && spatialGrabPending?.source===event.inputSource){
+            if(type==='selectend' && spatialGrabPending?.source===event.inputSource){
                 if(performance.now()-spatialGrabPending.startedAt>=PANEL_GRAB_HOLD_MS)finishingMoveSource=event.inputSource;
                 spatialGrabPending=null;event.stopImmediatePropagation();return;
             }
-            if(event.type==='select' && (spatialMove?.source===event.inputSource || finishingMoveSource===event.inputSource)){finishingMoveSource=null;event.stopImmediatePropagation();return;}
-            if(event.type==='selectend' && panelGestureSource!==event.inputSource)return;
-            if(event.type==='select' && panelGestureSource && panelGestureSource!==event.inputSource)return;
+            if(type==='select' && (spatialMove?.source===event.inputSource || finishingMoveSource===event.inputSource)){finishingMoveSource=null;event.stopImmediatePropagation();return;}
+            if(type==='selectend' && panelGestureSource!==event.inputSource)return;
+            if(type==='select' && panelGestureSource && panelGestureSource!==event.inputSource)return;
             const handState=event.inputSource?.hand ? handTrackingState(event.frame,event.inputSource,referenceSpace) : null;
             const handRay=handState?.pointer;
             const targetRaySpace=event.inputSource?.targetRaySpace;
             const transform=targetRaySpace ? event.frame?.getPose(targetRaySpace,referenceSpace)?.transform.matrix : null;
             if(!handRay && !transform)return;
             const ray=handRay || {origin:{x:transform[12],y:transform[13],z:transform[14]},direction:{x:-transform[8],y:-transform[9],z:-transform[10]}};
-            const target=hit(ray);if(!target){if(event.type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
+            const target=hit(ray);if(!target){if(type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
             event.stopImmediatePropagation();
-            const button=targetButtonAtRay(target);
-            if(event.inputSource?.hand && event.type==='selectstart' && button && button.kind!=='slider'){
+            const button=grip?null:targetButtonAtRay(target);
+            if(!event.inputSource?.hand && !grip && !button)return;
+            if(event.inputSource?.hand && type==='selectstart' && button && button.kind!=='slider'){
                 panelGestureSource=event.inputSource;api.activateHand(ray,event.inputSource,handState);return;
             }
             // The shared pinch edge already selects a hand button once.
-            if(event.inputSource?.hand && event.type==='select'){spatialGrabPending=null;panelGestureSource=null;return;}
-            if(event.type==='selectstart' && target.card?.settings)panelGestureSource=event.inputSource;
-            if(event.type==='selectstart' && target.card?.settings && !button){panelGestureSource=event.inputSource;settingsPose ||= spatialMediaDockPose('left');spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'settings',cardId:'settings',startedAt:event.inputSource?.hand?performance.now()-PANEL_GRAB_HOLD_MS:performance.now()};return;}
-            if(event.type==='selectstart' && button?.kind==='slider'){
+            if(event.inputSource?.hand && type==='select'){spatialGrabPending=null;panelGestureSource=null;return;}
+            if(type==='selectstart' && target.card?.settings)panelGestureSource=event.inputSource;
+            if(type==='selectstart' && target.card?.settings && !button){panelGestureSource=event.inputSource;settingsPose ||= spatialMediaDockPose('left');spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'settings',cardId:'settings',startedAt:performance.now()-PANEL_GRAB_HOLD_MS};return;}
+            if(type==='selectstart' && button?.kind==='slider'){
                 sliderGrab={source:event.inputSource,referenceSpace,button,surface:{...target}};panelGestureSource=event.inputSource;slideAtTarget(button,target);return;
             }
-            if(event.type==='selectstart' && target.card?.id==='explorer' && !button){panelGestureSource=event.inputSource;explorerPose ||= explorerSpatialPose();spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'explorer',cardId:'explorer',startedAt:event.inputSource?.hand?performance.now()-PANEL_GRAB_HOLD_MS:performance.now()};return;}
-            if(event.type==='selectstart' && target.card?.id==='media'){
+            if(type==='selectstart' && target.card?.id==='explorer' && !button){panelGestureSource=event.inputSource;explorerPose ||= explorerSpatialPose();spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'explorer',cardId:'explorer',startedAt:performance.now()-PANEL_GRAB_HOLD_MS};return;}
+            if(type==='selectstart' && target.card?.id==='media'){
                 panelGestureSource=event.inputSource;
-                spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'media',cardId:'media',startedAt:event.inputSource?.hand?performance.now()-PANEL_GRAB_HOLD_MS:performance.now(),handDirection:event.inputSource?.hand?{...ray.direction}:null};
+                spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'media',cardId:'media',startedAt:performance.now()-PANEL_GRAB_HOLD_MS,handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
-            if(event.type==='selectstart' && target.card?.id==='control' && !hidden && !button){
+            if(type==='selectstart' && target.card?.id==='control' && !hidden && !button){
                 panelGestureSource=event.inputSource;
-                spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'main',cardId:'control',startedAt:event.inputSource?.hand?performance.now()-PANEL_GRAB_HOLD_MS:performance.now(),handDirection:event.inputSource?.hand?{...ray.direction}:null};
+                spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'main',cardId:'control',startedAt:performance.now()-PANEL_GRAB_HOLD_MS,handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
-            if(event.type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
-            if(event.type==='selectend')panelGestureSource=null;
-        };const visibility=()=>{if(session.visibilityState!=='visible'){sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
-            removeXrControls=()=>{handReferenceSpace=null;handContacts.clear();handPokes.clear();sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
+            if(type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
+            if(type==='selectend')panelGestureSource=null;
+        };const visibility=()=>{if(session.visibilityState!=='visible'){sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
+            removeXrControls=()=>{handReferenceSpace=null;handContacts.clear();handPokes.clear();sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
         destroy(){removeCapabilities();mediaLoadToken++;clearTimeout(mediaTransitionTimer);clearInterval(panelHintTimer);mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;panelCanvases.clear();mediaFloating?.remove();element.remove();settingsElement.remove();explorerElement.remove();if(simpleDesktop)root?.classList.remove('is-simple-desktop-ar');}
     };const removeCapabilities=subscribePimoCapabilities(()=>{if(knowledgeRecord)knowledgeExplorer(knowledgeRecord);render(true);});render();return api;
 }

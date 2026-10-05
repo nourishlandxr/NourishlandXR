@@ -38,8 +38,8 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
     function unbind(){abort?.abort();if(active)release(active.source,false);inputs.clear();rays.clear();session=null;}
     return {hit,get heldSource(){return active?.source || null;},get state(){return physics?.state;},
         bindSession(value,referenceSpace){unbind();session=value;space=referenceSpace;abort=new AbortController();const listen=(type,fn)=>session.addEventListener(type,fn,{capture:true,signal:abort.signal});
-            for(const type of ['selectstart','squeezestart'])listen(type,event=>{if(begin(event.inputSource)){event.stopImmediatePropagation();event.preventDefault();}});
-            for(const type of ['selectend','squeezeend'])listen(type,event=>{if(release(event.inputSource)){event.stopImmediatePropagation();event.preventDefault();}});
+            for(const type of ['selectstart','squeezestart'])listen(type,event=>{if(type==='selectstart' && !event.inputSource.hand)return;if(begin(event.inputSource)){event.stopImmediatePropagation();event.preventDefault();}});
+            for(const type of ['selectend','squeezeend'])listen(type,event=>{if(type==='selectend' && !event.inputSource.hand)return;if(release(event.inputSource)){event.stopImmediatePropagation();event.preventDefault();}});
             listen('select',event=>{if(active?.source===event.inputSource || performance.now()<(suppressed.get(event.inputSource)||0)){event.stopImmediatePropagation();event.preventDefault();}});
             listen('inputsourceschange',event=>{for(const source of event.removed){release(source,false);inputs.delete(source);rays.delete(source);}});
             listen('visibilitychange',()=>{if(session.visibilityState!=='visible' && active)release(active.source,false);});listen('end',unbind);

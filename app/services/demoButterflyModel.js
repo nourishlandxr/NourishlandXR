@@ -48,18 +48,23 @@ function buildButterfly({gltf,bitmap},red=false){
     const bounds=new THREE.Box3(),center=new THREE.Vector3(),size=new THREE.Vector3();
     // Find a genuinely folded Idle pose from the asset rather than guessing
     // bone axes. Only the four wing hinges are constrained while perched.
-    const hinges=[52,55,58,61],closed=[];let narrowest=Infinity;
+    const hinges=[52,55,58,61],closed=[],open=[];let narrowest=Infinity,widest=-Infinity;
     const cached=foldedPoseCache.get(gltf);
-    if(cached){closed.push(...cached.closed);center.copy(cached.center);size.copy(cached.size);}else{
+    if(cached){closed.push(...cached.closed);open.push(...cached.open);center.copy(cached.center);size.copy(cached.size);}else{
     for(let i=0;i<32;i++){
         mixer.setTime(i/32*idle.getClip().duration/1.6);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getSize(size);
         if(size.x<narrowest){narrowest=size.x;closed.splice(0,closed.length,...hinges.map(index=>nodes[index].quaternion.clone()));}
     }
+    idle.setEffectiveWeight(0);flying.setEffectiveWeight(1);
+    for(let i=0;i<32;i++){
+        mixer.setTime(i/32*flying.getClip().duration/BUTTERFLY_FLIGHT_SPEED);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getSize(size);
+        if(size.x>widest){widest=size.x;open.splice(0,open.length,...hinges.map(index=>nodes[index].quaternion.clone()));}
+    }
     mixer.setTime(0);idle.setEffectiveWeight(0);flying.setEffectiveWeight(1);mixer.update(.2);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getCenter(center);bounds.getSize(size);
-    foldedPoseCache.set(gltf,{closed:closed.map(q=>q.clone()),center:center.clone(),size:size.clone()});}
+    foldedPoseCache.set(gltf,{closed:closed.map(q=>q.clone()),open:open.map(q=>q.clone()),center:center.clone(),size:size.clone()});}
     const centered=new THREE.Group();centered.add(root);root.position.sub(center);const wrapper=new THREE.Group();wrapper.add(centered);wrapper.scale.setScalar(1/Math.max(size.x,size.y,size.z));
     idle.setEffectiveWeight(1);flying.setEffectiveWeight(0);mixer.setTime(0);
-    return {wrapper,mixer,idle,flying,nodes,hinges,closed,texture,materials,geometries,meshes,bitmap};
+    return {wrapper,mixer,idle,flying,nodes,hinges,closed,open,texture,materials,geometries,meshes,bitmap};
 }
 // Bake the small animated mesh at the existing quality cadence. The same
 // vertices are reused by both eyes; no offscreen sprite or extra XR context.
@@ -100,8 +105,7 @@ export function mountDemoButterflyModel(canvas,{gl=null,red=false}={}){
         // Keep the feet still while the wings breathe and occasionally open.
         // The flight clip runs faster independently of this resting movement.
         const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-        const fold=(1-pose.flight)*butterflyRestingFold(elapsed,pose.wingPhase || 0,reduced);
-        for(const [i,index] of model.hinges.entries())model.nodes[index].quaternion.slerp(model.closed[i],fold);
+        for(const [i,index] of model.hinges.entries()){const flying=model.nodes[index].quaternion.clone(),rest=model.closed[i].clone().slerp(model.open[i],1-butterflyRestingFold(elapsed,pose.wingPhase || 0,reduced));model.nodes[index].quaternion.copy(rest).slerp(flying,pose.flight);}
         model.wrapper.rotation.set((pose.pitch || 0)*pose.flight,pose.state==='landed'?.85:pose.yaw,pose.bank);model.wrapper.updateMatrixWorld(true);
     }
     return {get ready(){return Boolean(model);},get interval(){return BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval;},

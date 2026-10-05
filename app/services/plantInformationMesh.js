@@ -637,6 +637,7 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
     const selectedNodeId = String(options.selectedNodeId || '');
     const selectedPathParts = ancestorPaths(selectedNodeId);
     const selectedAncestors = new Set(selectedPathParts.slice(0, -1));
+    const curiosity=options.explorer?.mode==='curiosity';
     const metrics = pimLayoutMetrics(options);
     const layoutRecords = [];
     let order = 0;
@@ -675,7 +676,8 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
         const children = options.includeAllChildren ? pimNodeChildren({ ...node, depth }) : pimArVisibleChildren({ ...node, depth });
         const open = expanded.has(node.path) || selectedAncestors.has(node.path);
         // Reserve slots for closed branches too: opening a sibling cannot move existing cells.
-        children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length, visible && open));
+        const page=curiosity?Math.min(Math.max(0,Math.ceil(children.length/3)-1),options.explorer.pages?.['children:'+node.path] || 0):0;
+        children.forEach((child, index) => visit(child, depth + 1, rootDirection, record, index, children.length, visible && open && (!curiosity || Math.floor(index/3)===page)));
     };
 
     pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));

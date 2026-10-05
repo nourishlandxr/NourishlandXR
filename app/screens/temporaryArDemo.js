@@ -1,10 +1,12 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
+import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
+import {supportsSpatialPIMO} from '../services/pimoSpatialCapabilities.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
 import {createHeroDiceToy} from '../services/heroDiceToy.js';
 let knowledgeRenderer=null,heroDiceToy=null;
-import {INSECT_VISUALS,insectFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
+import {INSECT_VISUALS,beeFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
 import {demoTotemHeightForScreen,shiftDemoAreaToFloor} from '../services/demoFloorPlacement.js';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../services/demoFeedback.js';
 let demoFeedback=null,demoFeedbackInputSource=null;
@@ -602,7 +604,7 @@ function demoPanelActions() {
     actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous',disabled:!(demoSlideHistoryIndex>0 || demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)});
     actions.push({id:'forward',label:'›',ariaLabel:'Next slide',description:'Next',disabled:!(demoSlideHistoryIndex>=0 && demoSlideHistoryIndex<demoSlideHistory.length-1)});
     if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
-    if(arWelcomeShowcaseActive && ['apply','connect','impact'].includes(demoJourneyStage))actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
+    if(arWelcomeShowcaseActive && demoJourneyStage==='apply')actions.push({id:'lim-visibility',label:limMeshVisible?'Hide learning cells':'Show learning cells'});
     if(!desktopDemo)actions.push({id:'safety',label:'Safety guidance'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
@@ -743,14 +745,8 @@ function demoTextTypingDelay(text, visibleLength) {
 
 function showDemoAction(nextStage) {
     if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
-    const messages = {
-        plant2: ['Apply the thinking in the place', 'A plant profile can hold far more than harvest or soil needs: identity, relationships, seasonal change, care, uses, local knowledge and questions still being explored. Add Moringa to see how two distinct living profiles can connect within one place.'],
-        note: ['Turn attention into a record', 'The plants provide reference knowledge. A Note adds what someone actually sees, remembers or needs to do in this place.']
-    };
-    const [title, text] = messages[nextStage] || ['Continue the journey', 'Move to the next tutorial step.'];
-    showGuidedChoice(`<h2>${title}</h2><p>${text}</p><button type="button" data-demo-choice="continue">Continue</button>`, choice => {
-        if (choice === 'continue') armDemoPlacement(nextStage,{explained:nextStage==='note'});
-    },{stepLabel:nextStage==='note'?'ELEMENTS 1.14':'ELEMENTS 1.9',nextGuide:nextStage==='note'?'':undefined});
+    const id=nextStage==='note'?'ELEMENTS 1.14':'ELEMENTS 1.9',step=guidedDemoStep(id);
+    showIntroBoard(step.title,step.main,nextStage==='note'?'Leave a Note':'Add Moringa',()=>armDemoPlacement(nextStage,{explained:true}),{stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true});
 }
 
 function closeDemoVirtualTag(record) {
@@ -833,15 +829,23 @@ function inviteVirtualTag(record) {
 
 function continueAfterDemoPim(record) {
     if (!record || record.demoProfileInteracted) return false;
+    if(record.tutorialStage==='plant'){
+        const lesson=record.demoPimoLesson || 'tag';
+        if(lesson==='tag'){
+            record.demoPimoLesson='curiosity';knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
+            refreshDemoPimProfile(record);infoPanel?.refreshExplorer();showPersistentPimPrompt(record);return true;
+        }
+        if(lesson==='curiosity' && supportsSpatialPIMO()){
+            record.demoPimoLesson='explore';knowledgeExplorerAction(record,'KnowledgeMode:explore');
+            refreshDemoPimProfile(record);infoPanel?.refreshExplorer();showPersistentPimPrompt(record);return true;
+        }
+        record.demoPimoLesson='done';
+    }
     record.demoProfileInteracted = true;
     record.demoProfileReady = false;
-    if (record.tutorialStage === 'plant2') inviteVirtualTag(record);
-    else if (record.tutorialStage === 'plant') {
-        clearLimSelection();
-        limMeshVisible=false;
-        activePimLimBridge=null;
-        showDemoAction('plant2');
-    }
+    clearLimSelection();limMeshVisible=false;activePimLimBridge=null;
+    finishIntroBoard();
+    showDemoAction(record.tutorialStage==='plant2'?'note':'plant2');
     return true;
 }
 
@@ -1232,11 +1236,11 @@ const DEMO_QUICK_ACCESS_COPY=Object.freeze({
     'SPACE 1.4':'In this demo, you’ll explore two plants, add an observation and see how Areas connect.',
     'SPACE 1.5':'The same place can support a visitor’s curiosity, a school activity or a land steward’s work.',
     'ELEMENTS 1.1':'A plant profile brings together its identity, ecology, care and uses, alongside local knowledge and sources.',
-    'ELEMENTS 1.2':'Totem signs help you find your way through an Area, pointing towards plants, Notes and other Areas.',
-    'ELEMENTS 1.3':'Start with Pigeon Pea. Aim at the plant, or choose a location for its digital tag.',
+    'ELEMENTS 1.2':'Start with one plant. Its Plant Orb brings information into the landscape.',
+    'ELEMENTS 1.3':'Add your first Plant Orb to explore Pigeon Pea. Creator mode lets you choose from thousands of plants or create your own profile.',
     'ELEMENTS 1.4':'The tag connects this plant profile to a location in the landscape.',
-    'ELEMENTS 1.5':'Adjust the tag’s distance, then confirm its position.',
-    'ELEMENTS 1.6':'This digital tag is a Plant Orb. Select it to open the plant profile, or hold it to move it.',
+    'ELEMENTS 1.5':'Place Pigeon Pea where you want to explore it.',
+    'ELEMENTS 1.6':'Your Plant Orb is ready. Open it to discover Pigeon Pea’s characteristics and roles.',
     'ELEMENTS 1.7':'Explore Pigeon Pea’s information cells to discover its characteristics and roles.',
     'ELEMENTS 1.8':'The same plant profile is also available in Web Mode, as a standard browser page.',
     'ELEMENTS 1.9':'Which of these characteristics could matter in this garden? Keep one in mind as you explore.',
@@ -1252,7 +1256,8 @@ const DEMO_QUICK_ACCESS_COPY=Object.freeze({
     'LEARNING 1.8':'Connect a plant characteristic to a learning question to explore it further.',
     'LEARNING 1.10':'Your connection opens a new question. Follow it further, or try another connection.',
     'LEARNING 1.12':'Take this question back to the landscape. What could you observe here to investigate it?',
-    'CLOSURE 1.1':'Thank you for exploring NourishlandXR. You’ve connected two plants, an observation and two Areas — the beginnings of a living map that can grow with the place.'
+    'CLOSURE 1.1':'Thank you for exploring NourishlandXR. You’ve connected two plants, an observation and two Areas — the beginnings of a living map that can grow with the place.',
+    ...DEMO_GUIDED_COPY
 });
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
@@ -1424,42 +1429,14 @@ function finishIntroBoard() {
 }
 
 function showPersistentPimPrompt(record) {
-    useSharedWelcomeBoard(true);
-    setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
-    const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
-    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    if (!panel || !continueButton) return;
-    if (record?.demoProfileInteracted) {setGuide(`${record.name || 'Plant'} information remains open for exploration.`);return;}
-    introBoardStep=record?.tutorialStage==='plant2'?'ELEMENTS 1.13':'ELEMENTS 1.7';
-    const plantName = record?.name || 'Plant';
-    const title = demoLocalizedText('Explore this plant');
-    const body = record?.tutorialStage==='plant'
-        ? demoLocalizedText(`Choose Curiosity in Explorer to see how knowledge branches from the plant. When you find Pruning, it can connect with an idea about the wider landscape. Continue whenever you are ready.`)
-        : simulatedMode?demoLocalizedText(`Use Tag for the essentials about ${plantName}, or Curiosity to follow its relationships. Click a cell to read it. Spatial Explore is available in immersive AR.`):demoLocalizedText(`Explorer gives you three ways to learn about ${plantName}: Tag for essentials, Curiosity for immediate relationships and Explore for spatial knowledge. Open a cell to follow a topic such as food, growing, uses or ecological roles.`);
-    panel.innerHTML = `<small>${demoIntroLabel()}</small><h2>${title}</h2><div class="tryit-board-text-window"><p>${body}</p></div>`;
-    setIntroBoardNextGuide(simulatedMode?'Click a cell once to read or expand it. Scroll the knowledge field to follow deeper branches.':'Press and hold the Orb to move it. While holding it, move the right joystick to bring it closer or further away. Press a cell once to expand plant information.');
-    panel.hidden = false;
-    panel.classList.add('is-welcome-board', 'is-copy-ready', 'is-persistent-demo-board');
-    panel.classList.remove('is-entering', 'is-typing', 'is-leaving');
-    panel.onclick = null;
-    introSceneActive = true;
-    introBoardTitle = title;
-    introBoardBody = body;
-    introBoardVisibleBody = body;
-    introBoardTextureDirty = true;
-    introBoardVisible = true;
-    rememberDemoSlide({stepLabel:introBoardStep,title,body,buttonLabel:'Continue',onContinue:()=>continueAfterDemoPim(record),options:{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,nextGuide:'Press and hold the Orb to move it. While holding it, move the right joystick to bring it closer or further away. Press a cell once to expand plant information.'},kind:'welcome'});
-    continueButton.textContent = demoLocalizedText('Continue');
-    continueButton.onclick = () => {
-        suppressSessionSelectUntil = performance.now() + 700;
-        continueButton.hidden = true;
-        continueAfterDemoPim(record);
-    };
-    continueButton.hidden = false;
-    skipDemoNarration = () => {
-        continueButton.click();
-    };
-    setGuide(record?.tutorialStage==='plant'?`${plantName} information opened. Choose Curiosity in Explorer, then select a cell.`:`${plantName} information opened. Select topics to explore.`);
+    if(record?.demoProfileInteracted){setGuide(`${record.name || 'Plant'} information remains available.`);return;}
+    const first=record?.tutorialStage==='plant',lesson=record.demoPimoLesson || 'tag';
+    const id=first?(lesson==='tag'?'ELEMENTS 1.7':lesson==='explore' && supportsSpatialPIMO()?'PIMO 1.3':'PIMO 1.2'):'ELEMENTS 1.12';
+    const step=guidedDemoStep(id);
+    const button=first?(lesson==='tag'?'Follow Curiosity':lesson==='curiosity' && supportsSpatialPIMO()?'Try spatial Explore':'Return to the garden'):'Observe the garden';
+    showIntroBoard(step.title,step.main,button,()=>continueAfterDemoPim(record),{
+        tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true
+    });
 }
 
 function useSharedWelcomeBoard(visible) {
@@ -2020,31 +1997,13 @@ function showDemoTutorialMedia(key,content={}) {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {code:'SPACE 1.1',title:'Meet your Control panel',art:'wheel',button:'Continue',nextGuide:'',paragraphs:[
-        'Take a moment to settle in. This place is ready to explore.'
-    ]},
-    {code:'ELEMENTS 1.1',title:'Every plant holds information',art:null,panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
-        'Finding a plant in the field can be confusing when you are carrying books, checking a phone and comparing guides. It can be hard to connect what you read to the plant in front of you.',
-        'A plant can connect identity, ecology, care, seasonal change, uses, local knowledge and trusted sources.'
-    ]},
-    {code:'SPACE 1.2',title:'Imagine arriving in a garden',art:'curiosity',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
-        'Imagine arriving in a garden and noticing a plant you do not recognise.',
-        'You pause, look closely and wonder what it is, how it belongs here and what it might teach you.'
-    ]},
-    {code:'SPACE 1.3',title:'A Project holds information',art:'area',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
-        'Create a Project anchored to a real place: tag an orchard, build an educational module, or make an immersive tour. Its Areas, plants, observations and guidance stay connected to that landscape.'
-    ]},
-    {code:'ELEMENTS 1.2',title:'Areas and Totems guide you',art:'structure',panelTitle:'Using the Control panel',button:'Continue',nextGuide:'',paragraphs:[
-        'Areas organise one part of a place. Directional Totem signs point visitors toward nearby Plant Orbs, Notes and other Totems, while keeping each Area’s information together.'
-    ]},
-    {code:'ELEMENTS 1.3',title:'Begin with one plant',panelTitle:'Placement controls',button:'Place Pigeon Pea',nextGuide:'Aim toward the plant or tag location. Hint: use the right joystick up or down to adjust distance.',paragraphs:[
-        'A Plant Orb attaches information to a real-world location. Pigeon Pea is our example: aim toward the plant or the exact place where you want its tag to appear.'
-    ]}
+    {code:'SPACE 1.1',title:'Meet your Control panel',art:null,button:'Continue',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
+    {code:'SPACE 1.2',title:'Enter the garden',art:'curiosity',button:'Add our first plant',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]}
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
     title:'This is the Plant Orb',button:'Continue',
-    nextGuide:'Press the Plant Orb to open its information. Press and hold it to move it.',
+    nextGuide:'Select the Plant Orb to open its information. Hold controller grip to move it; release grip to place it. With hands, pinch to hold and release the pinch to place it.',
     paragraphs:[
         'Pigeon Pea now has a location in this scene. This Plant Orb connects information to this plant in the real place.',
         'The Orb is interactive. Press it to explore its information, beginning with simple facts and deeper connected branches.'
@@ -2066,17 +2025,10 @@ function runArWelcomeTutorial(index=0) {
         infoPanel?.setMediaCollapsed(true);
         infoPanel?.setIntroduction(true);
         infoPanel?.suspend(false);
-        infoPanel?.setContextualHint('HINT · Adjust panel to your liking.');
+        infoPanel?.setContextualHint('Continue when you are ready.');
     }
-    if(step?.art){
-        infoPanel?.setCompact(false);
-        if(index!==1)showDemoTutorialMedia(step.art,index===0?{title:'Your Control panel',hideTitle:false,body:'Selected information appears here. Use Settings to adjust the view, Help for guidance, Back to revisit a page, and Hide when you want to focus on the landscape.'}:index===3?{title:'Build a Project',hideTitle:false,body:'Start with an Area, add a Totem for orientation, then place Plant Orbs and Notes. In a full Project, you can publish a guide and keep its information current.'}:{});
-    }else if(step.code==='ELEMENTS 1.1'){
-        infoPanel?.setMediaCollapsed(true);
-    }else if(index===DEMO_ORIENTATION_STEPS.length-1){
-        infoPanel?.setMediaCollapsed(true);
-        infoPanel?.setContextualHint('HINT · Move the right joystick up or down to adjust distance.');
-    }
+    if(step?.art)showDemoTutorialMedia(step.art);
+    else infoPanel?.setMediaCollapsed(true);
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
         suppressSessionSelectUntil=performance.now()+700;
@@ -2115,24 +2067,14 @@ function guidePlantConversion(record) {
         pointer?.setAttribute('hidden', '');
         pointer?.classList.remove('is-revealing', 'is-ready');
         refreshDemoRecord(record);
-        infoPanel?.setContextualHint(`Select the ${plantName} Plant Orb to open its Plant Profile. Press and hold it to move it.`);
+        infoPanel?.setContextualHint(`Select the ${plantName} Plant Orb.`);
         infoPanel?.suspend(false);
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
-    const afterPlacement=moringa
-        ? {title:'The living map can compare',paragraphs:['Moringa now has its own Plant Profile. Continue, then aim at and select the physical Moringa Plant Orb to compare it with the Pigeon Pea support shrub.'],button:'Continue',nextGuide:'Aim at and select the Moringa Plant Orb to read its profile.'}
-        : POST_PLACEMENT_AREA_STEP;
-    showIntroBoard(
-        afterPlacement.title,
-        afterPlacement.paragraphs,
-        afterPlacement.button,
-        () => {
-            suppressSessionSelectUntil = performance.now() + 700;
-            finishIntroBoard();
-            setGuide(`The ${plantName} orb is ready. Hold it to move it, or press it to open or close its plant information.`);
-        },
-        {stepLabel:moringa?'ELEMENTS 1.12':'ELEMENTS 1.6',nextGuide:afterPlacement.nextGuide,deferContinueUntilCopyReady:!moringa}
-    );
+    const id=moringa?'ELEMENTS 1.12':'ELEMENTS 1.6',step=guidedDemoStep(id);
+    showIntroBoard(step.title,step.main,moringa?'Observe the garden':'',()=>{
+        finishIntroBoard();if(moringa)showDemoAction('note');
+    },{stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true});
     // The sample plant is interactive while the large instruction board is
     // still visible, so the suggested grab can be tried immediately.
     completeConversion();
@@ -2236,8 +2178,8 @@ function createDemoTotemExample() {
         demoType: 'zone',
         tutorialStage: 'totem',
         demoTotemExampleId:'botanical-garden',
-        demoZoneName:'Botanical Garden',
-        demoNeighbourZoneName:'Rainforest Walk',
+        demoZoneName:'My area',
+        demoNeighbourZoneName:'Second Area',
         demoTotemColor:'#785a43',
         demoTotemSignsVisible:false,
         demoTotemFaded:false,
@@ -2259,9 +2201,14 @@ function createDemoTotemExample() {
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.firstAreaShown);
     updateSimulatedMarkers();
     showDemoTutorialMedia('totem');
-    setGuide('The Totem stands on the estimated floor, with its top near the middle of the main screen. Check its base against your real floor; Settings → Floor height corrects any offset.');
-    infoPanel?.setContextualHint('Check the Totem base against the real floor. Settings → Floor height adjustment corrects its height.');
-    showSceneContinue('Show neighbouring Totem', createDemoSecondTotem, 'ELEMENTS 1.19');
+    setGuide('Select Show Signs to see nearby destinations.');
+    infoPanel?.setContextualHint('Select a sign to see where it points.');
+    showSceneContinue('Why add a second Totem?', showSecondAreaIntroduction, 'ELEMENTS 1.19');
+}
+
+function showSecondAreaIntroduction(){
+    const step=guidedDemoStep('AREA 1.2');
+    showIntroBoard(step.title,step.main,'Create Second Area',createDemoSecondTotem,{stepLabel:step.id,nextGuide:step.hint,deferContinueUntilCopyReady:true});
 }
 
 function createDemoSecondTotem() {
@@ -2285,8 +2232,8 @@ function createDemoSecondTotem() {
         demoType: 'zone',
         tutorialStage: 'totem2',
         demoTotemExampleId:'rainforest-walk',
-        demoZoneName:'Rainforest Walk',
-        demoNeighbourZoneName:'Botanical Garden',
+        demoZoneName:'Second Area',
+        demoNeighbourZoneName:'My area',
         demoTotemColor:'#526d7a',
         demoTotemSignsVisible:false,
         demoTotemFaded:false,
@@ -2306,7 +2253,7 @@ function createDemoSecondTotem() {
     createDemoNeighbourhood(totem);
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.secondAreaShown);
     updateSimulatedMarkers();
-    setGuide('Totem 2 shows local Plant Orbs and a Note placed around one Area. Connect the two Totems when ready.');
+    setGuide('This neighbouring Area is a prepared example. Connect the two Areas when ready.');
     showSceneContinue('Connect the Totems', connectDemoTotems, 'ELEMENTS 1.20');
 }
 
@@ -2362,8 +2309,8 @@ function showLinkedTotemsIntroduction() {
             'A link creates a visitor route between Areas. The neighbour sign gives its name and direction without mixing the information attached to either place.',
             'The Totem stays simple: welcome here, then choose what nearby information you want to open.'
         ],
-        'Connect plant knowledge to learning',
-        showLimoLearningModes,
+        'See how the journey can grow',
+        showDemoClosingMessage,
         {stepLabel:'ELEMENTS 1.22'}
     );
 }
@@ -2775,7 +2722,7 @@ function armDemoPlacement(type, {explained=false}={}) {
     if (label) label.textContent = type === 'plant' ? 'Place Orb' : type === 'plant2' ? 'Place Orb' : type === 'totem' ? 'Place Totem' : 'Place Note';
     place?.setAttribute('aria-label', type === 'plant'
         ? 'Place the Pigeon Pea Plant Orb'
-        : type === 'plant2' ? 'Place the Moringa Plant Orb' : type === 'totem' ? 'Place the Botanical Garden Totem' : 'Place a Note');
+        : type === 'plant2' ? 'Place the Moringa Plant Orb' : type === 'totem' ? 'Place the My area Totem' : 'Place a Note');
     setGuide(['plant', 'plant2'].includes(type)
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : type==='totem'?'Aim the upright preview where the Totem should stand. Use the thumbstick to adjust depth.':'Take in the space before choosing the next position.');
@@ -2786,7 +2733,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         ]],
         plant2: ['Compare a second plant', 'Moringa will have its own Orb and profile beside Pigeon Pea. Together they show how different plant roles can be compared in one place.'],
         note: ['Add one observation', 'A Note keeps something noticed in this part of the landscape beside the plants it relates to. It can be as simple as flowering, damage, a task or a question.'],
-        totem: ['Place Botanical Garden Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
+        totem: ['Place My area Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
     const mediaKey=type==='totem'?'totem':type==='note'?'note':'orb';
@@ -2797,13 +2744,14 @@ function armDemoPlacement(type, {explained=false}={}) {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
         const questTriggerPlacement=Boolean(session && demoControllerInputSource()?.targetRayMode!=='screen');
+        if(type==='plant')infoPanel?.showLearning({id:'demo-plant-context',title:'Pigeon Pea',body:'In Creator mode, you can choose from thousands of plants or create your own profile.',editable:false});
         const placementCopy = type === 'plant'
-            ? {title:'Place Pigeon Pea',body:'A Plant Orb attaches this plant’s information to a real place. Pigeon Pea is our first example.',next:`Aim at the real plant or desired tag location, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place it. Use the right joystick to adjust distance.`}
+            ? {title:'Place Pigeon Pea',body:DEMO_GUIDED_COPY['ELEMENTS 1.5'],next:`Aim at the real plant or desired tag location, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place it. Use the right joystick to adjust distance.`}
             : type === 'plant2'
-                ? {title:'Place Moringa',body:'Moringa is the second Plant Orb in this map. Its own Plant Profile lets you compare two living roles in the same place.',next:`Aim beside Pigeon Pea, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place the Moringa Orb.`}
+                ? {title:'Place Moringa',body:DEMO_GUIDED_COPY['ELEMENTS 1.11'],next:'Place Moringa beside Pigeon Pea.'}
                 : type==='totem'
-                    ? {title:'Place Botanical Garden Totem',body:'A Totem gives an Area a clear welcome point for its signs and local information.',next:'Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.'}
-                    : {title:'Place an observation',body:'A Note keeps something noticed in this part of the landscape beside the plants it relates to.',next:'Aim at the place you observed, then press the aiming circle to place the Note.'};
+                    ? {title:'Place My area Totem',body:'A Totem gives an Area a clear welcome point for its signs and local information.',next:'Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.'}
+                    : {title:'Leave a Note',body:DEMO_GUIDED_COPY['ELEMENTS 1.16'],next:questTriggerPlacement?'Choose a location and press the trigger to place the Note.':'Choose a location and tap the aiming circle to place the Note.'};
         introBoardStep=type==='plant'?'ELEMENTS 1.5':type==='plant2'?'ELEMENTS 1.11':type==='note'?'ELEMENTS 1.16':'ELEMENTS 1.24';
         introBoardTitle=placementCopy.title;
         introBoardBody=placementCopy.body;
@@ -2813,11 +2761,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${placementCopy.title}</h2><div class="tryit-board-text-window"><p>${placementCopy.body}</p></div>`;board.classList.add('is-copy-ready');board.classList.remove('is-typing');}
         setIntroBoardNextGuide(placementCopy.next);
-        setGuide(type === 'plant'
-            ? `Aim toward the real plant or desired information-tag position, then ${questTriggerPlacement?'pull the Quest controller trigger':'tap the aiming circle'} to confirm.`
-            : type === 'plant2'
-                ? 'Press the aiming circle to place the Moringa orb.'
-                : type==='totem'?'Position the upright Totem preview, then confirm placement.':'Tap the circle to place a Note.');
+        setGuide(placementCopy.next);
         placementReady = true;
         place?.removeAttribute('hidden');
         refreshSimulatedPlacementAim();
@@ -3002,6 +2946,7 @@ function toggleDemoPlantProfile(record) {
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     const opening=!record.demoExpanded;knowledgeExplorer(record);
+    if(opening && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='tag';knowledgeExplorerAction(record,'KnowledgeMode:tag');}
     record.demoExpanded = opening;
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
@@ -3102,7 +3047,7 @@ function selectDemoProfileCell(selection=demoInfoTarget()) {
     const opened = demoPimState(record).expandedNodeIds.has(node.path);
     const remaining = advanceAfterDemoProfileInteraction(record);
     setGuide(opened
-        ? `${node.label} ${wasOpen ? 'remains open.' : 'opened into its connected information cells.'}${remaining ? ` Open ${remaining} more ${remaining === 1 ? 'cell' : 'cells'} to keep exploring this plant.` : ''}`
+        ? `${node.label} ${wasOpen ? 'remains open.' : 'opened into its connected information cells.'} Explore further or continue when you are ready.`
         : `${node.label} remains closed.`);
     return true;
 }
@@ -3112,14 +3057,14 @@ function advanceAfterDemoProfileInteraction(record) {
     if (!record || record.demoProfileInteracted) return 0;
     if (record.demoProfileReady) return 0;
     const opened = demoPimState(record).expandedNodeIds.has(record.demoActiveBranch);
-    const explorationGoal = record.tutorialStage === 'plant' ? 3 : 2;
+    const explorationGoal = record.tutorialStage === 'plant' ? 2 : 0;
     if (opened) record.demoProfileInteractionCount = (Number(record.demoProfileInteractionCount) || 0) + 1;
     const remaining = Math.max(0, explorationGoal - (Number(record.demoProfileInteractionCount) || 0));
     if (remaining) return remaining;
     // Exploring information unlocks progression; it never performs it.
     record.demoProfileReady = true;
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
-    if(continueButton){continueButton.textContent=demoLocalizedText('Continue');continueButton.hidden=false;continueButton.disabled=false;}
+    if(continueButton){continueButton.disabled=false;}
     setGuide('You have explored this plant information. Continue when you are ready.');
     syncDemoPanelActions();
     return 0;
@@ -3778,20 +3723,9 @@ function beginControllerDemoHold() {
     const profile=demoInfoTarget();
     const target = demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
     if (!target || target.record.demoInteractive === false) return false;
-    // Quick presses still select PIMO cells. Holding on an open PIMO surface
-    // moves its anchored Orb after the hold delay.
-    const origin = demoPointerWorldOrigin();
-    if (!origin) return false;
-    captureDemoGrabPose(target.record, origin, demoPointerWorldRay());
-    demoGrabPreparingIndex=target.index;
-    demoHoldTimer = setTimeout(() => {
-        demoHoldTimer = null;
-        demoGrabPreparingIndex=-1;
-        demoHeldIndex = target.index;
-        pulseDemoHaptics(demoGrabInputSource,true);
-        suppressSessionSelectUntil = performance.now() + 420;
-        setGuide(`Holding ${target.record.name || 'the orb'}. Move the controller, then release.`);
-    }, DEMO_PLANT_ORB_HOLD_DELAY_MS);
+    const origin=demoPointerWorldOrigin();if(!origin || !captureDemoGrabPose(target.record,origin,demoPointerWorldRay()))return false;
+    demoGrabPreparingIndex=-1;demoHeldIndex=target.index;pulseDemoHaptics(demoGrabInputSource,true);
+    setGuide(`Holding ${target.record.name || 'the object'}. Move with the grip held; release grip to place it.`);
     return true;
 }
 
@@ -4026,7 +3960,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode;showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
@@ -4325,17 +4259,24 @@ function pollDemoControllerSkip() {
 
 const butterflyPinchStates=new WeakMap(),butterflyGestureSources=new WeakSet();
 function butterflyHeldBy(source){return Boolean(source && (butterflyGestureSources.has(source) || butterflyCompanions.some(insect=>insect.heldSource===source)));}
+function releaseDemoButterfly(insect){
+    const perch=infoPanel?.getPerchPose(insect.side),position=insect.handPosition || insect.position;
+    insect.heldSource=null;insect.startedAt=arWelcomeClock.elapsed;insect.flightAnchor=perch && position?{...perch,center:{...position}}:null;insect.perchMs=0;insect.lastElapsed=NaN;
+}
+function butterflyGripStart(source){
+ const ray=latestControllerRay;if(!ray)return false;let nearest=null,distance=Infinity;
+ for(const insect of butterflyCompanions){if(insect.heldSource || !insect.position)continue;const p=insect.position,dx=p.x-ray.origin.x,dy=p.y-ray.origin.y,dz=p.z-ray.origin.z,t=dx*ray.direction.x+dy*ray.direction.y+dz*ray.direction.z;if(t<0 || t>distance)continue;const error=Math.hypot(dx-ray.direction.x*t,dy-ray.direction.y*t,dz-ray.direction.z*t);if(error<.10){nearest=insect;distance=t;}}
+ if(!nearest)return false;nearest.heldSource=source;nearest.controllerDistance=distance;nearest.handPosition={...nearest.position};return true;
+}
 function pollButterflyPinches(){
-    for(const insect of butterflyCompanions)if(insect.heldSource && !latestTrackedHandStates.some(entry=>entry.source===insect.heldSource)){insect.heldSource=null;insect.startedAt=arWelcomeClock.elapsed;insect.flightAnchor=null;}
+    for(const insect of butterflyCompanions)if(insect.heldSource?.hand && !latestTrackedHandStates.some(entry=>entry.source===insect.heldSource)){releaseDemoButterfly(insect);}
     for(const {source,state} of latestTrackedHandStates){
         const thumb=state.rawJoints.get('thumb-tip'),index=state.rawJoints.get('index-finger-tip');if(!thumb || !index)continue;
         const point={x:(thumb.x+index.x)/2,y:(thumb.y+index.y)/2,z:(thumb.z+index.z)/2};
         if(!state.pinch)butterflyGestureSources.delete(source);
         const held=butterflyCompanions.find(insect=>insect.heldSource===source),previous=butterflyPinchStates.get(source);butterflyPinchStates.set(source,state.pinch);
-        if(state.pinch && previous===false){
-            if(held){butterflyGestureSources.add(source);held.heldSource=null;held.startedAt=arWelcomeClock.elapsed;const perch=infoPanel?.getPerchPose(held.side);held.flightAnchor=perch?{...perch,center:{...held.handPosition}}:null;held.perchMs=0;}
-            else {const insect=butterflyCompanions.find(item=>!item.heldSource && item.position && Math.hypot(item.position.x-point.x,item.position.y-point.y,item.position.z-point.z)<.12);if(insect){butterflyGestureSources.add(source);insect.heldSource=source;insect.handOffset={x:insect.position.x-point.x,y:insect.position.y-point.y,z:insect.position.z-point.z};}}
-        }
+        if(held && !state.pinch){releaseDemoButterfly(held);}
+        else if(state.pinch && previous===false && !held){const insect=butterflyCompanions.find(item=>!item.heldSource && item.position && Math.hypot(item.position.x-point.x,item.position.y-point.y,item.position.z-point.z)<.12);if(insect){butterflyGestureSources.add(source);insect.heldSource=source;insect.handOffset={x:insect.position.x-point.x,y:insect.position.y-point.y,z:insect.position.z-point.z};}}
         const attached=butterflyCompanions.find(insect=>insect.heldSource===source);if(attached)attached.handPosition={x:point.x+attached.handOffset.x,y:point.y+attached.handOffset.y,z:point.z+attached.handOffset.z};
     }
 }
@@ -5077,11 +5018,24 @@ function paintDemoButterfly(now){
         if(pose.flight>0)insect.flightAnchor ||= perch;else insect.flightAnchor=null;
         const anchor=insect.flightAnchor || perch;insect.model.renderSprite(arWelcomeClock.elapsed,pose);
         let x=anchor.x+pose.x*220+(window.innerWidth*.53-anchor.x)*pose.close,y=anchor.y-pose.y*200+(window.innerHeight*.45-anchor.y)*pose.close;
-        const visit=insectFlowerVisit(arWelcomeClock.elapsed-insect.startedAt-insect.perchMs,insect.seed+4,{enabled:pose.flight===1 && !pose.close && !window.matchMedia('(prefers-reduced-motion: reduce)').matches,period:59000});
-        const flowers=livingFrameFlowerSites(arWelcomeClock.elapsed),frame=arWelcomeCanvas?.getBoundingClientRect();
-        if(flowers.length && frame?.width && introBoardVisible && arWelcomeSharedBoard){const flower=flowers[visit.index%flowers.length];x+=(frame.left+(flower.x+550)/2500*frame.width-x)*visit.amount;y+=(frame.top+(flower.y+510)/2100*frame.height-y)*visit.amount;}
+        // Stay on the outer side of the panel rather than visiting the reading frame.
+        if(pose.flight>0){const side=insect.side==='left'?-1:1;x=anchor.x+side*Math.abs(pose.x)*220;y=anchor.y-pose.y*200;}
         insect.canvas.style.visibility='visible';insect.canvas.style.opacity=String(pose.opacity);insect.canvas.style.left=x+'px';insect.canvas.style.top=y+'px';insect.canvas.style.transform=`translate(-50%,${pose.flight>0?'-50%':'-78%'}) scale(${(insect.red?.84:1)*(1+pose.close*.25)})`;
     }
+}
+function keepButterflyOutsideFrame(position,side){
+    if(!introWorldAnchor || !introBoardVisible || !arWelcomeSharedBoard)return position;
+    const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
+    const matrix=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
+    const width=Math.hypot(matrix[0],matrix[1],matrix[2]),height=Math.hypot(matrix[4],matrix[5],matrix[6]);
+    const right={x:matrix[0]/width,y:matrix[1]/width,z:matrix[2]/width};
+    const up={x:matrix[4]/height,y:matrix[5]/height,z:matrix[6]/height};
+    const dx=position.x-center.x,dy=position.y-center.y,dz=position.z-center.z;
+    const x=dx*right.x+dy*right.y+dz*right.z,y=dx*up.x+dy*up.y+dz*up.z;
+    const halfWidth=width*DEMO_SHARED_QUAD_SIZE.width/2+.16,halfHeight=height*DEMO_SHARED_QUAD_SIZE.height/2+.16;
+    if(Math.abs(y)>halfHeight || Math.abs(x)>halfWidth)return position;
+    const offset=(side==='left'?-halfWidth:halfWidth)-x;
+    return {x:position.x+right.x*offset,y:position.y+right.y*offset,z:position.z+right.z*offset};
 }
 function drawSpatialButterfly(view){
     if(!getSpatialVisualSettings().insects || !program || !buffer || !viewerMatrix)return;
@@ -5096,12 +5050,11 @@ function drawSpatialButterfly(view){
             if(pose.flight>0 && perch)insect.flightAnchor ||= {...perch,center:{...perch.center}};
             const anchor=insect.flightAnchor || perch;if(!anchor)continue;
             let position={x:anchor.center.x+anchor.right.x*pose.x+anchor.normal.x*pose.z,y:anchor.center.y+pose.y,z:anchor.center.z+anchor.right.z*pose.x+anchor.normal.z*pose.z};
-            const visit=insectFlowerVisit(elapsed-insect.startedAt-insect.perchMs,insect.seed+4,{enabled:pose.flight===1 && !pose.close && !reducedMotion,period:59000});
-            position=blendInsectWithFlower(position,visit,insect);pose.flight*=1-visit.amount*.65;
             if(pose.close>0){
                 if(insect.encounter?.index!==pose.encounterIndex)insect.encounter={index:pose.encounterIndex,x:viewerMatrix[12]-viewerMatrix[8]*.85+viewerMatrix[0]*(insect.red?-.18:.18),y:viewerMatrix[13]-.10,z:viewerMatrix[14]-viewerMatrix[10]*.85+viewerMatrix[2]*(insect.red?-.18:.18)};
                 position={x:position.x+(insect.encounter.x-position.x)*pose.close,y:position.y+(insect.encounter.y-position.y)*pose.close,z:position.z+(insect.encounter.z-position.z)*pose.close};
             }
+            if(pose.flight>0)position=keepButterflyOutsideFrame(position,insect.side);
             position=keepInsectAboveFloor(position,calibratedDemoGroundY());
             if(pose.state!=='landed' && insect.position){const dx=position.x-insect.position.x,dy=position.y-insect.position.y,dz=position.z-insect.position.z,horizontal=Math.hypot(dx,dz);if(horizontal>.0001){pose.yaw=Math.atan2(dx,dz);pose.pitch=-Math.atan2(dy,horizontal)*.4;}}
             if(pose.state==='landed')pose.yaw=insect.red?-.85:.85;
@@ -5117,11 +5070,11 @@ function blendInsectWithFlower(position,visit,visitor){
         const flowers=livingFrameFlowerSites(elapsed);
         if(flowers.length){
             // Pin the destination while new flower sites appear around it.
-            if(visitor && visitor.flowerVisit?.index!==visit.index)visitor.flowerVisit={index:visit.index,flower:{...flowers[visit.index%flowers.length]},startedAt:elapsed};
-            const flower=visitor?.flowerVisit?.flower || flowers[visit.index%flowers.length],center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
+            if(visitor && visitor.flowerVisit?.index!==visit.index)visitor.flowerVisit={index:visit.index,previous:visitor.flowerVisit?.flower?{...visitor.flowerVisit.flower}:null,flower:{...flowers[((visit.index%flowers.length)+flowers.length)%flowers.length]},startedAt:elapsed};
+            const selected=visitor?.flowerVisit?.flower || flowers[visit.index%flowers.length],previous=visitor?.flowerVisit?.previous,travel=visit.transfer ?? 1,flower=previous?{x:previous.x+(selected.x-previous.x)*travel,y:previous.y+(selected.y-previous.y)*travel}:selected,center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
             const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
             const local=demoBillboardTextureLocalPoint(flower.x+550,flower.y+510,2500,2100),target=introLocalPosition(board,[local.x,local.y,.09]);
-            const arrival=visitor?Math.max(0,Math.min(1,(elapsed-visitor.flowerVisit.startedAt)/4000)):1;
+            const arrival=visitor && !visitor.flowerVisit.previous?Math.max(0,Math.min(1,(elapsed-visitor.flowerVisit.startedAt)/1200)):1;
             const amount=visit.amount*arrival*arrival*(3-2*arrival);
             offset={x:(target.x-position.x)*amount,y:(target.y-position.y)*amount,z:(target.z-position.z)*amount};
         }
@@ -5186,7 +5139,7 @@ function ambientBeeWorldPosition(bee,index=0){
     };
     const age=arWelcomeClock.elapsed-ambientBeesStartedAt;
     const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    let visit=insectFlowerVisit(age,index,{enabled:!reducedMotion});
+    let visit=beeFlowerVisit(age,index,{enabled:true});
     if(reducedMotion)ambientBeeReturn[index]=null;
     else if(bee.flyby>.02 && bee.flybyProgress>=.72 && Number.isFinite(bee.encounterEndAt)){
         ambientBeeReturn[index]={endAt:ambientBeesStartedAt+bee.encounterEndAt,flowerIndex:bee.encounterIndex*BEE_COUNT+index};
@@ -5207,11 +5160,11 @@ function ambientBeeWorldPosition(bee,index=0){
         ambientEncounterOrigin={index:bee.encounterIndex,x:viewerMatrix[12],y:viewerMatrix[13],z:viewerMatrix[14]};
     }
     const curious=beeCuriosity(progress);
-    const faceDistance=.72+Math.abs(progress-.5)*.34+curious.z;
-    const faceAcross=(.5-progress)*.24+curious.x;
+    const encounter=bee.encounterIndex+ambientEncounterSeed,faceDistance=.66+(encounter%3)*.10+Math.abs(progress-.5)*.34+curious.z;
+    const side=encounter%2?-1:1,faceAcross=side*(.16+(encounter%3)*.08)+(progress-.5)*.20+curious.x;
     const facePosition={
         x:ambientEncounterOrigin.x+rightX*faceAcross-frontX*faceDistance,
-        y:ambientEncounterOrigin.y-.035-Math.sin(Math.PI*progress)*.025+curious.y,
+        y:ambientEncounterOrigin.y+[-.12,.08,-.04][Math.abs(encounter)%3]-Math.sin(Math.PI*progress)*.025+curious.y,
         z:ambientEncounterOrigin.z+rightZ*faceAcross-frontZ*faceDistance
     };
     const blended={
@@ -5602,8 +5555,7 @@ async function startImmersive() {
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
-            demoGrabInputSource=event.inputSource;
-            beginControllerDemoHold();
+            // Trigger selects; object movement belongs to the grip button.
         });
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
@@ -5621,9 +5573,16 @@ async function startImmersive() {
                 demoGrabPreparingIndex=-1;
                 return;
             }
-            releaseHeldDemoRecord();
+            // A trigger release must not end a grip-owned grab.
             suppressSessionSelectUntil = performance.now() + 280;
         });
+        session.addEventListener('squeezestart',event=>{
+            if(event.inputSource?.hand || arWelcomeIntroPending || placementReady || demoKnowledgeWorkspace || demoWebModeOpen)return;
+            captureDemoInputEventRay(event);if(butterflyGripStart(event.inputSource))return;
+            if(resolveDemoCellTarget()?.kind==='panel' || totemCardsRenderer?.hit(latestControllerRay))return;
+            demoGrabInputSource=event.inputSource;beginControllerDemoHold();
+        });
+        session.addEventListener('squeezeend',event=>{if(event.inputSource===demoGrabInputSource){releaseHeldDemoRecord();suppressSessionSelectUntil=performance.now()+280;}for(const insect of butterflyCompanions)if(insect.heldSource===event.inputSource)releaseDemoButterfly(insect);});
         const launchedSession=session;
         session.addEventListener('end', () => { void demoExitLifecycle.handleSessionEnd(launchedSession); },{once:true});
         const draw = (_time, frame) => {
@@ -5648,7 +5607,7 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
-            runXrFrameStep('butterfly pinch',pollButterflyPinches);
+            runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));

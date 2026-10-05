@@ -69,7 +69,7 @@ test('Try It Now offers optional LIM paths and a concise post-plant journey',()=
  assert.match(source,/Why does this matter\?/);
  assert.match(source,/More paths are being developed/);
  assert.match(source,/Try Understand This Place/);
- assert.match(source,/armDemoPlacement\(nextStage,\{explained:nextStage==='note'\}\)/);
+ assert.match(source,/armDemoPlacement\(nextStage,\{explained:true\}\)/);
  assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : demoStage==='totem'\?220:360/);
  assert.match(source,/Your Note is in place/);
  assert.match(source,/Why link Areas\?/);
@@ -545,7 +545,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     const styles = fs.readFileSync(path.join(root, 'app/style.css'), 'utf8');
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
-    assert.match(source, /nextGuide:'Aim toward the plant or tag location\. Hint: use the right joystick up or down to adjust distance\.'/);
+    assert.match(source, /Use the right joystick to adjust distance/);
     assert.match(source, /Aim at the real plant or desired tag location, then/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.deepEqual(DEMO_SEQUENCE,['plant','plant2','note','totem']);

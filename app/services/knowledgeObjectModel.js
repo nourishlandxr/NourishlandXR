@@ -33,7 +33,7 @@ export function selectKnowledgeObjectFace(record,knowledge,node){
  w.selectedFaceId=f.faceId;record.knowledgeExplorer.selectedConceptId=f.conceptId;record.knowledgeExplorer.saved=false;record[record.demoType?'demoSelectedNodeId':'pimSelectedNodeId']=f.path;
  const history=record.knowledgeExplorer.history || [];if(history.at(-1)!==f.path)record.knowledgeExplorer.history=[...history,f.path].slice(-32);
  const index=knowledgeObjectIndex(knowledge),opened=new Set(record.demoExpandedNodeIds || record.pimExpandedNodeIds || []);for(let current=index.nodes.get(f.conceptId);current;current=index.nodes.get(current.parentId))if(current.children?.length)opened.add(current.path);record[record.demoType?'demoExpandedNodeIds':'pimExpandedNodeIds']=[...opened];
- if(f.role==='branch')spawnKnowledgeObject(record,knowledge,f.conceptId);return true;
+ if(f.role==='branch' || f.role==='hybrid')spawnKnowledgeObject(record,knowledge,f.conceptId);return true;
 }
 export function spawnKnowledgeObject(record,knowledge,conceptId){
  const w=ensureKnowledgeObjects(record,knowledge),index=knowledgeObjectIndex(knowledge),node=index.nodes.get(String(conceptId)),source=selectedKnowledgeObject(record);if(!node?.children?.length || !source)return null;

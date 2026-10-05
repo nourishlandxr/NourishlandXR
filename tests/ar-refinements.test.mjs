@@ -30,7 +30,7 @@ test('numeric settings have clampable stepped sliders and no percentage cycle bu
 });
 test('eye height fallback is configurable and demo body is exactly two metres',()=>{
  const saved=getSpatialVisualSettings();try{const viewer=new Float32Array(16);viewer[13]=1;setSpatialVisualSettings({eyeHeight:1,floorOffset:-.2});assert.equal(demoGroundBaseY(null,viewer),0);assert.equal(demoGroundBaseY(null,viewer,.1),.1);assert.equal(DEMO_TOTEM_HALF_HEIGHT_METRES*2,2);setSpatialVisualSettings({eyeHeight:20,floorOffset:-10});assert.equal(getSpatialVisualSettings().eyeHeight,2.2);assert.equal(getSpatialVisualSettings().floorOffset,-1.5);}finally{setSpatialVisualSettings(saved);}
- const demo=read('app/screens/temporaryArDemo.js');assert.match(demo,/referenceSpaceHasFloor \? 0/);assert.match(demo,/Check the Totem base against the real floor/);assert.doesNotMatch(demo,/center\.y-AR_PHONE_COMFORT\.boardScale\[1\]/);
+ const demo=read('app/screens/temporaryArDemo.js');assert.match(demo,/referenceSpaceHasFloor \? 0/);assert.match(demo,/onFloorOffset:updateDemoFloor/);assert.doesNotMatch(demo,/center\.y-AR_PHONE_COMFORT\.boardScale\[1\]/);
 });
 test('butterfly preserves original mesh and attribution, with three skinned meshes and two clips',()=>{
  const bytes=readFileSync(new URL('../app/assets/animated_butterfly.glb',import.meta.url));const gltf=JSON.parse(bytes.toString('utf8',20,20+bytes.readUInt32LE(12)));

@@ -6,6 +6,11 @@ export function insectFlowerVisit(age,index=0,{enabled=true,period=47000}={}){
  const time=age+index*11237,cycle=Math.floor(time/period),local=time-cycle*period;
  return {amount:smooth((local-18000)/6000)*(1-smooth((local-29000)/6000)),index:cycle*3+index};
 }
+export function beeFlowerVisit(age,index=0,{enabled=true}={}){
+ if(!enabled || age<0)return {amount:0,index:0};
+ const period=40000,time=age+index*9173,cycle=Math.floor(time/period),local=time-cycle*period;
+ return {amount:1,index:cycle*7+index*11,transfer:local<6000?smooth(local/6000):1};
+}
 export function beeCuriosity(progress){
  const t=clamp(progress);
  return {x:Math.sin(t*Math.PI*3)*.07,y:Math.sin(t*Math.PI*4)*.045,z:Math.sin(t*Math.PI*2)*.09,headTurn:Math.sin(t*Math.PI*4)*.24,bank:Math.sin(t*Math.PI*3)*.10,pitch:Math.sin(t*Math.PI*2)*.08};

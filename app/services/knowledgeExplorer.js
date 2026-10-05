@@ -41,6 +41,7 @@ export function knowledgeExplorerAction(record,action,time=globalThis.performanc
     else if(action.startsWith('KnowledgeObject')){return state.mode==='explore' && knowledgeObjectAction(record,action);}
     else if(action==='KnowledgeConnections')state.connections=!state.connections;
     else if(action==='KnowledgeContext')state.context=!state.context;
+    else if(action.startsWith('KnowledgeChildPage:')){const match=action.match(/^KnowledgeChildPage:(\d+):(.+)$/);if(!match)return false;state.pages['children:'+match[2]]=Math.max(0,Number(match[1])-1);}
     else if(action==='KnowledgeMore'){const key=state.morePath || 'core';state.pages[key]=(state.pages[key] || 0)+1;}
     else if(action==='KnowledgeResume'){return restoreKnowledgeDiscovery(record,savedKnowledgeDiscovery(record));}
     else if(action==='KnowledgeSave'){

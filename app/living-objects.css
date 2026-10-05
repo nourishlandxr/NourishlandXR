@@ -2391,3 +2391,9 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 @media(max-width:600px) { .knowledge-object-field canvas { height:300px; } }
 
 .plant-knowledge-map[data-knowledge-mode=curiosity] :is(.plant-knowledge-cell,.plant-knowledge-core){filter:drop-shadow(0 0 2px rgba(225,255,238,.75));color:#f6fff8!important;text-shadow:0 1px 3px #071e14;}
+
+/* Curiosity keeps the glass flower, with stronger reading surfaces on its children. */
+.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after,
+.is-simple-desktop-ar .plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after{background:#102922!important;opacity:.9!important;}
+.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child{color:#fff!important;font-weight:700;text-shadow:0 1px 2px #000;}
+.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-core-copy strong{font-size:24px!important;font-weight:800;color:#fffbdc!important;text-shadow:0 2px 4px #05140f;}
