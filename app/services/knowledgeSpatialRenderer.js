@@ -1,7 +1,8 @@
-import {bindKnowledgeObjectInteraction} from './knowledgeObjectInteraction.js';
+import {bindExplorerMoleculeInteraction} from './explorerMoleculeInteraction.js';
+import {createExplorerMoleculeRenderer} from './explorerMoleculeRenderer.js';
 import {bindPimoSpatialCapabilities,isPimoDeveloperOverride} from './pimoSpatialCapabilities.js';
 import * as THREE from '../vendor/three.module.min.js';
-import {createKnowledgeObjectRenderer,knowledgeObjectSurfaces,knowledgeFaceCanvas} from './knowledgeObjectRenderer.js';
+import {knowledgeFaceCanvas} from './knowledgeObjectRenderer.js';
 import {pimVisibleNodes} from './plantInformationMesh.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,KNOWLEDGE_VISUALS} from './knowledgeExplorer.js';
 import {createSpatialTotemCards,hitTotemSurface,hitTotemPoint} from './spatialTotemCards.js';
@@ -98,7 +99,7 @@ function hitKnowledgeSurface(ray,surfaces){
 }
 export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={}){
     let surfaces=[],recordSurfaces=[],objectInput=null,capabilities=null;
-    const objects=createKnowledgeObjectRenderer(gl,{tether});
+    const objects=createExplorerMoleculeRenderer(gl,{ray});
     const cards=createSpatialTotemCards(gl,{canvas:card=>labelCanvas({...card,inkOnly:true}),ray,surfaces:()=>recordSurfaces.map(surface=>knowledgeSurfaceLayer(surface)),containedFeedback:true,hitSurface:hitKnowledgeSurface});
     const glass=createSpatialTotemCards(gl,{canvas:card=>labelCanvas({...card,bodyOnly:true}),ray:()=>null,surfaces:()=>recordSurfaces.map(surface=>knowledgeSurfaceLayer(surface,true))});
     return {
@@ -110,12 +111,11 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
                 if(!record.knowledgeExplorePose){const m=view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements,len=Math.hypot(m[8],m[10]) || 1,right={x:m[10]/len,y:0,z:-m[8]/len},normal={x:m[8]/len,y:0,z:m[10]/len};record.knowledgeExplorePose={position:{x:m[12]-normal.x*.75+right.x*.25,y:Math.max((record.knowledgeFloor || 0)+.65,m[13]-.30),z:m[14]-normal.z*.75+right.z*.25},right,normal,up:{x:0,y:1,z:0}};}
                 if(!isPimoDeveloperOverride())pose=record.knowledgeExplorePose;
                 const state=knowledgeExplorer(record),progress=motionPreference?.matches?1:smooth((time-(state.exploreEnteredAt || 0))/KNOWLEDGE_VISUALS.transitionMs);
-                const folded=progress<1?recordSurfaces.map(surface=>({...surface,interactive:false,opacity:1-progress,center:{x:pose.position.x+(surface.center.x-pose.position.x)*(1-progress),y:pose.position.y+(surface.center.y-pose.position.y)*(1-progress),z:pose.position.z+(surface.center.z-pose.position.z)*(1-progress)}})):[];
-                objects.draw(view,record,knowledge,pose,progress,time);
-                const camera=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements));
-                recordSurfaces=knowledgeObjectSurfaces(record,knowledge,pose).filter(surface=>surface.normal.dot(camera.clone().sub(surface.center).normalize())>.16).map(surface=>({...surface,opacity:progress}));
+                const folded=[];
+                recordSurfaces=objects.draw(view,record,knowledge,pose,progress,time);
                 surfaces.push(...recordSurfaces);recordSurfaces=[...recordSurfaces,...folded];
-                // Labels are inset in the hinged architecture itself.
+                // Molecular geometry belongs only to Explorer. The Curiosity
+                // surfaces and opening transition remain unchanged below.
                 if(folded.length){const objectsSurfaces=recordSurfaces;recordSurfaces=folded;glass.draw(view,{id:'knowledge-glass-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));recordSurfaces=objectsSurfaces;}return;
             }
             surfaces.push(...recordSurfaces);
@@ -136,12 +136,12 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
             glass.draw(view,{id:'knowledge-glass-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>surface.card));
             cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverPath===surface.node.path;return surface.card;}),record.demoSelectedNodeId || record.pimSelectedNodeId || '');
         },
-        end(){cards.end();glass.end();},
-        bindSession(session,space,{canGrab=()=>true,mode,onActivate}={}){objectInput?.destroy();capabilities?.destroy();capabilities=bindPimoSpatialCapabilities(session,space,{mode,rendererReady:true});objectInput=bindKnowledgeObjectInteraction(session,space,{hit:(_source,inputRay)=>objects.hit(inputRay || ray()),near:point=>objects.near(point),canGrab,onActivate});},
+        end(){cards.end();glass.end();objects.end();},
+        bindSession(session,space,{canGrab=()=>true,mode,onActivate}={}){objectInput?.destroy();capabilities?.destroy();capabilities=bindPimoSpatialCapabilities(session,space,{mode,rendererReady:true});objectInput=bindExplorerMoleculeInteraction(session,space,{hit:(_source,inputRay)=>objects.hit(inputRay || ray()),near:point=>objects.near(point),canGrab,onActivate});},
         updateInput(frame){capabilities?.update(frame);objectInput?.update(frame);},
         get grabbing(){return Boolean(objectInput?.active);},
         get grabbedSource(){return objectInput?.active?.source || null;},
-        movingAtAim(){const target=objects.hit(ray());return Boolean(objectInput?.active || target?.record.knowledgeExplorer.objects?.interaction==='move');},
+        movingAtAim(){const target=objects.hit(ray());return Boolean(objectInput?.active || target?.record.explorerMolecule?.interaction==='move');},
         hit(ray,record=null){
             const flat=hitKnowledgeSurface(ray,surfaces.filter(surface=>(!record || surface.record===record) && surface.record.knowledgeExplorer?.mode!=='explore')),object=objects.hit(ray,record);return [flat,object].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0] || null;
         },

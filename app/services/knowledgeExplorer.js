@@ -1,8 +1,9 @@
 import {knowledgeObjectAction} from './knowledgeObjectModel.js';
+import {explorerMoleculeSnapshot,restoreExplorerMolecule} from './explorerMoleculeModel.js';
 import {supportsSpatialPIMO,availablePimoModes} from './pimoSpatialCapabilities.js';
 export {availablePimoModes} from './pimoSpatialCapabilities.js';
 // Presentation state over the existing knowledge document, never a second graph.
-export const KNOWLEDGE_MODES=Object.freeze({tag:{label:'Tag',question:'What is this?',description:'Compact view for quick, discreet details.',hint:'See the essentials at a glance.'},curiosity:{label:'Curiosity',question:'Why is this interesting?',description:'Standard flower view with linked topic cells.',hint:'Follow what makes it interesting.'},explore:{label:'Explorer',question:'How does this knowledge grow?',description:'Unfold domain faces into a connected knowledge star.',hint:'Hold a face to open its wing. Explore the inset topics. Knowledge develops the structure.'}});
+export const KNOWLEDGE_MODES=Object.freeze({tag:{label:'Tag',question:'What is this?',description:'Compact view for quick, discreet details.',hint:'See the essentials at a glance.'},curiosity:{label:'Curiosity',question:'Why is this interesting?',description:'Standard flower view with linked topic cells.',hint:'Follow what makes it interesting.'},explore:{label:'Explorer',question:'What will you build around your purpose?',description:'Choose your knowledge wings and build your own 3D organism.',hint:'Start with your core. Choose a wing, fit its cylindrical connector, then fit the wing onto its free end. Arrange the wings around what matters to you.'}});
 export const KNOWLEDGE_VISUALS=Object.freeze({primaryBonds:6,secondaryBonds:3,maxCuriosityChildren:3,curiosityAttention:24,exploreAttention:18,groupGap:1.65,transitionMs:620,nodeWidth:.24,nodeHeight:.208,planarPitch:.20,shellRadius:.40,shellStep:.24,bondWidth:.0026,labelResolution:512,labelFont:64,ink:'#edf3e4',border:'#adc6bc',selectedBorder:'#dceabd',branchColours:Object.freeze({top:'#47dcb2','upper-right':'#c9e44b','lower-right':'#ffb34e',bottom:'#49c5f0','lower-left':'#ef75b6','upper-left':'#ab8cff'})});
 const discoveryKey = 'nxr-saved-discoveries';
 let savedDiscoveries=null;
@@ -24,7 +25,7 @@ export function knowledgeExplorer(record){
 }
 function discoverySnapshot(record){
     const state=record.knowledgeExplorer;
-    return {subjectId:subjectId(record),title:record.name || record.marker?.name || record.marker?.label || '',activeNodeId:record.demoSelectedNodeId || record.pimSelectedNodeId || '',expandedNodeIds:[...(record.demoExpandedNodeIds || record.pimExpandedNodeIds || [])],mode:state.mode,pages:{...state.pages},positions:{...state.positions},connections:state.connections,context:state.context,history:[...(state.history || [])],readingPage:state.readingPage || 0,selectedConceptId:state.selectedConceptId || '',objects:state.objects?JSON.parse(JSON.stringify(state.objects)):null,curiositySnapshot:state.curiositySnapshot?JSON.parse(JSON.stringify(state.curiositySnapshot)):null};
+    return {subjectId:subjectId(record),title:record.name || record.marker?.name || record.marker?.label || '',activeNodeId:record.demoSelectedNodeId || record.pimSelectedNodeId || '',expandedNodeIds:[...(record.demoExpandedNodeIds || record.pimExpandedNodeIds || [])],mode:state.mode,pages:{...state.pages},positions:{...state.positions},connections:state.connections,context:state.context,history:[...(state.history || [])],readingPage:state.readingPage || 0,selectedConceptId:state.selectedConceptId || '',objects:state.objects?JSON.parse(JSON.stringify(state.objects)):null,curiositySnapshot:state.curiositySnapshot?JSON.parse(JSON.stringify(state.curiositySnapshot)):null,explorerMolecule:explorerMoleculeSnapshot(record)};
 }
 export function preserveKnowledgeContext(record){
     if(!record?.knowledgeExplorer)return;
@@ -56,6 +57,7 @@ export function knowledgeExplorerAction(record,action,time=globalThis.performanc
 export function restoreKnowledgeDiscovery(record,value){
     if(!record || !value)return false;
     const demo=Boolean(record.demoType),state=knowledgeExplorer(record);
+    if(value.explorerMolecule)restoreExplorerMolecule(record,value.explorerMolecule);
     record[demo?'demoSelectedNodeId':'pimSelectedNodeId']=value.activeNodeId || '';
     record[demo?'demoExpandedNodeIds':'pimExpandedNodeIds']=[...(value.expandedNodeIds || [])];
     state.objects=[1,2].includes(value.objects?.version)?JSON.parse(JSON.stringify(value.objects)):undefined;

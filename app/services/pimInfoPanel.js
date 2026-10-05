@@ -1,4 +1,5 @@
 import {pimToArKnowledge} from './pimModel.js';
+import {ensureExplorerMolecule,explorerMoleculeIndex,explorerMoleculeAction,explorerDetailDocument,explorerSelectedPath,explorerPuzzleFit,EXPLORER_RECIPES,EXPLORER_RECIPE} from './explorerMoleculeModel.js';
 import {ensureKnowledgeObjects,selectedKnowledgeObject,selectKnowledgeObjectFace,spawnKnowledgeObject} from './knowledgeObjectModel.js';
 import {knowledgeExplorer,knowledgeExplorerAction,savedKnowledgeDiscovery,KNOWLEDGE_MODES,availablePimoModes,rememberKnowledgeSelection} from './knowledgeExplorer.js';
 import {subscribePimoCapabilities,supportsSpatialPIMO} from './pimoSpatialCapabilities.js';
@@ -24,6 +25,7 @@ export function pimInfoContent(document, path) {
     const node = document?.nodes?.find(item => item.id === path || item.path === path);
     if (!node) return null;
     return { id: node.id, path: node.path, title: node.title,
+        ...(node.explorerSample || node.explorerWing?{editable:false}:{}),
         plant: document.identity?.commonName || document.identity?.scientificName || document.plantId,
         breadcrumb: [...pimAncestors(document, node.id).map(item => item.title), node.title].join(' › '),
         body: node.body || 'No detailed information has been added to this cell yet.',
@@ -373,8 +375,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(action.startsWith('KnowledgeMode:')){panelModeChoice=action.split(':')[1];if(!availablePimoModes().includes(panelModeChoice))return;if(!knowledgeRecord){renderExplorer();return;}}
         if(action.startsWith('Knowledge')){
             if(!knowledgeRecord || explorerControls().find(item=>item.action===action)?.disabled)return;
-            const owner=knowledgeRecord,state=knowledgeExplorer(owner);state.readingPage=page;onInteract(action);
-            const knowledge=knowledgeDocument?pimToArKnowledge(knowledgeDocument):null;
+            const owner=knowledgeRecord,state=knowledgeExplorer(owner);if(state.mode==='explore' && owner.explorerMolecule)owner.explorerMolecule.readingPage=page;else state.readingPage=page;onInteract(action);
+            const knowledge=knowledgeDocument?pimToArKnowledge(knowledgeDocument.explorerSourceDocument || knowledgeDocument):null;
+            if(action.startsWith('KnowledgeMolecule') && knowledge){
+                if(explorerMoleculeAction(owner,knowledge,action)){
+                    const detail=explorerDetailDocument(knowledgeDocument,owner),path=explorerSelectedPath(owner,knowledge);
+                    if(path)api.select(owner,detail,path);else api.focusPlant(owner,detail);
+                    onExplorerAction(owner,action);renderExplorer();
+                }return;
+            }
             if(action==='KnowledgeReadCore'){owner[owner.demoType?'demoSelectedNodeId':'pimSelectedNodeId']='';state.selectedConceptId='core';api.focusPlant(owner,knowledgeDocument);onExplorerAction(owner,action);return;}
             if(action.startsWith('KnowledgeReadPage:')){const key='reader:'+action.slice(18);state.pages[key]=(state.pages[key] || 0)+1;renderExplorer();return;}
             if(action.startsWith('KnowledgeRead:')){
@@ -388,10 +397,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(action.startsWith('KnowledgeFace:') && knowledge){const [objectId,nodeId]=action.slice(14).split('|');const node=knowledgeDocument.nodes.find(item=>item.id===nodeId);if(node){selectKnowledgeObjectFace(owner,knowledge,{...node,knowledgeObjectId:objectId});api.select(owner,knowledgeDocument,node.path);onExplorerAction(owner,action);}return;}
             if(action.startsWith('KnowledgeBranch:') && knowledge){spawnKnowledgeObject(owner,knowledge,action.slice(16));onExplorerAction(owner,action);renderExplorer();return;}
             if(knowledgeExplorerAction(owner,action)){
-                if(state.mode==='explore' && knowledge)ensureKnowledgeObjects(owner,knowledge);
-                const readingPage=state.readingPage;
+                if(state.mode!=='explore' && knowledgeDocument?.explorerSourceDocument)api.focusPlant(owner,knowledgeDocument.explorerSourceDocument);
+                if(state.mode==='explore' && knowledge){ensureExplorerMolecule(owner,knowledge);const path=explorerSelectedPath(owner,knowledge);if(path)api.select(owner,explorerDetailDocument(knowledgeDocument,owner),path);}
+                const readingPage=state.mode==='explore'?owner.explorerMolecule?.readingPage || 0:state.readingPage;
                 onExplorerAction(owner,action);
-                if(action==='KnowledgeResume' || action==='KnowledgeMode:curiosity'){page=readingPage;state.readingPage=readingPage;}
+                if(action==='KnowledgeResume' || action==='KnowledgeMode:curiosity'){page=readingPage;if(state.mode!=='explore')state.readingPage=readingPage;}
                 render();renderExplorer();
             }return;
         }
@@ -451,7 +461,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(action==='SpatialScale'){spatialScale=value;setSpatialVisualSettings({spatialScale});}
         if(action==='TextSize'){largeText=value>=.5;page=0;setSpatialVisualSettings({largeText});updateReading();}
         if(action==='FloorOffset'){floorOffset=value;setSpatialVisualSettings({floorOffset});onFloorOffset(value);}
-        if(action==='KnowledgeDiceSize' && knowledgeRecord){knowledgeExplorerAction(knowledgeRecord,'KnowledgeObjectSize:'+value);onExplorerAction(knowledgeRecord,'KnowledgeObjectSize:'+value);renderExplorer();}
+        if(action==='KnowledgeDiceSize' && knowledgeRecord){const knowledge=knowledgeDocument?pimToArKnowledge(knowledgeDocument.explorerSourceDocument || knowledgeDocument):null;if(knowledge)explorerMoleculeAction(knowledgeRecord,knowledge,'KnowledgeMoleculeSize:'+value);onExplorerAction(knowledgeRecord,'KnowledgeMoleculeSize:'+value);renderExplorer();}
     }
     function slideAtTarget(button,target){
         if(!target || button.kind!=='slider')return false;
@@ -920,7 +930,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.explorer){
             ctx.fillStyle='#edf3e4';ctx.font='700 30px Manrope, system-ui';ctx.fillText('Controls',24,12,180);ctx.font='500 24px Manrope, system-ui';ctx.fillStyle='#cfdfd9';ctx.fillText(card.question,230,15,600);
-            for(const item of card.controls){ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,14);ctx.fill();ctx.stroke();if(item.kind==='slider'){ctx.textAlign='left';ctx.font='500 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText(item.action==='CellOpacity'?'Cell glass · '+Math.round(item.value*100)+'%':'Die size · '+Math.round(24*item.value)+' cm',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}else {ctx.font=(item.kind==='mode'?'650 31px':'550 24px')+' Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.fillText(item.label,item.x+item.width/2,item.y+12,item.width-16);}}ctx.globalAlpha=1;ctx.font='500 18px Manrope, system-ui';ctx.fillStyle='#d5ded7';ctx.textAlign='center';for(const item of card.controls.filter(control=>control.kind==='mode'))infoPages(item.description,31,2)[0].forEach((line,index)=>ctx.fillText(line,item.x+item.width/2,124+index*22,item.width-16));ctx.textAlign='left';return c;
+            for(const item of card.controls){ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,14);ctx.fill();ctx.stroke();if(item.kind==='slider'){ctx.textAlign='left';ctx.font='500 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText(item.action==='CellOpacity'?'Cell glass · '+Math.round(item.value*100)+'%':'Structure scale · '+item.value.toFixed(2)+'×',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}else {ctx.font=(item.kind==='mode'?'650 31px':'550 24px')+' Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.fillText(item.label,item.x+item.width/2,item.y+12,item.width-16);}}ctx.globalAlpha=1;ctx.font='500 18px Manrope, system-ui';ctx.fillStyle='#d5ded7';ctx.textAlign='center';for(const item of card.controls.filter(control=>control.kind==='mode'))infoPages(item.description,31,2)[0].forEach((line,index)=>ctx.fillText(line,item.x+item.width/2,124+index*22,item.width-16));ctx.textAlign='left';return c;
         }
         if(card.media){
             if(card.hoverHint){ctx.fillStyle='rgba(8,20,31,.88)';ctx.beginPath();ctx.roundRect(40,78,770,46,12);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 19px system-ui';ctx.fillText(card.hoverHint,56,91,740);}
@@ -1097,13 +1107,36 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         add('KnowledgeSave',state.saveFailed?'Retry save':state.saved?'Saved':'Save discovery',22,132,464);
         add('KnowledgeResume','Resume discovery',506,132,464,{disabled:!savedKnowledgeDiscovery(knowledgeRecord)});
         if(state.mode==='explore'){
-            const object=selectedKnowledgeObject(knowledgeRecord),face=object?.faces.find(f=>f?.faceId===state.objects?.selectedFaceId),region=state.objects?.regions?.find(region=>region.rootId===state.objects?.activeRegionId);
-            add('KnowledgeDiceSize','Structure size',260,202,710,{kind:'slider',value:state.objects?.scale || 1,min:.65,max:1.35,step:.05});
-            add('KnowledgeObjectCollapse',region?.opened?'Fold domain wing':'Reopen domain wing',22,272,464,{disabled:!region});
-            add('KnowledgeObjectMove',state.objects?.interaction==='move'?'Finish moving':'Pointer move',506,272,464,{selected:state.objects?.interaction==='move'});
-            if(region?.focusId && region.focusId!==region.rootId)add('KnowledgeObjectBack','Back within this domain',22,342,948);
-            else if(face?.role==='hybrid')add('KnowledgeBranch:'+face.conceptId,'Explore '+face.title,22,342,948);
-            if(object?.facePages>1)add('KnowledgeObjectFaces','More inset topics',22,412,464);
+            const knowledge=knowledgeDocument?pimToArKnowledge(knowledgeDocument.explorerSourceDocument || knowledgeDocument):null,molecule=knowledge?ensureExplorerMolecule(knowledgeRecord,knowledge):knowledgeRecord.explorerMolecule,index=knowledge?explorerMoleculeIndex(knowledge,knowledgeRecord):null,node=index?.nodes.get(molecule?.selectedId);
+            add('KnowledgeDiceSize','Structure size',260,202,710,{kind:'slider',value:molecule?.root.scale || 1,min:.65,max:1.35,step:.05});
+            let y=272;
+            if(molecule?.puzzle){
+                const connector=molecule.puzzle.phase==='connector';
+                add('KnowledgeMoleculeAlign',connector?'Align connector with socket':'Align topic with free end',22,y,948);y+=70;
+                add('KnowledgeMoleculeAttach',connector?'Lock connector':'Lock topic',22,y,464,{disabled:!knowledge || !explorerPuzzleFit(knowledgeRecord,knowledge).valid});
+                add('KnowledgeMoleculeCancel','Cancel assembly',506,y,464);y+=70;
+            }else{
+                if(node && node.id!=='core'){
+                    add('KnowledgeMoleculeCollapse',molecule.expanded.includes(node.id)?'Collapse this branch':'Expand this branch',22,y,464,{disabled:!node.children.length});
+                    add('KnowledgeMoleculeMove',molecule.interaction==='move'?'Finish moving':'Move a wing',506,y,464,{selected:molecule.interaction==='move'});y+=70;
+                    add('KnowledgeMoleculeBack','Back to parent',22,y,464);
+                    add('KnowledgeMoleculeMore','More topics',506,y,464,{disabled:node.children.length<=3});y+=70;
+                    const page=molecule.pages[node.id] || 0,available=node.children.filter(id=>id!==EXPLORER_RECIPE || molecule.contributionAdded).slice(page*3,page*3+3).some(id=>!molecule.assembled.includes(node.id+'>'+id));
+                    add('KnowledgeMoleculeBuild','Assemble a topic connection',22,y,948,{disabled:!available});y+=70;
+                    add('KnowledgeMoleculeRemove','Remove this wing',22,y,464);
+                    add('KnowledgeMoleculeWingSize','Wing size · '+(molecule.wingObjects[node.domainId]?.scale || 1).toFixed(2)+'×',506,y,464);y+=70;
+                    if(node.id===EXPLORER_RECIPES){add('KnowledgeMoleculeRecipe','Build sample recipe connection',22,y,948,{disabled:molecule.contributionAdded});y+=70;}
+                }
+            }
+            if(!molecule?.puzzle){
+                const open=molecule?.libraryOpen ?? !molecule?.wings.length;
+                add('KnowledgeMoleculeLibraryToggle',open?'Close wing library':'Choose a knowledge wing',22,y,948,{selected:open});y+=70;
+                if(open && index){
+                    const total=Math.ceil(index.roots.length/3),page=Math.min(total-1,molecule.libraryPage || 0);
+                    for(const id of index.roots.slice(page*3,page*3+3)){const attached=molecule.assembled.includes('core>'+id);add('KnowledgeMoleculeWing:'+id,(attached?'Connected · ':'Build · ')+index.nodes.get(id).label,22,y,948,{disabled:attached || molecule.wings.length>=12});y+=70;}
+                    add('KnowledgeMoleculeLibrary','More wings · '+(page+1)+' / '+total,22,y,948,{disabled:total<=1});
+                }
+            }
         }else if(state.mode==='curiosity' && knowledgeDocument){
             const selected=knowledgeDocument.nodes.find(n=>n.path===(knowledgeRecord.demoSelectedNodeId || knowledgeRecord.pimSelectedNodeId));
             if(selected){const parent=knowledgeDocument.nodes.find(n=>n.id===selected.parentId);add(parent?'KnowledgeRead:'+parent.id:'KnowledgeReadCore',parent?'Back to '+parent.title:'Back to plant',22,202,464);}
@@ -1131,9 +1164,34 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','Explorer options');
         for(const item of explorerControls()){
             if(item.action==='Explorer'){header.append(makeButton(item));continue;}
-            if(item.kind==='slider'){const label=document.createElement('label');label.className='nlxr-explorer-size';label.textContent=item.action==='CellOpacity'?'Cell surface · '+Math.round(item.value*100)+'% solid':'Die size · '+Math.round(24*item.value)+' cm';const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label',item.action==='CellOpacity'?'PIMO cell opacity':'Explorer die size');slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));label.append(slider);options.append(label);}
+            if(item.kind==='slider'){const label=document.createElement('label');label.className='nlxr-explorer-size';label.textContent=item.action==='CellOpacity'?'Cell surface · '+Math.round(item.value*100)+'% solid':'Structure scale · '+item.value.toFixed(2)+'×';const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label',item.action==='CellOpacity'?'PIMO cell opacity':'Explorer structure scale');slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));label.append(slider);options.append(label);}
             else {const button=makeButton(item);button.setAttribute('aria-pressed',String(Boolean(item.selected)));if(item.kind==='mode'){const choice=document.createElement('div'),description=document.createElement('p');choice.className='nlxr-explorer-mode-choice';description.textContent=item.description;description.id=contentId+'-'+item.action.replace(':','-')+'-description';button.setAttribute('aria-describedby',description.id);choice.append(button,description);modes.append(choice);}else options.append(button);}
         }explorerElement.append(modes,options);
+        if(state.mode==='explore' && knowledgeRecord && knowledgeDocument)renderMoleculeCustomization();
+    }
+    function renderMoleculeCustomization(){
+        const knowledge=pimToArKnowledge(knowledgeDocument.explorerSourceDocument || knowledgeDocument),molecule=ensureExplorerMolecule(knowledgeRecord,knowledge),index=explorerMoleculeIndex(knowledge,knowledgeRecord);
+        const progress=document.createElement('p');progress.className='nlxr-molecule-progress';progress.setAttribute('role','status');
+        progress.textContent=molecule.wings.filter(id=>molecule.assembled.includes('core>'+id)).length+' wings built · '+molecule.discovered.length+' topics discovered'+(molecule.purpose?' · '+molecule.purpose:'');explorerElement.append(progress);
+        const details=document.createElement('details');details.className='nlxr-molecule-customize';const summary=document.createElement('summary');summary.textContent='Customize your organism';details.append(summary);
+        const message=document.createElement('p');message.textContent='Choose what matters here. Wildlife and Historical Facts suit a ranger’s focus. Traditional uses can belong in your rainforest story when supported by recorded knowledge.';details.append(message);
+        const form=document.createElement('form');form.setAttribute('aria-label','Organism identity');
+        const input=(parent,label,value='',type='text')=>{const row=document.createElement('label');row.textContent=label;const field=document.createElement('input');field.type=type;field.value=value;field.setAttribute('aria-label',label);row.append(field);parent.append(row);return field;};
+        const submit=(parent,label)=>{const button=document.createElement('button');button.type='submit';button.textContent=label;parent.append(button);};
+        const name=input(form,'Organism name',molecule.name || index.title),purpose=input(form,'Purpose or place',molecule.purpose || '');name.maxLength=80;purpose.maxLength=280;submit(form,'Apply name and purpose');
+        const encode=values=>encodeURIComponent(JSON.stringify(values));
+        form.addEventListener('submit',event=>{event.preventDefault();act('KnowledgeMoleculePersonalize:'+encode({name:name.value,purpose:purpose.value}));});details.append(form);
+        const wing=index.nodes.get(index.nodes.get(molecule.selectedId)?.domainId);
+        if(wing && wing.id!=='core' && molecule.wings.includes(wing.id)){
+            const style=document.createElement('form');style.setAttribute('aria-label','Selected wing style');
+            const label=input(style,'Wing name',wing.label),colour=input(style,'Wing colour',wing.colour || '#79ab91','color'),scale=input(style,'Wing scale',molecule.wingObjects[wing.id]?.scale || 1,'number');scale.min=.65;scale.max=1.6;scale.step=.05;submit(style,'Apply wing style');
+            style.addEventListener('submit',event=>{event.preventDefault();act('KnowledgeMoleculeWingStyle:'+encode({label:label.value,colour:colour.value,scale:Number(scale.value)}));});details.append(style);
+        }
+        const custom=document.createElement('form');custom.setAttribute('aria-label','Create a custom wing');
+        const title=input(custom,'New wing name'),colour=input(custom,'New wing colour','#8ca7b4','color');title.required=true;title.maxLength=72;
+        const label=document.createElement('label');label.textContent='Choose existing topics (up to 12)';const select=document.createElement('select');select.multiple=true;select.size=6;select.required=true;select.setAttribute('aria-label','Topics for custom wing');
+        for(const node of explorerMoleculeIndex(knowledge).nodes.values()){if(node.id==='core'||node.sample||node.virtualWing||node.sourceId)continue;const option=document.createElement('option');option.value=node.id;option.textContent=(node.path || node.id)+' · '+node.label;select.append(option);}label.append(select);custom.append(label);
+        submit(custom,'Create wing in library');custom.addEventListener('submit',event=>{event.preventDefault();act('KnowledgeMoleculeCustom:'+encode({label:title.value,colour:colour.value,sourceIds:[...select.selectedOptions].map(option=>option.value)}));});details.append(custom);explorerElement.append(details);
     }
     function explorerDockPose(){if(!pose)return null;const {mainHeight,mainWidth}=spatialDimensions(),offset=mainHeight/2+explorerHeight()/1000*mainWidth/2+.035;return {...pose,center:{x:pose.center.x-pose.up.x*offset,y:pose.center.y-pose.up.y*offset,z:pose.center.z-pose.up.z*offset}};}
     function explorerSpatialPose(){return explorerPose || explorerDockPose();}
@@ -1207,13 +1265,15 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         focusPlant(nextRecord,document,media=null){
             const previousMedia=record===nextRecord ? identity?.media : null;
             const previousHint=record===nextRecord ? identity?.hint : '';
-            if(panelModeChoice)knowledgeExplorerAction(nextRecord,'KnowledgeMode:'+panelModeChoice);const savedContext=knowledgeExplorer(nextRecord),selectedPath=nextRecord.demoSelectedNodeId || nextRecord.pimSelectedNodeId;
+            if(panelModeChoice)knowledgeExplorerAction(nextRecord,'KnowledgeMode:'+panelModeChoice);const savedContext=knowledgeExplorer(nextRecord);
+            document=savedContext.mode==='explore'?explorerDetailDocument(document,nextRecord):document.explorerSourceDocument || document;
+            const selectedPath=savedContext.mode==='explore'?explorerSelectedPath(nextRecord,pimToArKnowledge(document.explorerSourceDocument || document)):nextRecord.demoSelectedNodeId || nextRecord.pimSelectedNodeId;
             const selectedContent=selectedPath?pimInfoContent(document,selectedPath):null;
             const nextMedia=pimPanelMedia(document,selectedContent,media,previousMedia);
             record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=selectedContent;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};
             mediaCollapsed=!nextMedia?.image;mediaTouched=false;
             loadPanelImage(nextMedia?.image || '');
-            tab='Details';page=savedContext.readingPage || 0;render(true);
+            tab='Details';page=savedContext.mode==='explore'?nextRecord.explorerMolecule?.readingPage || 0:savedContext.readingPage || 0;render(true);
         },
         select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String(cellMedia?.caption || document.identity?.imageCaption || '')}:previous;record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},

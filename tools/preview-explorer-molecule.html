@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Explorer molecular knowledge — local testing</title>
+<link rel="stylesheet" href="../app/living-objects.css">
+<style>
+body{margin:0;background:#203329;color:#edf3e4;font:16px/1.5 system-ui}main{max-width:1500px;margin:auto;padding:24px}h1{font:500 30px Georgia,serif;margin:0}p{max-width:900px;color:#c3d2c5}.choices{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}button{font:inherit;color:inherit;background:#9cb9a51c;border:1px solid #abc6b477;border-radius:12px;padding:8px 12px;cursor:pointer}button:hover{background:#9cb9a533}.study{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:20px}#field{border:1px solid #abc6b444;border-radius:22px;background:radial-gradient(ellipse at 45% 30%,#596b58,#304735 65%,#24372b);overflow:hidden;min-height:580px}.knowledge-object-field{display:block!important;padding:12px!important}.knowledge-object-field canvas{display:block;width:100%!important;height:510px!important;touch-action:none}.knowledge-object-title,.knowledge-object-hint{text-align:center;margin:8px auto;font-size:14px}#status{min-height:26px}#error{color:#ffbdb0}.study-panels .nlxr-info-panel,.study-panels .nlxr-settings-companion{position:relative!important;left:auto!important;right:auto!important;bottom:auto!important;top:auto!important;transform:none!important;width:100%!important;max-height:none!important;height:auto!important;z-index:1!important;margin:0 0 16px!important}.study-panels .nlxr-settings-companion[hidden]{display:none!important}.study-panels .nlxr-media-floating{display:none!important}a{color:#d9e9cf}#topics button{font-size:14px}@media(max-width:900px){.study{grid-template-columns:1fr}}
+</style>
+<main><h1>Explorer: build your own knowledge organism</h1><p>Start with one core. Choose the wings that matter to your purpose, connect them like a puzzle, and arrange each branch in full 3D. The wing library and customization forms below use the production Explorer controls.</p><p>This local study uses Pigeon Pea’s recorded knowledge. A ranger can choose Wildlife and Historical Facts while leaving Food Forest and Uses in the library. Custom wings can group traditional knowledge with seed, leaf or craft topics where relevant records exist.</p>
+<div class="choices"><button id="reset">Start a new empty organism</button><button id="ranger">Choose ranger focus</button><button id="align">Align connector with socket</button><button id="attach">Lock connector</button><button id="far">Far / aggregate</button><button id="close">Close / unfold</button></div>
+<div class="choices"><button id="front">Front view</button><button id="side">Side view</button><button id="back">Back view</button></div>
+<div class="study"><div><div id="field"></div><p id="status" role="status"></p><div id="topics" class="choices" aria-label="Visible knowledge nodes"></div><p id="error" role="alert"></p></div><div id="panels" class="study-panels"></div></div>
+<p><a href="/app/">Open the app welcome screen</a></p></main>
+<script type="module">
+import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
+import {PIGEON_PEA_PIM} from '../app/services/pigeonPeaPim.js';
+import {knowledgeExplorer,knowledgeExplorerAction} from '../app/services/knowledgeExplorer.js';
+import {setPimoDeveloperOverride} from '../app/services/pimoSpatialCapabilities.js';
+import {mountKnowledgeObjectDesktop} from '../app/services/knowledgeObjectDesktop.js';
+import {createPimInfoPanel} from '../app/services/pimInfoPanel.js';
+import {ensureExplorerMolecule,explorerMoleculeIndex,selectExplorerNode,explorerMoleculeAction,explorerMoleculeView,explorerDetailDocument,explorerSelectedPath,explorerPuzzleFit} from '../app/services/explorerMoleculeModel.js';
+const field=document.querySelector('#field'),status=document.querySelector('#status'),error=document.querySelector('#error'),topics=document.querySelector('#topics');
+window.addEventListener('error',e=>error.textContent=e.message);window.addEventListener('unhandledrejection',e=>error.textContent=String(e.reason));
+setPimoDeveloperOverride(true);
+let record,view,panel,viewDistance=1.5,viewAngle=0,rangerQueue=[];
+function refresh(){
+    if(!record)return;const state=ensureExplorerMolecule(record,knowledge),index=explorerMoleculeIndex(knowledge,record);
+    const visible=explorerMoleculeView(record,knowledge,viewDistance,performance.now(),true);
+    const connector=state.puzzle?.phase==='connector',assembly=state.puzzle?` · ${index.nodes.get(state.puzzle.parentId)?.label} → ${index.nodes.get(state.puzzle.childId)?.label}: ${connector?'fit and lock the connector':'fit and lock the topic'}`:'';
+    status.textContent=`${state.wings.filter(id=>state.assembled.includes('core>'+id)).length} wings built · ${state.discovered.length} topics discovered · ${visible.nodes.filter(n=>!n.attachment&&!n.connector).length} visible nodes · ${visible.bonds.length} connections · ${visible.lod} view${assembly}`;
+    document.querySelector('#align').textContent=connector?'Align connector with socket':'Align topic with free end';document.querySelector('#align').disabled=!state.puzzle;
+    document.querySelector('#attach').textContent=connector?'Lock connector':'Lock topic';document.querySelector('#attach').disabled=!explorerPuzzleFit(record,knowledge).valid;
+    document.querySelector('#ranger').disabled=Boolean(state.puzzle)||state.wings.length>0;
+    topics.replaceChildren();for(const node of visible.nodes.filter(n=>!n.pending)){const b=document.createElement('button');b.textContent=node.label;b.onclick=()=>select({explorerNodeId:node.id,explorerAttachment:node.attachment});topics.append(b);}
+    view.update({record,knowledge,expanded:record.demoExpandedNodeIds,onSelect:select,viewDistance,viewAngle});
+    const path=explorerSelectedPath(record,knowledge),detailDocument=explorerDetailDocument(PIGEON_PEA_PIM,record);
+    if(record.knowledgeExplorer.mode==='explore'){if(path)panel.select(record,detailDocument,path);else panel.focusPlant(record,detailDocument);}panel.refreshExplorer();
+}
+function select(node){selectExplorerNode(record,knowledge,node);refresh();}
+function reset(){
+    view?.destroy();panel?.destroy();viewDistance=1.5;viewAngle=0;rangerQueue=[];record={id:'molecule-study',demoType:'plant',name:'Pigeon Pea',demoExpandedNodeIds:[],demoSelectedNodeId:''};knowledgeExplorer(record);knowledgeExplorerAction(record,'KnowledgeMode:explore');ensureExplorerMolecule(record,knowledge);
+    view=mountKnowledgeObjectDesktop(field,{record,knowledge,expanded:[],onSelect:select,viewDistance,viewAngle});
+    panel=createPimInfoPanel({root:document.querySelector('#panels'),simpleDesktop:true,onExplorerAction:()=>{advanceRanger();refresh();}});panel.focusPlant(record,PIGEON_PEA_PIM);panel.setExplorerOpen(true);refresh();
+}
+function advanceRanger(){if(rangerQueue.length && !record.explorerMolecule.puzzle)explorerMoleculeAction(record,knowledge,'KnowledgeMoleculeWing:'+rangerQueue.shift());}
+document.querySelector('#reset').onclick=reset;
+document.querySelector('#ranger').onclick=()=>{explorerMoleculeAction(record,knowledge,'KnowledgeMoleculePersonalize:'+encodeURIComponent(JSON.stringify({name:'Ranger’s knowledge organism',purpose:'Wildlife and historical facts'})));rangerQueue=['explorer-wildlife','historical-data'];advanceRanger();refresh();};
+document.querySelector('#attach').onclick=()=>{explorerMoleculeAction(record,knowledge,'KnowledgeMoleculeAttach');advanceRanger();refresh();};
+document.querySelector('#align').onclick=()=>{explorerMoleculeAction(record,knowledge,'KnowledgeMoleculeAlign');refresh();};
+document.querySelector('#far').onclick=()=>{viewDistance=3.5;refresh();};document.querySelector('#close').onclick=()=>{viewDistance=1.5;refresh();};
+document.querySelector('#front').onclick=()=>{viewAngle=0;refresh();};document.querySelector('#side').onclick=()=>{viewAngle=Math.PI/2;refresh();};document.querySelector('#back').onclick=()=>{viewAngle=Math.PI;refresh();};
+reset();
+</script></html>

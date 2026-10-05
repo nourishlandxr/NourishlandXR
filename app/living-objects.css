@@ -2387,6 +2387,15 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 .nlxr-explorer-companion button {background:rgba(18,39,34,.36);color:#edf3e4;border:1px solid #8faea4;border-radius:12px;min-height:44px;}
 .nlxr-explorer-companion .nlxr-explorer-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px;}
 .nlxr-explorer-companion .nlxr-explorer-options button{white-space:normal;line-height:1.3;}
+.nlxr-molecule-progress{margin:14px 0!important;font:600 14px/1.5 system-ui!important;}
+.nlxr-molecule-customize{margin-top:14px;border-top:1px solid #abc6b444;padding-top:12px;}
+.nlxr-molecule-customize summary{cursor:pointer;font-weight:650;min-height:36px;}
+.nlxr-molecule-customize form{display:grid;gap:10px;margin:16px 0;padding-top:12px;border-top:1px solid #abc6b444;}
+.nlxr-molecule-customize label{display:grid;gap:4px;font:500 14px/1.4 system-ui;}
+.nlxr-molecule-customize input,.nlxr-molecule-customize select{box-sizing:border-box;width:100%;min-height:40px;padding:8px;border:1px solid #abc6b466;border-radius:8px;background:#172d29;color:#edf3e4;font:inherit;}
+.nlxr-molecule-customize input[type=color]{padding:4px;}
+.nlxr-molecule-customize select{min-height:150px;}
+.nlxr-molecule-customize button{min-height:44px;white-space:normal;}
 .nlxr-explorer-companion header>button{margin-left:auto;min-height:32px;padding:4px 12px;}
 .nlxr-explorer-size{grid-column:1/-1;display:grid;grid-template-columns:150px 1fr;align-items:center;gap:16px;color:#edf3e4;font-size:14px;min-height:48px;}
 .nlxr-explorer-size input{width:100%;accent-color:#b4d3ce;}

@@ -1,0 +1,15 @@
+# Explorer prototype testing
+
+Explorer uses its own model, renderer and XR interaction binder in the three `explorerMolecule*` modules. It reads canonical PIMO knowledge without modifying it. Its selection, expansion, discoveries, paging, node positions and contribution state live in `record.explorerMolecule`; Curiosity retains its existing presentation and state.
+
+The production Demo and Creator hosts use this renderer in immersive Explore mode. Normal desktop mode availability stays capability-gated. The developer preview at `/tools/preview-explorer-molecule.html` enables Explore locally and uses the production renderer and Control Panel.
+
+Walk through the numbered preview controls: initial structure, Uses, Food, Fresh peas details, build a recipe connection, promote Food, then far/close. Assembly has two stages: align and lock the cylindrical connector, then align and lock its topic. Alignment buttons provide a keyboard-accessible alternative to dragging; locking still validates position, angle and semantic address. The recipe and 32-entry density example are explicitly samples and never publish a plant-profile contribution.
+
+In immersive testing, hold a node for 500 ms to inspect it, then use Assemble a connection to build a root/domain/topic relationship, or Build sample recipe connection for the contribution example. Grab the cylindrical piece with trigger, grip or pinch, align its ends with the matching socket, and release to lock it. Fit the separate topic piece to the connector's free end and release again. Magnetic assistance operates only near the correct slot and with a compatible connector angle; wrong sockets and badly aligned pieces cannot lock. Cancelled/lost input cannot complete a connection. Physical Quest and Android testing is still required. On desktop, drag a piece to move it and Alt-drag to rotate it; side views allow moving through depth.
+
+Check Save/Resume and Explore → Curiosity → Explore: explored topology and local positions should restore, while Curiosity must retain the same honeycomb, content, selected cell and expansion. Long-form information stays in the Control Panel.
+
+Explorer's initial ports have their own 3D arrangement independent of Curiosity's compass. Completed relationships use closed cylindrical connectors with a 28 mm default diameter at scale 1. Pieces and sockets use the same shared geometry with exact cylinder ray picking and near-hand contact. The renderer caches label textures, limits detailed nodes to 24 and reveals three immediate children per page. Distance aggregation uses hysteresis and preserves promoted hubs and their parent bonds. Completed assemblies persist with discovery state; unfinished assemblies are discarded on restore. Reduced motion removes growth and contribution-pulse animation.
+
+Run `node --test tests/explorer-molecule.test.mjs`, the related knowledge/PIMO tests, `node tools/build-hosted.mjs` and `git diff --check`. Verify the welcome version in the built app. A local build is separate from deployment and physical headset validation.

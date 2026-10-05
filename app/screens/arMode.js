@@ -1,4 +1,5 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
+import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,rememberKnowledgeSelection,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
@@ -3654,7 +3655,10 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
     if(knowledgeRenderer?.grabbing && (!candidate.inputSource || candidate.inputSource===knowledgeRenderer.grabbedSource))return true;
     if(record.knowledgeExplorer?.mode==='explore' && (target.pimKnowledgeFace || target.pimKnowledgeContext)){
         if(!candidate.intentionalHold)return true;
-        selectKnowledgeObjectFace(record,creatorPlantKnowledge(record),target);if(target.path)showCreatorInfo(record,target.path);else infoPanel?.focusPlant(record,creatorKnowledgeDocument(record));refreshCreatorPimProfile(record);infoPanel?.refreshExplorer();return true;
+        selectExplorerNode(record,creatorPlantKnowledge(record),target);
+        const explorerDocument=explorerDetailDocument(creatorKnowledgeDocument(record),record),explorerPath=explorerSelectedPath(record,creatorPlantKnowledge(record));
+        if(explorerPath)infoPanel?.select(record,explorerDocument,explorerPath);else infoPanel?.focusPlant(record,explorerDocument);
+        refreshCreatorPimProfile(record);infoPanel?.refreshExplorer();return true;
     }
     if(target.pimRead) {openCreatorKnowledge(record);return true;}
     if (target.pimCore) {
@@ -5833,7 +5837,7 @@ function createCreatorInfoPanel(){
         onFloorOffset:()=>renderSessionMarkers(),onTotemModel:()=>renderSessionMarkers(),
         onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
         onCellOpacity:value=>{creatorCellOpacity=value;for(const record of sessionMarkers.filter(item=>item.profileExpanded))refreshCreatorPimProfile(record);},
-        onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);invalidateSpatialPimTexture(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.pimSelectedNodeId)showCreatorInfo(record,record.pimSelectedNodeId);refreshCreatorPimProfile(record);},onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
+        onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);invalidateSpatialPimTexture(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.pimSelectedNodeId)showCreatorInfo(record,record.pimSelectedNodeId);refreshCreatorPimProfile(record);},onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
     overlayRoot?.style.setProperty('--creator-info-opacity',String(getSpatialVisualSettings().infoOpacity));
     infoPanel.element.classList.add('is-creator-panel');creatorPerformance.publish();syncCreatorPanelActions();
 }

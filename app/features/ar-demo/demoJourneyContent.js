@@ -229,10 +229,28 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.22",
         "act": "Connect areas",
         "title": "A place that can grow with knowledge",
-        "main": "Plants, observations and directions can become part of one connected place. There is one optional learning example you can explore before finishing.",
+        "main": "Plants, observations and directions can become part of one connected place. Next, see how this can support exploring, learning and planning on any land.",
         "panel": "Keep local information available without repeating the full main message.",
-        "hint": "Continue to the final feature: Learning Pathways.",
+        "hint": "Continue to Utility: explore, learn and plan.",
         "art": "connectedAreas"
+    },
+    {
+        "id": "UTILITY 1.1",
+        "act": "Explore, learn and plan",
+        "title": "Explore, learn and plan",
+        "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
+        "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
+        "hint": "Replay the map, then discover learning before planting.",
+        "art": null
+    },
+    {
+        "id": "UTILITY 1.2",
+        "act": "Learn before planting",
+        "title": "Learn before planting",
+        "main": "Explore what could grow here before anything is planted.\n\nCompare what to plant, the light, water, soil and climate each plant needs, and what it can provide — food, shade, habitat or support for the soil.\n\nVisitors, teachers and students can use these questions to learn about a place. People planning a planting can use that knowledge to make informed choices.",
+        "panel": "Try three questions: What could grow here? What conditions would it need? What could it contribute? A school class could compare plants for a garden; a university group could investigate a site's conditions; a visitor could discover why a plant suits its surroundings.",
+        "hint": "Continue to Learning Pathways to follow a question.",
+        "art": null
     },
     {
         "id": "LEARNING 1.6",

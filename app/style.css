@@ -1,4 +1,4 @@
-﻿
+
 * {
     margin: 0;
     padding: 0;
@@ -11905,3 +11905,26 @@ body:has(.app-surface) {
 
 .tryit-butterfly-model {position:fixed;width:86px;height:86px;pointer-events:none;z-index:12310;object-fit:contain;}
 .tryit-demo.is-immersive .tryit-butterfly-model {display:none;}
+
+/* The flat demo keeps the live miniature inside its readable Living Frame card. */
+#app .tryit-demo.is-simulated .tryit-guided-choice.is-utility-board {
+    display:block;top:48%;left:50%;bottom:auto;width:min(800px,calc(100vw - 24px));height:auto;min-height:0;max-height:calc(100dvh - 170px);
+    padding:18px 20px;overflow:auto;transform:translate(-50%,-50%);animation:none;
+}
+#app .tryit-demo.is-simulated .is-utility-board h2 {font-size:clamp(1.3rem,3vw,2rem);margin:8px 0 12px;animation:none;}
+#app .tryit-demo.is-simulated .is-utility-board .tryit-board-text-window {max-height:none;min-height:0;padding:0;}
+#app .tryit-demo.is-simulated .is-utility-board .tryit-board-text-window p {font-size:clamp(.9rem,1.8vw,1.1rem);line-height:1.4;margin:0;}
+.tryit-demo.is-simulated [data-demo-living-map] {display:block;width:100%;height:auto;aspect-ratio:1000 / 740;margin:10px 0;}
+#app .tryit-demo.is-simulated .is-utility-board .tryit-map-caption {font-size:clamp(.9rem,1.8vw,1.1rem);margin:8px 0;color:#dfecc8;}
+#app .tryit-demo.is-simulated .tryit-map-replay {min-height:36px;padding:5px 14px;font-size:.85rem;margin-top:4px;}
+#app .tryit-demo.is-simulated .is-utility-board > .tryit-context-trigger {position:static!important;display:inline-flex;align-items:center;justify-content:center;transform:none!important;width:min(100%,280px);height:auto;min-height:44px;margin:6px 8px;padding:8px 14px;font-size:14px;border-radius:16px;}
+.tryit-demo.is-simulated[data-demo-utility="true"] .tryit-live-welcome canvas {visibility:hidden;}
+.tryit-demo.is-simulated[data-demo-utility="true"] [data-tryit-sim-markers] {opacity:.18;pointer-events:none;}
+@media(min-width:960px) {
+    #app .tryit-demo.is-simulated.is-desktop-spatial-preview .is-utility-board {left:74%;width:min(45vw,800px);}
+}
+@media(max-width:620px) {
+    #app:has(.tryit-demo[data-demo-utility="true"]) .nlxr-info-panel {display:none;}
+    #app .tryit-demo.is-simulated .tryit-guided-choice.is-utility-board {top:50%;padding:14px 16px;pointer-events:auto;}
+    .tryit-demo.is-simulated [data-demo-living-map] {aspect-ratio:1000 / 900;}
+}

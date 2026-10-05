@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Living Map · demo test</title>
+<link rel="stylesheet" href="../app/style.css"><link rel="stylesheet" href="../app/pim.css"><link rel="stylesheet" href="../app/product-v2.css"><link rel="stylesheet" href="../app/living-objects.css">
+<style>body{margin:0;background:#1b2923}#preview-bar{position:fixed;top:0;left:0;right:0;z-index:99999;display:flex;gap:12px;flex-wrap:wrap;align-items:center;padding:8px 12px;background:#17271ef2;color:#f1f3df;font:14px system-ui}#preview-bar button{padding:6px 14px;min-height:32px;font-size:14px}#preview-bar label{display:flex;align-items:center;gap:6px}#preview-bar input{appearance:auto;width:16px;height:16px;min-height:0;margin:0}#app{min-height:100vh}</style></head>
+<body><style>#preview-bar :is(strong,label,output){color:#f1f3df}#preview-bar input[type="range"]{height:24px}</style><header id="preview-bar"><strong>Utility 1.1 · after Totems, before LIMO</strong><span id="version"></span><button id="restart">Restart test</button><button id="pause">Pause animation</button><label>Time <input style="width:160px" type="range" id="time" aria-label="Animation time" min="0" max="13000" step="100" value="0"><output id="time-label">0.0s</output></label><label><input type="checkbox" id="reduced"> Reduced motion</label></header><main id="app"></main>
+<style>@media(max-width:620px){#preview-bar{gap:6px;font-size:12px}#preview-bar #time{width:120px!important}}</style>
+<script type="module">
+import {startTemporaryArDemo} from '../app/screens/temporaryArDemo.js';
+import {livingMapPreviewRecords} from './demo-living-map-fixture.js';
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+const root=document.querySelector('#app');document.querySelector('#version').textContent='V'+BUILD_INFO.version;
+window.renderLaunchScreen=()=>{location.href='../app/index.html';};
+let pausedAt=null,timeOffset=0,lastStartedAt=null;
+const slider=document.querySelector('#time'),pause=document.querySelector('#pause');
+const previewClock=(now,startedAt)=>{
+    if(startedAt!==lastStartedAt){lastStartedAt=startedAt;pausedAt=null;timeOffset=0;}
+    const elapsed=pausedAt ?? now-startedAt+timeOffset;
+    slider.value=Math.max(0,Math.min(13000,elapsed));document.querySelector('#time-label').textContent=(Number(slider.value)/1000).toFixed(1)+'s';
+    pause.textContent=pausedAt===null?'Pause animation':'Play animation';return elapsed;
+};
+slider.oninput=()=>{pausedAt=Number(slider.value);pause.textContent='Play animation';};
+pause.onclick=()=>{if(pausedAt===null)pausedAt=Number(slider.value);else{timeOffset=pausedAt-(performance.now()-lastStartedAt);pausedAt=null;}};
+const restart=()=>startTemporaryArDemo(root,{livingMapPreviewRecords:livingMapPreviewRecords(),livingMapPreviewClock:previewClock});
+document.querySelector('#restart').onclick=restart;
+const match=window.matchMedia.bind(window);window.matchMedia=query=>query==='(prefers-reduced-motion: reduce)' && document.querySelector('#reduced').checked?{matches:true}:match(query);
+document.querySelector('#reduced').onchange=restart;
+restart();
+</script></body></html>

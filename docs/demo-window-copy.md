@@ -61,6 +61,27 @@ This is the current English copy used by the Try It Now AR demo. The copy is gro
 - Button: `Try again`
 - Button: `Finish demo`
 
+## Utility chapter — after connected Totems, before Learning Pathways
+
+### Utility 1.1 — Explore, learn and plan
+
+- Title: `Explore, learn and plan`
+- Copy: `Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.`
+- Living Frame: empty land, first Totem, staggered Plant Orbs and Note, first Area boundary, second Totem and its plants and Note, second boundary, then the connecting path and landscape planting.
+- Tags: above the land disk, connected to their mapped objects by strings.
+- Caption: `Open to visitors, teachers, students and people caring for land.`
+- Panel examples: visitors discovering a public trail; school students observing a garden through the seasons; university groups connecting field studies to a site; people caring for land exploring planting possibilities.
+- Button: `Learn before planting`
+
+### Utility 1.2 — Learn before planting
+
+- Title: `Learn before planting`
+- Copy: `Explore what could grow here before anything is planted.`
+- Copy: `Compare what to plant, the light, water, soil and climate each plant needs, and what it can provide — food, shade, habitat or support for the soil.`
+- Copy: `Visitors, teachers and students can use these questions to learn about a place. People planning a planting can use that knowledge to make informed choices.`
+- Panel questions: `What could grow here? What conditions would it need? What could it contribute?`
+- Button: `Continue to Learning Pathways`
+
 ## Plant Live Tag web mode
 
 - Header: `WEB MODE · PLANT LIVE TAG`

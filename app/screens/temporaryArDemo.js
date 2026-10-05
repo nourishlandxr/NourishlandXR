@@ -1,5 +1,12 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
+import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
 import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
+import {createDemoLivingMapModel,demoLivingMapProgress} from '../services/demoLivingMapModel.js';
+import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
+let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
+function demoLivingMapElapsed(now=performance.now()){
+    return demoLivingMapPreviewClock ? demoLivingMapPreviewClock(now,demoLivingMapStartedAt) : now-demoLivingMapStartedAt;
+}
 import {supportsSpatialPIMO} from '../services/pimoSpatialCapabilities.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
@@ -420,6 +427,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    demoLivingMapScene?.dispose();demoLivingMapScene=null;demoLivingMapStartedAt=0;demoLivingMapPreviewClock=null;
     markers.forEach(preserveKnowledgeContext);
     disposeKnowledgeDesktopViews(appRoot);
     demoFeedback?.destroy();demoFeedback=null;demoFeedbackInputSource=null;
@@ -609,6 +617,7 @@ function demoPanelActions() {
         {id:'close-confirm',label:'Close demo',primary:true}
     ];
     const actions=[];
+    if(introBoardStep==='UTILITY 1.1')actions.push({id:'replay-map',label:'Replay living map'});
     if(introBoardStep==='LEARNING 1.6')actions.push({id:'finish-core',label:'Finish without learning example'});
     const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
@@ -640,13 +649,14 @@ function syncDemoPanelActions() {
     const trigger=appRoot?.querySelector('[data-tryit-context-trigger]');
     if(trigger){trigger.hidden=!(externalTrigger && primary);trigger.disabled=Boolean(primary?.disabled);trigger.dataset.contextMode=primary?.id || '';trigger.textContent=primary?.label || '';trigger.setAttribute('aria-label',primary?.label || 'Context action');
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
-        const mainScreen=arWelcomeLayer || board;
+        const mainScreen=introBoardStep.startsWith('UTILITY ') && simulatedMode ? board : arWelcomeLayer || board;
         // Desktop preview keeps the action on its rendered surface. Phone AR
         // uses the safe-area footer so the action never obscures the scene.
         const desktopPreview=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
-        const phoneFooterAction=simulatedMode && !desktopPreview;
+        const utilityCard=introBoardStep.startsWith('UTILITY ');
+        const phoneFooterAction=simulatedMode && !desktopPreview && !utilityCard;
         trigger.classList.toggle('is-phone-footer-action',phoneFooterAction);
-        if(simulatedMode && primary?.id==='continue' && mainScreen && desktopPreview)mainScreen.append(trigger);
+        if(simulatedMode && primary?.id==='continue' && mainScreen && (desktopPreview || utilityCard))mainScreen.append(trigger);
         else if(trigger.parentElement!==appRoot)appRoot?.append(trigger);
         if(placementReady && simulatedMode)refreshSimulatedPlacementAim();
     }
@@ -676,6 +686,7 @@ function handleDemoPanelAction(action) {
     if(action==='close'){requestDemoClose();return;}
     if(action==='finish-core'){showDemoClosingMessage();return;}
     if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
+    if(action==='replay-map'){demoLivingMapStartedAt=performance.now();introBoardTextureDirty=true;paintWelcomeLayer(performance.now());return;}
     if(action==='continue'){appRoot?.querySelector('[data-tryit-intro-continue]:not([hidden])')?.click();return;}
     if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
     if(action==='pim-lim'){openPimLimBridge(activePimLimBridge);return;}
@@ -1254,6 +1265,13 @@ const DEMO_QUICK_ACCESS_COPY=Object.freeze({
 });
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
+    appRoot?.querySelector('.tryit-demo')?.setAttribute('data-living-map',String(options.stepLabel==='UTILITY 1.1'));
+    appRoot?.querySelector('.tryit-demo')?.setAttribute('data-demo-utility',String(Boolean(options.stepLabel?.startsWith('UTILITY '))));
+    if(options.stepLabel==='UTILITY 1.1'){
+        appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
+        demoLivingMapStartedAt=performance.now();
+        if(!demoLivingMapScene)try{demoLivingMapScene=createDemoLivingMapScene(createDemoLivingMapModel(markers,{simulated:simulatedMode}));}catch(error){console.warn('Living map preview unavailable:',error);}
+    }else if(demoLivingMapScene){demoLivingMapScene.dispose();demoLivingMapScene=null;}
     useSharedWelcomeBoard(true);
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     const localizedTitle = demoLocalizedText(title);
@@ -1274,6 +1292,8 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
+    board?.classList.toggle('is-living-map-board',options.stepLabel==='UTILITY 1.1');
+    board?.classList.toggle('is-utility-board',Boolean(options.stepLabel?.startsWith('UTILITY ')));
     const deferContinueUntilCopyReady = Boolean(options.deferContinueUntilCopyReady);
     rememberDemoSlide({stepLabel:introBoardStep,title:localizedTitle,body:bodyText,buttonLabel,onContinue,options:{...options},kind:'intro'});
     let typingStartDelay = 220;
@@ -1324,9 +1344,20 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     };
     skipDemoNarration = finishTyping;
     if (board) {
+        // Tutorial updates may move the shared action onto this surface.
+        // Preserve it immediately before replacing the card's content.
+        const contextTrigger=board.querySelector('[data-tryit-context-trigger]');
+        if(contextTrigger)appRoot.append(contextTrigger);
         board.classList.add('is-typing');
         board.classList.remove('is-copy-ready');
-        board.innerHTML = `<small>${demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
+        board.innerHTML = `<small>${options.stepLabel?.startsWith('UTILITY ')?options.stepLabel:demoIntroLabel()}</small><h2>${localizedTitle}</h2><div class="tryit-board-text-window">${paragraphs.map(() => '<p></p>').join('')}</div>`;
+        if(options.stepLabel?.startsWith('UTILITY ') && simulatedMode)board.classList.remove('is-lim-shared-surface');
+        if(options.stepLabel==='UTILITY 1.1' && simulatedMode && demoLivingMapScene){
+            board.classList.remove('is-lim-shared-surface');
+            const map=document.createElement('canvas');map.dataset.demoLivingMap='';map.setAttribute('role','img');map.setAttribute('aria-label','Living miniature garden: Pigeon Pea, Moringa and a Note in My area; Vetiver, Acacia, Jackfruit, Lychee and a Note in Second Area. A path connects the two Totems.');board.append(map);
+            const caption=document.createElement('p');caption.className='tryit-map-caption';caption.textContent='Open to visitors, teachers, students and people caring for land.';board.append(caption);
+            const replay=document.createElement('button');replay.type='button';replay.className='tryit-map-replay';replay.textContent='Replay living map';replay.onclick=()=>handleDemoPanelAction('replay-map');board.append(replay);
+        }
         const firstArrival = prepareTutorialBoard(board);
         setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.'),{reveal:false});
         // Keep the large instruction surface visible without blocking the orb
@@ -1687,6 +1718,13 @@ function bindLimSessionInteractions(arSession) {
 
 function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
+    const mapCanvas=appRoot?.querySelector('[data-demo-living-map]');
+    if(introBoardStep==='UTILITY 1.1' && mapCanvas && demoLivingMapScene){
+        const width=Math.max(280,Math.round(mapCanvas.clientWidth)),height=Math.round(width*(window.matchMedia('(max-width:620px)').matches?.9:.74));
+        if(mapCanvas.width!==width || mapCanvas.height!==height){mapCanvas.width=width;mapCanvas.height=height;}
+        const ctx=mapCanvas.getContext('2d');ctx.clearRect(0,0,width,height);
+        demoLivingMapScene.draw(ctx,demoLivingMapElapsed(now),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:0,y:0,width,height});
+    }
     arWelcomeClock.tick(Date.now(),!document.hidden);
     const rainStage=simulatedMode || demoRainIntensity<=0?'':demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
     const demoRoot=appRoot?.querySelector('.tryit-demo');
@@ -1893,7 +1931,8 @@ function showArWelcomeShowcase() {
         if(!arWelcomeShowcaseActive)return;
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,limMeshVisible,limMeshActivatedAt,limExpandedAt.size,limHiddenCells.size,welcomeSequenceCanContinue()].join('|');
-        if(simulatedMode && now-last>=50 && (!reduced || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
+        const mapAnimating=introBoardStep==='UTILITY 1.1' && !demoLivingMapProgress(demoLivingMapElapsed(now),reduced,demoLivingMapScene?.schedule).settled;
+        if(simulatedMode && now-last>=50 && (!reduced || mapAnimating || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
 
@@ -2250,16 +2289,35 @@ function connectDemoTotems() {
     updateSimulatedMarkers();
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.areasConnected);
     setGuide('The Areas are linked. Each Totem still keeps its own local plants and Notes.');
-    showSceneContinue('See the final feature',showLimoLearningModes, 'ELEMENTS 1.21');
+    showSceneContinue('Explore, learn and plan',showDemoLivingMap, 'ELEMENTS 1.21');
+}
+
+function showDemoLivingMap(){
+    limMeshVisible=false;
+    const step=guidedDemoStep('UTILITY 1.1');
+    showIntroBoard(step.title,step.main,
+        'Learn before planting',showDemoBeforePlanting,
+        {stepLabel:step.id,dynamicCopy:true,nextGuide:step.hint});
+    infoPanel?.showLearning({id:'demo-living-map',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
+    infoPanel?.setContextualHint('Replay living map is available in the Control Panel.');
+    paintWelcomeLayer(performance.now());
+}
+
+function showDemoBeforePlanting(){
+    const step=guidedDemoStep('UTILITY 1.2');
+    showIntroBoard(step.title,step.main,'Continue to Learning Pathways',showLimoLearningModes,
+        {stepLabel:step.id,dynamicCopy:true,nextGuide:step.hint});
+    infoPanel?.showLearning({id:'demo-before-planting',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
 }
 
 function createDemoNeighbourhood(totem) {
     const right={x:Number(viewerMatrix?.[0]) || 1,z:Number(viewerMatrix?.[2]) || 0};
+    const forward={x:-right.z,z:right.x};
     const neighbours=[
-        {plantId:'vetiver',id:DEMO_RECORD_IDS.vetiver,name:'Vetiver grass',dx:-.48,dy:.72,anchor:{x:8,y:48},color:'vetiver'},
-        {plantId:'acacia',id:DEMO_RECORD_IDS.acacia,name:'Acacia sp.',dx:.30,dy:1.17,anchor:{x:39,y:46},color:'acacia'},
-        {plantId:'jackfruit',id:DEMO_RECORD_IDS.jackfruit,name:'Jackfruit',dx:-.61,dy:.55,anchor:{x:9,y:68},color:'jackfruit'},
-        {plantId:'lychee',id:DEMO_RECORD_IDS.lychee,name:'Lychee',dx:.49,dy:.71,anchor:{x:40,y:67},color:'lychee'}
+        {plantId:'vetiver',id:DEMO_RECORD_IDS.vetiver,name:'Vetiver grass',dx:-.48,dz:-.65,dy:.72,anchor:{x:8,y:48},color:'vetiver'},
+        {plantId:'acacia',id:DEMO_RECORD_IDS.acacia,name:'Acacia sp.',dx:.30,dz:-.85,dy:1.17,anchor:{x:39,y:46},color:'acacia'},
+        {plantId:'jackfruit',id:DEMO_RECORD_IDS.jackfruit,name:'Jackfruit',dx:-.61,dz:.35,dy:.55,anchor:{x:9,y:68},color:'jackfruit'},
+        {plantId:'lychee',id:DEMO_RECORD_IDS.lychee,name:'Lychee',dx:.49,dz:.45,dy:.71,anchor:{x:40,y:67},color:'lychee'}
     ];
     if(neighbours.map(item=>item.plantId).join('|')!==DEMO_NEIGHBOUR_PLANT_IDS.join('|'))throw new Error('Totem 2 plant set is out of sync.');
     for(const neighbour of neighbours){
@@ -2269,7 +2327,7 @@ function createDemoNeighbourhood(totem) {
             id:neighbour.id,name:neighbour.name,demoType:'plant',demoAreaId:totem.id,demoAmbientNeighbour:true,demoAlive:true,demoInteractive:true,
             demoKnowledgeProfile:profile,demoKnowledgeProjection:pimToArKnowledge(profile.pim),
             demoOrbColor:neighbour.color,demoOrbShape:'orb',demoExpanded:false,demoArriveAt:performance.now(),
-            position:{x:totem.position.x+right.x*neighbour.dx,y:totem.groundBaseY+neighbour.dy,z:totem.position.z+right.z*neighbour.dx},
+            position:{x:totem.position.x+right.x*neighbour.dx+forward.x*neighbour.dz,y:totem.groundBaseY+neighbour.dy,z:totem.position.z+right.z*neighbour.dx+forward.z*neighbour.dz},
             simulatedAnchor:neighbour.anchor
         });
     }
@@ -2287,8 +2345,8 @@ function showLinkedTotemsIntroduction() {
     showIntroBoard(
         step.title,
         step.main.split('\n\n'),
-        'Discover learning pathways',
-        showLimoLearningModes,
+        'Explore, learn and plan',
+        showDemoLivingMap,
         {stepLabel:'ELEMENTS 1.22'}
     );
 }
@@ -2998,7 +3056,10 @@ function selectDemoProfileCell(selection=demoInfoTarget()) {
     if(knowledgeRenderer?.grabbing && (!selection.inputSource || selection.inputSource===knowledgeRenderer.grabbedSource))return true;
     if(record.knowledgeExplorer?.mode==='explore' && (node.pimKnowledgeFace || node.pimKnowledgeContext)){
         if(!selection.intentionalHold)return true;
-        selectKnowledgeObjectFace(record,knowledgeFor(record),node);if(node.path)showDemoInfo(record,node.path);else infoPanel?.focusPlant(record,knowledgeFor(record));refreshDemoPimProfile(record);infoPanel?.refreshExplorer();return true;
+        selectExplorerNode(record,knowledgeFor(record),node);
+        const explorerDocument=explorerDetailDocument(demoOrbKnowledge(record).document,record),explorerPath=explorerSelectedPath(record,knowledgeFor(record));
+        if(explorerPath)infoPanel?.select(record,explorerDocument,explorerPath);else infoPanel?.focusPlant(record,explorerDocument);
+        refreshDemoPimProfile(record);infoPanel?.refreshExplorer();return true;
     }
     // Some Quest runtimes deliver the same trigger through both the capture
     // listener and the general select fallback. Do not toggle the branch shut
@@ -3950,7 +4011,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
@@ -4512,6 +4573,21 @@ function createIntroNoteTexture(texture = null) {
 }
 
 function drawIntroNoteContent(ctx) {
+    if(introBoardStep==='UTILITY 1.1' && demoLivingMapScene){
+        ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillStyle='#dfecc8';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
+        ctx.fillText('UTILITY 1.1',700,260,920);
+        ctx.fillStyle='#f4f5e7';ctx.font=`700 48px ${DEMO_PRESENTATION_FONT}`;
+        ctx.fillText(guidedDemoStep('UTILITY 1.1').title,700,305,920);
+        ctx.font=`500 28px ${DEMO_PRESENTATION_FONT}`;
+        ctx.fillText('Knowledge connected to any land',700,350,920);
+        ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
+        ctx.fillText('School gardens · University campuses · Farms · Public landscapes',700,385,920);
+        demoLivingMapScene.draw(ctx,demoLivingMapElapsed(),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:210,y:420,width:980,height:470});
+        ctx.fillStyle='#dfecc8';ctx.font=`500 29px ${DEMO_PRESENTATION_FONT}`;
+        ctx.fillText('Open to visitors, teachers, students and people caring for land.',700,925,900);
+        ctx.restore();return;
+    }
     // Give the copy the full readable centre of the glass screen without
     // reaching its sloped sides. The extra width keeps long slides legible.
     const contentLeft = 260;
@@ -4531,7 +4607,7 @@ function drawIntroNoteContent(ctx) {
     if(arWelcomeSettleStage)ctx.globalAlpha*=Math.max(0,Math.min(1,(arWelcomeClock.elapsed-arWelcomeSettleStartedAt)/850));
     ctx.fillStyle = 'rgba(232,246,225,.7)';
     ctx.font = `600 29px ${DEMO_PRESENTATION_FONT}`;
-    ctx.fillText(demoIntroLabel(), contentCenter, 345, contentWidth);
+    ctx.fillText(introBoardStep.startsWith('UTILITY ')?introBoardStep:demoIntroLabel(), contentCenter, 345, contentWidth);
     const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
     if(openingElapsed!==null){
         if(openingElapsed<DEMO_WELCOME_OPENING_MS){
@@ -4766,7 +4842,8 @@ function drawIntroSpatial(view) {
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
-        if((limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
+        const mapAnimating=introBoardStep==='UTILITY 1.1' && !demoLivingMapProgress(demoLivingMapElapsed(now),reducedMotion,demoLivingMapScene?.schedule).settled;
+        if(mapAnimating || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }
@@ -5707,16 +5784,26 @@ export function openTemporaryArDemoWindow(app) {
     });
 }
 
-export async function startTemporaryArDemo(app) {
+export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null } = {}) {
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
+    demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
     demoFeedback=createDemoFeedback();demoFeedback.start();
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
-    const immersive = await startImmersive();
+    const immersive = livingMapPreviewRecords ? false : await startImmersive();
     if (!immersive) {
         renderInterface(true);
         viewerMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+        // Only the standalone development preview supplies records. Normal
+        // demo visitors reach this scene through the Totem connection step.
+        if(livingMapPreviewRecords){
+            clearTimeout(introNarrationTimer);showArWelcomeShowcase();clearTimeout(arWelcomeUnlockTimer);
+            arWelcomeIntroPending=false;arWelcomeOpeningActive=false;arWelcomeSettleStage=false;
+            infoPanel?.restore();infoPanel?.setGuided(true);infoPanel?.setIntroduction(false);
+            markers.push(...livingMapPreviewRecords.map(record=>({...record,texture:createMarkerTexture(record)})));
+            updateSimulatedMarkers();showDemoLivingMap();
+        }
     }
 }
