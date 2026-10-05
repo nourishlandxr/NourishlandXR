@@ -349,11 +349,8 @@ function accentRgba(value,hue,alpha=.7){
 
 function learningCellPath(context,radius){
  context.beginPath();
- // A soft living contour rather than a separate geometric disc.
- for(let i=0;i<=64;i++){
-  const angle=i/64*Math.PI*2,r=radius*(1+.045*Math.sin(angle*3)+.025*Math.cos(angle*5));
-  const x=Math.cos(angle)*r,y=Math.sin(angle)*r;i?context.lineTo(x,y):context.moveTo(x,y);
- }
+ // Uniform cells; living detail grows inside without changing the silhouette.
+ context.arc(0,0,radius,0,Math.PI*2);
  context.closePath();
 }
 

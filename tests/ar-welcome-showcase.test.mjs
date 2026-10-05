@@ -77,7 +77,7 @@ test('main LIM renderer draws one lightweight connection beneath existing cell l
  assert.match(showcaseSource,/endInset=Math\.max\(0,cellEdgeRadius\(Math\.atan2\(-dy,-dx\),\(node\.baseRadius\|\|0\)\*\(node\.scale\|\|1\)\)-3\)/);
 });
 
-test('minimal introduction reveals only four coloured primary pathways without connectors',()=>{
+test('minimal introduction reveals four uniform pathways attached to the living frame',()=>{
  let lines=0;
  const stack=[];
  const ctx={textAlign:'left',textBaseline:'alphabetic',font:'10px system-ui',save(){stack.push({textAlign:this.textAlign,textBaseline:this.textBaseline,font:this.font});},restore(){Object.assign(this,stack.pop());},measureText(text){return {width:text.length*10};},createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},lineTo(){lines+=1;}};
@@ -91,10 +91,10 @@ test('minimal introduction reveals only four coloured primary pathways without c
  const frames=drawArWelcomeShowcase(ctx,29800,false,createArWelcomeClusters(),pacing);
  const nodes=frames.flatMap(frame=>frame.nodes);
  assert.deepEqual(nodes.map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
- assert.equal(lines,0,'round primary cells use arcs and have no faceted edge lines');
+ assert.equal(lines,0,'uniform primary cells use arcs and have no faceted edge lines');
  const expansion={...pacing,progression:{expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':22000}}};
  const softChildren=drawArWelcomeShowcase(ctx,22500,false,createArWelcomeClusters(),expansion).flatMap(frame=>frame.nodes).filter(node=>node.depth===1);
- assert.ok(softChildren.some(node=>node.opacity>0 && node.opacity<1),'selected pathway introduces its children with opacity');
+ assert.ok(softChildren.length>0 && softChildren.every(node=>node.opacity===1),'selected pathway opens its children immediately');
  const settledChildren=drawArWelcomeShowcase(ctx,25000,false,createArWelcomeClusters(),expansion).flatMap(frame=>frame.nodes).filter(node=>node.depth===1);
  assert.ok(settledChildren.some(node=>node.opacity>.9),'child cells remain after the soft reveal');
  assert.match(showcaseSource,/if\(opening && !options\.minimalIntro\)/);
@@ -182,7 +182,7 @@ test('cell labels stay centred and fitted even when the caller uses left-aligned
   const label=labels.find(l=>l.text===word && l.x===0);
   assert.ok(label,`missing cell label: ${word}`);assert.equal(label.align,'center');assert.equal(label.baseline,'middle');assert.ok(label.width<=node.baseRadius*1.48);
  }}
- assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');assert.equal(curves,0);
+ assert.equal(ctx.textAlign,'left');assert.equal(ctx.textBaseline,'alphabetic');assert.ok(curves>0,'leaves and roots use curves without changing label alignment');
  const active=welcomeExperienceFrames(12000,true).flatMap(frame=>frame.nodes).find(node=>node.opacity>0);
  drawArWelcomeShowcase(ctx,64000,true,undefined,{activeKey:active.key,activeProgress:.5,selectedKey:active.key});
  assert.ok(radials>0,'activation uses a centre-out radial fill');
@@ -327,7 +327,7 @@ test('LIMO opacity hides only its background, preserving label and outline alpha
  function paint(opacity){
   const fills=[],text=[],strokes=[],stack=[];
   const ctx={globalAlpha:1,fillStyle:'',strokeStyle:'',font:'',save(){stack.push({globalAlpha:this.globalAlpha,fillStyle:this.fillStyle,strokeStyle:this.strokeStyle});},restore(){Object.assign(this,stack.pop());},fill(){fills.push([this.fillStyle,this.globalAlpha]);},fillText(){text.push(this.globalAlpha);},stroke(){strokes.push(this.globalAlpha);},measureText(value){return {width:value.length*12};}};
-  for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','arc','setLineDash','quadraticCurveTo','bezierCurveTo'])ctx[method]=()=>{};
+  for(const method of ['clearRect','translate','rotate','scale','beginPath','moveTo','lineTo','closePath','arc','clip','setLineDash','quadraticCurveTo','bezierCurveTo'])ctx[method]=()=>{};
   drawArWelcomeShowcase(ctx,300000,true,undefined,{drawPanel:false,drawRoots:false,cellOpacity:opacity,progression:{opening:true}});
   return {fills:fills.filter(([colour])=>colour==='#102b22').map(([,alpha])=>alpha),text,strokes};
  }
