@@ -58,7 +58,7 @@ export function spawnKnowledgeObject(record,knowledge,conceptId){
   const normal=new THREE.Vector3(face.localNormal.x,face.localNormal.y,face.localNormal.z).applyQuaternion(new THREE.Quaternion(source.rotation.x,source.rotation.y,source.rotation.z,source.rotation.w)),tangent=new THREE.Vector3(0,1,0).cross(normal);if(tangent.length()<.01)tangent.set(1,0,0);tangent.normalize();const up=normal.clone().cross(tangent).normalize(),radius=KNOWLEDGE_DICE_RADIUS*w.scale;
   let position;
   for(let ring=0;!position && ring<12;ring++)for(let turn=0;turn<(ring?12:1);turn++){
-   const p=new THREE.Vector3(source.position.x,source.position.y,source.position.z).addScaledVector(normal,radius+.08+ring*.025).addScaledVector(tangent,Math.cos(turn*Math.PI/6)*(radius*2+.09+ring*.085)).addScaledVector(up,Math.sin(turn*Math.PI/6)*(radius*2+.09+ring*.085));
+   const p=new THREE.Vector3(source.position.x,source.position.y,source.position.z).addScaledVector(normal,radius*2+.09+ring*.025).addScaledVector(tangent,Math.cos(turn*Math.PI/6)*(radius*2+.09+ring*.085)).addScaledVector(up,Math.sin(turn*Math.PI/6)*(radius*2+.09+ring*.085));
    if(record.knowledgeObjectPose && Number.isFinite(record.knowledgeFloor) && p.clone().applyMatrix4(knowledgePoseMatrix(record.knowledgeObjectPose)).y<record.knowledgeFloor+radius+.02)continue;
    if(w.items.every(o=>p.distanceTo(new THREE.Vector3(o.position.x,o.position.y,o.position.z))>radius*2+.055))position=vector(p);if(position)break;
   }
