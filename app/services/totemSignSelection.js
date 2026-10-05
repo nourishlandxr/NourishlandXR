@@ -10,6 +10,7 @@ export function selectTotemSign(record,cardId,records=[]){
 
 export function selectedTotemDestinationIds(records,cardsFor,isActive=()=>true){
     const targets=new Set();
+    for(const record of records)record.signNotificationSelected=false;
     for(const record of records){
         if(!record.totemSelectedCard || !isActive(record))continue;
         const card=cardsFor(record).find(item=>item.id===record.totemSelectedCard);
@@ -17,7 +18,7 @@ export function selectedTotemDestinationIds(records,cardsFor,isActive=()=>true){
         if(card?.navigation?.destinationId){
             targets.add(card.navigation.destinationId);
             const destination=records.find(item=>(item.marker?.id || item.id)===card.navigation.destinationId);
-            if(destination)destination.signBeaconStartedAt=record.signSelectionStartedAt;
+            if(destination){destination.signBeaconStartedAt=record.signSelectionStartedAt;destination.signNotificationSelected=true;}
         }
     }
     return targets;
@@ -29,10 +30,10 @@ export const TOTEM_NOTIFICATION_COLOUR=Object.freeze([.22,.82,.86]);
 // The post shaders apply this only to their existing collar, without geometry.
 export function totemNotificationLight(record,now=performance.now()){
     const age=now-record?.signBeaconStartedAt;
-    if(!Number.isFinite(age) || age<0 || age>12000)return {colour:TOTEM_NOTIFICATION_COLOUR,strength:0};
+    if(!Number.isFinite(age) || age<0 || record.signNotificationSelected===false || (age>12000 && !record.signNotificationSelected))return {colour:TOTEM_NOTIFICATION_COLOUR,strength:0};
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    const strength=reduced?.8:.55+.35*(.5+.5*Math.sin(age/620));
-    return {colour:record.notificationColour || TOTEM_NOTIFICATION_COLOUR,strength:strength*Math.min(1,(12000-age)/900)};
+    const strength=reduced?1:.08+.92*Math.pow(.5-.5*Math.cos(age*Math.PI*2/1800),1.4);
+    return {colour:record.notificationColour || TOTEM_NOTIFICATION_COLOUR,strength:strength*(record.signNotificationSelected?1:Math.min(1,(12000-age)/900))};
 }
 const buffers=new WeakMap();
 const unitShapes=Object.fromEntries(['ellipse','box'].map(shape=>{

@@ -52,7 +52,7 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     const desktop=panelSettingsControls({infoOpacity:.5,ambientRain:1.65,ambientRainStyle:'v1',rainQuality:'hq',graphicsQuality:'high',spatialScale:1.1});
     const quest=panelSettingsControls({headset:true,handVisualMode:'outline'});
     const graphics=panelSettingsControls({graphicsOpen:true,rainQuality:'hq',graphicsQuality:'high'});
-    const performance=panelSettingsControls({headset:true,performanceSettings:{actual:120,supported:[72,90,120],showFps:true},demoSound:{music:.5,fx:.5,haptics:true}});
+    const performance=panelSettingsControls({graphicsOpen:true,headset:true,performanceSettings:{actual:120,supported:[72,90,120],showFps:true},demoSound:{music:.5,fx:.5,haptics:true}});
     const actions=['InfoOpacity','TextSize','SpatialScale','FloorOffset','HeroDice','GraphicsMenu','SettingsHelp','CloseSettings'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
     assert.deepEqual(quest.map(item=>item.action),[...actions.slice(0,4),'HandMode',...actions.slice(4)]);
@@ -62,7 +62,7 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.equal(graphics.find(item=>item.action==='RainQuality').label,'HQ');
     assert.equal(graphics.find(item=>item.action==='GraphicsQuality').label,'HIGH');
     assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality','RainQuality','Insects','OrbModel','TotemModel','SettingsHelp','CloseSettings']);
-    assert.equal(performance.find(item=>item.action==='RefreshRate').y,performance.find(item=>item.action==='ShowFps').y);
+    assert.ok(performance.find(item=>item.action==='RefreshRate').y<performance.find(item=>item.action==='ShowFps').y);
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Hand tracking');
     assert.equal(panelSettingsControls({headset:true,handVisualMode:'pointer'}).find(item=>item.action==='HandMode').label,'Pointer');
     for(const items of [desktop,quest,graphics,performance]){

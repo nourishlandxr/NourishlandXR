@@ -2101,6 +2101,7 @@ function controllerSpatialSurfaceAtAim() {
         : null;
     const pimCandidate = spatialPimTargetAtAim({ updateHover: false });
     const candidates = [
+        heroDiceToy?.hit(latestControllerRay),
         infoPanel?.hit(latestControllerRay),
         totemCardsRenderer?.hit(latestControllerRay),
         dashboardHit && { ...dashboardHit, kind: 'dashboard' },
@@ -2113,7 +2114,7 @@ function controllerPointerEnd(surfaceHit = controllerSpatialSurfaceAtAim()) {
     // UI surfaces are rendered as world-locked panels over the plant/orb. Use
     // their actual plane hit first so the laser reaches the control being
     // aimed at instead of stopping on the orb behind or in front of it.
-    if (surfaceHit?.position) return surfaceHit.position;
+    if (surfaceHit?.point || surfaceHit?.position) return surfaceHit.point || surfaceHit.position;
     const spatialEnd = controllerRayEnd(latestControllerRay, controllerLaserSubjects(), XR_LASER_POINTER_CONFIG.length);
     if(spatialEnd?.distance>=XR_LASER_POINTER_CONFIG.length){const fallback=controllerRayEnd(latestControllerRay,[],2.5);Object.assign(spatialEnd,fallback);}
     const beltHit = controllerQuestBeltSurfaceHit();

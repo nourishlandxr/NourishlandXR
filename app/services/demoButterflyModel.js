@@ -6,7 +6,7 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 const URL=new globalThis.URL('../assets/animated_butterfly.glb',import.meta.url);
 export const BUTTERFLY_RENDER_BUDGETS=Object.freeze({low:{pixels:192,interval:50},medium:{pixels:256,interval:42},high:{pixels:384,interval:33}});
 export const BUTTERFLY_FLIGHT_SPEED=4.8;
-export function butterflyRestingFold(elapsed,phase=0,reduced=false){return reduced?.96:.77+.10*Math.sin((elapsed/1000+phase)*5.4)+.045*Math.sin((elapsed/1000+phase)*1.7);}
+export function butterflyRestingFold(elapsed,phase=0,reduced=false){return reduced?.96:.58+.23*Math.sin((elapsed/1000+phase)*7.8)+.08*Math.sin((elapsed/1000+phase)*2.1);}
 let prepared=null;
 const foldedPoseCache=new WeakMap();
 export function prepareDemoButterflyModel(){

@@ -34,8 +34,8 @@ export function bindKnowledgeObjectInteraction(session,space,{hit,near,canGrab=(
             if(active && (active.target.record.knowledgeExplorer.mode!=='explore' || !visibleKnowledgeObjects(active.target.record.knowledgeExplorer.objects).includes(active.target.object)))finish(active.source);
             for(const source of session.inputSources || []){
                 let grip=null,rayPose=null;try{grip=value.getPose(source.gripSpace || source.targetRaySpace,space);rayPose=value.getPose(source.targetRaySpace,space);}catch{/* Lost input cancels its gesture. */}
-                const handState=source.hand?handTrackingState(value,source,space):null,wrist=handState?.joints.get('wrist'),index=handState?.joints.get('index-finger-tip'),thumb=handState?.joints.get('thumb-tip');
-                if(handState?.tracked && wrist && index && thumb)inputMatrices.set(source,new THREE.Matrix4().compose(new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),wrist.rotation,new THREE.Vector3(1,1,1)));
+                const handState=source.hand?handTrackingState(value,source,space):null,wrist=handState?.rawJoints.get('wrist'),index=handState?.rawJoints.get('index-finger-tip'),thumb=handState?.rawJoints.get('thumb-tip');
+                if(handState?.tracked && wrist && index && thumb)inputMatrices.set(source,new THREE.Matrix4().compose(new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(wrist.matrix)),new THREE.Vector3(1,1,1)));
                 else if(!source.hand && grip)inputMatrices.set(source,new THREE.Matrix4().fromArray(grip.transform.matrix));else inputMatrices.delete(source);
                 if(rayPose)rayMatrices.set(source,new THREE.Matrix4().fromArray(rayPose.transform.matrix));else rayMatrices.delete(source);
                 if(!source.hand)continue;

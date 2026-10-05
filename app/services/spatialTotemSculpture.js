@@ -131,7 +131,7 @@ export function createSpatialTotemSculpture(gl) {
             shaded+=vec3(.92,.81,.58)*spec*(.055+collar*.13);
             shaded+=vec3(.60,.68,.48)*pow(1.-max(dot(normal,viewer),0.),3.)*.045;
             shaded=mix(shaded,shaded+vec3(.09,.065,.025),aim);
-            shaded=mix(shaded,notificationColour*1.15,collar*notificationStrength);
+            shaded=mix(shaded,notificationColour*2.2,collar*notificationStrength);
             gl_FragColor=vec4(shaded,max(alpha,(1.-smoothstep(.031,.034,d))*controlOpacity*.90));
         }
     `);

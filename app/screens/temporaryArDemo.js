@@ -1808,6 +1808,7 @@ function showArWelcomeShowcase() {
     limDiagnostic('rendered-cells',{count:reservedCells.length,uniqueIds:new Set(reservedCells.map(node=>node.limId || node.key)).size,reservedCount:LIM_ALL_CELLS.length});
     limInteractionCleanup();limSessionCleanup();limActivationSessionSuppressUntil=0;
     limActivation=createLimActivationController({
+        durationForKey:key=>limNodeByKey(key)?.depth>0?0:undefined,
         onProgress:()=>{introBoardTextureDirty=true;},
         onStart:(_key,source)=>{if(source?.startsWith('xr'))pulseDemoHaptics(limInputSource);introBoardTextureDirty=true;},
         onCancel:()=>{introBoardTextureDirty=true;},
@@ -4322,6 +4323,23 @@ function pollDemoControllerSkip() {
     demoControllerYSkipTracker?.poll(session?.inputSources);
 }
 
+const butterflyPinchStates=new WeakMap(),butterflyGestureSources=new WeakSet();
+function butterflyHeldBy(source){return Boolean(source && (butterflyGestureSources.has(source) || butterflyCompanions.some(insect=>insect.heldSource===source)));}
+function pollButterflyPinches(){
+    for(const insect of butterflyCompanions)if(insect.heldSource && !latestTrackedHandStates.some(entry=>entry.source===insect.heldSource)){insect.heldSource=null;insect.startedAt=arWelcomeClock.elapsed;insect.flightAnchor=null;}
+    for(const {source,state} of latestTrackedHandStates){
+        const thumb=state.rawJoints.get('thumb-tip'),index=state.rawJoints.get('index-finger-tip');if(!thumb || !index)continue;
+        const point={x:(thumb.x+index.x)/2,y:(thumb.y+index.y)/2,z:(thumb.z+index.z)/2};
+        if(!state.pinch)butterflyGestureSources.delete(source);
+        const held=butterflyCompanions.find(insect=>insect.heldSource===source),previous=butterflyPinchStates.get(source);butterflyPinchStates.set(source,state.pinch);
+        if(state.pinch && previous===false){
+            if(held){butterflyGestureSources.add(source);held.heldSource=null;held.startedAt=arWelcomeClock.elapsed;const perch=infoPanel?.getPerchPose(held.side);held.flightAnchor=perch?{...perch,center:{...held.handPosition}}:null;held.perchMs=0;}
+            else {const insect=butterflyCompanions.find(item=>!item.heldSource && item.position && Math.hypot(item.position.x-point.x,item.position.y-point.y,item.position.z-point.z)<.12);if(insect){butterflyGestureSources.add(source);insect.heldSource=source;insect.handOffset={x:insect.position.x-point.x,y:insect.position.y-point.y,z:insect.position.z-point.z};}}
+        }
+        const attached=butterflyCompanions.find(insect=>insect.heldSource===source);if(attached)attached.handPosition={x:point.x+attached.handOffset.x,y:point.y+attached.handOffset.y,z:point.z+attached.handOffset.z};
+    }
+}
+
 function pollDemoHandPinch() {
     if (!latestHandState?.pointer) {
         if (handPinchActive && demoHeldIndex >= 0) releaseHeldDemoRecord();
@@ -4330,7 +4348,7 @@ function pollDemoHandPinch() {
     }
     const pinching = Boolean(latestHandState.pinch);
     const source=latestTrackedHandStates.find(entry=>entry.state===latestHandState)?.source;
-    if(infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPinchActive=pinching;return;}
+    if(butterflyHeldBy(source) || infoPanel?.getHeldInputSource()===source || infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPinchActive=pinching;return;}
     if (pinching && !handPinchActive) {
         let handled=Boolean(infoPanel?.activateHand(latestControllerRay,source,latestHandState));
         if(!handled && placementReady){pressPlacementPointer();handled=true;}
@@ -5089,7 +5107,7 @@ function drawSpatialButterfly(view){
             if(pose.state==='landed')pose.yaw=insect.red?-.85:.85;
             insect.position=position;insect.pose=pose;insect.lastElapsed=elapsed;
         }
-        insect.model.drawXR(view,insect.position,elapsed,insect.pose);
+        insect.model.drawXR(view,insect.heldSource && insect.handPosition?insect.handPosition:insect.position,elapsed,insect.heldSource?{...insect.pose,state:'landed',flight:0}:insect.pose);
     }
 }
 function blendInsectWithFlower(position,visit,visitor){
@@ -5464,7 +5482,7 @@ function drawDemoControllerPointer(view) {
     const hoveredRecordTarget=demoRecordAtPointer();
     const hoveredRecordHit=hoveredRecordTarget?.hit || null;
     const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
-    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.
@@ -5630,14 +5648,15 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
+            runXrFrameStep('butterfly pinch',pollButterflyPinches);
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
             runXrFrameStep('floor dice input',()=>heroDiceToy?.update(frame,_time));
             runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
-            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace)));
+            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace)));
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
-            runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
+            runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
             runXrFrameStep('hand pinch',()=>{if(!knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});
             runXrFrameStep('LIM activation',()=>tickLimActivation(_time));
             runXrFrameStep('panel diagnostic',()=>{

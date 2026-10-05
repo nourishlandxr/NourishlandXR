@@ -3,7 +3,7 @@ import {createDiceRenderer} from './diceRenderer.js';
 import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 import {handTrackingState} from './xrPointer.js';
 
-export const HERO_TOY_RADIUS=.13,HERO_TOY_REACH=2.2;
+export const HERO_TOY_RADIUS=.19,HERO_TOY_REACH=2.2;
 const one=new THREE.Vector3(1,1,1),serial=v=>({x:v.x,y:v.y,z:v.z});
 // Small fixed substeps keep a throw stable across 60/72/90/120 Hz sessions.
 export function createHeroDicePhysics(home,{radius=HERO_TOY_RADIUS,vertices=null}={}){
@@ -28,7 +28,7 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
         for(let i=0;i<positions.count;i+=3){a.fromBufferAttribute(positions,i);b.fromBufferAttribute(positions,i+1);c.fromBufferAttribute(positions,i+2);if(!local.intersectTriangle(a,b,c,true,point))continue;const world=point.clone().applyMatrix4(matrix),distance=world.distanceTo(origin);if(!nearest || distance<nearest.distance)nearest={toy:true,point:world,center:world,distance};}return nearest;}
     function rayFor(source){const m=rays.get(source);return m?{origin:new THREE.Vector3().setFromMatrixPosition(m),direction:new THREE.Vector3(0,0,-1).transformDirection(m)}:null;}
     function begin(source,near=false){if(active || !ensure())return false;const input=inputs.get(source),ray=rayFor(source),target=near?{toy:true,distance:0}:hit(ray);if(!input || !target || !canGrab({...target,inputRay:ray,source,near}))return false;
-        const matrix=model(),position=new THREE.Vector3().setFromMatrixPosition(matrix);if(!near && target.distance>.6){const close=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z).addScaledVector(ray.direction,.5);matrix.setPosition(close);physics.state.position=serial(close);}
+        const matrix=model(),position=new THREE.Vector3().setFromMatrixPosition(matrix);if(!near){const close=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z).addScaledVector(ray.direction,Math.max(.75,Math.min(HERO_TOY_REACH,target.distance)));matrix.setPosition(close);physics.state.position=serial(close);}
         active={source,offset:input.clone().invert().multiply(matrix),samples:[{time:performance.now(),position:{...physics.state.position},rotation:{...physics.state.rotation}}]};physics.state.held=true;physics.state.velocity={x:0,y:0,z:0};physics.state.angularVelocity={x:0,y:0,z:0};return true;
     }
     function release(source,throwing=true){if(active?.source!==source)return false;const samples=active.samples,last=samples.at(-1),first=samples.find(s=>last.time-s.time<120) || samples[0],dt=(last.time-first.time)/1000;
@@ -46,8 +46,8 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
         },
         update(frame,time){const dt=lastTime===null?0:Math.max(0,(time-lastTime)/1000);lastTime=time;if(!ensure()){if(active)release(active.source,false);return;}
             for(const source of session?.inputSources || []){let grip=null,ray=null;try{grip=frame.getPose(source.gripSpace || source.targetRaySpace,space);ray=frame.getPose(source.targetRaySpace,space);}catch{ /* A lost pose cancels this source. */ }
-                const hand=source.hand?handTrackingState(frame,source,space):null,wrist=hand?.joints.get('wrist'),index=hand?.joints.get('index-finger-tip'),thumb=hand?.joints.get('thumb-tip');
-                if(source.hand && hand?.tracked && wrist && index && thumb)inputs.set(source,new THREE.Matrix4().compose(new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),wrist.rotation,one));else if(!source.hand && grip)inputs.set(source,new THREE.Matrix4().fromArray(grip.transform.matrix));else inputs.delete(source);
+                const hand=source.hand?handTrackingState(frame,source,space):null,wrist=hand?.rawJoints.get('wrist'),index=hand?.rawJoints.get('index-finger-tip'),thumb=hand?.rawJoints.get('thumb-tip');
+                if(source.hand && hand?.tracked && wrist && index && thumb)inputs.set(source,new THREE.Matrix4().compose(new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(wrist.matrix)),one));else if(!source.hand && grip)inputs.set(source,new THREE.Matrix4().fromArray(grip.transform.matrix));else inputs.delete(source);
                 if(ray)rays.set(source,new THREE.Matrix4().fromArray(ray.transform.matrix));else rays.delete(source);
                 if(source.hand){const prior=pinches.get(source);pinches.set(source,Boolean(hand?.pinch));if(!hand?.tracked){release(source,false);continue;}if(!hand.pinch)release(source);else if(prior===false && !active && index && thumb){const midpoint=new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),p=physics.state.position;if(midpoint.distanceTo(new THREE.Vector3(p.x,p.y,p.z))<HERO_TOY_RADIUS+.04)begin(source,true);}}
             }

@@ -136,7 +136,7 @@ export function createSpatialPrismRenderer(gl) {
                 shaded*=1.0+woodGrain*(grain*.07+fine*.025);
                 shaded=mix(shaded,shaded*.78,woodGrain*collar);
             }
-            shaded=mix(shaded,notificationColour*1.15,collar*notificationStrength);
+            shaded=mix(shaded,notificationColour*2.2,collar*notificationStrength);
             gl_FragColor = vec4(shaded, alpha);
         }
     `);

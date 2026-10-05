@@ -148,8 +148,8 @@ export function createWelcomePresentationClock() {
 function attachedRoot(angle) {
  const edge=welcomeBoundary(angle);
  // Fixed root footprint just outside the shared board perimeter.
- return {x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x+Math.cos(angle)*94,
-  y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y+Math.sin(angle)*94,
+ return {x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x+Math.cos(angle)*78,
+  y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y+Math.sin(angle)*78,
   growthAngle:angle,
   attachment:{x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x,y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y}};
 }
@@ -299,7 +299,7 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
      const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent);
      const siblingIndex=Math.max(0,siblings.indexOf(node));
      const branchTime=Math.max(0,totalTime-expandedAt[parentId]);
-     node.progress=smooth(branchTime,180+siblingIndex*430,900);
+     node.progress=1;
      node.opacity=node.progress;node.emphasis=reducedMotion?0:(1-smooth(branchTime,1180+siblingIndex*430,950))*node.progress;
      node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
     }
@@ -379,8 +379,8 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  // Keep cells deliberately flat in XR: one face and one outline, with no
  // false rear rim, bevel, perspective edge or drop shadow.
  ctx.save();ctx.globalAlpha*=visual.backgroundOpacity ?? currentInfoOpacity();
- drawLearningCell(ctx,r,'#102b22',null,0);ctx.restore();
- drawLearningCell(ctx,r,null,`hsla(${hue},28%,84%,${hollow?.64:.78})`,hollow?4:5);
+ drawLearningCell(ctx,r,node.depth===0?'#173e31':'#102b22',null,0);ctx.restore();
+ drawLearningCell(ctx,r,null,node.depth===0?'rgba(180,220,167,.48)':`hsla(${hue},28%,84%,${hollow?.64:.78})`,node.depth===0?2:hollow?4:5);
  if(visual.pathway && !selected){
   ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;
   learningCellPath(ctx,r-7);ctx.stroke();ctx.setLineDash([]);

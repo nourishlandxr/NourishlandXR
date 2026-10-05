@@ -19,7 +19,7 @@ export function createXRHandOutline(gl){
             vec4 world=skin*vec4(p,1.);vec3 normal=normalize(mat3(skin)*n);
             rim=1.-abs(dot(normal,normalize(eye-world.xyz)));
             gl_Position=projection*view*world;}`);
-    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;varying float rim;uniform float opacity;void main(){float edge=smoothstep(.62,.94,rim);if(edge<.025)discard;gl_FragColor=vec4(.93,.96,.96,edge*opacity);}');
+    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;varying float rim;uniform float opacity;void main(){float edge=smoothstep(.48,.87,rim);if(edge<.025)discard;gl_FragColor=vec4(.93,.96,.96,edge*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS)){const error=gl.getProgramInfoLog(program);gl.deleteProgram(program);throw Error(error);}
     const locations=Object.fromEntries(['bones[0]','projection','view','eye','opacity'].map(name=>[name,gl.getUniformLocation(program,name)]));
@@ -42,7 +42,7 @@ export function createXRHandOutline(gl){
             gl.uniformMatrix4fv(locations.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(locations.view,false,view.transform.inverse.matrix);const eye=view.transform.matrix;gl.uniform3f(locations.eye,eye[12],eye[13],eye[14]);
             for(const {source,state} of ready){
                 const rig=rigs.get(source.handedness);if(rig.sample!==state){rig.names.forEach((name,i)=>{rig.matrix.fromArray(state.joints.get(name).matrix).multiply(rig.inverse[i]).toArray(rig.matrices,i*16);});rig.sample=state;}
-                gl.uniformMatrix4fv(locations['bones[0]'],false,rig.matrices);gl.uniform1f(locations.opacity,(state.pinch?.70:.43)*state.visualConfidence);
+                gl.uniformMatrix4fv(locations['bones[0]'],false,rig.matrices);gl.uniform1f(locations.opacity,(state.pinch?.95:.82)*state.visualConfidence);
                 for(const a of rig.geometry){gl.bindBuffer(gl.ARRAY_BUFFER,a.buffer);gl.enableVertexAttribArray(a.location);gl.vertexAttribPointer(a.location,a.size,gl.FLOAT,false,0,0);}
                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,rig.index);gl.drawElements(gl.TRIANGLES,rig.count,rig.type,0);
             }

@@ -139,6 +139,11 @@ export function syncPimConnectionLayer(map) {
     layer.setAttribute('viewBox', `0 0 ${geometry.width} ${geometry.height}`);
     layer.setAttribute('width', String(geometry.width));
     layer.setAttribute('height', String(geometry.height));
+    let defs=layer.querySelector('defs');if(!defs){defs=document.createElementNS(PIM_CONNECTION_SVG_NS,'defs');layer.prepend(defs);}
+    const mask=document.createElementNS(PIM_CONNECTION_SVG_NS,'mask');map.__pimBondMaskId ||= 'pim-bond-mask-'+Math.random().toString(36).slice(2);mask.id=map.__pimBondMaskId;mask.setAttribute('maskUnits','userSpaceOnUse');mask.setAttribute('x','0');mask.setAttribute('y','0');mask.setAttribute('width',String(geometry.width));mask.setAttribute('height',String(geometry.height));
+    const background=document.createElementNS(PIM_CONNECTION_SVG_NS,'rect');background.setAttribute('width',String(geometry.width));background.setAttribute('height',String(geometry.height));background.setAttribute('fill','white');mask.append(background);
+    for(const position of [...nodes.map(node=>node.position),corePosition].filter(Boolean)){const {center,bounds}=position,w=bounds.width/2+2,h=bounds.height/2+2,polygon=document.createElementNS(PIM_CONNECTION_SVG_NS,'polygon');polygon.setAttribute('points',[[w,0],[w/2,h],[-w/2,h],[-w,0],[-w/2,-h],[w/2,-h]].map(([x,y])=>`${center.x+x},${center.y+y}`).join(' '));polygon.setAttribute('fill','black');mask.append(polygon);}
+    defs.replaceChildren(mask);
     const selectedPath = map.querySelector('.plant-knowledge-cell.is-selected')?.dataset.pimNode || '';
     const pairs = pimConnectionPairs(nodes);
     const desired = new Map();
@@ -177,6 +182,7 @@ export function syncPimConnectionLayer(map) {
         path.dataset.pimConnectionChild = pair.childId;
         path.dataset.pimConnectionBranch = pair.branchId;
         path.style.setProperty('--pim-connection-hue', String(pair.hue));
+        path.setAttribute('mask',`url(#${map.__pimBondMaskId})`);
         path.setAttribute('pathLength', '1');
         path.setAttribute('d', curve.d);
         if (wasNew || wasClosing) {

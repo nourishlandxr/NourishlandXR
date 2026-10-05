@@ -4,6 +4,7 @@ export const LIM_ACTIVATION_MS = 300;
 
 export function createLimActivationController({
     duration = LIM_ACTIVATION_MS,
+    durationForKey = null,
     now = () => performance.now(),
     onProgress = () => {},
     onStart = () => {},
@@ -55,6 +56,7 @@ export function createLimActivationController({
             startedAt = Number(timestamp) || 0;
             emitProgress(activeKey, 0);
             onStart(activeKey, source);
+            if(durationForKey?.(activeKey)===0)return complete(activeKey,timestamp);
             return true;
         },
         tick(key = activeKey, timestamp = now()) {

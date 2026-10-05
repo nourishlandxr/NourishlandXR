@@ -48,14 +48,30 @@ export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performanc
     }
     return surfaces;
 }
+// Subtract every glass cell footprint from a bond, rather than relying on
+// transparent faces to conceal it. This also covers intervening child cells.
+function visibleBondSegments(a,b,surfaces){
+    let intervals=[[0,1]];const delta={x:b.x-a.x,y:b.y-a.y,z:b.z-a.z};
+    for(const surface of surfaces){
+        const relative={x:a.x-surface.center.x,y:a.y-surface.center.y,z:a.z-surface.center.z},dot=(v,axis)=>v.x*axis.x+v.y*axis.y+v.z*axis.z;
+        if(Math.abs(dot(relative,surface.normal))>.03)continue;
+        const w=surface.width/2+.003,h=surface.height/2+.003,x=dot(relative,surface.right),y=dot(relative,surface.up),dx=dot(delta,surface.right),dy=dot(delta,surface.up);
+        const planes=surface.card.identity?[[1,0,w],[-1,0,w],[0,1,h],[0,-1,h]]:[[0,1,h],[0,-1,h],[1,w/(2*h),w],[1,-w/(2*h),w],[-1,w/(2*h),w],[-1,-w/(2*h),w]];
+        let lo=0,hi=1;
+        for(const [nx,ny,limit] of planes){const start=nx*x+ny*y,slope=nx*dx+ny*dy;if(Math.abs(slope)<1e-8){if(start>limit){lo=1;hi=0;break;}}else {const t=(limit-start)/slope;if(slope>0)hi=Math.min(hi,t);else lo=Math.max(lo,t);}}
+        if(lo>=hi)continue;
+        intervals=intervals.flatMap(([start,end])=>hi<=start || lo>=end?[[start,end]]:[[start,Math.max(start,lo)],[Math.min(end,hi),end]].filter(([u,v])=>v-u>.001));
+    }
+    const point=t=>({x:a.x+delta.x*t,y:a.y+delta.y*t,z:a.z+delta.z*t});return intervals.map(([start,end])=>[point(start),point(end)]);
+}
 function labelCanvas(card){
     if(card.knowledgeFace)return knowledgeFaceCanvas(card);
     const canvas=document.createElement('canvas');canvas.width=card.resolution;canvas.height=card.resolution;const ctx=canvas.getContext('2d');ctx.scale(canvas.width/512,canvas.height/512);
     ctx.beginPath();
     if(card.identity)ctx.roundRect(18,62,476,388,34);
     else for(let i=0;i<6;i++){const angle=Math.PI/3*i,x=256+246*Math.cos(angle),y=256+284*Math.sin(angle);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();
-    const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,`rgba(18,40,34,${card.infoOpacity})`);gradient.addColorStop(1,`rgba(7,21,24,${card.infoOpacity})`);ctx.fillStyle=gradient;ctx.fill();
-    ctx.lineJoin='round';ctx.lineWidth=card.selected || card.hovered?10:6;ctx.strokeStyle=card.hovered?'#f0fbf8':card.selected?KNOWLEDGE_VISUALS.selectedBorder:card.branchColour;ctx.stroke();
+    const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,`rgba(18,40,34,${Math.max(.52,card.infoOpacity)})`);gradient.addColorStop(1,`rgba(7,21,24,${Math.max(.52,card.infoOpacity)})`);ctx.fillStyle=gradient;ctx.fill();
+    ctx.lineJoin='round';ctx.lineWidth=card.selected || card.hovered?12:9;ctx.strokeStyle=card.hovered?'#f0fbf8':card.selected?KNOWLEDGE_VISUALS.selectedBorder:card.branchColour;ctx.stroke();
     // Keep power-of-two artwork for filtered distance viewing, but compensate
     // glyphs for the world card's aspect ratio so the type is not stretched.
     ctx.save();ctx.translate(256,256);ctx.scale(1,card.identity ? .43/.28:KNOWLEDGE_VISUALS.nodeWidth/KNOWLEDGE_VISUALS.nodeHeight);ctx.translate(-256,-256);
@@ -99,10 +115,10 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
                     const edge=(s,target)=>{
                         const delta={x:target.x-s.center.x,y:target.y-s.center.y,z:target.z-s.center.z};
                         const x=delta.x*s.right.x+delta.y*s.right.y+delta.z*s.right.z,y=delta.x*s.up.x+delta.y*s.up.y+delta.z*s.up.z;
-                        const factor=.96/Math.max(Math.abs(y)/(s.height/2),s.card.identity?Math.abs(x)/(s.width/2):Math.abs(x)/(s.width/2)+Math.abs(y)/s.height,.001);
+                        const factor=1.04/Math.max(Math.abs(y)/(s.height/2),s.card.identity?Math.abs(x)/(s.width/2):Math.abs(x)/(s.width/2)+Math.abs(y)/s.height,.001);
                         return {x:s.center.x+s.right.x*x*factor+s.up.x*y*factor,y:s.center.y+s.right.y*x*factor+s.up.y*y*factor,z:s.center.z+s.right.z*x*factor+s.up.z*y*factor};
                     };
-                    if(d>.03)drawSpatialTether(gl,tether,view,edge(parent,b),edge(surface,a),{segments:4,width:KNOWLEDGE_VISUALS.bondWidth,curve:0,lift:0,color:[.68,.83,.70,(surface.node.contextual ? .28 : .62)*Math.max(surface.opacity,.08)]});
+                    if(d>.03)for(const [start,end] of visibleBondSegments(a,b,recordSurfaces))drawSpatialTether(gl,tether,view,start,end,{segments:4,width:KNOWLEDGE_VISUALS.bondWidth,curve:0,lift:0,color:[.68,.83,.70,(surface.node.contextual ? .28 : .62)*Math.max(surface.opacity,.08)]});
                 }gl.depthMask(true);
             }
             cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverPath===surface.node.path;return surface.card;}),record.demoSelectedNodeId || record.pimSelectedNodeId || '');

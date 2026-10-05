@@ -7,7 +7,7 @@ import {pimVisibleNodes} from '../app/services/plantInformationMesh.js';
 import {knowledgeExplorer,knowledgeExplorerAction,preserveKnowledgeContext} from '../app/services/knowledgeExplorer.js';
 import {ensureKnowledgeObjects,spawnKnowledgeObject,selectKnowledgeObjectFace,knowledgeObjectAction,knowledgeConnectorAnchors,visibleKnowledgeObjects,rotateKnowledgeObject} from '../app/services/knowledgeObjectModel.js';
 import {availablePimoModes,bindPimoSpatialCapabilities,setPimoDeveloperOverride,supportsSpatialPIMO} from '../app/services/pimoSpatialCapabilities.js';
-import {createHeroDicePhysics,HERO_TOY_REACH} from '../app/services/heroDiceToy.js';
+import {createHeroDicePhysics,HERO_TOY_RADIUS,HERO_TOY_REACH} from '../app/services/heroDiceToy.js';
 import {bindKnowledgeObjectInteraction} from '../app/services/knowledgeObjectInteraction.js';
 import {createHandSurfaceInteraction} from '../app/services/handSurfaceInteraction.js';
 import {beginHandTrackingFrame,handTrackingState,XR_HAND_JOINT_CONNECTIONS} from '../app/services/xrPointer.js';
@@ -49,8 +49,8 @@ test('session re-entry keeps selected topic, open branches, reading page and obj
 });
 test('floor toy bounces, settles and stays within reach at each Quest refresh rate',()=>{
  for(const hz of [60,72,90,120]){const p=createHeroDicePhysics({x:0,y:0,z:0});p.state.position.y=1;p.state.velocity={x:4.5,y:3,z:1.4};let bounced=false,lastV=p.state.velocity.y;
-  for(let i=0;i<hz*12;i++){p.step(1/hz);if(lastV<-.5 && p.state.velocity.y>0)bounced=true;lastV=p.state.velocity.y;assert.ok(p.state.position.y>=.13-1e-8);assert.ok(Math.hypot(p.state.position.x,p.state.position.z)<=HERO_TOY_REACH+1e-8);assert.ok(Object.values(p.state.position).every(Number.isFinite));}
-  assert.ok(bounced);assert.equal(p.state.velocity.y,0);assert.ok(Math.abs(p.state.position.y-.13)<1e-8);
+  for(let i=0;i<hz*12;i++){p.step(1/hz);if(lastV<-.5 && p.state.velocity.y>0)bounced=true;lastV=p.state.velocity.y;assert.ok(p.state.position.y>=HERO_TOY_RADIUS-1e-8);assert.ok(Math.hypot(p.state.position.x,p.state.position.z)<=HERO_TOY_REACH+1e-8);assert.ok(Object.values(p.state.position).every(Number.isFinite));}
+  assert.ok(bounced);assert.equal(p.state.velocity.y,0);assert.ok(Math.abs(p.state.position.y-HERO_TOY_RADIUS)<1e-8);
  }
 });
 test('the actual Totem collar uses configurable cyan and expires without an extra mesh',()=>{
