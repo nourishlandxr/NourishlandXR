@@ -307,7 +307,7 @@ test('Spatial device wording is used in preparation and runtime status while Que
     const creator = read('app/screens/arMode.js');
     const demo = read('app/screens/temporaryArDemo.js');
     const translations = read('app/services/i18n.js');
-    assert.match(onboarding, /On a Spatial device/);
+    assert.match(onboarding, /On a spatial device/);
     assert.match(creator, /Right Spatial device controller active/);
     assert.match(demo, /Spatial device immersive mode/);
     assert.match(creator, /isQuestHeadsetBrowser\(\)/);

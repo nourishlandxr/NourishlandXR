@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AR preparation review</title><link rel="stylesheet" href="../dist/xr/style.css"><link rel="stylesheet" href="../dist/xr/product-v2.css"><link rel="stylesheet" href="../dist/xr/living-objects.css"></head><body><main id="app"></main><script type="module">
+import {renderArIntroductionPreparation} from '../dist/xr/services/arOnboarding.js';
+renderArIntroductionPreparation(document.querySelector('#app'),{onContinue:()=>{const status=document.querySelector('[data-ar-entry-status]');status.hidden=false;status.textContent='Preview: Start AR reached the entry handler.';},onCancel:()=>location.href='../dist/xr/'});
+</script></body></html>

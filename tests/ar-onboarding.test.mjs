@@ -26,15 +26,34 @@ test('AR introduction preparation distinguishes the desktop book and spatial mod
     const app = { innerHTML: '', querySelector: () => null };
     renderArIntroductionPreparation(app);
     assert.match(app.innerHTML, /we recommend the plain NLXR introduction/);
-    assert.match(app.innerHTML, /compatible Android phone or spatial device\*/);
+    assert.match(app.innerHTML, /compatible Android phone or spatial device/);
     assert.match(app.innerHTML, /iPhone and iPad cannot currently launch this WebXR AR mode/);
     assert.match(app.innerHTML, /plain desktop introduction needs no camera/);
     assert.match(app.innerHTML, /Camera and tracking/);
-    assert.match(app.innerHTML, /Begin introduction/);
+    assert.match(app.innerHTML, /Start AR/);
+    assert.doesNotMatch(app.innerHTML, /global-ar-action|data-ar-eye-height|Floor and natural scale/);
+    assert.match(app.innerHTML, /<details class="ar-device-support">/);
     assert.match(app.innerHTML, /XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame/);
     assert.match(app.innerHTML, /not confirmed compatible devices/);
     assert.match(app.innerHTML, /Don’t show this preparation next time/);
     assert.match(app.innerHTML, /data-ar-introduction-continue/);
+});
+
+test('desktop preparation keeps its own entry label and AR entry exposes retry feedback', async () => {
+    const desktop={innerHTML:'',querySelector:()=>null};
+    renderArIntroductionPreparation(desktop,{simpleDesktop:true});
+    assert.match(desktop.innerHTML,/Begin introduction/);
+    assert.doesNotMatch(desktop.innerHTML,/>Start AR</);
+    const handlers=new Map(),attributes=new Map();
+    const button={textContent:'Start AR',disabled:false,setAttribute:(key,value)=>attributes.set(key,value),addEventListener:(name,fn)=>handlers.set(name,fn)};
+    const status={hidden:true,textContent:''};
+    const app={innerHTML:'',querySelector:selector=>selector==='[data-ar-introduction-continue]'?button:selector==='[data-ar-entry-status]'?status:null};
+    let starts=0;
+    renderArIntroductionPreparation(app,{onContinue:()=>{starts++;throw Error('Session unavailable');}});
+    await handlers.get('click')({currentTarget:button});
+    assert.equal(starts,1);assert.equal(button.disabled,false);
+    assert.equal(button.textContent,'Start AR');assert.equal(attributes.get('aria-busy'),'false');
+    assert.equal(status.hidden,false);assert.match(status.textContent,/try again/);
 });
 
 test('homepage AR introduction checks the remembered preference before starting WebXR', () => {

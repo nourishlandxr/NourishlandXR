@@ -83,5 +83,5 @@ export function createBeeXRRenderer(gl,model,bitmap){
             }
             gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.activeTexture(gl.TEXTURE0);
         },destroy:cleanup};
-    }catch(error){cleanup();console.warn('Native bee unavailable; using the lightweight bee:',error);return null;}
+    }catch(error){cleanup();console.warn('Native bee unavailable; bees remain hidden:',error);return null;}
 }

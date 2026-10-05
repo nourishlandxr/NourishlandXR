@@ -65,31 +65,31 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
 export function renderArIntroductionPreparation(app, { onContinue, onCancel, simpleDesktop=false } = {}) {
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
-        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>Ready to explore?</h1><p class="subtitle">On desktop, we recommend the plain NLXR introduction. For the full spatial experience, use a compatible Android phone or spatial device*.</p></div>
+        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>${simpleDesktop?'Prepare the introduction':'Prepare for AR'}</h1><p class="subtitle">${simpleDesktop?'Explore the sample demo on your screen. No camera is needed.':'Bring the sample demo into the space around you.'}</p></div>
         ${botanicalTextureMarkup('prep')}
         <section class="panel ar-safety-card ar-introduction-preparation-card">
-            <p class="ar-introduction-lead">On a supported device, learning cells appear in the space around you. iPhone and iPad cannot currently launch this WebXR AR mode.</p>
             <div class="ar-preparation-points">
-                <div><span aria-hidden="true">◎</span><p><strong>Make a little room</strong><small>Use a clear, calm space and stay aware of people and obstacles.</small></p></div>
-                <div><span aria-hidden="true">⌾</span><p><strong>Camera and tracking</strong><small>A compatible phone or spatial device may request access after you continue. The plain desktop introduction needs no camera.</small></p></div>
-                <div><span aria-hidden="true">✦</span><p><strong>Move at your pace</strong><small>On a Spatial device, stay within your safety boundary. On a phone, hold the device securely.</small></p></div>
+                <div><span aria-hidden="true">◎</span><p><strong>Clear space</strong><small>Stay aware of people and obstacles. On a spatial device, stay within your boundary.</small></p></div>
+                <div><span aria-hidden="true">⌾</span><p><strong>${simpleDesktop?'Explore at your pace':'Camera and tracking'}</strong><small>${simpleDesktop?'Use your mouse to select information. You can leave at any time.':'Your browser may request access when you start AR. Hold your phone securely.'}</small></p></div>
             </div>
-            <p class="ar-spatial-device-note">* Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p>
-            <p class="meta">You can leave at any time. Camera access, when available, begins only after you continue and grant permission.</p>
+            <details class="ar-device-support"><summary>Device support</summary><p>Use a compatible Android phone or spatial device. On desktop, we recommend the plain NLXR introduction; the plain desktop introduction needs no camera. iPhone and iPad cannot currently launch this WebXR AR mode.</p><p class="meta">Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p></details>
         </section>
         ${arPreparationControlsMarkup({simpleDesktop})}
-        <label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time on this device</span></label>
-        <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary global-ar-action" type="button" data-ar-introduction-continue>Begin introduction</button></div>
+        <div class="ar-preparation-footer"><label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>
+        <p role="status" data-ar-entry-status hidden></p>
+        <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary ar-preparation-start" type="button" data-ar-introduction-continue>${simpleDesktop?'Begin introduction':'Start AR'}</button></div></div>
     </div>`;
     bindBotanicalTexture(app);
     bindArPreparationControls(app,app.querySelector('[data-ar-introduction-continue]'),{nearFuture:!simpleDesktop,simpleDesktop});
     app.querySelector('[data-ar-introduction-continue]')?.addEventListener('click', async event => {
         const button = event.currentTarget;
         button.disabled = true;
+        button.setAttribute('aria-busy','true');button.textContent=simpleDesktop?'Starting…':'Starting AR…';
         const remember = Boolean(app.querySelector('[data-ar-introduction-remember]')?.checked);
         if (remember) skipArIntroductionPreparation();
         try { await onContinue?.({ remember }); }
-        finally { button.disabled = false; }
+        catch {const status=app.querySelector('[data-ar-entry-status]');if(status){status.hidden=false;status.textContent='AR could not start. Please try again.';}}
+        finally { button.disabled = false;button.setAttribute('aria-busy','false');button.textContent=simpleDesktop?'Begin introduction':'Start AR'; }
     });
     app.querySelector('[data-ar-introduction-cancel]')?.addEventListener('click', () => onCancel?.());
 }

@@ -68,7 +68,12 @@ test('ambient life is wired into simulated and immersive demo rendering', () => 
     assert.match(spatialDraw,/ambientBeeModel\?\.drawXR\?\.\(view,position,arWelcomeClock\.elapsed,\{\.\.\.bee,viewer:viewerMatrix\}\)/);
     assert.doesNotMatch(spatialDraw,/tex(?:Sub)?Image2D|renderSprite/);
     assert.match(spatialDraw,/ambientWorldAnchor\.x[\s\S]*ambientWorldAnchor\.y[\s\S]*ambientWorldAnchor\.z/);
-    assert.match(spatialDraw,/bee\.flyby\*\.3/);
+    assert.match(spatialDraw,/!ambientBeeModel\?\.ready/);
+    const nativeDraw=spatialDraw.slice(0,spatialDraw.indexOf('function ambientBeeWorldPosition'));
+    assert.doesNotMatch(nativeDraw,/drawSpatialSphere|drawDemoAmbientLines|wings\.push/);
+    const model=readFileSync(new URL('../app/services/demoBeeModel.js',import.meta.url),'utf8');
+    const drawXR=model.slice(model.indexOf('drawXR(view'),model.indexOf('renderSprite('));
+    assert.doesNotMatch(drawXR,/currentGraphicsQuality\(\)==='low'/);
     assert.match(spatialDraw,/encounters:!reducedMotion/);
     assert.doesNotMatch(spatialDraw,/\bbase\.(?:x|y|z)\b/);
     assert.doesNotMatch(source,/seedlingGrowthStage|ambientGrowth|tickDemoAmbientLife/);

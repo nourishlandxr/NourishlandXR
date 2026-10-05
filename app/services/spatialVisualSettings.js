@@ -57,6 +57,10 @@ export function setSpatialVisualSettings(change){
 }
 export function currentOrbModel(){return preferences.orbModel;}
 export function currentInfoOpacity(){return preferences.infoOpacity;}
+// Cell glass is controlled independently from the surrounding information
+// panel. Keep a small accessor so canvas based welcome/PIMO surfaces use the
+// same live value as the WebGL renderer and the simulated DOM mesh.
+export function currentCellOpacity(){return preferences.cellOpacity;}
 
 export function currentShowFps(){return preferences.showFps;}
 

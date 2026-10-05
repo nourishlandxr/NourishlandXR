@@ -146,12 +146,12 @@ export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
     let bees=[],bee=null,resources=null,xr=null,lastElapsed=NaN,lastSpritePaint=-Infinity,disposed=false,ready=false;
     prepareDemoBeeModel().then(async gltf=>{
         const loaded=await beeResources(gltf);if(disposed){loaded.geometry.dispose();loaded.texture.dispose();loaded.materials.forEach(material=>material.dispose());loaded.bitmap.close();return;}
-        resources=loaded;bees=Array.from({length:gl || sprite?1:BEE_COUNT},()=>makeBee(gltf,loaded));bee=bees[0];bees.forEach(item=>scene.add(item.wrapper));if(gl)xr=createBeeXRRenderer(gl,bee,loaded.bitmap);ready=Boolean(renderer || xr);canvas.dataset.modelReady=ready?'true':'fallback';
-    }).catch(error=>{if(!disposed){console.warn('Bee model fallback:',error);canvas.dataset.modelReady='error';}});
+        resources=loaded;bees=Array.from({length:gl || sprite?1:BEE_COUNT},()=>makeBee(gltf,loaded));bee=bees[0];bees.forEach(item=>scene.add(item.wrapper));if(gl)xr=createBeeXRRenderer(gl,bee,loaded.bitmap);ready=Boolean(renderer || xr);canvas.dataset.modelReady=ready?'true':'unavailable';
+    }).catch(error=>{if(!disposed){console.warn('Bee model unavailable; bees remain hidden:',error);canvas.dataset.modelReady='error';}});
     return {
         get ready(){return ready;},
         hide(){canvas.style.visibility='hidden';},
-        drawXR(view,origin,elapsed,pose){if(!xr || !ready || currentGraphicsQuality()==='low')return false;xr.draw(view,origin,elapsed,pose);return true;},
+        drawXR(view,origin,elapsed,pose){if(!xr || !ready)return false;xr.draw(view,origin,elapsed,pose);return true;},
         renderSprite(elapsed,startedAt){
             if(!renderer || !sprite || !ready || !Number.isFinite(startedAt))return null;
             if(elapsed>=lastSpritePaint && elapsed-lastSpritePaint<BEE_SPRITE_INTERVAL_MS)return canvas;

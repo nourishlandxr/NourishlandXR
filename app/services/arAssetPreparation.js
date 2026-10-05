@@ -40,7 +40,10 @@ export function prepareArAssets({onProgress=()=>{},retry=false,experience='demo'
  if(!state.active && !state.prepared){
   const assets=(experience==='demo'?AR_PRELOAD_ASSETS.critical:[]).map(path=>({id:path,critical:true,load:()=>loadPreparedImage(assetURL(path))}));
   if(experience!=='desktop' && currentGraphicsQuality()==='high')assets.push({id:'living-frame-artwork',critical:false,load:()=>prepareLivingFrameArtwork('high')});
-  if(experience==='demo')assets.push({id:'butterfly-model',critical:false,load:()=>import('./demoButterflyModel.js').then(module=>module.prepareDemoButterflyModel())});
+  if(experience==='demo'){
+   assets.push({id:'bee-model',critical:false,load:()=>import('./demoBeeModel.js').then(module=>module.prepareDemoBeeModel())});
+   assets.push({id:'butterfly-model',critical:false,load:()=>import('./demoButterflyModel.js').then(module=>module.prepareDemoButterflyModel())});
+  }
   // Fonts can fall back to system faces when offline. No audio autoplay.
   for(const face of ['600 24px Fraunces','500 24px Manrope','400 24px Marcellus'])assets.push({id:face,critical:false,load:()=>new Promise(resolve=>{
    const timer=setTimeout(resolve,4000);Promise.resolve(globalThis.document?.fonts?.load(face)).catch(()=>{}).finally(()=>{clearTimeout(timer);resolve();});

@@ -13,12 +13,12 @@ export function architectureRegionAmount(region, time=globalThis.performance?.no
     return transition.from+(target-transition.from)*progress;
 }
 
-// One connected solid: a faceted seed with six edge-hinged pentagonal wings.
-// Every region owns three fixed reading bays. Development changes the wing's
-// span, hinge and ribs; it never adds another collection of little solids.
+// One connected solid: a faceted seed with six compact edge-hinged pentagonal
+// panels. Every region owns three inset reading bays. Development changes a
+// panel's span and colour treatment without manufacturing extra solids.
 export function createKnowledgeArchitectureGeometry(radius=.16, regions=[], time=Infinity, reducedMotion=false){
     const positions=[], normals=[], uvs=[], triangleRegions=[], frames=[];
-    const front=radius*.26, back=-radius*.30, capRadius=radius*.68;
+    const front=radius*.22, back=-radius*.26, capRadius=radius*.64;
     function triangle(a,b,c,region,uvA,uvB,uvC){
         const normal=b.clone().sub(a).cross(c.clone().sub(a)).normalize();
         triangleRegions.push(region);
@@ -53,28 +53,27 @@ export function createKnowledgeArchitectureGeometry(radius=.16, regions=[], time
         const angle=Math.PI/2-slot*Math.PI/3, radial=new THREE.Vector3(Math.cos(angle),Math.sin(angle),0), tangent=new THREE.Vector3(Math.sin(angle),-Math.cos(angle),0);
         const region=regions[slot], amount=architectureRegionAmount(region,time,reducedMotion), opened=clamp(amount), maturity=Math.max(0,amount-1);
         const hinge=radial.clone().multiplyScalar(capRadius*Math.cos(Math.PI/6)).setZ(front);
-        const half=capRadius*.5, length=radius*(.72+opened*.92+maturity*.24);
-        const pitch=THREE.MathUtils.degToRad(-68+(80+(slot%2)*14)*opened), outward=radial.clone().multiplyScalar(Math.cos(pitch)).add(new THREE.Vector3(0,0,Math.sin(pitch)));
+        const half=capRadius*.44, length=radius*(.52+opened*.86+maturity*.14);
+        const pitch=THREE.MathUtils.degToRad(-18+39*opened+3*maturity), outward=radial.clone().multiplyScalar(Math.cos(pitch)).add(new THREE.Vector3(0,0,Math.sin(pitch)));
         const point=(side,along,depth=0)=>hinge.clone().addScaledVector(tangent,side).addScaledVector(outward,along).add(new THREE.Vector3(0,0,depth));
         const tip=point(0,length), shoulder=length*.70;
         const outline=[point(-half,0),point(half,0),point(half*1.18,shoulder),tip,point(-half*1.18,shoulder)];
-        // The tangent basis above gives an outward front normal for all wings.
         if(opened>.08){
+            const gap=radius*.035;
             for(let bay=0;bay<3;bay++){
-                const low=shoulder*bay/3, high=shoulder*(bay+1)/3, w0=half*(1+.18*low/shoulder), w1=half*(1+.18*high/shoulder);
-                polygon([point(-w0,low),point(w0,low),point(w1,high),point(-w1,high)],6+slot*3+bay);
+                const low=shoulder*bay/3+gap, high=shoulder*(bay+1)/3-gap;
+                const w0=Math.max(.01,half*(1+.18*low/shoulder)-gap), w1=Math.max(.01,half*(1+.18*high/shoulder)-gap);
+                const lift=p=>p.addScaledVector(outward,.006);
+                polygon([lift(point(-w0,low)),lift(point(w0,low)),lift(point(w1,high)),lift(point(-w1,high))],6+slot*3+bay);
             }
             polygon([point(-half*1.18,shoulder),point(half*1.18,shoulder),tip],slot);
         }else polygon(outline,slot);
-        const thickness=radius*(.16+maturity*.05);
+        const thickness=radius*(.12+maturity*.03);
         const underside=outline.map(p=>p.clone().add(new THREE.Vector3(0,0,-thickness)));
         polygon([...underside].reverse(),slot,true);
         for(let edge=0;edge<outline.length;edge++){
             const next=(edge+1)%outline.length;
-            const ridge=outline[edge].clone().add(outline[next]).add(underside[edge]).add(underside[next]).multiplyScalar(.25);
-            // Fixed facets make the richer state visibly architectural.
-            ridge.addScaledVector(radial,maturity*radius*.045);
-            for(const [a,b] of [[outline[edge],outline[next]],[outline[next],underside[next]],[underside[next],underside[edge]],[underside[edge],outline[edge]]])polygon([a,b,ridge],slot,true);
+            for(const [a,b] of [[outline[edge],outline[next]],[outline[next],underside[next]],[underside[next],underside[edge]],[underside[edge],outline[edge]]])polygon([a,b,underside[edge].clone().add(underside[next]).multiplyScalar(.5)],slot,true);
         }
     }
     const geometry=new THREE.BufferGeometry();

@@ -62,7 +62,13 @@ export function createKnowledgeArchitectureRenderer(gl){
     function prepare(object,time){
         let cache=caches.get(object);
         if(!cache){cache={position:buffer(),normal:buffer(),uv:buffer(),region:buffer(),edges:buffer(),texture:gl.createTexture()};caches.set(object,cache);}
-        const key=JSON.stringify([object.seedRadius || .16,(object.regions || []).map(region=>architectureRegionAmount(region,time,motionPreference?.matches).toFixed(4))]);
+        // The architecture is a low-poly learning object. Rebuilding and
+        // re-uploading its buffers for every transition tick caused a large
+        // third-stage frame-time spike on Quest. Four visible growth steps
+        // keep the opening legible while limiting GPU/GC work to a handful of
+        // uploads per interaction.
+        const growthSteps=(object.regions || []).map(region=>Math.round(architectureRegionAmount(region,time,motionPreference?.matches)*4)/4);
+        const key=JSON.stringify([object.seedRadius || .16,growthSteps]);
         if(key!==cache.geometryKey){
             cache.geometry?.dispose();
             cache.geometry=createKnowledgeArchitectureGeometry(object.seedRadius || .16,object.regions,time,motionPreference?.matches);
