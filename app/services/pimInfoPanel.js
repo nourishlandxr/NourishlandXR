@@ -179,7 +179,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         choice('OrbModel',`Orb · ${ORB_MODELS[orbModel]?.label || 'Improved'}`,'models','Object styles',446,56,420),
         choice('TotemModel',`Totem · ${TOTEM_MODELS[totemModel]?.label || 'Botanical column'}`,'models','Object styles',446,496,448),
         ...(performanceSettings?[...rateControls,choice('ShowFps',performanceSettings.showFps?'On':'Off','fps','FPS / CPU readout',620,540,404)]:[]),
-        choice('SettingsHelp','Help','help','',714,56,888),close];
+        choice('SettingsHelp','Help','help','',746,56,888),close];
     return [
         slider('InfoOpacity','info-opacity','Main / Control glass',infoOpacity,0,1,.01,104),
         slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),
@@ -187,7 +187,6 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
         {...choice('HeroDice',getSpatialVisualSettings().heroDice===false?'Off':'On','hero-dice','Floor dice',488),height:50},
-        ...(performanceSettings?[...rateControls,choice('ShowFps',`FPS · ${performanceSettings.showFps?'On':'Off'}`,'performance','Refresh rate / FPS',550,56+rates.length*(rateWidth+12),rateWidth)]:[]),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,888)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
 }
@@ -274,7 +273,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     const MEDIA_FADE_MS=650;
     let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
-    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,hoveredPanelId='',hoveredDescription='',hoveredAction='';
+    let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,taskProgress=null,hoveredPanelId='',hoveredDescription='',hoveredAction='';
     const panelCanvases=new Map();let explorerPose=null,explorerPosition=null,explorerClosed=true,panelModeChoice=null,knowledgeRecord=null,knowledgeDocument=null;
     const explorerElement=document.createElement('aside');explorerElement.className='nlxr-settings-companion nlxr-explorer-companion';explorerElement.setAttribute('aria-label','Knowledge options');explorerElement.hidden=true;root?.append(explorerElement);
     let confirmation=null,confirmationSnapshot=null;
@@ -309,7 +308,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     const panelHeading=()=>hasPimPath() && tab==='Details' ? pimPath() : title();
     const hasPimPathHeading=()=>hasPimPath() && tab==='Details';
     const selectionMetadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
-    const metadata=()=>[selectionMetadata(),performanceStatus()].filter(Boolean).join(' / ');
+    const metadata=()=>selectionMetadata();
     const previewMedia=()=>mediaPreviewBlocked ? null : selection?.mesh==='lim' && (selection.sketchImage || selection.image)
         ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false,fit:selection.imageFit || 'cover'}
         : identity?.media?.image ? {...identity.media,caption:identity.media.caption || identity.plant,plant:true} : null;
@@ -478,8 +477,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 row.querySelector('.nlxr-setting-options').append(slider);
             }else row.querySelector('.nlxr-setting-options').append(makeButton(item));
         }
-        if(!graphicsOpen && !soundOpen && performanceSettings?.message){
-            const status=document.createElement('p');status.className='nlxr-settings-status';status.textContent=performanceSettings.message;status.hidden=!status.textContent;status.setAttribute('role','status');
+        if(graphicsOpen && performanceStatus()){
+            const status=document.createElement('p');status.className='nlxr-settings-status';status.textContent=performanceStatus();status.hidden=!status.textContent;status.setAttribute('role','status');
             const soundRow=actions.querySelector('[data-setting-group="sound"]');
             if(soundRow)actions.insertBefore(status,soundRow);else actions.append(status);
         }
@@ -652,6 +651,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         });
     }
     function progressState(){
+        if(taskProgress)return taskProgress;
         if(!headerProgress?.steps?.length)return null;
         const activeIndex=Math.max(0,headerProgress.steps.findIndex(step=>step.id===headerProgress.activeId));
         return {...headerProgress,activeIndex,current:headerProgress.steps[activeIndex]};
@@ -663,13 +663,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(!progress)return;
         const region=document.createElement('section');region.className='nlxr-panel-progress';region.setAttribute('aria-label',progress.label);
         const heading=document.createElement('div');heading.className='nlxr-panel-progress-heading';
-        const status=document.createElement('span');status.textContent=`${progress.activeIndex+1} of ${progress.steps.length} · ${progress.current.label}`;status.setAttribute('aria-live','polite');
+        const status=document.createElement('span');status.textContent=progress.checklist?`${progress.steps.filter(step=>step.complete).length} of ${progress.steps.length} complete · ${progress.current.label}`:`${progress.activeIndex+1} of ${progress.steps.length} · ${progress.current.label}`;status.setAttribute('aria-live','polite');
         heading.append(status);
         const list=document.createElement('ol');
         progress.steps.forEach((step,index)=>{
-            const item=document.createElement('li');item.classList.toggle('is-complete',index<progress.activeIndex);item.classList.toggle('is-current',index===progress.activeIndex);
+            const item=document.createElement('li');item.classList.toggle('is-complete',progress.checklist?step.complete:index<progress.activeIndex);item.classList.toggle('is-current',index===progress.activeIndex);
             if(index===progress.activeIndex)item.setAttribute('aria-current','step');
-            const marker=document.createElement('i');marker.setAttribute('aria-hidden','true');
+            const marker=document.createElement('i');marker.setAttribute('aria-hidden','true');if(progress.checklist && step.complete)marker.textContent='✓';
             const text=document.createElement('span');text.textContent=step.label;
             item.append(marker,text);list.append(item);
         });
@@ -877,8 +877,12 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     });
     element.addEventListener('beforexrselect',event=>event.preventDefault());
     let explorerDrag=null;explorerElement.addEventListener('pointerdown',event=>{event.stopPropagation();if(event.target.closest('button'))return;const rect=explorerElement.getBoundingClientRect();explorerDrag={id:event.pointerId,started:performance.now(),x:event.clientX-rect.left,y:event.clientY-rect.top};explorerElement.setPointerCapture?.(event.pointerId);});
-    explorerElement.addEventListener('pointermove',event=>{if(explorerDrag?.id!==event.pointerId || performance.now()-explorerDrag.started<PANEL_GRAB_HOLD_MS)return;explorerPosition={x:Math.max(8,event.clientX-explorerDrag.x),y:Math.max(8,event.clientY-explorerDrag.y)};explorerElement.style.left=explorerPosition.x+'px';explorerElement.style.top=explorerPosition.y+'px';});
-    for(const type of ['pointerup','pointercancel','lostpointercapture'])explorerElement.addEventListener(type,()=>{explorerDrag=null;});
+    explorerElement.addEventListener('pointermove',event=>{if(explorerDrag?.id!==event.pointerId || performance.now()-explorerDrag.started<PANEL_GRAB_HOLD_MS)return;explorerPosition={x:Math.max(8,event.clientX-explorerDrag.x),y:Math.max(8,event.clientY-explorerDrag.y)};explorerElement.style.left=explorerPosition.x+'px';explorerElement.style.top=explorerPosition.y+'px';const main=element.getBoundingClientRect();explorerElement.classList.toggle('is-magnetized',Math.abs(explorerPosition.y-main.bottom-12)<80 && Math.abs(explorerPosition.x-main.left)<100);});
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])explorerElement.addEventListener(type,()=>{
+        if(explorerDrag && explorerPosition){const main=element.getBoundingClientRect(),rect=explorerElement.getBoundingClientRect();
+            if(Math.abs(rect.top-main.bottom-12)<80 && Math.abs(rect.left-main.left)<100){explorerPosition=null;renderExplorer();explorerElement.classList.add('is-magnetized');}}
+        explorerDrag=null;
+    });
     const removePanelMove=bindPanelMove();
     element.addEventListener('pointerdown',event=>event.stopPropagation());
     function canvas(card){
@@ -922,10 +926,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 ctx.strokeStyle=aimed?'rgba(243,248,226,.95)':'rgba(239,251,244,.48)';ctx.lineWidth=aimed?5:2.5;ctx.stroke();
                 ctx.fillStyle='#fcfff4';ctx.font='650 30px Manrope, system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+14,button.width-24);
             });ctx.textAlign='left';
-            if(!card.graphicsOpen && !card.soundOpen && card.performanceMessage){
-                ctx.fillStyle='rgba(9,25,27,.18)';ctx.beginPath();ctx.roundRect(40,616,920,32,12);ctx.fill();
+            if(card.graphicsOpen && card.performanceMessage){
+                ctx.fillStyle='rgba(9,25,27,.18)';ctx.beginPath();ctx.roundRect(40,684,920,50,12);ctx.fill();
                 ctx.strokeStyle='rgba(238,249,243,.27)';ctx.lineWidth=2.5;ctx.stroke();
-                ctx.fillStyle='#dfebe0';ctx.font='500 21px Manrope, system-ui';ctx.fillText(card.performanceMessage,56,638,888);
+                ctx.fillStyle='#dfebe0';ctx.font='500 21px Manrope, system-ui';infoPages(card.performanceMessage,80,2)[0].forEach((line,index)=>ctx.fillText(line,56,692+index*22,888));
             }
             return c;
         }
@@ -941,11 +945,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 ctx.fillStyle='#dfff9b';ctx.font='700 17px system-ui';ctx.textAlign='left';ctx.fillText(`${card.progress.activeIndex+1} / ${card.progress.steps.length} · ${card.progress.current.label.toUpperCase()}`,left,20,progressWidth);ctx.textAlign='left';
                 ctx.fillStyle='rgba(255,255,255,.15)';ctx.fillRect(left,barY,progressWidth,3);
                 ctx.fillStyle='#dfff9b';ctx.fillRect(left,barY,Math.max(3,stepWidth*card.progress.activeIndex),3);
-                card.progress.steps.forEach((step,index)=>{const x=left+stepWidth*index;ctx.beginPath();ctx.arc(x,barY+1.5,index===card.progress.activeIndex?7:5,0,Math.PI*2);ctx.fillStyle=index<=card.progress.activeIndex?'#dfff9b':'#536469';ctx.fill();});
+                card.progress.steps.forEach((step,index)=>{const x=left+stepWidth*index,complete=card.progress.checklist?step.complete:index<card.progress.activeIndex;
+                    if(card.progress.checklist && complete){const age=(lastTime || performance.now())-card.progress.successAt;if(age>=0 && age<1000){ctx.save();ctx.globalAlpha=(1-age/1000)*.45;ctx.fillStyle='#b6efcd';ctx.beginPath();ctx.arc(x,barY,12+age/70,0,Math.PI*2);ctx.fill();ctx.restore();}ctx.fillStyle='#c7f4dc';ctx.font='700 23px system-ui';ctx.fillText('✓',x-8,barY-12);}
+                    else{ctx.beginPath();ctx.arc(x,barY+1.5,index===card.progress.activeIndex?7:5,0,Math.PI*2);ctx.fillStyle=complete?'#c7f4dc':'#536469';ctx.fill();}});
             }
             ctx.fillStyle='#e8f7f1';ctx.font='650 17px system-ui';ctx.fillText('CONTROL',24,22,128);ctx.fillText('PANEL',24,42,128);
             if(card.plant && card.plant.toLowerCase()!=='control panel'){ctx.fillStyle='#f3f8fc';ctx.font='650 34px system-ui';ctx.fillText(card.plant,left,card.progress?58:20,Math.max(100,width-150));}
-            if(card.scientific){ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';ctx.fillText(card.scientific,left,card.progress?91:58,width);}
+            if(card.hoverHint && card.progress){ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';ctx.fillText(card.hoverHint,left,91,width);}else if(card.scientific){ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';ctx.fillText(card.scientific,left,card.progress?91:58,width);}
             let y=headerBottom+22;
             if(card.pathway){
                 ctx.fillStyle='#badbc1';ctx.font='600 20px system-ui';ctx.fillText(card.pathway.title,left,y,width);y+=28;
@@ -962,7 +968,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const lineHeight=card.largeText?36:32;
             ctx.textAlign='center';card.lines.forEach(line=>{ctx.fillText(line,left+width/2,y,width);y+=lineHeight;});ctx.restore();
             if(card.hint){ctx.fillStyle='#d8e6e3';ctx.font='600 20px system-ui';ctx.textAlign='center';infoPages(card.hint,Math.max(24,Math.floor(width/11)),2)[0].forEach((line,index)=>ctx.fillText(line,left+width/2,actionTop-57+index*24,width-16));ctx.textAlign='left';}
-            if(card.hoverHint){ctx.fillStyle='rgba(5,16,26,.88)';ctx.beginPath();ctx.roundRect(14,card.height-132,136,104,12);ctx.fill();ctx.strokeStyle='rgba(166,204,229,.32)';ctx.stroke();ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';infoPages(card.hoverHint,18,5)[0].forEach((line,index)=>ctx.fillText(line,24,card.height-120+index*18,116));}
+            if(card.hoverHint && !card.progress){ctx.fillStyle='rgba(8,23,26,.24)';ctx.beginPath();ctx.roundRect(200,92,630,42,10);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';infoPages(card.hoverHint,65,2)[0].forEach((line,index)=>ctx.fillText(line,210,98+index*18,610));}
             ctx.fillStyle='#d4e0dc';ctx.font='400 18px system-ui';ctx.fillText(card.metadata,left,card.height-23,width);
             if(card.tab==='Details' && card.page)ctx.fillText(card.page,right-65,card.height-20,65);
         }else if(!card.hidden){
@@ -989,7 +995,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(card.trail){ctx.fillStyle='#b4c3c7';ctx.font='400 18px system-ui';ctx.fillText(card.trail,200,contentTop+38,772);}
             const bodyOffset=card.trail?75:47;
             card.lines.forEach((line,i)=>{ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 31px':'400 27px')+' system-ui';ctx.textAlign='center';ctx.fillText(line,titleX+titleWidth/2,contentTop+bodyOffset+i*(card.largeText?36:32),titleWidth);ctx.textAlign='left';});
-            if(card.hoverHint){ctx.fillStyle='rgba(5,16,26,.88)';ctx.beginPath();ctx.roundRect(20,500,142,92,10);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 15px system-ui';infoPages(card.hoverHint,18,4)[0].forEach((line,index)=>ctx.fillText(line,30,512+index*18,122));}
+            if(card.hoverHint && !card.progress){ctx.fillStyle='rgba(8,23,26,.24)';ctx.beginPath();ctx.roundRect(200,92,630,42,10);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';infoPages(card.hoverHint,65,2)[0].forEach((line,index)=>ctx.fillText(line,210,98+index*18,610));}
             const footerY=card.pathway?card.height-190:card.height-86;
             if(card.hint){ctx.fillStyle='#d8e6e3';ctx.font='600 21px system-ui';ctx.textAlign='center';infoPages(card.hint,72,2)[0].forEach((line,index)=>ctx.fillText(line,500,footerY-64+index*25,740));ctx.textAlign='left';}
             ctx.fillStyle='#b4c3c7';ctx.font='400 17px system-ui';ctx.fillText(card.metadata,200,footerY,600);
@@ -1008,13 +1014,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(button.kind!=='tab' && button.kind!=='handle' && !button.disabled && !isContinue){ctx.fillStyle='rgba(4,9,12,.34)';ctx.beginPath();ctx.roundRect(button.x,button.y+5,button.width,button.height,radius);ctx.fill();}
             const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);
             if(isContinue){face.addColorStop(0,'rgba(10,26,29,.06)');face.addColorStop(1,'rgba(10,26,29,.12)');}
-            else if(button.panelOpener){face.addColorStop(0,button.expanded?'rgba(52,133,129,.78)':'rgba(34,100,102,.66)');face.addColorStop(1,'rgba(14,66,72,.76)');}
+            else if(button.panelOpener){face.addColorStop(0,button.expanded?'rgba(159,222,211,.19)':'rgba(190,225,223,.11)');face.addColorStop(1,'rgba(21,51,56,.10)');}
             else if(button.primary){face.addColorStop(0,'rgba(79,128,115,.18)');face.addColorStop(1,'rgba(29,69,68,.26)');}
             else if(button.selected){face.addColorStop(0,'rgba(140,205,235,.5)');face.addColorStop(1,'rgba(56,112,150,.4)');}
             else if(button.disabled){face.addColorStop(0,'rgba(211,220,225,.05)');face.addColorStop(1,'rgba(211,220,225,.025)');}
-            else if(button.action==='Utility:close'){face.addColorStop(0,'rgba(159,101,82,.44)');face.addColorStop(1,'rgba(94,51,45,.38)');}
+            else if(button.action==='Utility:close'){face.addColorStop(0,'rgba(224,199,191,.14)');face.addColorStop(1,'rgba(45,34,33,.08)');}
             else if(button.kind==='toggle'||button.kind==='handle'){face.addColorStop(0,'rgba(174,232,252,.4)');face.addColorStop(1,'rgba(61,137,177,.2)');}
-            else {face.addColorStop(0,'rgba(119,169,198,.34)');face.addColorStop(.5,'rgba(56,93,122,.56)');face.addColorStop(1,'rgba(26,52,78,.74)');}
+            else {face.addColorStop(0,'rgba(225,242,239,.12)');face.addColorStop(.5,'rgba(169,202,207,.08)');face.addColorStop(1,'rgba(19,42,46,.10)');}
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
             if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=button.panelOpener?'rgba(159,236,223,.86)':isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=isContinue?18:button.primary?3:2.5;ctx.stroke();}
             if(card.hoverAction===button.action && !button.disabled){ctx.fillStyle='rgba(219,237,216,.22)';ctx.fill();ctx.strokeStyle='rgba(245,247,222,.96)';ctx.lineWidth=isContinue?22:5;ctx.stroke();}
@@ -1106,7 +1112,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             else {const button=makeButton(item);button.setAttribute('aria-pressed',String(Boolean(item.selected)));(item.kind==='mode'?modes:options).append(button);}
         }explorerElement.append(modes,options);
     }
-    function explorerSpatialPose(){if(!pose)return null;const {mainHeight,mainWidth}=spatialDimensions(),offset=mainHeight/2+explorerHeight()/1000*mainWidth/2+.035;return explorerPose || {...pose,center:{x:pose.center.x-pose.up.x*offset,y:pose.center.y-pose.up.y*offset,z:pose.center.z-pose.up.z*offset}};}
+    function explorerDockPose(){if(!pose)return null;const {mainHeight,mainWidth}=spatialDimensions(),offset=mainHeight/2+explorerHeight()/1000*mainWidth/2+.035;return {...pose,center:{x:pose.center.x-pose.up.x*offset,y:pose.center.y-pose.up.y*offset,z:pose.center.z-pose.up.z*offset}};}
+    function explorerSpatialPose(){return explorerPose || explorerDockPose();}
+    function explorerNearDock(){const dock=explorerDockPose();return Boolean(dock && explorerPose && Math.hypot(explorerPose.center.x-dock.center.x,explorerPose.center.y-dock.center.y,explorerPose.center.z-dock.center.z)<.16);}
+    function finishExplorerDock(){if(explorerNearDock()){explorerPose=null;explorerPosition=null;explorerElement.classList.add('is-magnetized');}}
     function spatialDimensions(){return {mainWidth:(hidden ? .38 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .11 : headset ? .50 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
     function spatialMediaDockPose(side){
         if(!pose)return null;
@@ -1155,6 +1164,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
+        setTaskProgress(value){
+            if(!value){taskProgress=null;render();return;}
+            const steps=value.steps.map(step=>({...step})),pending=steps.findIndex(step=>!step.complete),activeIndex=pending<0?steps.length-1:pending;
+            taskProgress={label:'Try the interactions',checklist:true,steps,activeIndex,current:pending<0?{label:'Ready to continue'}:steps[activeIndex],successAt:value.successAt || 0};render();
+        },
         setXRPerformance(value){performanceSettings=value;renderSettings();updateReading();},
         setContextualHint(message=''){contextHint=String(message || '');page=0;updateReading();},
         setPanelHints(values=[]){rotatingPanelHints=Array.isArray(values)?values.map(String).filter(Boolean):[];panelHintIndex=0;clearInterval(panelHintTimer);panelHintTimer=0;if(rotatingPanelHints.length>1)panelHintTimer=setInterval(()=>{panelHintIndex=(panelHintIndex+1)%rotatingPanelHints.length;if(!contextHint && !identity?.hint && tab!=='Help')updateReading();},7000);if(!contextHint && !identity?.hint && tab!=='Help')updateReading();},
@@ -1196,7 +1210,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
             const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
-            if(grab?.source?.hand && xrFrame){const state=handTrackingState(xrFrame,grab.source,grab.referenceSpace),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');if(!state?.tracked || !state.pinch){spatialMove=null;spatialGrabPending=null;sliderGrab=null;}else if(index && thumb){const origin={x:(index.x+thumb.x)/2,y:(index.y+thumb.y)/2,z:(index.z+thumb.z)/2};if(!grab.handAnchor){grab.handAnchor=origin;grab.panelAnchor={...(grab.panel==='explorer'?explorerSpatialPose():grab.panel==='settings'?settingsPose || spatialMediaDockPose('left'):grab.panel==='media'?mediaPose || spatialMediaDockPose(mediaDockSide):pose).center};}handMoveRay=state.pointer?{...state.pointer,direction:grab.handDirection || state.pointer.direction}:null;grab.handCenter={x:grab.panelAnchor.x+origin.x-grab.handAnchor.x,y:grab.panelAnchor.y+origin.y-grab.handAnchor.y,z:grab.panelAnchor.z+origin.z-grab.handAnchor.z};}}
+            if(grab?.source?.hand && xrFrame){const state=handTrackingState(xrFrame,grab.source,grab.referenceSpace),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');if(!state?.tracked || !state.pinch){if(spatialMove?.panel==='explorer')finishExplorerDock();spatialMove=null;spatialGrabPending=null;sliderGrab=null;}else if(index && thumb){const origin={x:(index.x+thumb.x)/2,y:(index.y+thumb.y)/2,z:(index.z+thumb.z)/2};if(!grab.handAnchor){grab.handAnchor=origin;grab.panelAnchor={...(grab.panel==='explorer'?explorerSpatialPose():grab.panel==='settings'?settingsPose || spatialMediaDockPose('left'):grab.panel==='media'?mediaPose || spatialMediaDockPose(mediaDockSide):pose).center};}handMoveRay=state.pointer?{...state.pointer,direction:grab.handDirection || state.pointer.direction}:null;grab.handCenter={x:grab.panelAnchor.x+origin.x-grab.handAnchor.x,y:grab.panelAnchor.y+origin.y-grab.handAnchor.y,z:grab.panelAnchor.z+origin.z-grab.handAnchor.z};}}
             if(grab && !grab.source?.hand && xrFrame?.getPose && grab.source?.targetRaySpace && grab.referenceSpace){
                 try{heldTransform=xrFrame.getPose(grab.source.targetRaySpace,grab.referenceSpace)?.transform.matrix || null;}catch{heldTransform=null;}
             }
@@ -1215,11 +1229,11 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 if(Math.abs(stick)>.15)spatialMove.distance=Math.max(.4,Math.min(2.5,spatialMove.distance+stick*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.9));
                 pose ||= next;
                 if(spatialMove.panel==='media')mediaPose ||= spatialMediaDockPose(mediaDockSide);
-                const current=spatialMove.panel==='explorer'?explorerPose:spatialMove.panel==='settings'?settingsPose || spatialMediaDockPose('left'):spatialMove.panel==='media'?mediaPose:pose;
+                const current=spatialMove.panel==='explorer'?explorerSpatialPose():spatialMove.panel==='settings'?settingsPose || spatialMediaDockPose('left'):spatialMove.panel==='media'?mediaPose:pose;
                 const center=spatialMove.handCenter || panelCenterFromGrab(heldRay,spatialMove,current);
                 const facing=facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]});
                 const moved={...current,center,...facing,anchorHeading:facing.right};
-                if(spatialMove.panel==='explorer'){explorerPose=moved;}else if(spatialMove.panel==='settings'){settingsPose=moved;}else if(spatialMove.panel==='media'){
+                if(spatialMove.panel==='explorer'){explorerPose=moved;if(explorerNearDock())explorerPose=explorerDockPose();}else if(spatialMove.panel==='settings'){settingsPose=moved;}else if(spatialMove.panel==='media'){
                     mediaPose=moved;const candidate=spatialDockCandidate(mediaPose);
                     if(candidate){mediaPose=spatialMediaDockPose(candidate.side);spatialMove.dockSide=candidate.side;}else spatialMove.dockSide=null;
                 }else{pose=moved;heading=facing.right;manuallyPositioned=true;}
@@ -1245,7 +1259,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',infoOpacity,headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
-            const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,performanceMessage:performanceSettings?.message || '',infoOpacity,height:790,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
+            const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,performanceMessage:performanceStatus(),infoOpacity,height:840,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
@@ -1294,7 +1308,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
             if(type==='selectend' && spatialMove?.source===event.inputSource){
                 const moving=spatialMove,candidate=moving.panel==='media'?spatialDockCandidate(mediaPose):null;
-                finishingMoveSource=event.inputSource;spatialMove=null;
+                if(moving.panel==='explorer')finishExplorerDock();finishingMoveSource=event.inputSource;spatialMove=null;
                 if(moving.panel==='media' && candidate)dockSpatialMedia(candidate.side);
                 event.stopImmediatePropagation();return;
             }

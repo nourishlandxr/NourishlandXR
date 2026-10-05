@@ -21,9 +21,9 @@ export function createHeroDicePhysics(home,{radius=HERO_TOY_RADIUS,vertices=null
 }
 export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings().heroDice!==false,canGrab=()=>true}={}){
     const painter=createDiceRenderer(gl,{radius:HERO_TOY_RADIUS,appearance:'hero'}),geometry=painter.geometry,positions=geometry.attributes.position;
-    let physics=null,session=null,space=null,abort=null,active=null,lastTime=null;const inputs=new Map(),rays=new Map(),pinches=new WeakMap(),suppressed=new WeakMap();
+    let physics=null,session=null,space=null,abort=null,active=null,lastTime=null,visibleSince=null;const inputs=new Map(),rays=new Map(),pinches=new WeakMap(),suppressed=new WeakMap();
     const model=()=>physics?new THREE.Matrix4().compose(new THREE.Vector3(physics.state.position.x,physics.state.position.y,physics.state.position.z),new THREE.Quaternion(physics.state.rotation.x,physics.state.rotation.y,physics.state.rotation.z,physics.state.rotation.w),one):null;
-    function ensure(){if(!visible())return false;const origin=home?.();if(!origin)return false;if(!physics)physics=createHeroDicePhysics(origin,{vertices:positions.array});else physics.state.home.y=origin.y;return true;}
+    function ensure(){if(!visible()){visibleSince=null;return false;}const origin=home?.();if(!origin)return false;visibleSince ??= performance.now();if(!physics)physics=createHeroDicePhysics(origin,{vertices:positions.array});else physics.state.home.y=origin.y;return true;}
     function hit(ray){if(!physics || !visible() || !ray?.origin || !ray.direction)return null;const matrix=model(),origin=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),direction=new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z).normalize(),local=new THREE.Ray(origin.clone(),direction).applyMatrix4(matrix.clone().invert()),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),point=new THREE.Vector3();let nearest=null;
         for(let i=0;i<positions.count;i+=3){a.fromBufferAttribute(positions,i);b.fromBufferAttribute(positions,i+1);c.fromBufferAttribute(positions,i+2);if(!local.intersectTriangle(a,b,c,true,point))continue;const world=point.clone().applyMatrix4(matrix),distance=world.distanceTo(origin);if(!nearest || distance<nearest.distance)nearest={toy:true,point:world,center:world,distance};}return nearest;}
     function rayFor(source){const m=rays.get(source);return m?{origin:new THREE.Vector3().setFromMatrixPosition(m),direction:new THREE.Vector3(0,0,-1).transformDirection(m)}:null;}
@@ -54,6 +54,6 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
             }
             if(active){const input=inputs.get(active.source);if(!input){release(active.source,false);return;}const m=input.clone().multiply(active.offset),p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();m.decompose(p,q,s);physics.state.position=serial(p);physics.state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};active.samples.push({time,position:{...physics.state.position},rotation:{...physics.state.rotation}});active.samples=active.samples.filter(sample=>time-sample.time<180);}else physics.step(dt);
         },
-        draw(view){if(ensure())painter.draw(view,model());},destroy(){unbind();painter.destroy();physics=null;}
+        draw(view){if(ensure()){const t=Math.min(1,Math.max(0,(performance.now()-visibleSince)/1000)),opacity=t*t*(3-2*t);painter.draw(view,model(),opacity);}},destroy(){unbind();painter.destroy();physics=null;}
     };
 }

@@ -12,14 +12,14 @@ export function diceRegionDirections(count=6){
     if(count>7)directions.push([-.577,-.577,.577]);
     return directions.slice(0,Math.max(1,Math.min(8,count))).map(([x,y,z])=>new THREE.Vector3(x,y,z).normalize());
 }
-// Explorer is a regular hexagonal prism, with a recognisable six-sided outline
-// facing the viewer. Six rectangular walls carry topics; the front hexagonal
-// end carries context and the back end stays textured. All corners remain
-// inside the object's radius so grabbing and spacing use the same bounds.
+// Match the supplied solid: eight broad regular hexagonal faces connected by
+// six small square faces (a truncated octahedron), not a hexagonal prism.
+// Six hexagons carry topics, one carries context; other faces stay textured.
 export function createKnowledgeDiceGeometry(radius=.12){
- const halfDepth=radius*.5,circumradius=Math.sqrt(radius*radius-halfDepth*halfDepth),apothem=circumradius*Math.cos(Math.PI/6);
- const planes=Array.from({length:6},(_,region)=>{const angle=region*Math.PI/3;return {normal:new THREE.Vector3(Math.cos(angle),Math.sin(angle),0),distance:apothem,region};});
- planes.push({normal:new THREE.Vector3(0,0,1),distance:halfDepth,region:6},{normal:new THREE.Vector3(0,0,-1),distance:halfDepth,region:7});
+ const unit=radius/Math.sqrt(5),front=new THREE.Vector3(1,1,1).normalize(),orientation=new THREE.Quaternion().setFromUnitVectors(front,new THREE.Vector3(0,0,1));
+ const hexagons=[[1,1,1],[-1,1,1],[1,-1,1],[-1,-1,1],[1,1,-1],[-1,1,-1],[1,-1,-1],[-1,-1,-1]];
+ const planes=hexagons.map(([x,y,z],region)=>({normal:new THREE.Vector3(x,y,z).normalize().applyQuaternion(orientation),distance:Math.sqrt(3)*unit,region}));
+ for(const [x,y,z] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]])planes.push({normal:new THREE.Vector3(x,y,z).applyQuaternion(orientation),distance:2*unit,region:7});
  const vertices=[];
  for(let i=0;i<planes.length;i++)for(let j=i+1;j<planes.length;j++)for(let k=j+1;k<planes.length;k++){
   const a=planes[i],b=planes[j],c=planes[k],bc=b.normal.clone().cross(c.normal),det=a.normal.dot(bc);if(Math.abs(det)<1e-7)continue;

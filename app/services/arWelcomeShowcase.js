@@ -374,17 +374,17 @@ function drawLearningCell(context,radius,fill,stroke,lineWidth=2){
 function drawLivingCellGrowth(ctx,node,r,accent,elapsed,reducedMotion){
  const age=Math.max(0,elapsed-(node.growthStartedAt || 0));
  const growth=reducedMotion?1:smooth(age,0,6500),angle=node.growthAngle || 0;
- ctx.save();learningCellPath(ctx,r-6);ctx.clip();ctx.strokeStyle=accent;ctx.fillStyle=accent;ctx.lineWidth=2;
- for(let i=0;i<9;i++){
-  const extent=r*(.2+.68*((i*7%9)/9))*growth,a=angle+Math.PI+(i-4)*.28;
-  const sx=Math.cos(angle+Math.PI)*r,sy=Math.sin(angle+Math.PI)*r;
-  ctx.globalAlpha=node.opacity*.22;ctx.beginPath();ctx.moveTo(sx,sy);ctx.quadraticCurveTo(sx*.65+Math.sin(i)*r*.15,sy*.65+Math.cos(i)*r*.15,Math.cos(a)*extent,Math.sin(a)*extent);ctx.stroke();
+ ctx.save();ctx.strokeStyle=accent;ctx.fillStyle='#72a865';ctx.lineWidth=2;
+ // Roots trace the outside perimeter; the reading surface stays completely clear.
+ for(let i=0;i<3;i++){
+  const start=angle+Math.PI+i*.22,extent=Math.PI*1.55*growth;
+  ctx.globalAlpha=node.opacity*.28;ctx.beginPath();ctx.arc(0,0,r+4+i*3,start,start+extent);ctx.stroke();
  }
  const leaves=reducedMotion?1:smooth(age,0,1800);
  for(let i=0;i<5;i++){
-  const a=angle+i*1.27,x=Math.cos(a)*r*.88,y=Math.sin(a)*r*.88;
+  const a=angle+i*1.27,x=Math.cos(a)*(r+7),y=Math.sin(a)*(r+7);
   ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.scale(leaves,leaves);ctx.globalAlpha=node.opacity*.72;
-  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-16,-20,-32,0);ctx.quadraticCurveTo(-16,12,0,0);ctx.fill();ctx.restore();
+  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(10,-7,18,0);ctx.quadraticCurveTo(10,7,0,0);ctx.fill();ctx.restore();
  }
  ctx.restore();
 }

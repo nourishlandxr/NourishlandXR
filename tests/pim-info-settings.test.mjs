@@ -67,8 +67,8 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.equal(panelSettingsControls({headset:true,handVisualMode:'pointer'}).find(item=>item.action==='HandMode').label,'Pointer');
     for(const items of [desktop,quest,graphics,performance]){
         for(const [index,a] of items.entries()){
-            // The Settings surface is 790px tall after reserving space for FPS and Sound.
-            assert.ok(a.width>=88 && a.height>=42 && a.x>=0 && a.x+a.width<=1000 && a.y>=0 && a.y+a.height<=790);
+            // The Settings surface reserves a separate Graphics status row.
+            assert.ok(a.width>=88 && a.height>=42 && a.x>=0 && a.x+a.width<=1000 && a.y>=0 && a.y+a.height<=840);
             assert.ok(a.settingGroup && a.ariaLabel);
             for(const b of items.slice(index+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
         }

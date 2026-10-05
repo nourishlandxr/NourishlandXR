@@ -148,6 +148,10 @@ const meshGenerator=createPlaceholderKnowledgeGenerator();
 const meshRelationships=createMeshRelationshipService({repository:meshRepository,resolver:meshSourceResolver,generator:meshGenerator});
 const meshComposition=createMeshCompositionState();
 function demoMeshOwnerId(record,document){return String(record?.id || record?.demoPlantPreset || document?.plantId || 'demo-plant');}
+let demoInteractionTasks=new Set();
+const DEMO_INTERACTION_TASKS=[{id:'place',label:'Place Orb'},{id:'open',label:'Open Orb'},{id:'expand',label:'Expand a cell'}];
+function syncDemoInteractionTasks(successAt=0){infoPanel?.setTaskProgress({steps:DEMO_INTERACTION_TASKS.map(task=>({...task,complete:demoInteractionTasks.has(task.id)})),successAt});}
+function completeDemoInteractionTask(id){if(demoInteractionTasks.has(id))return;demoInteractionTasks.add(id);syncDemoInteractionTasks(performance.now());demoFeedback?.sound('placement');}
 function showDemoInfo(record,path) {
     clearLimSelection();
     const document=demoOrbKnowledge(record).document;
@@ -155,6 +159,7 @@ function showDemoInfo(record,path) {
     const ownerId=demoMeshOwnerId(record,document);
     meshSourceResolver.registerPimDocument(document,{ownerId});
     const selectedNode=document.nodes?.find(node=>node.id===path || node.path===path);
+    if(record.tutorialStage==='plant' && !record.demoProfileInteracted && document.nodes?.some(node=>node.parentId===selectedNode?.id))completeDemoInteractionTask('expand');
     try{meshComposition.setActiveRef(pimMeshRef(document,selectedNode?.id,{ownerId,specimenId:String(record?.id || ownerId)}));}catch{meshComposition.setActiveRef(null);}
     const bridge=pimLimBridgeFor(document,path);
     activePimLimBridge=bridge?{bridge,record}:null;
@@ -614,7 +619,9 @@ function demoPanelActions() {
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     actions.push({id:'close',label:'Close demo'});
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
-    if(continueButton && !continueButton.hidden)actions.push({id:'continue',label:continueButton.textContent.trim() || 'Continue',primary:true,disabled:continueButton.disabled});
+    const firstProfile=demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM && markers.some(record=>record.tutorialStage==='plant' && record.demoExpanded && !record.demoProfileInteracted);
+    const tasksPending=firstProfile && DEMO_INTERACTION_TASKS.some(task=>!demoInteractionTasks.has(task.id));
+    if(continueButton && !continueButton.hidden)actions.push({id:'continue',label:continueButton.textContent.trim() || 'Continue',primary:true,disabled:continueButton.disabled || tasksPending});
     const navigation=actions.filter(item=>item.id==='back' || item.id==='forward');
     const priorities=actions.filter(item=>item.id==='close' || item.id==='continue');
     const ordinary=actions.filter(item=>!navigation.includes(item) && !priorities.includes(item));
@@ -833,6 +840,8 @@ function inviteVirtualTag(record) {
 
 function continueAfterDemoPim(record) {
     if (!record || record.demoProfileInteracted) return false;
+    if(record.tutorialStage==='plant' && DEMO_INTERACTION_TASKS.some(task=>!demoInteractionTasks.has(task.id))){syncDemoInteractionTasks();setIntroBoardNextGuide('Select the Orb, then open a cell to complete the interaction checklist.');return false;}
+    infoPanel?.setTaskProgress(null);
     record.demoPimoLesson='done';
     knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
     refreshDemoPimProfile(record);infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
@@ -1746,6 +1755,7 @@ function paintSimulatedRainV2(now){
 
 function showArWelcomeShowcase() {
     demoSlideHistory=[];demoSlideHistoryIndex=-1;demoSlideHistoryReplay=false;
+    demoInteractionTasks=new Set();infoPanel?.setTaskProgress(null);
     infoPanel?.setHeaderProgress(null);
     selectedLimCell='';
     introBoardStep='INTRO 1.1';
@@ -2291,7 +2301,8 @@ function showLinkedTotemsIntroduction() {
 
 function fadeMappedSceneForLimo() {
     markers.forEach(record=>{
-        record.demoHiddenForLimo=true;
+        // Keep every placed Plant Orb visible as context for the final feature.
+        record.demoHiddenForLimo=record.demoType!=='plant';
         if(record.demoType==='plant')record.demoExpanded=false;
         if(record.demoType==='zone'){
             record.demoTotemFaded=true;
@@ -2921,7 +2932,7 @@ function toggleDemoPlantProfile(record) {
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
         activePimLimBridge=null;
-        if(record.tutorialStage==='plant'){setDemoJourneyStage('know');advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.plantProfileOpened);}
+        if(record.tutorialStage==='plant'){setDemoJourneyStage('know');if(!record.demoProfileInteracted)completeDemoInteractionTask('open');advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.plantProfileOpened);}
         clearLimSelection();
         const ambientNeighbour=Boolean(record.demoAmbientNeighbour);
         const plantMedia=demoPlantMedia(record);
@@ -3821,6 +3832,7 @@ function placeMarker() {
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
+    if(type==='plant')completeDemoInteractionTask('place');
     demoFeedback?.sound('placement');pulseDemoHaptics(demoGrabInputSource || limInputSource);
     const placedRecord = marker;
     const pointer = appRoot?.querySelector('[data-tryit-place]');
@@ -4147,7 +4159,7 @@ function setupRenderer() {
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
-    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=infoPanel?.getPosition();return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=>!arWelcomeIntroPending && getSpatialVisualSettings().heroDice!==false,canGrab:target=>{if(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
+    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):null;return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=> (arWelcomeSettleStage || !arWelcomeIntroPending) && getSpatialVisualSettings().heroDice!==false,canGrab:target=>{if(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
 }
 
 function demoControllerInputSource() {
