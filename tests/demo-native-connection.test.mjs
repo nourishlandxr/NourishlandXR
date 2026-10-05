@@ -44,7 +44,8 @@ test('demo Control Panel offers each example and explains the selected connectio
     assert.match(source,/actions:DEMO_NATIVE_CONNECTION_EXAMPLES\.map\(example=>\(\{id:`Connection:\$\{example\.id\}`,label:example\.label\}\)\)/);
     assert.match(source,/action\.startsWith\('Connection:'\)/);
     assert.match(source,/startNativeConnectionExperience\(action\.slice\('Connection:'\.length\)\)/);
-    assert.match(source,/const connectionText=`\$\{state\.explanation\}\\n\\nIn this place: \$\{state\.fieldQuestion\}`/);
+    assert.match(source,/const connectionText=`\$\{state\.explanation\}\\n\\nIn a real project: \$\{state\.fieldQuestion\}`/);
+    assert.match(source,/state\.phase==='connected'\?`\$\{connectionText\}\\n\\n\$\{body\}`:body/);
 });
 
 test('guided LIMO target becomes visible and ray-selectable after opening its authored ancestors',()=>{

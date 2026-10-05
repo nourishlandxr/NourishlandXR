@@ -40,7 +40,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const read = file => fs.readFileSync(path.join(root, file), 'utf8');
 
 test('welcome stays concise and spatial controllers never fall back to head movement', () => {
-    assert.ok(WELCOME_BOARD_PARAGRAPHS.includes('NLXR is an immersive information hub for living landscapes.'));
+    assert.ok(WELCOME_BOARD_PARAGRAPHS.includes('Attach information to objects and locations, then open it where it belongs.'));
     assert.equal(demoViewerPointerFallbackAllowed({ simulated:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ hasScreenInput:true, spatialInputSeen:true }), true);
     assert.equal(demoViewerPointerFallbackAllowed({ spatialInputSeen:true }), false);
@@ -1223,7 +1223,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementPointerMarkup/);
     assert.match(styles, /\.creator-ar-overlay \.creator-ar-placement-guide/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-revealing/);
-    assert.match(source, /press the aiming circle.*to place it/);
+    assert.match(source, /press the aiming circle.*to place the sample Orb/);
     assert.match(source, /placementReady = true;\s*place\?\.removeAttribute\('hidden'\)/);
     assert.doesNotMatch(source, /Use the Move tool in the bottom bar/);
     assert.match(styles, /\.tryit-place\.is-revealing/);
@@ -1300,7 +1300,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /suppressSessionSelectUntil=performance\.now\(\)\+700;[\s\S]*finishIntroBoard\(\);clearTimeout\(aimRevealTimer\);armDemoPlacement\('plant',\{explained:true\}\)/);
-    assert.match(source, /typingStartDelay = 1800/);
+    assert.match(source, /typingStartDelay = 220/);
     assert.match(source, /function demoTextTypingDelay\(text, visibleLength\)/);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
     assert.match(styles, /tryit-board-identity 1\.15s \.25s/);
@@ -1343,10 +1343,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const id=moringa\?'ELEMENTS 1\.12':'ELEMENTS 1\.6',step=guidedDemoStep\(id\)/);
     assert.match(source, /if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.setIntroduction\(true\);[\s\S]*infoPanel\?\.suspend\(false\);[\s\S]*if\(step\?\.art\)/);
     assert.doesNotMatch(source, /You do not need prior plant, farming or technology knowledge to begin/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /An Area keeps nearby plants, Notes and guidance together/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /An Area groups related markers and messages/);
     assert.match(source, /const id=moringa\?'ELEMENTS 1\.12':'ELEMENTS 1\.6'/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Both plant profiles are now connected to this place/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Pigeon Pea keeps its own profile, ready to open again/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
@@ -1406,7 +1406,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(previewSource, /A Plant Live Tag can open this full, view-only plant file/);
     assert.match(source, /function advanceAfterDemoProfileInteraction\(record\)/);
     assert.match(source, /record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
-    assert.match(source, /record\.tutorialStage==='plant'[\s\S]*clearLimSelection\(\);[\s\S]*limMeshVisible=false;[\s\S]*showDemoAction\(record\.tutorialStage==='plant2'\?'note':'plant2'\)/);
+    const profileContinuation=source.slice(source.indexOf('function continueAfterDemoPim'),source.indexOf('function showDemoPanelIntroduction'));
+    assert.match(profileContinuation, /clearLimSelection\(\);limMeshVisible=false;[\s\S]*if\(record\.tutorialStage==='plant'\)showDemoPanelIntroduction\(record\);\s*else showDemoAction\('note'\)/);
     assert.match(source, /if\(demoKnowledgeWorkspace\) \{const hit=spatialDashboardRayHit/);
     assert.match(source, /if\(stage\) stage\.inert=true/);
     assert.match(source, /function openDemoVirtualTag\(record\)[\s\S]*if \(!simulatedMode \|\| session\)[\s\S]*advancePastVirtualTag\(record\)[\s\S]*openDemoKnowledge\(record\)/);
@@ -1504,7 +1505,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introBoardVisibleBody = paragraphs\.slice\(0, paragraphIndex\)\.join/);
     assert.match(source, /paragraphIndex\+\+/);
     assert.match(source, /return 62;/);
-    assert.match(source, /boardTypingTimer = setTimeout\(revealNextParagraph, 1350\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(revealNextParagraph, 500\)/);
     assert.doesNotMatch(source, /boardControlTimer/);
     assert.doesNotMatch(source, /'▌'/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after,[\s\S]*?content:none;/);

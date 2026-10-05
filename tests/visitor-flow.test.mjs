@@ -6,6 +6,7 @@ import { renderProjectEntry } from '../app/components/projectEntry.js';
 import { renderLaunchScreen } from '../app/screens/launch.js';
 import { scopedMarkerStorageId } from '../app/services/markerWorkflow.js';
 import { DEMO_SEQUENCE } from '../app/features/ar-demo/demoConfig.js';
+import { guidedDemoStep } from '../app/features/ar-demo/demoJourneyContent.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 
@@ -71,9 +72,10 @@ test('Try It Now offers optional LIM paths and a concise post-plant journey',()=
  assert.match(source,/Try Understand This Place/);
  assert.match(source,/armDemoPlacement\(nextStage,\{explained:true\}\)/);
  assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : demoStage==='totem'\?220:360/);
- assert.match(source,/Your Note is in place/);
- assert.match(source,/Why link Areas\?/);
- assert.match(source,/without mixing the information attached to either place/);
+ assert.equal(guidedDemoStep('ELEMENTS 1.17').title,'Read the message where it belongs');
+ assert.equal(guidedDemoStep('ELEMENTS 1.20').title,'Connect the two Totems');
+ assert.match(guidedDemoStep('ELEMENTS 1.20').main,/Each keeps its own information/);
+ assert.match(source,/showIntroBoard\(step\.title,step\.main,label,onContinue,\{stepLabel,nextGuide:step\.hint\}\)/);
  assert.match(styles,/\.tryit-sim-totem-pillar[^\n]*background: #70875b/);
  assert.match(styles,/\.tryit-sim-marker-zone:not\(\.is-expanded\)[^\n]*background:#70875b/);
 });
@@ -546,14 +548,14 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /placementPointerMarkup\(''\)/);
     assert.doesNotMatch(source, /works like a game/);
     assert.match(source, /Use the right joystick to adjust distance/);
-    assert.match(source, /Aim at the real plant or desired tag location, then/);
+    assert.match(source, /Aim at a clear spot in front of you, then/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.deepEqual(DEMO_SEQUENCE,['plant','plant2','note','totem']);
     assert.doesNotMatch(source, /Every place holds more than we first see/);
     assert.doesNotMatch(source, /Area · Citrus Guild/);
     assert.match(source, /function createSpatialKnowledgeTexture/);
     assert.match(source, /record\.demoExpanded/);
-    assert.match(source, /'Add one observation'/);
+    assert.match(source, /'Add a sample Note'/);
     assert.match(source, /const directType = type === 'note' \? 'note' : 'sub_checkpoint'/);
     assert.doesNotMatch(source, /record\.type = 'note'/);
     assert.match(source, /markers\.length >= DEMO_SEQUENCE\.length/);
@@ -575,7 +577,8 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /first\.demoLinkVisible=second\.demoLinkVisible=true/);
     assert.match(source, /createDemoNeighbourhood\(totem\)/);
     assert.match(previewSource, /LINKED AREAS/);
-    assert.match(source, /if \(record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
+    const continuation=source.slice(source.indexOf('function continueAfterDemoPim'),source.indexOf('function showDemoPanelIntroduction'));
+    assert.match(continuation,/if\(record\.tutorialStage==='plant'\)showDemoPanelIntroduction\(record\);\s*else showDemoAction\('note'\)/);
     assert.doesNotMatch(styles, /\.tryit-sim-totem-model-toggle|is-totem-style-organic|is-totem-style-flat-disc/);
     assert.match(styles, /\.tryit-sim-area-link-line/);
     assert.doesNotMatch(source, /Name your Plant|Plant name<input/);
