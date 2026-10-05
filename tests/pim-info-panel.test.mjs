@@ -74,7 +74,7 @@ test('Quest panel source keeps progress separate and all three surfaces aligned'
     assert.match(panel,/target\.append\(region\)/);
     assert.doesNotMatch(panel,/Choose a topic|Explore → Details/);
     assert.match(panel,/mediaHeight=mainHeight,gap=\.035/);
-    assert.match(panel,/settingsPose=spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
+    assert.match(panel,/settingsSurfacePose=settingsPose \|\| spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
     assert.match(panel,/settingsPose,width:mediaWidth,height:mainHeight/);
     assert.match(panel,/firstPlacement[\s\S]*pose\.center=\{x:pose\.center\.x-pose\.right\.x\*\.6/);
 });
@@ -259,7 +259,7 @@ test('media movement uses the same hold gesture and settings expose shared mesh 
     assert.match(panel,/slider\('InfoOpacity','info-opacity','Main \/ Control glass'/);
     assert.match(panel,/drawPanelSettingSlider/);
     assert.match(panel,/onCellOpacity\(value\)/);
-    assert.match(panel,/panel:'media',cardId:'media',startedAt:performance\.now\(\)/);
+    assert.match(panel,/panel:'media',cardId:'media',startedAt:event\.inputSource\?\.hand\?performance\.now\(\)-PANEL_GRAB_HOLD_MS:performance\.now\(\)/);
 });
 
 test('cell selection updates reading content and remounts only when companion media changes',()=>{

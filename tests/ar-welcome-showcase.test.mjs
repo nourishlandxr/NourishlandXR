@@ -69,7 +69,7 @@ test('main LIM renderer draws one lightweight connection beneath existing cell l
   createRadialGradient(){return {addColorStop(){}};},createLinearGradient(){return {addColorStop(){}};},
   bezierCurveTo(){beziers+=1;},lineTo(){lines+=1;}};
  for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','quadraticCurveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
- const frame=drawArWelcomeShowcase(ctx,3000,false,createArWelcomeClusters(),{opening:true,openingSeed:73421,drawRoots:false});
+ const frame=drawArWelcomeShowcase(ctx,8000,false,createArWelcomeClusters(),{opening:true,openingSeed:73421,drawRoots:false});
  assert.equal(frame.reduce((count,item)=>count+item.nodes.length,0),59);
  assert.equal(beziers,0,'opening connections avoid expensive multi-pass curves');
  assert.ok(lines>0,'parent-child relationships retain a simple line');
@@ -120,16 +120,16 @@ test('the four archetypes fade in after learning cells are activated late in the
  assert.equal(settled.opacity,1);
 });
 
-test('a late cell selection keeps repainting until its children finish fading',()=>{
+test('a late cell selection reveals all children immediately',()=>{
  const selectedAt=AR_WELCOME_SHOWCASE_DURATION+20000;
  assert.equal(welcomeRevealIsAnimating(selectedAt+100,[selectedAt]),true);
  assert.equal(welcomeRevealIsAnimating(selectedAt+4400,[selectedAt]),true);
  assert.equal(welcomeRevealIsAnimating(selectedAt+4500,[selectedAt]),false);
  const progression={expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':selectedAt}};
- const first=welcomeExperienceFrames(selectedAt+1000,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
+ const first=welcomeExperienceFrames(selectedAt,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
  const later=welcomeExperienceFrames(selectedAt+2500,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
- assert.ok(first.some(node=>node.opacity>0 && node.opacity<1));
- assert.ok(later.filter(node=>node.opacity>0).length>first.filter(node=>node.opacity>0).length);
+ assert.ok(first.every(node=>node.opacity===1));
+ assert.equal(later.filter(node=>node.opacity>0).length,first.filter(node=>node.opacity>0).length);
 });
 import {LIM_ALL_CELLS,LIM_INTRO_CELLS,LIM_INTRO_BRANCHES,limLearningContent} from '../app/services/limLearning.js';
 test('one LIM face grows through three levels, fades and passes around the octagon',()=>{
@@ -225,19 +225,19 @@ test('four archetypes are roots and Vision belongs to Shape the Outcome',async()
  for(const node of nodes)if(node.parent){const parent=nodes.find(p=>p.key===node.key[0]+':'+node.parent);assert.ok(parent);assert.ok(node.revealAt>parent.revealAt+1450);}
  for(const [index,node] of nodes.entries())for(const other of nodes.slice(index+1))assert.ok(Math.hypot(node.x-other.x,node.y-other.y)>=node.radius*1.49);
  assert.ok(nodes.every(node=>node.x-node.radius>0 && node.x+node.radius<2500 && node.y-node.radius>0 && node.y+node.radius<2100));
- for(const node of nodes.filter(node=>node.depth===0)){assert.ok(node.attachment);assert.ok(Math.abs(Math.hypot(node.x-node.attachment.x,node.y-node.attachment.y)-94)<.001);}
+ for(const node of nodes.filter(node=>node.depth===0)){assert.ok(node.attachment);assert.ok(Math.abs(Math.hypot(node.x-node.attachment.x,node.y-node.attachment.y)-78)<.001);}
  const opening=welcomeExperienceFrames(order[0].revealAt+700,true,graphs).flatMap(f=>f.nodes).find(n=>n.key===order[0].key);
  assert.ok(opening.opacity>0 && opening.opacity<1);assert.equal(opening.scale,1);
  assert.deepEqual(welcomeExperienceFrames(15000,false,graphs),welcomeExperienceFrames(15000,false,graphs));
 });
 
-test('the four roots remain live while Shape softly introduces Vision and its siblings',()=>{
+test('the four roots remain live while Shape immediately introduces Vision and its siblings',()=>{
  const graphs=createArWelcomeClusters(),expandedAt=30000;
  const waiting=welcomeExperienceFrames(expandedAt,false,graphs).flatMap(frame=>frame.nodes);
  assert.deepEqual(waiting.filter(node=>node.opacity>.5).map(node=>node.label),['Read Nature','Understand the Land','Design the Forest','Shape the Outcome']);
  const opening=welcomeExperienceFrames(expandedAt+900,false,graphs,new Set(),{expandedLimIds:['lim-intro-smart'],expandedAt:{'lim-intro-smart':expandedAt}}).flatMap(frame=>frame.nodes);
  const vision=opening.find(node=>node.label==='Vision');
- assert.ok(vision.opacity>0 && vision.opacity<1);
+ assert.equal(vision.opacity,1);
  assert.ok(opening.filter(node=>node.depth===1 && node.opacity>0).every(node=>node.key.startsWith('3:')));
  const settled=welcomeExperienceFrames(expandedAt+5000,false,graphs,new Set(),{expandedLimIds:['lim-intro-smart'],expandedAt:{'lim-intro-smart':expandedAt}}).find(frame=>frame.corner===3).nodes.filter(node=>node.depth===1);
  assert.equal(settled.length,7);assert.ok(settled.every(node=>node.opacity===1));
@@ -265,8 +265,8 @@ test('expanded LIM content forms a logical four-branch learning cycle',()=>{
  assert.deepEqual(LIM_INTRO_CELLS.filter(cell=>cell.parentId==='lim-intro-smart').map(cell=>cell.title),['Vision','Goals','Outcomes','Limitations','Challenges','Decisions','Feedback']);
  const revealAt=10000,progression={expandedLimIds:['lim-intro-literacy'],expandedAt:{'lim-intro-literacy':revealAt}};
  const openingChildren=welcomeExperienceFrames(revealAt+900,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
- assert.ok(openingChildren.some(node=>node.opacity>0 && node.opacity<1),'new siblings fade rather than appearing instantly');
- assert.ok(openingChildren.some(node=>node.opacity===0),'later siblings remain staged');
+ assert.ok(openingChildren.every(node=>node.opacity===1),'new siblings appear instantly');
+ assert.equal(openingChildren.length,6,'all authored siblings appear together');
  const settledChildren=welcomeExperienceFrames(revealAt+4000,false,undefined,new Set(),progression).find(frame=>frame.corner===1).nodes.filter(node=>node.depth===1);
  assert.ok(settledChildren.every(node=>node.opacity===1),'all six children eventually settle');
  const feedback=limLearningContent('lim-intro-smart-feedback');

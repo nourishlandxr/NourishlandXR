@@ -42,7 +42,7 @@ test('arrival does not repeatedly upload the full welcome surface merely because
 
 test('Settings moves to the free dock while the image retains its own dock',()=>{
  const panel=read('app/services/pimInfoPanel.js');
- assert.match(panel,/settingsPose=spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
+ assert.match(panel,/settingsSurfacePose=settingsPose \|\| spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
  assert.doesNotMatch(panel,/dockSide=settingsOpen/);
  assert.match(panel,/mediaSurface=mediaDetached\?mediaPose:spatialMediaDockPose\(mediaDockSide\)/);
 });

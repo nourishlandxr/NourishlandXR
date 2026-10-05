@@ -72,7 +72,7 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.ok(settings.x < 200);
     assert.equal(actions.some(action => action.action === 'ToggleMedia'),false);
     const panelSource=read('app/services/pimInfoPanel.js');
-    assert.match(panelSource, /settingsPose=spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
+    assert.match(panelSource, /settingsSurfacePose=settingsPose \|\| spatialMediaDockPose\(mediaCard && mediaDockSide==='left'\?'top':'left'\)/);
     assert.match(panelSource, /settingsPose,width:mediaWidth,height:mainHeight/);
     assert.match(panelSource, /companionPanelPose\(pose,side,mainWidth,mediaWidth,18,gap\)/);
     assert.match(panelSource, /angleDegrees = 18, gap = 0/);
@@ -860,7 +860,7 @@ test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard
     assert.match(arSource, /questSpatialDashboardMirror\.activateAt/);
     assert.match(arSource, /questSpatialDashboardMirror\.scrollBy/);
     assert.match(arSource, /function controllerSpatialSurfaceAtAim\(\)/);
-    assert.match(arSource, /if \(surfaceHit\?\.position\) return surfaceHit\.position/);
+    assert.match(arSource, /if \(surfaceHit\?\.point \|\| surfaceHit\?\.position\) return surfaceHit\.point \|\| surfaceHit\.position/);
     assert.match(arSource, /color: surfaceHit[\s\S]*XR_LASER_POINTER_CONFIG\.color,\.82/);
     assert.match(arSource, /drawSpatialPointerContact\(gl,controllerPointerRenderer,view,point/);
     assert.match(arSource, /if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
