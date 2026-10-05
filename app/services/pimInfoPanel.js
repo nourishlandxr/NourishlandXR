@@ -278,7 +278,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(confirmation)return confirmation.body;
         if(tab==='Help')return [moduleContext?.body,INFO_HELP].filter(Boolean).join('\n\n');
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
-            :identity?'Choose Curiosity to reveal six essential perspectives.'+(supportsSpatialPIMO()?' Choose Explore to hold knowledge objects and follow their connections.':'')
+            :identity?'Curiosity reveals six perspectives on this plant.'+(supportsSpatialPIMO()?' Explorer 3D is an optional experiment in Controls. You can continue the demo without using it.':'')
                 :'Information about what you select will appear here.';
         return reading;
     };

@@ -22,7 +22,7 @@ export function knowledgeObjectSurfaces(record,knowledge,pose){
             const centre=new THREE.Vector3(face.localAnchor.x,face.localAnchor.y,face.localAnchor.z).applyMatrix4(matrix);n.transformDirection(matrix);r.transformDirection(matrix);u.transformDirection(matrix);
             const context=face.role==='contextual',node=index.nodes.get(face.conceptId);if(!node && !context)continue;
             const id=object.id+'|'+face.faceId;
-            surfaces.push({record,object,face,node:{...node,path:node?.path || '',nodeId:node?.id,pimKnowledgeFace:!context,pimKnowledgeContext:context,knowledgeObjectId:object.id,knowledgeFaceId:face.faceId},center:centre,right:r,up:u,normal:n,width:.13*object.scale,height:.065*object.scale,interactive:true,pressProgress:record.pimObjectPressId===id?record.pimObjectPressProgress:0,card:{id,title:context?object.title+' · context':face.title,role:face.role,context,knowledgeFace:true,selected:workspace.selectedObjectId===object.id && workspace.selectedFaceId===face.faceId,resolution:512,height:256,fadeDuration:120}});
+            surfaces.push({record,object,face,node:{...node,path:node?.path || '',nodeId:node?.id,pimKnowledgeFace:!context,pimKnowledgeContext:context,knowledgeObjectId:object.id,knowledgeFaceId:face.faceId},center:centre,right:r,up:u,normal:n,width:face.faceRadius*1.5*object.scale,height:face.faceRadius*1.5*object.scale,interactive:true,pressProgress:record.pimObjectPressId===id?record.pimObjectPressProgress:0,card:{id,title:context?object.title+' · context':face.title,role:face.role,context,knowledgeFace:true,selected:workspace.selectedObjectId===object.id && workspace.selectedFaceId===face.faceId,resolution:512,height:256,fadeDuration:120}});
         }
     }
     return surfaces;
@@ -50,11 +50,12 @@ export function createKnowledgeObjectRenderer(gl,{tether=null}={}){
             if(opacity>.55 && !entries.some(e=>e.record===record))entries.push({record,knowledge,pose});record.knowledgeObjectPose=pose;
             const workspace=ensureKnowledgeObjects(record,knowledge),basis=knowledgePoseMatrix(pose),visible=visibleKnowledgeObjects(workspace),ids=new Set(visible.map(o=>o.id)),lineage=new Set(),ancestors=[workspace.selectedObjectId],seen=new Set(ancestors);
             for(let i=0;i<ancestors.length;i++)for(const link of workspace.connectors)if(link.targetObjectId===ancestors[i]){lineage.add(link.id);if(!seen.has(link.sourceObjectId)){seen.add(link.sourceObjectId);ancestors.push(link.sourceObjectId);}}
-            for(const object of visible)dice.draw(view,basis.clone().multiply(localObjectMatrix(object)),opacity,[...object.faces,{...object.contextFace,title:object.title+' · context'}]);
+            for(const object of visible)dice.draw(view,basis.clone().multiply(localObjectMatrix(object)),opacity,[...object.faces,{...object.contextFace,title:object.featuredUses?'Common uses':object.title+' · context'}],object.accent);
             if(record.knowledgeExplorer.connections && tether)for(const link of workspace.connectors){
                 if(!ids.has(link.sourceObjectId) || !ids.has(link.targetObjectId))continue;const anchors=knowledgeConnectorAnchors(workspace,link);if(!anchors)continue;
                 const a=new THREE.Vector3(anchors.start.x,anchors.start.y,anchors.start.z).applyMatrix4(basis),b=new THREE.Vector3(anchors.end.x,anchors.end.y,anchors.end.z).applyMatrix4(basis),selected=lineage.has(link.id);
-                drawSpatialTether(gl,tether,view,a,b,{segments:10,width:selected?.003:.002,curve:.025,lift:.025,startNormal:new THREE.Vector3(anchors.startNormal.x,anchors.startNormal.y,anchors.startNormal.z).transformDirection(basis),endNormal:new THREE.Vector3(anchors.endNormal.x,anchors.endNormal.y,anchors.endNormal.z).transformDirection(basis),color:[.68,.87,.86,opacity*(selected?.85:.38)]});
+                const colour=new THREE.Color(link.accent || '#42c99a');
+                drawSpatialTether(gl,tether,view,a,b,{segments:10,width:selected?.003:.002,curve:.025,lift:.025,startNormal:new THREE.Vector3(anchors.startNormal.x,anchors.startNormal.y,anchors.startNormal.z).transformDirection(basis),endNormal:new THREE.Vector3(anchors.endNormal.x,anchors.endNormal.y,anchors.endNormal.z).transformDirection(basis),color:[colour.r,colour.g,colour.b,opacity*(selected?.95:.65)]});
             }
         },
         hit(ray,record=null){return entries.filter(e=>!record || e.record===record).map(e=>hitKnowledgeObject(ray,e.record,e.knowledge,e.pose,geometry)).filter(Boolean).sort((a,b)=>a.distance-b.distance)[0] || null;},
