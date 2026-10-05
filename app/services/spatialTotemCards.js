@@ -160,8 +160,8 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     });
 }
 
-export function resolveTotemNavigation(record, partner) {
-    const rotation=Number(record?.rotationY);
+export function resolveTotemNavigation(record, partner, facingRotation=record?.rotationY) {
+    const rotation=Number(facingRotation);
     const dx=Number(partner?.position?.x)-Number(record?.position?.x);
     const dz=Number(partner?.position?.z)-Number(record?.position?.z);
     if(!record?.demoLinkVisible || !partner || !Number.isFinite(rotation) || !Number.isFinite(dx) || !Number.isFinite(dz) || Math.hypot(dx,dz)<=.05) {
@@ -290,11 +290,15 @@ function cardCanvas(card, detail) {
     }
     if(boardStyle==='attached-sign'){
         ctx.shadowColor='rgba(3,15,12,.85)';ctx.shadowBlur=4;ctx.shadowOffsetY=2;
-        ctx.fillStyle='#fffdf2';ctx.font=`750 ${String(card.title||'').length>26?66:86}px ${face}`;ctx.fillText(card.title,512,128,900);
+        if(card.directional){
+            const left=card.boardSide==='left',title=String(card.title || '').replace(/^[←→]\s*|\s*[←→]$/g,'');
+            ctx.fillStyle='#f0cb7c';ctx.font=`750 108px ${face}`;ctx.textAlign=left?'left':'right';ctx.fillText(left?'←':'→',left?36:988,128,130);
+            ctx.textAlign='center';ctx.font=`750 72px ${face}`;ctx.fillText(title,512,128,700);
+        }else {ctx.fillStyle='#fffdf2';ctx.font=`750 ${String(card.title||'').length>26?62:76}px ${face}`;ctx.fillText(card.title,512,128,900);}
         return canvas;
     }
     if(boardStyle==='header-compact'){
-        ctx.shadowBlur=1;ctx.fillStyle='#f7f1df';ctx.font=`650 ${String(card.title || '').length>20?82:104}px ${face}`;ctx.fillText(card.title,512,256,900);
+        ctx.shadowBlur=1;ctx.fillStyle='#bce4d7';ctx.font=`700 ${String(card.title || '').length>20?92:116}px Georgia, serif`;ctx.fillText(card.title,512,256,900);
         return canvas;
     }
     if(boardStyle==='header-detail'){

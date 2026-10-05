@@ -856,9 +856,13 @@ function continueAfterDemoPim(record) {
 
 function showDemoPanelIntroduction(record,index=0){
     const id=index===0?'PANEL 1.1':'PANEL 1.2',step=guidedDemoStep(id);
-    showIntroBoard(step.title,step.main,index===0?'View and comfort options':'Add the second sample',()=>{
+    infoPanel?.setMediaCollapsed(index!==0);
+    infoPanel?.setExplorerOpen(index!==0);
+    infoPanel?.setSettingsOpen(index!==0);
+    showIntroBoard(step.title,step.main,index===0?'Continue to Settings':'Add the second sample',()=>{
         if(index===0){showDemoPanelIntroduction(record,1);return;}
         knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
+        infoPanel?.setExplorerOpen(false);infoPanel?.setSettingsOpen(false);
         showDemoAction('plant2');
     },{stepLabel:id,nextGuide:step.hint});
 }
@@ -985,7 +989,7 @@ function demoTotemCards(record) {
     const note=notes[0];
     const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
     const destination=partner?.demoZoneName || '';
-    const navigation=resolveTotemNavigation(record,partner);
+    const navigation=resolveTotemNavigation(record,partner,demoTotemRotationY(record));
     const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:navigation.reliable?pointedTitle(destination,navigation.side):`Explore ${destination}`,summary:'',body:navigation.reliable?'Follow this sign to the neighbouring Totem.':'Explore the neighbouring Area.',boardSide:navigation.side,plaque:true,navigation:{...navigation,destinationId:partner.id}} : null;
     return [header,...(neighbour ? [neighbour] : []),...plantSigns,
         ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:pointedTitle(note.name,directionFor(note)),summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
@@ -4533,7 +4537,7 @@ function drawIntroNoteContent(ctx) {
             ctx.globalAlpha*=fade;ctx.fillStyle='#f7fbf4';
             do {ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
             ctx.fillText(openingTitle,contentCenter,420);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font=`600 42px ${DEMO_PRESENTATION_FONT}`;drawWrappedTextureText(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentCenter,570,780,54,3);}
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font=`600 42px ${DEMO_PRESENTATION_FONT}`;drawWrappedTextureText(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentCenter,540,880,48,5);}
         }
         ctx.restore();return;
     }

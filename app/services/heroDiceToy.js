@@ -21,12 +21,19 @@ export function createHeroDicePhysics(home,{radius=HERO_TOY_RADIUS,vertices=null
 }
 export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings().heroDice!==false,canGrab=()=>true}={}){
     const painter=createDiceRenderer(gl,{radius:HERO_TOY_RADIUS,appearance:'hero'}),geometry=painter.geometry,positions=geometry.attributes.position;
-    let physics=null,session=null,space=null,abort=null,active=null,lastTime=null,visibleSince=null;const inputs=new Map(),rays=new Map(),pinches=new WeakMap(),suppressed=new WeakMap();
+    let physics=null,session=null,space=null,abort=null,active=null,lastTime=null,visibleSince=null;const inputs=new Map(),rays=new Map(),pinches=new WeakMap(),suppressed=new WeakMap(),pushed=new WeakSet();
     const model=()=>physics?new THREE.Matrix4().compose(new THREE.Vector3(physics.state.position.x,physics.state.position.y,physics.state.position.z),new THREE.Quaternion(physics.state.rotation.x,physics.state.rotation.y,physics.state.rotation.z,physics.state.rotation.w),one):null;
     function ensure(){if(!visible()){visibleSince=null;return false;}const origin=home?.();if(!origin)return false;visibleSince ??= performance.now();if(!physics)physics=createHeroDicePhysics(origin,{vertices:positions.array});else physics.state.home.y=origin.y;return true;}
     function hit(ray){if(!physics || !visible() || !ray?.origin || !ray.direction)return null;const matrix=model(),origin=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),direction=new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z).normalize(),local=new THREE.Ray(origin.clone(),direction).applyMatrix4(matrix.clone().invert()),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),point=new THREE.Vector3();let nearest=null;
         for(let i=0;i<positions.count;i+=3){a.fromBufferAttribute(positions,i);b.fromBufferAttribute(positions,i+1);c.fromBufferAttribute(positions,i+2);if(!local.intersectTriangle(a,b,c,true,point))continue;const world=point.clone().applyMatrix4(matrix),distance=world.distanceTo(origin);if(!nearest || distance<nearest.distance)nearest={toy:true,point:world,center:world,distance};}return nearest;}
     function rayFor(source){const m=rays.get(source);return m?{origin:new THREE.Vector3().setFromMatrixPosition(m),direction:new THREE.Vector3(0,0,-1).transformDirection(m)}:null;}
+    function push(source,frame){
+        if(active || source.hand || !ensure())return false;
+        try{const pose=frame?.getPose(source.targetRaySpace,space);if(pose)rays.set(source,new THREE.Matrix4().fromArray(pose.transform.matrix));}catch{ /* Use the last tracked pointer pose. */ }
+        const ray=rayFor(source),target=hit(ray);if(!target || !canGrab({...target,inputRay:ray,source,near:false}))return false;
+        const velocity=new THREE.Vector3(physics.state.velocity.x,physics.state.velocity.y,physics.state.velocity.z).addScaledVector(ray.direction,.65);velocity.y+=.12;velocity.clampLength(0,1.2);
+        physics.state.velocity=serial(velocity);physics.state.angularVelocity={x:ray.direction.z*2,y:.6,z:-ray.direction.x*2};pushed.add(source);suppressed.set(source,performance.now()+500);return true;
+    }
     function begin(source,near=false){if(active || !ensure())return false;const input=inputs.get(source),ray=rayFor(source),target=near?{toy:true,distance:0}:hit(ray);if(!input || !target || !canGrab({...target,inputRay:ray,source,near}))return false;
         // Preserve the original contact and distance when the grip begins.
         const matrix=model();
@@ -36,13 +43,13 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
         if(throwing && dt>.008){const v=new THREE.Vector3(last.position.x-first.position.x,last.position.y-first.position.y,last.position.z-first.position.z).multiplyScalar(1/dt).clampLength(0,4.5);physics.state.velocity=serial(v);const q=new THREE.Quaternion(last.rotation.x,last.rotation.y,last.rotation.z,last.rotation.w).multiply(new THREE.Quaternion(first.rotation.x,first.rotation.y,first.rotation.z,first.rotation.w).invert());if(q.w<0)q.set(-q.x,-q.y,-q.z,-q.w);const angle=2*Math.acos(Math.min(1,q.w)),axis=new THREE.Vector3(q.x,q.y,q.z).normalize().multiplyScalar(Math.min(12,angle/dt));physics.state.angularVelocity=serial(axis);}
         physics.state.held=false;suppressed.set(source,performance.now()+500);active=null;return true;
     }
-    function unbind(){abort?.abort();if(active)release(active.source,false);inputs.clear();rays.clear();session=null;}
+    function unbind(){abort?.abort();if(active)release(active.source,false);for(const source of rays.keys())pushed.delete(source);inputs.clear();rays.clear();session=null;}
     return {hit,get heldSource(){return active?.source || null;},get state(){return physics?.state;},
         bindSession(value,referenceSpace){unbind();session=value;space=referenceSpace;abort=new AbortController();const listen=(type,fn)=>session.addEventListener(type,fn,{capture:true,signal:abort.signal});
-            for(const type of ['selectstart','squeezestart'])listen(type,event=>{if(type==='selectstart' && !event.inputSource.hand)return;if(begin(event.inputSource)){event.stopImmediatePropagation();event.preventDefault();}});
-            for(const type of ['selectend','squeezeend'])listen(type,event=>{if(type==='selectend' && !event.inputSource.hand)return;if(release(event.inputSource)){event.stopImmediatePropagation();event.preventDefault();}});
-            listen('select',event=>{if(active?.source===event.inputSource || performance.now()<(suppressed.get(event.inputSource)||0)){event.stopImmediatePropagation();event.preventDefault();}});
-            listen('inputsourceschange',event=>{for(const source of event.removed){release(source,false);inputs.delete(source);rays.delete(source);}});
+            for(const type of ['selectstart','squeezestart'])listen(type,event=>{const handled=type==='selectstart' && !event.inputSource.hand?push(event.inputSource,event.frame):begin(event.inputSource);if(handled){event.stopImmediatePropagation();event.preventDefault();}});
+            for(const type of ['selectend','squeezeend'])listen(type,event=>{if(type==='selectend' && !event.inputSource.hand){if(pushed.has(event.inputSource)){pushed.delete(event.inputSource);suppressed.set(event.inputSource,performance.now()+500);event.stopImmediatePropagation();event.preventDefault();}return;}if(release(event.inputSource)){event.stopImmediatePropagation();event.preventDefault();}});
+            listen('select',event=>{if(active?.source===event.inputSource || pushed.has(event.inputSource) || performance.now()<(suppressed.get(event.inputSource)||0)){event.stopImmediatePropagation();event.preventDefault();}});
+            listen('inputsourceschange',event=>{for(const source of event.removed){release(source,false);inputs.delete(source);rays.delete(source);pushed.delete(source);}});
             listen('visibilitychange',()=>{if(session.visibilityState!=='visible' && active)release(active.source,false);});listen('end',unbind);
         },
         update(frame,time){const dt=lastTime===null?0:Math.max(0,(time-lastTime)/1000);lastTime=time;if(!ensure()){if(active)release(active.source,false);return;}
