@@ -175,10 +175,10 @@ test('Totem examples stay generic and use short local signs', () => {
     assert.match(demo, /demoTotemColor:'#526d7a'/);
 });
 
-test('Areas finish the guided journey while optional learning retains quiet mapped objects', () => {
+test('Areas lead into the final learning feature with quiet mapped objects', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
-    assert.match(demo, /'See how the journey can grow',\s*showDemoClosingMessage/);
+    assert.match(demo, /'Discover learning pathways',\s*showLimoLearningModes/);
     assert.match(demo, /'Learn here or as a standalone experience'/);
     assert.match(demo, /'Show pathway archetypes',\s*showLimoArchetypes/);
     assert.match(demo, /record\.demoTotemFaded=true;[\s\S]*record\.demoNarrativeFaded=true/);

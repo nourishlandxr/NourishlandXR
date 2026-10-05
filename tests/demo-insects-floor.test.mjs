@@ -50,8 +50,8 @@ test('Totem tip starts at main-screen midpoint and floor adjustment moves Area c
  shiftDemoAreaToFloor(records,.5);assert.equal(records[0].position.y,1.5);assert.equal(position.y,1.3);assert.equal(panel.y,2);assert.equal(records[2].position.y,.9);assert.equal(records[3].position.y,.7);
  shiftDemoAreaToFloor(records,.5);assert.equal(panel.y,2,'identical floor updates do not accumulate');
 });
-test('round learning cells preserve peripheral planting rather than erasing full foliage discs',()=>{
+test('organic learning cells preserve peripheral planting rather than erasing full foliage discs',()=>{
  const frame=read('app/services/arWelcomeShowcase.js'),roots=read('app/services/arWelcomeRoots.js');
- assert.match(frame,/context.arc\(0,0,radius,0,Math.PI\*2\)/);assert.match(roots,/const radius=\(cell.radius-LIVING_RIM.cellGap\)\*\.52/);
+ assert.match(frame,/radius\*\(1\+\.045\*Math\.sin\(angle\*3\)/);assert.match(roots,/const radius=\(cell.radius-LIVING_RIM.cellGap\)\*\.52/);
  assert.match(roots,/start=polarPoint\(angle,535\)/);
 });

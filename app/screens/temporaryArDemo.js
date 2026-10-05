@@ -114,6 +114,7 @@ let lastViewerPoseAt = 0;
 let latestDemoView = null;
 let hitMatrix = null;
 let latestControllerRay = null;
+let demoPointerRays = [];
 let latestHandState = null;
 let latestTrackedHandStates = [];
 let demoHandMode = getSpatialVisualSettings().handMode;
@@ -841,6 +842,8 @@ function continueAfterDemoPim(record) {
         }
         record.demoPimoLesson='done';
     }
+    knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
+    refreshDemoPimProfile(record);infoPanel?.refreshExplorer();knowledgeRenderer?.clear(record);
     record.demoProfileInteracted = true;
     record.demoProfileReady = false;
     clearLimSelection();limMeshVisible=false;activePimLimBridge=null;
@@ -2027,7 +2030,8 @@ function runArWelcomeTutorial(index=0) {
         infoPanel?.suspend(false);
         infoPanel?.setContextualHint('Continue when you are ready.');
     }
-    if(step?.art)showDemoTutorialMedia(step.art);
+    if(index===0)showDemoTutorialMedia('companion');
+    else if(step?.art)showDemoTutorialMedia(step.art);
     else infoPanel?.setMediaCollapsed(true);
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
@@ -2309,8 +2313,8 @@ function showLinkedTotemsIntroduction() {
             'A link creates a visitor route between Areas. The neighbour sign gives its name and direction without mixing the information attached to either place.',
             'The Totem stays simple: welcome here, then choose what nearby information you want to open.'
         ],
-        'See how the journey can grow',
-        showDemoClosingMessage,
+        'Discover learning pathways',
+        showLimoLearningModes,
         {stepLabel:'ELEMENTS 1.22'}
     );
 }
@@ -4196,12 +4200,19 @@ function updateDemoControllerRay(frame,time=performance.now()) {
     latestControllerRay = null;
     latestHandState = null;
     latestTrackedHandStates = [];
+    demoPointerRays = [];
     const sources = [...(session?.inputSources || [])];
     if (sources.some(source => source.hand || source.targetRayMode === 'tracked-pointer')) spatialPointerInputSeen = true;
     if (!referenceSpace) return;
     latestTrackedHandStates = sources.filter(source => source.hand)
         .map(source => ({ source, state: handTrackingState(frame, source, referenceSpace) }))
         .filter(entry => entry.state?.tracked);
+    demoPointerRays=latestTrackedHandStates.filter(entry=>entry.state.pointer).map(entry=>({source:entry.source,ray:entry.state.pointer}));
+    for(const source of sources.filter(source=>!source.hand && source.targetRayMode==='tracked-pointer')){
+        const space=source.targetRaySpace || source.gripSpace;
+        const ray=space?controllerRayFromPose(frame.getPose(space,referenceSpace),source.handedness || 'right'):null;
+        if(ray)demoPointerRays.push({source,ray});
+    }
     const activeHand = latestTrackedHandStates.find(entry => entry.state.pinch && entry.state.pointer)
         || latestTrackedHandStates.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
         || latestTrackedHandStates.find(entry => entry.state.pointer)
@@ -5161,13 +5172,18 @@ function ambientBeeWorldPosition(bee,index=0){
         ambientEncounterOrigin={index:bee.encounterIndex,x:viewerMatrix[12],y:viewerMatrix[13],z:viewerMatrix[14]};
     }
     const curious=beeCuriosity(progress);
-    const encounter=bee.encounterIndex+ambientEncounterSeed,faceDistance=.66+(encounter%3)*.10+Math.abs(progress-.5)*.34+curious.z;
-    const side=encounter%2?-1:1,faceAcross=side*(.16+(encounter%3)*.08)+(progress-.5)*.20+curious.x;
+    const encounter=bee.encounterIndex+ambientEncounterSeed,faceDistance=.66+(encounter%3)*.10+Math.abs(progress-.5)*.34;
+    const approach=Math.abs(encounter)%4,faceAcross=[.38,-.34,.10,.28][approach]+(progress-.5)*.20,faceHeight=[.10,.08,.42,.28][approach];
     const facePosition={
         x:ambientEncounterOrigin.x+rightX*faceAcross-frontX*faceDistance,
-        y:ambientEncounterOrigin.y+[-.12,.08,-.04][Math.abs(encounter)%3]-Math.sin(Math.PI*progress)*.025+curious.y,
+        y:ambientEncounterOrigin.y+faceHeight-Math.sin(Math.PI*progress)*.025,
         z:ambientEncounterOrigin.z+rightZ*faceAcross-frontZ*faceDistance
     };
+    const dx=facePosition.x-viewerMatrix[12],dy=facePosition.y-viewerMatrix[13],dz=facePosition.z-viewerMatrix[14],distance=Math.hypot(dx,dy,dz)||1;
+    // Only curious body vibration responds to gaze; wingbeats stay active.
+    const attention=Math.max(0,Math.min(1,((-viewerMatrix[8]*dx-viewerMatrix[9]*dy-viewerMatrix[10]*dz)/distance-.90)/.07));
+    bee.headTurn*=attention;bee.bank*=1-flyby+flyby*attention;
+    facePosition.x+=curious.x*attention;facePosition.y+=curious.y*attention;facePosition.z+=curious.z*attention;
     const blended={
         x:ambientPosition.x+(facePosition.x-ambientPosition.x)*flyby,
         y:ambientPosition.y+(facePosition.y-ambientPosition.y)*flyby,
@@ -5403,12 +5419,16 @@ function drawMarker(view) {
 }
 
 function drawDemoControllerPointer(view) {
+    if(latestTrackedHandStates.length && demoHandMode==='outline')handOutlineRenderer?.draw(view,latestTrackedHandStates);
+    const original=latestControllerRay;
+    try{
+        for(const entry of demoPointerRays.length?demoPointerRays:[{source:demoControllerInputSource(),ray:original}]){
+            latestControllerRay=entry.ray;drawDemoInputPointer(view,entry.source);
+        }
+    }finally{latestControllerRay=original;}
+}
+function drawDemoInputPointer(view,pointerSource) {
     if (!tetherRenderer) return;
-    if (latestTrackedHandStates.length && demoHandMode==='outline') {
-        handOutlineRenderer?.draw(view,latestTrackedHandStates);
-        return;
-    }
-    const pointerSource = demoControllerInputSource();
     // Android exposes taps as a WebXR `screen` ray. It remains available for
     // hit testing, but the Quest laser/contact sphere must only be rendered
     // for tracked spatial input.

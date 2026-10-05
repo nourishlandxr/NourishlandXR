@@ -148,8 +148,8 @@ export function createWelcomePresentationClock() {
 function attachedRoot(angle) {
  const edge=welcomeBoundary(angle);
  // Fixed root footprint just outside the shared board perimeter.
- return {x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x+Math.cos(angle)*78,
-  y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y+Math.sin(angle)*78,
+ return {x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x+Math.cos(angle)*(LIM_CELL_SHAPE.archetypeRadius+42),
+  y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y+Math.sin(angle)*(LIM_CELL_SHAPE.archetypeRadius+42),
   growthAngle:angle,
   attachment:{x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x,y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y}};
 }
@@ -280,6 +280,7 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
   const expandedAt=progression?.expandedAt || {};
   frame.nodes.forEach(node=>{
    node.progress=smooth(time,node.revealAt,1450);
+   node.growthStartedAt=cellsActivatedAt+node.revealAt;
    node.opacity=node.progress;
    // Reveal uses opacity only. The reserved cell footprint never grows or
    // shifts when another LIM cell is selected or a later step begins.
@@ -298,6 +299,7 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
     else if(Number.isFinite(expandedAt[parentId])){
      const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent);
      const siblingIndex=Math.max(0,siblings.indexOf(node));
+     node.growthStartedAt=expandedAt[parentId];
      const branchTime=Math.max(0,totalTime-expandedAt[parentId]);
      node.progress=1;
      node.opacity=node.progress;node.emphasis=reducedMotion?0:(1-smooth(branchTime,1180+siblingIndex*430,950))*node.progress;
@@ -347,7 +349,11 @@ function accentRgba(value,hue,alpha=.7){
 
 function learningCellPath(context,radius){
  context.beginPath();
- context.arc(0,0,radius,0,Math.PI*2);
+ // A soft living contour rather than a separate geometric disc.
+ for(let i=0;i<=64;i++){
+  const angle=i/64*Math.PI*2,r=radius*(1+.045*Math.sin(angle*3)+.025*Math.cos(angle*5));
+  const x=Math.cos(angle)*r,y=Math.sin(angle)*r;i?context.lineTo(x,y):context.moveTo(x,y);
+ }
  context.closePath();
 }
 
@@ -368,6 +374,23 @@ function drawLearningCell(context,radius,fill,stroke,lineWidth=2){
  if(stroke&&lineWidth>0){context.strokeStyle=stroke;context.lineWidth=lineWidth;context.stroke();}
 }
 
+function drawLivingCellGrowth(ctx,node,r,accent,elapsed,reducedMotion){
+ const age=Math.max(0,elapsed-(node.growthStartedAt || 0));
+ const growth=reducedMotion?1:smooth(age,0,6500),angle=node.growthAngle || 0;
+ ctx.save();learningCellPath(ctx,r-6);ctx.clip();ctx.strokeStyle=accent;ctx.fillStyle=accent;ctx.lineWidth=2;
+ for(let i=0;i<9;i++){
+  const extent=r*(.2+.68*((i*7%9)/9))*growth,a=angle+Math.PI+(i-4)*.28;
+  const sx=Math.cos(angle+Math.PI)*r,sy=Math.sin(angle+Math.PI)*r;
+  ctx.globalAlpha=node.opacity*.22;ctx.beginPath();ctx.moveTo(sx,sy);ctx.quadraticCurveTo(sx*.65+Math.sin(i)*r*.15,sy*.65+Math.cos(i)*r*.15,Math.cos(a)*extent,Math.sin(a)*extent);ctx.stroke();
+ }
+ const leaves=reducedMotion?1:smooth(age,0,1800);
+ for(let i=0;i<5;i++){
+  const a=angle+i*1.27,x=Math.cos(a)*r*.88,y=Math.sin(a)*r*.88;
+  ctx.save();ctx.translate(x,y);ctx.rotate(a);ctx.scale(leaves,leaves);ctx.globalAlpha=node.opacity*.72;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-16,-20,-32,0);ctx.quadraticCurveTo(-16,12,0,0);ctx.fill();ctx.restore();
+ }
+ ctx.restore();
+}
 function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual={}) {
  ctx.save();ctx.globalAlpha=node.opacity;
  ctx.translate(node.drawX,node.drawY);
@@ -380,16 +403,17 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  // false rear rim, bevel, perspective edge or drop shadow.
  ctx.save();ctx.globalAlpha*=visual.backgroundOpacity ?? currentInfoOpacity();
  drawLearningCell(ctx,r,node.depth===0?'#173e31':'#102b22',null,0);ctx.restore();
- drawLearningCell(ctx,r,null,node.depth===0?'rgba(180,220,167,.48)':`hsla(${hue},28%,84%,${hollow?.64:.78})`,node.depth===0?2:hollow?4:5);
+ drawLearningCell(ctx,r,null,accent || `hsl(${hue},42%,64%)`,hollow?4:5);
+ drawLivingCellGrowth(ctx,node,r,accent || '#9fbd78',elapsed,reducedMotion);
  if(visual.pathway && !selected){
-  ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=2.5;
+  ctx.globalAlpha=node.opacity*.72;ctx.setLineDash([7,6]);ctx.strokeStyle=accent || '#9fbd78';ctx.lineWidth=2.5;
   learningCellPath(ctx,r-7);ctx.stroke();ctx.setLineDash([]);
  }
  if(selected || visual.hovered){
   const hoverOnly=visual.hovered && !selected;
   ctx.save();ctx.globalAlpha*=visual.backgroundOpacity ?? currentInfoOpacity();
   drawLearningCell(ctx,r-4,accentRgba(accent,hue,hoverOnly?.24:.28),'rgba(255,255,255,0)',0);ctx.restore();
-  ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.strokeStyle=hoverOnly?'#f4ffe7':accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?6:5;
+  ctx.globalAlpha=node.opacity*(hoverOnly?.98:.9);ctx.strokeStyle=accent||`hsl(${hue},52%,58%)`;ctx.lineWidth=hoverOnly?6:5;
   learningCellPath(ctx,r-2);ctx.stroke();ctx.shadowBlur=0;
  }
  if(visual.holdProgress>0){
@@ -556,16 +580,17 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
   }).map(node=>{
    if(order.has(node.key)){
     const index=order.get(node.key),start=Number(options.minimalStartAt)||4800,revealDuration=Number(options.minimalRevealDuration)||1100;
-    const progress=reducedMotion?1:opening?smooth(elapsed,start,revealDuration):1;
-    return {...node,progress,opacity:progress,scale:1,radius:node.baseRadius,drawX:node.x,drawY:node.y,
+    const growthStartedAt=opening?start:Number(options.progression?.cellsActivatedAt)||0;
+    const progress=reducedMotion?1:smooth(elapsed,growthStartedAt,revealDuration);
+    return {...node,growthStartedAt,progress,opacity:progress,scale:1,radius:node.baseRadius,drawX:node.x,drawY:node.y,
      emphasis:reducedMotion?0:progress*(.10+Math.sin(elapsed/900+index)*.04)};
    }
    const parent=frame.nodes.find(candidate=>candidate.id===node.parent),parentId=parent?.limId || node.parent;
    const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent),siblingIndex=Math.max(0,siblings.indexOf(node));
    const branchStartedAt=Number(expandedAt[parentId]);
    const branchElapsed=Math.max(0,elapsed-(Number.isFinite(branchStartedAt)?branchStartedAt:elapsed));
-   const progress=reducedMotion?1:smooth(branchElapsed,180+siblingIndex*430,900);
-   return {...node,progress,opacity:progress,scale:1,radius:node.baseRadius,drawX:node.x,drawY:node.y,emphasis:0};
+   const progress=1;
+   return {...node,growthStartedAt:Number.isFinite(branchStartedAt)?branchStartedAt:elapsed,progress,opacity:progress,scale:1,radius:node.baseRadius,drawX:node.x,drawY:node.y,emphasis:0};
   })})).filter(frame=>frame.nodes.length);
  }
  if(options.drawCells===false){ctx.restore();return frames;}
@@ -610,6 +635,12 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
   }
  } else {
   for(const node of frame.nodes){node.drawX=node.x;node.drawY=node.y;}
+  for(const node of frame.nodes.filter(node=>node.depth===0 && node.opacity>0 && node.attachment)){
+   const start=node.attachment,dx=node.x-start.x,dy=node.y-start.y,length=Math.hypot(dx,dy)||1;
+   const growth=reducedMotion?1:node.progress;
+   ctx.save();ctx.globalAlpha=node.opacity*.75;ctx.strokeStyle=node.accent || '#9fbd78';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(start.x,start.y);
+   ctx.quadraticCurveTo(start.x+dx*.35,start.y+dy*.65,start.x+dx*(1-node.radius/length)*growth,start.y+dy*(1-node.radius/length)*growth);ctx.stroke();ctx.restore();
+  }
   for(const node of frame.nodes.filter(node=>node.depth>=1 && node.opacity>0)){
    const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
    if(!parent || parent.opacity<=0)continue;

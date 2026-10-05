@@ -104,7 +104,8 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
                 const camera=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements));
                 recordSurfaces=knowledgeObjectSurfaces(record,knowledge,pose).filter(surface=>surface.normal.dot(camera.clone().sub(surface.center).normalize())>.16).map(surface=>({...surface,opacity:progress}));
                 surfaces.push(...recordSurfaces);recordSurfaces=[...recordSurfaces,...folded];
-                cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverObjectFaceId===surface.card.id;return surface.card;}));return;
+                // Explorer labels belong to the die surface, not floating plaques.
+                if(folded.length)cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));return;
             }
             surfaces.push(...recordSurfaces);
             const state=knowledgeExplorer(record),byId=new Map(recordSurfaces.map(surface=>[surface.node.path || 'core',surface]));

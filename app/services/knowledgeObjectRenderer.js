@@ -43,14 +43,14 @@ export function hitKnowledgeObject(ray,record,knowledge,pose,geometry){
     return best;
 }
 export function createKnowledgeObjectRenderer(gl,{tether=null}={}){
-    const dice=createDiceRenderer(gl,{radius:KNOWLEDGE_DICE_RADIUS}),geometry=dice.geometry;let entries=[];
+    const dice=createDiceRenderer(gl,{radius:KNOWLEDGE_DICE_RADIUS,appearance:'knowledge'}),geometry=dice.geometry;let entries=[];
     return {
         begin(){entries=[];},
         draw(view,record,knowledge,pose,opacity=1){
             if(opacity>.55 && !entries.some(e=>e.record===record))entries.push({record,knowledge,pose});record.knowledgeObjectPose=pose;
             const workspace=ensureKnowledgeObjects(record,knowledge),basis=knowledgePoseMatrix(pose),visible=visibleKnowledgeObjects(workspace),ids=new Set(visible.map(o=>o.id)),lineage=new Set(),ancestors=[workspace.selectedObjectId],seen=new Set(ancestors);
             for(let i=0;i<ancestors.length;i++)for(const link of workspace.connectors)if(link.targetObjectId===ancestors[i]){lineage.add(link.id);if(!seen.has(link.sourceObjectId)){seen.add(link.sourceObjectId);ancestors.push(link.sourceObjectId);}}
-            for(const object of visible)dice.draw(view,basis.clone().multiply(localObjectMatrix(object)),opacity);
+            for(const object of visible)dice.draw(view,basis.clone().multiply(localObjectMatrix(object)),opacity,[...object.faces,{...object.contextFace,title:object.title+' · context'}]);
             if(record.knowledgeExplorer.connections && tether)for(const link of workspace.connectors){
                 if(!ids.has(link.sourceObjectId) || !ids.has(link.targetObjectId))continue;const anchors=knowledgeConnectorAnchors(workspace,link);if(!anchors)continue;
                 const a=new THREE.Vector3(anchors.start.x,anchors.start.y,anchors.start.z).applyMatrix4(basis),b=new THREE.Vector3(anchors.end.x,anchors.end.y,anchors.end.z).applyMatrix4(basis),selected=lineage.has(link.id);

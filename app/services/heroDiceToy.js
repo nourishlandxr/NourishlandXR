@@ -28,7 +28,8 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
         for(let i=0;i<positions.count;i+=3){a.fromBufferAttribute(positions,i);b.fromBufferAttribute(positions,i+1);c.fromBufferAttribute(positions,i+2);if(!local.intersectTriangle(a,b,c,true,point))continue;const world=point.clone().applyMatrix4(matrix),distance=world.distanceTo(origin);if(!nearest || distance<nearest.distance)nearest={toy:true,point:world,center:world,distance};}return nearest;}
     function rayFor(source){const m=rays.get(source);return m?{origin:new THREE.Vector3().setFromMatrixPosition(m),direction:new THREE.Vector3(0,0,-1).transformDirection(m)}:null;}
     function begin(source,near=false){if(active || !ensure())return false;const input=inputs.get(source),ray=rayFor(source),target=near?{toy:true,distance:0}:hit(ray);if(!input || !target || !canGrab({...target,inputRay:ray,source,near}))return false;
-        const matrix=model(),position=new THREE.Vector3().setFromMatrixPosition(matrix);if(!near){const close=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z).addScaledVector(ray.direction,Math.max(.75,Math.min(HERO_TOY_REACH,target.distance)));matrix.setPosition(close);physics.state.position=serial(close);}
+        // Preserve the original contact and distance when the grip begins.
+        const matrix=model();
         active={source,offset:input.clone().invert().multiply(matrix),samples:[{time:performance.now(),position:{...physics.state.position},rotation:{...physics.state.rotation}}]};physics.state.held=true;physics.state.velocity={x:0,y:0,z:0};physics.state.angularVelocity={x:0,y:0,z:0};return true;
     }
     function release(source,throwing=true){if(active?.source!==source)return false;const samples=active.samples,last=samples.at(-1),first=samples.find(s=>last.time-s.time<120) || samples[0],dt=(last.time-first.time)/1000;
@@ -51,7 +52,7 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
                 if(ray)rays.set(source,new THREE.Matrix4().fromArray(ray.transform.matrix));else rays.delete(source);
                 if(source.hand){const prior=pinches.get(source);pinches.set(source,Boolean(hand?.pinch));if(!hand?.tracked){release(source,false);continue;}if(!hand.pinch)release(source);else if(prior===false && !active && index && thumb){const midpoint=new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),p=physics.state.position;if(midpoint.distanceTo(new THREE.Vector3(p.x,p.y,p.z))<HERO_TOY_RADIUS+.04)begin(source,true);}}
             }
-            if(active){const input=inputs.get(active.source);if(!input){release(active.source,false);return;}const m=input.clone().multiply(active.offset),p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();m.decompose(p,q,s);physics.state.position=serial(p);physics.state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};physics.bound();active.samples.push({time,position:{...physics.state.position},rotation:{...physics.state.rotation}});active.samples=active.samples.filter(sample=>time-sample.time<180);}else physics.step(dt);
+            if(active){const input=inputs.get(active.source);if(!input){release(active.source,false);return;}const m=input.clone().multiply(active.offset),p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();m.decompose(p,q,s);physics.state.position=serial(p);physics.state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};active.samples.push({time,position:{...physics.state.position},rotation:{...physics.state.rotation}});active.samples=active.samples.filter(sample=>time-sample.time<180);}else physics.step(dt);
         },
         draw(view){if(ensure())painter.draw(view,model());},destroy(){unbind();painter.destroy();physics=null;}
     };
