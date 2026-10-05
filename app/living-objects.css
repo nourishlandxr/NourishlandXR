@@ -2437,6 +2437,9 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 .nlxr-info-panel .nlxr-control-tabs .nlxr-panel-openers button.nlxr-panel-opener[aria-expanded="true"] {background:rgba(163,210,196,.15);border-color:rgba(213,244,228,.65);}
 .nlxr-explorer-companion.is-magnetized {outline:1px solid rgba(196,234,222,.6);box-shadow:0 0 14px rgba(157,220,191,.10);}
 .nlxr-panel-progress li.is-complete i {color:#c7f4dc;font-style:normal;text-align:center;line-height:1;}
+.nlxr-panel-progress.is-checklist li i {width:18px;height:18px;box-sizing:border-box;font-size:15px;line-height:14px;}
+.nlxr-panel-progress.is-checklist li.is-complete i {background:rgba(130,195,165,.14);border-color:rgba(193,237,216,.6);}
+.nlxr-info-panel .nlxr-control-tabs .nlxr-panel-openers button.nlxr-panel-opener:is(:hover,:focus-visible) {background:rgba(194,229,219,.18);}
 @media(max-width:700px){
     .nlxr-info-panel .nlxr-control-tabs .nlxr-panel-openers {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));flex:0 0 100%;min-width:0;max-width:100%;box-sizing:border-box;gap:5px;margin:0;padding:5px;}
     .nlxr-info-panel .nlxr-panel-openers-heading {grid-column:1/-1;margin-bottom:0;}

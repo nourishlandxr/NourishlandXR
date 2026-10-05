@@ -21,7 +21,7 @@ test('90 Hz recovery supersedes an unresolved 120 Hz request',async()=>{
  const controller=createXRPerformanceSettings({getSession:()=>session,publish:value=>snapshots.push(value),configure:async(_session,rate)=>{calls.push(rate);if(rate===120)await new Promise(resolve=>{release=resolve;});return {requested:rate};}});
  try{
   controller.tick(0);const high=controller.action('RefreshRate:120');
-  const controls=panelSettingsControls({headset:true,performanceSettings:snapshots.at(-1)});
+  const controls=panelSettingsControls({graphicsOpen:true,headset:true,performanceSettings:snapshots.at(-1)});
   assert.equal(controls.find(item=>item.action==='RefreshRate').disabled,false);
   assert.equal(controls.find(item=>item.action==='RefreshRate:120').disabled,true);
   await controller.action('RefreshRate');release();await high;
@@ -43,9 +43,11 @@ test('sustained missed 120 Hz callbacks recover even with Show FPS off',async()=
 
 test('supported 60 Hz is selectable and graphics follows the main settings',()=>{
  const items=panelSettingsControls({headset:true,performanceSettings:{actual:120,pending:true,supported:[60,72,90,120]}});
- assert.ok(items.find(item=>item.action==='RefreshRate:60'));assert.equal(items.find(item=>item.action==='RefreshRate').disabled,false);
+ const graphics=panelSettingsControls({graphicsOpen:true,headset:true,performanceSettings:{actual:120,pending:true,supported:[60,72,90,120]}});
+ assert.ok(graphics.find(item=>item.action==='RefreshRate:60'));assert.equal(graphics.find(item=>item.action==='RefreshRate').disabled,false);
+ assert.equal(items.some(item=>item.action.startsWith('RefreshRate') || item.action==='ShowFps'),false);
  assert.ok(items.find(item=>item.action==='GraphicsMenu').y>items.find(item=>item.action==='FloorOffset').y);
- for(const a of items)for(const b of items)if(a!==b)assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
+ for(const controls of [items,graphics])for(const a of controls)for(const b of controls)if(a!==b)assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
 });
 
 test('image fades reuse one texture across both eyes and update existing storage',()=>{

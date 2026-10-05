@@ -661,7 +661,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         target.querySelector('.nlxr-panel-progress')?.remove();
         const progress=progressState();
         if(!progress)return;
-        const region=document.createElement('section');region.className='nlxr-panel-progress';region.setAttribute('aria-label',progress.label);
+        const region=document.createElement('section');region.className='nlxr-panel-progress';region.classList.toggle('is-checklist',Boolean(progress.checklist));region.setAttribute('aria-label',progress.label);
         const heading=document.createElement('div');heading.className='nlxr-panel-progress-heading';
         const status=document.createElement('span');status.textContent=progress.checklist?`${progress.steps.filter(step=>step.complete).length} of ${progress.steps.length} complete · ${progress.current.label}`:`${progress.activeIndex+1} of ${progress.steps.length} · ${progress.current.label}`;status.setAttribute('aria-live','polite');
         heading.append(status);
