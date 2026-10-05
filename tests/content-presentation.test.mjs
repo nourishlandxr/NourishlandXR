@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
 import { createPimDocument, pimToArKnowledge, validatePimDocument } from '../app/services/pimModel.js';
-import { pimInfoContent } from '../app/services/pimInfoPanel.js';
-import { DEMO_CONTENT, DEMO_ORB_MATERIALS, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../app/features/ar-demo/demoContent.js';
+import { pimInfoContent, learningPanelMedia, pimPanelMedia } from '../app/services/pimInfoPanel.js';
+import { DEMO_CONTENT, DEMO_ORB_MATERIALS, DEMO_TUTORIAL_ART, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../app/features/ar-demo/demoContent.js';
 import {DEMO_GUIDED_STEPS,DEMO_GUIDED_COPY} from '../app/features/ar-demo/demoJourneyContent.js';
 import { DEMO_ARCHETYPE_START_MS } from '../app/features/ar-demo/demoConfig.js';
 import { MORINGA_PIM, MORINGA_PROFILE_IMAGE } from '../app/features/ar-demo/demoPlantContent.js';
@@ -153,14 +153,40 @@ test('each archetype keeps its ordered illustration while plant media retains ho
         assert.ok(content.image.endsWith(file), `${id} should use ${file}`);
         assert.ok(content.imageAlt.length > 20);
         assert.ok(statSync(new URL(`../app/assets/${file}`, import.meta.url)).size < 500_000);
+        assert.equal(learningPanelMedia(content).image, content.image);
+        assert.equal(learningPanelMedia(content).alt, content.imageAlt);
     }
     const panel = read('app/services/pimInfoPanel.js');
-    assert.match(panel, /selection\?\.mesh==='lim' && \(selection\.sketchImage \|\| selection\.image\)/);
+    assert.match(panel, /selection\?\.mesh==='lim'\s*\? learningPanelMedia\(selection\)/);
+    assert.match(panel, /imageSource=learningPanelMedia\(content\)\?\.image/);
     assert.match(panel, /showLearning\(content\).*mediaCollapsed=true;mediaTouched=false/s);
     assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);
     assert.doesNotMatch(panel, /LIMO cell sketch|LIMO CELL SKETCH|PLANT MEDIA/);
     assert.match(panel, /caption:'',plant:false/);
     assert.match(panel, /caption:plantMedia\?\(identity\?\.media\?\.caption \|\| identity\?\.plant \|\| ''\):''/);
+});
+
+test('Media introduction restores botanical background and selected Pigeon Pea artwork survives reopening', () => {
+    assert.ok(DEMO_TUTORIAL_ART.companion.image.endsWith('/media-panel-background.jpg'));
+    assert.ok(statSync(new URL(DEMO_TUTORIAL_ART.companion.image)).size > 0);
+    assert.match(read('app/living-objects.css'),/:not\(\.is-media-collapsed\):has\(> \.nlxr-media-wing\)\s*\{\s*overflow:visible/);
+    const before=JSON.stringify(PIGEON_PEA_PIM);
+    const plantPhoto={image:PIGEON_PEA_PIM.identity.image,alt:PIGEON_PEA_PIM.identity.imageAlt};
+    for(const path of ['food-forest','uses','propagation','scientific-information','historical-data','cultivation','culinary','fresh-peas']) {
+        const selection=pimInfoContent(PIGEON_PEA_PIM,path);
+        assert.ok(selection?.media?.url || selection?.media?.image || selection?.media?.src,path);
+        const media=pimPanelMedia(PIGEON_PEA_PIM,selection,plantPhoto);
+        assert.match(media.image,/pimo-cell-illustrations\/pigeon-pea-/);
+        assert.ok(statSync(new URL(media.image)).size > 0);
+        assert.notEqual(media.image,plantPhoto.image);
+    }
+    assert.equal(pimPanelMedia(PIGEON_PEA_PIM).image,plantPhoto.image);
+    assert.equal(JSON.stringify(PIGEON_PEA_PIM),before);
+    const fallback=learningPanelMedia({sketchImage:'child.png',sketchImageAlt:'Child illustration'});
+    assert.equal(fallback.image,'child.png');assert.equal(fallback.alt,'Child illustration');
+    assert.equal(learningPanelMedia({}),null);
+    const panel=read('app/services/pimInfoPanel.js');
+    assert.match(panel,/nextMedia=pimPanelMedia\(document,selectedContent,media,previousMedia\)/);
 });
 
 test('Totem examples stay generic and use short local signs', () => {
@@ -169,7 +195,7 @@ test('Totem examples stay generic and use short local signs', () => {
     for (const label of ['Welcome to this area', 'NOTES · nearby', 'PLANT ORBS · around this Totem', 'NEIGHBOUR TOTEM · right']) {
         assert.ok(totemCopy.includes(label), `missing Area example ${label}`);
     }
-    assert.match(demo, /'Meet the Totem'/);
+    assert.match(demo, /guidedDemoStep\('ELEMENTS 1\.18'\)\.title/);
     assert.doesNotMatch(demo, /Show Botanical Garden Totem|Rainforest Walk Totem|A Botanical Garden can welcome visitors/);
     assert.match(demo, /demoTotemColor:'#785a43'/);
     assert.match(demo, /demoTotemColor:'#526d7a'/);
@@ -180,7 +206,7 @@ test('Areas lead into the final learning feature with quiet mapped objects', () 
     const styles = read('app/living-objects.css');
     assert.match(demo, /'Discover learning pathways',\s*showLimoLearningModes/);
     assert.match(demo, /guidedDemoStep\('LEARNING 1\.6'\)\.title/);
-    assert.match(demo, /'Show Learning Pathways',\s*showLimoArchetypes/);
+    assert.match(demo, /'Explore Learning Pathways',\s*showLimoArchetypes/);
     assert.match(demo, /record\.demoTotemFaded=true;[\s\S]*record\.demoNarrativeFaded=true/);
     assert.match(demo, /record\.demoType==='note'[\s\S]*record\.demoNarrativeFaded=true/);
     assert.match(styles, /\.tryit-sim-marker-note\.is-narrative-faded/);
@@ -223,7 +249,7 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     const profileStyles = read('app/product-v2.css');
     const editorStyles = read('app/style.css');
     assert.match(model, /image: source\.identity\.image/);
-    assert.match(panel, /identityImage=document\?\.identity\?\.image/);
+    assert.equal(pimPanelMedia(document).image,image);
     assert.match(panel, /imageHeight=Math\.min\(520,Math\.max\(250,card\.height\*\.42\)\)/);
     assert.ok(MORINGA_PROFILE_IMAGE.endsWith('/assets/moringa-oleifera.jpg'));
     assert.match(preview, /export function demoPlantMedia\(record\)/);
@@ -305,4 +331,17 @@ test('simulated and immersive plant orbs use the shared crowned renderer', () =>
     assert.match(renderer, /band\(1\.16,width,0,Math\.PI\*2,96\)/);
     assert.match(styles, /border:2px solid var\(--demo-orb-ring/);
     assert.match(styles, /content:none;\s*display:none;/);
+});
+
+
+test('reviewed flow keeps panel explanations contextual and allows finishing before learning',()=>{
+ const demo=read('app/screens/temporaryArDemo.js');
+ assert.match(demo,/introBoardStep==='LEARNING 1\.6'\)actions.push\(\{id:'finish-core'/);
+ assert.match(demo,/action==='finish-core'\)\{showDemoClosingMessage\(\)/);
+ const introduction=demo.slice(demo.indexOf('function showDemoPanelIntroduction'),demo.indexOf('const LIM_APPLICATION_LENSES'));
+ assert.match(introduction,/setSettingsOpen\(false\)/);assert.doesNotMatch(introduction,/setSettingsOpen\(true\)/);
+ const copy=demo.slice(demo.indexOf('function showIntroBoard'),demo.indexOf('const localizedTitle',demo.indexOf('function showIntroBoard'))+500);
+ assert.match(copy,/options.dynamicCopy\?null/);
+ assert.match(copy,/flatMap\(value=>String/);
+ for(const id of ['LEARNING 1.9','LEARNING 1.10','LEARNING 1.11'])assert.ok(demo.includes("stepLabel:'"+id+"',dynamicCopy:true"),'optional examples retain their actual source and target names');
 });

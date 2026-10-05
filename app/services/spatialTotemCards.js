@@ -118,8 +118,10 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
             boardSide:card.boardSide || ''
         };
     };
+    const titleBottom=buttons[0].faceCenter.y-position.y+.075;
+    const titleHeight=Math.max(.025,Math.min(.18,1.88*bodyHalfHeight-titleBottom-.015));
     const headerBoard = cards[0] ? {
-        ...place(0,1.48*demoScale,demoZone ? .64 : .68,.21,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
+        ...place(0,titleBottom+titleHeight/2,demoZone ? .64 : .68,titleHeight,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);

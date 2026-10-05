@@ -63,3 +63,35 @@ test('simulated PIMO receives the same opacity without changing cell identity or
     const demo = readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
     assert.match(demo, /function demoPlantKnowledgeMarkup[\s\S]*?cellOpacity: demoCellOpacity/);
 });
+
+
+test('native glass opacity uses draw uniforms without invalidating cached text or body artwork',async()=>{
+ const {knowledgeSurfaceLayer,curiositySurfaceOpacity}=await import('../app/services/knowledgeSpatialRenderer.js');
+ const {spatialCardTextureContent,createSpatialTotemCards}=await import('../app/services/spatialTotemCards.js');
+ const calls=[];
+ const gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getExtension:()=>null,getAttribLocation:()=>0},{get(target,key){return key in target?target[key]:key.startsWith('create')?()=>({}):typeof key==='string' && key===key.toUpperCase()?key:(...args)=>calls.push([key,...args]);}});
+ let surface={card:{id:'child',child:true,branchColour:'#37ad88',title:'Fresh peas',infoOpacity:1},opacity:1,center:{x:0,y:0,z:-1},right:{x:1,y:0,z:0},width:1,height:1};
+ const baseInk=spatialCardTextureContent(knowledgeSurfaceLayer(surface).card),baseBody=spatialCardTextureContent(knowledgeSurfaceLayer(surface,true).card);
+ const renderer=createSpatialTotemCards(gl,{canvas:()=>({width:512,height:512}),surfaces:()=>[knowledgeSurfaceLayer(surface,true)]});
+ const matrix=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),view={projectionMatrix:matrix,transform:{inverse:{matrix}}};
+ for(const level of [1,.75,.5,.25,0]){
+  surface={...surface,card:{...surface.card,infoOpacity:level}};
+  const ink=knowledgeSurfaceLayer(surface),body=knowledgeSurfaceLayer(surface,true);
+  assert.equal(ink.opacity,1);assert.equal(body.opacity,level);
+  assert.equal(spatialCardTextureContent(ink.card),baseInk);assert.equal(spatialCardTextureContent(body.card),baseBody);
+  renderer.begin();renderer.draw(view,{id:'plant'},surface.center,[surface.card]);renderer.draw(view,{id:'plant'},surface.center,[surface.card]);renderer.end();
+ }
+ assert.equal(calls.filter(call=>call[0]==='texImage2D').length,1,'one upload reused through every opacity and both eyes');
+ assert.equal(calls.filter(call=>call[0]==='texSubImage2D').length,0,'dragging opacity never repaints cell textures');
+ assert.equal(calls.filter(call=>call[0]==='generateMipmap').length,1);
+ renderer.destroy();assert.equal(curiositySurfaceOpacity(-1),0);assert.equal(curiositySurfaceOpacity(2),1);
+});
+
+test('live native cell opacity does not repaint the Living Frame or reconcile plant content',()=>{
+ const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+ const callback=source.slice(source.indexOf('onCellOpacity:value=>'),source.indexOf('onMove:refreshSimulatedPlacementAim',source.indexOf('onCellOpacity:value=>')));
+ assert.doesNotMatch(callback,/paintWelcomeLayer|updateSimulatedMarkers/);
+ assert.match(callback,/if\(!knowledgeRenderer\)/);
+ const panel=readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+ assert.match(panel,/value===meshCellOpacity\)return/);
+});

@@ -33,11 +33,11 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
     const candidate=demoBeeEncounter(elapsed-startedAt,{enabled:encounters,seed:encounterSeed});
     const encounter=candidate && (candidate.index+encounterSeed)%BEE_COUNT===index ? candidate : null;
     const flybyProgress=encounter?.progress || 0,flyby=encounter?.envelope || 0;
-    const orbitX=.5+Math.cos(phase)*.30;
-    const orbitY=.5+Math.sin(phase)*.30;
-    const orbitDepth=Math.sin(phase-.9);
-    const wanderingX=Math.sin(phase*.63+index)*.023;
-    const wanderingY=Math.sin(phase*1.37+index)*.025;
+    const orbitX=.5+Math.cos(phase)*(.22+.07*Math.sin(time*.13+index));
+    const orbitY=.5+Math.sin(phase*.83+index*.4)*(.20+.08*Math.cos(time*.17+index));
+    const orbitDepth=Math.sin(phase*.71-.9)+Math.sin(time*.19+index)*.12;
+    const wanderingX=Math.sin(phase*.63+index)*.045;
+    const wanderingY=Math.sin(phase*1.37+index)*.035;
     return {
         x:(orbitX+wanderingX)*(1-flyby)+(.82-flybyProgress*.64)*flyby,
         y:(orbitY+wanderingY)*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,

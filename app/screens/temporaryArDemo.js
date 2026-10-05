@@ -609,6 +609,7 @@ function demoPanelActions() {
         {id:'close-confirm',label:'Close demo',primary:true}
     ];
     const actions=[];
+    if(introBoardStep==='LEARNING 1.6')actions.push({id:'finish-core',label:'Finish without learning example'});
     const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
     actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous',disabled:!(demoSlideHistoryIndex>0 || demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)});
@@ -673,6 +674,7 @@ function handleDemoPanelAction(action) {
     if(action==='close-cancel'){cancelDemoClose();return;}
     if(action==='close-confirm'){void confirmDemoClose();return;}
     if(action==='close'){requestDemoClose();return;}
+    if(action==='finish-core'){showDemoClosingMessage();return;}
     if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
     if(action==='continue'){appRoot?.querySelector('[data-tryit-intro-continue]:not([hidden])')?.click();return;}
     if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
@@ -858,8 +860,8 @@ function showDemoPanelIntroduction(record,index=0){
     const id=index===0?'PANEL 1.1':'PANEL 1.2',step=guidedDemoStep(id);
     infoPanel?.setMediaCollapsed(index!==0);
     infoPanel?.setExplorerOpen(index!==0);
-    infoPanel?.setSettingsOpen(index!==0);
-    showIntroBoard(step.title,step.main,index===0?'Continue to Settings':'Add the second sample',()=>{
+    infoPanel?.setSettingsOpen(false);
+    showIntroBoard(step.title,step.main,index===0?'View choices':'Discover another plant',()=>{
         if(index===0){showDemoPanelIntroduction(record,1);return;}
         knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
         infoPanel?.setExplorerOpen(false);infoPanel?.setSettingsOpen(false);
@@ -1255,8 +1257,9 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     useSharedWelcomeBoard(true);
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     const localizedTitle = demoLocalizedText(title);
-    const quickAccessCopy=DEMO_QUICK_ACCESS_COPY[options.stepLabel];
+    const quickAccessCopy=options.dynamicCopy?null:DEMO_QUICK_ACCESS_COPY[options.stepLabel];
     const paragraphs = (quickAccessCopy ? [quickAccessCopy] : Array.isArray(body) ? body : [body])
+        .flatMap(value=>String(value || '').split(/\n\n+/))
         .map(value => demoLocalizedText(String(value || '').trim()))
         .filter(Boolean);
     const bodyText = paragraphs.join('\n\n');
@@ -1425,7 +1428,7 @@ function showPersistentPimPrompt(record) {
     const firstStep={uses:'PIMO 1.2a',culinary:'PIMO 1.2b','fresh-peas':'PIMO 1.2c'}[record.demoGuidedNodeId] || 'PIMO 1.2';
     const id=first?(record.knowledgeExplorer?.mode==='tag'?'ELEMENTS 1.7':firstStep):'ELEMENTS 1.12';
     const step=guidedDemoStep(id);
-    const button=first?'See the panel buttons':'Add a sample Note';
+    const button=first?'Take a closer look':'Leave something behind';
     showIntroBoard(step.title,step.main,button,()=>continueAfterDemoPim(record),{
         tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true
     });
@@ -1990,8 +1993,8 @@ function showDemoTutorialMedia(key,content={}) {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Meet the first sample',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
-    {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:null,button:'Place the sample Orb',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]}
+    {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Discover the first plant',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
+    {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:null,button:'See how it works',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]}
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
@@ -2122,9 +2125,9 @@ function pairedDemoTotemPosition(side, groundBaseY) {
     const center=anchor ? introLocalPosition(anchor,AR_PHONE_COMFORT.boardPosition) : {x:0,z:-1.9};
     const right={x:Number(anchor?.[0]) || 1,z:Number(anchor?.[2]) || 0};
     return {
-        x:center.x+right.x*side*1.65-(Number(anchor?.[8]) || 0)*.45,
+        x:center.x+right.x*side*1.65,
         y:groundBaseY+initialDemoTotemHalfHeight(groundBaseY),
-        z:center.z+right.z*side*1.65-(Number(anchor?.[10]) || 1)*.45
+        z:center.z+right.z*side*1.65
     };
 }
 function initialDemoTotemHalfHeight(ground){
@@ -2203,9 +2206,7 @@ function createDemoSecondTotem() {
     const first = [...markers].reverse().find(record => record.demoType === 'zone');
     const groundBaseY = first?.groundBaseY ?? demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY-getSpatialVisualSettings().floorOffset;
-    const position = first?.demoPairRight
-        ? {x:first.position.x-first.demoPairRight.x*2,y:groundBaseY+demoTotemHalfHeight(first),z:first.position.z-first.demoPairRight.z*2}
-        : pairedDemoTotemPosition(-1,groundBaseY);
+    const position = pairedDemoTotemPosition(-1,groundBaseY);
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
             name: 'Totem',
@@ -2249,6 +2250,8 @@ function connectDemoTotems() {
     const [first,second]=markers.filter(record=>record.demoType==='zone');
     if(!first || !second)return;
     first.demoLinkVisible=second.demoLinkVisible=true;
+    first.demoTotemSignsVisible=second.demoTotemSignsVisible=true;
+    first.demoTotemFaded=second.demoTotemFaded=false;
     first.demoLinkPartner=second.id;
     second.demoLinkPartner=first.id;
     first.totemCardsRefreshed=second.totemCardsRefreshed=0;
@@ -2288,15 +2291,10 @@ function createDemoNeighbourhood(totem) {
 
 function showLinkedTotemsIntroduction() {
     showDemoTutorialMedia('connectedAreas');
+    const step=guidedDemoStep('ELEMENTS 1.22');
     showIntroBoard(
-        'Why link Areas?',
-        [
-            'Each Totem is the welcoming home marker for one Area. Its plants, Notes and local information remain attached to that Area.',
-            'A larger garden can contain many Areas, each marked by its own Totem. The monochrome overview shows how those local places fit into one connected landscape.',
-            'Short signs point to Notes, Plant Orbs and neighbouring Totems without filling the scene with instructions.',
-            'A link creates a visitor route between Areas. The neighbour sign gives its name and direction without mixing the information attached to either place.',
-            'The Totem stays simple: welcome here, then choose what nearby information you want to open.'
-        ],
+        step.title,
+        step.main.split('\n\n'),
         'Discover learning pathways',
         showLimoLearningModes,
         {stepLabel:'ELEMENTS 1.22'}
@@ -2312,6 +2310,7 @@ function fadeMappedSceneForLimo() {
             record.demoTotemFaded=true;
             record.demoNarrativeFaded=true;
             record.demoInteractive=false;
+            record.demoSignsBeforeLimo ??= record.demoTotemSignsVisible!==false;
             record.demoTotemSignsVisible=false;
             record.totemSelectedCard='';
         }
@@ -2324,7 +2323,7 @@ function fadeMappedSceneForLimo() {
 }
 
 function restoreMappedSceneAfterLimo(){
-    markers.forEach(record=>{record.demoHiddenForLimo=false;if(record.demoType==='zone' || record.demoType==='note'){record.demoNarrativeFaded=false;record.demoInteractive=true;}if(record.demoType==='zone')record.demoTotemFaded=false;});
+    markers.forEach(record=>{record.demoHiddenForLimo=false;if(record.demoType==='zone' || record.demoType==='note'){record.demoNarrativeFaded=false;record.demoInteractive=true;}if(record.demoType==='zone'){record.demoTotemFaded=false;if(record.demoSignsBeforeLimo!==undefined){record.demoTotemSignsVisible=record.demoSignsBeforeLimo;delete record.demoSignsBeforeLimo;record.totemCardsRefreshed=0;}}});
     updateSimulatedMarkers();
 }
 
@@ -2438,10 +2437,10 @@ function startNativeConnectionExperience(exampleId='uses') {
     for(const id of targetLineage.ancestors){limExpandedCells.add(id);limExpandedAt.set(id,arWelcomeClock.elapsed-8000);}
     limHiddenCells.delete(targetLineage.key);
     useSharedWelcomeBoard(true);
-    showIntroBoard('Choose the plant information',
-        [`First select ${nativeConnectionState.sourceTitle} in Pigeon Pea’s profile. This chooses the information for the connection.`],
+    showIntroBoard(guidedDemoStep('LEARNING 1.9').title,
+        [guidedDemoStep('LEARNING 1.9').main.replace('Uses',nativeConnectionState.sourceTitle)],
         '',()=>{},
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.9',nextGuide:`Select ${nativeConnectionState.sourceTitle} in Pigeon Pea to continue.`});
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.9',dynamicCopy:true,nextGuide:`Select ${nativeConnectionState.sourceTitle} in Pigeon Pea to continue.`});
     nativeConnectionPanelGuide();
     introBoardTextureDirty=true;
 }
@@ -2451,10 +2450,10 @@ function acceptNativePimCell(record,path) {
     if(record!==nativeConnectionPlant() || !acceptDemoNativeSource(state,path))return false;
     record.demoSelectedNodeId=state.sourcePath;
     refreshDemoPimProfile(record);
-    showIntroBoard('Choose the learning topic',
-        [`Now hold ${state.targetTitle} until the connection completes. This chooses the learning topic for that plant information.`],
+    showIntroBoard(guidedDemoStep('LEARNING 1.10').title,
+        [guidedDemoStep('LEARNING 1.10').main.replace('Uses and Making',state.targetTitle)],
         '',()=>{},
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.10',nextGuide:`Select the ${state.targetTitle} learning cell to continue.`});
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.10',dynamicCopy:true,nextGuide:`Select the ${state.targetTitle} learning cell to continue.`});
     nativeConnectionPanelGuide();
     navigator.vibrate?.(12);
     return true;
@@ -2479,10 +2478,10 @@ async function acceptNativeLimCell(key) {
         if(!finishDemoNativeConnection(state,result))return false;
         meshComposition.display(result);
         refreshDemoPimProfile(plant);
-        showIntroBoard('A plant detail becomes a learning activity',
-            [state.exampleId==='uses'?'A teacher could ask which plant part is used and what preparation is recorded. This connection gives the activity a specific source to return to.':`You connected ${state.sourceTitle} with ${state.targetTitle}. A learning activity can now refer back to this specific plant information.`],
+        showIntroBoard(guidedDemoStep('LEARNING 1.11').title,
+            [state.exampleId==='uses'?guidedDemoStep('LEARNING 1.11').main:`You connected ${state.sourceTitle} with ${state.targetTitle}. A learning activity can now refer back to this specific plant information.`],
             'Finish the sample',showDemoClosingMessage,
-            {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.11',nextGuide:'The two highlighted cells remain connected while you continue.'});
+            {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.11',dynamicCopy:true,nextGuide:'The two highlighted cells remain connected while you continue.'});
         nativeConnectionPanelGuide();
         introBoardTextureDirty=true;
         navigator.vibrate?.([18,35,24]);
@@ -2505,7 +2504,7 @@ function showLimoLearningModes() {
     showIntroBoard(
         guidedDemoStep('LEARNING 1.6').title,
         DEMO_GUIDED_COPY['LEARNING 1.6'],
-        'Show Learning Pathways',
+        'Explore Learning Pathways',
         showLimoArchetypes,
         {stepLabel:'LEARNING 1.6',nextGuide:'Open the final feature.'}
     );
@@ -2566,12 +2565,8 @@ function showTotemIntroduction() {
     setDemoJourneyStage('connect');
     showDemoTutorialMedia('totem');
     showIntroBoard(
-        'Meet the Totem',
-        [
-            'A Totem welcomes you to an Area and keeps its local information together.',
-            'Its directional signs point toward Notes, Plant Orbs and neighbouring Totems. Show Signs toggles the plaques; Fade softens the Totem while you explore nearby information.',
-            'Open a Totem card to see what is nearby, then choose the information you want to explore.'
-        ],
+        guidedDemoStep('ELEMENTS 1.18').title,
+        DEMO_GUIDED_COPY['ELEMENTS 1.18'],
         'Show Totem',
         () => {
             finishIntroBoard();
@@ -2716,8 +2711,8 @@ function armDemoPlacement(type, {explained=false}={}) {
             'A Plant Orb gives a plant’s information a location in the scene.',
             'Pigeon Pea will be our first example. No previous plant knowledge is needed.'
         ]],
-        plant2: ['Compare a second plant', 'Moringa will have its own Orb and profile beside Pigeon Pea. Together they show how different plant roles can be compared in one place.'],
-        note: ['Place a sample message', DEMO_GUIDED_COPY['ELEMENTS 1.14']],
+        plant2: [guidedDemoStep('ELEMENTS 1.9').title, DEMO_GUIDED_COPY['ELEMENTS 1.9']],
+        note: [guidedDemoStep('ELEMENTS 1.14').title, DEMO_GUIDED_COPY['ELEMENTS 1.14']],
         totem: ['Place My area Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
@@ -2731,7 +2726,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         const questTriggerPlacement=Boolean(session && demoControllerInputSource()?.targetRayMode!=='screen');
         if(type==='plant')infoPanel?.showLearning({id:'demo-plant-context',title:'Pigeon Pea sample',body:'This prepared profile demonstrates plant information. A real project can use its own plant profiles.',editable:false});
         const placementCopy = type === 'plant'
-            ? {title:'Place the sample Orb',body:DEMO_GUIDED_COPY['ELEMENTS 1.5'],next:`Aim at a clear spot in front of you, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place the sample Orb. Use the right joystick to adjust distance.`}
+            ? {title:guidedDemoStep('ELEMENTS 1.5').title,body:DEMO_GUIDED_COPY['ELEMENTS 1.5'],next:`Aim at a clear spot in front of you, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place the sample Orb. Use the right joystick to adjust distance.`}
             : type === 'plant2'
                 ? {title:'Place Moringa',body:DEMO_GUIDED_COPY['ELEMENTS 1.11'],next:'Place Moringa beside Pigeon Pea.'}
                 : type==='totem'
@@ -3946,7 +3941,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);introBoardTextureDirty=true;paintWelcomeLayer(performance.now());},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
@@ -4537,7 +4532,13 @@ function drawIntroNoteContent(ctx) {
             ctx.globalAlpha*=fade;ctx.fillStyle='#f7fbf4';
             do {ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
             ctx.fillText(openingTitle,contentCenter,420);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){ctx.fillStyle='#fff';ctx.font=`600 42px ${DEMO_PRESENTATION_FONT}`;drawWrappedTextureText(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentCenter,540,880,48,5);}
+            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){
+                ctx.fillStyle='#fff';ctx.textBaseline='top';
+                const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,280);
+                ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
+                let y=515;
+                for(const lines of layout.paragraphLines){for(const line of lines){ctx.fillText(line,contentCenter,y);y+=layout.lineHeight;}y+=layout.paragraphGap;}
+            }
         }
         ctx.restore();return;
     }

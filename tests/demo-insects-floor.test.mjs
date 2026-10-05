@@ -23,14 +23,14 @@ test('floor clearance covers bee bodies and survives adjustment and close-up pos
  const screen=read('app/screens/temporaryArDemo.js');assert.match(screen,/keepInsectAboveFloor\([\s\S]*calibratedDemoGroundY\(\)/);
  assert.match(screen,/boardScale\[0\]\*\.4/);assert.match(screen,/boardScale\[1\]\*\.16/);
 });
-test('bee close inspection moves in three dimensions and orientation follows flight, independent of the viewer',()=>{
+test('bee close inspection moves in three dimensions; ambient orientation follows flight',()=>{
  const a=beeCuriosity(.40),b=beeCuriosity(.50);for(const axis of ['x','y','z'])assert.notEqual(a[axis],b[axis]);
  const sizes=new Set(Array.from({length:4},(_,i)=>demoBeePose(30000,0,i).bodyScale));assert.equal(sizes.size,4);
  assert.equal(beeRenderYaw({worldYaw:1.2,heading:2.4,headTurn:.2,viewer:[]}),1.4);
  assert.equal(beeRenderYaw({worldYaw:0,heading:2.4}),0);
  assert.equal(beeRenderYaw({heading:2.4,headTurn:.1}),2.5);
  assert.equal(beeRenderYaw({}),0);
- const shader=read('app/services/demoBeeXR.js');assert.match(shader,/uniforms.yaw,beeRenderYaw\(pose\)/);
+ const shader=read('app/services/demoBeeXR.js');assert.match(shader,/uniforms.yaw,beeRenderYaw\(pose,origin\)/);
  assert.ok(INSECT_VISUALS.beeSize<.2);
 });
 test('red perches 30 seconds, blue 60 seconds, and flight direction agrees with velocity',()=>{
@@ -59,4 +59,19 @@ test('uniform learning cells preserve peripheral planting rather than erasing fu
  const frame=read('app/services/arWelcomeShowcase.js'),roots=read('app/services/arWelcomeRoots.js');
  assert.match(frame,/context.arc\(0,0,radius,0,Math.PI\*2\)/);assert.match(roots,/const radius=\(cell.radius-LIVING_RIM.cellGap\)\*\.52/);
  assert.match(roots,/start=polarPoint\(angle,535\)/);
+});
+
+
+test('close-up bees face the viewer while ambient bees remain free to turn',()=>{
+ const viewer=new Float32Array(16);viewer[12]=2;viewer[14]=3;
+ const origin={x:1,z:1},target=Math.atan2(1,2);
+ for(const worldYaw of [-3,-1,0,1,3]){
+  const yaw=beeRenderYaw({worldYaw,flyby:1,viewer},origin);
+  assert.ok(Math.abs(Math.atan2(Math.sin(yaw-target),Math.cos(yaw-target)))<1e-6);
+  assert.equal(beeRenderYaw({worldYaw,flyby:0,viewer},origin),worldYaw);
+ }
+ for(let flyby=0;flyby<.65;flyby+=.001){
+  const a=beeRenderYaw({worldYaw:-3,flyby,viewer},origin),b=beeRenderYaw({worldYaw:-3,flyby:flyby+.001,viewer},origin);
+  assert.ok(Math.abs(a-b)<.01,'engagement rotates smoothly without a sudden snap');
+ }
 });

@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pigeon Pea knowledge star</title>
+<link rel="stylesheet" href="../app/living-objects.css">
+<style>
+body{margin:0;background:#1c3029;color:#edf3e4;font:16px/1.5 system-ui}main{max-width:1120px;margin:auto;padding:24px}h1{font:500 30px Georgia,serif;margin:0}p{max-width:850px;color:#c3d2c5}.choices{display:flex;gap:8px;flex-wrap:wrap;margin:18px 0}button{font:inherit;color:inherit;background:#9cb9a51c;border:1px solid #abc6b477;border-radius:14px;padding:9px 14px;cursor:pointer}button:hover{background:#9cb9a533}#field{border:1px solid #abc6b444;border-radius:24px;background:radial-gradient(ellipse at 45% 30%,#63746a,#344c3f 60%,#263d31);overflow:hidden;min-height:540px}.knowledge-object-field{display:block!important;padding:16px!important}.knowledge-object-field canvas{display:block;width:100%!important;height:470px!important;touch-action:none}.knowledge-object-title,.knowledge-object-hint{text-align:center;margin:8px auto;font-size:14px}#status{font-size:15px;min-height:45px}#error{color:#ffccb3}a{color:#d8e7cb}.views{display:flex;gap:8px;margin-top:12px}
+</style>
+<main><h1>Knowledge builds the structure</h1><p>Begin with a compact faceted seed. Open a domain face into a star wing, then follow its inset topics. Discovery develops that same wing into a cluster and a hub.</p>
+<div class="choices"><button id="reset">Untouched seed</button><button data-topic="uses">Open Uses</button><button data-topic="culinary">Explore Food · Culinary</button><button data-topic="fresh-peas">Discover Fresh peas</button><button id="develop">Develop region</button><button id="hub">Promote Uses to hub</button><button id="fold">Fold / reopen wing</button><button id="more">More inset topics</button><button id="back">Back within domain</button></div>
+<div id="field"></div><div class="views"><button data-turn="left">Turn left</button><button data-turn="right">Turn right</button><button data-turn="up">Tilt up</button><button data-turn="down">Tilt down</button></div><p id="status" role="status"></p><p id="error" role="alert"></p></main>
+<script type="module">
+import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
+import {knowledgeExplorer,knowledgeExplorerAction} from '../app/services/knowledgeExplorer.js';
+import {ensureKnowledgeObjects,knowledgeObjectIndex,selectKnowledgeObjectFace,spawnKnowledgeObject,knowledgeObjectAction} from '../app/services/knowledgeObjectModel.js';
+import {mountKnowledgeObjectDesktop} from '../app/services/knowledgeObjectDesktop.js';
+import {setPimoDeveloperOverride} from '../app/services/pimoSpatialCapabilities.js';
+const field=document.querySelector('#field'),status=document.querySelector('#status'),errors=document.querySelector('#error');
+window.addEventListener('error',event=>errors.textContent=event.message);window.addEventListener('unhandledrejection',event=>errors.textContent=String(event.reason));
+setPimoDeveloperOverride(true);
+let record,view;
+function refresh(){
+    const workspace=ensureKnowledgeObjects(record,knowledge),region=workspace.regions.find(r=>r.rootId===workspace.activeRegionId),index=knowledgeObjectIndex(knowledge);
+    status.textContent=region?`${index.nodes.get(region.rootId)?.label} · ${['Seed','Activated wing','Developed cluster','Hub'][region.level]} · Focus: ${index.nodes.get(region.focusId)?.label} · ${region.visited.length} concepts discovered · One connected structure`:'Six folded domain faces · One connected seed';
+    const canvas=view.host.querySelector('canvas');canvas.dataset.architectureState=region?String(region.level):'0';
+    view.update({record,knowledge,expanded:record.demoExpandedNodeIds,onSelect:select});
+    window.knowledgeStarStudy={record,knowledge,select:choose,refresh};
+}
+function select(node){selectKnowledgeObjectFace(record,knowledge,node);refresh();}
+function reset(){
+    view?.destroy();record={id:'knowledge-star-study',demoType:'plant',name:'Pigeon Pea',demoExpandedNodeIds:[],demoSelectedNodeId:''};
+    knowledgeExplorer(record);knowledgeExplorerAction(record,'KnowledgeMode:explore');
+    view=mountKnowledgeObjectDesktop(field,{record,knowledge,expanded:[],onSelect:select});refresh();
+}
+function choose(id){
+    const index=knowledgeObjectIndex(knowledge),node=index.nodes.get(id);if(!node)return;
+    const chain=[];for(let parent=index.nodes.get(node.parentId);parent;parent=index.nodes.get(parent.parentId))chain.unshift(parent);
+    for(const parent of chain)spawnKnowledgeObject(record,knowledge,parent.id);
+    const workspace=ensureKnowledgeObjects(record,knowledge),region=workspace.regions.find(r=>r.rootId===workspace.activeRegionId);
+    if(region && node.parentId){const siblings=index.nodes.get(node.parentId)?.children || [];region.page=Math.floor(Math.max(0,siblings.findIndex(child=>child.id===id))/3);}
+    const face=ensureKnowledgeObjects(record,knowledge).items[0].faces.find(face=>face?.conceptId===id);
+    if(face)select({id,knowledgeFaceId:face.faceId,knowledgeObjectId:'object:core'});
+}
+document.querySelector('#reset').onclick=reset;
+document.querySelectorAll('[data-topic]').forEach(button=>button.onclick=()=>choose(button.dataset.topic));
+document.querySelector('#develop').onclick=()=>['uses','culinary','fresh-peas'].forEach(choose);
+document.querySelector('#hub').onclick=()=>['uses','culinary','fresh-peas','young-pods','dried-pulse'].forEach(choose);
+for(const [id,action] of [['fold','KnowledgeObjectCollapse'],['more','KnowledgeObjectFaces'],['back','KnowledgeObjectBack']])document.querySelector('#'+id).onclick=()=>{knowledgeExplorerAction(record,action);refresh();};
+document.querySelectorAll('[data-turn]').forEach(button=>button.onclick=()=>{knowledgeExplorerAction(record,'KnowledgeObjectTurn:'+button.dataset.turn);refresh();});
+reset();
+</script></html>

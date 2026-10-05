@@ -5,7 +5,7 @@ export const PIGEON_PEA_CONTROL_IMAGE = new URL('../../assets/pigeon-pea-cajanus
 export const DEMO_TUTORIAL_ART = Object.freeze({
     wheel:{image:new URL('../../assets/living-knowledge-seed-atlas.png',import.meta.url).href,alt:'Nourishland website hero knowledge wheel, a visual index to information that can grow around a place.'},
     curiosity:{image:new URL('../../assets/demo-tutorial-art/01-plant-curiosity.png',import.meta.url).href,alt:'A visitor pauses beside an unfamiliar plant, wondering what it is.'},
-    companion:{image:new URL('../../assets/demo-tutorial-art/02-companion-control-panel.png',import.meta.url).href,alt:'A visitor explores the NourishlandXR companion Control panel.'},
+    companion:{image:new URL('../../assets/media-panel-background.jpg',import.meta.url).href,alt:'A botanical mosaic of connected cells containing leaves, flowers and roots.'},
     references:{image:new URL('../../assets/demo-tutorial-art/03-cumbersome-reference-tools.png',import.meta.url).href,alt:'A visitor carries books, a phone, compass and field guides while identifying a plant.'},
     area:{image:new URL('../../assets/demo-tutorial-art/04-create-an-area.png',import.meta.url).href,alt:'A garden Area is organised as part of a living place.'},
     structure:{image:new URL('../../assets/demo-tutorial-art/04b-one-place-clear-structure.png',import.meta.url).href,alt:'Signs for a food forest, rainforest walk and school garden reveal Areas within one connected place.'},

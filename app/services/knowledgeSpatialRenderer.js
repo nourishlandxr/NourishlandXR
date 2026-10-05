@@ -6,12 +6,18 @@ import {pimVisibleNodes} from './plantInformationMesh.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,KNOWLEDGE_VISUALS} from './knowledgeExplorer.js';
 import {createSpatialTotemCards,hitTotemSurface,hitTotemPoint} from './spatialTotemCards.js';
 import {drawSpatialTether} from './spatialTetherRenderer.js';
-import {currentInfoOpacity,currentGraphicsQuality} from './spatialVisualSettings.js';
+import {currentInfoOpacity,currentGraphicsQuality,getSpatialVisualSettings} from './spatialVisualSettings.js';
 
 const caches=new WeakMap();
 const motionPreference=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 let fontRevision=0;globalThis.document?.fonts?.ready?.then(()=>{fontRevision++;});
 const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
+export const curiositySurfaceOpacity=value=>Math.max(0,Math.min(1,Number.isFinite(Number(value))?Number(value):1));
+// Opacity belongs to the draw uniform, so dragging glass sliders never changes
+// the cached artwork. The separate ink layer keeps labels and borders legible.
+export function knowledgeSurfaceLayer(surface,body=false){
+    return {...surface,opacity:surface.opacity*(body?curiositySurfaceOpacity(surface.card.infoOpacity):1),card:{...surface.card,infoOpacity:1,...(body?{hovered:false}: {})}};
+}
 const world=(pose,p)=>({x:pose.position.x+pose.right.x*p.x+pose.up.x*p.y+pose.normal.x*p.z,y:pose.position.y+pose.right.y*p.x+pose.up.y*p.y+pose.normal.y*p.z,z:pose.position.z+pose.right.z*p.x+pose.up.z*p.y+pose.normal.z*p.z});
 function nodePoint(node,spatial){
     const p=node.layoutGrid || {x:0,y:0},x=p.x*.18,y=-(p.y+p.x*.5)*.208;
@@ -44,7 +50,7 @@ export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performanc
         const tag=state.mode==='tag' && id==='core';
         const roles=(identity.roles || knowledge.roles || []).slice(0,3).map(role=>typeof role==='string'?role:role.label || role.title).filter(Boolean);
         surfaces.push({record,node,center:world(pose,p),right:pose.right,up:pose.up,normal:pose.normal,width:tag ? .43 : node.depth>0?.195:KNOWLEDGE_VISUALS.nodeWidth,height:tag ? .28 : node.depth>0?.169:KNOWLEDGE_VISUALS.nodeHeight,interactive:!exiting && (id==='core' || progress>.55),pressProgress:record.pimPressPath===node.path?Number(record.pimPressProgress)||0:0,
-            card:{id,core:id==='core' && !tag,child:node.depth>0,depth:node.depth || 0,title:node.label,scientific:tag?core.description:'',roles:tag?roles.join(' · '):'',subtitle:tag?(identity.identityStatement || knowledge.identityStatement || knowledge.summary || ''):'',identity:tag,branchColour:KNOWLEDGE_VISUALS.branchColours[node.rootDirection] || KNOWLEDGE_VISUALS.border,selected:selectedNode,contextual:role==='context',infoOpacity:node.depth>0?Math.max(.86,currentInfoOpacity()):currentInfoOpacity(),fontRevision,resolution:currentGraphicsQuality()==='low'?KNOWLEDGE_VISUALS.labelResolution/2:KNOWLEDGE_VISUALS.labelResolution,height:512,fadeDuration:120},opacity:(exiting?1-progress:id==='core' || cache.source.has(id)?1:smooth((progress-.30)/.70))*(role==='context' ? .62 : 1)});
+            card:{id,core:id==='core' && !tag,child:node.depth>0,depth:node.depth || 0,title:node.label,scientific:tag?core.description:'',roles:tag?roles.join(' · '):'',subtitle:tag?(identity.identityStatement || knowledge.identityStatement || knowledge.summary || ''):'',identity:tag,branchColour:KNOWLEDGE_VISUALS.branchColours[node.rootDirection] || KNOWLEDGE_VISUALS.border,selected:selectedNode,contextual:role==='context',infoOpacity:tag?currentInfoOpacity():curiositySurfaceOpacity(getSpatialVisualSettings().cellOpacity),fontRevision,resolution:currentGraphicsQuality()==='low'?KNOWLEDGE_VISUALS.labelResolution/2:KNOWLEDGE_VISUALS.labelResolution,height:512,fadeDuration:120},opacity:(exiting?1-progress:id==='core' || cache.source.has(id)?1:smooth((progress-.30)/.70))*(role==='context' ? .62 : 1)});
     }
     return surfaces;
 }
@@ -70,8 +76,11 @@ function labelCanvas(card){
     ctx.beginPath();
     if(card.identity)ctx.roundRect(18,62,476,388,34);
     else for(let i=0;i<6;i++){const angle=Math.PI/3*i,x=256+246*Math.cos(angle),y=256+284*Math.sin(angle);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();
-    const tint=new THREE.Color(card.branchColour),shade=tint.clone().multiplyScalar(card.child?.22:.30);ctx.fillStyle='#'+shade.getHexString();ctx.fill();
-    const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,`rgba(18,40,34,${Math.max(.52,card.infoOpacity)})`);gradient.addColorStop(1,`rgba(7,21,24,${Math.max(.52,card.infoOpacity)})`);ctx.globalAlpha=.46;ctx.fillStyle=gradient;ctx.fill();ctx.globalAlpha=1;
+    if(!card.inkOnly){
+    const tint=new THREE.Color(card.branchColour),shade=tint.clone().multiplyScalar(card.child?.22:.30);ctx.globalAlpha=card.infoOpacity;ctx.fillStyle='#'+shade.getHexString();ctx.fill();
+    const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,`rgba(18,40,34,${card.infoOpacity})`);gradient.addColorStop(1,`rgba(7,21,24,${card.infoOpacity})`);ctx.globalAlpha=.30;ctx.fillStyle=gradient;ctx.fill();ctx.globalAlpha=1;
+    }
+    if(card.bodyOnly)return canvas;
     ctx.lineJoin='round';ctx.lineWidth=card.selected || card.hovered?12:9;ctx.strokeStyle=card.hovered?'#f0fbf8':card.selected?KNOWLEDGE_VISUALS.selectedBorder:card.branchColour;ctx.stroke();
     // Keep power-of-two artwork for filtered distance viewing, but compensate
     // glyphs for the world card's aspect ratio so the type is not stretched.
@@ -90,23 +99,24 @@ function hitKnowledgeSurface(ray,surfaces){
 export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={}){
     let surfaces=[],recordSurfaces=[],objectInput=null,capabilities=null;
     const objects=createKnowledgeObjectRenderer(gl,{tether});
-    const cards=createSpatialTotemCards(gl,{canvas:labelCanvas,ray,surfaces:()=>recordSurfaces,containedFeedback:true,hitSurface:hitKnowledgeSurface});
+    const cards=createSpatialTotemCards(gl,{canvas:card=>labelCanvas({...card,inkOnly:true}),ray,surfaces:()=>recordSurfaces.map(surface=>knowledgeSurfaceLayer(surface)),containedFeedback:true,hitSurface:hitKnowledgeSurface});
+    const glass=createSpatialTotemCards(gl,{canvas:card=>labelCanvas({...card,bodyOnly:true}),ray:()=>null,surfaces:()=>recordSurfaces.map(surface=>knowledgeSurfaceLayer(surface,true))});
     return {
-        begin(){surfaces=[];cards.begin();objects.begin();},
+        begin(){surfaces=[];cards.begin();glass.begin();objects.begin();},
         draw(view,record,knowledge,expanded,pose,time=performance.now()){
             recordSurfaces=knowledgeSurfaces(record,knowledge,expanded,pose,time);
             if(knowledgeExplorer(record).mode==='explore'){
-                // Start the first die in reach, without moving the flower or plant.
-                if(!record.knowledgeExplorePose){const m=view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements,len=Math.hypot(m[8],m[10]) || 1,right={x:m[10]/len,y:0,z:-m[8]/len},normal={x:m[8]/len,y:0,z:m[10]/len};record.knowledgeExplorePose={position:{x:m[12]-normal.x*.55+right.x*.35,y:Math.max((record.knowledgeFloor || 0)+.2,m[13]-.45),z:m[14]-normal.z*.55+right.z*.35},right,normal,up:{x:0,y:1,z:0}};}
+                // The seed keeps its physical orientation while people explore.
+                if(!record.knowledgeExplorePose){const m=view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements,len=Math.hypot(m[8],m[10]) || 1,right={x:m[10]/len,y:0,z:-m[8]/len},normal={x:m[8]/len,y:0,z:m[10]/len};record.knowledgeExplorePose={position:{x:m[12]-normal.x*.75+right.x*.25,y:Math.max((record.knowledgeFloor || 0)+.65,m[13]-.30),z:m[14]-normal.z*.75+right.z*.25},right,normal,up:{x:0,y:1,z:0}};}
                 if(!isPimoDeveloperOverride())pose=record.knowledgeExplorePose;
-                const state=knowledgeExplorer(record),progress=motionPreference?.matches?1:smooth((time-state.changedAt)/KNOWLEDGE_VISUALS.transitionMs);
+                const state=knowledgeExplorer(record),progress=motionPreference?.matches?1:smooth((time-(state.exploreEnteredAt || 0))/KNOWLEDGE_VISUALS.transitionMs);
                 const folded=progress<1?recordSurfaces.map(surface=>({...surface,interactive:false,opacity:1-progress,center:{x:pose.position.x+(surface.center.x-pose.position.x)*(1-progress),y:pose.position.y+(surface.center.y-pose.position.y)*(1-progress),z:pose.position.z+(surface.center.z-pose.position.z)*(1-progress)}})):[];
-                objects.draw(view,record,knowledge,pose,progress);
+                objects.draw(view,record,knowledge,pose,progress,time);
                 const camera=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements));
                 recordSurfaces=knowledgeObjectSurfaces(record,knowledge,pose).filter(surface=>surface.normal.dot(camera.clone().sub(surface.center).normalize())>.16).map(surface=>({...surface,opacity:progress}));
                 surfaces.push(...recordSurfaces);recordSurfaces=[...recordSurfaces,...folded];
-                // Explorer labels belong to the die surface, not floating plaques.
-                if(folded.length)cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));return;
+                // Labels are inset in the hinged architecture itself.
+                if(folded.length){const objectsSurfaces=recordSurfaces;recordSurfaces=folded;glass.draw(view,{id:'knowledge-glass-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));recordSurfaces=objectsSurfaces;}return;
             }
             surfaces.push(...recordSurfaces);
             const state=knowledgeExplorer(record),byId=new Map(recordSurfaces.map(surface=>[surface.node.path || 'core',surface]));
@@ -123,9 +133,10 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
                     if(d>.03)for(const [start,end] of visibleBondSegments(a,b,recordSurfaces))drawSpatialTether(gl,tether,view,start,end,{segments:4,width:KNOWLEDGE_VISUALS.bondWidth,curve:0,lift:0,color:[...new THREE.Color(surface.card.branchColour).toArray(),(surface.node.contextual ? .28 : .80)*Math.max(surface.opacity,.08)]});
                 }gl.depthMask(true);
             }
+            glass.draw(view,{id:'knowledge-glass-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>surface.card));
             cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverPath===surface.node.path;return surface.card;}),record.demoSelectedNodeId || record.pimSelectedNodeId || '');
         },
-        end(){cards.end();},
+        end(){cards.end();glass.end();},
         bindSession(session,space,{canGrab=()=>true,mode,onActivate}={}){objectInput?.destroy();capabilities?.destroy();capabilities=bindPimoSpatialCapabilities(session,space,{mode,rendererReady:true});objectInput=bindKnowledgeObjectInteraction(session,space,{hit:(_source,inputRay)=>objects.hit(inputRay || ray()),near:point=>objects.near(point),canGrab,onActivate});},
         updateInput(frame){capabilities?.update(frame);objectInput?.update(frame);},
         get grabbing(){return Boolean(objectInput?.active);},
@@ -142,6 +153,6 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
         },
         surface(record,path){return surfaces.find(surface=>surface.record===record && surface.node.path===path && surface.interactive!==false);},
         clear(record){const cache=caches.get(record);if(cache)cache.key='';},
-        destroy(){objectInput?.destroy();capabilities?.destroy();cards.destroy();objects.destroy();surfaces=[];}
+        destroy(){objectInput?.destroy();capabilities?.destroy();cards.destroy();glass.destroy();objects.destroy();surfaces=[];}
     };
 }

@@ -1314,7 +1314,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function pressPlacementPointer\(event\)/);
     assert.doesNotMatch(source, /function guideFirstOrbAdjustment\(record\)|is-movement-tip|awaitingPositionAdjustment/);
     assert.match(source, /This Plant Orb connects information to this plant in the real place/);
-    assert.match(source, /button:'Place the sample Orb'[\s\S]*armDemoPlacement\('plant',\{explained:true\}\)/);
+    assert.match(source, /button:'See how it works'[\s\S]*armDemoPlacement\('plant',\{explained:true\}\)/);
     assert.doesNotMatch(source, /EDIT mode: press and hold the Pigeon Pea orb/);
     assert.doesNotMatch(source, /PLAY mode will open/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
@@ -1344,10 +1344,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const id=moringa\?'ELEMENTS 1\.12':'ELEMENTS 1\.6',step=guidedDemoStep\(id\)/);
     assert.match(source, /if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.setIntroduction\(true\);[\s\S]*infoPanel\?\.suspend\(false\);[\s\S]*if\(step\?\.art\)/);
     assert.doesNotMatch(source, /You do not need prior plant, farming or technology knowledge to begin/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /An Area groups related markers and messages/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /An Area keeps them organised/);
     assert.match(source, /const id=moringa\?'ELEMENTS 1\.12':'ELEMENTS 1\.6'/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Pigeon Pea keeps its own profile, ready to open again/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /return to Pigeon Pea whenever you like/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
@@ -1396,7 +1396,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     );
     assert.doesNotMatch(immersiveSelectStartHandler, /activateImmersiveDemoControl/);
     assert.match(immersiveSelectHandler, /selectGuidedDemoOrb\(\);/);
-    assert.match(source, /plant2: \['Compare a second plant'[\s\S]*Place Moringa beside Pigeon Pea/);
+    assert.match(source, /plant2: \[guidedDemoStep\('ELEMENTS 1\.9'\)\.title[\s\S]*Place Moringa beside Pigeon Pea/);
     assert.match(source, /function inviteVirtualTag\(record\)/);
     assert.match(source, /data-tryit-open-live-tag hidden/);
     assert.match(source, /data-tryit-skip/);
@@ -1483,10 +1483,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS/);
     assert.match(source, /DEMO_QUICK_ACCESS_COPY\['INTRO 1\.1'\]/);
     assert.match(source, /demoViewerPointerFallbackAllowed/);
-    assert.match(source, /button:'Place the sample Orb'/);
+    assert.match(source, /button:'See how it works'/);
     assert.match(source, /hasPhoneScreenInput=Array\.from\(session\?\.inputSources \|\| \[\]\)/);
     assert.match(source, /phoneArPanel=Boolean\(!simulated && sessionMode==='immersive-ar'/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /A Plant Orb is a marker that opens a plant profile/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Plant Orb beside it, creating a starting point/);
     assert.match(source, /limActivation\.start\(node\.key,performance\.now\(\),'xr-hold'\)/);
     assert.doesNotMatch(source, /Hold to open selected learning cell/);
     assert.doesNotMatch(livingStyles, /--lim-progress|is-lim-holding/);
@@ -1688,8 +1688,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Give the Area a Totem/);
     assert.match(source, /function createDemoTotemExample\(\)/);
     assert.match(source, /pairedDemoTotemPosition\(1,groundBaseY\)/);
-    assert.match(source, /A Totem welcomes you to an Area/);
-    assert.match(source, /A link creates a visitor route between Areas/);
+    assert.match(source, /guidedDemoStep\('ELEMENTS 1\.18'\)\.title/);
+    assert.match(source, /guidedDemoStep\('ELEMENTS 1\.22'\)/);
     assert.match(source, /tutorialStage: 'totem'/);
     assert.deepEqual(DEMO_NOTE_IMMERSIVE_SCALE,{x:2.15,y:1.65});
     assert.match(source, /const noteScale = noteSign \? record\.demoAmbientNeighbour/);

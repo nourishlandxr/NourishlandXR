@@ -72,9 +72,9 @@ test('Try It Now offers optional LIM paths and a concise post-plant journey',()=
  assert.match(source,/Try Understand This Place/);
  assert.match(source,/armDemoPlacement\(nextStage,\{explained:true\}\)/);
  assert.match(source,/const placementDelay = demoStage === 'note' \? 120 : demoStage==='totem'\?220:360/);
- assert.equal(guidedDemoStep('ELEMENTS 1.17').title,'Read the message where it belongs');
- assert.equal(guidedDemoStep('ELEMENTS 1.20').title,'Connect the two Totems');
- assert.match(guidedDemoStep('ELEMENTS 1.20').main,/Each keeps its own information/);
+ assert.equal(guidedDemoStep('ELEMENTS 1.17').title,'A message connected to place');
+ assert.equal(guidedDemoStep('ELEMENTS 1.20').title,'Give visitors a direction');
+ assert.match(guidedDemoStep('ELEMENTS 1.20').main,/own locations/);
  assert.match(source,/showIntroBoard\(step\.title,step\.main,label,onContinue,\{stepLabel,nextGuide:step\.hint\}\)/);
  assert.match(styles,/\.tryit-sim-totem-pillar[^\n]*background: #70875b/);
  assert.match(styles,/\.tryit-sim-marker-zone:not\(\.is-expanded\)[^\n]*background:#70875b/);
@@ -569,7 +569,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
     assert.match(source, /function createDemoTotemExample\(\)/);
-    assert.match(source, /A Totem welcomes you to an Area and keeps its local information together/);
+    assert.match(guidedDemoStep('ELEMENTS 1.18').main, /signs help visitors/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.doesNotMatch(source, /const DEMO_TOTEM_STYLES|function cycleDemoTotemStyle\(record\)/);
     assert.match(previewSource, /is-totem-style-basic/);

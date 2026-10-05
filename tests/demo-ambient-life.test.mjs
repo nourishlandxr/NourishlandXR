@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BEE_ENCOUNTER_DURATION_MS, BEE_FIRST_ENCOUNTER_MS, demoBeeEncounter, demoBeePose, drawDemoAmbientLife } from '../app/services/demoAmbientLife.js';
 
-test('bees arrive after their introduction and orbit around the welcome screen', () => {
+test('bees arrive after their introduction and wander around the welcome screen', () => {
     assert.equal(demoBeePose(1200,2000,0),null);
     assert.equal(demoBeePose(2500,2000,1),null);
     const depths=[];
@@ -16,7 +16,7 @@ test('bees arrive after their introduction and orbit around the welcome screen',
         const bee=demoBeePose(elapsed,2000,0);
         assert.ok(bee.x>.15 && bee.x<.85);
         assert.ok(bee.y>.17 && bee.y<.83);
-        assert.ok(Math.abs(Math.hypot(bee.x-.5,bee.y-.5)-.3)<.04);
+        assert.ok(Math.hypot(bee.x-.5,bee.y-.5)<.4);
         assert.ok(bee.opacity>=0 && bee.opacity<=.92);
         depths.push(bee.depth);
     }
@@ -89,4 +89,15 @@ test('the supplied animated bee asset is bundled with its attribution', () => {
     assert.ok(json.animations.some(animation=>animation.name==='hover'));
     assert.ok(json.meshes.length>0 && json.skins.length>0);
     assert.match(readFileSync(new URL('../app/assets/bee-CREDITS.txt',import.meta.url),'utf8'),/etro313[\s\S]*CC BY 4\.0/);
+});
+
+
+test('ordinary bee flight varies its radius and stays continuous',()=>{
+ const radii=[];
+ for(let time=2000;time<122000;time+=100){
+  const a=demoBeePose(time,2000,0,{encounters:false}),b=demoBeePose(time+1,2000,0,{encounters:false});
+  radii.push(Math.hypot(a.x-.5,a.y-.5));
+  assert.ok(Math.hypot(b.x-a.x,b.y-a.y)<.002);
+ }
+ assert.ok(Math.max(...radii)-Math.min(...radii)>.12,'flight is not a fixed circular orbit');
 });

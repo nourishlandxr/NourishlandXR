@@ -2,7 +2,7 @@ import {knowledgeObjectAction} from './knowledgeObjectModel.js';
 import {supportsSpatialPIMO,availablePimoModes} from './pimoSpatialCapabilities.js';
 export {availablePimoModes} from './pimoSpatialCapabilities.js';
 // Presentation state over the existing knowledge document, never a second graph.
-export const KNOWLEDGE_MODES=Object.freeze({tag:{label:'Tag',question:'What is this?',description:'Compact view for quick, discreet details.',hint:'See the essentials at a glance.'},curiosity:{label:'Curiosity',question:'Why is this interesting?',description:'Standard flower view with linked topic cells.',hint:'Follow what makes it interesting.'},explore:{label:'Explorer',question:'Optional 3D experiment',description:'Optional experimental 3D dice for building knowledge.',hint:'Explorer is experimental. Grab to turn or move. Touch a face and hold briefly to explore.'}});
+export const KNOWLEDGE_MODES=Object.freeze({tag:{label:'Tag',question:'What is this?',description:'Compact view for quick, discreet details.',hint:'See the essentials at a glance.'},curiosity:{label:'Curiosity',question:'Why is this interesting?',description:'Standard flower view with linked topic cells.',hint:'Follow what makes it interesting.'},explore:{label:'Explorer',question:'How does this knowledge grow?',description:'Unfold domain faces into a connected knowledge star.',hint:'Hold a face to open its wing. Explore the inset topics. Knowledge develops the structure.'}});
 export const KNOWLEDGE_VISUALS=Object.freeze({primaryBonds:6,secondaryBonds:3,maxCuriosityChildren:3,curiosityAttention:24,exploreAttention:18,groupGap:1.65,transitionMs:620,nodeWidth:.24,nodeHeight:.208,planarPitch:.20,shellRadius:.40,shellStep:.24,bondWidth:.0026,labelResolution:512,labelFont:64,ink:'#edf3e4',border:'#adc6bc',selectedBorder:'#dceabd',branchColours:Object.freeze({top:'#47dcb2','upper-right':'#c9e44b','lower-right':'#ffb34e',bottom:'#49c5f0','lower-left':'#ef75b6','upper-left':'#ab8cff'})});
 const discoveryKey = 'nxr-saved-discoveries';
 let savedDiscoveries=null;
@@ -37,7 +37,7 @@ export function knowledgeExplorerAction(record,action,time=globalThis.performanc
     if(action!=='KnowledgeSave')state.saved=false;
     if(action.startsWith('KnowledgeMode:')){const mode=action.split(':')[1];if(!availablePimoModes().includes(mode) || state.mode===mode)return false;if(state.mode==='curiosity' && mode==='explore')state.curiositySnapshot={positions:JSON.parse(JSON.stringify(state.positions)),pages:{...state.pages}};
         if(mode==='curiosity' && state.curiositySnapshot){const snapshot=state.curiositySnapshot;state.positions={...snapshot.positions,...state.positions};state.pages={...snapshot.pages,...state.pages};}
-        state.previousMode=state.mode;state.mode=mode;}
+        state.previousMode=state.mode;state.mode=mode;if(mode==='explore')state.exploreEnteredAt=time;}
     else if(action.startsWith('KnowledgeObject')){return state.mode==='explore' && knowledgeObjectAction(record,action);}
     else if(action==='KnowledgeConnections')state.connections=!state.connections;
     else if(action==='KnowledgeContext')state.context=!state.context;
@@ -58,6 +58,8 @@ export function restoreKnowledgeDiscovery(record,value){
     const demo=Boolean(record.demoType),state=knowledgeExplorer(record);
     record[demo?'demoSelectedNodeId':'pimSelectedNodeId']=value.activeNodeId || '';
     record[demo?'demoExpandedNodeIds':'pimExpandedNodeIds']=[...(value.expandedNodeIds || [])];
-    state.objects=value.objects?.version===1?JSON.parse(JSON.stringify(value.objects)):undefined;state.curiositySnapshot=value.curiositySnapshot?JSON.parse(JSON.stringify(value.curiositySnapshot)):undefined;state.mode=availablePimoModes().includes(value.mode)?value.mode:'curiosity';state.pages={...value.pages};state.positions={...value.positions};state.history=[...(value.history || [])];state.readingPage=value.readingPage || 0;state.selectedConceptId=value.selectedConceptId || '';state.connections=value.connections!==false;state.context=value.context!==false;state.changedAt=globalThis.performance?.now?.() || 0;state.revision++;return true;
+    state.objects=[1,2].includes(value.objects?.version)?JSON.parse(JSON.stringify(value.objects)):undefined;
+    if(state.objects?.version===2)for(const region of state.objects.regions || [])delete region.transition;
+    state.curiositySnapshot=value.curiositySnapshot?JSON.parse(JSON.stringify(value.curiositySnapshot)):undefined;state.mode=availablePimoModes().includes(value.mode)?value.mode:'curiosity';state.pages={...value.pages};state.positions={...value.positions};state.history=[...(value.history || [])];state.readingPage=value.readingPage || 0;state.selectedConceptId=value.selectedConceptId || '';state.connections=value.connections!==false;state.context=value.context!==false;state.changedAt=globalThis.performance?.now?.() || 0;state.revision++;return true;
 }
 export function rememberKnowledgeSelection(record,path){const state=knowledgeExplorer(record);if(!state || state.history?.at(-1)===path)return;state.history=[...(state.history || []),path].slice(-32);state.saved=false;}

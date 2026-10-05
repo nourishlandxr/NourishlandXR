@@ -28,7 +28,7 @@ export async function prepareAssetGroup(assets,{onProgress=()=>{},concurrency=2}
 const assetURL=path=>new URL('../assets/'+path,import.meta.url).href;
 export const AR_PRELOAD_ASSETS=Object.freeze({
  critical:['living-knowledge-seed-atlas.png'],
- nearFuture:['demo-tutorial-art/01-plant-curiosity.png','pigeon-pea-cajanus-cajan.png'],
+ nearFuture:['media-panel-background.jpg','demo-tutorial-art/01-plant-curiosity.png','pigeon-pea-cajanus-cajan.png'],
  // Remaining tutorial/LIMO illustrations, project media and optional audio stay on demand.
 });
 const sessions=new Map();

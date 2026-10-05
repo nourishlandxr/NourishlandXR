@@ -26,14 +26,14 @@ export function mountKnowledgeObjectDesktop(container,options){
             if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;}
             if(framedCount!==workspace.items.length){framedCount=workspace.items.length;focus.set(workspace.items.reduce((sum,item)=>sum+item.position.x,0)/framedCount,workspace.items.reduce((sum,item)=>sum+item.position.y,0)/framedCount,0);}
             if(workspace.focusObjectId && workspace.focusObjectId!==focusedObjectId){focusedObjectId=workspace.focusObjectId;const target=workspace.items.find(item=>item.id===focusedObjectId);if(target)focus.set(target.position.x,target.position.y,target.position.z);}
-            camera.aspect=width/height;camera.position.set(focus.x,focus.y,focus.z+Math.max(.75,.6/camera.aspect,.6+framedCount*.2));camera.lookAt(focus);camera.updateMatrixWorld();camera.updateProjectionMatrix();
+            camera.aspect=width/height;camera.position.set(focus.x,focus.y,focus.z+Math.max(1.2,.9/camera.aspect));camera.lookAt(focus);camera.updateMatrixWorld();camera.updateProjectionMatrix();
             gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
             const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};
             painter.begin();painter.draw(view,record,knowledge,expanded,pose,time);painter.end();
             canvas.dataset.objects=String(workspace.items.length);canvas.dataset.connectors=String(workspace.connectors.length);canvas.dataset.rotation=JSON.stringify(selected.rotation);canvas.dataset.arrangement=JSON.stringify(workspace.items.map(item=>({id:item.id,position:item.position,rotation:item.rotation})));
             hint.textContent=workspace.interaction==='move'?'Drag an object to move it. Choose Finish moving to return to turning.':KNOWLEDGE_OBJECT_INSTRUCTION;
         }
-        if(time-settings.record.knowledgeExplorer.changedAt<700 || time<settleUntil || gesture)request(true);
+        if(time-settings.record.knowledgeExplorer.changedAt<1000 || time<settleUntil || gesture)request(true);
     }
     listen(canvas,'pointerdown',event=>{
         if(event.button && event.pointerType==='mouse' || gesture)return;event.stopPropagation();event.preventDefault();const hit=painter?.hit(rayAt(event),settings.record);if(!hit)return;

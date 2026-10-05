@@ -1,36 +1,302 @@
-// Guided narration only. Placement, selection, grabbing and face activation
-// continue to use the existing interaction paths.
+// Guided narration from the reviewed demo.docx. Interaction handlers retain their existing mechanics.
 export const DEMO_GUIDED_STEPS = Object.freeze([
-    {id:'INTRO 1.1',act:'Introduce the tool',title:'Information where you need it',main:'NourishlandXR connects digital information to the world around you. Discover a plant, explore knowledge about a place, or follow directions through the landscape — with information available where it matters.',panel:'Hidden.',hint:'See how it works.',art:'opening'},
-    {id:'INTRO 1.2',act:'Introduce the tool',title:'Try the tools with sample content',main:'Visitors explore. Teachers support learning. Creators organise local knowledge. This demo uses prepared examples in the room around you. No garden or plant knowledge is needed.',panel:'Hidden. A real garden project is a separate experience after the sample demo.',hint:'Start the sample demo.',art:'opening'},
-    {id:'SPACE 1.1',act:'Meet the panel',title:'Your Control panel',main:'This panel shows details about what you select. The main screen gives you one next action. We will introduce the other buttons when they become useful.',panel:'A compact panel with its companion image visible. Media, Controls and Settings are initially closed.',hint:'Continue to the first sample.',art:null},
-    {id:'SPACE 1.2',act:'Place a sample',title:'What is a Plant Orb?',main:'A Plant Orb is a marker that opens a plant profile. Our sample is Pigeon Pea, a shrub grown for edible peas. We chose it to demonstrate several kinds of information.',panel:'Keep the companion image available without repeating the main message.',hint:'Place the sample marker in front of you.',art:'curiosity'},
-    {id:'ELEMENTS 1.5',act:'Place a sample',title:'Place the sample Orb',main:'Place the Pigeon Pea marker in a comfortable spot in front of you. This prepared profile lets you try the tool without a real plant nearby.',panel:'Existing placement controls; media closed.',hint:'Aim at an open space and use the placement control.',art:null},
-    {id:'ELEMENTS 1.6',act:'Open a profile',title:'Open your first plant profile',main:'The Orb is ready. Select it to open Pigeon Pea information. Its location stays in view while you read.',panel:'Selected plant identity. Curiosity is the standard presentation.',hint:'Select the Pigeon Pea Orb.',art:null},
-    {id:'ELEMENTS 1.7',act:'Open a profile',title:'The compact Tag view',main:'Tag shows the essentials. Use Controls to return to Curiosity when you want the information cells, or continue the demo.',panel:'Optional compact view, not a required lesson.',hint:'Curiosity is the standard view.',art:null},
-    {id:'PIMO 1.2',act:'Find a useful detail',title:'Find a use for the sample plant',main:'Open Uses to see what this sample plant provides. We will follow one example, then show how the panel helps you read it.',panel:'Plant profile in Curiosity; keep only the relevant branch in focus.',hint:'Select Uses.',art:null},
-    {id:'PIMO 1.2a',act:'Find a useful detail',title:'Choose the food examples',main:'Uses contains several kinds of information. Culinary groups the food examples. Select it to see the next choices.',panel:'Uses information and its immediate child cells.',hint:'Select Culinary.',art:null},
-    {id:'PIMO 1.2b',act:'Find a useful detail',title:'Open one specific example',main:'Fresh peas describes one harvest and preparation example. Select it to read the detail.',panel:'Culinary information and its child cells.',hint:'Select Fresh peas.',art:null},
-    {id:'PIMO 1.2c',act:'Find a useful detail',title:'A useful detail, ready to read',main:'Pigeon Pea\u2019s green seeds can be harvested and cooked while tender. You have moved from a plant marker to one specific piece of information.',panel:'Authored Fresh peas information, breadcrumb and matching media if available.',hint:'Continue to learn about Media.',art:null},
-    {id:'PANEL 1.1',act:'Meet the panel tools',title:'Media opens the related image',main:'Media is now open with an image related to your selection. Press Media to hide or show it when you need more room to read.',panel:'Open the selected cell or plant\u2019s authored image. Media is a panel opener, visually distinct from demo progression actions.',hint:'Review the image, then continue.',art:null},
-    {id:'PANEL 1.2',act:'Meet the panel tools',title:'Controls and Settings',main:'Settings is now open with display and comfort preferences. Controls explains the available information views. You can open either panel whenever you need it.',panel:'Open Settings and Controls for their introduction. Explain Tag, Curiosity and optional Explorer inside Controls. Continuing closes these panels and restores Curiosity.',hint:'Review the panels, then continue. Changing views is optional.',art:null},
-    {id:'ELEMENTS 1.9',act:'Compare profiles',title:'Each Orb carries its own profile',main:'Add our second sample, Moringa, to see how separate markers open separate profiles. Place it beside Pigeon Pea with enough room to select either one.',panel:'Keep the first sample and its information available.',hint:'Add the Moringa sample.',art:null},
-    {id:'ELEMENTS 1.11',act:'Compare profiles',title:'Place the second sample',main:'Each Orb carries its own profile. Place our second sample, Moringa, beside Pigeon Pea to see how selecting another marker changes the information.',panel:'Existing placement controls; media closed.',hint:'Place the Moringa Orb.',art:null},
-    {id:'ELEMENTS 1.12',act:'Compare profiles',title:'Switch between the sample profiles',main:'Select Moringa to see its information. The panel title and image follow your selection. Pigeon Pea keeps its own profile, ready to open again.',panel:'Selected plant information only; Curiosity remains standard.',hint:'Select Moringa, or continue to add a sample Note.',art:null},
-    {id:'ELEMENTS 1.14',act:'Leave a message',title:'What does a Note do?',main:'A Note attaches a message to a location. It can explain a task or give a reminder. We will use a prepared message beside the sample plants.',panel:'No invented observation or typing task.',hint:'Add the prepared Note.',art:null},
-    {id:'ELEMENTS 1.16',act:'Leave a message',title:'Place the sample Note',main:'A Note attaches a message to a location. Our prepared message invites people to open either sample profile. Place it beside the Orbs.',panel:'Existing Note placement controls. Prepared message: Two sample plant profiles are available here. Select either Orb to explore.',hint:'Choose a location and place the Note.',art:'note'},
-    {id:'ELEMENTS 1.17',act:'Leave a message',title:'Read the message where it belongs',main:'Select the Note to read its message. It stays associated with this location, while each plant keeps its own profile.',panel:'Selected Note content and existing Note controls.',hint:'Select the Note, then continue to organise the area.',art:null},
-    {id:'SPACE 1.4',act:'Organise an area',title:'Group the sample information',main:'An Area groups related markers and messages. We will call this sample group My area. A Totem identifies it and provides signs pointing to its contents.',panel:'Keep the sample plants and Note visible.',hint:'Show the first Totem.',art:null},
-    {id:'ELEMENTS 1.18',act:'Organise an area',title:'Show the first Totem',main:'A Totem identifies an Area and helps visitors find its contents. This first one belongs to My area, with signs for the sample plants and Note.',panel:'Totem example and preloaded signage. Floor adjustment remains in Settings.',hint:'Show the My area Totem.',art:'totem'},
-    {id:'ELEMENTS 1.19',act:'Organise an area',title:'Signs and visibility',main:'Signs opens or closes the Totem\u2019s signage. Fade reduces the Totem\u2019s visibility; Wake restores it. These controls let you adjust the view while the Area keeps its information.',panel:'Existing Signs and Fade/Wake controls. Signs are already visible on arrival.',hint:'Try the controls if you like, then create Second Area.',art:'totem'},
-    {id:'AREA 1.2',act:'Connect areas',title:'Why add a second Area?',main:'Another Area can hold its own information. Create Second Area to see how a link provides directions between two groups. Both are prepared examples in this room.',panel:'My area and its content remain visible.',hint:'Create the Second Area Totem.',art:null},
-    {id:'ELEMENTS 1.20',act:'Connect areas',title:'Connect the two Totems',main:'Second Area contains its own sample plants and Note. Connect the Totems to give visitors directions between the Areas. Each keeps its own information.',panel:'Second Area and local content. No remote destination sign until the link is created.',hint:'Select Connect the Totems.',art:null},
-    {id:'ELEMENTS 1.21',act:'Connect areas',title:'See which destination a sign means',main:'Select the Second Area sign on the first Totem. The destination\u2019s notification light pulses while its sign is selected, showing which Area it refers to.',panel:'Remote Totem notification uses its existing white strip. No surrounding destination outline.',hint:'Select the Second Area sign.',art:null},
-    {id:'ELEMENTS 1.22',act:'Connect areas',title:'From local information to directions',main:'The same signs can point to plants, Notes or another Area. You have seen how separate groups stay organised while visitors find their way between them.',panel:'Keep local information available without repeating the full main message.',hint:'Continue to the final feature: Learning Pathways.',art:'connectedAreas'},
-    {id:'LEARNING 1.6',act:'Learning pathways',title:'Turn information into a learning activity',main:'Learning Pathways connects information with questions and activities. We will use the plant detail you already opened for one prepared example.',panel:'Four uniform starting cells grow from the Living Frame. Learning Pathways is the final feature.',hint:'Open the learning example.',art:'connection'},
-    {id:'LEARNING 1.7',act:'Learning pathways',title:'Four starting topics',main:'Hold a starting cell to explore its learning topic, or continue to our prepared Uses connection. Its source and target will appear together for you.',panel:'Selected learning cell information and authored image. No need to find a nested target before starting the guided connection.',hint:'Try a starting topic, or connect the sample plant.',art:'pathways'},
-    {id:'LEARNING 1.8',act:'Learning pathways',title:'Use what you already opened',main:'Connect Pigeon Pea Uses to Uses and Making. This turns a plant detail into a starting point for a learning activity.',panel:'Uses is the guided default. Other prepared connection examples remain optional.',hint:'Show the source and target together.',art:null},
-    {id:'CLOSURE 1.1',act:'Finish the sample',title:'You have tried the tools',main:'You opened profiles, read a local message, connected Areas and linked information to learning. These were prepared samples. After finishing, explore a separate real garden project from the welcome screen.',panel:'Finish the sample cleanly. Any available published project is a separate choice after returning to welcome.',hint:'Finish the sample demo.',art:null}
+    {
+        "id": "INTRO 1.1",
+        "act": "Introduce the tool",
+        "title": "Knowledge connected to place",
+        "main": "NourishlandXR brings information, knowledge and observations into the places they belong.\n\nA plant can share its story. Something noticed today can be left for someone to discover later. Information can connect what you see with what you want to understand.\n\nAs more is added, a place becomes richer with knowledge that can be explored, shared and built on over time.",
+        "panel": "Hidden.",
+        "hint": "See how it works.",
+        "art": "opening"
+    },
+    {
+        "id": "INTRO 1.2",
+        "act": "Introduce the tool",
+        "title": "Try the tools with sample content",
+        "main": "NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples. No experience is needed — just take your time and follow your curiosity.",
+        "panel": "Hidden. A real garden project is a separate experience after the sample demo.",
+        "hint": "Start the sample demo.",
+        "art": "opening"
+    },
+    {
+        "id": "SPACE 1.1",
+        "act": "Meet the panel",
+        "title": "Your Control Panel",
+        "main": "The Control Panel keeps information and useful actions close by as you explore. We’ll introduce more of it naturally along the way.",
+        "panel": "A compact panel with its companion image visible. Media, Controls and Settings are initially closed.",
+        "hint": "Continue to the first sample.",
+        "art": null
+    },
+    {
+        "id": "SPACE 1.2",
+        "act": "Place a sample",
+        "title": "Something catches your attention",
+        "main": "Imagine you come across a tree or plant and wonder — what is it? Is it edible? How does it grow? What role could it play here?\n\nYou can add that plant and place a Plant Orb beside it, creating a starting point for its information, observations and discoveries.\n\nYou can choose from plants already available, or create your own.",
+        "panel": "Keep the companion image available without repeating the main message.",
+        "hint": "Place the sample marker in front of you.",
+        "art": "curiosity"
+    },
+    {
+        "id": "ELEMENTS 1.5",
+        "act": "Place a sample",
+        "title": "Place the first Plant Orb",
+        "main": "Place the Pigeon Pea Orb in a comfortable spot in front of you. In a real place, its Orb would sit beside the plant.",
+        "panel": "Existing placement controls; media closed.",
+        "hint": "Aim at an open space and use the placement control.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.6",
+        "act": "Open a profile",
+        "title": "Your first plant to explore",
+        "main": "Let’s begin with Pigeon Pea — a versatile shrub grown in many parts of the world for food, soil improvement and its many roles in the garden.\n\nIts Plant Orb is now in place. Select it and start discovering what makes this plant interesting.",
+        "panel": "Selected plant identity. Curiosity is the standard presentation.",
+        "hint": "Select the Pigeon Pea Orb.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.7",
+        "act": "Open a profile",
+        "title": "The compact Tag view",
+        "main": "Tag shows the essentials. Use Controls to return to Curiosity when you want the information cells, or continue the demo.",
+        "panel": "Optional compact view, not a required lesson.",
+        "hint": "Curiosity is the standard view.",
+        "art": null
+    },
+    {
+        "id": "PIMO 1.2",
+        "act": "Find a useful detail",
+        "title": "There’s more to discover",
+        "main": "There are many ways to get to know a plant. You might wonder how it grows, what it can provide, how it supports other life, or why it suits a particular place.\n\nLet’s follow one of those questions and see where it leads.",
+        "panel": "Plant profile in Curiosity; keep only the relevant branch in focus.",
+        "hint": "Select Uses.",
+        "art": null
+    },
+    {
+        "id": "PIMO 1.2a",
+        "act": "Find a useful detail",
+        "title": "Follow Uses",
+        "main": "Select Culinary to discover the food examples.",
+        "panel": "Uses information and its immediate child cells.",
+        "hint": "Select Culinary.",
+        "art": null
+    },
+    {
+        "id": "PIMO 1.2b",
+        "act": "Find a useful detail",
+        "title": "Explore one use",
+        "main": "Select Fresh peas to see one way Pigeon Pea can be used.",
+        "panel": "Culinary information and its child cells.",
+        "hint": "Select Fresh peas.",
+        "art": null
+    },
+    {
+        "id": "PIMO 1.2c",
+        "act": "Find a useful detail",
+        "title": "A detail you can return to",
+        "main": "You can keep exploring, or take a closer look at the related image.",
+        "panel": "Authored Fresh peas information, breadcrumb and matching media if available.",
+        "hint": "Continue to learn about Media.",
+        "art": null
+    },
+    {
+        "id": "PANEL 1.1",
+        "act": "Meet the panel tools",
+        "title": "A closer look",
+        "main": "Want a closer look? Media shows the image connected to your selection.",
+        "panel": "Open the selected cell or plant’s authored image. Media is a panel opener, visually distinct from demo progression actions.",
+        "hint": "Review the image, then continue.",
+        "art": null
+    },
+    {
+        "id": "PANEL 1.2",
+        "act": "Meet the panel tools",
+        "title": "Different ways to see information",
+        "main": "Sometimes you want a quick answer. Other times, you might want to explore a plant more deeply.\n\nTag gives you the essentials at a glance, while Curiosity lets you follow different branches of knowledge.",
+        "panel": "Show the available view choices in Controls without opening Settings. Explain Tag, Curiosity and optional Explorer there. Continuing closes Controls and restores Curiosity.",
+        "hint": "Review the panels, then continue. Changing views is optional.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.9",
+        "act": "Compare profiles",
+        "title": "Another plant, another story",
+        "main": "Every plant brings a different story. Add Moringa beside Pigeon Pea and explore what it can share.",
+        "panel": "Keep the first sample and its information available.",
+        "hint": "Add the Moringa sample.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.11",
+        "act": "Compare profiles",
+        "title": "Add Moringa",
+        "main": "Place Moringa beside Pigeon Pea. Each plant keeps its own information, ready for you to explore.",
+        "panel": "Existing placement controls; media closed.",
+        "hint": "Place the Moringa Orb.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.12",
+        "act": "Compare profiles",
+        "title": "Explore another story",
+        "main": "Select Moringa to open its information. You can return to Pigeon Pea whenever you like.",
+        "panel": "Selected plant information only; Curiosity remains standard.",
+        "hint": "Select Moringa, or continue to add a sample Note.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.14",
+        "act": "Leave a message",
+        "title": "Leave something behind",
+        "main": "A plant profile tells part of a story. A Note lets someone leave an observation, a reminder or a message for another person to discover later.",
+        "panel": "No invented observation or typing task.",
+        "hint": "Add the prepared Note.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.16",
+        "act": "Leave a message",
+        "title": "Leave a message here",
+        "main": "Place this example Note beside the plants. In a real place, you could leave a seasonal observation or a useful message for the next visitor.",
+        "panel": "Existing Note placement controls. Prepared message: Two sample plant profiles are available here. Select either Orb to explore.",
+        "hint": "Choose a location and place the Note.",
+        "art": "note"
+    },
+    {
+        "id": "ELEMENTS 1.17",
+        "act": "Leave a message",
+        "title": "A message connected to place",
+        "main": "Select the Note to read it. Someone visiting later can discover the message where it belongs.",
+        "panel": "Selected Note content and existing Note controls.",
+        "hint": "Select the Note, then continue to organise the area.",
+        "art": null
+    },
+    {
+        "id": "SPACE 1.4",
+        "act": "Organise an area",
+        "title": "Bring the pieces together",
+        "main": "So far, we have explored plants, knowledge and a local message. In a real place, many of these pieces can grow together. An Area keeps them organised, with a Totem as its welcome point.",
+        "panel": "Keep the sample plants and Note visible.",
+        "hint": "Show the first Totem.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.18",
+        "act": "Organise an area",
+        "title": "A welcome point for My area",
+        "main": "This Totem belongs to My area. Its signs help visitors find the plants and messages that belong here.",
+        "panel": "Totem example and preloaded signage. Floor adjustment remains in Settings.",
+        "hint": "Show the My area Totem.",
+        "art": "totem"
+    },
+    {
+        "id": "ELEMENTS 1.19",
+        "act": "Organise an area",
+        "title": "Find what belongs here",
+        "main": "The Totem names the Area. Its signs point toward nearby plants and Notes, giving visitors a way to find what they want to explore.",
+        "panel": "Existing Signs and Fade/Wake controls. Signs are already visible on arrival.",
+        "hint": "Try the controls if you like, then create Second Area.",
+        "art": "totem"
+    },
+    {
+        "id": "AREA 1.2",
+        "act": "Connect areas",
+        "title": "Connect another area",
+        "main": "A larger place can hold several Areas, each with its own stories. Add Second Area to see how visitors can find their way between them.",
+        "panel": "My area and its content remain visible.",
+        "hint": "Create the Second Area Totem.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.20",
+        "act": "Connect areas",
+        "title": "Give visitors a direction",
+        "main": "Connect the Totems so each Area can point toward the other. Their plants and messages remain connected to their own locations.",
+        "panel": "Second Area and local content. No remote destination sign until the link is created.",
+        "hint": "Select Connect the Totems.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.21",
+        "act": "Connect areas",
+        "title": "Follow the direction",
+        "main": "Select the Second Area sign on My area. Its arrow points toward the destination, helping you see where to go next.",
+        "panel": "Remote Totem notification uses its existing white strip. No surrounding destination outline.",
+        "hint": "Select the Second Area sign.",
+        "art": null
+    },
+    {
+        "id": "ELEMENTS 1.22",
+        "act": "Connect areas",
+        "title": "A place that can grow with knowledge",
+        "main": "Plants, observations and directions can become part of one connected place. There is one optional learning example you can explore before finishing.",
+        "panel": "Keep local information available without repeating the full main message.",
+        "hint": "Continue to the final feature: Learning Pathways.",
+        "art": "connectedAreas"
+    },
+    {
+        "id": "LEARNING 1.6",
+        "act": "Learning pathways",
+        "title": "An optional learning discovery",
+        "main": "Want to see how this can become a learning experience? Open Learning Pathways, or choose Finish without learning example in the Control Panel.",
+        "panel": "Four uniform starting cells grow from the Living Frame. Learning Pathways is the final feature.",
+        "hint": "Open the learning example.",
+        "art": "connection"
+    },
+    {
+        "id": "LEARNING 1.7",
+        "act": "Learning pathways",
+        "title": "A question to explore",
+        "main": "Explore a starting topic, or follow the Uses example to connect plant information with a learning activity.",
+        "panel": "Selected learning cell information and authored image. No need to find a nested target before starting the guided connection.",
+        "hint": "Try a starting topic, or connect the sample plant.",
+        "art": "pathways"
+    },
+    {
+        "id": "LEARNING 1.8",
+        "act": "Learning pathways",
+        "title": "Build on what you discovered",
+        "main": "Connect Pigeon Pea Uses to Uses and Making. One plant detail can become the starting point for a question or activity.",
+        "panel": "Uses is the guided default. Other prepared connection examples remain optional.",
+        "hint": "Show the source and target together.",
+        "art": null
+    },
+    {
+        "id": "LEARNING 1.9",
+        "act": "Learning pathways",
+        "panel": "The existing source and target remain visible together.",
+        "hint": "Select Uses.",
+        "art": null,
+        "title": "Choose the plant information",
+        "main": "Select Uses in Pigeon Pea to choose the information for this learning example."
+    },
+    {
+        "id": "LEARNING 1.10",
+        "act": "Learning pathways",
+        "panel": "Preserve the existing deliberate target hold.",
+        "hint": "Hold Uses and Making.",
+        "art": null,
+        "title": "Connect a learning question",
+        "main": "Hold Uses and Making until the connection completes."
+    },
+    {
+        "id": "LEARNING 1.11",
+        "act": "Learning pathways",
+        "panel": "Show the actual connected source, target and matching image.",
+        "hint": "Finish the example.",
+        "art": null,
+        "title": "A detail becomes a learning activity",
+        "main": "A teacher could ask which plant part is used and what preparation is recorded. The connected plant detail gives learners a source to return to."
+    },
+    {
+        "id": "CLOSURE 1.1",
+        "act": "Finish the sample",
+        "title": "Knowledge grows with a place",
+        "main": "You have explored a small example. In a real place, plants, observations and local knowledge can grow together over time, creating something others can explore, learn from and contribute to.\n\nReturn to the welcome screen to discover a separate real garden project.",
+        "panel": "Finish the sample cleanly. Any available published project is a separate choice after returning to welcome.",
+        "hint": "Finish the sample demo.",
+        "art": null
+    }
 ]);
 
 export const DEMO_GUIDED_COPY = Object.freeze(Object.fromEntries(DEMO_GUIDED_STEPS.map(step=>[step.id,step.main])));

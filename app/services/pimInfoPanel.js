@@ -34,6 +34,24 @@ export function pimInfoContent(document, path) {
             .filter(Boolean).map(source => source.title || source.name || source.url || source.id) };
 }
 
+// Keep DOM previews and decoded XR images on the same selected artwork.
+// Coloured pathway illustrations are primary; sketches remain a fallback.
+export function learningPanelMedia(content) {
+    const image=content?.image || content?.sketchImage;
+    if(!image)return null;
+    return {image,alt:(content.image ? content.imageAlt : content.sketchImageAlt) || content.title || '',caption:'',plant:false,fit:content.imageFit || 'cover'};
+}
+
+export function pimPanelMedia(document,selection=null,fallback=null,previous=null) {
+    const cell=selection?.media;
+    const cellImage=cell?.image || cell?.url || cell?.src;
+    if(cellImage)return {image:String(cellImage),alt:String(cell.alt || selection.title || ''),caption:String(cell.caption || '')};
+    if(fallback?.image)return {image:String(fallback.image),alt:String(fallback.alt || ''),caption:String(fallback.caption || '')};
+    const identity=document?.identity;
+    if(identity?.image)return {image:String(identity.image),alt:String(identity.imageAlt || identity.commonName || identity.scientificName || 'Plant'),caption:String(identity.imageCaption || '')};
+    return previous;
+}
+
 export function infoPages(text, columns = 48, rows = 10) {
     const lines = [];
     for (const paragraph of String(text || '').split('\n')) {
@@ -298,7 +316,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         return sentences.reduce((parts,sentence,index)=>{if(index%2===0)parts.push(sentence.trim());else parts[parts.length-1]+=' '+sentence.trim();return parts;},[]).join('\n\n');
     };
     const currentHint=()=>confirmation || tab==='Help'?'':contextHint || (record && identity?KNOWLEDGE_MODES[knowledgeExplorer(record).mode].hint:'') || identity?.hint || rotatingPanelHints[panelHintIndex] || '';
-    const pages=()=>infoPages(text(),headset?(largeText?44:52):(largeText?46:54),pathwayContext?4:7);
+    const pages=()=>infoPages(text(),headset?(largeText?44:52):(largeText?46:54),pathwayContext?4:headset&&(headerProgress||taskProgress)?5:7);
     const title=()=>confirmation?.title || (tab==='Help'?'Help':selection?.hideTitle?'':selection?.title || '');
     const hasPimPath=()=>Boolean(selection && identity);
     const pimPath=()=>{
@@ -312,8 +330,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     const hasPimPathHeading=()=>false;
     const selectionMetadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const metadata=()=>selectionMetadata();
-    const previewMedia=()=>mediaPreviewBlocked ? null : selection?.mesh==='lim' && (selection.sketchImage || selection.image)
-        ? {image:selection.sketchImage || selection.image,alt:selection.sketchImageAlt || selection.imageAlt || selection.title,caption:'',plant:false,fit:selection.imageFit || 'cover'}
+    const previewMedia=()=>mediaPreviewBlocked ? null : selection?.mesh==='lim'
+        ? learningPanelMedia(selection)
         : identity?.media?.image ? {...identity.media,caption:identity.media.caption || identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
     function loadPanelImage(source,{delayMs=0,discardPrevious=false}={}){
@@ -428,8 +446,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     }
     function setSliderValue(action,value){
         if(action==='MusicVolume' || action==='FxVolume')demoSound?.setVolume(action==='MusicVolume'?'music':'fx',value);
-        if(action==='InfoOpacity'){infoOpacity=value;setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);}
-        if(action==='CellOpacity'){meshCellOpacity=value;setSpatialVisualSettings({cellOpacity:value});onCellOpacity(value);}
+        if(action==='InfoOpacity'){value=Math.round(value*20)/20;if(value===infoOpacity)return;infoOpacity=value;setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);}
+        if(action==='CellOpacity'){value=Math.round(value*20)/20;if(value===meshCellOpacity)return;meshCellOpacity=value;setSpatialVisualSettings({cellOpacity:value});onCellOpacity(value);}
         if(action==='SpatialScale'){spatialScale=value;setSpatialVisualSettings({spatialScale});}
         if(action==='TextSize'){largeText=value>=.5;page=0;setSpatialVisualSettings({largeText});updateReading();}
         if(action==='FloorOffset'){floorOffset=value;setSpatialVisualSettings({floorOffset});onFloorOffset(value);}
@@ -733,7 +751,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         element.dataset.relatedFaceIds=contentKind()==='lim' ? (selection?.relatedFaceIds || []).join(',') : '';
         element.style.setProperty('--lim-accent',selection?.mesh==='lim' ? (selection.accent || '#719b62') : 'transparent');
         const header=element.querySelector('.nlxr-control-header');
-        if(header){const plant=header.querySelector('h2'),scientific=header.querySelector('.nlxr-control-identity');plant.textContent=identity?.plant || selection?.plant || '';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');plant.hidden=hasPimPath() || !plant.textContent;scientific.hidden=hasPimPath() || !scientific.textContent;syncHeaderProgress(header);}
+        if(header){const plant=header.querySelector('h2'),scientific=header.querySelector('.nlxr-control-identity');plant.textContent=identity?.plant || selection?.plant || '';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');plant.hidden=!plant.textContent;scientific.hidden=!scientific.textContent;syncHeaderProgress(header);}
         const detailsTab=element.querySelector('[data-info-action="Details"]');
         if(detailsTab)detailsTab.textContent=contentKind()==='pim'?'Plant':'Selected topic';
         if(tab==='Help'){content.setAttribute('aria-labelledby',contentId+'-Help');content.removeAttribute('aria-label');}
@@ -829,8 +847,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         else{
             const header=document.createElement('header');header.className='nlxr-control-header';
             const brand=document.createElement('span');brand.className='nlxr-panel-brand';brand.setAttribute('aria-label','Control panel');brand.innerHTML='CONTROL<br>PANEL';header.append(brand);
-            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || '';plant.hidden=hasPimPath() || !plant.textContent;
-            const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');scientific.hidden=hasPimPath() || !scientific.textContent;
+            const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || '';plant.hidden=!plant.textContent;
+            const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');scientific.hidden=!scientific.textContent;
             const hideControl=optionalPanelControl(controls(),'Hide');
             if(hideControl){const hideButton=makeButton(hideControl);hideButton.classList.add('is-panel-hide');header.append(hideButton);}
             header.classList.add('is-move-handle');header.title='Hold to move the Control panel';
@@ -902,7 +920,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.explorer){
             ctx.fillStyle='#edf3e4';ctx.font='700 30px Manrope, system-ui';ctx.fillText('Controls',24,12,180);ctx.font='500 24px Manrope, system-ui';ctx.fillStyle='#cfdfd9';ctx.fillText(card.question,230,15,600);
-            for(const item of card.controls){ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,14);ctx.fill();ctx.stroke();if(item.kind==='slider'){ctx.textAlign='left';ctx.font='500 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText('Die size · '+Math.round(24*item.value)+' cm',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}else {ctx.font=(item.kind==='mode'?'650 31px':'550 24px')+' Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.fillText(item.label,item.x+item.width/2,item.y+12,item.width-16);}}ctx.globalAlpha=1;ctx.font='500 18px Manrope, system-ui';ctx.fillStyle='#d5ded7';ctx.textAlign='center';for(const item of card.controls.filter(control=>control.kind==='mode'))infoPages(item.description,31,2)[0].forEach((line,index)=>ctx.fillText(line,item.x+item.width/2,124+index*22,item.width-16));ctx.textAlign='left';return c;
+            for(const item of card.controls){ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,14);ctx.fill();ctx.stroke();if(item.kind==='slider'){ctx.textAlign='left';ctx.font='500 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText(item.action==='CellOpacity'?'Cell glass · '+Math.round(item.value*100)+'%':'Die size · '+Math.round(24*item.value)+' cm',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}else {ctx.font=(item.kind==='mode'?'650 31px':'550 24px')+' Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.fillText(item.label,item.x+item.width/2,item.y+12,item.width-16);}}ctx.globalAlpha=1;ctx.font='500 18px Manrope, system-ui';ctx.fillStyle='#d5ded7';ctx.textAlign='center';for(const item of card.controls.filter(control=>control.kind==='mode'))infoPages(item.description,31,2)[0].forEach((line,index)=>ctx.fillText(line,item.x+item.width/2,124+index*22,item.width-16));ctx.textAlign='left';return c;
         }
         if(card.media){
             if(card.hoverHint){ctx.fillStyle='rgba(8,20,31,.88)';ctx.beginPath();ctx.roundRect(40,78,770,46,12);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 19px system-ui';ctx.fillText(card.hoverHint,56,91,740);}
@@ -939,7 +957,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(card.headset && !card.hidden){
             const rail=card.railCollapsed?54:164,media=0;
             const left=rail+22,right=1000-media-22,width=right-left;
-            const headerBottom=card.progress?108:88;
+            const headerBottom=card.progress?164:88;
             ctx.fillStyle=`rgba(5,15,27,${(card.infoOpacity ?? .38)*.16})`;ctx.fillRect(6,headerBottom,rail,c.height-headerBottom-7);
             ctx.fillStyle=`rgba(8,22,34,${(card.infoOpacity ?? .38)*.16})`;ctx.fillRect(1000-media,headerBottom,media-6,c.height-headerBottom-7);
             ctx.fillStyle='rgba(157,208,235,.36)';ctx.fillRect(left,headerBottom+1,width,2);
@@ -953,8 +971,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                     else{ctx.beginPath();ctx.arc(x,barY+1.5,index===card.progress.activeIndex?7:5,0,Math.PI*2);ctx.fillStyle=complete?'#c7f4dc':'#536469';ctx.fill();}});
             }
             ctx.fillStyle='#e8f7f1';ctx.font='650 17px system-ui';ctx.fillText('CONTROL',24,22,128);ctx.fillText('PANEL',24,42,128);
-            if(card.plant && card.plant.toLowerCase()!=='control panel'){ctx.fillStyle='#f3f8fc';ctx.font='650 34px system-ui';ctx.fillText(card.plant,left,card.progress?58:20,Math.max(100,width-150));}
-            if(card.hoverHint && card.progress){ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';ctx.fillText(card.hoverHint,left,91,width);}else if(card.scientific){ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';ctx.fillText(card.scientific,left,card.progress?91:58,width);}
+            if(card.plant && card.plant.toLowerCase()!=='control panel'){ctx.fillStyle='#f3f8fc';ctx.font='650 34px system-ui';ctx.textAlign='center';ctx.fillText(card.plant,left+width/2,card.progress?86:20,width-24);ctx.textAlign='left';}
+            if(card.scientific){ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';ctx.textAlign='center';ctx.fillText(card.scientific,left+width/2,card.progress?130:58,width);ctx.textAlign='left';}
             let y=headerBottom+22;
             if(card.pathway){
                 ctx.fillStyle='#badbc1';ctx.font='600 20px system-ui';ctx.fillText(card.pathway.title,left,y,width);y+=28;
@@ -1079,13 +1097,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         add('KnowledgeSave',state.saveFailed?'Retry save':state.saved?'Saved':'Save discovery',22,132,464);
         add('KnowledgeResume','Resume discovery',506,132,464,{disabled:!savedKnowledgeDiscovery(knowledgeRecord)});
         if(state.mode==='explore'){
-            const object=selectedKnowledgeObject(knowledgeRecord),face=object?.faces.find(f=>f.faceId===state.objects?.selectedFaceId);
-            add('KnowledgeDiceSize','Die size',260,202,710,{kind:'slider',value:state.objects?.scale || 1,min:.65,max:1.35,step:.05});
-            add('KnowledgeObjectCollapse',state.objects?.collapsed?.includes(object?.id)?'Reopen children':'Collapse children',22,272,464,{disabled:!state.objects?.connectors.some(c=>c.sourceObjectId===object?.id)});
+            const object=selectedKnowledgeObject(knowledgeRecord),face=object?.faces.find(f=>f?.faceId===state.objects?.selectedFaceId),region=state.objects?.regions?.find(region=>region.rootId===state.objects?.activeRegionId);
+            add('KnowledgeDiceSize','Structure size',260,202,710,{kind:'slider',value:state.objects?.scale || 1,min:.65,max:1.35,step:.05});
+            add('KnowledgeObjectCollapse',region?.opened?'Fold domain wing':'Reopen domain wing',22,272,464,{disabled:!region});
             add('KnowledgeObjectMove',state.objects?.interaction==='move'?'Finish moving':'Pointer move',506,272,464,{selected:state.objects?.interaction==='move'});
-            if(face?.role==='hybrid')add('KnowledgeBranch:'+face.conceptId,'Explore '+face.title,22,342,948);
-            if(object?.facePages>1)add('KnowledgeObjectFaces','More faces',22,412,464);
-            add('KnowledgeConnections','Connections '+(state.connections?'On':'Off'),506,412,464,{selected:state.connections});
+            if(region?.focusId && region.focusId!==region.rootId)add('KnowledgeObjectBack','Back within this domain',22,342,948);
+            else if(face?.role==='hybrid')add('KnowledgeBranch:'+face.conceptId,'Explore '+face.title,22,342,948);
+            if(object?.facePages>1)add('KnowledgeObjectFaces','More inset topics',22,412,464);
         }else if(state.mode==='curiosity' && knowledgeDocument){
             const selected=knowledgeDocument.nodes.find(n=>n.path===(knowledgeRecord.demoSelectedNodeId || knowledgeRecord.pimSelectedNodeId));
             if(selected){const parent=knowledgeDocument.nodes.find(n=>n.id===selected.parentId);add(parent?'KnowledgeRead:'+parent.id:'KnowledgeReadCore',parent?'Back to '+parent.title:'Back to plant',22,202,464);}
@@ -1097,6 +1115,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 add('KnowledgeChildPage:'+(page+2)+':'+branch.path,'More topics '+(page+1)+' / '+pages,506,272,464,{disabled:page===pages-1});}
 
         }
+        if(state.mode==='curiosity')add('CellOpacity','Cell glass',22,352,948,{kind:'slider',value:meshCellOpacity,min:0,max:1,step:.01});
         for(const item of controls)if(item.y>=132)item.y+=60;
         return controls;
     }
@@ -1112,7 +1131,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','Explorer options');
         for(const item of explorerControls()){
             if(item.action==='Explorer'){header.append(makeButton(item));continue;}
-            if(item.kind==='slider'){const label=document.createElement('label');label.className='nlxr-explorer-size';label.textContent='Die size · '+Math.round(24*item.value)+' cm';const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label','Explorer die size');slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));label.append(slider);options.append(label);}
+            if(item.kind==='slider'){const label=document.createElement('label');label.className='nlxr-explorer-size';label.textContent=item.action==='CellOpacity'?'Cell surface · '+Math.round(item.value*100)+'% solid':'Die size · '+Math.round(24*item.value)+' cm';const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label',item.action==='CellOpacity'?'PIMO cell opacity':'Explorer die size');slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));label.append(slider);options.append(label);}
             else {const button=makeButton(item);button.setAttribute('aria-pressed',String(Boolean(item.selected)));if(item.kind==='mode'){const choice=document.createElement('div'),description=document.createElement('p');choice.className='nlxr-explorer-mode-choice';description.textContent=item.description;description.id=contentId+'-'+item.action.replace(':','-')+'-description';button.setAttribute('aria-describedby',description.id);choice.append(button,description);modes.append(choice);}else options.append(button);}
         }explorerElement.append(modes,options);
     }
@@ -1159,7 +1178,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         showLearning(content){
             if(!content?.keepExplorerContext)knowledgeRecord=null;
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
-            const imageSource=content?.sketchImage || content?.image || '';
+            const imageSource=learningPanelMedia(content)?.image || '';
             mediaCollapsed=true;mediaTouched=false;
             if(imageSource)mediaCollapsed=false;
             loadPanelImage(imageSource,{delayMs:Number(content?.imageTransitionDelayMs)||0,discardPrevious:Boolean(content?.discardPreviousImage)});
@@ -1188,12 +1207,10 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         focusPlant(nextRecord,document,media=null){
             const previousMedia=record===nextRecord ? identity?.media : null;
             const previousHint=record===nextRecord ? identity?.hint : '';
-            const identityImage=document?.identity?.image;
-            const nextMedia=media?.image ? {image:String(media.image),alt:String(media.alt || ''),caption:String(media.caption || '')}
-                : identityImage ? {image:String(identityImage),alt:String(document.identity.imageAlt || document.identity.commonName || document.identity.scientificName || 'Plant'),caption:String(document.identity.imageCaption || '')}
-                    : previousMedia;
             if(panelModeChoice)knowledgeExplorerAction(nextRecord,'KnowledgeMode:'+panelModeChoice);const savedContext=knowledgeExplorer(nextRecord),selectedPath=nextRecord.demoSelectedNodeId || nextRecord.pimSelectedNodeId;
-            record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=selectedPath?pimInfoContent(document,selectedPath):null;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};
+            const selectedContent=selectedPath?pimInfoContent(document,selectedPath):null;
+            const nextMedia=pimPanelMedia(document,selectedContent,media,previousMedia);
+            record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=selectedContent;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};
             mediaCollapsed=!nextMedia?.image;mediaTouched=false;
             loadPanelImage(nextMedia?.image || '');
             tab='Details';page=savedContext.readingPage || 0;render(true);
@@ -1264,7 +1281,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
-            const card={id:'control',infoOpacity,headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(hasPimPath()?pimPath():selection?.breadcrumb || ''):'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
+            const card={id:'control',infoOpacity,headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(hasPimPath()?pimPath():selection?.breadcrumb || ''):'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,performanceMessage:performanceStatus(),infoOpacity,height:840,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));

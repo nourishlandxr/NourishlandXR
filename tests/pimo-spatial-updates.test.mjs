@@ -32,16 +32,16 @@ test('Explore is absent until an active immersive session has real 6DoF and mani
 test('local override cannot enable Explorer on a consumer URL',()=>{
  globalThis.location={hostname:'nourishland.org',pathname:'/xr/'};assert.equal(setPimoDeveloperOverride(true),false);assert.equal(supportsSpatialPIMO(),false);
 });
-test('one hand-sized die; face-normal spawn and collapse retain every arranged descendant',()=>{
- enableHarness();const r=record();knowledgeExplorerAction(r,'KnowledgeMode:explore');const w=ensureKnowledgeObjects(r,knowledge);assert.equal(w.items.length,1);assert.equal(w.items[0].radius,.12);
- const face=w.items[0].faces.find(f=>f.conceptId==='cultivation') || w.items[0].faces[0],source=w.items[0];selectKnowledgeObjectFace(r,knowledge,{id:face.conceptId,knowledgeObjectId:source.id});w.selectedObjectId=source.id;w.selectedFaceId=face.faceId;const child=spawnKnowledgeObject(r,knowledge,face.conceptId);assert.ok(child);assert.equal(w.items.length,2);
- const displacement=new THREE.Vector3(child.position.x,child.position.y,child.position.z);assert.ok(displacement.dot(new THREE.Vector3(face.localNormal.x,face.localNormal.y,face.localNormal.z))>.32);
- child.position.x+=.7;rotateKnowledgeObject(child,.4,.2);const before=JSON.stringify(child);w.selectedObjectId=source.id;knowledgeObjectAction(r,'KnowledgeObjectCollapse');assert.deepEqual(visibleKnowledgeObjects(w).map(o=>o.id),[source.id]);knowledgeObjectAction(r,'KnowledgeObjectCollapse');assert.equal(visibleKnowledgeObjects(w).length,2);assert.equal(JSON.stringify(child),before);
- const link=w.connectors[0],a=knowledgeConnectorAnchors(w,link);knowledgeObjectAction(r,'KnowledgeObjectSize:1.3');ensureKnowledgeObjects(r,knowledge);const b=knowledgeConnectorAnchors(w,link);assert.notDeepEqual(a.start,b.start);assert.equal(w.items.every(o=>o.scale===1.3),true);setPimoDeveloperOverride(false);
+test('domain wings develop and fold within one connected architecture',()=>{
+ enableHarness();const r=record();knowledgeExplorerAction(r,'KnowledgeMode:explore');const w=ensureKnowledgeObjects(r,knowledge),source=w.items[0];assert.equal(w.items.length,1);assert.ok(source.radius>.1);
+ const face=source.faces.find(f=>f?.conceptId==='cultivation');selectKnowledgeObjectFace(r,knowledge,{id:face.conceptId,knowledgeObjectId:source.id});const branch=spawnKnowledgeObject(r,knowledge,face.conceptId);assert.equal(branch,source);assert.equal(w.items.length,1);
+ const region=w.regions.find(region=>region.rootId==='cultivation');assert.equal(region.opened,true);const visited=[...region.visited];source.position.x+=.7;rotateKnowledgeObject(source,.4,.2);const position={...source.position},rotation={...source.rotation};
+ knowledgeObjectAction(r,'KnowledgeObjectCollapse');assert.equal(region.opened,false);assert.deepEqual(visibleKnowledgeObjects(w).map(o=>o.id),[source.id]);knowledgeObjectAction(r,'KnowledgeObjectCollapse');assert.equal(region.opened,true);assert.deepEqual(region.visited,visited);assert.deepEqual(source.position,position);assert.deepEqual(source.rotation,rotation);
+ knowledgeObjectAction(r,'KnowledgeObjectSize:1.3');ensureKnowledgeObjects(r,knowledge);assert.equal(source.scale,1.3);assert.equal(w.items.length,1);setPimoDeveloperOverride(false);
 });
-test('full authored overflow is accessible through face pages',()=>{
- const r=record();knowledgeExplorer(r);const custom={title:'Many',categories:Array.from({length:15},(_,i)=>({id:'n'+i,path:'n'+i,label:'Topic '+i,children:[]}))},w=ensureKnowledgeObjects(r,custom),ids=new Set();
- for(let i=0;i<3;i++){w.items[0].faces.forEach(f=>ids.add(f.conceptId));knowledgeObjectAction(r,'KnowledgeObjectFaces');ensureKnowledgeObjects(r,custom);}assert.equal(ids.size,15);
+test('authored overflow pages through three inset bays without growing object count',()=>{
+ const r=record();knowledgeExplorer(r);const custom={title:'Many',categories:[{id:'uses',path:'uses',label:'Uses',children:Array.from({length:15},(_,i)=>({id:'n'+i,path:'uses.'+i,label:'Topic '+i,children:[]}))}]},w=ensureKnowledgeObjects(r,custom),ids=new Set();spawnKnowledgeObject(r,custom,'uses');
+ for(let i=0;i<5;i++){ensureKnowledgeObjects(r,custom).items[0].faces.filter(f=>f?.conceptId.startsWith('n')).forEach(f=>ids.add(f.conceptId));knowledgeObjectAction(r,'KnowledgeObjectFaces');}assert.equal(ids.size,15);assert.equal(w.items.length,1);assert.equal(w.regions.length,6);
 });
 test('session re-entry keeps selected topic, open branches, reading page and object arrangement',()=>{
  const r=record();const state=knowledgeExplorer(r);r.demoSelectedNodeId='food-forest';r.demoExpandedNodeIds=['food-forest'];state.readingPage=3;state.selectedConceptId='food-forest';state.objects={version:1,items:[{id:'object:core',position:{x:.6,y:.3,z:.2}}],connectors:[]};preserveKnowledgeContext(r);

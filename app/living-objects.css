@@ -2463,3 +2463,23 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 .plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child { width:calc(var(--pim-render-cell-size)*.82);height:calc(var(--pim-render-cell-height)*.82);--pim-text-cell-size:calc(var(--pim-render-cell-size)*.82); }
 .plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after,
 .is-simple-desktop-ar .plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after { background:hsl(var(--pim-hue) 65% 17%)!important; }
+
+.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after,
+.is-simple-desktop-ar .plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after { opacity:var(--pim-cell-opacity,1)!important; }
+
+/* Progress owns its row; plant identity is centred underneath. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header { display:flex;flex-direction:column;align-items:stretch;gap:8px; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-panel-progress { order:-1;position:static;clear:both;width:100%;margin:0 0 8px;padding:8px 0 12px;border-bottom:1px solid rgba(214,232,218,.22); }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-control-header :is(h2,.nlxr-control-identity) { position:static;text-align:center;width:100%;margin:0; }
+
+/* Reviewed action labels fit below the desktop reading surface. */
+.tryit-demo.is-desktop-spatial-preview .tryit-live-welcome > .tryit-context-trigger[data-context-mode="continue"] {
+    width:min(360px,calc(100% - 32px));min-width:0;height:auto;min-height:60px;
+    padding:14px 20px;border-width:2px;border-radius:18px;
+    font-size:20px;line-height:1.25;white-space:normal;
+}
+/* Docked Media lives outside the main frame; the reading area scrolls inside
+   its own tab panel, so the shell must not clip the companion image. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):not(.is-media-collapsed):has(> .nlxr-media-wing) {
+    overflow:visible;
+}

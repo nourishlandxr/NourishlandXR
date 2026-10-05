@@ -1,94 +1,148 @@
 import * as THREE from '../vendor/three.module.min.js';
-import {knowledgeDiceFaceFrames} from './heroDiceGeometry.js';
-export const KNOWLEDGE_DICE_RADIUS=.12,KNOWLEDGE_OBJECT_LIMIT=18;
-const indexes=new WeakMap(),vector=v=>({x:v.x,y:v.y,z:v.z});
-const FACE_COLOURS=['#42c99a','#e5ae45','#62bcec','#d782c5','#a999ef','#e67b60'];
-function relatedFaceColour(colour,index){const tint=new THREE.Color(colour || '#8bb9aa'),shade=[.04,.12,-.06,.18,-.10,.08][index%6];tint.lerp(new THREE.Color(shade<0?'#263c35':'#fff7e7'),Math.abs(shade));return '#'+tint.getHexString();}
-// Use authored concepts directly; these are featured examples, not a popularity ranking.
-function featuredUses(index,node){
- const candidates=[];
- function visit(n){const children=(n.children || []).map(c=>index.nodes.get(String(c.id))).filter(Boolean);if(n!==node && !['category','traditional_knowledge'].includes(n.informationType) && n.value?.trim())candidates.push(n);children.forEach(visit);}
- visit(node);
- const priority=['fresh-peas','dried-pulse','animal-fodder','garden-stakes','young-pods','fuelwood'];
- candidates.sort((a,b)=>{const rank=n=>{const i=priority.indexOf(n.id);return i<0?priority.length:i;};return rank(a)-rank(b);});
- return candidates.length?candidates:(node.children || []).map(n=>index.nodes.get(String(n.id))).filter(Boolean);
-}
+import {PIM_COMPASS_BY_ID} from './pimCompass.js';
+import {createKnowledgeArchitectureGeometry,architectureRegionAmount,KNOWLEDGE_REGION_DIRECTIONS} from './knowledgeArchitectureGeometry.js';
+
+export const KNOWLEDGE_DICE_RADIUS=.16, KNOWLEDGE_OBJECT_LIMIT=1;
+const indexes=new WeakMap(),framesByObject=new WeakMap(),vector=v=>({x:v.x,y:v.y,z:v.z});
+const REGION_COLOURS=['#47dcb2','#c9e44b','#ffb34e','#49c5f0','#ef75b6','#ab8cff'];
+
 export function knowledgeObjectIndex(knowledge){
- if(indexes.has(knowledge))return indexes.get(knowledge);
- const nodes=new Map(),roots=[...(knowledge.categories || []),...(knowledge.customCategories || [])];
- function visit(n,parent=null){if(!n || nodes.has(String(n.id)))return;const node={...n,id:String(n.id || n.path),parentId:parent?.id || null,parentPath:parent?.path || 'core'};nodes.set(node.id,node);(n.children || []).forEach(child=>visit(child,node));}
- roots.forEach(n=>visit(n));const index={nodes,roots:roots.map(n=>nodes.get(String(n.id))).filter(Boolean)};indexes.set(knowledge,index);return index;
+    if(indexes.has(knowledge))return indexes.get(knowledge);
+    const nodes=new Map(),roots=[...(knowledge.categories || []),...(knowledge.customCategories || [])];
+    function visit(n,parent=null){
+        if(!n || nodes.has(String(n.id)))return;
+        const node={...n,id:String(n.id || n.path),parentId:parent?.id || null,parentPath:parent?.path || 'core'};
+        nodes.set(node.id,node);(n.children || []).forEach(child=>visit(child,node));
+    }
+    roots.forEach(n=>visit(n));
+    const index={nodes,roots:roots.map(n=>nodes.get(String(n.id))).filter(Boolean)};indexes.set(knowledge,index);return index;
 }
-function facesFor(index,object){
- const concept=index.nodes.get(object.conceptId),uses=concept && (concept.id==='uses' || concept.label?.toLowerCase()==='uses');
- const nodes=object.conceptId==='core'?index.roots:uses?featuredUses(index,concept):(concept?.children || []).map(n=>index.nodes.get(String(n.id))).filter(Boolean),frames=knowledgeDiceFaceFrames(KNOWLEDGE_DICE_RADIUS);
- object.featuredUses=!!uses;
- object.facePages=Math.max(1,Math.ceil(nodes.length/6));object.facePage=((object.facePage || 0)%object.facePages+object.facePages)%object.facePages;
- return nodes.slice(object.facePage*6,object.facePage*6+6).map((n,i)=>({faceId:'face:'+n.id,conceptId:n.id,path:n.path,title:n.label,summary:n.description || '',accent:object.conceptId==='core'?FACE_COLOURS[(object.facePage*6+i)%FACE_COLOURS.length]:relatedFaceColour(object.accent,object.facePage*6+i),role:n.children?.length?(n.value?.trim()?'hybrid':'branch'):'information',localAnchor:vector(frames[i].centre.clone().addScaledVector(frames[i].normal,.001)),localNormal:vector(frames[i].normal),faceRadius:frames[i].inradius}));
+function domainFor(index,node){while(node?.parentId)node=index.nodes.get(node.parentId);return node;}
+function childrenFor(index,node){return (node?.children || []).map(child=>index.nodes.get(String(child.id))).filter(Boolean);}
+function knowledgeDensity(index,node){
+    return childrenFor(index,node).reduce((sum,child)=>sum+(child.value?.trim()?1:0)+knowledgeDensity(index,child),0);
+}
+export function setKnowledgeArchitectureGeometry(object,geometry){
+    framesByObject.set(object,geometry.userData.knowledgeFrames);
+    object.radius=geometry.boundingSphere?geometry.boundingSphere.radius+geometry.boundingSphere.center.length():KNOWLEDGE_DICE_RADIUS;
+}
+function frameFields(frame){
+    return frame?{localAnchor:vector(frame.centre.clone().addScaledVector(frame.normal,.001)),localNormal:vector(frame.normal),faceRadius:frame.inradius,faceWidth:frame.width,faceHeight:frame.height}:{};
+}
+function buildFaces(index,workspace,object){
+    let frames=framesByObject.get(object);
+    if(!frames){const geometry=createKnowledgeArchitectureGeometry(object.seedRadius,object.regions);setKnowledgeArchitectureGeometry(object,geometry);frames=geometry.userData.knowledgeFrames;geometry.dispose();}
+    const faces=Array(24).fill(null);
+    object.regions.forEach((region,slot)=>{
+        const root=index.nodes.get(region.rootId);if(!root)return;
+        const make=(node,regionIndex)=>({faceId:'face:'+node.id,conceptId:node.id,path:node.path,title:node.label,accent:region.accent,domainId:root.id,regionSlot:slot,
+            role:node.children?.length?(node.value?.trim()?'hybrid':'branch'):'information',selected:workspace.selectedFaceId==='face:'+node.id,...frameFields(frames[regionIndex])});
+        faces[slot]=make(root,slot);
+        if(region.opened){
+            const focus=index.nodes.get(region.focusId) || root,children=childrenFor(index,focus);
+            region.parentFocusId=focus.parentId || root.id;
+            region.pages=Math.max(1,Math.ceil(children.length/3));region.page=((region.page || 0)%region.pages+region.pages)%region.pages;
+            children.slice(region.page*3,region.page*3+3).forEach((node,bay)=>faces[6+slot*3+bay]=make(node,6+slot*3+bay));
+        }
+    });
+    object.faces=faces;object.featuredUses=false;
+    const selectedRegion=object.regions.find(region=>region.rootId===workspace.activeRegionId);
+    object.facePages=selectedRegion?.pages || 1;
+    object.contextFace={faceId:'context',conceptId:'core',title:object.title,accent:'#d8deca',role:'contextual',...frameFields(frames[24])};
 }
 export function ensureKnowledgeObjects(record,knowledge){
- const state=record.knowledgeExplorer,index=knowledgeObjectIndex(knowledge),w=state.objects ||= {version:1,items:[],connectors:[],selectedObjectId:'object:core',selectedFaceId:'',interaction:'rotate',scale:1,collapsed:[]};
- w.scale=Math.max(.65,Math.min(1.35,Number(w.scale)||1));w.collapsed ||= [];
- if(!w.items.length)w.items.push({id:'object:core',conceptId:'core',title:knowledge.title || record.name || 'Plant',position:{x:0,y:0,z:0},rotation:{x:0,y:0,z:0,w:1},userPositioned:false});
- for(const o of w.items){
-  const parentLink=w.connectors.find(link=>link.targetObjectId===o.id),parent=parentLink && w.items.find(item=>item.id===parentLink.sourceObjectId),parentNode=parent && index.nodes.get(parent.conceptId),parentTopics=parent?.conceptId==='core'?index.roots:parent?.featuredUses?featuredUses(index,parentNode):(parentNode?.children || []).map(node=>index.nodes.get(String(node.id))).filter(Boolean),topicIndex=parentTopics?.findIndex(node=>'face:'+node.id===parentLink.sourceFaceId);
-  if(parent && topicIndex>=0)o.accent=parent.conceptId==='core'?FACE_COLOURS[topicIndex%FACE_COLOURS.length]:relatedFaceColour(parent.accent,topicIndex);
-  o.radius=KNOWLEDGE_DICE_RADIUS;o.scale=w.scale;o.faces=facesFor(index,o);const frame=knowledgeDiceFaceFrames(KNOWLEDGE_DICE_RADIUS)[6];o.contextFace={faceId:'context',conceptId:o.conceptId,role:'contextual',localAnchor:vector(frame.centre.clone().addScaledVector(frame.normal,.001)),localNormal:vector(frame.normal),faceRadius:frame.inradius};
- }
- for(const link of w.connectors){const source=w.items.find(o=>o.id===link.sourceObjectId),target=w.items.find(o=>o.id===link.targetObjectId),face=source?.faces.find(f=>f.faceId===link.sourceFaceId);if(face){link.sourceAnchor={...face.localAnchor};link.sourceNormal={...face.localNormal};}link.accent=target?.accent || face?.accent || '#42c99a';}
- return w;
+    const state=record.knowledgeExplorer,index=knowledgeObjectIndex(knowledge);
+    let workspace=state.objects,legacyConcepts=[];
+    if(workspace?.version!==2){
+        const legacy=workspace,oldCore=legacy?.items?.find(item=>item.conceptId==='core');
+        legacyConcepts=[...(legacy?.items || []).map(item=>item.conceptId),state.selectedConceptId].filter(id=>index.nodes.has(id));
+        workspace={version:2,items:[{id:'object:core',conceptId:'core',title:knowledge.identity?.commonName || knowledge.title || record.name || 'Plant',
+            position:{...(oldCore?.position || {x:0,y:0,z:0})},rotation:{...(oldCore?.rotation || {x:0,y:0,z:0,w:1})},userPositioned:Boolean(oldCore?.userPositioned)}],
+            selectedObjectId:'object:core',selectedFaceId:'',interaction:legacy?.interaction || 'rotate',scale:legacy?.scale || 1,regions:[],growthEvents:[],connectors:[],collapsed:[]};
+        state.objects=workspace;
+    }
+    workspace.scale=Math.max(.65,Math.min(1.35,Number(workspace.scale)||1));
+    const object=workspace.items[0];object.seedRadius=KNOWLEDGE_DICE_RADIUS;object.scale=workspace.scale;
+    if(!workspace.regions.length){
+        workspace.regions=KNOWLEDGE_REGION_DIRECTIONS.map((direction,slot)=>{
+            const root=index.roots.find(node=>(node.direction || node.rootDirection || PIM_COMPASS_BY_ID[node.id]?.direction)===direction) || (!index.roots.some(node=>node.direction || PIM_COMPASS_BY_ID[node.id])?index.roots[slot]:null);
+            return {rootId:root?.id || '',focusId:root?.id || '',direction,accent:REGION_COLOURS[slot],opened:false,level:0,visited:[],page:0};
+        });
+    }
+    for(const id of legacyConcepts){
+        const node=index.nodes.get(id),root=domainFor(index,node),region=workspace.regions.find(region=>region.rootId===root?.id);
+        if(!region)continue;
+        for(let current=node;current;current=index.nodes.get(current.parentId))developRegion(workspace,index,region,current,0);
+        region.focusId=node.children?.length?node.id:node.parentId || root.id;delete region.transition;
+    }
+    object.regions=workspace.regions;buildFaces(index,workspace,object);return workspace;
 }
-export function visibleKnowledgeObjects(w){
- const ids=new Set([w.items[0]?.id]),queue=[...ids],collapsed=new Set(w.collapsed || []);
- for(let i=0;i<queue.length;i++){const id=queue[i];if(collapsed.has(id))continue;for(const c of w.connectors)if(c.sourceObjectId===id && !ids.has(c.targetObjectId)){ids.add(c.targetObjectId);queue.push(c.targetObjectId);}}
- return w.items.filter(o=>ids.has(o.id));
+export function visibleKnowledgeObjects(workspace){return workspace.items.slice(0,1);}
+export function selectedKnowledgeObject(record){return record?.knowledgeExplorer?.objects?.items?.[0];}
+function developRegion(workspace,index,region,node,time){
+    const before=region.level || 0,from=architectureRegionAmount(region,time);
+    if(!region.visited.includes(node.id)){
+        region.visited.push(node.id);workspace.growthEvents.push({type:'discovered',conceptId:node.id,domainId:region.rootId,at:new Date().toISOString()});
+    }
+    region.opened=true;
+    const explored=region.visited.length,density=knowledgeDensity(index,index.nodes.get(region.rootId));
+    region.level=explored>=5 && density>=6?3:explored>=3?2:1;
+    if(before!==region.level || from===0){
+        region.transition={from,startedAt:time};
+        workspace.growthEvents.push({type:'region-developed',domainId:region.rootId,level:region.level,at:new Date().toISOString()});
+    }
 }
-export function selectedKnowledgeObject(record){const w=record?.knowledgeExplorer?.objects;return w?.items.find(o=>o.id===w.selectedObjectId) || w?.items[0];}
 export function selectKnowledgeObjectFace(record,knowledge,node){
- const w=ensureKnowledgeObjects(record,knowledge),o=w.items.find(o=>o.id===node.knowledgeObjectId);if(!o)return false;w.selectedObjectId=o.id;
- if(node.pimKnowledgeContext){w.selectedFaceId='';record.knowledgeExplorer.selectedConceptId=o.conceptId;record[record.demoType?'demoSelectedNodeId':'pimSelectedNodeId']=knowledgeObjectIndex(knowledge).nodes.get(o.conceptId)?.path || '';return true;}
- const f=o.faces.find(f=>f.faceId===(node.knowledgeFaceId || 'face:'+String(node.id || node.nodeId)));if(!f)return false;
- w.selectedFaceId=f.faceId;record.knowledgeExplorer.selectedConceptId=f.conceptId;record.knowledgeExplorer.saved=false;record[record.demoType?'demoSelectedNodeId':'pimSelectedNodeId']=f.path;
- const history=record.knowledgeExplorer.history || [];if(history.at(-1)!==f.path)record.knowledgeExplorer.history=[...history,f.path].slice(-32);
- const index=knowledgeObjectIndex(knowledge),opened=new Set(record.demoExpandedNodeIds || record.pimExpandedNodeIds || []);for(let current=index.nodes.get(f.conceptId);current;current=index.nodes.get(current.parentId))if(current.children?.length)opened.add(current.path);record[record.demoType?'demoExpandedNodeIds':'pimExpandedNodeIds']=[...opened];
- if(f.role==='branch' || f.role==='hybrid')spawnKnowledgeObject(record,knowledge,f.conceptId);return true;
+    const workspace=ensureKnowledgeObjects(record,knowledge),object=workspace.items[0],index=knowledgeObjectIndex(knowledge);
+    if(node.pimKnowledgeContext){
+        workspace.selectedFaceId='';record.knowledgeExplorer.selectedConceptId='core';record[record.demoType?'demoSelectedNodeId':'pimSelectedNodeId']='';return true;
+    }
+    const face=object.faces.find(face=>face && face.faceId===(node.knowledgeFaceId || 'face:'+String(node.id || node.nodeId)));if(!face)return false;
+    const concept=index.nodes.get(face.conceptId),region=workspace.regions[face.regionSlot];
+    workspace.selectedFaceId=face.faceId;workspace.activeRegionId=region.rootId;
+    developRegion(workspace,index,region,concept,globalThis.performance?.now?.() || 0);
+    if(concept.children?.length){region.focusId=concept.id;region.parentFocusId=concept.parentId || region.rootId;region.page=0;}
+    record.knowledgeExplorer.selectedConceptId=concept.id;record.knowledgeExplorer.saved=false;
+    record[record.demoType?'demoSelectedNodeId':'pimSelectedNodeId']=face.path;
+    const opened=new Set(record.demoExpandedNodeIds || record.pimExpandedNodeIds || []);
+    for(let current=concept;current;current=index.nodes.get(current.parentId))if(current.children?.length)opened.add(current.path);
+    record[record.demoType?'demoExpandedNodeIds':'pimExpandedNodeIds']=[...opened];
+    const history=record.knowledgeExplorer.history || [];if(history.at(-1)!==face.path)record.knowledgeExplorer.history=[...history,face.path].slice(-32);
+    record.knowledgeExplorer.changedAt=globalThis.performance?.now?.() || 0;record.knowledgeExplorer.revision++;return true;
 }
+// Host compatibility: exploring a branch develops its existing wing.
 export function spawnKnowledgeObject(record,knowledge,conceptId){
- const w=ensureKnowledgeObjects(record,knowledge),index=knowledgeObjectIndex(knowledge),node=index.nodes.get(String(conceptId)),source=selectedKnowledgeObject(record);if(!node?.children?.length || !source)return null;
- const face=source.faces.find(f=>f.conceptId===node.id) || source.faces.find(f=>f.faceId===w.selectedFaceId);if(!face)return null;
- const chain=[];let cursor=node;while(cursor && cursor.id!==face.conceptId){chain.unshift(cursor.id);cursor=index.nodes.get(cursor.parentId);}if(!cursor)return null;chain.unshift(cursor.id);
- let target=w.items.find(o=>o.conceptId===node.id);
- if(!target){
-  if(w.items.length>=KNOWLEDGE_OBJECT_LIMIT){w.limitReached=true;return null;}
-  const normal=new THREE.Vector3(face.localNormal.x,face.localNormal.y,face.localNormal.z).applyQuaternion(new THREE.Quaternion(source.rotation.x,source.rotation.y,source.rotation.z,source.rotation.w)),tangent=new THREE.Vector3(0,1,0).cross(normal);if(tangent.length()<.01)tangent.set(1,0,0);tangent.normalize();const up=normal.clone().cross(tangent).normalize(),radius=KNOWLEDGE_DICE_RADIUS*w.scale;
-  let position;
-  for(let ring=0;!position && ring<12;ring++)for(let turn=0;turn<(ring?12:1);turn++){
-   const p=new THREE.Vector3(source.position.x,source.position.y,source.position.z).addScaledVector(normal,radius*2+.09+ring*.025).addScaledVector(tangent,Math.cos(turn*Math.PI/6)*(radius*2+.09+ring*.085)).addScaledVector(up,Math.sin(turn*Math.PI/6)*(radius*2+.09+ring*.085));
-   if(record.knowledgeObjectPose && Number.isFinite(record.knowledgeFloor) && p.clone().applyMatrix4(knowledgePoseMatrix(record.knowledgeObjectPose)).y<record.knowledgeFloor+radius+.02)continue;
-   if(w.items.every(o=>p.distanceTo(new THREE.Vector3(o.position.x,o.position.y,o.position.z))>radius*2+.055))position=vector(p);if(position)break;
-  }
-  if(!position)return null;target={id:'object:'+node.id,conceptId:node.id,title:node.label,accent:face.accent,position,rotation:{...source.rotation},radius:KNOWLEDGE_DICE_RADIUS,scale:w.scale,userPositioned:false};w.items.push(target);ensureKnowledgeObjects(record,knowledge);
- }
- const id=source.id+'|'+face.faceId+'|'+target.id;
- if(!w.connectors.some(c=>c.id===id))w.connectors.push({id,accent:face.accent,sourceObjectId:source.id,sourceFaceId:face.faceId,sourceAnchor:{...face.localAnchor},sourceNormal:{...face.localNormal},targetObjectId:target.id,targetFaceId:'context',relationshipPath:chain,relationshipId:chain.join('>')});
- w.collapsed=w.collapsed.filter(id=>id!==source.id);w.selectedObjectId=target.id;w.selectedFaceId='';w.limitReached=false;record.knowledgeExplorer.revision++;record.knowledgeExplorer.saved=false;return target;
+    const workspace=ensureKnowledgeObjects(record,knowledge),index=knowledgeObjectIndex(knowledge),node=index.nodes.get(String(conceptId));
+    if(!node?.children?.length)return null;
+    const root=domainFor(index,node),region=workspace.regions.find(region=>region.rootId===root?.id);if(!region)return null;
+    developRegion(workspace,index,region,node,globalThis.performance?.now?.() || 0);
+    region.focusId=node.id;region.parentFocusId=node.parentId || region.rootId;region.page=0;workspace.activeRegionId=root.id;workspace.selectedFaceId='face:'+node.id;
+    record.knowledgeExplorer.changedAt=globalThis.performance?.now?.() || 0;record.knowledgeExplorer.revision++;record.knowledgeExplorer.saved=false;return workspace.items[0];
 }
-export function rotateKnowledgeObject(o,dx,dy){const q=new THREE.Quaternion(o.rotation.x,o.rotation.y,o.rotation.z,o.rotation.w);q.premultiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(dy,dx,0,'YXZ'))).normalize();o.rotation={x:q.x,y:q.y,z:q.z,w:q.w};}
-export function localObjectMatrix(o){return new THREE.Matrix4().compose(new THREE.Vector3(o.position.x,o.position.y,o.position.z),new THREE.Quaternion(o.rotation.x,o.rotation.y,o.rotation.z,o.rotation.w),new THREE.Vector3().setScalar(o.scale || 1));}
-export function knowledgePoseMatrix(p){return new THREE.Matrix4().set(p.right.x,p.up.x,p.normal.x,p.position.x,p.right.y,p.up.y,p.normal.y,p.position.y,p.right.z,p.up.z,p.normal.z,p.position.z,0,0,0,1);}
-export function knowledgeConnectorAnchors(w,c){
- const source=w.items.find(o=>o.id===c.sourceObjectId),target=w.items.find(o=>o.id===c.targetObjectId),face=source?.faces.find(f=>f.faceId===c.sourceFaceId),a=c.sourceAnchor || face?.localAnchor,n=c.sourceNormal || face?.localNormal;if(!source || !target || !a || !n)return null;
- const f=target.contextFace;
- return {start:vector(new THREE.Vector3(a.x,a.y,a.z).applyMatrix4(localObjectMatrix(source))),end:vector(new THREE.Vector3(f.localAnchor.x,f.localAnchor.y,f.localAnchor.z).applyMatrix4(localObjectMatrix(target))),startNormal:vector(new THREE.Vector3(n.x,n.y,n.z).transformDirection(localObjectMatrix(source))),endNormal:vector(new THREE.Vector3(f.localNormal.x,f.localNormal.y,f.localNormal.z).transformDirection(localObjectMatrix(target)))};
+export function rotateKnowledgeObject(object,dx,dy){
+    const rotation=new THREE.Quaternion(object.rotation.x,object.rotation.y,object.rotation.z,object.rotation.w);
+    rotation.premultiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(dy,dx,0,'YXZ'))).normalize();object.rotation={x:rotation.x,y:rotation.y,z:rotation.z,w:rotation.w};
 }
+export function localObjectMatrix(object){return new THREE.Matrix4().compose(new THREE.Vector3(object.position.x,object.position.y,object.position.z),new THREE.Quaternion(object.rotation.x,object.rotation.y,object.rotation.z,object.rotation.w),new THREE.Vector3().setScalar(object.scale || 1));}
+export function knowledgePoseMatrix(pose){return new THREE.Matrix4().set(pose.right.x,pose.up.x,pose.normal.x,pose.position.x,pose.right.y,pose.up.y,pose.normal.y,pose.position.y,pose.right.z,pose.up.z,pose.normal.z,pose.position.z,0,0,0,1);}
+export function knowledgeConnectorAnchors(){return null;}
 export function knowledgeObjectAction(record,action){
- const s=record.knowledgeExplorer,w=s.objects,o=selectedKnowledgeObject(record);if(!o)return false;
- if(action==='KnowledgeObjectCollapse')w.collapsed=w.collapsed.includes(o.id)?w.collapsed.filter(id=>id!==o.id):[...w.collapsed,o.id];
- else if(action==='KnowledgeObjectFaces'){o.facePage=(o.facePage || 0)+1;w.selectedFaceId='';}
- else if(action.startsWith('KnowledgeObjectSize:')){const previous=w.scale || 1;w.scale=Math.max(.65,Math.min(1.35,Number(action.split(':')[1])||1));w.items.forEach(o=>{o.scale=w.scale;for(const axis of ['x','y','z'])o.position[axis]*=w.scale/previous;});}
- else if(action.startsWith('KnowledgeObjectFocus:')){const id=action.slice(21);if(!visibleKnowledgeObjects(w).some(o=>o.id===id))return false;w.selectedObjectId=id;w.focusObjectId=id;w.selectedFaceId='';}
- else if(action==='KnowledgeObjectMove')w.interaction=w.interaction==='move'?'rotate':'move';
- else if(action.startsWith('KnowledgeObjectTurn:')){const d=action.split(':')[1];rotateKnowledgeObject(o,d==='left'?-.32:d==='right'?.32:0,d==='up'?-.25:d==='down'?.25:0);}
- else if(action.startsWith('KnowledgeObjectShift:')){const d=action.split(':')[1];o.position.x+=d==='left'?-.12:d==='right'?.12:0;o.position.y+=d==='up'?.12:d==='down'?-.12:0;o.position.z+=d==='near'?.12:d==='far'?-.12:0;o.userPositioned=true;}
- else return false;s.revision++;s.saved=false;return true;
+    const state=record.knowledgeExplorer,workspace=state.objects,object=selectedKnowledgeObject(record);if(!object)return false;
+    const region=workspace.regions.find(region=>region.rootId===workspace.activeRegionId);
+    if(action==='KnowledgeObjectCollapse'){
+        if(!region)return false;const from=architectureRegionAmount(region);region.opened=!region.opened;region.transition={from,startedAt:performance.now()};
+    }else if(action==='KnowledgeObjectFaces'){if(!region)return false;region.page=(region.page || 0)+1;workspace.selectedFaceId='';}
+    else if(action==='KnowledgeObjectBack'){
+        if(!region)return false;
+        // A leaf is read within its parent's bays. Back first returns to that
+        // parent; only a second Back leaves the branch and hides its siblings.
+        const readingChild=workspace.selectedFaceId && workspace.selectedFaceId!=='face:'+region.focusId;
+        if(!readingChild)region.focusId=region.parentFocusId || region.rootId;
+        region.page=0;workspace.selectedFaceId='face:'+region.focusId;
+    }else if(action.startsWith('KnowledgeObjectSize:'))workspace.scale=Math.max(.65,Math.min(1.35,Number(action.split(':')[1])||1));
+    else if(action.startsWith('KnowledgeObjectFocus:')){workspace.focusObjectId=object.id;workspace.selectedFaceId='';}
+    else if(action==='KnowledgeObjectMove')workspace.interaction=workspace.interaction==='move'?'rotate':'move';
+    else if(action.startsWith('KnowledgeObjectTurn:')){const direction=action.split(':')[1];rotateKnowledgeObject(object,direction==='left'?-.32:direction==='right'?.32:0,direction==='up'?-.25:direction==='down'?.25:0);}
+    else if(action.startsWith('KnowledgeObjectShift:')){const direction=action.split(':')[1];object.position.x+=direction==='left'?-.12:direction==='right'?.12:0;object.position.y+=direction==='up'?.12:direction==='down'?-.12:0;object.position.z+=direction==='near'?.12:direction==='far'?-.12:0;object.userPositioned=true;}
+    else return false;state.revision++;state.saved=false;return true;
 }

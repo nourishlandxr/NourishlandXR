@@ -119,6 +119,8 @@ export const PIGEON_PEA_PIM = deepFreeze(attachPimCellIllustrations(createPimDoc
     identity: {
         commonName: 'Pigeon Pea',
         scientificName: 'Cajanus cajan',
+        image: new URL('../assets/pigeon-pea-cajanus-cajan.png', import.meta.url).href,
+        imageAlt: 'Pigeon Pea flowers, pods and peas',
         identityStatement: 'A productive legume shrub used for food, propagation, biomass and support within warm-climate food forests.',
         synonyms: [],
         regionalNames: [],
