@@ -158,6 +158,10 @@ function showDemoInfo(record,path) {
     try{meshComposition.setActiveRef(pimMeshRef(document,selectedNode?.id,{ownerId,specimenId:String(record?.id || ownerId)}));}catch{meshComposition.setActiveRef(null);}
     const bridge=pimLimBridgeFor(document,path);
     activePimLimBridge=bridge?{bridge,record}:null;
+    if(record.tutorialStage==='plant' && !record.demoProfileInteracted && record.knowledgeExplorer?.mode==='curiosity' && ['uses','culinary','fresh-peas'].includes(selectedNode?.id)){
+        record.demoGuidedNodeId=selectedNode.id;
+        showPersistentPimPrompt(record);
+    }
     syncDemoPanelActions();
 }
 // PIM textures are intentionally large because the canvas keeps authored cell
@@ -361,7 +365,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => introBoardStep || 'INTRO 1.1';
+const demoIntroLabel = () => guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
 let demoJourneyStage='why';
 
 function setDemoJourneyStage(stageId) {
@@ -746,8 +750,7 @@ function demoTextTypingDelay(text, visibleLength) {
 
 function showDemoAction(nextStage) {
     if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
-    const id=nextStage==='note'?'ELEMENTS 1.14':'ELEMENTS 1.9',step=guidedDemoStep(id);
-    showIntroBoard(step.title,step.main,nextStage==='note'?'Leave a Note':'Add Moringa',()=>armDemoPlacement(nextStage,{explained:true}),{stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true});
+    armDemoPlacement(nextStage,{explained:true});
 }
 
 function closeDemoVirtualTag(record) {
@@ -830,22 +833,25 @@ function inviteVirtualTag(record) {
 
 function continueAfterDemoPim(record) {
     if (!record || record.demoProfileInteracted) return false;
-    if(record.tutorialStage==='plant'){
-        const lesson=record.demoPimoLesson || 'tag';
-        if(lesson==='tag'){
-            record.demoPimoLesson='curiosity';knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
-            refreshDemoPimProfile(record);infoPanel?.refreshExplorer();showPersistentPimPrompt(record);return true;
-        }
-        record.demoPimoLesson='done';
-    }
+    record.demoPimoLesson='done';
     knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
-    refreshDemoPimProfile(record);infoPanel?.refreshExplorer();knowledgeRenderer?.clear(record);
+    refreshDemoPimProfile(record);infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
     record.demoProfileInteracted = true;
     record.demoProfileReady = false;
     clearLimSelection();limMeshVisible=false;activePimLimBridge=null;
     finishIntroBoard();
-    showDemoAction(record.tutorialStage==='plant2'?'note':'plant2');
+    if(record.tutorialStage==='plant')showDemoPanelIntroduction(record);
+    else showDemoAction('note');
     return true;
+}
+
+function showDemoPanelIntroduction(record,index=0){
+    const id=index===0?'PANEL 1.1':'PANEL 1.2',step=guidedDemoStep(id);
+    showIntroBoard(step.title,step.main,index===0?'View and comfort options':'Add the second sample',()=>{
+        if(index===0){showDemoPanelIntroduction(record,1);return;}
+        knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
+        showDemoAction('plant2');
+    },{stepLabel:id,nextGuide:step.hint});
 }
 
 const LIM_APPLICATION_LENSES = Object.freeze([
@@ -1227,35 +1233,8 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
 
 // Visitor wording from the Quick Access / Edit table in data1/demo.docx.
 const DEMO_QUICK_ACCESS_COPY=Object.freeze({
-    'INTRO 1.1':'Discover how extended reality brings plant stories and knowledge into living landscapes.',
-    'INTRO 1.2':'Extended reality connects digital information with the world around you. Here, plants and places become starting points for discovery and learning.',
-    'SPACE 1.1':'This is your Control Panel. It shows the actions and help available at each step.',
-    'SPACE 1.2':'You arrive in a garden. A plant catches your attention — what is it, and what role does it play here?',
-    'SPACE 1.3':'A Project brings together the plants, observations and guidance for a real place. Areas organise different parts of that place.',
-    'SPACE 1.4':'In this demo, you’ll explore two plants, add an observation and see how Areas connect.',
-    'SPACE 1.5':'The same place can support a visitor’s curiosity, a school activity or a land steward’s work.',
-    'ELEMENTS 1.1':'A plant profile brings together its identity, ecology, care and uses, alongside local knowledge and sources.',
-    'ELEMENTS 1.2':'Start with one plant. Its Plant Orb brings information into the landscape.',
-    'ELEMENTS 1.3':'Add your first Plant Orb to explore Pigeon Pea. Creator mode lets you choose from thousands of plants or create your own profile.',
-    'ELEMENTS 1.4':'The tag connects this plant profile to a location in the landscape.',
-    'ELEMENTS 1.5':'Place Pigeon Pea where you want to explore it.',
-    'ELEMENTS 1.6':'Your Plant Orb is ready. Open it to discover Pigeon Pea’s characteristics and roles.',
-    'ELEMENTS 1.7':'Explore Pigeon Pea’s information cells to discover its characteristics and roles.',
-    'ELEMENTS 1.8':'The same plant profile is also available in Web Mode, as a standard browser page.',
-    'ELEMENTS 1.9':'Which of these characteristics could matter in this garden? Keep one in mind as you explore.',
-    'ELEMENTS 1.10':'Now meet Moringa. Compare its characteristics with Pigeon Pea and consider the different roles they might play here.',
-    'ELEMENTS 1.12':'Both plant profiles are now linked to this place, ready to explore and compare.',
-    'ELEMENTS 1.14':'What do you notice in the actual landscape?',
-    'ELEMENTS 1.15':'Create a Note to record an observation.',
-    'ELEMENTS 1.17':'Your Note now belongs to this location. It can hold an observation, image, memory or task.',
-    'ELEMENTS 1.18':'This Totem introduces the Area and points to nearby content. Use Show Signs to reveal its directions, or Fade to reduce its visibility.',
-    'ELEMENTS 1.21':'A route connects the two Areas. Each keeps its own plants and Notes.',
-    'ELEMENTS 1.22':'Linked Areas can form a garden tour, a learning trail or a route through a working landscape.',
-    'LEARNING 1.7':'Choose a learning pathway and explore the questions within it.',
-    'LEARNING 1.8':'Connect a plant characteristic to a learning question to explore it further.',
-    'LEARNING 1.10':'Your connection opens a new question. Follow it further, or try another connection.',
-    'LEARNING 1.12':'Take this question back to the landscape. What could you observe here to investigate it?',
-    'CLOSURE 1.1':'Thank you for exploring NourishlandXR. You’ve connected two plants, an observation and two Areas — the beginnings of a living map that can grow with the place.',
+    'SPACE 1.3':'A Project holds information for a real place. This demonstration uses prepared samples in the room around you.',
+    'ELEMENTS 1.8':'This plant profile also has a standard web view. Keep exploring here, or open that view when you choose.',
     ...DEMO_GUIDED_COPY
 });
 
@@ -1322,10 +1301,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         introBoardTextureDirty = true;
         paintBoardParagraphs(introBoardVisibleBody);
         if (paragraphIndex >= paragraphs.length) {
-            boardTypingTimer = setTimeout(finishTyping, 800);
+            boardTypingTimer = setTimeout(finishTyping, 120);
             return;
         }
-        boardTypingTimer = setTimeout(revealNextParagraph, 1350);
+        boardTypingTimer = setTimeout(revealNextParagraph, 500);
     };
     skipDemoNarration = finishTyping;
     if (board) {
@@ -1339,7 +1318,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.add('is-persistent-demo-board');
         if (firstArrival) {
             introSceneStartedAt = performance.now();
-            typingStartDelay = 1800;
+            typingStartDelay = 220;
         }
     }
     finalActions?.setAttribute('hidden', '');
@@ -1429,10 +1408,11 @@ function finishIntroBoard() {
 
 function showPersistentPimPrompt(record) {
     if(record?.demoProfileInteracted){setGuide(`${record.name || 'Plant'} information remains available.`);return;}
-    const first=record?.tutorialStage==='plant',lesson=record.demoPimoLesson || 'tag';
-    const id=first?(lesson==='tag'?'ELEMENTS 1.7':'PIMO 1.2'):'ELEMENTS 1.12';
+    const first=record?.tutorialStage==='plant';
+    const firstStep={uses:'PIMO 1.2a',culinary:'PIMO 1.2b','fresh-peas':'PIMO 1.2c'}[record.demoGuidedNodeId] || 'PIMO 1.2';
+    const id=first?(record.knowledgeExplorer?.mode==='tag'?'ELEMENTS 1.7':firstStep):'ELEMENTS 1.12';
     const step=guidedDemoStep(id);
-    const button=first?(lesson==='tag'?'Follow Curiosity':'Return to the garden'):'Observe the garden';
+    const button=first?'See the panel buttons':'Add a sample Note';
     showIntroBoard(step.title,step.main,button,()=>continueAfterDemoPim(record),{
         tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true
     });
@@ -1799,7 +1779,7 @@ function showArWelcomeShowcase() {
     introSceneActive=true;introBoardVisible=true;introKnowledgeVisible=false;introBoardHasEntered=true;
     arWelcomeStartedAt=performance.now();introSceneStartedAt=arWelcomeStartedAt;introBoardTextureDirty=true;
     introBoardStep='INTRO 1.1';
-    introBoardTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
+    introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.1').title);
     introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
     introBoardVisibleBody='';
     limMeshVisible=false;
@@ -1850,9 +1830,9 @@ function showArWelcomeShowcase() {
         if(!arWelcomeShowcaseActive)return;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
         introBoardStep='INTRO 1.2';
-        introBoardTitle=demoLocalizedText('EXTENDED REALITY, ROOTED IN PLACE');
+        introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
         introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
-        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
+        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Start the sample demo',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
@@ -1933,7 +1913,7 @@ function showArWelcomeShowcase() {
         setIntroBoardNextGuide('');
         const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(continueButton){
-            continueButton.textContent=demoLocalizedText('Continue');
+            continueButton.textContent=demoLocalizedText('Start the sample demo');
             continueButton.hidden=false;
             continueButton.disabled=false;
             continueButton.onclick=()=>{
@@ -1996,8 +1976,8 @@ function showDemoTutorialMedia(key,content={}) {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {code:'SPACE 1.1',title:'Meet your Control panel',art:null,button:'Continue',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
-    {code:'SPACE 1.2',title:'Enter the garden',art:'curiosity',button:'Add our first plant',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]}
+    {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Meet the first sample',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
+    {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:null,button:'Place the sample Orb',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]}
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
@@ -2072,7 +2052,7 @@ function guidePlantConversion(record) {
         setGuide(`Press the ${plantName} orb to reveal its connected Plant Profile.`);
     };
     const id=moringa?'ELEMENTS 1.12':'ELEMENTS 1.6',step=guidedDemoStep(id);
-    showIntroBoard(step.title,step.main,moringa?'Observe the garden':'',()=>{
+    showIntroBoard(step.title,step.main,moringa?'Add a sample Note':'',()=>{
         finishIntroBoard();if(moringa)showDemoAction('note');
     },{stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true});
     // The sample plant is interactive while the large instruction board is
@@ -2081,13 +2061,9 @@ function guidePlantConversion(record) {
 }
 
 function showSceneContinue(label, onContinue, stepLabel) {
-    const sceneCopy={
-        'ELEMENTS 1.19':['Area 1 is ready','Its Totem holds the welcome for this Area. Select a sign to find a nearby plant or Note.'],
-        'ELEMENTS 1.20':['Meet the neighbouring Area','Totem 2 shows a sample layout with its own Plant Orbs and Note. Each belongs to this Area.'],
-        'ELEMENTS 1.21':['The Areas are connected','Each Totem still holds its own local information. The link provides a route between them.']
-    }[stepLabel];
-    if(!sceneCopy)return;
-    showIntroBoard(sceneCopy[0],sceneCopy[1],label,onContinue,{stepLabel});
+    const step=guidedDemoStep(stepLabel);
+    if(!step)return;
+    showIntroBoard(step.title,step.main,label,onContinue,{stepLabel,nextGuide:step.hint});
 }
 
 function cycleDemoNoteTemplate(record) {
@@ -2114,15 +2090,13 @@ function cycleDemoNoteTemplate(record) {
 }
 
 function showDemoClosingMessage() {
+    clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
+    restoreMappedSceneAfterLimo();
     setDemoJourneyStage('impact');
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.demoClosing);
     showIntroBoard(
-        'Thank you for exploring NourishlandXR',
-        [
-            'You mapped two plants, opened their information, connected a fact with purpose, recorded an observation and linked two Areas.',
-            'The result is more than a digital plant label. It is a living information map that can be entered simply and explored in depth.',
-            'NourishlandXR can support school grounds, botanical gardens, parks, community gardens, farms, forests and small home projects through the same connected system.'
-        ],
+        guidedDemoStep('CLOSURE 1.1').title,
+        DEMO_GUIDED_COPY['CLOSURE 1.1'],
         'Finish demo',
         returnToWelcome,
         {stepLabel:'CLOSURE 1.1'}
@@ -2181,7 +2155,7 @@ function createDemoTotemExample() {
         demoZoneName:'My area',
         demoNeighbourZoneName:'Second Area',
         demoTotemColor:'#785a43',
-        demoTotemSignsVisible:false,
+        demoTotemSignsVisible:true,
         demoTotemFaded:false,
         demoArriveAt:performance.now(),
         demoPairRight:{x:(Number(viewerMatrix?.[0]) || 1)/pairRightLength,z:(Number(viewerMatrix?.[2]) || 0)/pairRightLength},
@@ -2201,9 +2175,9 @@ function createDemoTotemExample() {
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.firstAreaShown);
     updateSimulatedMarkers();
     showDemoTutorialMedia('totem');
-    setGuide('Select Show Signs to see nearby destinations.');
+    setGuide('Select a sign to find one of the sample plants or Note.');
     infoPanel?.setContextualHint('Select a sign to see where it points.');
-    showSceneContinue('Why add a second Totem?', showSecondAreaIntroduction, 'ELEMENTS 1.19');
+    showSceneContinue('Add another area', showSecondAreaIntroduction, 'ELEMENTS 1.19');
 }
 
 function showSecondAreaIntroduction(){
@@ -2235,7 +2209,7 @@ function createDemoSecondTotem() {
         demoZoneName:'Second Area',
         demoNeighbourZoneName:'My area',
         demoTotemColor:'#526d7a',
-        demoTotemSignsVisible:false,
+        demoTotemSignsVisible:true,
         demoTotemFaded:false,
         demoArriveAt:performance.now(),
         demoLinkVisible: false,
@@ -2267,7 +2241,7 @@ function connectDemoTotems() {
     updateSimulatedMarkers();
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.areasConnected);
     setGuide('The Areas are linked. Each Totem still keeps its own local plants and Notes.');
-    showSceneContinue('Why link Areas?',showLinkedTotemsIntroduction, 'ELEMENTS 1.21');
+    showSceneContinue('See the final feature',showLimoLearningModes, 'ELEMENTS 1.21');
 }
 
 function createDemoNeighbourhood(totem) {
@@ -2397,15 +2371,15 @@ function syncNativeConnectionEffect(now=performance.now()) {
 function nativeConnectionPanelGuide() {
     const state=nativeConnectionState;if(!state)return;
     const body=state.phase==='source'
-        ? `1. Select Pigeon Pea’s ${state.sourceTitle} cell. 2. Direct the connection toward the ${state.targetTitle} learning cell. 3. Hold ${state.targetTitle} to connect them.`
+        ? `Select ${state.sourceTitle} in Pigeon Pea’s profile. The learning target is already visible beside it.`
         : state.phase==='target'
         ? `The ${state.sourceTitle} cell is selected. Aim at the ${state.targetTitle} learning cell and hold until its progress ring completes. Release early to cancel and try again.`
         : state.phase==='resolving'
         ? `Connecting ${state.sourceTitle} with ${state.targetTitle}…`
         : `${state.sourceTitle} is connected with ${state.targetTitle}. The highlighted cells share one relationship.`;
-    const connectionText=`${state.explanation}\n\nIn this place: ${state.fieldQuestion}`;
+    const connectionText=`${state.explanation}\n\nIn a real project: ${state.fieldQuestion}`;
     const targetMedia=limLearningContent(state.targetId);
-    infoPanel?.showLearning({id:'native-mesh-connection',keepExplorerContext:true,title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}\n\n${connectionText}`:state.phase==='connected'?`${connectionText}\n\n${body}`:`${body}\n\n${connectionText}`,image:targetMedia.image,imageAlt:targetMedia.imageAlt,accent:'#dfff9b',mesh:'lim',editable:false});
+    infoPanel?.showLearning({id:'native-mesh-connection',keepExplorerContext:true,title:`${state.sourceTitle} ↔ ${state.targetTitle}`,body:state.error?`${state.error} ${body}`:state.phase==='connected'?`${connectionText}\n\n${body}`:body,image:targetMedia.image,imageAlt:targetMedia.imageAlt,accent:'#dfff9b',mesh:'lim',editable:false});
     infoPanel?.suspend(false);
 }
 
@@ -2419,16 +2393,16 @@ function showNativeConnectionIntroduction() {
         toggleDemoPlantProfile(plant);
         updateSimulatedMarkers();
     }
-    showIntroBoard('Connect plant knowledge to learning',
+    showIntroBoard('Use what you already opened',
         ['Pigeon Pea and the learning mesh are available together. Their existing cells can form one connection.'],
-        'Connect real cells',startNativeConnectionExperience,
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.8',nextGuide:'Continue to use the live Plant and Learning cells.'});
-    infoPanel?.setLearningModules({title:'Choose a cell connection',
-        body:'Three authored Pigeon Pea examples connect an existing Plant cell with an existing Learning cell. Choose one to try. The Control panel will explain that relationship and offer a question to check against the real place.',
-        actions:DEMO_NATIVE_CONNECTION_EXAMPLES.map(example=>({id:`Connection:${example.id}`,label:example.label}))},{open:true});
+        'Connect the Uses example',()=>startNativeConnectionExperience('uses'),
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.8',nextGuide:'Continue to show the plant source and learning target together.'});
+    infoPanel?.setLearningModules({title:'Other connection examples',
+        body:'The main action uses Uses. You can choose another prepared example here instead.',
+        actions:[...DEMO_NATIVE_CONNECTION_EXAMPLES].sort((a,b)=>(a.id==='uses'?-1:0)-(b.id==='uses'?-1:0)).map(example=>({id:`Connection:${example.id}`,label:example.label}))},{open:true});
 }
 
-function startNativeConnectionExperience(exampleId=DEMO_NATIVE_CONNECTION_EXAMPLES[0].id) {
+function startNativeConnectionExperience(exampleId='uses') {
     const plant=nativeConnectionPlant();
     if(!plant){setGuide('Pigeon Pea is unavailable. Return to its Plant Orb and try again.');return;}
     let spec;
@@ -2443,14 +2417,14 @@ function startNativeConnectionExperience(exampleId=DEMO_NATIVE_CONNECTION_EXAMPL
     removeNativeConnectionEffect();
     meshComposition.clear();
     prepareStableLimoSurface();
-    if(!plant.demoExpanded)toggleDemoPlantProfile(plant);knowledgeExplorerAction(plant,'KnowledgeMode:curiosity');knowledgeRenderer?.clear(plant);
+    if(!plant.demoExpanded)toggleDemoPlantProfile(plant);knowledgeExplorerAction(plant,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(plant);
     limMeshVisible=true;
     limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SETTLED_MS;
     for(const id of targetLineage.ancestors){limExpandedCells.add(id);limExpandedAt.set(id,arWelcomeClock.elapsed-8000);}
     limHiddenCells.delete(targetLineage.key);
     useSharedWelcomeBoard(true);
-    showIntroBoard('Connect a plant cell to a learning cell.',
-        [`Select Pigeon Pea’s ${nativeConnectionState.sourceTitle} cell in the open Plant Profile. A click or trigger press selects it.`],
+    showIntroBoard('Choose the plant information',
+        [`First select ${nativeConnectionState.sourceTitle} in Pigeon Pea’s profile. This chooses the information for the connection.`],
         '',()=>{},
         {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.9',nextGuide:`Select ${nativeConnectionState.sourceTitle} in Pigeon Pea to continue.`});
     nativeConnectionPanelGuide();
@@ -2462,8 +2436,8 @@ function acceptNativePimCell(record,path) {
     if(record!==nativeConnectionPlant() || !acceptDemoNativeSource(state,path))return false;
     record.demoSelectedNodeId=state.sourcePath;
     refreshDemoPimProfile(record);
-    showIntroBoard('Connect a plant cell to a learning cell.',
-        [`Now select the ${state.targetTitle} learning cell. A trigger press or short hold completes the connection.`],
+    showIntroBoard('Choose the learning topic',
+        [`Now hold ${state.targetTitle} until the connection completes. This chooses the learning topic for that plant information.`],
         '',()=>{},
         {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.10',nextGuide:`Select the ${state.targetTitle} learning cell to continue.`});
     nativeConnectionPanelGuide();
@@ -2490,9 +2464,9 @@ async function acceptNativeLimCell(key) {
         if(!finishDemoNativeConnection(state,result))return false;
         meshComposition.display(result);
         refreshDemoPimProfile(plant);
-        showIntroBoard('Plant information connects with learning',
-            [`You connected Pigeon Pea’s ${state.sourceTitle} cell with the ${state.targetTitle} learning cell. Their information now has a relationship you can follow in this place.`],
-            'Continue',showAudienceValue,
+        showIntroBoard('A plant detail becomes a learning activity',
+            [state.exampleId==='uses'?'A teacher could ask which plant part is used and what preparation is recorded. This connection gives the activity a specific source to return to.':`You connected ${state.sourceTitle} with ${state.targetTitle}. A learning activity can now refer back to this specific plant information.`],
+            'Finish the sample',showDemoClosingMessage,
             {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.11',nextGuide:'The two highlighted cells remain connected while you continue.'});
         nativeConnectionPanelGuide();
         introBoardTextureDirty=true;
@@ -2514,15 +2488,11 @@ function showLimoLearningModes() {
     fadeMappedSceneForLimo();
     showDemoTutorialMedia('connection');
     showIntroBoard(
-        'Learn here or as a standalone experience',
-        [
-            'A learning pathway can guide someone on the spot in AR, where questions and actions stay connected to the living place in front of them.',
-            'The same pathway can also work as a standalone learning experience before a visit, in a classroom or when reflecting afterwards.',
-            'A Plant Profile explains the plant. Connecting that knowledge to learning turns facts into pathways: what to notice, how the plant relates to its place, why it matters and what someone could try next.'
-        ],
-        'Show pathway archetypes',
+        guidedDemoStep('LEARNING 1.6').title,
+        DEMO_GUIDED_COPY['LEARNING 1.6'],
+        'Show Learning Pathways',
         showLimoArchetypes,
-        {stepLabel:'LEARNING 1.6',nextGuide:'Open the pathway archetypes, then select one to explore its questions.'}
+        {stepLabel:'LEARNING 1.6',nextGuide:'Open the final feature.'}
     );
 }
 
@@ -2538,8 +2508,8 @@ function showLimoArchetypes() {
     paintWelcomeLayer(performance.now());
     infoPanel?.showLearning({
         id:'limo-pathway-archetypes',
-        title:'Choose a learning pathway',
-        body:'The four archetypes are starting points for different ways of learning. Select an archetype to open its pathway, then follow the connected cells that become relevant.',
+        title:'Learning Pathways',
+        body:'Four starting topics open connected cells. Select one to explore, or use the main action for our prepared Uses connection.',
         image:DEMO_TUTORIAL_ART.pathways.image,
         imageAlt:DEMO_TUTORIAL_ART.pathways.alt,
         accent:'#9fdcff',
@@ -2547,17 +2517,16 @@ function showLimoArchetypes() {
         editable:false
     });
     showIntroBoard(
-        'Choose a pathway archetype',
-        [
-            'The scene is quiet now so the learning pathways can take focus. Totems and Notes remain anchored, but fade into the background.',
-            'Select any archetype to explore. Each pathway opens a different way to read the place, understand living relationships, design with them or shape an outcome.',
-            'A pathway can begin from a Plant Profile, from something observed on site or as a standalone learning journey.'
-        ],
-        'Continue after exploring',
-        showNativeConnectionIntroduction,
-        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.7',nextGuide:'Select an archetype to explore its connected learning cells.'}
+        guidedDemoStep('LEARNING 1.7').title,
+        DEMO_GUIDED_COPY['LEARNING 1.7'],
+        'Connect the Uses example',
+        ()=>startNativeConnectionExperience('uses'),
+        {tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.7',nextGuide:'Try a starting topic, or connect the sample plant.'}
     );
-    setGuide('Select a pathway archetype to explore its connected learning cells.');
+    infoPanel?.setLearningModules({title:'Other connection examples',
+        body:'The guided action uses Uses. These other prepared links are optional.',
+        actions:DEMO_NATIVE_CONNECTION_EXAMPLES.map(example=>({id:`Connection:${example.id}`,label:example.label}))},{open:false});
+    setGuide('Hold a starting cell to open its topic, or continue to the prepared connection.');
     syncDemoPanelActions();
 }
 
@@ -2599,11 +2568,12 @@ function showTotemIntroduction() {
 
 function showSpatialGardenSummary() {
     setDemoJourneyStage('connect');
+    showDemoTutorialMedia('totem');
     showIntroBoard(
-        'The information now belongs to a place',
-        'This scene now holds two plant profiles and one local observation. NourishlandXR organises them into Areas, so visitors can understand where they are and how each part connects to the wider project.',
-        'See Area Totems',
-        showTotemIntroduction,
+        guidedDemoStep('SPACE 1.4').title,
+        DEMO_GUIDED_COPY['SPACE 1.4'],
+        'Show the first Totem',
+        () => {finishIntroBoard();createDemoTotemExample();},
         {stepLabel:'SPACE 1.4'}
     );
 }
@@ -2617,18 +2587,18 @@ function guideNoteConversion(record) {
     record.revealLines = 3;
     refreshDemoRecord(record);
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.notePlaced);
-    infoPanel?.setContextualHint('Select the note to see what changed.');
+    infoPanel?.setContextualHint('Select the Note to read the prepared message.');
     if(pathwayNotePlacementPending){
         pathwayNotePlacementPending=false;placementReady=false;
         setGuide('Your observation Note is anchored to this place.');
         completeLearningPath('placed');
         return;
     }
-    setGuide('Your observation is anchored beside the plants.');
+    setGuide('The sample message is placed beside the two plant profiles.');
     showIntroBoard(
-        'Your Note is in place',
-        'This Note records a seasonal change beside the plants. A Note can also hold an image, memory or task that someone may return to here.',
-        'Continue to Areas',
+        guidedDemoStep('ELEMENTS 1.17').title,
+        DEMO_GUIDED_COPY['ELEMENTS 1.17'],
+        'Organise this area',
         () => {
             finishIntroBoard();
             showSpatialGardenSummary();
@@ -2727,26 +2697,26 @@ function armDemoPlacement(type, {explained=false}={}) {
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : type==='totem'?'Aim the upright preview where the Totem should stand. Use the thumbstick to adjust depth.':'Take in the space before choosing the next position.');
     const introductions = {
-        plant: ['A plant story in this place', [
+        plant: ['A prepared plant sample', [
             'A Plant Orb gives a plant’s information a location in the scene.',
             'Pigeon Pea will be our first example. No previous plant knowledge is needed.'
         ]],
         plant2: ['Compare a second plant', 'Moringa will have its own Orb and profile beside Pigeon Pea. Together they show how different plant roles can be compared in one place.'],
-        note: ['Add one observation', 'A Note keeps something noticed in this part of the landscape beside the plants it relates to. It can be as simple as flowering, damage, a task or a question.'],
+        note: ['Place a sample message', DEMO_GUIDED_COPY['ELEMENTS 1.14']],
         totem: ['Place My area Totem', 'Aim the upright ghost where the Totem should stand. Adjust its distance with the controller thumbstick, then confirm placement.']
     };
     const [title, introduction] = introductions[type];
     const mediaKey=type==='totem'?'totem':type==='note'?'note':'orb';
     if(type==='plant' || type==='plant2')infoPanel?.setMediaCollapsed(true);
     else showDemoTutorialMedia(mediaKey);
-    if(type==='note')infoPanel?.setContextualHint('Press Note for more examples and observation templates.');
+    if(type==='note')infoPanel?.setContextualHint('The prepared message describes the two sample profiles.');
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
         const questTriggerPlacement=Boolean(session && demoControllerInputSource()?.targetRayMode!=='screen');
-        if(type==='plant')infoPanel?.showLearning({id:'demo-plant-context',title:'Pigeon Pea',body:'In Creator mode, you can choose from thousands of plants or create your own profile.',editable:false});
+        if(type==='plant')infoPanel?.showLearning({id:'demo-plant-context',title:'Pigeon Pea sample',body:'This prepared profile demonstrates plant information. A real project can use its own plant profiles.',editable:false});
         const placementCopy = type === 'plant'
-            ? {title:'Place Pigeon Pea',body:DEMO_GUIDED_COPY['ELEMENTS 1.5'],next:`Aim at the real plant or desired tag location, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place it. Use the right joystick to adjust distance.`}
+            ? {title:'Place the sample Orb',body:DEMO_GUIDED_COPY['ELEMENTS 1.5'],next:`Aim at a clear spot in front of you, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place the sample Orb. Use the right joystick to adjust distance.`}
             : type === 'plant2'
                 ? {title:'Place Moringa',body:DEMO_GUIDED_COPY['ELEMENTS 1.11'],next:'Place Moringa beside Pigeon Pea.'}
                 : type==='totem'
@@ -2946,7 +2916,7 @@ function toggleDemoPlantProfile(record) {
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     const opening=!record.demoExpanded;knowledgeExplorer(record);
-    if(opening && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='tag';knowledgeExplorerAction(record,'KnowledgeMode:tag');}
+    if(opening && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='curiosity';knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});}
     record.demoExpanded = opening;
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
@@ -3841,9 +3811,9 @@ function placeMarker() {
         revealLines: 3,
         texture: null,
         ...(type === 'note' ? {
-            name: NOTE_TEMPLATES.observation.title,
-            description: spatialNoteTemplate('observation').description,
-            demoContent: NOTE_TEMPLATES.observation,
+            name: pathwayNotePlacementPending?NOTE_TEMPLATES.observation.title:DEMO_CONTENT.note.title,
+            description: pathwayNotePlacementPending?spatialNoteTemplate('observation').description:'A prepared message about the two sample plant profiles.',
+            demoContent: pathwayNotePlacementPending?NOTE_TEMPLATES.observation:DEMO_CONTENT.note,
             demoNoteTemplateIndex: Math.max(0,DEMO_NOTE_TEMPLATE_KEYS.indexOf('observation')),
             appearance: { note_template:'observation', color: spatialNoteTemplate('observation').color, size: 'small', opacity: .64, surface: 'outline' }
         } : {})

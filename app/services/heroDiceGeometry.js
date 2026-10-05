@@ -12,16 +12,14 @@ export function diceRegionDirections(count=6){
     if(count>7)directions.push([-.577,-.577,.577]);
     return directions.slice(0,Math.max(1,Math.min(8,count))).map(([x,y,z])=>new THREE.Vector3(x,y,z).normalize());
 }
-// Six broad topic faces and one clipped corner for context, with bevelled edges.
-// Each face owns a complete polygon and its own centred texture coordinates.
+// Explorer uses a truncated octahedron: eight regular hexagons joined by six
+// square faces. Six hexagons carry topics, one carries context, and the remaining
+// faces keep the material texture. The front topic faces the viewer initially.
 export function createKnowledgeDiceGeometry(radius=.12){
- const directions=diceRegionDirections(7),size=radius*.6,bevel=size*.13;
- const planes=directions.map((normal,region)=>({normal,distance:size*(region===6?1.25:1),region}));
- const primary=planes.slice();
- for(let i=0;i<primary.length;i++)for(let j=i+1;j<primary.length;j++){
-  const sum=primary[i].normal.clone().add(primary[j].normal),length=sum.length();if(length<.1)continue;
-  planes.push({normal:sum.divideScalar(length),distance:(primary[i].distance+primary[j].distance-bevel)/length,region:7});
- }
+ const unit=radius/Math.sqrt(5),front=new THREE.Vector3(1,1,1).normalize(),orientation=new THREE.Quaternion().setFromUnitVectors(front,new THREE.Vector3(0,0,1));
+ const hexagons=[[1,1,1],[-1,1,1],[1,-1,1],[-1,-1,1],[1,1,-1],[-1,1,-1],[1,-1,-1],[-1,-1,-1]];
+ const planes=hexagons.map(([x,y,z],region)=>({normal:new THREE.Vector3(x,y,z).normalize().applyQuaternion(orientation),distance:Math.sqrt(3)*unit,region}));
+ for(const [x,y,z] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]])planes.push({normal:new THREE.Vector3(x,y,z).applyQuaternion(orientation),distance:2*unit,region:7});
  const vertices=[];
  for(let i=0;i<planes.length;i++)for(let j=i+1;j<planes.length;j++)for(let k=j+1;k<planes.length;k++){
   const a=planes[i],b=planes[j],c=planes[k],bc=b.normal.clone().cross(c.normal),det=a.normal.dot(bc);if(Math.abs(det)<1e-7)continue;
@@ -34,13 +32,16 @@ export function createKnowledgeDiceGeometry(radius=.12){
   const centre=polygon.reduce((sum,p)=>sum.add(p),new THREE.Vector3()).divideScalar(polygon.length),right=new THREE.Vector3(0,1,0).cross(plane.normal);if(right.length()<.01)right.set(1,0,0);right.normalize();const up=plane.normal.clone().cross(right).normalize();
   polygon.sort((a,b)=>Math.atan2(a.clone().sub(centre).dot(up),a.clone().sub(centre).dot(right))-Math.atan2(b.clone().sub(centre).dot(up),b.clone().sub(centre).dot(right)));
   const inradius=Math.min(...polygon.map((p,i)=>{const next=polygon[(i+1)%polygon.length],edge=next.clone().sub(p);return centre.clone().sub(p).cross(edge).length()/edge.length();}));
+  const uvDiameter=inradius*(polygon.length===6?2.4:3);
   if(plane.region<7)frames[plane.region]={centre,normal:plane.normal.clone(),right,up,inradius};
   for(let i=0;i<polygon.length;i++){
    regions.push(plane.region);
    for(const p of [centre,polygon[i],polygon[(i+1)%polygon.length]]){
     positions.push(p.x,p.y,p.z);normals.push(plane.normal.x,plane.normal.y,plane.normal.z);
-    const delta=p.clone().sub(centre),x=.5+delta.dot(right)/(inradius*2.25),y=.5-delta.dot(up)/(inradius*2.25);
-    uvs.push((plane.region%4+Math.max(.01,Math.min(.99,x)))/4,(Math.floor(plane.region/4)+Math.max(.01,Math.min(.99,y)))/2);
+    // The complete polygon fits inside its atlas tile. A circular link target
+    // stays inside the hexagon's inradius, and text never wraps around an edge.
+    const delta=p.clone().sub(centre),x=.5+delta.dot(right)/uvDiameter,y=.5-delta.dot(up)/uvDiameter;
+    uvs.push((plane.region%4+x)/4,(Math.floor(plane.region/4)+y)/2);
    }
   }
  }

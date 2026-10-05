@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Explorer hexagonal dice review</title>
+<style>
+body{margin:0;background:#102b25;color:#e4f2e9;font:16px system-ui}main{max-width:1100px;margin:auto;padding:20px}h1{font-size:22px;font-weight:500;margin:0 0 8px}p{margin:8px 0;color:#bbd8c9}canvas{display:block;width:100%;height:auto;background:#173a31;border-radius:16px}label{display:inline-flex;gap:12px;align-items:center;margin:12px 0}input{width:250px}#errors{color:#ffb7a5}
+</style>
+<main>
+<h1>Explorer dice · regular hexagonal faces</h1>
+<p>Production geometry, circular link targets and engraved surface texture. The right die inherits the Uses target colour.</p>
+<canvas id="dice" width="1320" height="760" aria-label="Hexagonal knowledge dice with Uses and Dried pulse faces"></canvas>
+<label>Turn both dice <input id="turn" type="range" min="-180" max="180" value="0"></label>
+<p id="status" role="status">Preparing renderer…</p><p id="errors" role="alert"></p>
+</main>
+<script type="module">
+import * as THREE from '../app/vendor/three.module.min.js';
+import {createDiceRenderer} from '../app/services/diceRenderer.js';
+const canvas=document.querySelector('#dice'),status=document.querySelector('#status'),errors=document.querySelector('#errors');
+window.addEventListener('error',event=>errors.textContent=event.message);
+window.addEventListener('unhandledrejection',event=>errors.textContent=String(event.reason));
+try{
+ await document.fonts.ready;
+ const gl=canvas.getContext('webgl',{alpha:false,antialias:true});if(!gl)throw Error('WebGL unavailable.');
+ const renderer=createDiceRenderer(gl,{radius:.12,appearance:'knowledge'}),camera=new THREE.PerspectiveCamera(36,canvas.width/canvas.height,.01,10);
+ camera.position.set(0,.02,.75);camera.lookAt(0,0,0);camera.updateMatrixWorld();camera.updateProjectionMatrix();
+ const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};
+ const parent=[
+  {title:'Uses',summary:'Food, fodder and materials',role:'branch',accent:'#e5ae45'},
+  {title:'Growing',summary:'Planting and propagation',role:'branch',accent:'#42c99a'},
+  {title:'Ecology',summary:'Relationships with other plants',role:'branch',accent:'#62bcec'},
+  {title:'History',role:'branch',accent:'#d782c5'},
+  {title:'Plant care',role:'branch',accent:'#a999ef'},
+  {title:'Identity',role:'information'},
+  {title:'Pigeon Pea',role:'contextual'},undefined
+ ];
+ const child=[
+  {title:'Dried pulse',summary:'Store mature seeds as a pulse',role:'information'},
+  {title:'Fresh peas',summary:'Cook the green seeds',role:'information'},
+  {title:'Garden stakes',summary:'Strong stems support plants',role:'information'},
+  {title:'Animal fodder',role:'information'},undefined,undefined,
+  {title:'Common uses',role:'contextual'},undefined
+ ];
+ function draw(){
+  gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.055,.15,.125,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+  const turn=Number(document.querySelector('#turn').value)*Math.PI/180;
+  const left=new THREE.Matrix4().compose(new THREE.Vector3(-.18,0,0),new THREE.Quaternion().setFromEuler(new THREE.Euler(.12,turn-.20,.06)),new THREE.Vector3(1,1,1));
+  const right=new THREE.Matrix4().compose(new THREE.Vector3(.18,0,0),new THREE.Quaternion().setFromEuler(new THREE.Euler(-.06,turn+.24,-.03)),new THREE.Vector3(1,1,1));
+  renderer.draw(view,left,1,parent,'#8bb9aa');renderer.draw(view,right,1,child,'#e5ae45');
+  status.textContent='Rendered two knowledge dice. Six topic hexagons, a context hexagon and textured connecting faces. No edge skeleton.';
+ }
+ document.querySelector('#turn').addEventListener('input',draw);draw();
+}catch(error){errors.textContent=error.stack || String(error);status.textContent='Preview unavailable.';}
+</script>
+</html>

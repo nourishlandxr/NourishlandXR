@@ -50,7 +50,12 @@ export function createKnowledgeObjectRenderer(gl,{tether=null}={}){
             if(opacity>.55 && !entries.some(e=>e.record===record))entries.push({record,knowledge,pose});record.knowledgeObjectPose=pose;
             const workspace=ensureKnowledgeObjects(record,knowledge),basis=knowledgePoseMatrix(pose),visible=visibleKnowledgeObjects(workspace),ids=new Set(visible.map(o=>o.id)),lineage=new Set(),ancestors=[workspace.selectedObjectId],seen=new Set(ancestors);
             for(let i=0;i<ancestors.length;i++)for(const link of workspace.connectors)if(link.targetObjectId===ancestors[i]){lineage.add(link.id);if(!seen.has(link.sourceObjectId)){seen.add(link.sourceObjectId);ancestors.push(link.sourceObjectId);}}
-            for(const object of visible)dice.draw(view,basis.clone().multiply(localObjectMatrix(object)),opacity,[...object.faces,{...object.contextFace,title:object.featuredUses?'Common uses':object.title+' · context'}],object.accent);
+            for(const object of visible){
+                // Geometry always reserves hexagon six for context, including
+                // objects with fewer than six topics. Empty topics stay blank.
+                const atlasFaces=Array.from({length:8},(_,i)=>i<6?object.faces[i]:i===6?{...object.contextFace,title:object.featuredUses?'Common uses':object.title+' · context'}:undefined);
+                dice.draw(view,basis.clone().multiply(localObjectMatrix(object)),opacity,atlasFaces,object.accent);
+            }
             if(record.knowledgeExplorer.connections && tether)for(const link of workspace.connectors){
                 if(!ids.has(link.sourceObjectId) || !ids.has(link.targetObjectId))continue;const anchors=knowledgeConnectorAnchors(workspace,link);if(!anchors)continue;
                 const a=new THREE.Vector3(anchors.start.x,anchors.start.y,anchors.start.z).applyMatrix4(basis),b=new THREE.Vector3(anchors.end.x,anchors.end.y,anchors.end.z).applyMatrix4(basis),selected=lineage.has(link.id);

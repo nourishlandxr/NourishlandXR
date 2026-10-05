@@ -18,8 +18,8 @@ export const DEMO_TUTORIAL_ART = Object.freeze({
 });
 
 export const DEMO_PANEL_HINTS = Object.freeze([
-    'The image panel is attached above.',
-    'Open Settings to adjust the experience.',
+    'Media opens or closes the image panel.',
+    'Controls opens view options; Settings opens display preferences.',
     'Select Help if you need guidance.',
     'Use Back to revisit an earlier information cell.',
     'Hide this panel when you want an unobstructed view.'
@@ -27,7 +27,7 @@ export const DEMO_PANEL_HINTS = Object.freeze([
 
 export const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
     'Welcome to the NourishlandXR demo',
-    'NLXR is an immersive information hub for living landscapes.'
+    'Attach information to objects and locations, then open it where it belongs.'
 ]);
 
 export const WELCOME_BOARD_PARAGRAPHS_PT = Object.freeze([
@@ -79,7 +79,7 @@ export const INTRO_KNOWLEDGE_KEYWORDS = Object.freeze(Object.keys(BIOMAP_CATEGOR
 
 export const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
-    note: { title: 'Focus Point · Seasonal observation', accent: '#f0cf70', lines: ['STORY  New growth after summer rain', 'MEDIA  Sound · animation · images', 'ACTION  Revisit · compare · update'] },
+    note: { title: 'Sample message', accent: '#f0cf70', lines: ['Two sample plant profiles are available here.', 'Select either Orb to explore.'] },
     zone: { title: 'Welcome to this area', accent: '#785a43', bubbles: ['NOTES · nearby', 'PLANT ORBS · around this Totem', 'NEIGHBOUR TOTEM · right'] },
     zoneTwo: { title: 'Welcome to this area', accent: '#438f99', bubbles: ['NOTES · nearby', 'PLANT ORBS · around this Totem', 'NEIGHBOUR TOTEM · left'] }
 });

@@ -144,6 +144,15 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
 export function optionalPanelControl(items=[],action=''){
     return Array.isArray(items)?items.find(item=>item?.action===action) || null:null;
 }
+// Companion openers share their names and show/hide state in screen and XR views.
+export function panelOpenerControls({mediaCollapsed=true,explorerClosed=true,settingsOpen=false}={}){
+    return [
+        {action:'ToggleMedia',label:'Media',expanded:!mediaCollapsed},
+        {action:'Explorer',label:'Controls',expanded:!explorerClosed},
+        {action:'Settings',label:'Settings',expanded:settingsOpen}
+    ].map((item,index)=>({...item,kind:'menu',panelOpener:true,status:item.expanded?'Hide':'Show',
+        ariaLabel:`${item.expanded?'Hide':'Show'} ${item.label} panel`,x:18,y:174+index*62,width:174,height:54}));
+}
 export function controlPanelHeight(lines,largeText=false,pathway=false,utilities=0,moduleCount=0){
     const items=Array.isArray(utilities)?utilities.slice(0,8):[],count=items.length || Math.min(8,Number(utilities)||0);
     const hasPrimary=items.some(item=>item.primary || item.id==='continue');
@@ -204,7 +213,10 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const left=rail+22,width=1000-rail-44;
     const button=(item,x,y,w,h)=>({...item,description:item.description || controlDescription(item),x,y,width:w,height:h});
     const result=[];
-    items.filter(item=>['tab','menu'].includes(item.kind)).forEach((item,index)=>result.push(button(item,16,150+index*50,rail-28,40)));
+    const menu=items.filter(item=>['tab','menu'].includes(item.kind)),openers=menu.filter(item=>item.panelOpener),otherMenu=menu.filter(item=>!item.panelOpener);
+    openers.forEach((item,index)=>result.push(button(item,16,150+index*56,rail-28,46)));
+    const menuStart=150+openers.length*56+(openers.length?26:0);
+    otherMenu.forEach((item,index)=>result.push(button(item,16,menuStart+index*50,rail-28,40)));
     const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
     const secondary=items.filter(item=>item.kind==='utility' && item!==primary);
     const pager=items.filter(item=>item.kind==='pager');
@@ -213,7 +225,7 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const primaryY=primary?height-82:height-20;
     if(primary)result.push(button(primary,left,primaryY,width,64));
     pager.forEach((item,index)=>result.push(button(item,left+width-(pager.length-index)*46,98,40,34)));
-    history.forEach((item,index)=>result.push(button(item,16+index*46,150+items.filter(menu=>['tab','menu'].includes(menu.kind)).length*50,40,38)));
+    history.forEach((item,index)=>result.push(button(item,16+index*46,menuStart+otherMenu.length*50,40,38)));
     const rows=Math.ceil(secondary.length/2);
     let y=primaryY-(rows*40+module.length*42+pathway.length*42+8);
     for(const group of [pathway,module])for(const item of group){result.push(button(item,left,y,width,36));y+=40;}
@@ -227,13 +239,14 @@ function controlDescription(item={}){
         Hide:'Collapse the Control panel. Reopen it from its small tab.',
         Restore:'Restore the Control panel.',
         Help:'Open the available help and tutorial options.',
-        Settings:'Adjust text size, glass opacity, Orb model, Totem style, panel scale and device settings.',
+        Settings:'Show or hide the Settings panel for reading comfort, graphics and sound.',
         GraphicsMenu:'Open graphics quality, rain and object styles, or return to General settings.',
         SettingsHelp:'Open the full Help page in the Control panel.',
         CloseSettings:'Close Settings. The image stays open.',
         Previous:'Show the previous page.',
         Next:'Show the next page.',
-        ToggleMedia:'Show or hide the selected plant image.',
+        ToggleMedia:'Show or hide the Media panel for the selected image.',
+        Explorer:'Show or hide the Controls panel for Tag, Curiosity and optional Explorer 3D.',
         ToggleMediaDetach:'Detach or dock the media panel.',
         'Utility:close':'Close the current demo experience.',
         'Utility:continue':'Continue to the next demo step.',
@@ -319,7 +332,19 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const mainUtilities=()=>utilityActions.filter(item=>!['safety','recenter'].includes(item.id));
-    const controls=()=>{const items=controlPanelControls({hidden,tab,selected:confirmation?false:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:confirmation?[]:pathwayContext?.actions || [],moduleActions:confirmation?[]:moduleContext?.actions || [],utilityActions:mainUtilities()});if(!hidden && !confirmation)(()=>{const hide=items.find(item=>item.action==='Hide');const y=hide?.y || 346;items.filter(item=>item.kind==='history' || item.action==='Hide').forEach(item=>item.y+=124);items.splice(items.indexOf(hide),0,{action:'ToggleMedia',label:mediaCollapsed?'Media':'Hide media',kind:'menu',x:18,y,width:174,height:54},{action:'Explorer',label:explorerClosed?'Controls':'Hide controls',description:'Show Tag, Curiosity and spatial Explorer modes.',kind:'menu',x:18,y:y+62,width:174,height:54});})();const visible=confirmation?items.filter(item=>item.kind==='utility'):items;return isDesktopDemo()?visible.filter(item=>item.action!=='Recenter'):visible;};
+    const panelOpeners=()=>panelOpenerControls({mediaCollapsed,explorerClosed,settingsOpen});
+    const controls=()=>{
+        let items=controlPanelControls({hidden,tab,selected:confirmation?false:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:confirmation?[]:pathwayContext?.actions || [],moduleActions:confirmation?[]:moduleContext?.actions || [],utilityActions:mainUtilities()});
+        if(!hidden && !confirmation){
+            items=items.filter(item=>item.action!=='Settings');
+            const menu=items.filter(item=>['tab','menu'].includes(item.kind));
+            menu.forEach((item,index)=>item.y=384+index*62);
+            items.filter(item=>item.kind==='history').forEach(item=>item.y=384+menu.length*62);
+            items=[...panelOpeners(),...items];
+        }
+        const visible=confirmation?items.filter(item=>item.kind==='utility'):items;
+        return isDesktopDemo()?visible.filter(item=>item.action!=='Recenter'):visible;
+    };
     // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
     const spatialHeight=()=>phoneAR?900:headset?600:height();
     const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
@@ -417,6 +442,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     const settingsControls=()=>panelSettingsControls({simpleDesktop,headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,demoSound:demoSound?.volumes()});
     function renderSettings(){
         renderExplorer();
+        syncPanelOpenerButtons();
         settingsElement.hidden=!settingsOpen || hidden || detached;
         element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
         settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
@@ -465,9 +491,38 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         button.dataset.controlKind=item.kind || 'action';button.classList.toggle('is-primary-action',Boolean(item.primary) || ['Next','PathNext'].includes(item.action));
         button.setAttribute('aria-label',item.action==='Restore'?'Restore Control panel':item.ariaLabel || item.label);
         button.title=controlDescription(item);
+        if(item.panelOpener){
+            button.classList.add('nlxr-panel-opener');button.setAttribute('aria-expanded',String(item.expanded));
+            const icon=document.createElement('span');icon.className='nlxr-panel-opener-icon';icon.setAttribute('aria-hidden','true');
+            const label=document.createElement('span');label.className='nlxr-panel-opener-label';label.textContent=item.label;
+            const state=document.createElement('small');state.className='nlxr-panel-opener-state';state.textContent=item.status;
+            button.replaceChildren(icon,label,state);button.title=item.ariaLabel;
+        }
         if(item.action.startsWith('KnowledgeMode:'))button.setAttribute('aria-pressed',String(Boolean(item.selected)));
         if(item.kind==='tab'){button.setAttribute('role','tab');button.setAttribute('aria-selected',String(item.selected));button.setAttribute('aria-controls',contentId);button.id=contentId+'-'+item.action;button.tabIndex=item.selected?0:-1;}
         button.addEventListener('click',event=>{event.stopPropagation();act(item.action);});return button;
+    }
+    function syncPanelOpenerButtons(){
+        for(const item of panelOpeners()){
+            const button=element.querySelector(`.nlxr-panel-opener[data-info-action="${item.action}"]`);
+            if(!button)continue;
+            button.setAttribute('aria-expanded',String(item.expanded));button.setAttribute('aria-label',item.ariaLabel);button.title=item.ariaLabel;
+            const state=button.querySelector('.nlxr-panel-opener-state');if(state)state.textContent=item.status;
+        }
+    }
+    function renderControlNavigation(tabs){
+        const items=controls(),openers=items.filter(item=>item.panelOpener);
+        tabs.replaceChildren();
+        if(openers.length){
+            const group=document.createElement('section');group.className='nlxr-panel-openers';group.setAttribute('role','group');group.setAttribute('aria-label','Panels');
+            const title=document.createElement('small');title.className='nlxr-panel-openers-heading';title.textContent='Panels';group.append(title);
+            openers.forEach(item=>group.append(makeButton(item)));tabs.append(group);
+        }
+        items.filter(item=>['tab','menu'].includes(item.kind) && !item.panelOpener && item.action!=='Hide').forEach(item=>tabs.append(makeButton(item)));
+        if(!confirmation){
+            const history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Experience history');
+            items.filter(item=>item.kind==='history').forEach(item=>history.append(makeButton(item)));if(history.childElementCount)tabs.append(history);
+        }
     }
     function performanceStatus(){
         if(performanceSettings?.showFps){const cpu=performanceSettings.cpuMs===null || performanceSettings.cpuMs===undefined?'Measuring CPU…':`CPU ${performanceSettings.cpuMs} ms · ${performanceSettings.heaviest || 'rendering'}`;return `${performanceSettings.label} · ${cpu}`;}
@@ -739,8 +794,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const tabs=element.querySelector('.nlxr-control-tabs');
             if(tabs){
                 const railScroll=tabs.scrollTop;
-                tabs.querySelectorAll('[data-info-action]').forEach(button=>button.remove());
-                controls().filter(item=>['tab','menu'].includes(item.kind) && item.action!=='Hide').forEach(item=>tabs.append(makeButton(item)));
+                renderControlNavigation(tabs);
                 tabs.scrollTop=railScroll;
             }
             const tools=element.querySelector('.nlxr-tools-dock');
@@ -779,8 +833,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             header.classList.add('is-move-handle');header.title='Hold to move the Control panel';
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
             const tabs=document.createElement('nav');tabs.className='nlxr-control-tabs';tabs.setAttribute('role','tablist');tabs.setAttribute('aria-orientation','vertical');tabs.setAttribute('aria-label','Control panel sections');
-            controls().filter(item=>['tab','menu'].includes(item.kind) && item.action!=='Hide').forEach(item=>tabs.append(makeButton(item)));
-            if(!confirmation){const history=document.createElement('nav');history.className='nlxr-demo-history';history.setAttribute('aria-label','Experience history');controls().filter(item=>item.kind==='history').forEach(item=>history.append(makeButton(item)));if(history.childElementCount)tabs.append(history);}
+            renderControlNavigation(tabs);
             element.append(tabs);
             if(pathwayContext){
                 const pathway=document.createElement('section');pathway.className='nlxr-pathway-context';pathway.setAttribute('aria-live','polite');
@@ -942,12 +995,20 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             ctx.fillStyle='#b4c3c7';ctx.font='400 17px system-ui';ctx.fillText(card.metadata,200,footerY,600);
             if(card.tab==='Details')ctx.fillText(card.page,882,footerY,88);
         }
+        const panelButtons=card.controls.filter(button=>button.panelOpener);
+        if(panelButtons.length){
+            const first=panelButtons[0],last=panelButtons[panelButtons.length-1],groupTop=first.y-30;
+            ctx.fillStyle='rgba(19,72,72,.28)';ctx.beginPath();ctx.roundRect(first.x-8,groupTop-6,first.width+16,last.y+last.height-groupTop+14,16);ctx.fill();
+            ctx.strokeStyle='rgba(142,222,214,.38)';ctx.lineWidth=1.5;ctx.stroke();
+            ctx.fillStyle='#b8eee5';ctx.font='650 16px system-ui';ctx.textAlign='left';ctx.fillText('PANELS',first.x+8,groupTop+2,first.width-16);
+        }
         card.controls.forEach(button=>{
             const radius=button.kind==='tab'?13:15;
             const isContinue=button.action==='Utility:continue';
             if(button.kind!=='tab' && button.kind!=='handle' && !button.disabled && !isContinue){ctx.fillStyle='rgba(4,9,12,.34)';ctx.beginPath();ctx.roundRect(button.x,button.y+5,button.width,button.height,radius);ctx.fill();}
             const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);
             if(isContinue){face.addColorStop(0,'rgba(10,26,29,.06)');face.addColorStop(1,'rgba(10,26,29,.12)');}
+            else if(button.panelOpener){face.addColorStop(0,button.expanded?'rgba(52,133,129,.78)':'rgba(34,100,102,.66)');face.addColorStop(1,'rgba(14,66,72,.76)');}
             else if(button.primary){face.addColorStop(0,'rgba(79,128,115,.18)');face.addColorStop(1,'rgba(29,69,68,.26)');}
             else if(button.selected){face.addColorStop(0,'rgba(140,205,235,.5)');face.addColorStop(1,'rgba(56,112,150,.4)');}
             else if(button.disabled){face.addColorStop(0,'rgba(211,220,225,.05)');face.addColorStop(1,'rgba(211,220,225,.025)');}
@@ -955,9 +1016,14 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             else if(button.kind==='toggle'||button.kind==='handle'){face.addColorStop(0,'rgba(174,232,252,.4)');face.addColorStop(1,'rgba(61,137,177,.2)');}
             else {face.addColorStop(0,'rgba(119,169,198,.34)');face.addColorStop(.5,'rgba(56,93,122,.56)');face.addColorStop(1,'rgba(26,52,78,.74)');}
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
-            if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=isContinue?18:button.primary?3:2.5;ctx.stroke();}
+            if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=button.panelOpener?'rgba(159,236,223,.86)':isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=isContinue?18:button.primary?3:2.5;ctx.stroke();}
             if(card.hoverAction===button.action && !button.disabled){ctx.fillStyle='rgba(219,237,216,.22)';ctx.fill();ctx.strokeStyle='rgba(245,247,222,.96)';ctx.lineWidth=isContinue?22:5;ctx.stroke();}
             if(button.selected){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
+            if(button.panelOpener){
+                ctx.strokeStyle='#c4f5ed';ctx.lineWidth=1.8;ctx.beginPath();ctx.roundRect(button.x+10,button.y+10,14,14,3);ctx.moveTo(button.x+15,button.y+11);ctx.lineTo(button.x+15,button.y+23);ctx.stroke();
+                ctx.textAlign='left';ctx.fillStyle='#f1fffc';ctx.font='650 18px system-ui';ctx.fillText(button.label,button.x+33,button.y+7,button.width-40);
+                ctx.fillStyle='#bdeae3';ctx.font='550 12px system-ui';ctx.fillText(button.status,button.x+33,button.y+29,button.width-40);return;
+            }
             ctx.fillStyle=button.disabled?'#899297':isContinue?'#e1dfd2':button.primary?'#f3fbf4':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(isContinue?'600 ':button.primary?'680 ':button.kind==='toggle'||button.kind==='handle'?'650 ':'600 ')+(isContinue?'44px':button.primary?'28px':button.kind==='toggle'||button.kind==='handle'?'26px':'21px')+' system-ui';ctx.textAlign='center';ctx.fillText(isContinue?button.label.toUpperCase():button.label,button.x+button.width/2,button.y+(button.height-(isContinue?44:button.primary?34:button.kind==='toggle'||button.kind==='handle'?30:28))/2,button.width-16);
         });return c;
     }
@@ -1188,7 +1254,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
-        refreshExplorer(){renderExplorer();},
+        refreshExplorer({mode}={}){
+            if(mode && availablePimoModes().includes(mode)){
+                panelModeChoice=mode;
+                if(knowledgeRecord)knowledgeExplorerAction(knowledgeRecord,'KnowledgeMode:'+mode);
+            }
+            renderExplorer();
+        },
         getHeldInputSource(){return spatialMove?.source || null;},
         activate(ray){const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
         isHandInteracting(source){return Boolean(source && handContacts.get(source));},

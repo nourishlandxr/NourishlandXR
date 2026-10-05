@@ -1,7 +1,8 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {createHeroDiceGeometry,createKnowledgeDiceGeometry} from './heroDiceGeometry.js';
 
-// Shared shape. Explorer text is etched into its textured surface atlas.
+// The hero and Explorer keep separate shapes. Explorer text is etched into its
+// textured surface atlas, with each link target contained on one flat hexagon.
 function engravedDiceAtlas(faces,colour){
  const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d');
  for(let tile=0;tile<8;tile++){
@@ -42,7 +43,7 @@ export function createDiceRenderer(gl,{radius=.12,appearance='glass'}={}){
         draw(view,model,opacity=1,faces=[],colour=null){
             let surfaceTexture=atlas;
             if(appearance==='knowledge'){
-             const key=JSON.stringify([colour,faces.map(face=>[face.title,face.role,face.accent,face.summary])]);surfaceTexture=engravedTextures.get(key);
+             const key=JSON.stringify([colour,faces.map(face=>face?[face.title,face.role,face.accent,face.summary]:null)]);surfaceTexture=engravedTextures.get(key);
              if(!surfaceTexture){surfaceTexture=gl.createTexture();const previous=gl.getParameter(gl.TEXTURE_BINDING_2D);gl.bindTexture(gl.TEXTURE_2D,surfaceTexture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,engravedDiceAtlas(faces,colour));gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.bindTexture(gl.TEXTURE_2D,previous);engravedTextures.set(key,surfaceTexture);if(engravedTextures.size>8){const oldest=engravedTextures.keys().next().value;gl.deleteTexture(engravedTextures.get(oldest));engravedTextures.delete(oldest);}}
             }
             const depth=gl.isEnabled(gl.DEPTH_TEST),cull=gl.isEnabled(gl.CULL_FACE),blend=gl.isEnabled(gl.BLEND),mask=gl.getParameter(gl.DEPTH_WRITEMASK),active=gl.getParameter(gl.ACTIVE_TEXTURE);
