@@ -51,6 +51,11 @@ export const XR_HAND_JOINT_CONNECTIONS = Object.freeze([
 import * as THREE from '../vendor/three.module.min.js';
 
 const handSamples = new WeakMap();
+const handFrameTokens=new WeakMap();
+let handFrameSequence=0;
+export function beginHandTrackingFrame(frame,time=performance.now()){
+    handFrameTokens.set(frame,{sequence:++handFrameSequence,time});
+}
 const handJointNames = [...new Set(XR_HAND_JOINT_CONNECTIONS.flat())];
 // One sample per XR frame, shared by visuals, pokes and pinch routing. Missing
 // poses are never extrapolated into interaction with a surface.
@@ -58,15 +63,17 @@ export function handTrackingState(frame, source, referenceSpace) {
     const hand = source?.hand;
     if (!hand || !frame || !referenceSpace) return null;
     const lastSample=handSamples.get(source);let previous = lastSample;
-    if(previous?.frame===frame && previous.space===referenceSpace)return previous.state;
-    const time=globalThis.performance?.now?.() || Date.now();
+    const token=handFrameTokens.get(frame),time=token?.time ?? (globalThis.performance?.now?.() || Date.now());
+    // Some XR runtimes reuse the XRFrame wrapper. Object identity alone must
+    // never make the hand sample permanent across animation frames.
+    if(token && previous?.sequence===token.sequence && previous.space===referenceSpace)return previous.state;
     if(previous?.space!==referenceSpace || time-previous.time>100)previous=null;
     const joints = new Map(),rawJoints=new Map();
     for (const name of handJointNames) {
         const space = hand.get?.(name);
         const pose = space ? frame.getJointPose?.(space, referenceSpace) : null;
         const matrix = pose?.transform?.matrix;
-        if (!matrix || ![matrix[12],matrix[13],matrix[14]].every(Number.isFinite)) {
+        if (!matrix || pose.emulatedPosition===true || !Array.from(matrix).every(Number.isFinite)) {
             const last=previous?.state.joints.get(name);
             if(last && time-last.lastSeenAt<70)joints.set(name,last);
             continue;
@@ -97,12 +104,12 @@ export function handTrackingState(frame, source, referenceSpace) {
     const pose=tracked && source.targetRaySpace?frame.getPose?.(source.targetRaySpace,referenceSpace):null;
     const pointer=tracked?(controllerRayFromPose(pose,source.handedness) || {origin:filteredIndex,direction:{x:dx/length,y:dy/length,z:dz/length},handedness:source.handedness || 'right'}):null;
     const state={
-        joints,rawJoints,time,tracked,visualConfidence:Math.min(1,...handJointNames.map(name=>rawJoints.has(name)?1:joints.has(name)?Math.max(0,1-(time-joints.get(name).lastSeenAt)/70):0)),
+        joints,rawJoints,time,tracked,visualConfidence:tracked && handJointNames.every(name=>rawJoints.has(name))?1:0,
         connections: XR_HAND_JOINT_CONNECTIONS,
         pinch,pinchSequence:(lastSample?.state.pinchSequence || 0)+(pinch && !lastSample?.state.pinch?1:0),
         pointer
     };
-    handSamples.set(source,{frame,space:referenceSpace,time,state});return state;
+    handSamples.set(source,{frame,sequence:token?.sequence,space:referenceSpace,time,state});return state;
 }
 
 export function controllerRayEnd(ray, subjects = [], maxLength = XR_LASER_POINTER_CONFIG.length) {

@@ -2378,4 +2378,14 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 [data-knowledge-mode="explore"] [data-pim-renderer="canonical"] { display:none !important; }
 .nlxr-explorer-options { display:flex; flex-wrap:wrap; gap:8px; }
 .nlxr-explorer-options button { flex:1 1 130px; min-height:44px; }
+.nlxr-explorer-companion button {background:rgba(18,39,34,.36);color:#edf3e4;border:1px solid #8faea4;border-radius:12px;min-height:44px;}
+.nlxr-explorer-companion .nlxr-explorer-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:16px;}
+.nlxr-explorer-companion .nlxr-explorer-options button{white-space:normal;line-height:1.3;}
+.nlxr-explorer-companion header>button{margin-left:auto;min-height:32px;padding:4px 12px;}
+.nlxr-explorer-size{grid-column:1/-1;display:grid;grid-template-columns:150px 1fr;align-items:center;gap:16px;color:#edf3e4;font-size:14px;min-height:48px;}
+.nlxr-explorer-size input{width:100%;accent-color:#b4d3ce;}
+.is-simple-desktop-ar .plant-knowledge-map[data-knowledge-mode=curiosity] :is(.plant-knowledge-cell,.plant-knowledge-core)::after{opacity:.22!important;}
+.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child{animation:pimo-child-unfold .62s cubic-bezier(.2,.72,.3,1) both!important;animation-delay:calc(min(var(--pim-child-index,0),4)*45ms)!important;}
+@keyframes pimo-child-unfold{from{opacity:0;transform:translate(-50%,-50%) scale(.72);filter:blur(2px)}to{opacity:1;transform:translate(-50%,-50%) scale(1);filter:none}}
+@media(prefers-reduced-motion:reduce){.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child{animation:none!important;}}
 @media(max-width:600px) { .knowledge-object-field canvas { height:300px; } }

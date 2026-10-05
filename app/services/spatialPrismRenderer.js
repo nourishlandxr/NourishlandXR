@@ -109,6 +109,8 @@ export function createSpatialPrismRenderer(gl) {
         uniform float alpha;
         uniform float woodGrain;
         uniform float grainDirection;
+        uniform vec3 notificationColour;
+        uniform float notificationStrength;
         void main() {
             vec3 normal = normalize(surfaceNormal);
             vec3 viewer = normalize(viewDirection);
@@ -134,6 +136,7 @@ export function createSpatialPrismRenderer(gl) {
                 shaded*=1.0+woodGrain*(grain*.07+fine*.025);
                 shaded=mix(shaded,shaded*.78,woodGrain*collar);
             }
+            shaded=mix(shaded,notificationColour*1.15,collar*notificationStrength);
             gl_FragColor = vec4(shaded, alpha);
         }
     `);
@@ -165,7 +168,9 @@ export function createSpatialPrismRenderer(gl) {
         colorLocation: gl.getUniformLocation(program, 'color'),
         topColorLocation: gl.getUniformLocation(program, 'topColor'),
         woodLocation:gl.getUniformLocation(program,'woodGrain'),grainLocation:gl.getUniformLocation(program,'grainDirection'),
-        alphaLocation: gl.getUniformLocation(program, 'alpha')
+        alphaLocation: gl.getUniformLocation(program, 'alpha'),
+        notificationColourLocation:gl.getUniformLocation(program,'notificationColour'),
+        notificationStrengthLocation:gl.getUniformLocation(program,'notificationStrength')
     };
 }
 
@@ -197,6 +202,8 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.uniform1f(renderer.woodLocation,options.woodGrain || 0);
     gl.uniform1f(renderer.grainLocation,options.grainDirection || 0);
     gl.uniform1f(renderer.alphaLocation, alpha);
+    gl.uniform3fv(renderer.notificationColourLocation,options.notification?.colour || [1,1,1]);
+    gl.uniform1f(renderer.notificationStrengthLocation,options.notification?.strength || 0);
     gl.drawArrays(gl.TRIANGLES, 0, renderer.vertexCount);
     gl.depthMask(true);
     gl.disable(gl.CULL_FACE);

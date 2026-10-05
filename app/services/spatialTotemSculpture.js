@@ -104,7 +104,7 @@ export function createSpatialTotemSculpture(gl) {
     `);
     const fragment=shader(gl,gl.FRAGMENT_SHADER,`
         precision mediump float;varying vec3 n,eye;varying vec2 tex;
-        uniform sampler2D timber;uniform vec3 tint;uniform float alpha,aim,twist,controlOpacity,signsActive,fadeActive,form;uniform vec2 dimensions,controls;
+        uniform sampler2D timber;uniform vec3 tint,notificationColour;uniform float alpha,aim,twist,controlOpacity,signsActive,fadeActive,form,notificationStrength;uniform vec2 dimensions,controls;
         void main(){
             vec3 normal=normalize(n),light=normalize(vec3(-.55,.7,.65)),viewer=normalize(eye);
             vec3 wood=texture2D(timber,tex).rgb;
@@ -112,7 +112,7 @@ export function createSpatialTotemSculpture(gl) {
             float foot=1.-smoothstep(.025,.07,tex.y);
             vec3 base=wood*mix(vec3(.69,.51,.35),tint,.36);
             base=mix(base,vec3(.13,.16,.13),foot*.62);
-            base=mix(base,vec3(.53,.39,.20),collar*.88);
+            base=mix(base,vec3(.92,.96,.9),collar*.88);
             // Flush incisions are part of the timber material, never floating meshes.
             float front=.25-twist*sin(tex.y*3.14159265-.6)/6.2831853;
             float du=mod(tex.x-front+.5,1.)-.5;
@@ -131,6 +131,7 @@ export function createSpatialTotemSculpture(gl) {
             shaded+=vec3(.92,.81,.58)*spec*(.055+collar*.13);
             shaded+=vec3(.60,.68,.48)*pow(1.-max(dot(normal,viewer),0.),3.)*.045;
             shaded=mix(shaded,shaded+vec3(.09,.065,.025),aim);
+            shaded=mix(shaded,notificationColour*1.15,collar*notificationStrength);
             gl_FragColor=vec4(shaded,max(alpha,(1.-smoothstep(.031,.034,d))*controlOpacity*.90));
         }
     `);
@@ -147,7 +148,7 @@ export function createSpatialTotemSculpture(gl) {
     // Material atlases are uploaded once on first use of each tier.
     const textures={};
     const attributes=Object.fromEntries(['position','normal','uv'].map(key=>[key,gl.getAttribLocation(program,key)]));
-    const uniforms=Object.fromEntries(['projection','modelView','inverseScale','timber','tint','alpha','aim','twist','controlOpacity','signsActive','fadeActive','form','dimensions','controls'].map(key=>[key,gl.getUniformLocation(program,key)]));
+    const uniforms=Object.fromEntries(['projection','modelView','inverseScale','timber','tint','alpha','aim','twist','controlOpacity','signsActive','fadeActive','form','dimensions','controls','notificationColour','notificationStrength'].map(key=>[key,gl.getUniformLocation(program,key)]));
     return {program,meshes,textures,attributes,uniforms,model:new Float32Array(16),modelView:new Float32Array(16),inverseScale:new Float32Array(3)};
 }
 
@@ -167,6 +168,7 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     gl.useProgram(renderer.program);gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);
     for(const [key,offset,size] of VERTEX_ATTRIBUTES){gl.enableVertexAttribArray(renderer.attributes[key]);gl.vertexAttribPointer(renderer.attributes[key],size,gl.FLOAT,false,32,offset);}
     const u=renderer.uniforms;gl.uniformMatrix4fv(u.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(u.modelView,false,out);
+    gl.uniform3fv(u.notificationColour,options.notification?.colour || [1,1,1]);gl.uniform1f(u.notificationStrength,options.notification?.strength || 0);
     gl.uniform3fv(u.inverseScale,renderer.inverseScale);
     gl.activeTexture(gl.TEXTURE0);
     const quality=currentGraphicsQuality();

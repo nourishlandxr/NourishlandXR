@@ -26,7 +26,7 @@ export function mountKnowledgeObjectDesktop(container,options){
             if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;}
             if(framedCount!==workspace.items.length){framedCount=workspace.items.length;focus.set(workspace.items.reduce((sum,item)=>sum+item.position.x,0)/framedCount,workspace.items.reduce((sum,item)=>sum+item.position.y,0)/framedCount,0);}
             if(workspace.focusObjectId && workspace.focusObjectId!==focusedObjectId){focusedObjectId=workspace.focusObjectId;const target=workspace.items.find(item=>item.id===focusedObjectId);if(target)focus.set(target.position.x,target.position.y,target.position.z);}
-            camera.aspect=width/height;camera.position.set(focus.x,focus.y,focus.z+Math.max(1.6,1.05/camera.aspect,.85+framedCount*.5));camera.lookAt(focus);camera.updateMatrixWorld();camera.updateProjectionMatrix();
+            camera.aspect=width/height;camera.position.set(focus.x,focus.y,focus.z+Math.max(.75,.6/camera.aspect,.6+framedCount*.2));camera.lookAt(focus);camera.updateMatrixWorld();camera.updateProjectionMatrix();
             gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
             const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};
             painter.begin();painter.draw(view,record,knowledge,expanded,pose,time);painter.end();

@@ -1,10 +1,11 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
-import {knowledgeExplorer,knowledgeExplorerOptions,rememberKnowledgeSelection} from '../services/knowledgeExplorer.js';
+import {knowledgeExplorer,knowledgeExplorerOptions,rememberKnowledgeSelection,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
-let knowledgeRenderer=null;
+import {createHeroDiceToy} from '../services/heroDiceToy.js';
+let knowledgeRenderer=null,heroDiceToy=null;
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
-import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,drawTotemDestinationBeacon} from '../services/totemSignSelection.js';
+import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,totemNotificationLight} from '../services/totemSignSelection.js';
 import {getSpatialVisualSettings} from '../services/spatialVisualSettings.js';
 import {createXRPerformanceSettings} from '../services/xrPerformanceSettings.js';
 import {SPATIAL_OBJECT_VISUALS,spatialTransitionProgress} from '../services/spatialObjectVisuals.js';
@@ -43,7 +44,7 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { showArSafetyDialog } from '../services/arOnboarding.js';
-import { controllerRayEnd, controllerRayFromPose, handTrackingState, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, handTrackingState, beginHandTrackingFrame, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createXRHandOutline } from '../services/xrHandOutline.js';
 import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
@@ -830,13 +831,9 @@ function drawCreatorSignDestinations(view){
     for(const record of activeAreaMarkers()){
         if(!targets.has(record.marker.id) || !hasRenderableSpatialPosition(record) || hiddenStructuralMarkerIds.has(record.marker.id))continue;
         const [halfWidth,halfHeight]=markerDimensions(record.marker),totem=record.marker.type==='area_checkpoint';
+        if(totem)continue;
         const position=totem?{...groundedTotemPosition(record.position),y:groundedTotemPosition(record.position).y+halfHeight}:record.position;
         drawSignDestinationHighlight(gl,controllerPointerRenderer,view,position,{width:halfWidth*2,height:halfHeight*2,shape:totem || record.marker.type==='note'?'box':'ellipse'});
-        if(totem){
-            const ground=groundedTotemPosition(record.position),rotationY=Number(record.rotationY) || 0;
-            const surfaces=totemLayoutForRecord(record,ground,creatorTotemCards(record),record.totemSelectedCard,rotationY);
-            drawTotemDestinationBeacon(gl,controllerPointerRenderer,view,record,surfaces.find(surface=>surface.card?.boardStyle==='header-compact') || {center:{...ground,y:ground.y+halfHeight*1.805},right:{x:Math.cos(rotationY),z:-Math.sin(rotationY)},width:.62,height:.15});
-        }
     }
 }
 
@@ -2382,6 +2379,7 @@ function controllerRecentlyUsed(source, pose, time) {
 }
 
 function updateControllerRay(frame, time = performance.now()) {
+    beginHandTrackingFrame(frame,time);
     latestControllerRay = null;
     latestHandState = null;
     latestTrackedHandStates = [];
@@ -2418,7 +2416,7 @@ function updateControllerRay(frame, time = performance.now()) {
 
     const trackedHands = refSpace
         ? handInputSources().map(source => ({ source, state: handTrackingState(frame, source, refSpace) }))
-            .filter(entry => entry.state?.joints?.size)
+            .filter(entry => entry.state?.tracked)
         : [];
     latestTrackedHandStates = trackedHands;
     const activeHand = trackedHands.find(entry => entry.state.pinch && entry.state.pointer)
@@ -3655,8 +3653,9 @@ function activateSpatialPimTarget(candidate = spatialPimTargetAtAim({ updateHove
     if (!candidate) return false;
     const { record, target } = candidate;
     if(knowledgeRenderer?.grabbing && (!candidate.inputSource || candidate.inputSource===knowledgeRenderer.grabbedSource))return true;
-    if(record.knowledgeExplorer?.mode==='explore' && target.pimKnowledgeFace){
-        selectKnowledgeObjectFace(record,creatorPlantKnowledge(record),target);showCreatorInfo(record,target.path);refreshCreatorPimProfile(record);infoPanel?.refreshExplorer();return true;
+    if(record.knowledgeExplorer?.mode==='explore' && (target.pimKnowledgeFace || target.pimKnowledgeContext)){
+        if(!candidate.intentionalHold)return true;
+        selectKnowledgeObjectFace(record,creatorPlantKnowledge(record),target);if(target.path)showCreatorInfo(record,target.path);else infoPanel?.focusPlant(record,creatorKnowledgeDocument(record));refreshCreatorPimProfile(record);infoPanel?.refreshExplorer();return true;
     }
     if(target.pimRead) {openCreatorKnowledge(record);return true;}
     if (target.pimCore) {
@@ -4078,22 +4077,26 @@ function setupSpatialMarkerRenderer() {
     controllerPointerRenderer = createSpatialTetherRenderer(gl);
     try{handOutlineRenderer=createXRHandOutline(gl);}catch(error){console.warn('Hand outline unavailable:',error.message);}
     nearHandInteraction=createHandSurfaceInteraction({
+        holdDuration:target=>target?.record?.knowledgeExplorer?.mode==='explore' && (target.node?.pimKnowledgeFace || target.node?.pimKnowledgeContext)?500:0,
+        onHoldProgress:(target,amount)=>{if(target.record){target.record.pimObjectPressId=target.object.id+'|'+(target.face?.faceId || 'context');target.record.pimObjectPressProgress=amount;}},
         hitPoint:(point,source)=>{
             if(infoPanel?.isHandInteracting(source))return null;
             const target=[knowledgeRenderer?.hitPoint(point),totemCardsRenderer?.hitPoint(point,{front:.045,back:.025})].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
-            return target?{...target,button:{action:String(target.record?.marker?.id || target.record?.id)+'|'+(target.node?.path || target.card?.id)}}:null;
+            return target?{...target,button:{action:String(target.record?.marker?.id || target.record?.id)+'|'+(target.node?.knowledgeObjectId?target.node.knowledgeObjectId+'|'+(target.node.knowledgeFaceId || 'context'):target.node?.path || target.card?.id)}}:null;
         },
         onHover:target=>{
-            if(handHoverRecord){delete handHoverRecord.handHoverPath;delete handHoverRecord.handHoverCardId;}handHoverRecord=target?.record || null;
-            if(target?.node && target.record)target.record.handHoverPath=target.node.path;
+            if(handHoverRecord){delete handHoverRecord.handHoverPath;delete handHoverRecord.handHoverCardId;delete handHoverRecord.handHoverObjectFaceId;}handHoverRecord=target?.record || null;
+            if(target?.node && target.record){target.record.handHoverPath=target.node.path;if(target.object)target.record.handHoverObjectFaceId=target.card.id;}
             else if(target?.record)target.record.handHoverCardId=target.card.id;
         },
-        onPress:(target,source)=>{if(target.node)activateSpatialPimTarget({record:target.record,target:target.node,inputSource:source});else activateCreatorTotemCard(target);}
+        onPress:(target,source)=>{if(target.node)activateSpatialPimTarget({record:target.record,target:target.node,inputSource:source,intentionalHold:Boolean(target.holdCompleted)});else activateCreatorTotemCard(target);}
     });
     knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:controllerPointerRenderer});
+    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=infoPanel?.getPosition();return p?{x:p.x,y:currentGroundY(),z:p.z}:null;},canGrab:target=>{if(readyPlacementType || dragState || creatorKnowledgeRoot || infoPanel?.isHandInteracting(target.source))return false;return [infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay)].filter(Boolean).every(hit=>hit.distance>=target.distance);}});
 }
 
 function drawSpatialMarkers(view) {
+    creatorSignDestinationIds();
     if (!markerProgram || !markerBuffer || !sphereRenderer || !prismRenderer || !triangleRenderer) return;
     gl.enable(gl.DEPTH_TEST);
     gl.depthFunc(gl.LEQUAL);
@@ -4161,6 +4164,7 @@ function drawSpatialMarkers(view) {
             const visual=SPATIAL_OBJECT_VISUALS.totem;
             const fadeOpacity=creatorTotemOpacity(record);
             const postOptions={halfWidth,halfHeight:bodyHalfHeight,halfDepth:halfWidth*.5,
+                notification:totemNotificationLight(record),
                 color:totemColor.map(channel=>channel*visual.postContrast+visual.postLift),
                 alpha:fadeOpacity,rotationY,style,signsVisible:record.demoTotemSignsVisible,faded:record.demoTotemFaded,
                 highlighted:Boolean(record.totemSelectedCard)};
@@ -5836,6 +5840,7 @@ function createCreatorInfoPanel(){
 }
 
 function cleanup() {
+    sessionMarkers.forEach(preserveKnowledgeContext);
     disposeKnowledgeDesktopViews(overlayRoot);
     closeCreatorKnowledge({force:true});
     creatorPanelControlsCleanup();creatorPanelControlsCleanup=()=>{};creatorPanelActionSignature='';
@@ -5890,7 +5895,7 @@ function cleanup() {
     pendingPlacedRecord = null;
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
-    totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;
+    totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;heroDiceToy?.destroy();heroDiceToy=null;
     pimHold?.destroy(); pimHold = null; handPimHold.cancel(); infoPanel?.destroy(); infoPanel = null;
     destroySpatialPrismRenderer(gl, prismRenderer);
     destroySpatialTotemSculpture(gl, totemSculptureRenderer);
@@ -6262,8 +6267,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             pollControllerInput(_time);
             updateControllerRay(frame, _time);
             if(!latestHandState || latestHandState.pinch)tickControllerMarkerPress(_time);
-            knowledgeRenderer?.updateInput(frame);infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame,source=>knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot)); pimHold?.tick(_time);
-            nearHandInteraction?.update(latestTrackedHandStates,_time,source=>knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot || readyPlacementType || exitPromise || arExitRequested));
+            heroDiceToy?.update(frame,_time);knowledgeRenderer?.updateInput(frame);infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot)); pimHold?.tick(_time);
+            nearHandInteraction?.update(latestTrackedHandStates,_time,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot || readyPlacementType || exitPromise || arExitRequested));
             const hasSpatialRay = isSpatialRayInputMode() && latestControllerRay;
             const dashboardTarget = hasSpatialRay ? controllerSpatialDashboardAtAim() : null;
             const pimTarget = !dashboardTarget && hasSpatialRay ? spatialPimTargetAtAim() : null;
@@ -6310,7 +6315,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 if(!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)drawSpatialRainField(gl,rainRenderer,view,_time,{origin:pose.transform.matrix,groundY:currentGroundY()});
                 drawSpatialPlantProfiles(view);
                 drawCreatorSignDestinations(view);
-                infoPanel?.draw(view);
+                infoPanel?.draw(view);heroDiceToy?.draw(view);
                 drawHandTrackingLines(view);
                 // Keep the controller laser and its contact marker in the
                 // foreground. A world-locked PIM panel is transparent, but
@@ -6339,12 +6344,12 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             clearControllerMarkerPress();consumedMarkerSource=null;
             setCreatorInputMode(availableCreatorInputMode());
         });
-        nearHandInteraction?.bindSession(launchedSession);
-        knowledgeRenderer?.bindSession(launchedSession,refSpace,{canGrab:target=>{const panel=target.contactPoint?infoPanel?.hitPoint(target.contactPoint):infoPanel?.hit(target.inputRay || latestControllerRay);return !creatorKnowledgeRoot && !readyPlacementType && (!panel || panel.distance>=target.distance);}});
+        heroDiceToy?.bindSession(launchedSession,refSpace);nearHandInteraction?.bindSession(launchedSession);
+        knowledgeRenderer?.bindSession(launchedSession,refSpace,{mode:sessionMode,onActivate:target=>activateSpatialPimTarget({record:target.record,target:target.node,inputSource:target.inputSource,intentionalHold:true}),canGrab:target=>{if(heroDiceToy?.heldSource===target.source)return false;const panel=target.contactPoint?infoPanel?.hitPoint(target.contactPoint):infoPanel?.hit(target.inputRay || latestControllerRay);return !creatorKnowledgeRoot && !readyPlacementType && (!panel || panel.distance>=target.distance);}});
         infoPanel?.bindSession(launchedSession, refSpace);
         pimHold = bindSpatialPimHold({session:launchedSession,
             enabled:()=>!knowledgeRenderer?.movingAtAim() && !exitPromise && !arExitRequested && !latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay) && !totemCardsRenderer?.hit(latestControllerRay) && !controllerSpatialDashboardAtAim(),
-            getTarget:()=>spatialPimTargetAtAim({updateHover:false}), activate:activateSpatialPimTarget,
+            getTarget:()=>{const target=spatialPimTargetAtAim({updateHover:false});return target?.record?.knowledgeExplorer?.mode==='explore'?null:target;}, activate:activateSpatialPimTarget,
             progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}
         });
         launchedSession.addEventListener('selectstart', event => {

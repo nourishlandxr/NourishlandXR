@@ -1,5 +1,4 @@
 // Shared destination selection for desktop, touch and XR Totem boards.
-import {drawSpatialTether} from './spatialTetherRenderer.js';
 
 export function selectTotemSign(record,cardId,records=[]){
     const next=record.totemSelectedCard===cardId?'':cardId;
@@ -26,14 +25,14 @@ export function selectedTotemDestinationIds(records,cardsFor,isActive=()=>true){
 
 export const SIGN_DESTINATION_HIGHLIGHT=Object.freeze({color:Object.freeze([.98,.88,.61,.94]),inset:.95,padding:1.12});
 
-export function drawTotemDestinationBeacon(gl,renderer,view,record,surface,now=performance.now()){
+export const TOTEM_NOTIFICATION_COLOUR=Object.freeze([.22,.82,.86]);
+// The post shaders apply this only to their existing collar, without geometry.
+export function totemNotificationLight(record,now=performance.now()){
     const age=now-record?.signBeaconStartedAt;
-    if(!surface || !Number.isFinite(age) || age<0 || age>12000)return;
+    if(!Number.isFinite(age) || age<0 || age>12000)return {colour:TOTEM_NOTIFICATION_COLOUR,strength:0};
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     const strength=reduced?.8:.55+.35*(.5+.5*Math.sin(age/620));
-    const center={...surface.center,y:surface.center.y+surface.height/2-.022};
-    const half=surface.width*.32;
-    drawSpatialTether(gl,renderer,view,{x:center.x-surface.right.x*half,y:center.y,z:center.z-surface.right.z*half},{x:center.x+surface.right.x*half,y:center.y,z:center.z+surface.right.z*half},{segments:2,width:.007,curve:0,lift:0,color:[.22,.82,.86,strength*Math.min(1,(12000-age)/900)]});
+    return {colour:record.notificationColour || TOTEM_NOTIFICATION_COLOUR,strength:strength*Math.min(1,(12000-age)/900)};
 }
 const buffers=new WeakMap();
 const unitShapes=Object.fromEntries(['ellipse','box'].map(shape=>{

@@ -1,8 +1,9 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
-import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction} from '../services/knowledgeExplorer.js';
+import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
-let knowledgeRenderer=null;
+import {createHeroDiceToy} from '../services/heroDiceToy.js';
+let knowledgeRenderer=null,heroDiceToy=null;
 import {INSECT_VISUALS,insectFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
 import {demoTotemHeightForScreen,shiftDemoAreaToFloor} from '../services/demoFloorPlacement.js';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../services/demoFeedback.js';
@@ -11,7 +12,7 @@ import {BEE_COUNT} from '../services/demoAmbientLife.js';
 import {demoButterflyPose} from '../services/demoButterflyPose.js';
 import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
-import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,drawTotemDestinationBeacon} from '../services/totemSignSelection.js';
+import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,totemNotificationLight} from '../services/totemSignSelection.js';
 import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_INTRO_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
 import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
@@ -58,7 +59,7 @@ import { demoContentFor, demoPlantMedia, simulatedAreaLinkMarkup, simulatedPlant
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
-import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, beginHandTrackingFrame, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createXRHandOutline } from '../services/xrHandOutline.js';
 import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction.js';
 import { hitTotemPoint } from '../services/spatialTotemCards.js';
@@ -407,6 +408,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    markers.forEach(preserveKnowledgeContext);
     disposeKnowledgeDesktopViews(appRoot);
     demoFeedback?.destroy();demoFeedback=null;demoFeedbackInputSource=null;
     appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
@@ -503,7 +505,7 @@ function clearSessionState() {
     });
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
-    totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;
+    totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;heroDiceToy?.destroy();heroDiceToy=null;
     pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
     handOutlineRenderer?.destroy();handOutlineRenderer=null;
@@ -3059,8 +3061,9 @@ function selectDemoProfileCell(selection=demoInfoTarget()) {
         return false;
     }
     if(knowledgeRenderer?.grabbing && (!selection.inputSource || selection.inputSource===knowledgeRenderer.grabbedSource))return true;
-    if(record.knowledgeExplorer?.mode==='explore' && node.pimKnowledgeFace){
-        selectKnowledgeObjectFace(record,knowledgeFor(record),node);showDemoInfo(record,node.path);refreshDemoPimProfile(record);infoPanel?.refreshExplorer();return true;
+    if(record.knowledgeExplorer?.mode==='explore' && (node.pimKnowledgeFace || node.pimKnowledgeContext)){
+        if(!selection.intentionalHold)return true;
+        selectKnowledgeObjectFace(record,knowledgeFor(record),node);if(node.path)showDemoInfo(record,node.path);else infoPanel?.focusPlant(record,knowledgeFor(record));refreshDemoPimProfile(record);infoPanel?.refreshExplorer();return true;
     }
     // Some Quest runtimes deliver the same trigger through both the capture
     // listener and the general select fallback. Do not toggle the branch shut
@@ -4217,26 +4220,29 @@ function setupRenderer() {
     tetherRenderer = createSpatialTetherRenderer(gl);
     try{handOutlineRenderer=createXRHandOutline(gl);}catch(error){console.warn('Hand outline unavailable:',error.message);}
     nearHandInteraction=createHandSurfaceInteraction({
+        holdDuration:target=>target?.record?.knowledgeExplorer?.mode==='explore' && (target.node?.pimKnowledgeFace || target.node?.pimKnowledgeContext)?500:0,
+        onHoldProgress:(target,amount)=>{if(target.record){target.record.pimObjectPressId=target.object.id+'|'+(target.face?.faceId || 'context');target.record.pimObjectPressProgress=amount;}},
         hitPoint:(point,source)=>{
             if(infoPanel?.isHandInteracting(source))return null;
             const hits=[knowledgeRenderer?.hitPoint(point),totemCardsRenderer?.hitPoint(point,{front:.045,back:.025}),welcomeHandTarget(point)].filter(Boolean).sort((a,b)=>a.distance-b.distance);
-            const target=hits[0];return target?{...target,button:{action:target.kind==='lim-cell'?target.node.key:String(target.record?.id || target.record?.marker?.id)+'|'+(target.node?.path || target.card?.id),disabled:target.button?.disabled}}:null;
+            const target=hits[0];return target?{...target,button:{action:target.kind==='lim-cell'?target.node.key:String(target.record?.id || target.record?.marker?.id)+'|'+(target.node?.knowledgeObjectId?target.node.knowledgeObjectId+'|'+(target.node.knowledgeFaceId || 'context'):target.node?.path || target.card?.id),disabled:target.button?.disabled}}:null;
         },
         onHover:target=>{
-            if(handHoverRecord){delete handHoverRecord.handHoverPath;delete handHoverRecord.handHoverCardId;}handHoverRecord=target?.record || null;
-            if(target?.node && target.record)target.record.handHoverPath=target.node.path;
+            if(handHoverRecord){delete handHoverRecord.handHoverPath;delete handHoverRecord.handHoverCardId;delete handHoverRecord.handHoverObjectFaceId;}handHoverRecord=target?.record || null;
+            if(target?.node && target.record){target.record.handHoverPath=target.node.path;if(target.object)target.record.handHoverObjectFaceId=target.card.id;}
             else if(target?.record)target.record.handHoverCardId=target.card.id;
             if(target?.kind==='lim-cell' && contextCellKey!==target.node.key){contextCellKey=target.node.key;introBoardTextureDirty=true;}
         },
         onPress:(target,source)=>{
             if(target.kind==='lim-cell'){limActivation?.cancel();toggleLimCell(target.node.key);}
-            else if(target.node)selectDemoProfileCell({record:target.record,target:{node:target.node},inputSource:source});
+            else if(target.node)selectDemoProfileCell({record:target.record,target:{node:target.node},inputSource:source,intentionalHold:Boolean(target.holdCompleted)});
             else activateDemoTotemCard(target);
         }
     });
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
+    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=infoPanel?.getPosition();return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=>!arWelcomeIntroPending && getSpatialVisualSettings().heroDice!==false,canGrab:target=>{if(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
 }
 
 function demoControllerInputSource() {
@@ -4250,7 +4256,8 @@ function demoControllerInputSource() {
         || null;
 }
 
-function updateDemoControllerRay(frame) {
+function updateDemoControllerRay(frame,time=performance.now()) {
+    beginHandTrackingFrame(frame,time);
     latestControllerRay = null;
     latestHandState = null;
     latestTrackedHandStates = [];
@@ -4259,7 +4266,7 @@ function updateDemoControllerRay(frame) {
     if (!referenceSpace) return;
     latestTrackedHandStates = sources.filter(source => source.hand)
         .map(source => ({ source, state: handTrackingState(frame, source, referenceSpace) }))
-        .filter(entry => entry.state?.joints?.size);
+        .filter(entry => entry.state?.tracked);
     const activeHand = latestTrackedHandStates.find(entry => entry.state.pinch && entry.state.pointer)
         || latestTrackedHandStates.find(entry => entry.source.handedness === 'right' && entry.state.pointer)
         || latestTrackedHandStates.find(entry => entry.state.pointer)
@@ -5286,6 +5293,7 @@ function drawMarker(view) {
         const bodyHalfWidth=.095,bodyHalfDepth=.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
         const style=currentTotemModel();
         const postOptions={halfWidth:bodyHalfWidth,halfHeight:bodyHalfHeight,halfDepth:bodyHalfDepth,
+            notification:totemNotificationLight(record),
             color:totemColour,alpha:arrival*demoTotemVisualOpacity(record),rotationY,style,
             signsVisible:record.demoTotemSignsVisible,faded:record.demoTotemFaded,controlOpacity:arrival,
             highlighted:Boolean(record.totemSelectedCard)};
@@ -5417,11 +5425,6 @@ function drawMarker(view) {
         }else if(record.demoType==='note'){
             const scale=record.demoAmbientNeighbour ? .62 : 1;
             drawSignDestinationHighlight(gl,tetherRenderer,view,record.position,{width:.4*DEMO_NOTE_IMMERSIVE_SCALE.x*scale,height:.16*DEMO_NOTE_IMMERSIVE_SCALE.y*scale,shape:'box'});
-        }else if(record.demoType==='zone'){
-            const halfHeight=demoTotemHalfHeight(record),ground=record.groundBaseY ?? record.position.y-halfHeight;
-            const surfaces=totemLayoutForRecord(record,{...record.position,y:ground},demoTotemCards(record),record.totemSelectedCard,demoTotemRotationY(record));
-            const right={x:Math.cos(demoTotemRotationY(record)),z:-Math.sin(demoTotemRotationY(record))};
-            drawTotemDestinationBeacon(gl,tetherRenderer,view,record,surfaces.find(surface=>surface.card?.boardStyle==='header-compact') || {center:{...record.position,y:ground+halfHeight*1.805},right,width:.56,height:.15});
         }
     }
 
@@ -5556,13 +5559,13 @@ async function startImmersive() {
             if (activateImmersiveDemoControl()) return;
             selectGuidedDemoOrb();
         });
-        nearHandInteraction?.bindSession(session);
-        knowledgeRenderer?.bindSession(session,referenceSpace,{canGrab:target=>{const panel=target.contactPoint?infoPanel?.hitPoint(target.contactPoint):infoPanel?.hit(target.inputRay || latestControllerRay);return !arWelcomeIntroPending && !placementReady && !demoKnowledgeWorkspace && (!panel || panel.distance>=target.distance);}});
+        heroDiceToy?.bindSession(session,referenceSpace);nearHandInteraction?.bindSession(session);
+        knowledgeRenderer?.bindSession(session,referenceSpace,{mode:sessionMode,onActivate:target=>selectDemoProfileCell({record:target.record,target:{node:target.node},inputSource:target.inputSource,intentionalHold:true}),canGrab:target=>{if(heroDiceToy?.heldSource===target.source)return false;const panel=target.contactPoint?infoPanel?.hitPoint(target.contactPoint):infoPanel?.hit(target.inputRay || latestControllerRay);return !arWelcomeIntroPending && !placementReady && !demoKnowledgeWorkspace && (!panel || panel.distance>=target.distance);}});
         pimHold=bindSpatialPimHold({session,enabled:()=>!knowledgeRenderer?.movingAtAim() && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE && nativeConnectionState?.phase!=='source' && !demoKnowledgeWorkspace && !demoWebModeOpen && !arWelcomeIntroPending && !placementReady,
             // Use the same nearest visible surface as the laser and main XR
             // select route. A Control panel hit behind a nearer PIMO cell must
             // not disable the cell's hold/short-release interaction.
-            getTarget:()=>{const target=resolveDemoCellTarget();return target?.kind==='pim-cell'?target:null;},activate:selectDemoProfileCell,captureEvent:captureDemoInputEventRay,
+            getTarget:()=>{const target=resolveDemoCellTarget();return target?.kind==='pim-cell' && target.record?.knowledgeExplorer?.mode!=='explore'?target:null;},activate:selectDemoProfileCell,captureEvent:captureDemoInputEventRay,
             progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;queueDemoPimTextureRefresh(record);}
         });
         session.addEventListener('selectstart', event => {
@@ -5626,14 +5629,15 @@ async function startImmersive() {
                 hitMatrix = hitPose ? Float32Array.from(hitPose.transform.matrix) : null;
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
-            runXrFrameStep('controller update',()=>updateDemoControllerRay(frame));
+            runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
+            runXrFrameStep('floor dice input',()=>heroDiceToy?.update(frame,_time));
             runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
-            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace)));
+            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace)));
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
-            runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
+            runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
             runXrFrameStep('hand pinch',()=>{if(!knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});
             runXrFrameStep('LIM activation',()=>tickLimActivation(_time));
             runXrFrameStep('panel diagnostic',()=>{
@@ -5669,6 +5673,7 @@ async function startImmersive() {
                 if(runXrFrameStep('marker render',()=>drawMarker(view)))renderedContent=true;
                 runXrFrameStep('PIM render',()=>drawDemoKnowledge(view));
                 runXrFrameStep('Control panel render',()=>infoPanel?.draw(view));
+                runXrFrameStep('floor dice render',()=>heroDiceToy?.draw(view));
                 runXrFrameStep('butterfly render',()=>drawSpatialButterfly(view));
                 runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));
                 runXrFrameStep('pointer render',()=>drawDemoControllerPointer(view));

@@ -562,7 +562,7 @@ export function plantInformationMeshMarkup(knowledge, expandedPaths = [], option
                 })
             }
             : { selectedNodeId: options.selectedNodeId };
-    const nodes = pimVisibleNodes(source, expanded, {
+    const nodes = options.explorer?.mode==='tag' ? [] : pimVisibleNodes(source, expanded, {
         ...layoutOptions,
         explorer:options.explorer,
         connectedPath:options.connectedPath,

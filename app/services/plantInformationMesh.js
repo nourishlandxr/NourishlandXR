@@ -1,5 +1,4 @@
 import { PIM_COMPASS } from './pimCompass.js';
-import {molecularKnowledgeNodes} from './knowledgeExplorer.js';
 
 const HONEYCOMB_DIRECTIONS = Object.freeze([
     'top',
@@ -680,12 +679,6 @@ export function pimVisibleNodes(knowledge = {}, expandedPaths = [], options = {}
     };
 
     pimKnowledgeNodes(knowledge).forEach(root => visit(root, 0, root.direction, null, 0, 1));
-    if(options.explorer){
-        const molecular=molecularKnowledgeNodes(layoutRecords,metrics,options);
-        // Fit flat presentations without changing stored molecular positions.
-        // The spatial renderer uses knowledgeLocal, preserving its world anchor.
-        return pimCorrectVisibleNodeBounds(molecular,options);
-    }
 
     const byPath = new Map(layoutRecords.map(record => [record.path, record]));
     const corePosition = layoutPosition({ x: 0, y: 0 }, metrics);

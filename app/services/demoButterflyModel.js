@@ -5,6 +5,8 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 // the original, unchanged GLB. Geometry/materials are shared by all phases.
 const URL=new globalThis.URL('../assets/animated_butterfly.glb',import.meta.url);
 export const BUTTERFLY_RENDER_BUDGETS=Object.freeze({low:{pixels:192,interval:50},medium:{pixels:256,interval:42},high:{pixels:384,interval:33}});
+export const BUTTERFLY_FLIGHT_SPEED=4.8;
+export function butterflyRestingFold(elapsed,phase=0,reduced=false){return reduced?.96:.77+.10*Math.sin((elapsed/1000+phase)*5.4)+.045*Math.sin((elapsed/1000+phase)*1.7);}
 let prepared=null;
 const foldedPoseCache=new WeakMap();
 export function prepareDemoButterflyModel(){
@@ -42,7 +44,7 @@ function buildButterfly({gltf,bitmap},red=false){
         return path==='rotation'?new THREE.QuaternionKeyframeTrack(name,times,values):new THREE.VectorKeyframeTrack(name,times,values);
     })));
     const mixer=new THREE.AnimationMixer(root),idle=mixer.clipAction(clips.find(clip=>clip.name==='Idle')),flying=mixer.clipAction(clips.find(clip=>clip.name==='Flying'));
-    idle.play();flying.play();flying.setEffectiveWeight(0);idle.setEffectiveTimeScale(.85);flying.setEffectiveTimeScale(1.1);
+    idle.play();flying.play();flying.setEffectiveWeight(0);idle.setEffectiveTimeScale(1.6);flying.setEffectiveTimeScale(BUTTERFLY_FLIGHT_SPEED);
     const bounds=new THREE.Box3(),center=new THREE.Vector3(),size=new THREE.Vector3();
     // Find a genuinely folded Idle pose from the asset rather than guessing
     // bone axes. Only the four wing hinges are constrained while perched.
@@ -50,7 +52,7 @@ function buildButterfly({gltf,bitmap},red=false){
     const cached=foldedPoseCache.get(gltf);
     if(cached){closed.push(...cached.closed);center.copy(cached.center);size.copy(cached.size);}else{
     for(let i=0;i<32;i++){
-        mixer.setTime(i/32*idle.getClip().duration/.85);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getSize(size);
+        mixer.setTime(i/32*idle.getClip().duration/1.6);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getSize(size);
         if(size.x<narrowest){narrowest=size.x;closed.splice(0,closed.length,...hinges.map(index=>nodes[index].quaternion.clone()));}
     }
     mixer.setTime(0);idle.setEffectiveWeight(0);flying.setEffectiveWeight(1);mixer.update(.2);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getCenter(center);bounds.getSize(size);
@@ -73,9 +75,9 @@ function butterflyXRRenderer(gl,model,red=false){
     const point=new THREE.Vector3(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),ab=new THREE.Vector3(),ac=new THREE.Vector3(),ids=new Uint32Array(3);
     function update(elapsed,pose){
         if(elapsed>=lastPaint && elapsed-lastPaint<BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval)return;
-        model.wrapper.updateMatrixWorld(true);foot=Infinity;let offset=0;
+        model.wrapper.updateMatrixWorld(true);foot=Math.min(...[26,31,36,41,46,51].map(index=>model.nodes[index].getWorldPosition(point).y));let offset=0;
         for(const part of parts){const {mesh,positions,vertices}=part,g=mesh.geometry;mesh.skeleton.update();
-            for(let i=0;i<g.attributes.position.count;i++){point.fromBufferAttribute(g.attributes.position,i);mesh.applyBoneTransform(i,point);point.applyMatrix4(mesh.matrixWorld);positions[i*3]=point.x;positions[i*3+1]=point.y;positions[i*3+2]=point.z;foot=Math.min(foot,point.y);}
+            for(let i=0;i<g.attributes.position.count;i++){point.fromBufferAttribute(g.attributes.position,i);mesh.applyBoneTransform(i,point);point.applyMatrix4(mesh.matrixWorld);positions[i*3]=point.x;positions[i*3+1]=point.y;positions[i*3+2]=point.z;}
             for(let i=0;i<g.index.count;i+=3){ids[0]=g.index.getX(i);ids[1]=g.index.getX(i+1);ids[2]=g.index.getX(i+2);a.fromArray(positions,ids[0]*3);b.fromArray(positions,ids[1]*3);c.fromArray(positions,ids[2]*3);normal.crossVectors(ab.subVectors(b,a),ac.subVectors(c,a)).normalize();
                 for(let j=0;j<3;j++){const id=ids[j],k=(i+j)*8;vertices[k]=positions[id*3];vertices[k+1]=positions[id*3+1];vertices[k+2]=positions[id*3+2];vertices[k+3]=normal.x;vertices[k+4]=normal.y;vertices[k+5]=normal.z;vertices[k+6]=g.attributes.uv?.getX(id)||0;vertices[k+7]=g.attributes.uv?.getY(id)||0;}
             }part.start=offset/8;packed.set(vertices,offset);offset+=vertices.length;
@@ -95,7 +97,10 @@ export function mountDemoButterflyModel(canvas,{gl=null,red=false}={}){
     function updatePose(elapsed,pose){
         if(elapsed===lastElapsed)return;const delta=Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0;lastElapsed=elapsed;
         model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);model.mixer.update(delta);
-        const fold=(1-pose.flight)*(.88+Math.sin(elapsed/350+(pose.wingPhase || 0))*.035);
+        // Keep the feet still while the wings breathe and occasionally open.
+        // The flight clip runs faster independently of this resting movement.
+        const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+        const fold=(1-pose.flight)*butterflyRestingFold(elapsed,pose.wingPhase || 0,reduced);
         for(const [i,index] of model.hinges.entries())model.nodes[index].quaternion.slerp(model.closed[i],fold);
         model.wrapper.rotation.set((pose.pitch || 0)*pose.flight,pose.state==='landed'?.85:pose.yaw,pose.bank);model.wrapper.updateMatrixWorld(true);
     }

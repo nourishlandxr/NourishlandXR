@@ -33,7 +33,7 @@ function validated(change){
     if(ORB_MODELS[change?.orbModel])result.orbModel=change.orbModel;
     if(TOTEM_MODELS[change?.totemModel])result.totemModel=change.totemModel;
     if(['pointer','outline'].includes(change?.handMode))result.handMode=change.handMode;
-    for(const key of ['largeText','showFps','insects'])if(typeof change?.[key]==='boolean')result[key]=change[key];
+    for(const key of ['largeText','showFps','insects','heroDice'])if(typeof change?.[key]==='boolean')result[key]=change[key];
     if(['auto',60,72,90,120].includes(change?.refreshRate))result.refreshRate=change.refreshRate;
     return result;
 }
@@ -48,7 +48,7 @@ try{
 }catch{ /* Storage is optional in restricted browser sessions. */ }
 function syncVisualCss(){globalThis.document?.documentElement?.style.setProperty('--nlxr-panels-opacity',String(preferences.infoOpacity));}
 syncVisualCss();
-export function getSpatialVisualSettings(){return {...preferences};}
+export function getSpatialVisualSettings(){return {heroDice:true,...preferences};}
 export function setSpatialVisualSettings(change){
     Object.assign(preferences,validated(change));
     syncVisualCss();

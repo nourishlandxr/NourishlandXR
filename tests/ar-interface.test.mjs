@@ -1085,7 +1085,7 @@ test('immersive demo builds its welcome before requesting the first XR frame', (
     assert.match(immersive, /beginXrFirstContentWatchdog\(\);/);
     assert.match(source, /runXrFrameStep\('rain render',\(\)=>drawSpatialRain\(view, _time\)\)/);
     assert.match(source, /runXrFrameStep\('ambient render',\(\)=>drawSpatialAmbientLife\(view\)\)/);
-    assert.match(source, /runXrFrameStep\('controller update',\(\)=>updateDemoControllerRay\(frame\)\)/);
+    assert.match(source, /runXrFrameStep\('controller update',\(\)=>updateDemoControllerRay\(frame,_time\)\)/);
     assert.match(source, /runXrFrameStep\('marker render',\(\)=>drawMarker\(view\)\)/);
     assert.doesNotMatch(source, /(?:begin|sync|end)ImmersiveKnowledgeCombination|knowledge combination/);
     assert.match(source, /drawXrRecoverySurface\(view\)/);

@@ -35,7 +35,7 @@ export function createXRHandOutline(gl){
     return {
         draw(view,entries){
             if(disposed)return false;
-            const ready=entries.filter(({source,state})=>state?.visualConfidence>0 && rigs.has(source.handedness) && rigs.get(source.handedness).names.every(name=>state.joints.has(name)));
+            const ready=entries.filter(({source,state})=>state?.tracked && state.visualConfidence>0 && performance.now()-state.time<100 && rigs.has(source.handedness) && rigs.get(source.handedness).names.every(name=>state.rawJoints.has(name)));
             if(!ready.length)return false;
             const depth=gl.isEnabled(gl.DEPTH_TEST),blend=gl.isEnabled(gl.BLEND),cull=gl.isEnabled(gl.CULL_FACE),mask=gl.getParameter(gl.DEPTH_WRITEMASK),cullMode=gl.getParameter(gl.CULL_FACE_MODE);
             gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.depthMask(false);gl.useProgram(program);

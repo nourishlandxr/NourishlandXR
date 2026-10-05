@@ -1,4 +1,5 @@
 import {bindKnowledgeObjectInteraction} from './knowledgeObjectInteraction.js';
+import {bindPimoSpatialCapabilities,isPimoDeveloperOverride} from './pimoSpatialCapabilities.js';
 import * as THREE from '../vendor/three.module.min.js';
 import {createKnowledgeObjectRenderer,knowledgeObjectSurfaces,knowledgeFaceCanvas} from './knowledgeObjectRenderer.js';
 import {pimVisibleNodes} from './plantInformationMesh.js';
@@ -13,37 +14,22 @@ let fontRevision=0;globalThis.document?.fonts?.ready?.then(()=>{fontRevision++;}
 const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t);};
 const world=(pose,p)=>({x:pose.position.x+pose.right.x*p.x+pose.up.x*p.y+pose.normal.x*p.z,y:pose.position.y+pose.right.y*p.x+pose.up.y*p.y+pose.normal.y*p.z,z:pose.position.z+pose.right.z*p.x+pose.up.z*p.y+pose.normal.z*p.z});
 function nodePoint(node,spatial){
-    const p=node.knowledgeLocal || {x:0,y:0},x=p.x*KNOWLEDGE_VISUALS.planarPitch,y=-p.y*KNOWLEDGE_VISUALS.planarPitch;
+    const p=node.layoutGrid || {x:0,y:0},x=p.x*.18,y=-(p.y+p.x*.5)*.208;
     return {x,y,z:0};
 }
 export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performance.now()){
     if(!pose?.position)return [];
     const state=knowledgeExplorer(record),selected=record.demoSelectedNodeId || record.pimSelectedNodeId || '';
-    state.subjectId=record.marker?.id || knowledge.plantId || state.subjectId;
+    state.subjectId ||= record.marker?.plantId || record.marker?.id || knowledge.plantId;
     // These anchors can diverge when the existing hold-to-move interaction
     // moves the knowledge surface. Never overwrite the physical subject.
     state.subjectAnchor=record.position || null;state.knowledgeAnchor=pose.position;
     const key=JSON.stringify([state.revision,state.mode,selected,expanded,record.knowledgeConnectedPath,record.knowledgeFloor,pose.position.y]);
     let cache=caches.get(record);
     if(!cache || cache.key!==key || cache.knowledge!==knowledge){
-        const nodes=pimVisibleNodes(knowledge,expanded,{...knowledgeExplorerOptions(record),layoutWidth:1440,layoutHeight:1080,cellWidthPixels:200,cellHeightPixels:173.2});
+        const nodes=state.mode==='tag'?[]:pimVisibleNodes(knowledge,expanded,{...knowledgeExplorerOptions(record),layoutWidth:1440,layoutHeight:1080,cellWidthPixels:200,cellHeightPixels:173.2});
         const source=cache?.mode==='explore' && state.mode==='curiosity'?new Map((cache.nodes || []).map(node=>[node.path,{x:0,y:0,z:0}])):cache?.local || new Map(),targets=new Map([['core',{x:0,y:0,z:0}]]);
-        const remembered=cache?.mode===state.mode?cache.targets:null;
-        const occupied=[{x:0,y:0,z:0,path:'core'},...nodes.filter(node=>remembered?.has(node.path)).map(node=>({...remembered.get(node.path),path:node.path}))];
-        nodes.forEach(node=>{
-            const point=remembered?.has(node.path)?{...remembered.get(node.path)}:nodePoint(node,false);
-            const previous=occupied.findIndex(other=>other.path===node.path);if(previous>=0)occupied.splice(previous,1);
-            const floor=()=>{if(Number.isFinite(record.knowledgeFloor))point.y=Math.max(point.y,(record.knowledgeFloor+.13-pose.position.y-pose.normal.y*point.z-pose.right.y*point.x)/Math.max(.5,pose.up.y));};
-            floor();
-            // Resolve projected bounds from the established anchor's forward
-            // field once per graph change, never chase a moving headset.
-            let attempt=0;
-            while(occupied.some(other=>Math.abs(other.x-point.x)<.265 && Math.abs(other.y-point.y)<.225) && attempt<20){
-                const angle=Math.atan2(point.y,point.x),step=.055;
-                point.x+=(Math.abs(Math.cos(angle))<.2?(node._pimOrder%2?1:-1):Math.cos(angle))*step;point.y+=Math.sin(angle)*step;floor();attempt++;
-            }
-            occupied.push({...point,path:node.path});targets.set(node.path,point);
-        });
+        nodes.forEach(node=>targets.set(node.path,nodePoint(node,false)));
         const exits=(cache?.nodes || []).filter(node=>!targets.has(node.path));
         cache={key,knowledge,nodes,exits,source,targets,local:new Map(),started:time,mode:state.mode};caches.set(record,cache);
     }
@@ -85,7 +71,7 @@ function hitKnowledgeSurface(ray,surfaces){
     return hits.sort((a,b)=>a.distance-b.distance)[0] || null;
 }
 export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={}){
-    let surfaces=[],recordSurfaces=[],objectInput=null;
+    let surfaces=[],recordSurfaces=[],objectInput=null,capabilities=null;
     const objects=createKnowledgeObjectRenderer(gl,{tether});
     const cards=createSpatialTotemCards(gl,{canvas:labelCanvas,ray,surfaces:()=>recordSurfaces,containedFeedback:true,hitSurface:hitKnowledgeSurface});
     return {
@@ -93,13 +79,16 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
         draw(view,record,knowledge,expanded,pose,time=performance.now()){
             recordSurfaces=knowledgeSurfaces(record,knowledge,expanded,pose,time);
             if(knowledgeExplorer(record).mode==='explore'){
+                // Start the first die in reach, without moving the flower or plant.
+                if(!record.knowledgeExplorePose){const m=view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements,len=Math.hypot(m[8],m[10]) || 1,right={x:m[10]/len,y:0,z:-m[8]/len},normal={x:m[8]/len,y:0,z:m[10]/len};record.knowledgeExplorePose={position:{x:m[12]-normal.x*.55+right.x*.35,y:Math.max((record.knowledgeFloor || 0)+.2,m[13]-.45),z:m[14]-normal.z*.55+right.z*.35},right,normal,up:{x:0,y:1,z:0}};}
+                if(!isPimoDeveloperOverride())pose=record.knowledgeExplorePose;
                 const state=knowledgeExplorer(record),progress=motionPreference?.matches?1:smooth((time-state.changedAt)/KNOWLEDGE_VISUALS.transitionMs);
                 const folded=progress<1?recordSurfaces.map(surface=>({...surface,interactive:false,opacity:1-progress,center:{x:pose.position.x+(surface.center.x-pose.position.x)*(1-progress),y:pose.position.y+(surface.center.y-pose.position.y)*(1-progress),z:pose.position.z+(surface.center.z-pose.position.z)*(1-progress)}})):[];
                 objects.draw(view,record,knowledge,pose,progress);
                 const camera=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements));
                 recordSurfaces=knowledgeObjectSurfaces(record,knowledge,pose).filter(surface=>surface.normal.dot(camera.clone().sub(surface.center).normalize())>.16).map(surface=>({...surface,opacity:progress}));
                 surfaces.push(...recordSurfaces);recordSurfaces=[...recordSurfaces,...folded];
-                cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverPath===surface.node.path;return surface.card;}));return;
+                cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverObjectFaceId===surface.card.id;return surface.card;}));return;
             }
             surfaces.push(...recordSurfaces);
             const state=knowledgeExplorer(record),byId=new Map(recordSurfaces.map(surface=>[surface.node.path || 'core',surface]));
@@ -119,8 +108,8 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
             cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,recordSurfaces.map(surface=>{surface.card.hovered=record.handHoverPath===surface.node.path;return surface.card;}),record.demoSelectedNodeId || record.pimSelectedNodeId || '');
         },
         end(){cards.end();},
-        bindSession(session,space,{canGrab=()=>true}={}){objectInput?.destroy();objectInput=bindKnowledgeObjectInteraction(session,space,{hit:(_source,inputRay)=>objects.hit(inputRay || ray()),near:point=>objects.near(point),canGrab});},
-        updateInput(frame){objectInput?.update(frame);},
+        bindSession(session,space,{canGrab=()=>true,mode,onActivate}={}){objectInput?.destroy();capabilities?.destroy();capabilities=bindPimoSpatialCapabilities(session,space,{mode,rendererReady:true});objectInput=bindKnowledgeObjectInteraction(session,space,{hit:(_source,inputRay)=>objects.hit(inputRay || ray()),near:point=>objects.near(point),canGrab,onActivate});},
+        updateInput(frame){capabilities?.update(frame);objectInput?.update(frame);},
         get grabbing(){return Boolean(objectInput?.active);},
         get grabbedSource(){return objectInput?.active?.source || null;},
         movingAtAim(){const target=objects.hit(ray());return Boolean(objectInput?.active || target?.record.knowledgeExplorer.objects?.interaction==='move');},
@@ -128,13 +117,13 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
             const flat=hitKnowledgeSurface(ray,surfaces.filter(surface=>(!record || surface.record===record) && surface.record.knowledgeExplorer?.mode!=='explore')),object=objects.hit(ray,record);return [flat,object].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0] || null;
         },
         hitPoint(point){
-            const target=hitTotemPoint(point,surfaces,{front:.045,back:.025});
+            const target=[objects.near(point),hitTotemPoint(point,surfaces.filter(s=>s.record.knowledgeExplorer?.mode!=='explore'),{front:.045,back:.025})].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
             if(!target || target.interactive===false)return null;
             if(!target.card.identity && !target.card.knowledgeFace && (Math.abs(target.localY)/(target.height/2)>.96 || Math.abs(target.localX)/(target.width/2)+Math.abs(target.localY)/target.height>.96))return null;
             return target;
         },
         surface(record,path){return surfaces.find(surface=>surface.record===record && surface.node.path===path && surface.interactive!==false);},
         clear(record){const cache=caches.get(record);if(cache)cache.key='';},
-        destroy(){objectInput?.destroy();cards.destroy();objects.destroy();surfaces=[];}
+        destroy(){objectInput?.destroy();capabilities?.destroy();cards.destroy();objects.destroy();surfaces=[];}
     };
 }

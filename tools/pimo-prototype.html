@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PIMO prototype</title>
-<link rel="stylesheet" href="../app/style.css"><link rel="stylesheet" href="../app/pim.css"><link rel="stylesheet" href="../app/living-objects.css">
+<link rel="stylesheet" href="../app/style.css"><link rel="stylesheet" href="../app/pim.css"><link rel="stylesheet" href="../app/living-objects.css?v=0.9312">
 <style>
-body{margin:0;padding:24px;background:#11241f;color:#edf3e4;font-family:system-ui}main{display:grid;grid-template-columns:minmax(360px,1fr) minmax(340px,480px);gap:24px;align-items:start}.prototype-map{position:relative;min-height:600px;overflow:hidden}.prototype-panels{position:relative;min-height:700px}.prototype-panels .nlxr-info-panel{position:relative;inset:auto!important;transform:none!important;width:100%;max-height:none;margin:0}.prototype-panels .nlxr-explorer-companion{position:relative;inset:auto!important;transform:none!important;width:100%!important;margin-top:16px}.prototype-map .knowledge-flat-view{height:580px}.prototype-map .knowledge-object-field canvas{height:480px}h1{font-size:24px;margin:0 0 20px} @media(max-width:800px){main{grid-template-columns:1fr}.prototype-map{min-height:400px}.prototype-map .knowledge-flat-view{height:400px}.prototype-map .knowledge-object-field canvas{height:380px}}
+.prototype-map>[data-pim-renderer="canonical"]{position:absolute;inset:0;width:100%;height:100%}h1{color:#edf3e4}body{margin:0;padding:24px;background:#11241f;color:#edf3e4;font-family:system-ui}main{display:grid;grid-template-columns:minmax(360px,1fr) minmax(340px,480px);gap:24px;align-items:start}.prototype-map{position:relative;min-height:600px;overflow:hidden}.prototype-panels{position:relative;min-height:700px}.prototype-panels .nlxr-info-panel{position:relative;inset:auto!important;transform:none!important;width:100%;max-height:none;margin:0}.prototype-panels .nlxr-explorer-companion{position:relative;inset:auto!important;transform:none!important;width:100%!important;margin-top:16px}.prototype-map .knowledge-flat-view{height:580px}.prototype-map .knowledge-object-field canvas{height:480px}h1{font-size:24px;margin:0 0 20px} @media(max-width:800px){main{grid-template-columns:1fr}.prototype-map{min-height:400px}.prototype-map .knowledge-flat-view{height:400px}.prototype-map .knowledge-object-field canvas{height:380px}}
 </style></head><body><h1>PIMO · Pigeon Pea</h1><main><section class="prototype-map" aria-label="Pigeon Pea knowledge"></section><section class="prototype-panels" aria-label="Control panel workspace"></section></main>
 <script type="module">
 import {PIGEON_PEA_PIM} from '../app/services/pigeonPeaPim.js';
@@ -13,11 +13,13 @@ import {plantInformationMeshMarkup,reconcilePlantInformationMesh} from '../app/s
 import {mountKnowledgeDesktopView} from '../app/services/knowledgeDesktopView.js';
 import {selectKnowledgeObjectFace} from '../app/services/knowledgeObjectModel.js';
 import {createPimInfoPanel} from '../app/services/pimInfoPanel.js';
+import {setPimoDeveloperOverride} from '../app/services/pimoSpatialCapabilities.js';
+setPimoDeveloperOverride(new URLSearchParams(location.search).get('spatial')==='1');
 const record={id:'pimo-prototype',name:'Pigeon Pea',demoType:'plant',demoExpandedNodeIds:[],demoSelectedNodeId:''},knowledge=pimToArKnowledge(PIGEON_PEA_PIM),map=document.querySelector('.prototype-map');
 knowledgeExplorer(record);
 const panel=createPimInfoPanel({root:document.querySelector('.prototype-panels'),simpleDesktop:true,onExplorerAction:()=>draw()});
 function select(node){if(!node)return;if(node.pimKnowledgeFace)selectKnowledgeObjectFace(record,knowledge,node);else{record.demoSelectedNodeId=node.path;record.demoExpandedNodeIds=pimToggleExpandedPaths(record.demoExpandedNodeIds,node.path);}panel.select(record,PIGEON_PEA_PIM,node.path);draw();}
-function draw(){reconcilePlantInformationMesh(map,plantInformationMeshMarkup(knowledge,record.demoExpandedNodeIds,{...knowledgeExplorerOptions(record),layoutWidth:800,layoutHeight:580}));mountKnowledgeDesktopView(map,{record,knowledge,expanded:record.demoExpandedNodeIds,onSelect:select});panel.refreshExplorer();}
+function draw(){reconcilePlantInformationMesh(map,plantInformationMeshMarkup(knowledge,record.demoExpandedNodeIds,{...knowledgeExplorerOptions(record),layoutWidth:map.clientWidth,layoutHeight:map.clientHeight}));mountKnowledgeDesktopView(map,{record,knowledge,expanded:record.demoExpandedNodeIds,onSelect:select});panel.refreshExplorer();}
 map.addEventListener('click',event=>{const cell=event.target.closest('[data-pim-node]');if(cell)select(pimNodeAtPath(knowledge,cell.dataset.pimNode));});
 panel.focusPlant(record,PIGEON_PEA_PIM);draw();
 </script></body></html>
