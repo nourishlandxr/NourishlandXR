@@ -30,9 +30,9 @@ function capturePimCanvas(cellOpacity) {
 test('Quest PIMO opacity changes dark glass while labels remain fully readable', () => {
     for (const level of [0, .25, .5, 1]) {
         const events = capturePimCanvas(level);
-        const hex = events.find(event => event.type === 'fill' && String(event.style).includes('31%, 12%, 0.7'));
+        const hex = events.find(event => event.type === 'fill' && String(event.style).includes('65%, 17%, 0.7'));
         const core = events.find(event => event.type === 'fill' && event.style === 'rgba(22,35,55,.82)');
-        const outline = events.find(event => event.type === 'stroke' && String(event.style).includes('58%, 82%'));
+        const outline = events.find(event => event.type === 'stroke' && String(event.style).includes('80%, 65%'));
         const coreOutline = events.find(event => event.type === 'stroke' && event.style === 'rgba(137,165,213,.82)');
         const labels = events.filter(event => event.type === 'text');
         assert.ok(hex, 'primary cell has an actual filled body');

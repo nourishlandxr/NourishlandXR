@@ -1,5 +1,8 @@
 // Share the session context. Never render a WebGL canvas and copy it into XR.
 // Geometry and colour are uploaded once; both eyes and all bees share one rig.
+export function beeRenderYaw(pose={}){
+    return (Number.isFinite(pose.worldYaw)?pose.worldYaw:pose.heading || 0)+(pose.headTurn || 0);
+}
 export function createBeeXRRenderer(gl,model,bitmap){
     if(!gl.getExtension('OES_texture_float') || gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS)<1)return null;
     const shaders=[],buffers=[],textures=[];
@@ -62,9 +65,8 @@ export function createBeeXRRenderer(gl,model,bitmap){
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,index);
             gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
             gl.uniformMatrix4fv(uniforms.bind,false,model.mesh.bindMatrix.elements);gl.uniformMatrix4fv(uniforms.normalise,false,normalise.elements);
-            const camera=pose.viewer || view.transform.matrix;
             gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.size,.095*(pose.bodyScale || 1)*(1+pose.flyby*.3));
-            gl.uniform1f(uniforms.yaw,(Number.isFinite(pose.worldYaw)?pose.worldYaw:pose.heading || 0)+(pose.headTurn || 0));
+            gl.uniform1f(uniforms.yaw,beeRenderYaw(pose));
             gl.uniform1f(uniforms.pitch,pose.pitch || 0);gl.uniform1f(uniforms.bank,pose.bank || 0);
             gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.uniform1i(uniforms.colour,0);
             gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);gl.uniform1i(uniforms.bones,1);

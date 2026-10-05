@@ -5,6 +5,7 @@ import {INSECT_VISUALS,keepInsectAboveFloor,beeCuriosity,insectFlowerVisit,butte
 import {demoTotemHeightForScreen,shiftDemoAreaToFloor} from '../app/services/demoFloorPlacement.js';
 import {demoButterflyPose} from '../app/services/demoButterflyPose.js';
 import {demoBeePose} from '../app/services/demoAmbientLife.js';
+import {beeRenderYaw} from '../app/services/demoBeeXR.js';
 import {getSpatialVisualSettings,setSpatialVisualSettings} from '../app/services/spatialVisualSettings.js';
 import {panelSettingsControls} from '../app/services/pimInfoPanel.js';
 import {livingFrameFlowerSites} from '../app/services/arWelcomeRoots.js';
@@ -22,10 +23,14 @@ test('floor clearance covers bee bodies and survives adjustment and close-up pos
  const screen=read('app/screens/temporaryArDemo.js');assert.match(screen,/keepInsectAboveFloor\([\s\S]*calibratedDemoGroundY\(\)/);
  assert.match(screen,/boardScale\[0\]\*\.4/);assert.match(screen,/boardScale\[1\]\*\.16/);
 });
-test('bee close inspection keeps moving in three dimensions, sizes vary and face correction uses the centre viewer',()=>{
+test('bee close inspection moves in three dimensions and orientation follows flight, independent of the viewer',()=>{
  const a=beeCuriosity(.40),b=beeCuriosity(.50);for(const axis of ['x','y','z'])assert.notEqual(a[axis],b[axis]);
  const sizes=new Set(Array.from({length:4},(_,i)=>demoBeePose(30000,0,i).bodyScale));assert.equal(sizes.size,4);
- const shader=read('app/services/demoBeeXR.js');assert.match(shader,/camera=pose.viewer \|\| view.transform.matrix/);assert.match(shader,/origin.z\)\+\(pose.headTurn/);
+ assert.equal(beeRenderYaw({worldYaw:1.2,heading:2.4,headTurn:.2,viewer:[]}),1.4);
+ assert.equal(beeRenderYaw({worldYaw:0,heading:2.4}),0);
+ assert.equal(beeRenderYaw({heading:2.4,headTurn:.1}),2.5);
+ assert.equal(beeRenderYaw({}),0);
+ const shader=read('app/services/demoBeeXR.js');assert.match(shader,/uniforms.yaw,beeRenderYaw\(pose\)/);
  assert.ok(INSECT_VISUALS.beeSize<.2);
 });
 test('red perches 30 seconds, blue 60 seconds, and flight direction agrees with velocity',()=>{

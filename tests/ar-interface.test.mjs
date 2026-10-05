@@ -1208,7 +1208,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialSphere/);
-    assert.match(source, /pointerSource\?\.targetRayMode === 'screen'\) return/);
+    assert.match(source, /pointerSource\?\.targetRayMode === 'screen'/);
+    assert.match(source, /demoHandMode==='outline' && \(pointerSource\?\.hand \|\| latestTrackedHandStates.length>0\)/);
     assert.match(source, /function beginControllerDemoHold\(\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
     assert.match(source, /event\.frame\?\.getPose\?\.\(sourceSpace, referenceSpace\)/);
