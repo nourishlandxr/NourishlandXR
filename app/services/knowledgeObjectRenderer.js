@@ -51,7 +51,7 @@ export function createKnowledgeObjectRenderer(gl,{tether=null}={}){
             const workspace=ensureKnowledgeObjects(record,knowledge),basis=knowledgePoseMatrix(pose),visible=visibleKnowledgeObjects(workspace),ids=new Set(visible.map(o=>o.id)),lineage=new Set(),ancestors=[workspace.selectedObjectId],seen=new Set(ancestors);
             for(let i=0;i<ancestors.length;i++)for(const link of workspace.connectors)if(link.targetObjectId===ancestors[i]){lineage.add(link.id);if(!seen.has(link.sourceObjectId)){seen.add(link.sourceObjectId);ancestors.push(link.sourceObjectId);}}
             for(const object of visible){
-                // Geometry always reserves hexagon six for context, including
+                // Geometry always reserves the front hexagon (six) for context, including
                 // objects with fewer than six topics. Empty topics stay blank.
                 const atlasFaces=Array.from({length:8},(_,i)=>i<6?object.faces[i]:i===6?{...object.contextFace,title:object.featuredUses?'Common uses':object.title+' · context'}:undefined);
                 dice.draw(view,basis.clone().multiply(localObjectMatrix(object)),opacity,atlasFaces,object.accent);

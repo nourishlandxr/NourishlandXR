@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import {createHeroDiceGeometry,createKnowledgeDiceGeometry} from './heroDiceGeometry.js';
 
 // The hero and Explorer keep separate shapes. Explorer text is etched into its
-// textured surface atlas, with each link target contained on one flat hexagon.
+// textured surface atlas, with each link target contained on one prism wall.
 function engravedDiceAtlas(faces,colour){
  const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d');
  for(let tile=0;tile<8;tile++){
