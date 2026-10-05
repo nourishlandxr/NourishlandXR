@@ -5032,7 +5032,8 @@ function keepButterflyOutsideFrame(position,side){
     const up={x:matrix[4]/height,y:matrix[5]/height,z:matrix[6]/height};
     const dx=position.x-center.x,dy=position.y-center.y,dz=position.z-center.z;
     const x=dx*right.x+dy*right.y+dz*right.z,y=dx*up.x+dy*up.y+dz*up.z;
-    const halfWidth=width*DEMO_SHARED_QUAD_SIZE.width/2+.16,halfHeight=height*DEMO_SHARED_QUAD_SIZE.height/2+.16;
+    // The existing board quad spans .4 by .16 before its matrix scale.
+    const halfWidth=width*.4/2+.16,halfHeight=height*.16/2+.16;
     if(Math.abs(y)>halfHeight || Math.abs(x)>halfWidth)return position;
     const offset=(side==='left'?-halfWidth:halfWidth)-x;
     return {x:position.x+right.x*offset,y:position.y+right.y*offset,z:position.z+right.z*offset};

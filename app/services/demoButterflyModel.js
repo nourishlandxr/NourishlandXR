@@ -6,7 +6,18 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 const URL=new globalThis.URL('../assets/animated_butterfly.glb',import.meta.url);
 export const BUTTERFLY_RENDER_BUDGETS=Object.freeze({low:{pixels:192,interval:50},medium:{pixels:256,interval:42},high:{pixels:384,interval:33}});
 export const BUTTERFLY_FLIGHT_SPEED=4.8;
-export function butterflyRestingFold(elapsed,phase=0,reduced=false){return reduced?.96:.58+.23*Math.sin((elapsed/1000+phase)*7.8)+.08*Math.sin((elapsed/1000+phase)*2.1);}
+export function butterflyRestingFold(elapsed,phase=0,reduced=false){
+    if(reduced)return .96;
+    // One occasional opening per window, with different pauses and durations
+    // for each insect. Folded wings stay still between these resting gestures.
+    const time=elapsed/1000+phase*3,window=Math.floor(time/14),local=time-window*14;
+    const random=salt=>{const value=Math.sin(window*127.1+phase*311.7+salt*74.7)*43758.5453;return value-Math.floor(value);};
+    const start=2+random(1)*5,duration=1.8+random(2)*1.8,progress=(local-start)/duration;
+    if(progress<=0 || progress>=1)return .96;
+    const smooth=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
+    const opening=smooth(progress/.45)*(1-smooth((progress-.60)/.40));
+    return .96-(.55+random(3)*.20)*opening;
+}
 let prepared=null;
 const foldedPoseCache=new WeakMap();
 export function prepareDemoButterflyModel(){
@@ -102,7 +113,7 @@ export function mountDemoButterflyModel(canvas,{gl=null,red=false}={}){
     function updatePose(elapsed,pose){
         if(elapsed===lastElapsed)return;const delta=Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0;lastElapsed=elapsed;
         model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);model.mixer.update(delta);
-        // Keep the feet still while the wings breathe and occasionally open.
+        // Keep the feet still while the resting wings occasionally open.
         // The flight clip runs faster independently of this resting movement.
         const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
         for(const [i,index] of model.hinges.entries()){const flying=model.nodes[index].quaternion.clone(),rest=model.closed[i].clone().slerp(model.open[i],1-butterflyRestingFold(elapsed,pose.wingPhase || 0,reduced));model.nodes[index].quaternion.copy(rest).slerp(flying,pose.flight);}
