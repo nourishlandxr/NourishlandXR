@@ -2122,9 +2122,9 @@ function pairedDemoTotemPosition(side, groundBaseY) {
     const center=anchor ? introLocalPosition(anchor,AR_PHONE_COMFORT.boardPosition) : {x:0,z:-1.9};
     const right={x:Number(anchor?.[0]) || 1,z:Number(anchor?.[2]) || 0};
     return {
-        x:center.x+right.x*side,
+        x:center.x+right.x*side*1.65-(Number(anchor?.[8]) || 0)*.45,
         y:groundBaseY+initialDemoTotemHalfHeight(groundBaseY),
-        z:center.z+right.z*side
+        z:center.z+right.z*side*1.65-(Number(anchor?.[10]) || 1)*.45
     };
 }
 function initialDemoTotemHalfHeight(ground){
@@ -5103,6 +5103,10 @@ function drawSpatialAmbientLife(view){
         // soon as the Meet a Plant Orb step enabled the bees. Because the frame
         // had already been cleared, that made the whole AR scene disappear.
         const position=ambientBeeWorldPosition(bee,index);
+        const visitor=ambientBeeFlowerVisits[index] ||= {},last=visitor.flightPosition;
+        if(last && visitor.flightAt!==arWelcomeClock.elapsed){const dx=position.x-last.x,dz=position.z-last.z;if(Math.hypot(dx,dz)>.00001)visitor.flightYaw=Math.atan2(dx,dz);}
+        visitor.flightPosition={...position};visitor.flightAt=arWelcomeClock.elapsed;
+        bee.worldYaw=(visitor.flightYaw ?? bee.heading)+Math.sin(arWelcomeClock.elapsed*.0017+index)*.16;
         if(ambientBeeModel?.drawXR?.(view,position,arWelcomeClock.elapsed,{...bee,viewer:viewerMatrix}))continue;
         const flybyScale=.6*(bee.bodyScale || 1)*(1+bee.flyby*.3);
         drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,position,.018*flybyScale,{scale:{x:1.35,y:.7,z:.75},color:[.86,.66,.27],alpha:bee.opacity,emissive:.16});
@@ -5414,7 +5418,7 @@ function drawDemoInputPointer(view,pointerSource) {
     // Android exposes taps as a WebXR `screen` ray. It remains available for
     // hit testing, but the Quest laser/contact sphere must only be rendered
     // for tracked spatial input.
-    if (!latestControllerRay || pointerSource?.targetRayMode === 'screen') return;
+    if (!latestControllerRay || pointerSource?.targetRayMode === 'screen' || (demoHandMode==='outline' && (pointerSource?.hand || latestTrackedHandStates.length>0))) return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,

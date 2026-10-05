@@ -12,14 +12,18 @@ export function diceRegionDirections(count=6){
     if(count>7)directions.push([-.577,-.577,.577]);
     return directions.slice(0,Math.max(1,Math.min(8,count))).map(([x,y,z])=>new THREE.Vector3(x,y,z).normalize());
 }
-// Match the supplied solid: eight broad regular hexagonal faces connected by
-// six small square faces (a truncated octahedron), not a hexagonal prism.
-// Six hexagons carry topics, one carries context; other faces stay textured.
+// Explorer uses the confirmed pentagonal reference: a regular dodecahedron.
+// Six pentagons carry topics, one carries context; other faces stay textured.
 export function createKnowledgeDiceGeometry(radius=.12){
- const unit=radius/Math.sqrt(5),front=new THREE.Vector3(1,1,1).normalize(),orientation=new THREE.Quaternion().setFromUnitVectors(front,new THREE.Vector3(0,0,1));
- const hexagons=[[1,1,1],[-1,1,1],[1,-1,1],[-1,-1,1],[1,1,-1],[-1,1,-1],[1,-1,-1],[-1,-1,-1]];
- const planes=hexagons.map(([x,y,z],region)=>({normal:new THREE.Vector3(x,y,z).normalize().applyQuaternion(orientation),distance:Math.sqrt(3)*unit,region}));
- for(const [x,y,z] of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]])planes.push({normal:new THREE.Vector3(x,y,z).applyQuaternion(orientation),distance:2*unit,region:7});
+ const template=new THREE.DodecahedronGeometry(radius,0),points=template.attributes.position,planes=[],a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3();
+ for(let i=0;i<points.count;i+=3){
+  a.fromBufferAttribute(points,i);b.fromBufferAttribute(points,i+1);c.fromBufferAttribute(points,i+2);
+  const normal=b.clone().sub(a).cross(c.clone().sub(a)).normalize();if(normal.dot(a)<0)normal.negate();
+  if(!planes.some(plane=>plane.normal.dot(normal)>1-1e-6))planes.push({normal,distance:normal.dot(a),region:Math.min(planes.length,7)});
+ }
+ template.dispose();
+ const orientation=new THREE.Quaternion().setFromUnitVectors(planes[0].normal,new THREE.Vector3(0,0,1));
+ for(const plane of planes)plane.normal.applyQuaternion(orientation);
  const vertices=[];
  for(let i=0;i<planes.length;i++)for(let j=i+1;j<planes.length;j++)for(let k=j+1;k<planes.length;k++){
   const a=planes[i],b=planes[j],c=planes[k],bc=b.normal.clone().cross(c.normal),det=a.normal.dot(bc);if(Math.abs(det)<1e-7)continue;
@@ -32,7 +36,7 @@ export function createKnowledgeDiceGeometry(radius=.12){
   const centre=polygon.reduce((sum,p)=>sum.add(p),new THREE.Vector3()).divideScalar(polygon.length),right=new THREE.Vector3(0,1,0).cross(plane.normal);if(right.length()<.01)right.set(1,0,0);right.normalize();const up=plane.normal.clone().cross(right).normalize();
   polygon.sort((a,b)=>Math.atan2(a.clone().sub(centre).dot(up),a.clone().sub(centre).dot(right))-Math.atan2(b.clone().sub(centre).dot(up),b.clone().sub(centre).dot(right)));
   const inradius=Math.min(...polygon.map((p,i)=>{const next=polygon[(i+1)%polygon.length],edge=next.clone().sub(p);return centre.clone().sub(p).cross(edge).length()/edge.length();}));
-  // Uniform UV scale keeps circular targets circular on the rectangular walls.
+  // Uniform UV scale keeps circular targets circular on each pentagonal face.
   // Leave enough margin for the port outline and keep every vertex in its tile.
   const extent=Math.max(...polygon.map(p=>{const delta=p.clone().sub(centre);return Math.max(Math.abs(delta.dot(right)),Math.abs(delta.dot(up)));}));
   const uvDiameter=Math.max(inradius*2.4,extent*2.04);

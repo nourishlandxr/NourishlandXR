@@ -292,10 +292,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
             :identity?'Curiosity reveals six perspectives on this plant.'+(supportsSpatialPIMO()?' Explorer 3D is an optional experiment in Controls. You can continue the demo without using it.':'')
                 :'Information about what you select will appear here.';
-        return reading;
+        // Keep authored paragraphs; give a long unbroken reading body breathing room.
+        if(reading.includes('\n') || reading.length<230)return reading;
+        const sentences=reading.match(/[^.!?]+[.!?]+(?:\s|$)|[^.!?]+$/g) || [reading];
+        return sentences.reduce((parts,sentence,index)=>{if(index%2===0)parts.push(sentence.trim());else parts[parts.length-1]+=' '+sentence.trim();return parts;},[]).join('\n\n');
     };
     const currentHint=()=>confirmation || tab==='Help'?'':contextHint || (record && identity?KNOWLEDGE_MODES[knowledgeExplorer(record).mode].hint:'') || identity?.hint || rotatingPanelHints[panelHintIndex] || '';
-    const pages=()=>infoPages(text(),headset?(largeText?29:34):(largeText?32:38),pathwayContext?4:7);
+    const pages=()=>infoPages(text(),headset?(largeText?44:52):(largeText?46:54),pathwayContext?4:7);
     const title=()=>confirmation?.title || (tab==='Help'?'Help':selection?.hideTitle?'':selection?.title || '');
     const hasPimPath=()=>Boolean(selection && identity);
     const pimPath=()=>{
@@ -305,8 +308,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         const parts=plant && trail[0]?.toLowerCase()!==plant.toLowerCase() ? [plant,...trail] : trail;
         return parts.join(' > ');
     };
-    const panelHeading=()=>hasPimPath() && tab==='Details' ? pimPath() : title();
-    const hasPimPathHeading=()=>hasPimPath() && tab==='Details';
+    const panelHeading=()=>title();
+    const hasPimPathHeading=()=>false;
     const selectionMetadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const metadata=()=>selectionMetadata();
     const previewMedia=()=>mediaPreviewBlocked ? null : selection?.mesh==='lim' && (selection.sketchImage || selection.image)
@@ -736,7 +739,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(tab==='Help'){content.setAttribute('aria-labelledby',contentId+'-Help');content.removeAttribute('aria-label');}
         else{content.removeAttribute('aria-labelledby');content.setAttribute('aria-label','Information');}
         const heading=content.querySelector('h3'),pathHeading=hasPimPathHeading();heading.textContent=panelHeading();heading.hidden=!heading.textContent;heading.classList.toggle('nlxr-pim-pathline',pathHeading);if(pathHeading)heading.title=heading.textContent;else heading.removeAttribute('title');
-        const trail=content.querySelector('.nlxr-info-trail');trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?selection?.breadcrumb || '':'';
+        const trail=content.querySelector('.nlxr-info-trail');trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?(hasPimPath()?pimPath():selection?.breadcrumb || ''):'';
         content.querySelector('.nlxr-info-body').textContent=currentPages[page].join('\n');
         let hint=element.querySelector('.nlxr-info-hint');
         if(!hint){hint=document.createElement('p');hint.className='nlxr-info-hint';element.querySelector('.nlxr-tools-dock')?.append(hint);}
@@ -848,7 +851,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             }
             const content=document.createElement('section');content.id=contentId;content.setAttribute('role','tabpanel');if(tab==='Help')content.setAttribute('aria-labelledby',contentId+'-Help');else content.setAttribute('aria-label','Information');content.tabIndex=0;
             const heading=document.createElement('h3'),pathHeading=hasPimPathHeading();heading.textContent=panelHeading();heading.hidden=!heading.textContent;heading.classList.toggle('nlxr-pim-pathline',pathHeading);if(pathHeading)heading.title=heading.textContent;
-            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?selection?.breadcrumb || '':'';
+            const trail=document.createElement('p');trail.className='nlxr-info-trail';trail.hidden=pathHeading;trail.textContent=tab==='Details'&&!pathHeading?(hasPimPath()?pimPath():selection?.breadcrumb || ''):'';
             const body=document.createElement('p');body.className='nlxr-info-body';body.textContent=pages()[page].join('\n');
             const hint=document.createElement('p');hint.className='nlxr-info-hint';hint.textContent=currentHint();hint.hidden=!hint.textContent;
             const status=document.createElement('small');status.textContent=metadata();content.append(heading,trail,body,status);
@@ -966,7 +969,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
             ctx.fillStyle='#f3f8fc';ctx.font=(card.largeText?'500 31px':'500 27px')+' system-ui';
             const lineHeight=card.largeText?36:32;
-            ctx.textAlign='center';card.lines.forEach(line=>{ctx.fillText(line,left+width/2,y,width);y+=lineHeight;});ctx.restore();
+            ctx.textAlign='left';card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             if(card.hint){ctx.fillStyle='#d8e6e3';ctx.font='600 20px system-ui';ctx.textAlign='center';infoPages(card.hint,Math.max(24,Math.floor(width/11)),2)[0].forEach((line,index)=>ctx.fillText(line,left+width/2,actionTop-57+index*24,width-16));ctx.textAlign='left';}
             if(card.hoverHint && !card.progress){ctx.fillStyle='rgba(8,23,26,.24)';ctx.beginPath();ctx.roundRect(200,92,630,42,10);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';infoPages(card.hoverHint,65,2)[0].forEach((line,index)=>ctx.fillText(line,210,98+index*18,610));}
             ctx.fillStyle='#d4e0dc';ctx.font='400 18px system-ui';ctx.fillText(card.metadata,left,card.height-23,width);
@@ -992,9 +995,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             }
             if(card.accent){ctx.fillStyle=card.accent;ctx.globalAlpha=.92;ctx.fillRect(titleX,contentTop-6,5,32);ctx.globalAlpha=1;}
             ctx.fillStyle='#f1f4f4';ctx.font='600 26px system-ui';ctx.textAlign='center';ctx.fillText(card.title,titleX+titleWidth/2,contentTop,titleWidth);ctx.textAlign='left';
-            if(card.trail){ctx.fillStyle='#b4c3c7';ctx.font='400 18px system-ui';ctx.fillText(card.trail,200,contentTop+38,772);}
+            if(card.trail){ctx.fillStyle='rgba(69,111,103,.28)';ctx.beginPath();ctx.roundRect(194,contentTop+18,784,34,9);ctx.fill();ctx.fillStyle='#8ee6d0';ctx.font='650 19px system-ui';ctx.fillText(card.trail,206,contentTop+40,760);}
             const bodyOffset=card.trail?75:47;
-            card.lines.forEach((line,i)=>{ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 31px':'400 27px')+' system-ui';ctx.textAlign='center';ctx.fillText(line,titleX+titleWidth/2,contentTop+bodyOffset+i*(card.largeText?36:32),titleWidth);ctx.textAlign='left';});
+            card.lines.forEach((line,i)=>{ctx.fillStyle='#f1f4f4';ctx.font=(card.largeText?'400 31px':'400 27px')+' system-ui';ctx.textAlign='left';ctx.fillText(line,titleX,contentTop+bodyOffset+i*(card.largeText?36:32),titleWidth);ctx.textAlign='left';});
             if(card.hoverHint && !card.progress){ctx.fillStyle='rgba(8,23,26,.24)';ctx.beginPath();ctx.roundRect(200,92,630,42,10);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 16px system-ui';infoPages(card.hoverHint,65,2)[0].forEach((line,index)=>ctx.fillText(line,210,98+index*18,610));}
             const footerY=card.pathway?card.height-190:card.height-86;
             if(card.hint){ctx.fillStyle='#d8e6e3';ctx.font='600 21px system-ui';ctx.textAlign='center';infoPages(card.hint,72,2)[0].forEach((line,index)=>ctx.fillText(line,500,footerY-64+index*25,740));ctx.textAlign='left';}
@@ -1261,7 +1264,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         draw(view){
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
-            const card={id:'control',infoOpacity,headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:pimPathSelected?'':tab==='Details'?selection?.breadcrumb || '':'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
+            const card={id:'control',infoOpacity,headset,hidden,tab,height:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:pimPathSelected?'':identity?.plant || selection?.plant || 'Control panel',scientific:pimPathSelected?'':identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(hasPimPath()?pimPath():selection?.breadcrumb || ''):'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:p.length>1?(page+1)+' / '+p.length:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,performanceMessage:performanceStatus(),infoOpacity,height:840,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));

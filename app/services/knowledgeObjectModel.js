@@ -3,6 +3,7 @@ import {knowledgeDiceFaceFrames} from './heroDiceGeometry.js';
 export const KNOWLEDGE_DICE_RADIUS=.12,KNOWLEDGE_OBJECT_LIMIT=18;
 const indexes=new WeakMap(),vector=v=>({x:v.x,y:v.y,z:v.z});
 const FACE_COLOURS=['#42c99a','#e5ae45','#62bcec','#d782c5','#a999ef','#e67b60'];
+function relatedFaceColour(colour,index){const tint=new THREE.Color(colour || '#8bb9aa'),shade=[.04,.12,-.06,.18,-.10,.08][index%6];tint.lerp(new THREE.Color(shade<0?'#263c35':'#fff7e7'),Math.abs(shade));return '#'+tint.getHexString();}
 // Use authored concepts directly; these are featured examples, not a popularity ranking.
 function featuredUses(index,node){
  const candidates=[];
@@ -23,14 +24,18 @@ function facesFor(index,object){
  const nodes=object.conceptId==='core'?index.roots:uses?featuredUses(index,concept):(concept?.children || []).map(n=>index.nodes.get(String(n.id))).filter(Boolean),frames=knowledgeDiceFaceFrames(KNOWLEDGE_DICE_RADIUS);
  object.featuredUses=!!uses;
  object.facePages=Math.max(1,Math.ceil(nodes.length/6));object.facePage=((object.facePage || 0)%object.facePages+object.facePages)%object.facePages;
- return nodes.slice(object.facePage*6,object.facePage*6+6).map((n,i)=>({faceId:'face:'+n.id,conceptId:n.id,path:n.path,title:n.label,summary:n.description || '',accent:FACE_COLOURS[(object.facePage*6+i)%FACE_COLOURS.length],role:n.children?.length?(n.value?.trim()?'hybrid':'branch'):'information',localAnchor:vector(frames[i].centre.clone().addScaledVector(frames[i].normal,.001)),localNormal:vector(frames[i].normal),faceRadius:frames[i].inradius}));
+ return nodes.slice(object.facePage*6,object.facePage*6+6).map((n,i)=>({faceId:'face:'+n.id,conceptId:n.id,path:n.path,title:n.label,summary:n.description || '',accent:object.conceptId==='core'?FACE_COLOURS[(object.facePage*6+i)%FACE_COLOURS.length]:relatedFaceColour(object.accent,object.facePage*6+i),role:n.children?.length?(n.value?.trim()?'hybrid':'branch'):'information',localAnchor:vector(frames[i].centre.clone().addScaledVector(frames[i].normal,.001)),localNormal:vector(frames[i].normal),faceRadius:frames[i].inradius}));
 }
 export function ensureKnowledgeObjects(record,knowledge){
  const state=record.knowledgeExplorer,index=knowledgeObjectIndex(knowledge),w=state.objects ||= {version:1,items:[],connectors:[],selectedObjectId:'object:core',selectedFaceId:'',interaction:'rotate',scale:1,collapsed:[]};
  w.scale=Math.max(.65,Math.min(1.35,Number(w.scale)||1));w.collapsed ||= [];
  if(!w.items.length)w.items.push({id:'object:core',conceptId:'core',title:knowledge.title || record.name || 'Plant',position:{x:0,y:0,z:0},rotation:{x:0,y:0,z:0,w:1},userPositioned:false});
- for(const o of w.items){o.radius=KNOWLEDGE_DICE_RADIUS;o.scale=w.scale;o.faces=facesFor(index,o);const frame=knowledgeDiceFaceFrames(KNOWLEDGE_DICE_RADIUS)[6];o.contextFace={faceId:'context',conceptId:o.conceptId,role:'contextual',localAnchor:vector(frame.centre.clone().addScaledVector(frame.normal,.001)),localNormal:vector(frame.normal),faceRadius:frame.inradius};}
- for(const link of w.connectors){const source=w.items.find(o=>o.id===link.sourceObjectId),target=w.items.find(o=>o.id===link.targetObjectId),face=source?.faces.find(f=>f.faceId===link.sourceFaceId);if(face){link.sourceAnchor={...face.localAnchor};link.sourceNormal={...face.localNormal};}link.accent ||= face?.accent || '#42c99a';if(target)target.accent ||= link.accent;}
+ for(const o of w.items){
+  const parentLink=w.connectors.find(link=>link.targetObjectId===o.id),parent=parentLink && w.items.find(item=>item.id===parentLink.sourceObjectId),parentNode=parent && index.nodes.get(parent.conceptId),parentTopics=parent?.conceptId==='core'?index.roots:parent?.featuredUses?featuredUses(index,parentNode):(parentNode?.children || []).map(node=>index.nodes.get(String(node.id))).filter(Boolean),topicIndex=parentTopics?.findIndex(node=>'face:'+node.id===parentLink.sourceFaceId);
+  if(parent && topicIndex>=0)o.accent=parent.conceptId==='core'?FACE_COLOURS[topicIndex%FACE_COLOURS.length]:relatedFaceColour(parent.accent,topicIndex);
+  o.radius=KNOWLEDGE_DICE_RADIUS;o.scale=w.scale;o.faces=facesFor(index,o);const frame=knowledgeDiceFaceFrames(KNOWLEDGE_DICE_RADIUS)[6];o.contextFace={faceId:'context',conceptId:o.conceptId,role:'contextual',localAnchor:vector(frame.centre.clone().addScaledVector(frame.normal,.001)),localNormal:vector(frame.normal),faceRadius:frame.inradius};
+ }
+ for(const link of w.connectors){const source=w.items.find(o=>o.id===link.sourceObjectId),target=w.items.find(o=>o.id===link.targetObjectId),face=source?.faces.find(f=>f.faceId===link.sourceFaceId);if(face){link.sourceAnchor={...face.localAnchor};link.sourceNormal={...face.localNormal};}link.accent=target?.accent || face?.accent || '#42c99a';}
  return w;
 }
 export function visibleKnowledgeObjects(w){

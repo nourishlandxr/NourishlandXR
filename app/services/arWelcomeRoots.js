@@ -213,7 +213,7 @@ export function welcomeRootsAreGrowing(options = {}) {
 
 export function welcomeRootsNeedRefresh(options = {}) {
     if (options.reducedMotion) return false;
-    return Number(options.elapsed)<300000 || welcomeRootsAreGrowing(options);
+    return Number(options.elapsed)<480000 || welcomeRootsAreGrowing(options);
 }
 
 function fillRootRibbon(ctx, points, width, offset = 0) {
@@ -382,11 +382,13 @@ const RIM_PATCHES=Object.freeze(Array.from({length:13},(_,i)=>({
 let flowerSiteTime=-1,flowerSiteCache=[];
 export function livingFrameFlowerSites(elapsed=0){
  const tick=Math.floor(elapsed/1000);if(tick===flowerSiteTime)return flowerSiteCache;flowerSiteTime=tick;
- flowerSiteCache=RIM_PATCHES.filter(p=>p.seed%4!==1 && elapsed>LIVING_RIM.flowersAt+p.delay*.35+12000).map(p=>{
-  const angle=p.angle+(p.seed%2?1:-1)*.02,branch=stageEase((elapsed-95000-p.delay)/LIVING_RIM.growthMs);
-  const base=polarPoint(angle,p.radius),target=polarPoint(angle+.009,p.radius+15);
+ flowerSiteCache=RIM_PATCHES.filter(p=>p.seed%4!==1).flatMap(p=>Array.from({length:6},(_,n)=>{
+  const bloomAt=n<3?95000:240000+(n-3)*85000;
+  if(elapsed<(n<3?LIVING_RIM.flowersAt:bloomAt+10000)+p.delay*.35+n*2300+12000)return null;
+  const angle=p.angle+(p.seed%2?1:-1)*(.02+n*.025),branch=stageEase((elapsed-bloomAt-p.delay-n*2100)/LIVING_RIM.growthMs);
+  const base=polarPoint(angle,p.radius),target=polarPoint(angle+.009,p.radius+15+n*9);
   return {x:mix(base.x,target.x,branch),y:mix(base.y,target.y,branch)};
- });return flowerSiteCache;
+ }).filter(Boolean));return flowerSiteCache;
 }
 function drawRimLeaf(ctx,x,y,angle,size,colour,vein='rgba(201,214,149,.35)',detail=1){
  if(detail>1 && drawLivingLeafArtwork(ctx,x,y,angle,size,colour))return;
@@ -485,9 +487,10 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false,quality=currentGraphic
     ctx.fillStyle='rgba(227,171,133,.45)';ctx.beginPath();ctx.arc(fruit.x-.8,fruit.y-.9,.65*berries,0,Math.PI*2);ctx.fill();
    }
   }
-  if(patch.seed%4!==1)for(let n=0;n<3;n++){
-   const branch=grow(95000,patch.delay+n*2100);
-   const flower=reducedMotion?1:stageEase((elapsed-LIVING_RIM.flowersAt-patch.delay*.35-n*2300)/LIVING_RIM.flowerGrowthMs);
+  if(patch.seed%4!==1)for(let n=0;n<6;n++){
+   const bloomAt=n<3?95000:240000+(n-3)*85000;
+   const branch=grow(bloomAt,patch.delay+n*2100);
+   const flower=reducedMotion?1:stageEase((elapsed-(n<3?LIVING_RIM.flowersAt:bloomAt+10000)-patch.delay*.35-n*2300)/LIVING_RIM.flowerGrowthMs);
    if(branch<=0)continue;
    const a=patch.angle+(patch.seed%2?1:-1)*(.02+n*.025);
    const base=polarPoint(a,patch.radius),target=polarPoint(a+.009,patch.radius+15+n*9);
@@ -496,7 +499,7 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false,quality=currentGraphic
    ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.quadraticCurveTo(base.x+Math.cos(a)*8,base.y+Math.sin(a)*8,tip.x,tip.y);ctx.stroke();
    if(flower<=0)continue;
    ctx.save();ctx.translate(tip.x,tip.y);ctx.rotate(patch.seed*.73+n);ctx.scale(flower,flower);
-   ctx.fillStyle=['#b477ab','#d199c3','#a76998','#ede0d9'][(patch.seed+n)%4];
+   ctx.fillStyle=['#7962c8','#a98add','#efca47','#eadb8a','#c48da9','#eee5df'][(patch.seed+n)%6];
    for(let j=0;j<5;j++){
     ctx.save();ctx.rotate(j*Math.PI*2/5);ctx.beginPath();ctx.moveTo(0,0);
     ctx.quadraticCurveTo(-4,-4,-2.5,-8);ctx.lineTo(0,-6.8);ctx.lineTo(2.5,-8);

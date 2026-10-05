@@ -2,15 +2,15 @@ import * as THREE from '../vendor/three.module.min.js';
 import {createHeroDiceGeometry,createKnowledgeDiceGeometry} from './heroDiceGeometry.js';
 
 // The hero and Explorer keep separate shapes. Explorer text is etched into its
-// textured surface atlas, with each link target contained on one hexagonal face.
+// textured surface atlas, with each link target contained on one pentagonal face.
 function engravedDiceAtlas(faces,colour){
  const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d');
  for(let tile=0;tile<8;tile++){
   const x=tile%4*512,y=Math.floor(tile/4)*512;ctx.save();ctx.translate(x,y);
-  const tint=new THREE.Color(colour || '#8bb9aa'),light=tint.clone().lerp(new THREE.Color('#ffffff'),.52),dark=tint.clone().multiplyScalar(.65);
-  const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,'#'+light.getHexString());gradient.addColorStop(1,'#'+dark.getHexString());ctx.fillStyle=gradient;ctx.fillRect(0,0,512,512);
+  const face=faces[tile],accent=face?.accent || colour || '#8bb9aa';
+  const tint=new THREE.Color(accent),base=new THREE.Color(colour || '#8bb9aa'),light=tint.clone().lerp(new THREE.Color('#fff7e7'),.32),dark=base.clone().lerp(tint,.65).multiplyScalar(.78);
+  const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,'#'+light.getHexString());gradient.addColorStop(.52,'#'+tint.clone().lerp(base,.22).getHexString());gradient.addColorStop(1,'#'+dark.getHexString());ctx.fillStyle=gradient;ctx.fillRect(0,0,512,512);
   for(let i=0;i<900;i++){ctx.fillStyle=i%2?'rgba(242,255,248,.10)':'rgba(26,53,45,.10)';ctx.fillRect((i*137)%512,(i*83)%512,2,2);}
-  const face=faces[tile],accent=face?.accent || colour || '#42c99a';
   if(face?.role==='branch' || face?.role==='hybrid'){
    // A circular coloured port marks an outgoing knowledge link on the face.
    // Information-only faces keep their surface lettering without a port.
@@ -29,7 +29,7 @@ export function createDiceRenderer(gl,{radius=.12,appearance='glass'}={}){
     const geometry=appearance==='knowledge'?createKnowledgeDiceGeometry(radius):createHeroDiceGeometry(radius),edges=new THREE.EdgesGeometry(geometry,4),buffers=[];
     const compile=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
     const vertex=compile(gl.VERTEX_SHADER,'attribute vec3 position,normal;attribute vec2 uv;uniform mat4 mvp,model;uniform vec3 camera;varying vec3 n,eye;varying vec2 t;void main(){vec3 p=(model*vec4(position,1.)).xyz;n=normalize(mat3(model)*normal);eye=normalize(camera-p);t=uv;gl_Position=mvp*vec4(position,1.);}');
-    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 n,eye;varying vec2 t;uniform sampler2D atlas;uniform float hero,lineMode,opacity,textured;void main(){float facing=abs(dot(normalize(n),normalize(eye)));float rim=pow(1.-facing,3.);float key=max(dot(normalize(n),normalize(vec3(-.4,.7,.8))),0.);vec3 glass=vec3(.72,.9,.94)+vec3(.15)*pow(key,24.);vec3 art=texture2D(atlas,t).rgb*(.6+key*.5);vec3 colour=mix(glass,art,max(hero,textured));colour=mix(colour,mix(vec3(.76,.94,.98),vec3(.19,.28,.20),hero),lineMode);float alpha=mix(.08+rim*.32,.58+rim*.30,textured);alpha=mix(alpha,1.,hero);alpha=mix(alpha,mix(.35,.3,hero),lineMode);gl_FragColor=vec4(colour,alpha*opacity);}');
+    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 n,eye;varying vec2 t;uniform sampler2D atlas;uniform float hero,lineMode,opacity,textured;void main(){float facing=abs(dot(normalize(n),normalize(eye)));float rim=pow(1.-facing,3.);float key=max(dot(normalize(n),normalize(vec3(-.4,.7,.8))),0.);vec3 glass=vec3(.72,.9,.94)+vec3(.15)*pow(key,24.);vec3 art=texture2D(atlas,t).rgb*(.6+key*.5);art*=mix(1.,.72,hero);vec3 colour=mix(glass,art,max(hero,textured));colour=mix(colour,mix(vec3(.76,.94,.98),vec3(.19,.28,.20),hero),lineMode);float alpha=mix(.08+rim*.32,.58+rim*.30,textured);alpha=mix(alpha,1.,hero);alpha=mix(alpha,mix(.35,.3,hero),lineMode);gl_FragColor=vec4(colour,alpha*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const attrs=Object.fromEntries(['position','normal','uv'].map(n=>[n,gl.getAttribLocation(program,n)])),u=Object.fromEntries(['mvp','model','camera','atlas','hero','lineMode','opacity','textured'].map(n=>[n,gl.getUniformLocation(program,n)]));
     const buffer=data=>{const b=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,data,gl.STATIC_DRAW);buffers.push(b);return b;};

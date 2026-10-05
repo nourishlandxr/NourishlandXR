@@ -33,12 +33,12 @@ const DIRECTION_LAYOUT = Object.freeze({
 });
 
 const ROOT_HUES = Object.freeze({
-    top: 132,
-    'upper-left': 42,
-    'lower-left': 184,
-    'upper-right': 212,
-    'lower-right': 270,
-    bottom: 25
+    top: 164,
+    'upper-left': 258,
+    'lower-left': 329,
+    'upper-right': 70,
+    'lower-right': 35,
+    bottom: 196
 });
 
 // All world-space measurements are metres. The texture surface includes
@@ -61,7 +61,7 @@ export const PIM_SPATIAL_CONFIG = Object.freeze({
 // complete hierarchy remains in the shared document model and Web Hub; this
 // limit only controls what blooms into the spatial surface.
 export const AR_PIM_MAX_VISIBLE_CHILDREN = 3;
-export const PIM_CHILD_SCALE = 1;
+export const PIM_CHILD_SCALE = .82;
 export const PIM_SPATIAL_LAYOUT_OPTIONS = Object.freeze({
     safeArea: Object.freeze({ left: 5, right: 95, top: 6, bottom: 84 }),
     layoutWidth: 1440,

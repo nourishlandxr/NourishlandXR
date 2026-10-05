@@ -2455,3 +2455,11 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
     .nlxr-info-panel .nlxr-panel-openers .nlxr-panel-opener-icon::before {left:3px;}
     .nlxr-info-panel .nlxr-panel-openers .nlxr-panel-opener-state {grid-column:2;grid-row:2;text-align:left;}
 }
+
+/* Reading body and knowledge location have separate visual hierarchies. */
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) [role="tabpanel"] .nlxr-info-body { text-align:left; width:100%; max-width:none; white-space:pre-line; line-height:1.6; }
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) [role="tabpanel"] .nlxr-info-trail { text-align:left; color:#8ee6d0; background:rgba(69,111,103,.22); padding:8px 12px; border-radius:8px; font-size:13px; font-weight:650; letter-spacing:.025em; }
+
+.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child { width:calc(var(--pim-render-cell-size)*.82);height:calc(var(--pim-render-cell-height)*.82);--pim-text-cell-size:calc(var(--pim-render-cell-size)*.82); }
+.plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after,
+.is-simple-desktop-ar .plant-knowledge-map[data-knowledge-mode=curiosity] .plant-knowledge-child::after { background:hsl(var(--pim-hue) 65% 17%)!important; }

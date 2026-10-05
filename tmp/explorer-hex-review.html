@@ -2,14 +2,14 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Explorer hexagonal dice review</title>
+<title>Explorer pentagonal dice review</title>
 <style>
 body{margin:0;background:#102b25;color:#e4f2e9;font:16px system-ui}main{max-width:1100px;margin:auto;padding:20px}h1{font-size:22px;font-weight:500;margin:0 0 8px}p{margin:8px 0;color:#bbd8c9}canvas{display:block;width:100%;height:auto;background:#173a31;border-radius:16px}label{display:inline-flex;gap:12px;align-items:center;margin:12px 0}input{width:250px}#errors{color:#ffb7a5}
 </style>
 <main>
-<h1>Explorer dice · reference solid with hexagonal faces</h1>
+<h1>Explorer dice · reference solid with pentagonal faces</h1>
 <p>Production geometry, circular link targets and engraved surface texture. The right die inherits the Uses target colour.</p>
-<canvas id="dice" width="1320" height="760" aria-label="Hexagonal knowledge dice with Uses and Dried pulse faces"></canvas>
+<canvas id="dice" width="1320" height="760" aria-label="Pentagonal knowledge dice with Uses and Dried pulse faces"></canvas>
 <label>Turn both dice <input id="turn" type="range" min="-180" max="180" value="0"></label>
 <p id="status" role="status">Preparing renderer…</p><p id="errors" role="alert"></p>
 </main>
@@ -47,7 +47,7 @@ try{
   const left=new THREE.Matrix4().compose(new THREE.Vector3(-.18,0,0),new THREE.Quaternion().setFromEuler(new THREE.Euler(.12,turn-.20,.06)),new THREE.Vector3(1,1,1));
   const right=new THREE.Matrix4().compose(new THREE.Vector3(.18,0,0),new THREE.Quaternion().setFromEuler(new THREE.Euler(-.06,turn+.24,-.03)),new THREE.Vector3(1,1,1));
   renderer.draw(view,left,1,parent,'#8bb9aa');renderer.draw(view,right,1,child,'#e5ae45');
-  status.textContent='Rendered two reference solids. Eight regular hexagonal faces with six small square joins. No edge skeleton.';
+  status.textContent='Rendered two reference solids. Twelve regular pentagonal faces. No edge skeleton.';
  }
  document.querySelector('#turn').addEventListener('input',draw);draw();
 }catch(error){errors.textContent=error.stack || String(error);status.textContent='Preview unavailable.';}

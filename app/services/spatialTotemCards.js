@@ -119,7 +119,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         };
     };
     const headerBoard = cards[0] ? {
-        ...place(0,1.48*demoScale,demoZone ? .56 : .62,.15,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
+        ...place(0,1.48*demoScale,demoZone ? .64 : .68,.21,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
@@ -279,8 +279,8 @@ function cardCanvas(card, detail) {
     if(Number.isFinite(card.glassOpacity)){
         const width=canvas.width/2,height=canvas.height/2;
         ctx.save();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-        ctx.beginPath();ctx.roundRect(7,7,width-14,height-14,boardStyle==='attached-sign'?24:30);
-        ctx.fillStyle=`rgba(8,30,28,${card.glassOpacity})`;ctx.fill();
+        ctx.beginPath();ctx.roundRect(7,7,width-14,height-14,boardStyle==='header-compact'?height/2:24);
+        ctx.fillStyle=boardStyle==='header-compact'?`rgba(37,48,43,${card.glassOpacity})`:`rgba(8,30,28,${card.glassOpacity})`;ctx.fill();
         ctx.strokeStyle='rgba(213,232,207,.84)';ctx.lineWidth=5;ctx.stroke();ctx.restore();
     }
     if(card.control){

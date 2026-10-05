@@ -371,7 +371,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
         const bloomAlpha = node.depth > 0 ? (.35 + .65 * nodeBloom) : 1;
         context.save();
         context.globalAlpha = bloomAlpha * cellOpacity;
-        drawHexagon(context, point.x, point.y, radius, `hsla(${hue}, 31%, 12%, ${active ? .82 : .7})`, null, 0);
+        drawHexagon(context, point.x, point.y, radius, `hsla(${hue}, 65%, 17%, ${active ? .82 : .7})`, null, 0);
         context.restore();
         context.save();
         context.globalAlpha = bloomAlpha;
@@ -385,7 +385,7 @@ export function drawPlantInformationHoneycomb(context, canvas, knowledge, expand
             point.y,
             radius,
             null,
-            options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 58%, 82%, ${active ? .98 : .72})`,
+            options.softSurface ? `hsla(${hue}, 24%, 40%, ${active ? .98 : .7})` : `hsla(${hue}, 80%, 65%, ${active ? .98 : .72})`,
             active ? 4 : 2
         );
         if (options.pressPath === node.path && options.pressProgress > 0) {
