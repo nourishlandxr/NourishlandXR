@@ -93,9 +93,10 @@ export function createExplorerWing(record,knowledge,values){
     if(record.knowledgeExplorer?.mode!=='explore')return false;
     const state=ensureExplorerMolecule(record,knowledge),base=sourceIndex(knowledge),label=String(values.label || '').trim().slice(0,72),sourceIds=[...new Set(Array.isArray(values.sourceIds)?values.sourceIds:[])].filter(id=>base.nodes.has(id)&&id!=='core'&&!base.nodes.get(id).sample).slice(0,12);
     if(!label || !sourceIds.length || state.customWings.length>=12)return false;
+    const references=sourceIds.filter(id=>{for(let parent=base.nodes.get(id)?.parentId;parent&&parent!=='core';parent=base.nodes.get(parent)?.parentId)if(sourceIds.includes(parent))return false;return true;});
     let number=1;while(state.customWings.some(w=>w.id==='explorer-custom-'+number))number++;
     const id='explorer-custom-'+number,colour=/^#[\da-f]{6}$/i.test(values.colour)?values.colour:'#8ca7b4';
-    state.customWings.push({id,label,sourceIds,colour});state.libraryOpen=true;state.libraryPage=Math.floor((explorerMoleculeIndex(knowledge,record).roots.length)/3);touch(record);return id;
+    state.customWings.push({id,label,sourceIds:references,colour});state.libraryOpen=true;state.libraryPage=Math.floor((explorerMoleculeIndex(knowledge,record).roots.length)/3);touch(record);return id;
 }
 export function chooseExplorerWing(record,knowledge,id,time=now()){
     const state=ensureExplorerMolecule(record,knowledge),index=explorerMoleculeIndex(knowledge,record);

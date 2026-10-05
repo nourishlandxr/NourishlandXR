@@ -1461,7 +1461,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /label\.width = 900/);
     assert.match(source, /label\.height = 360/);
     assert.deepEqual(INTRO_CONTROL_POSITION,[.42,.16,-2.755]);
-    assert.match(source, /const mainScreen=arWelcomeLayer \|\| board/);
+    assert.match(source, /const mainScreen=introBoardStep\.startsWith\('UTILITY '\) && simulatedMode \? board : arWelcomeLayer \|\| board/);
     assert.match(source, /const phoneFooterAction=simulatedMode && !desktopPreview/);
     assert.match(source, /trigger\.classList\.toggle\('is-phone-footer-action',phoneFooterAction\)/);
     assert.match(styles, /\.tryit-context-trigger\.is-phone-footer-action \{[\s\S]*bottom:max\(12px,env\(safe-area-inset-bottom,0px\)\);[\s\S]*min-height:52px/);

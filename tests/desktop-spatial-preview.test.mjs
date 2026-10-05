@@ -123,8 +123,8 @@ test('desktop control panel keeps a stable rail and shows media only for the act
 test('desktop primary action stays on its rendered surface while phone preview uses the safe footer', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
-    assert.match(demo, /const phoneFooterAction=simulatedMode && !desktopPreview/);
-    assert.match(demo, /mainScreen && desktopPreview\)mainScreen\.append\(trigger\)/);
+    assert.match(demo, /const phoneFooterAction=simulatedMode && !desktopPreview && !utilityCard/);
+    assert.match(demo, /mainScreen && \(desktopPreview \|\| utilityCard\)\)mainScreen\.append\(trigger\)/);
     assert.match(read('app/style.css'), /\.tryit-context-trigger\.is-phone-footer-action/);
     assert.match(demo, /demoLocalizedText\('Continue'\)/);
     assert.doesNotMatch(demo, /Begin with why/i);

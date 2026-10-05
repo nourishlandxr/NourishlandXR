@@ -310,7 +310,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(confirmation)return confirmation.body;
         if(tab==='Help')return [moduleContext?.body,INFO_HELP].filter(Boolean).join('\n\n');
         const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
-            :identity?'Curiosity reveals six perspectives on this plant.'+(supportsSpatialPIMO()?' Explorer 3D is an optional experiment in Controls. You can continue the demo without using it.':'')
+            :identity?knowledgeRecord?.knowledgeExplorer?.mode==='explore'?'Your core is the starting point. Choose knowledge wings for your purpose, then assemble and arrange them. '+(knowledgeRecord.explorerMolecule?.purpose || ''):'Curiosity reveals six perspectives on this plant.'+(supportsSpatialPIMO()?' Explorer 3D is an optional experiment in Controls. You can continue the demo without using it.':'')
                 :'Information about what you select will appear here.';
         // Keep authored paragraphs; give a long unbroken reading body breathing room.
         if(reading.includes('\n') || reading.length<230)return reading;
@@ -907,7 +907,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         element.querySelector('[data-info-action="'+tab+'"]')?.focus();
     });
     element.addEventListener('beforexrselect',event=>event.preventDefault());
-    let explorerDrag=null;explorerElement.addEventListener('pointerdown',event=>{event.stopPropagation();if(event.target.closest('button'))return;const rect=explorerElement.getBoundingClientRect();explorerDrag={id:event.pointerId,started:performance.now(),x:event.clientX-rect.left,y:event.clientY-rect.top};explorerElement.setPointerCapture?.(event.pointerId);});
+    let explorerDrag=null;explorerElement.addEventListener('pointerdown',event=>{event.stopPropagation();if(event.target.closest('button,input,select,textarea,summary'))return;const rect=explorerElement.getBoundingClientRect();explorerDrag={id:event.pointerId,started:performance.now(),x:event.clientX-rect.left,y:event.clientY-rect.top};explorerElement.setPointerCapture?.(event.pointerId);});
     explorerElement.addEventListener('pointermove',event=>{if(explorerDrag?.id!==event.pointerId || performance.now()-explorerDrag.started<PANEL_GRAB_HOLD_MS)return;explorerPosition={x:Math.max(8,event.clientX-explorerDrag.x),y:Math.max(8,event.clientY-explorerDrag.y)};explorerElement.style.left=explorerPosition.x+'px';explorerElement.style.top=explorerPosition.y+'px';const main=element.getBoundingClientRect();explorerElement.classList.toggle('is-magnetized',Math.abs(explorerPosition.y-main.bottom-12)<80 && Math.abs(explorerPosition.x-main.left)<100);});
     for(const type of ['pointerup','pointercancel','lostpointercapture'])explorerElement.addEventListener(type,()=>{
         if(explorerDrag && explorerPosition){const main=element.getBoundingClientRect(),rect=explorerElement.getBoundingClientRect();
@@ -1173,7 +1173,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         const knowledge=pimToArKnowledge(knowledgeDocument.explorerSourceDocument || knowledgeDocument),molecule=ensureExplorerMolecule(knowledgeRecord,knowledge),index=explorerMoleculeIndex(knowledge,knowledgeRecord);
         const progress=document.createElement('p');progress.className='nlxr-molecule-progress';progress.setAttribute('role','status');
         progress.textContent=molecule.wings.filter(id=>molecule.assembled.includes('core>'+id)).length+' wings built · '+molecule.discovered.length+' topics discovered'+(molecule.purpose?' · '+molecule.purpose:'');explorerElement.append(progress);
-        const details=document.createElement('details');details.className='nlxr-molecule-customize';const summary=document.createElement('summary');summary.textContent='Customize your organism';details.append(summary);
+        const details=document.createElement('details');details.className='nlxr-molecule-customize';details.open=Boolean(molecule.customizationOpen);details.addEventListener('toggle',()=>{if(details.isConnected)molecule.customizationOpen=details.open;});const summary=document.createElement('summary');summary.textContent='Customize your organism';details.append(summary);
         const message=document.createElement('p');message.textContent='Choose what matters here. Wildlife and Historical Facts suit a ranger’s focus. Traditional uses can belong in your rainforest story when supported by recorded knowledge.';details.append(message);
         const form=document.createElement('form');form.setAttribute('aria-label','Organism identity');
         const input=(parent,label,value='',type='text')=>{const row=document.createElement('label');row.textContent=label;const field=document.createElement('input');field.type=type;field.value=value;field.setAttribute('aria-label',label);row.append(field);parent.append(row);return field;};

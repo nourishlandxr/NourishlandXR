@@ -191,3 +191,69 @@ test('cylindrical pieces can be selected along their sides and capped ends',()=>
     assert.ok(hitExplorerConnector({origin:node.world.clone().addScaledVector(axis,.3),direction:axis.clone().negate()},node));
     assert.equal(hitExplorerConnector({origin:node.world.clone().addScaledVector(axis,.3).addScaledVector(normal,.1),direction:normal.clone().negate()},node),null);
 });
+
+test('ranger chooses only Wildlife and Historical Facts through two-stage assemblies',()=>{
+    const record=fixture(false),source=JSON.stringify(knowledge),curiosity=JSON.stringify(record.demoExpandedNodeIds);
+    for(const id of ['explorer-wildlife','historical-data']){
+        assert.ok(chooseExplorerWing(record,knowledge,id));assert.ok(!view(record).nodes.some(n=>n.id===id));
+        assert.equal(commitExplorerPuzzle(record,knowledge),false);alignExplorerPuzzle(record,knowledge);commitExplorerPuzzle(record,knowledge);
+        assert.ok(!view(record).nodes.some(n=>n.id===id));alignExplorerPuzzle(record,knowledge);commitExplorerPuzzle(record,knowledge);
+    }
+    const field=view(record);assert.deepEqual(field.nodes.filter(n=>n.depth===1).map(n=>n.id),['explorer-wildlife','historical-data']);
+    assert.ok(!field.nodes.some(n=>n.domainId==='uses'||n.domainId==='food-forest'));
+    select(record,'explorer-wildlife');const index=explorerMoleculeIndex(knowledge,record);assert.ok(index.nodes.get('explorer-wildlife').children.every(id=>index.nodes.get(id).sourceId));
+    const topic=index.nodes.get('explorer-wildlife').children[0];select(record,topic);const original=PIGEON_PEA_PIM.nodes.find(n=>n.id===index.nodes.get(topic).sourceId);
+    assert.equal(pimInfoContent(explorerDetailDocument(PIGEON_PEA_PIM,record),index.nodes.get(topic).path).body,original.body);
+    assert.equal(JSON.stringify(knowledge),source);assert.equal(JSON.stringify(record.demoExpandedNodeIds),curiosity);
+});
+
+test('custom wing groups existing records, supports personal style and survives save/resume',()=>{
+    const record=fixture(false),source=JSON.stringify(PIGEON_PEA_PIM);
+    assert.equal(createExplorerWing(record,knowledge,{label:'Empty',sourceIds:[]}),false);
+    const id=createExplorerWing(record,knowledge,{label:'Rainforest heritage',sourceIds:['attributed-traditional-knowledge','leaf-identification','basket-materials'],colour:'#78aa98'});
+    assert.ok(id);assert.ok(customizeExplorerOrganism(record,knowledge,{name:'Rainforest stories',purpose:'Traditional knowledge and organism parts'}));
+    chooseExplorerWing(record,knowledge,id);connectPrepared(record);select(record,id);
+    const action='KnowledgeMoleculeWingStyle:'+encodeURIComponent(JSON.stringify({label:'Ancient uses',colour:'#ba946b',scale:1.25}));assert.ok(explorerMoleculeAction(record,knowledge,action));
+    const index=explorerMoleculeIndex(knowledge,record);assert.equal(index.title,'Rainforest stories');assert.equal(index.nodes.get(id).label,'Ancient uses');assert.equal(index.nodes.get(id).children.length,3);
+    const field=view(record);assert.equal(field.nodes.find(n=>n.id===id).colour,'#ba946b');
+    assert.equal(pimInfoContent(explorerDetailDocument(PIGEON_PEA_PIM,record),id).editable,false);
+    const next=fixture(false);restoreExplorerMolecule(next,explorerMoleculeSnapshot(record));
+    assert.deepEqual(view(next).nodes.map(n=>[n.id,n.position,n.colour,n.radius]),field.nodes.map(n=>[n.id,n.position,n.colour,n.radius]));assert.equal(next.explorerMolecule.purpose,record.explorerMolecule.purpose);
+    assert.equal(JSON.stringify(PIGEON_PEA_PIM),source);
+});
+
+test('moving and rotating one wing carries its descendants and sockets, preserving other wings',()=>{
+    const record=fixture(false);for(const id of ['explorer-wildlife','historical-data']){chooseExplorerWing(record,knowledge,id);connectPrepared(record);}
+    select(record,'explorer-wildlife');const state=record.explorerMolecule,index=explorerMoleculeIndex(knowledge,record),child=index.nodes.get('explorer-wildlife').children[0],origin={...state.positions[child]},other=view(record).nodes.find(n=>n.id==='historical-data').position;
+    const wing=state.wingObjects['explorer-wildlife'];wing.position={x:.5,y:.2,z:.15};wing.rotation={x:0,y:Math.sin(.4),z:0,w:Math.cos(.4)};wing.scale=1.2;
+    const transformed=explorerNodePosition(state,index,child);assert.notDeepEqual(transformed,origin);assert.deepEqual(view(record).nodes.find(n=>n.id==='historical-data').position,other);
+    assert.ok(prepareExplorerConnection(record,knowledge,'explorer-wildlife',child));assert.deepEqual(explorerPuzzleSlot(record,knowledge).childPosition,transformed);connectPrepared(record);
+    assert.deepEqual(view(record).nodes.find(n=>n.id===child).position,transformed);assert.deepEqual(state.positions[child],origin);
+    assert.ok(removeExplorerWing(record,knowledge,'explorer-wildlife'));assert.deepEqual(view(record).nodes.map(n=>n.id),['core','historical-data']);assert.ok(explorerMoleculeIndex(knowledge,record).roots.includes('explorer-wildlife'));
+});
+
+test('cancelled and unfinished wings stay out of resumed organisms; old presets migrate only deliberate assemblies',()=>{
+    const record=fixture(false);chooseExplorerWing(record,knowledge,'uses');const saved=explorerMoleculeSnapshot(record);assert.deepEqual(saved.wings,[]);
+    assert.ok(explorerMoleculeAction(record,knowledge,'KnowledgeMoleculeCancel'));assert.deepEqual(view(record).nodes.map(n=>n.id),['core']);
+    const old=fixture();delete old.explorerMolecule.wings;delete old.explorerMolecule.wingObjects;old.explorerMolecule.assembled=['core>historical-data'];
+    assert.deepEqual(view(old).nodes.map(n=>n.id),['core','historical-data']);
+});
+
+test('custom topic selection preserves one semantic parent when a branch and its descendant are both chosen',()=>{
+    const record=fixture(false),id=createExplorerWing(record,knowledge,{label:'Seed records',sourceIds:['seed','direct-sowing','seed']});
+    assert.deepEqual(record.explorerMolecule.customWings[0].sourceIds,['seed']);const index=explorerMoleculeIndex(knowledge,record);
+    assert.equal(index.nodes.get(id).children.length,1);assert.equal(index.nodes.get(id+':direct-sowing').parentId,id+':seed');
+});
+
+test('XR grips move only the chosen wing and cancel safely when the wing is removed',()=>{
+    class Session extends EventTarget{inputSources=[];visibilityState='visible';}
+    const record=fixture(false);chooseExplorerWing(record,knowledge,'explorer-wildlife');connectPrepared(record);
+    const state=record.explorerMolecule,wing=state.wingObjects['explorer-wildlife'],root=structuredClone(state.root),s=new Session(),source={targetRaySpace:{},gripSpace:{}};s.inputSources=[source];
+    const basis={position:{x:0,y:0,z:0},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:0,z:1}};
+    let matrix=new THREE.Matrix4(),activations=0;
+    const input=bindExplorerMoleculeInteraction(s,{}, {hit:()=>({record,knowledge,object:wing,pose:basis,node:{explorerNodeId:'explorer-wildlife'},face:{faceId:'explorer-wildlife'}}),near:()=>null,onActivate:()=>activations++});
+    const frame={getPose:()=>({transform:{matrix:matrix.elements}})},event=type=>{const e=new Event(type);Object.defineProperty(e,'inputSource',{value:source});s.dispatchEvent(e);};
+    input.update(frame);event('squeezestart');assert.equal(input.active.target.object,wing);
+    const previous={...wing.position};matrix.makeTranslation(.2,.1,-.08);input.update(frame);assert.ok(Math.abs(wing.position.x-previous.x-.2)<1e-6);assert.deepEqual(state.root,root);assert.equal(activations,0);
+    removeExplorerWing(record,knowledge,'explorer-wildlife');input.update(frame);assert.equal(input.active,null);event('squeezeend');assert.equal(activations,0);input.destroy();
+});
