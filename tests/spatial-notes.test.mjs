@@ -63,6 +63,12 @@ test('architecture ray facets are read from the actual mesh and cached rather th
  const geometry=createKnowledgeArchitectureGeometry(.16);const first=knowledgeFacetRegions(geometry);assert.equal(knowledgeFacetRegions(geometry),first);
  for(let i=0;i<first.length;i++)assert.equal(first[i],geometry.attributes.region.getX(i*3));geometry.dispose();
 });
+
+test('demo slide navigation retains authored Note widgets and glass colour',()=>{
+ const note={id:'note',demoType:'note',name:'Original',appearance:{color:'#29493c',spatial_note:{type:'plain',widgets:[]}},position:{x:0,y:1,z:-1}};
+ const snapshot=captureDemoScene([note]);note.appearance={color:'#53405e',spatial_note:{type:'dynamic',widgets:[{id:'timer',type:'timer'}]}};
+ restoreDemoScene(snapshot,{preserveNotes:true});assert.equal(note.appearance.color,'#53405e');assert.equal(note.appearance.spatial_note.widgets.length,1);
+});
 test('new reusable widget types register without changing Dynamic Note placement',()=>{
  registerNoteWidget({type:'test-observation',label:'Test observation',category:'Information',render:()=>'<p>Registered</p>'});
  assert.match(renderNoteWidget(createNoteWidget('test-observation')),/Registered/);assert.equal(noteWidgetPlacement(1).length,1);

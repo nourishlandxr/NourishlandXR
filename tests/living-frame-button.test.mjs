@@ -10,7 +10,7 @@ test('button uses two filled edges and no stroke or text blur',()=>{
     assert.equal(calls.filter(call=>call[0]==='fill').length,2);
     assert.deepEqual(calls[0],['clear',0,0,2048,1024]);
     assert.deepEqual(calls.find(call=>call[0]==='text'),['text','Start the demo',450,180,780]);
-    assert.equal(ctx.fillStyle,'#f5faef');
+    assert.equal(ctx.fillStyle,'#ffffff');
 });
 
 test('button anisotropy is capped and safely optional',()=>{

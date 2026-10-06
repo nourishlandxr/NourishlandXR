@@ -13,7 +13,7 @@ export function demoNoteWidgetPlacement(count){
 }
 export function mountDemoNoteShowcase(root,record,{onChange=()=>{},onClose=()=>{}}={}){
     let arm=null,destroyed=false,timer=null;
-    const states=new Map();
+    const states=new Map(Object.entries(record.demoNoteWidgetStates || {}));
     function render(){
         if(destroyed)return;clearInterval(timer);timer=null;
         const widgets=spatialNote(record).widgets,bays=demoNoteWidgetPlacement(widgets.length+(arm?1:0));
@@ -40,7 +40,7 @@ export function mountDemoNoteShowcase(root,record,{onChange=()=>{},onClose=()=>{
     function click(event){
         const demo=event.target.closest('[data-demo-note]');if(demo){action(demo.dataset.demoNote);return;}
         const button=event.target.closest('[data-widget-action]'),container=button?.closest('[data-note-widget]'),widget=spatialNote(record).widgets.find(item=>item.id===container?.dataset.noteWidget);
-        if(widget){states.set(widget.id,interactNoteWidget(widget,states.get(widget.id),button.dataset.widgetAction));render();}
+        if(widget){states.set(widget.id,interactNoteWidget(widget,states.get(widget.id),button.dataset.widgetAction));record.demoNoteWidgetStates=Object.fromEntries(states);render();}
     }
     root.addEventListener('click',click);render();
     return {action,close:onClose,destroy(){destroyed=true;clearInterval(timer);root.removeEventListener('click',click);root.replaceChildren();}};

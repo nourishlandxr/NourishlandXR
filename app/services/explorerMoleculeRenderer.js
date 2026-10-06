@@ -9,6 +9,7 @@ const motion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 const vec=p=>new THREE.Vector3(p.x,p.y,p.z);
 function labelCanvas(card){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=localizedCanvasContext(canvas.getContext('2d'));
+    if(card.nameBadge){ctx.fillStyle='rgba(8,24,28,.9)';ctx.beginPath();ctx.roundRect(8,20,496,200,30);ctx.fill();ctx.strokeStyle='#e2f4e9';ctx.lineWidth=4;ctx.stroke();}
     ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffffff';ctx.shadowBlur=0;ctx.font=`750 ${card.attachment?48:64}px Manrope,system-ui`;
     const lines=[];let line='';for(const word of String(translateNxrText(card.title)).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>460&&line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
     lines.slice(0,3).forEach((text,i)=>{const y=105+(i-(Math.min(3,lines.length)-1)/2)*52;ctx.fillText(text,256,y,470);});
@@ -136,11 +137,13 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
                 if(node.attachment || node.connector || field.lod==='far')return [surface];
                 // Fixed semantic faces, not a billboard that changes identity as it turns.
                 const normals=[];for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1])normals.push(new THREE.Vector3(x,y,z).normalize().applyQuaternion(node.worldRotation));
-                return normals.slice(0,1+(node.outputs || []).length).flatMap((normal,i)=>{
+                const faces=normals.slice(0,1+(node.outputs || []).length).flatMap((normal,i)=>{
                     if(normal.dot(toward)<.15)return [];
                     const output=i?(node.outputs || [])[i-1]:null,r=up.clone().cross(normal);if(r.lengthSq()<1e-6)r.copy(right);r.normalize();
                     return [{...surface,normal,right:r,up:normal.clone().cross(r).normalize(),center:node.world.clone().addScaledVector(normal,node.worldRadius*Math.sqrt(3)/2+.002),moleculeNode:output?{...node,outputTarget:output.id,outputIndex:i-1}:node,card:{...surface.card,id:node.id+':face:'+i,title:output?.label || title,status:output?'Select to build / read':status}}];
                 });
+                const name={...surface,center:node.world.clone().addScaledVector(up,node.worldRadius*1.35).addScaledVector(toward,.004),right,up,normal:toward,width:node.worldRadius*2.4,height:node.worldRadius*.8,interactive:false,card:{...surface.card,id:node.id+':name',title,status:'',nameBadge:true}};
+                return [name,...faces];
             });
             labels.draw(view,{id:'explorer-labels-'+String(record.id || record.marker?.id)},pose.position,labelSurfaces.map(s=>s.card));
             const tokenPose={position:new THREE.Vector3().setFromMatrixPosition(matrix),right:new THREE.Vector3().setFromMatrixColumn(matrix,0),up:new THREE.Vector3().setFromMatrixColumn(matrix,1),normal:new THREE.Vector3().setFromMatrixColumn(matrix,2)};

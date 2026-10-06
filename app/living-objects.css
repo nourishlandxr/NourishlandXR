@@ -75,7 +75,7 @@
 .nlxr-info-panel .nlxr-info-body { font-size:15px; line-height:1.5; margin:12px 0; }
 .nlxr-info-panel .nlxr-plant-preview { position:relative; margin:6px 0 12px; aspect-ratio:16/7; overflow:hidden; border:1px solid #c9dec866; border-radius:10px; background:#111915; box-shadow:inset 0 1px #ffffff26,0 8px 20px #0004; }
 .nlxr-info-panel .nlxr-plant-preview::after { content:""; position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg,transparent 55%,#10201966); }
-.nlxr-info-panel .nlxr-plant-preview img { display:block; width:100%; height:100%; object-fit:cover; object-position:center; }
+.nlxr-info-panel .nlxr-plant-preview img { display:block; width:100%; height:100%; box-sizing:border-box; padding:12px; object-fit:contain; object-position:center; }
 .nlxr-info-panel .nlxr-plant-preview.is-tutorial-art { aspect-ratio:4/3; background:#e9edea; }
 .nlxr-info-panel .nlxr-plant-preview.is-tutorial-art::after { display:none; }
 .nlxr-info-panel .nlxr-plant-preview.is-tutorial-art img { object-fit:contain; transition:opacity 1.4s ease; }
@@ -1412,7 +1412,7 @@
 .nlxr-media-floating.is-magnetized { outline:3px solid rgba(166,231,250,.72); outline-offset:4px; box-shadow:0 0 0 9px rgba(166,231,250,.12),0 22px 60px rgba(0,0,0,.52)!important; }
 .nlxr-media-floating .nlxr-plant-preview { position:relative; flex:1 1 auto; display:grid; grid-template-rows:minmax(0,1fr) auto; width:100%; min-height:0; height:auto!important; margin:0; overflow:hidden; border:1px solid rgba(177,215,233,.3); border-radius:12px; background:rgba(3,12,18,.78); }
 .nlxr-media-floating .nlxr-plant-preview::after { display:none; }
-.nlxr-media-floating .nlxr-plant-preview img { display:block; width:100%; height:100%; min-height:0; object-fit:contain; object-position:center; }
+.nlxr-media-floating .nlxr-plant-preview img { display:block; width:100%; height:100%; min-height:0; box-sizing:border-box; padding:12px; object-fit:contain; object-position:center; }
 .nlxr-media-floating .nlxr-plant-preview figcaption { padding:6px 9px; color:#e6f2f7; background:rgba(8,20,34,.94); font:600 13px/1.25 system-ui,sans-serif; text-align:center; }
 .nlxr-media-floating .nlxr-media-empty { flex:1 1 auto; display:grid; place-items:center; margin:0; padding:20px; color:#c7d8e0; font:500 15px/1.45 system-ui,sans-serif; text-align:center; }
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel)[data-media-dock-side="left"]:not(.is-media-collapsed) > .nlxr-media-wing {
@@ -2496,3 +2496,6 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 /* Legacy placement links never expose an unsupported desktop AR launch. */
 body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],button[onclick*="startArMode"],button[onclick*="startExplorerAr"],button[onclick*="startArWithSkipCheck"],button[onclick*="startWelcomeAr"],button[onclick*="toggleGlobalAr"]) {display:none!important;}
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-body {padding:14px 16px;border:1px solid rgba(211,241,231,.55);border-radius:16px;background:rgba(4,18,23,.38);color:#fff;font-family:Manrope,system-ui;font-weight:600;}
+.nlxr-info-panel .nlxr-reading-surface {padding:14px 16px;border:1px solid rgba(211,241,231,.55);border-radius:16px;background:rgba(4,18,23,.38);}
+.nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-reading-surface .nlxr-info-body {padding:0;margin:0;border:0;background:none;}
+.nlxr-info-panel .nlxr-reading-surface .nlxr-info-hint {margin:12px 0 0;padding:10px 0 0;border-top:1px solid rgba(211,241,231,.25);}

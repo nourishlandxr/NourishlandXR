@@ -44,8 +44,13 @@ test('authored overflow pages through three inset bays without growing object co
  for(let i=0;i<5;i++){ensureKnowledgeObjects(r,custom).items[0].faces.filter(f=>f?.conceptId.startsWith('n')).forEach(f=>ids.add(f.conceptId));knowledgeObjectAction(r,'KnowledgeObjectFaces');}assert.equal(ids.size,15);assert.equal(w.items.length,1);assert.equal(w.regions.length,6);
 });
 test('session re-entry keeps selected topic, open branches, reading page and object arrangement',()=>{
- const r=record();const state=knowledgeExplorer(r);r.demoSelectedNodeId='food-forest';r.demoExpandedNodeIds=['food-forest'];state.readingPage=3;state.selectedConceptId='food-forest';state.objects={version:1,items:[{id:'object:core',position:{x:.6,y:.3,z:.2}}],connectors:[]};preserveKnowledgeContext(r);
- const next={...record(),name:r.name},resumed=knowledgeExplorer(next);assert.equal(next.demoSelectedNodeId,'food-forest');assert.equal(resumed.readingPage,3);assert.deepEqual(resumed.objects,state.objects);
+ const r=record();delete r.demoType;const state=knowledgeExplorer(r);r.demoSelectedNodeId='food-forest';r.demoExpandedNodeIds=['food-forest'];state.readingPage=3;state.selectedConceptId='food-forest';state.objects={version:1,items:[{id:'object:core',position:{x:.6,y:.3,z:.2}}],connectors:[]};preserveKnowledgeContext(r);
+ const next={...record(),name:r.name};delete next.demoType;const resumed=knowledgeExplorer(next);assert.equal(next.pimSelectedNodeId,'food-forest');assert.equal(resumed.readingPage,3);assert.deepEqual(resumed.objects,state.objects);
+});
+
+test('a fresh demo does not restore previous exploration of the same plant',()=>{
+ const r=record(),state=knowledgeExplorer(r);state.readingPage=3;r.demoExpandedNodeIds=['uses'];preserveKnowledgeContext(r);
+ const next={...record(),name:r.name},fresh=knowledgeExplorer(next);assert.equal(fresh.mode,'curiosity');assert.equal(fresh.readingPage,undefined);assert.deepEqual(next.demoExpandedNodeIds,[]);
 });
 test('floor toy bounces, settles and stays within reach at each Quest refresh rate',()=>{
  for(const hz of [60,72,90,120]){const p=createHeroDicePhysics({x:0,y:0,z:0});p.state.position.y=1;p.state.velocity={x:4.5,y:3,z:1.4};let bounced=false,lastV=p.state.velocity.y;

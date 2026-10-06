@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../app/vendor/three.module.min.js';
 import {mountDemoNoteShowcase} from '../app/services/demoNoteShowcase.js';
-import {resolveNoteCardButton} from '../app/services/noteSpatialRenderer.js';
+import {resolveNoteCardButton,noteAnchorPose} from '../app/services/noteSpatialRenderer.js';
 import {noteSurfaceOwnsRay} from '../app/services/demoNoteRouting.js';
 import {beeWingsAtRest} from '../app/services/demoAmbientLife.js';
 import {applyBeeWingPose} from '../app/services/demoBeeXR.js';
@@ -25,6 +25,12 @@ test('Note chooser offers three choices and transforms its connected card with a
 test('Note surfaces do not steal Continue or Control panel rays, including misses',()=>{
  assert.equal(noteSurfaceOwnsRay(null,[]),false);assert.equal(noteSurfaceOwnsRay({distance:1.5},[{distance:1}]),false);
  assert.equal(noteSurfaceOwnsRay({distance:.8},[{distance:1.1},null]),true);assert.equal(noteSurfaceOwnsRay({distance:1},[{distance:1}]),false);
+});
+
+test('adding widgets keeps the original Note plane despite headset pitch and roll',()=>{
+ const record={position:{x:.5,y:1,z:-1}},viewer=new THREE.Matrix4().makeRotationZ(.7).elements;viewer[12]=0;viewer[14]=0;
+ const before=noteAnchorPose(record,viewer);assert.deepEqual(before.up,{x:0,y:1,z:0});assert.equal(before.right.y,0);
+ viewer[12]=2;viewer[14]=3;const after=noteAnchorPose(record,viewer);assert.deepEqual(after,before);
 });
 test('native Note presses resolve live buttons after a timer replaces unchanged card markup',()=>{
  const stale={id:'old'},live={id:'new'},close={id:'close'};let buttons=[stale];

@@ -225,7 +225,7 @@ test('the demo keeps the three simple Totem forms and uses physical plaques and 
     assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     assert.match(demoSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone' || !demoAreaVisible(record))"),demoSource.indexOf('const linkedTotems'));
-    assert.match(demoTotemDraw,/bodyHalfWidth=record\.demoMapPiece\?\.055:\.095,bodyHalfDepth=record\.demoMapPiece\?\.05:\.075,bodyHalfHeight=demoTotemHalfHeight\(record\)/);
+    assert.match(demoTotemDraw,/bodyHalfWidth=record\.demoMapPiece\?\.04:\.095,bodyHalfDepth=record\.demoMapPiece\?\.036:\.075,bodyHalfHeight=demoTotemHalfHeight\(record\)/);
     assert.doesNotMatch(demoTotemDraw,/crownRadius|scale:\{x:1,y:\.7,z:\.5\}/);
     assert.match(demoSource,/drawSpatialTotemPlaques\(gl,prismRenderer,sphereRenderer/);
     const plaqueSource=read('app/services/spatialTotemCards.js');
@@ -1410,7 +1410,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     const profileContinuation=source.slice(source.indexOf('function continueAfterDemoPim'),source.indexOf('function showDemoPanelIntroduction'));
     assert.match(profileContinuation, /clearLimSelection\(\);limMeshVisible=false;[\s\S]*if\(record\.tutorialStage==='plant'\)showDemoPanelIntroduction\(record\);\s*else showDemoAction\('note'\)/);
     assert.match(source, /if\(demoKnowledgeIsModal\(\)\)\{const hit=spatialDashboardRayHit/);
-    assert.match(source,/if\(demoNoteOwnsPointer\(\) && demoNoteRenderer\?\.activate\(latestControllerRay\)\)return/);
+    assert.match(source,/if\(demoNoteOwnsPointer\(\) && demoNoteHit\(latestControllerRay\)\?\.noteRenderer\.activate\(latestControllerRay\)\)return/);
     assert.match(source,/if\(demoNoteRenderer && activateImmersiveDemoControl\(\)\)\{closeDemoKnowledge\(true\);return;/);
     assert.match(source, /if\(stage\) stage\.inert=true/);
     assert.match(source, /function openDemoVirtualTag\(record\)[\s\S]*if \(!simulatedMode \|\| session\)[\s\S]*advancePastVirtualTag\(record\)[\s\S]*openDemoKnowledge\(record\)/);

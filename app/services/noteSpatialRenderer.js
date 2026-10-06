@@ -3,6 +3,11 @@ import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {createSpatialTetherRenderer,drawSpatialTether,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {noteWidgetPlacement} from './spatialNotes.js';
 export const NOTE_CARD_LAYOUT=Object.freeze({width:.86,height:.336,canvasWidth:1024,canvasHeight:400,buttonX:36,buttonY:240,columnStep:482,rowStep:40,buttonWidth:460,buttonHeight:36});
+export function noteAnchorPose(record,viewer){
+    const center={...(record.position || {x:0,y:1,z:-1})};
+    if(!record.demoNotePose){const dx=viewer[12]-center.x,dz=viewer[14]-center.z,length=Math.hypot(dx,dz) || 1;record.demoNotePose={right:{x:dz/length,y:0,z:-dx/length},up:{x:0,y:1,z:0},normal:{x:dx/length,y:0,z:dz/length}};}
+    return {center,right:{...record.demoNotePose.right},up:{...record.demoNotePose.up}};
+}
 export function noteCardActionOffset(index){
     const l=NOTE_CARD_LAYOUT;
     return {x:((l.buttonX+index%2*l.columnStep+l.buttonWidth/2)/l.canvasWidth-.5)*l.width,
@@ -17,13 +22,13 @@ export function resolveNoteCardButton(root,id,actionIndex,fallback){
 // Spatial placement stays separate from widget behaviour. The DOM owns state,
 // and the native cards forward their actions to the same visitor controls.
 export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},widgetPlacement=noteWidgetPlacement}={}){
-    const tether=createSpatialTetherRenderer(gl),canvases=new Map(),pages=new Map(),widgetBirths=new Map();let revision=0,pose=null,layout=[],openingAt=performance.now(),closingAt=null,wasExpanded=false;
-    const marker=record.marker || record,positions=new Map();let held=null;
+    const tether=createSpatialTetherRenderer(gl),canvases=new Map(),pages=new Map(),widgetBirths=new Map();let revision=0,pose=record.demoNotePose?{center:{...record.position},right:{...record.demoNotePose.right},up:{...record.demoNotePose.up}}:null,layout=[],openingAt=performance.now(),closingAt=null,wasExpanded=false;
+    const marker=record.marker || record,positions=new Map(Object.entries(record.demoNoteWidgetPositions || {}));let held=null;
     const observer=new MutationObserver(()=>revision++);observer.observe(root,{childList:true,subtree:true,characterData:true,attributes:true});
     const imageLoaded=()=>revision++;root.addEventListener('load',imageLoaded,true);
     const canvas=card=>{
         const c=document.createElement('canvas');c.width=1024;c.height=400;const ctx=localizedCanvasContext(c.getContext('2d'));
-        ctx.fillStyle='rgba(12,31,27,.42)';ctx.beginPath();ctx.roundRect(5,5,1014,390,36);ctx.fill();ctx.strokeStyle='rgba(215,237,219,.76)';ctx.lineWidth=3;ctx.stroke();
+        const glassColour=/^#[\da-f]{6}$/i.test(record.appearance?.color || '')?record.appearance.color:'#0c1f1b';ctx.fillStyle=glassColour+'66';ctx.beginPath();ctx.roundRect(5,5,1014,390,36);ctx.fill();ctx.strokeStyle='rgba(215,237,219,.76)';ctx.lineWidth=3;ctx.stroke();
         const element=card.element,title=element.querySelector('h2,h3')?.textContent || marker.name;
         ctx.fillStyle='#fffdf1';ctx.font='700 42px "Trebuchet MS", system-ui';ctx.fillText(title,36,58,950);
         const paragraphs=[...element.querySelectorAll('p,li,figcaption,small')].map(item=>translateNxrText(item.textContent)).filter(Boolean);let y=102;
@@ -40,7 +45,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
     const renderer=createSpatialTotemCards(gl,{canvas,surfaces:()=>layout,containedFeedback:true});
     const api={
         draw(view,currentViewer=viewer){
-            if(!pose && currentViewer){const p=record.position || {x:0,y:1,z:-1};pose={center:{x:p.x,y:p.y,z:p.z},right:{x:currentViewer[0],y:currentViewer[1],z:currentViewer[2]},up:{x:currentViewer[4],y:currentViewer[5],z:currentViewer[6]}};}
+            if(!pose && currentViewer)pose=noteAnchorPose(record,currentViewer);
             if(!pose)return;
             const main=root.querySelector('.note-anchor');if(!main)return;
             const board=root.querySelector('.note-spatial-board'),expanded=Boolean(board?.classList.contains('is-expanded')),closing=Boolean(board?.classList.contains('is-collapsing'));
@@ -48,7 +53,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             if(closing && closingAt===null)closingAt=performance.now();if(!closing)closingAt=null;
             const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,time=performance.now(),amount=reduced?1:closing?Math.max(0,1-(time-closingAt)/260):Math.min(1,(time-openingAt)/480);
             const widgets=expanded?[...root.querySelectorAll('[data-note-widget]')]:[],hasAddPanel=widgets.some(element=>element.classList.contains('note-widget-picker')),bays=widgetPlacement(widgets.length,hasAddPanel);
-            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-compact')?.58:.86,height:element?.classList.contains('note-widget-compact')?.23:.336,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0),title:element.textContent,fadeDuration:reduced?1:350}});
+            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-compact')?.58:.86,height:element?.classList.contains('note-widget-compact')?.178:.264,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0)+':'+record.appearance?.color,title:element.textContent,fadeDuration:index<0?0:reduced?1:350}});
             const ids=new Set(widgets.map(element=>element.dataset.noteWidget));for(const id of widgetBirths.keys())if(!ids.has(id))widgetBirths.delete(id);
             layout=[card(main,'main',pose.center),...widgets.map((element,index)=>{
                 const id=element.dataset.noteWidget;if(!widgetBirths.has(id))widgetBirths.set(id,time);
@@ -61,7 +66,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             const normal={x:pose.right.y*pose.up.z-pose.right.z*pose.up.y,y:pose.right.z*pose.up.x-pose.right.x*pose.up.z,z:pose.right.x*pose.up.y-pose.right.y*pose.up.x};
             for(const surface of layout.slice(1)){
                 const delta={x:surface.center.x-pose.center.x,y:surface.center.y-pose.center.y,z:surface.center.z-pose.center.z},across=delta.x*pose.right.x+delta.y*pose.right.y+delta.z*pose.right.z,vertical=delta.x*pose.up.x+delta.y*pose.up.y+delta.z*pose.up.z;
-                const lateral=Math.abs(across)>=Math.abs(vertical),axis=lateral?pose.right:pose.up,sign=Math.sign(lateral?across:vertical),mainEdge=lateral?.43:.168,widgetEdge=lateral?surface.width/2:surface.height/2;
+                const lateral=Math.abs(across)>=Math.abs(vertical),axis=lateral?pose.right:pose.up,sign=Math.sign(lateral?across:vertical),mainEdge=lateral?.43:.132,widgetEdge=lateral?surface.width/2:surface.height/2;
                 if(Math.abs(lateral?across:vertical)<mainEdge+widgetEdge+.02)continue;
                 const start={x:pose.center.x+axis.x*sign*mainEdge+normal.x*.012,y:pose.center.y+axis.y*sign*mainEdge+normal.y*.012,z:pose.center.z+axis.z*sign*mainEdge+normal.z*.012};
                 const end={x:surface.center.x-axis.x*sign*widgetEdge+normal.x*.012,y:surface.center.y-axis.y*sign*widgetEdge+normal.y*.012,z:surface.center.z-axis.z*sign*widgetEdge+normal.z*.012};
@@ -71,7 +76,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
         hit:ray=>renderer.hit(ray),
         beginGrab(ray,source){const hit=renderer.hit(ray);if(!hit || !pose)return false;const surface=layout.find(item=>item.card.id===hit.card.id);if(!surface)return false;held={source,id:hit.card.id,distance:hit.distance,offset:{x:surface.center.x-ray.origin.x-ray.direction.x*hit.distance,y:surface.center.y-ray.origin.y-ray.direction.y*hit.distance,z:surface.center.z-ray.origin.z-ray.direction.z*hit.distance}};return true;},
         updateGrab(ray){if(!held || !pose || !ray)return;const center={x:ray.origin.x+ray.direction.x*held.distance+held.offset.x,y:ray.origin.y+ray.direction.y*held.distance+held.offset.y,z:ray.origin.z+ray.direction.z*held.distance+held.offset.z};if(held.id==='main'){pose.center=center;}else positions.set(held.id,{x:center.x-pose.center.x,y:center.y-pose.center.y,z:center.z-pose.center.z});},
-        releaseGrab(source){if(held?.source!==source)return false;held=null;return true;},
+        releaseGrab(source){if(held?.source!==source)return false;record.position={...pose.center};record.demoNoteWidgetPositions=Object.fromEntries(positions);held=null;return true;},
         get heldSource(){return held?.source;},
         activate(ray){const hit=renderer.hit(ray);if(!hit)return false;const entry=canvases.get(hit.card.id),x=(hit.localX/hit.width+.5)*1024,y=(.5-hit.localY/hit.height)*400;
             const target=entry?.buttons?.find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);

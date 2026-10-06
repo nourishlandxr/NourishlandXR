@@ -17,7 +17,7 @@ export function knowledgeExplorer(record){
     if(!record)return null;
     if(!record.knowledgeExplorer){
         record.knowledgeExplorer={mode:'curiosity',subjectId:subjectId(record),connections:true,context:true,pages:{},positions:{},changedAt:0,revision:0};
-        const context=sessionDiscoveries.get(subjectId(record));if(context)restoreKnowledgeDiscovery(record,context);
+        const context=!record.demoType && sessionDiscoveries.get(subjectId(record));if(context)restoreKnowledgeDiscovery(record,context);
     }
     const state=record.knowledgeExplorer;
     if(state.mode==='explore' && !supportsSpatialPIMO()){state.previousMode='explore';state.mode='curiosity';state.revision++;}
@@ -28,6 +28,7 @@ function discoverySnapshot(record){
     return {subjectId:subjectId(record),title:record.name || record.marker?.name || record.marker?.label || '',activeNodeId:record.demoSelectedNodeId || record.pimSelectedNodeId || '',expandedNodeIds:[...(record.demoExpandedNodeIds || record.pimExpandedNodeIds || [])],mode:state.mode,pages:{...state.pages},positions:{...state.positions},connections:state.connections,context:state.context,history:[...(state.history || [])],readingPage:state.readingPage || 0,selectedConceptId:state.selectedConceptId || '',objects:state.objects?JSON.parse(JSON.stringify(state.objects)):null,curiositySnapshot:state.curiositySnapshot?JSON.parse(JSON.stringify(state.curiositySnapshot)):null,explorerMolecule:explorerMoleculeSnapshot(record)};
 }
 export function preserveKnowledgeContext(record){
+    if(record?.demoType){sessionDiscoveries.delete(subjectId(record));return;}
     if(!record?.knowledgeExplorer)return;
     const value=discoverySnapshot(record);if(value.mode==='explore')value.mode='curiosity';sessionDiscoveries.set(value.subjectId,value);
     if(sessionDiscoveries.size>100)sessionDiscoveries.delete(sessionDiscoveries.keys().next().value);

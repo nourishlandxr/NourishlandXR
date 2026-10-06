@@ -150,7 +150,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 for(let i=0;i<32;i++){const angle=i*Math.PI/16;fitPoint(Math.cos(angle)*6.3,.05,Math.sin(angle)*4.2);fitPoint(Math.cos(angle)*6.3,-.43,Math.sin(angle)*4.2);}
                 // Include the tallest context trees in the final composition.
                 if(progress.scenery>0)for(const [px,pz,size] of contextTrees)fitPoint(px,size*1.9*progress.scenery,pz);
-                camera.zoom=Math.min(.92/extentX,.88/extentY);camera.updateProjectionMatrix();
+                camera.zoom=Math.min(.97/extentX,.95/extentY);camera.updateProjectionMatrix();
                 boundaries.forEach(({area,line,fill})=>{const boundary=model.concept?1:demoLivingMapAreaProgress(schedule,area.id,elapsed,reducedMotion);line.visible=boundary>0;line.geometry.setDrawRange(0,Math.round(boundary*64)+1);fill.visible=boundary>=.99;});
                 markers.forEach(({item,group,ring,orb})=>{
                     const born=bornFor(item.id);
