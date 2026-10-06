@@ -60,7 +60,7 @@ let knowledgeRenderer=null,heroDiceToy=null;
 import {INSECT_VISUALS,beeFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
 import {demoTotemHeightForScreen,shiftDemoAreaToFloor} from '../services/demoFloorPlacement.js';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../services/demoFeedback.js';
-let demoFeedback=null,demoFeedbackInputSource=null;
+let demoFeedback=null,demoFeedbackInputSource=null,demoFeedbackLastTick=-Infinity;
 import {BEE_COUNT} from '../services/demoAmbientLife.js';
 import {demoButterflyPose,butterflyDropSurface} from '../services/demoButterflyPose.js';
 import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
@@ -1233,6 +1233,8 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     introBoardStep=options.stepLabel || '';
     const panel = appRoot?.querySelector('[data-tryit-guided-choice]');
     if (!panel) return;
+    clearDemoNarration();
+    const narrationRevision=demoNarrationRevision;
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     panel.innerHTML = html;
     panel.classList.remove('is-persistent-demo-board');
@@ -1259,7 +1261,6 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     const choiceLabels=[...panel.querySelectorAll('[data-demo-choice]')].map(button=>button.textContent.trim()).filter(Boolean);
     setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(choiceLabels.length===1?`Use ${choiceLabels[0]} below.`:'Choose an option below.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
-    clearTimeout(boardTypingTimer);
     const fullText = paragraph?.textContent || '';
     const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
     const choiceButtons = [...panel.querySelectorAll('[data-demo-choice]')];
@@ -1284,15 +1285,21 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
             const choiceButton = choiceButtons[0];
             continueButton.textContent = choiceButton.dataset.demoChoice === 'continue' ? 'Continue' : choiceButton.textContent.trim();
             continueButton.onclick = () => {
+                if(continueButton.disabled || narrationRevision!==demoNarrationRevision)return;
                 suppressSessionSelectUntil = performance.now() + 700;
+                typing=false;
+                continueButton.disabled=true;
+                clearDemoNarration();
                 onClick(choiceButton.dataset.demoChoice);
             };
             continueButton.hidden = false;
+            continueButton.disabled = false;
         } else if (choiceButtons.length > 1 && finalActions) {
             finalActions.hidden = false;
         }
     };
     const finishTyping = () => {
+        if(narrationRevision!==demoNarrationRevision)return;
         clearTimeout(boardTypingTimer);
         clearTimeout(boardTypingWatchdogTimer);
         if (paragraph) paragraph.textContent = fullText;
@@ -1309,6 +1316,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         }
     };
     const revealParagraph = () => {
+        if(narrationRevision!==demoNarrationRevision)return;
         if (!typing || !paragraph) return;
         paragraph.textContent = fullText;
         paragraph.classList.add('is-revealed');
@@ -1344,7 +1352,9 @@ const DEMO_QUICK_ACCESS_COPY=Object.freeze({
     ...DEMO_GUIDED_COPY
 });
 
+let demoNarrationRevision=0;
 function clearDemoNarration() {
+    demoNarrationRevision++;
     clearTimeout(boardTypingTimer);
     clearTimeout(boardTypingWatchdogTimer);
     skipDemoNarration=null;
@@ -1355,6 +1365,8 @@ function clearDemoNarration() {
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
+    clearDemoNarration();
+    const narrationRevision=demoNarrationRevision;
     if(!options.historyReplay && !options.keepPanel && options.stepLabel && !options.stepLabel.startsWith('PIMO') && options.tutorialStep!==DEMO_TUTORIAL_STEPS.PIM)infoPanel?.showLearning({title:'',hideTitle:true,body:'',discardPreviousImage:true});
     if(guidedDemoStep(options.stepLabel)?.act==='Meet the panel tools'){infoPanel?.guideTool('Explorer');infoPanel?.setContextualHint('Grip moves panels and objects. Trigger interacts with buttons and cells.');}
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-living-map',String(options.stepLabel==='UTILITY 1.1'));
@@ -1382,8 +1394,6 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     introBoardVisibleBody = '';
     introBoardParagraphFadeTimes=[];
     introBoardTextureDirty = true;
-    clearTimeout(boardTypingTimer);
-    clearTimeout(boardTypingWatchdogTimer);
     const board = appRoot?.querySelector('[data-tryit-guided-choice]');
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const finalActions = appRoot?.querySelector('[data-tryit-final-actions]');
@@ -1409,6 +1419,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         });
     };
     const finishTyping = () => {
+        if(narrationRevision!==demoNarrationRevision)return;
         clearTimeout(boardTypingTimer);
         clearTimeout(boardTypingWatchdogTimer);
         introBoardParagraphFadeTimes=paragraphs.map(()=>-Infinity);
@@ -1426,6 +1437,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         }
     };
     const revealNextParagraph = () => {
+        if(narrationRevision!==demoNarrationRevision)return;
         if (!typing) return;
         board?.classList.add('is-copy-ready');
         paragraphIndex++;
@@ -1489,8 +1501,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.hidden = false;
         continueButton.disabled = false;
         continueButton.onclick = () => {
+            if(continueButton.disabled || narrationRevision!==demoNarrationRevision)return;
             suppressSessionSelectUntil = performance.now() + 700;
             typing=false;
+            continueButton.disabled=true;
             clearDemoNarration();
             onContinue();
         };
@@ -5182,7 +5196,7 @@ function drawIntroSpatial(view) {
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
     const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<1100;
-    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
+    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
     if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
@@ -6085,13 +6099,11 @@ async function startImmersive() {
             runXrFrameStep('PIM hold',()=>pimHold?.tick(_time));
             runXrFrameStep('held element update',()=>{if(!demoKnowledgeWorkspace)updateHeldDemoRecordPosition();});
             runXrFrameStep('demo touch feedback',()=>{
-                const sources=[...session.inputSources],beeContactSources=getSpatialVisualSettings().insects?sources.filter(source=>{
-                    const ray=demoControllerRayForInputEvent({frame,inputSource:source});
-                    return ambientBeeFlowerVisits.some(visitor=>beePointerContact(visitor?.flightPosition,ray));
-                }):[];
+                if(_time-demoFeedbackLastTick<120)return;
+                demoFeedbackLastTick=_time;
+                const sources=[...session.inputSources];
                 const beeEncounters=getSpatialVisualSettings().insects?ambientBeeFlowerVisits.filter(visitor=>visitor?.encounterId && visitor.flightPosition && viewerMatrix && Math.hypot(visitor.flightPosition.x-viewerMatrix[12],visitor.flightPosition.y-viewerMatrix[13],visitor.flightPosition.z-viewerMatrix[14])<.95).map(visitor=>visitor.encounterId):[];
-                const beesAround=session.visibilityState!=='hidden' && getSpatialVisualSettings().insects && ambientBeeFlowerVisits.some(visitor=>visitor?.flightPosition && viewerMatrix && Math.hypot(visitor.flightPosition.x-viewerMatrix[12],visitor.flightPosition.y-viewerMatrix[13],visitor.flightPosition.z-viewerMatrix[14])<3.5);
-                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeContactSources,beeEncounters,beeAround:beesAround});
+                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeEncounters});
             });
             let layer=null;
             try { layer=frame.session.renderState.baseLayer; }
@@ -6153,7 +6165,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
-    demoFeedback=createDemoFeedback();demoFeedback.start();
+    demoFeedback=createDemoFeedback();demoFeedbackLastTick=-Infinity;demoFeedback.start();
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = livingMapPreviewRecords ? false : await startImmersive();

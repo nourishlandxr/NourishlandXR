@@ -13,7 +13,7 @@ export const AR_PHONE_COMFORT = Object.freeze({
 // It sits slightly in front of the screen so the texture remains crisp and the
 // shared ray hit target can still resolve it independently from LIM cells.
 export const INTRO_CONTROL_POSITION = Object.freeze([0.42, 0.16, -2.755]);
-export const INTRO_CONTROL_SCALE = Object.freeze([1.16, .78]);
+export const INTRO_CONTROL_SCALE = Object.freeze([1.5, 1]);
 export const DEMO_QUEST_ORB_SCALE = 0.62;
 
 // The shared demo quad is .4 m by .16 m before model scaling. These values
