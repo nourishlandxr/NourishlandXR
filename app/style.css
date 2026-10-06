@@ -9081,10 +9081,19 @@ button.ar-square-action::before { display: none !important; }
     margin-inline:auto;
     text-align:center;
     overflow-wrap:anywhere;
+    opacity:0;
+    transform:translateY(9px);
+    transition:opacity .62s ease,transform .62s cubic-bezier(.2,.7,.2,1);
 }
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p.is-current,
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p.is-revealed {opacity:1;transform:translateY(0);}
 .tryit-demo[data-demo-tutorial-step="welcome"] .tryit-guided-choice.is-welcome-board::after {
     content:none;
 }
+.nlxr-object-control-heading {flex-basis:100%;margin:12px 0 0;font-size:1rem;color:#eef8e5;}
+.nlxr-light-swatch {display:inline-block;width:26px;height:26px;border-radius:7px;border:1px solid rgba(255,255,255,.6);vertical-align:middle;}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p.tryit-board-next {opacity:1;transform:none;}
+@media (prefers-reduced-motion:reduce) {.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {transition:none;transform:none;}}
 /* Web Hub redesign -------------------------------------------------------
    The creator Web Hub has its own composition so the visitor Field Guide,
    project dashboard and AR surfaces keep their existing visual contracts. */

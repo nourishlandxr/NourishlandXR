@@ -2,12 +2,12 @@
 .note-experience header,.note-edit-workspace header {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px;}
 .note-spatial-board {position:relative;min-height:590px;display:grid;place-items:center;isolation:isolate;}
 .note-anchor,.note-widget {box-sizing:border-box;padding:18px;background:linear-gradient(135deg,rgba(215,236,213,.13),rgba(10,28,22,.42));border:1px solid rgba(215,235,203,.60);border-radius:20px;color:#fffdf3;box-shadow:0 6px 20px rgba(0,15,10,.12);}
-.note-anchor {width:250px;z-index:2;}
+.note-anchor {width:min(340px,calc(100vw - 48px));z-index:2;}
 .note-anchor h2,.note-widget h3 {margin:0 0 10px;font-size:20px;font-weight:750;line-height:1.2;overflow-wrap:anywhere;}
 .note-anchor p,.note-widget p,.note-widget li {font-size:15px;line-height:1.45;white-space:normal;}
-.note-widget {position:absolute;left:calc(50% + var(--widget-x)*405px);top:calc(50% + var(--widget-y)*395px);width:240px;max-height:175px;overflow:auto;z-index:1;transform:translate(-50%,-50%);animation:note-unfold .38s ease both;animation-delay:calc(var(--widget-order)*65ms);}
+.note-widget {position:absolute;left:calc(50% + var(--widget-x)*405px);top:calc(50% + var(--widget-y)*395px);width:min(320px,calc(100vw - 48px));max-height:210px;overflow:auto;z-index:1;transform:translate(-50%,-50%);animation:note-unfold .38s ease both;animation-delay:calc(var(--widget-order)*65ms);}
 .note-widget figure {margin:0;}.note-widget img {width:100%;height:92px;object-fit:contain;border-radius:10px;}.note-widget figcaption {font-size:12px;}
-.note-experience button,.note-edit-workspace button {min-height:44px;border:1px solid rgba(226,245,220,.55);border-radius:12px;padding:9px 12px;background:rgba(214,239,210,.12);color:#fffdf3;font:650 15px Manrope,system-ui;cursor:pointer;}
+.note-experience button,.note-edit-workspace button {min-height:44px;border:1px solid rgba(226,245,220,.55);border-radius:999px;padding:9px 16px;background:rgba(214,239,210,.12);color:#fffdf3;font:650 15px Manrope,system-ui;cursor:pointer;}
 .note-check {display:block;width:100%;text-align:left;margin:6px 0;}.note-check[aria-pressed="true"] {background:rgba(168,225,165,.24);}
 .note-connectors {position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}.note-connectors line {stroke:rgba(199,227,184,.50);stroke-width:.3;stroke-dasharray:120;animation:note-string .35s ease both;}
 .note-spatial-board.is-collapsing .note-widget {animation:note-retract .26s ease both;}.note-spatial-board.is-collapsing .note-connectors {opacity:0;transition:opacity .2s;}

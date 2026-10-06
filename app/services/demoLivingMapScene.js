@@ -3,7 +3,7 @@ import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage } from './demoLivingMapModel.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
-export function createDemoLivingMapScene(model, { width = 1000, height = 560 } = {}) {
+export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
     const schedule = createDemoLivingMapSchedule(model);
     const canvas = document.createElement('canvas');
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: false, preserveDrawingBuffer: true, powerPreference: 'low-power' });
@@ -88,7 +88,7 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
             const glass=new THREE.MeshPhongMaterial({color:'#bfe0d6',transparent:true,opacity:.48,shininess:85,depthWrite:false});materials.set('totem-glass'+index,glass);
             const collar=new THREE.Mesh(cylinder,glass);collar.position.y=.54;collar.scale.set(.16,.25,.16);group.add(collar);
             const tip=new THREE.MeshPhongMaterial({color:'#fff2b7',emissive:'#b7a152',emissiveIntensity:.65,shininess:50});materials.set('totem-tip'+index,tip);
-            const beacon=new THREE.Mesh(sphere,tip);beacon.position.y=.72;beacon.scale.set(.11,.09,.11);group.add(beacon);
+            const beacon=new THREE.Mesh(sphere,tip);beacon.position.y=.72;beacon.scale.set(.15,.14,.15);group.add(beacon);
         } else {
             const note=mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#d5bd84',0,.24,0,.16,.2,.055,group);note.rotation.y=.35;
         }
@@ -97,12 +97,27 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
         if(model.concept && item.type==='plant')ring.visible=false;
         return {item,group,ring,orb};
     });
+    const targetMaterial=new THREE.MeshBasicMaterial({color:'#e5f6c6',transparent:true,opacity:.65,depthWrite:false});materials.set('placement-target',targetMaterial);
+    const targetRing=new THREE.Mesh(geometry(new THREE.RingGeometry(.30,.35,40)),targetMaterial);targetRing.rotation.x=-Math.PI/2;targetRing.position.y=.1;targetRing.visible=false;scene.add(targetRing);
+    let welcomeTexture=null,welcomeScreen=null;
+    if(model.interactive){
+        const label=document.createElement('canvas');label.width=256;label.height=256;
+        const text=localizedCanvasContext(label.getContext('2d'));text.fillStyle='rgba(15,37,31,.88)';text.beginPath();text.arc(128,128,124,0,Math.PI*2);text.fill();text.strokeStyle='#e1f1cf';text.lineWidth=5;text.stroke();text.fillStyle='#fffdf0';text.font='600 32px system-ui';text.textAlign='center';text.fillText('Welcome',128,140,225);
+        welcomeTexture=new THREE.CanvasTexture(label);
+        const glass=new THREE.MeshBasicMaterial({map:welcomeTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false});materials.set('entry-welcome',glass);
+        welcomeScreen=new THREE.Mesh(geometry(new THREE.CircleGeometry(.44,32)),glass);welcomeScreen.visible=false;scene.add(welcomeScreen);
+    }
     const cloudItems=model.concept?model.areas.map(area=>area.totem):model.areas.flatMap(area=>[area.totem,...area.members.filter(item=>item.id!==area.id)]);
     if(!model.concept)for(const item of model.items)if(!cloudItems.some(entry=>entry.id===item.id))cloudItems.push(item);
     let lastPaint=-Infinity, disposed=false, settledPaint=false, lastReduced=null;
     const projected = new THREE.Vector3();
     return {
         canvas,schedule,
+        project(item,rect){
+            const tagHeight=(rect.width>=700?20:rect.width>=440?14:12)+10,cloudHeight=tagHeight+18;
+            projected.set(item.x,.095,item.z).project(camera);
+            return {x:rect.x+(projected.x+1)*rect.width/2,y:rect.y+cloudHeight+(1-projected.y)*(rect.height-cloudHeight)/2};
+        },
         draw(ctx, elapsed, reducedMotion, rect) {
             if(disposed)return;
             const {x,y,width:w,height:h}=rect;
@@ -115,7 +130,16 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
                 renderer.setSize(width,renderHeight,false);
                 camera.aspect=w/landHeight;camera.updateProjectionMatrix();settledPaint=false;lastPaint=-Infinity;
             }
+            const placed=placement?.snapshot() || [];
+            if(model.interactive){
+                model.items.forEach(item=>{
+                    const owner=placed.find(entry=>entry.id===(item.areaId || item.id));
+                    schedule.items[item.id]={startAt:owner?owner.at+(item.type==='plant'?400+model.items.filter(p=>p.type==='plant').indexOf(item)*220:0):Infinity,duration:item.type==='plant'?700:600};
+                });
+            }
+            const bornFor=id=>model.interactive && !Number.isFinite(schedule.items[id]?.startAt)?0:demoLivingMapItemProgress(schedule,id,elapsed,reducedMotion);
             const progress=demoLivingMapProgress(elapsed,reducedMotion,schedule);
+            if(model.interactive){progress.camera=1;progress.wide=1;progress.settled=!placement?.current() && elapsed>(placed.at(-1)?.at || 0)+2800;}
             if(elapsed<lastPaint || lastReduced!==reducedMotion)settledPaint=false;
             if(!settledPaint && (elapsed-lastPaint>=1000/24 || elapsed<lastPaint || lastReduced!==reducedMotion)){
                 const rise=model.concept ? .85+.15*progress.camera : progress.camera, wide=progress.wide;
@@ -129,7 +153,7 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
                 camera.zoom=Math.min(.92/extentX,.88/extentY);camera.updateProjectionMatrix();
                 boundaries.forEach(({area,line,fill})=>{const boundary=model.concept?1:demoLivingMapAreaProgress(schedule,area.id,elapsed,reducedMotion);line.visible=boundary>0;line.geometry.setDrawRange(0,Math.round(boundary*64)+1);fill.visible=boundary>=.99;});
                 markers.forEach(({item,group,ring,orb})=>{
-                    const born=demoLivingMapItemProgress(schedule,item.id,elapsed,reducedMotion);
+                    const born=bornFor(item.id);
                     const landscapePlant=model.concept && item.type==='plant';
                     group.visible=landscapePlant || born>0;group.scale.setScalar(landscapePlant?1:Math.max(.001,born));
                     group.position.y=landscapePlant?0:item.type==='zone'?-.68*(1-born):.12*(1-born);
@@ -137,7 +161,9 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
                     const age=elapsed-schedule.items[item.id].startAt;
                     ring.material.opacity=born*(reducedMotion || age>1600?.65:.65+.25*Math.sin(age/180));
                 });
-                paths.forEach(path=>{path.visible=progress.path>0;path.geometry.setDrawRange(0,Math.floor(progress.path*32)*30);});
+                paths.forEach((path,index)=>{const arrival=placed[index+1],t=model.interactive?arrival?(reducedMotion?1:Math.max(0,Math.min(1,(elapsed-arrival.at-200)/1500))):0:progress.path;path.visible=t>0;path.geometry.setDrawRange(0,Math.floor(t*32)*30);});
+                const current=placement?.current();targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.09*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.65:.5+.18*Math.sin(elapsed/430);}
+                if(welcomeScreen){welcomeScreen.visible=placed.length>0;welcomeScreen.position.set(model.areas[0].totem.x-.65,.62,model.areas[0].totem.z);welcomeScreen.quaternion.copy(camera.quaternion);welcomeScreen.scale.setScalar(Math.max(.001,bornFor(model.areas[0].id)));}
                 scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,progress.scenery);shrub.count=Math.floor(planted*progress.scenery);
                 renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
             }
@@ -145,10 +171,10 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
             if(model.concept){
                 ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
-                ctx.fillText(demoLivingMapStage(elapsed,reducedMotion),x+w/2,y+tagHeight/2,w-20);
+                ctx.fillText(model.interactive?['Welcome at the entrance','Three Orbs in the open forest','A Totem at the swales','Three Totems · one connected place'][placed.length]:demoLivingMapStage(elapsed,reducedMotion),x+w/2,y+tagHeight/2,w-20);
                 // Only the two Totems need labels; no plant-name tag cloud.
                 for(const item of cloudItems){
-                    if(demoLivingMapItemProgress(schedule,item.id,elapsed,reducedMotion)<.85)continue;
+                    if(bornFor(item.id)<.85)continue;
                     projected.set(item.x,.85,item.z).project(camera);
                     const px=x+(projected.x+1)*w/2,py=landY+(1-projected.y)*landHeight/2;
                     const labelWidth=ctx.measureText(item.name).width+16;
@@ -189,6 +215,6 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
             }
             ctx.restore();
         },
-        dispose(){if(disposed)return;disposed=true;geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
+        dispose(){if(disposed)return;disposed=true;welcomeTexture?.dispose();geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
     };
 }

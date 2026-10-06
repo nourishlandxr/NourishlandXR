@@ -1,16 +1,20 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
 import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
-import {createDemoLivingMapConcept,createDemoLivingMapPlayback,demoLivingMapProgress} from '../services/demoLivingMapModel.js';
+import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
+let demoLivingMapPlacement=null;
+const DEMO_MAP_RECT=Object.freeze({x:190,y:395,width:1020,height:435});
 const demoLivingMapPlayback=createDemoLivingMapPlayback();
 let demoLivingMapWasPlaying=false;
 function demoLivingMapElapsed(now=performance.now()){
+    if(demoLivingMapPlacement)return Math.max(0,now-demoLivingMapStartedAt);
     return demoLivingMapPreviewClock ? demoLivingMapPreviewClock(now,demoLivingMapStartedAt) : demoLivingMapPlayback.elapsed(now);
 }
 function demoLivingMapIsPlaying(now){
+    if(demoLivingMapPlacement){const placed=demoLivingMapPlacement.snapshot();return Boolean(demoLivingMapPlacement.current() || now-demoLivingMapStartedAt<(placed.at(-1)?.at || 0)+2800);}
     const playing=demoLivingMapPlayback.playing(now);
     if(playing!==demoLivingMapWasPlaying){demoLivingMapWasPlaying=playing;introBoardTextureDirty=true;syncDemoPanelActions();}
     return playing;
@@ -347,6 +351,8 @@ let introNoteTexture = null;
 let introNoteCanvas = null;
 let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
+let introBoardParagraphFadeStartedAt=-Infinity;
+let introBoardParagraphFadeTimes=[];
 let introTextureUploadedAt = 0;
 let introFrameToken = 0;
 let introTextureFrameToken = -1;
@@ -392,7 +398,7 @@ const demoLocalizedText = value => translateNxrText(value);
 const welcomeBoardParagraphs = () => WELCOME_BOARD_PARAGRAPHS.map(demoLocalizedText);
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => arWelcomeOpeningActive?'NourishlandXR':guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
+const demoIntroLabel = () => arWelcomeOpeningActive?'NourishlandXR':introBoardStep || 'Sample demo';
 let demoJourneyStage='why';
 
 function setDemoJourneyStage(stageId) {
@@ -443,7 +449,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
 }
 function clearSessionState() {
     demoLivingMapScene?.dispose();demoLivingMapScene=null;demoLivingMapStartedAt=0;demoLivingMapPreviewClock=null;
-    demoLivingMapPlayback.reset(performance.now());demoLivingMapWasPlaying=false;
+    demoLivingMapPlayback.reset(performance.now());demoLivingMapWasPlaying=false;demoLivingMapPlacement=null;
     markers.forEach(preserveKnowledgeContext);
     disposeKnowledgeDesktopViews(appRoot);
     demoFeedback?.destroy();demoFeedback=null;demoFeedbackInputSource=null;
@@ -634,7 +640,7 @@ function demoPanelActions() {
     ];
     const actions=[];
     if(introBoardStep==='UTILITY 1.1')actions.push(
-        {id:'play-map',label:demoLivingMapPlayback.playing(performance.now())?'Pause living map':'Play living map'},
+        ...(demoLivingMapPlacement?.current()?[{id:'place-map',label:'Place Totem'}]:[]),
         {id:'replay-map',label:'Replay living map'}
     );
     if(introBoardStep==='LEARNING 1.6')actions.push({id:'finish-core',label:'Finish without learning example'});
@@ -706,6 +712,10 @@ function handleDemoPanelAction(action) {
     if(action==='close'){requestDemoClose();return;}
     if(action==='finish-core'){showDemoClosingMessage();return;}
     if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
+    if(action==='place-map'){placeDemoMapTotem(true);return;}
+    if(action==='replay-map' && demoLivingMapPlacement){
+        demoLivingMapPlacement.reset();demoLivingMapStartedAt=performance.now();spawnDemoMapTotem();setGuide(guidedDemoStep('UTILITY 1.1').hint);syncDemoPanelActions();return;
+    }
     if(action==='replay-map' || action==='play-map'){
         const now=performance.now();
         if(action==='replay-map'){demoLivingMapStartedAt=now;demoLivingMapPlayback.reset(now,true);}
@@ -1006,6 +1016,7 @@ function demoOrbKnowledge(record) {
 }
 const PIGEON_PEA_PROFILE_FOR_ORB={pim_document:PIGEON_PEA_PIM};
 function demoTotemCards(record) {
+    if(record.demoMapPiece)return [];
     const second=record.tutorialStage==='totem2';
     const plants=markers.filter(item=>item.demoType==='plant' && Boolean(item.demoAmbientNeighbour)===second);
     const notes=markers.filter(item=>item.demoType==='note' && Boolean(item.demoAmbientNeighbour)===second);
@@ -1027,9 +1038,10 @@ function demoTotemCards(record) {
         : plants.map(item=>({id:`plant-${item.id}`,eyebrow:'',title:pointedTitle(`Plant Orb · ${item.name}`,directionFor(item)),summary:'',plaque:true,boardSide:directionFor(item),references:[item.id]}));
     const note=notes[0];
     const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
-    const destination=partner?.demoZoneName || '';
+    const pendingNeighbour=!partner && record.tutorialStage==='totem';
+    const destination=partner?.demoZoneName || (pendingNeighbour?'Second Area':'');
     const navigation=resolveTotemNavigation(record,partner,demoTotemRotationY(record));
-    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:navigation.reliable?pointedTitle(destination,navigation.side):`Explore ${destination}`,summary:'',body:navigation.reliable?'Follow this sign to the neighbouring Totem.':'Explore the neighbouring Area.',boardSide:navigation.side,plaque:true,navigation:{...navigation,destinationId:partner.id}} : null;
+    const neighbour=destination ? {id:'neighbour',eyebrow:'NEIGHBOUR TOTEM',title:pendingNeighbour?pointedTitle(destination,'left'):navigation.reliable?pointedTitle(destination,navigation.side):`Explore ${destination}`,summary:'',body:'Follow this sign to the neighbouring Totem.',boardSide:pendingNeighbour?'left':navigation.side,plaque:true,navigation:{...navigation,destinationId:partner?.id,pending:pendingNeighbour}} : null;
     return [header,...(neighbour ? [neighbour] : []),...plantSigns,
         ...(note ? [{id:`note-${note.id}`,eyebrow:'NOTE',title:pointedTitle(note.name,directionFor(note)),summary:'',body:(demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
     ].slice(0,5);
@@ -1080,6 +1092,7 @@ function demoTotemVisualOpacity(record,now=performance.now()) {
     return (record.demoTotemFadeFrom ?? target)*(1-progress)+target*progress;
 }
 function selectDemoTotemSign(record,cardId) {
+    if(cardId==='neighbour' && record.tutorialStage==='totem' && !markers.some(item=>item.tutorialStage==='totem2')){createDemoSecondTotem();record.totemSelectedCard='neighbour';updateSimulatedMarkers();return;}
     focusDemoObjectControls(record);
     selectTotemSign(record,cardId,markers);
     const card=demoTotemCards(record).find(item=>item.id===record.totemSelectedCard);
@@ -1300,10 +1313,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-demo-utility',String(Boolean(options.stepLabel?.startsWith('UTILITY '))));
     if(options.stepLabel==='UTILITY 1.1'){
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
-        demoLivingMapStartedAt=performance.now();
+        if(!demoLivingMapPlacement){demoLivingMapPlacement=createDemoLivingMapPlacement();demoLivingMapStartedAt=performance.now();}
         demoLivingMapPlayback.reset(demoLivingMapStartedAt);
-        if(!demoLivingMapScene)try{demoLivingMapScene=createDemoLivingMapScene(createDemoLivingMapConcept());}catch(error){console.warn('Living map preview unavailable:',error);}
-    }else if(demoLivingMapScene){demoLivingMapScene.dispose();demoLivingMapScene=null;}
+        if(!demoLivingMapScene)try{demoLivingMapScene=createDemoLivingMapScene(createDemoLivingMapConcept({interactive:true}),{placement:demoLivingMapPlacement});}catch(error){console.warn('Living map preview unavailable:',error);}
+    }else if(demoLivingMapScene){clearDemoMapPiece();demoLivingMapScene.dispose();demoLivingMapScene=null;}
     useSharedWelcomeBoard(true);
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
     const localizedTitle = demoLocalizedText(title);
@@ -1318,6 +1331,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     introBoardTitle = localizedTitle;
     introBoardBody = bodyText;
     introBoardVisibleBody = '';
+    introBoardParagraphFadeTimes=[];
     introBoardTextureDirty = true;
     clearTimeout(boardTypingTimer);
     clearTimeout(boardTypingWatchdogTimer);
@@ -1365,6 +1379,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         if (!typing) return;
         board?.classList.add('is-copy-ready');
         paragraphIndex++;
+        introBoardParagraphFadeStartedAt=performance.now();introBoardParagraphFadeTimes[paragraphIndex-1]=introBoardParagraphFadeStartedAt;
         introBoardVisibleBody = paragraphs.slice(0, paragraphIndex).join('\n\n');
         introBoardTextureDirty = true;
         paintBoardParagraphs(introBoardVisibleBody);
@@ -1386,10 +1401,15 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         if(options.stepLabel?.startsWith('UTILITY ') && simulatedMode)board.classList.remove('is-lim-shared-surface');
         if(options.stepLabel==='UTILITY 1.1' && simulatedMode && demoLivingMapScene){
             board.classList.remove('is-lim-shared-surface');
-            const map=document.createElement('canvas');map.dataset.demoLivingMap='';map.setAttribute('role','img');map.setAttribute('aria-label','3D concept garden: Area 1 has curved swales; Area 2 has an open centre and perimeter trees. Totem 1, three Orbs, Totem 2, a curved connection and three more Orbs appear in stages.');board.append(map);
+            const map=document.createElement('canvas');map.dataset.demoLivingMap='';map.setAttribute('role','img');map.setAttribute('aria-label','3D garden. Place three Totems: entrance, open forest, then swales.');board.append(map);
             const caption=document.createElement('p');caption.className='tryit-map-caption';caption.textContent='Open to visitors, teachers, students and people caring for land.';board.append(caption);
             const replay=document.createElement('button');replay.type='button';replay.className='tryit-map-replay';replay.textContent='Replay living map';replay.onclick=()=>handleDemoPanelAction('replay-map');board.append(replay);
-            const play=document.createElement('button');play.type='button';play.className='tryit-map-replay';play.dataset.demoMapPlay='';play.textContent='Play living map';play.onclick=()=>handleDemoPanelAction('play-map');replay.before(play);
+            const play=document.createElement('button');play.type='button';play.className='tryit-map-replay';play.dataset.demoMapPlace='';play.textContent='Place Totem';play.onclick=()=>placeDemoMapTotem(true);replay.before(play);
+            map.addEventListener('pointerup',event=>{
+                const target=demoLivingMapPlacement?.current();if(!target)return;
+                const bounds=map.getBoundingClientRect(),rect={x:0,y:0,width:map.width,height:map.height};
+                if(livingMapDropAccepted({x:(event.clientX-bounds.left)*map.width/bounds.width,y:(event.clientY-bounds.top)*map.height/bounds.height},demoLivingMapScene.project(target,rect),map.width*.075))placeDemoMapTotem(true);
+            });
         }
         const firstArrival = prepareTutorialBoard(board);
         setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.'),{reveal:false});
@@ -1424,6 +1444,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + paragraphs.length * 2200)
     );
     setGuide('');
+    if(options.stepLabel==='UTILITY 1.1')spawnDemoMapTotem();
 }
 
 function rememberDemoSlide(slide){
@@ -1470,7 +1491,7 @@ function showDemoSlideFromHistory(index){
     }else if(slide.kind==='welcome' || slide.kind==='placement'){
         introSceneActive=true;introBoardVisible=true;introBoardTitle=slide.title;introBoardBody=slide.body;introBoardVisibleBody=slide.body;introBoardStep=slide.stepLabel;introBoardTextureDirty=true;useSharedWelcomeBoard(true);
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
-        if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${slide.title}</h2><div class="tryit-board-text-window"><p>${slide.body}</p></div>`;board.hidden=false;board.classList.add('is-copy-ready','is-persistent-demo-board');}
+        if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${slide.title}</h2><div class="tryit-board-text-window"><p class="is-revealed">${slide.body}</p></div>`;board.hidden=false;board.classList.add('is-copy-ready','is-persistent-demo-board');}
         const button=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(button && slide.kind==='placement'){button.hidden=true;button.onclick=null;setIntroBoardNextGuide(slide.options?.nextGuide || 'Aim at the highlighted position and confirm placement.');}
         else if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=()=>{const next=demoSlideHistoryIndex+1;if(next<demoSlideHistory.length)showDemoSlideFromHistory(next);else slide.onContinue?.();};}
@@ -1926,6 +1947,7 @@ function showArWelcomeShowcase() {
     const revealOpeningParagraph=()=>{
         if(!openingTyping || !arWelcomeShowcaseActive)return;
         openingParagraphIndex++;
+        introBoardParagraphFadeStartedAt=performance.now();introBoardParagraphFadeTimes[openingParagraphIndex-1]=introBoardParagraphFadeStartedAt;
         introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
         if(openingParagraphIndex>=openingParagraphs.length){boardTypingTimer=setTimeout(finishOpeningCopy,800);return;}
         boardTypingTimer=setTimeout(revealOpeningParagraph,1350);
@@ -1938,7 +1960,7 @@ function showArWelcomeShowcase() {
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
         introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
         rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Start the demo',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
-        introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
+        introBoardVisibleBody='';introBoardParagraphFadeTimes=[];openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
         panel.querySelector('.tryit-board-text-window').innerHTML=openingParagraphs.map(()=>'<p></p>').join('');
@@ -1993,7 +2015,7 @@ function showArWelcomeShowcase() {
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const mapPlaying=introBoardStep==='UTILITY 1.1' && demoLivingMapIsPlaying(now);
         const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,limMeshVisible,limMeshActivatedAt,limExpandedAt.size,limHiddenCells.size,welcomeSequenceCanContinue(),mapPlaying].join('|');
-        const mapAnimating=introBoardStep==='UTILITY 1.1' && (demoLivingMapPreviewClock || mapPlaying) && !demoLivingMapProgress(demoLivingMapElapsed(now),reduced,demoLivingMapScene?.schedule).settled;
+        const mapAnimating=introBoardStep==='UTILITY 1.1' && (demoLivingMapPlacement?mapPlaying:(demoLivingMapPreviewClock || mapPlaying) && !demoLivingMapProgress(demoLivingMapElapsed(now),reduced,demoLivingMapScene?.schedule).settled);
         if(simulatedMode && now-last>=50 && (!reduced || mapAnimating || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
@@ -2288,15 +2310,17 @@ function createDemoTotemExample() {
     showDemoTutorialMedia('totem');
     setGuide('Select a sign to find one of the sample plants or Note.');
     infoPanel?.setContextualHint('Select a sign to see where it points.');
-    showSceneContinue('Add another area', showSecondAreaIntroduction, 'ELEMENTS 1.19');
+    focusDemoObjectControls(totem);
+    showSceneContinue('Continue', showSecondAreaIntroduction, 'ELEMENTS 1.19');
 }
 
 function showSecondAreaIntroduction(){
     const step=guidedDemoStep('AREA 1.2');
-    showIntroBoard(step.title,step.main,'Create Second Area',createDemoSecondTotem,{stepLabel:step.id,nextGuide:step.hint,deferContinueUntilCopyReady:true});
+    showIntroBoard(step.title,'Point at the Second Area signage on your first Totem, then press the trigger.\n\nThe neighbouring Totem will appear. Its sign gives you a direction through the space.','Continue',createDemoSecondTotem,{stepLabel:step.id,dynamicCopy:true,nextGuide:'Select the Second Area sign. Continue is an alternative.',deferContinueUntilCopyReady:true});
 }
 
 function createDemoSecondTotem() {
+    if(markers.some(record=>record.tutorialStage==='totem2'))return;
     const first = [...markers].reverse().find(record => record.demoType === 'zone');
     const groundBaseY = first?.groundBaseY ?? demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
     groundYEstimate = groundBaseY-getSpatialVisualSettings().floorOffset;
@@ -2336,8 +2360,8 @@ function createDemoSecondTotem() {
     createDemoNeighbourhood(totem);
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.secondAreaShown);
     updateSimulatedMarkers();
-    setGuide('This neighbouring Area is a prepared example. Connect the two Areas when ready.');
-    showSceneContinue('Connect the Totems', connectDemoTotems, 'ELEMENTS 1.20');
+    connectDemoTotems();
+    showIntroBoard('Follow the direction','The neighbouring Totem is now visible.\n\nFollow its sign to move through the real space. Each Totem welcomes you to its own Area, plants and Notes.','Explore, learn and plan',showDemoLivingMap,{stepLabel:'ELEMENTS 1.21',dynamicCopy:true,nextGuide:'Point at a sign to highlight its destination.'});
 }
 
 function connectDemoTotems() {
@@ -2362,8 +2386,51 @@ function showDemoLivingMap(){
         'Learn before planting',showDemoBeforePlanting,
         {stepLabel:step.id,dynamicCopy:true,nextGuide:step.hint});
     infoPanel?.showLearning({id:'demo-living-map',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
-    infoPanel?.setContextualHint('Use Play living map to begin. Pause or Replay are available in the Control Panel.');
+    infoPanel?.setContextualHint('Grip the Totem inside the Living Frame. Move it to the pulsing circle and release. Place Totem in Controls is an alternative.');
     paintWelcomeLayer(performance.now());
+}
+
+function clearDemoMapPiece(){
+    const index=markers.findIndex(record=>record.demoMapPiece);if(index<0)return;
+    if(demoHeldIndex===index)demoHeldIndex=-1;else if(demoHeldIndex>index)demoHeldIndex--;
+    const [piece]=markers.splice(index,1);if(piece.texture && gl)gl.deleteTexture(piece.texture);
+}
+function demoMapWorldPoint(px,py,depth=.1){
+    if(!introWorldAnchor)return {x:0,y:1,z:-2.7};
+    const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
+    const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
+    const local=demoBillboardTextureLocalPoint(px+550,py+510,2500,2100);
+    return introLocalPosition(board,[local.x,local.y,depth]);
+}
+function spawnDemoMapTotem(){
+    clearDemoMapPiece();const target=demoLivingMapPlacement?.current();
+    if(target && introBoardStep==='UTILITY 1.1'){
+        const position=demoMapWorldPoint(1080,370),halfHeight=.07;
+        const piece={...createMinimalMarkerDraft('area_checkpoint',{name:target.name}),id:'demo-map-piece',name:target.name,
+            demoType:'zone',demoMapPiece:true,demoInteractive:true,demoHalfHeight:halfHeight,position,groundBaseY:position.y-halfHeight,
+            demoMapHome:{...position},demoTotemColor:'#795f41',demoTotemSignsVisible:false,rotationY:demoTotemRotationForPosition(position),
+            appearance:{totemStyle:'carved',totemStyleExplicit:true,notificationColor:'#a5db8d'},demoArriveAt:performance.now(),simulatedAnchor:{x:65,y:42}};
+        markers.push(piece);
+    }
+    const place=appRoot?.querySelector('[data-demo-map-place]');if(place)place.hidden=!target;
+    const map=appRoot?.querySelector('[data-demo-living-map]');if(map)map.dataset.placements=String(demoLivingMapPlacement?.snapshot().length || 0);
+    introBoardTextureDirty=true;updateSimulatedMarkers();syncDemoPanelActions();
+}
+function placeDemoMapTotem(alternative=false){
+    const target=demoLivingMapPlacement?.current();if(!target || !demoLivingMapScene || introBoardStep!=='UTILITY 1.1')return false;
+    const piece=markers.find(record=>record.demoMapPiece);
+    if(!alternative){
+        const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
+        const hit=welcomeSurfaceHit(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
+        if(!hit || !livingMapDropAccepted({x:hit.pixelX-550,y:hit.pixelY-510},demoLivingMapScene.project(target,DEMO_MAP_RECT))) {
+            if(piece){piece.position={...piece.demoMapHome};piece.groundBaseY=piece.position.y-demoTotemHalfHeight(piece);}
+            setGuide('Move the Totem to the pulsing circle and release.');return false;
+        }
+    }
+    if(!demoLivingMapPlacement.place(target.id,demoLivingMapElapsed()))return false;
+    demoFeedback?.sound('totem');pulseDemoHaptics(demoGrabInputSource || limInputSource);
+    spawnDemoMapTotem();paintWelcomeLayer(performance.now());
+    setGuide(demoLivingMapPlacement.current()?'The next Totem is ready inside the Living Frame.':'Your three Totems connect one living place. Continue when ready.');return true;
 }
 
 function showDemoBeforePlanting(){
@@ -3721,7 +3788,7 @@ function demoRecordRayHit(record) {
         const point={x:origin.x+ray.x*distance,y:origin.y+ray.y*distance,z:origin.z+ray.z*distance};
         const offset={x:point.x-record.position.x,y:point.y-centerY,z:point.z-record.position.z};
         const localX=offset.x*right.x+offset.z*right.z;
-        if(Math.abs(localX)>.28 || point.y<ground-.04 || point.y>ground+halfHeight*2+.04)return null;
+        if(Math.abs(localX)>(record.demoMapPiece?.07:.28) || point.y<ground-.04 || point.y>ground+halfHeight*2+.04)return null;
         return {distance,point,position:point,localX,localY:point.y-centerY,radius:.28};
     }
     const offset={x:record.position.x-origin.x,y:record.position.y-origin.y,z:record.position.z-origin.z};
@@ -3767,11 +3834,15 @@ function updateHeldDemoRecordPosition() {
     const lateral = record.demoGrabLateral || { x: 0, y: 0, z: 0 };
     record.position = {
         x: origin.x + ray.x * distance + lateral.x,
-        y: record.demoType === 'zone'
+        y: record.demoType === 'zone' && !record.demoMapPiece
             ? calibratedDemoGroundY() + demoTotemHalfHeight(record)
             : origin.y + ray.y * distance + lateral.y,
         z: origin.z + ray.z * distance + lateral.z
     };
+    if(record.demoMapPiece && introWorldAnchor){
+        const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080);
+        if(hit)record.position=demoMapWorldPoint(hit.pixelX-550,hit.pixelY-510);
+    }
     if (record.demoType === 'zone') record.groundBaseY = record.position.y - demoTotemHalfHeight(record);
     record.informationPosition = null;
     record.informationPose = null;
@@ -3867,7 +3938,8 @@ function selectDemoNoteTemplateAtPointer() {
 function focusDemoObjectControls(record){
     if(!record)return false;
     if(record.demoType==='note')return focusDemoNoteControls(record);
-    return focusSpatialObjectControls(infoPanel,record,{edit:openDemoNoteEditor,open:openDemoNoteExperience,refresh:item=>{refreshDemoRecord(item);item.totemCardsRefreshed=0;updateSimulatedMarkers();}});
+    if(record.demoMapPiece)return false;
+    return focusSpatialObjectControls(infoPanel,record,{demo:true,edit:openDemoNoteEditor,open:openDemoNoteExperience,refresh:item=>{refreshDemoRecord(item);item.totemCardsRefreshed=0;updateSimulatedMarkers();}});
 }
 function focusDemoNoteControls(record){
     infoPanel?.restore();infoPanel?.showLearning({title:record.name,body:record.description || record.notes,mesh:'note'});
@@ -3910,6 +3982,7 @@ function releaseHeldDemoRecord() {
         record.demoGrabDepth = null;
         record.demoGrabLateral = null;
     }
+    if(record?.demoMapPiece){placeDemoMapTotem();updateSimulatedMarkers();return true;}
     appRoot?.querySelector('[data-demo-depth-joystick]')?.setAttribute('hidden', '');
     updateSimulatedMarkers();
     setGuide(`${record?.name || 'Element'} released in its adjusted position.`);
@@ -4340,6 +4413,7 @@ function setupRenderer() {
 
 function demoControllerInputSource() {
     const sources = [...(session?.inputSources || [])];
+    if(demoHeldIndex>=0 && sources.includes(demoGrabInputSource))return demoGrabInputSource;
     const trackedControllers = sources.filter(source => source.targetRayMode === 'tracked-pointer' && !source.hand);
     return trackedControllers.find(source => source.handedness === 'right' && source.gamepad)
         || trackedControllers.find(source => source.handedness === 'right')
@@ -4707,12 +4781,11 @@ function drawIntroNoteContent(ctx) {
         ctx.fillStyle='#f4f5e7';ctx.font=`700 48px ${DEMO_PRESENTATION_FONT}`;
         ctx.fillText(guidedDemoStep('UTILITY 1.1').title,700,305,920);
         ctx.font=`500 28px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('Knowledge connected to any land',700,350,920);
+        ctx.fillText('Grip the Totem, move it to the circle, then release.',700,354,650);
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('School gardens · University campuses · Farms · Public landscapes',700,385,920);
-        demoLivingMapScene.draw(ctx,demoLivingMapElapsed(),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:210,y:420,width:980,height:415});
+        demoLivingMapScene.draw(ctx,demoLivingMapElapsed(),window.matchMedia('(prefers-reduced-motion: reduce)').matches,DEMO_MAP_RECT);
         ctx.fillStyle='#dfecc8';ctx.font=`500 29px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('Open to visitors, teachers, students and people caring for land.',700,866,900);
+        ctx.fillText('Open to visitors, teachers, students and people caring for land.',700,850,870);
         ctx.restore();return;
     }
     // Give the copy the full readable centre of the glass screen without
@@ -4742,7 +4815,11 @@ function drawIntroNoteContent(ctx) {
                 const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,280);
                 ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
                 let y=515;
-                for(const lines of layout.paragraphLines){for(const line of lines){ctx.fillText(line,contentCenter,y);y+=layout.lineHeight;}y+=layout.paragraphGap;}
+                for(const [index,lines] of layout.paragraphLines.entries()){
+                    const age=openingElapsed-DEMO_WELCOME_TITLE_HOLD_MS-index*1350;
+                    ctx.save();ctx.globalAlpha*=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.max(0,Math.min(1,age/620));
+                    for(const line of lines){ctx.fillText(line,contentCenter,y);y+=layout.lineHeight;}ctx.restore();y+=layout.paragraphGap;
+                }
             }
         }
         ctx.restore();return;
@@ -4799,11 +4876,14 @@ function drawIntroNoteContent(ctx) {
     ctx.textBaseline = 'top';
     outer: for (const [paragraphIndex, completeLines] of bodyLayout.paragraphLines.entries()) {
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
+        ctx.save();
+        ctx.globalAlpha*=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/620));
         for (const [lineIndex, line] of visibleLines.entries()) {
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
-            if (lineY > bodyBottom) { clipped = true; break outer; }
+            if (lineY > bodyBottom) { clipped = true;ctx.restore();break outer; }
             ctx.fillText(line, bodyX, lineY);
         }
+        ctx.restore();
         paragraphY += completeLines.length * bodyLayout.lineHeight + bodyLayout.paragraphGap;
     }
     if (clipped) ctx.fillText('…', bodyX, bodyBottom);
@@ -4945,14 +5025,16 @@ function drawIntroSpatial(view) {
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
-        const mapAnimating=introBoardStep==='UTILITY 1.1' && (demoLivingMapPreviewClock || demoLivingMapIsPlaying(now)) && !demoLivingMapProgress(demoLivingMapElapsed(now),reducedMotion,demoLivingMapScene?.schedule).settled;
-        if(mapAnimating || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
+        const mapAnimating=introBoardStep==='UTILITY 1.1' && (demoLivingMapPlacement?demoLivingMapIsPlaying(now):(demoLivingMapPreviewClock || demoLivingMapIsPlaying(now)) && !demoLivingMapProgress(demoLivingMapElapsed(now),reducedMotion,demoLivingMapScene?.schedule).settled);
+        const paragraphFadeActive=!reducedMotion && now-introBoardParagraphFadeStartedAt<620;
+        if(mapAnimating || paragraphFadeActive || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
-    const textureInterval=limActivation?.active || textIsTyping ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
+    const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<620;
+    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
     if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
@@ -5259,11 +5341,12 @@ function blendInsectWithFlower(position,visit,visitor){
             const selected=visitor?.flowerVisit?.flower || flowers[visit.index%flowers.length],previous=visitor?.flowerVisit?.previous,travel=visit.transfer ?? 1,flower=previous?{x:previous.x+(selected.x-previous.x)*travel,y:previous.y+(selected.y-previous.y)*travel}:selected,center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
             const board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
             const local=demoBillboardTextureLocalPoint(flower.x+550,flower.y+510,2500,2100),target=introLocalPosition(board,[local.x,local.y,.09]);
+            if(visitor)visitor.nectarTarget=target;
             const arrival=visitor && !visitor.flowerVisit.previous?Math.max(0,Math.min(1,(elapsed-visitor.flowerVisit.startedAt)/1200)):1;
             const amount=visit.amount*arrival*arrival*(3-2*arrival);
             offset={x:(target.x-position.x)*amount,y:(target.y-position.y)*amount,z:(target.z-position.z)*amount};
         }
-    }else if(visitor)visitor.flowerVisit=null;
+    }else if(visitor){visitor.flowerVisit=null;visitor.nectarTarget=null;}
     if(visitor){
         // Ease the handoff between a curious return and the next flower visit,
         // including release to the flight ring. Both eyes share one update.
@@ -5295,12 +5378,13 @@ function drawSpatialAmbientLife(view){
         // had already been cleared, that made the whole AR scene disappear.
         const position=ambientBeeWorldPosition(bee,index);
         const visitor=ambientBeeFlowerVisits[index] ||= {},last=visitor.flightPosition;
-        if(last && visitor.flightAt!==arWelcomeClock.elapsed){const dx=position.x-last.x,dz=position.z-last.z;if(Math.hypot(dx,dz)>.00001)visitor.flightYaw=Math.atan2(dx,dz);}
+        if(last && visitor.flightAt!==arWelcomeClock.elapsed){const dx=position.x-last.x,dy=position.y-last.y,dz=position.z-last.z;if(Math.hypot(dx,dz)>.00001)visitor.flightYaw=Math.atan2(dx,dz);visitor.flightSpeed=Math.hypot(dx,dy,dz)/Math.max(.001,(arWelcomeClock.elapsed-visitor.flightAt)/1000);}
         visitor.flightPosition={...position};visitor.flightAt=arWelcomeClock.elapsed;
         visitor.encounterId=bee.flyby>.2?index+':'+bee.encounterIndex:'';
         bee.worldYaw=(visitor.flightYaw ?? bee.heading)+Math.sin(arWelcomeClock.elapsed*.0017+index)*.16;
         const displacement=Math.hypot(ambientBeeAvoidance[index]?.x || 0,ambientBeeAvoidance[index]?.y || 0,ambientBeeAvoidance[index]?.z || 0);
-        bee.nectar=beeWingsAtRest({nectar:visitor.nectar,flyby:bee.flyby,displacement,pointerContact:beePointerContact(position,latestControllerRay)});
+        const flowerDistance=visitor.nectarTarget?Math.hypot(position.x-visitor.nectarTarget.x,position.y-visitor.nectarTarget.y,position.z-visitor.nectarTarget.z):Infinity;
+        bee.nectar=beeWingsAtRest({nectar:visitor.nectar,flyby:bee.flyby,displacement,speed:visitor.flightSpeed ?? Infinity,flowerDistance,pointerContact:beePointerContact(position,latestControllerRay)});
         ambientBeeModel?.drawXR?.(view,position,arWelcomeClock.elapsed,{...bee,viewer:viewerMatrix});
     }
 }
@@ -5455,12 +5539,12 @@ function drawMarker(view) {
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - demoTotemHalfHeight(record);
-        const bodyHalfWidth=.095,bodyHalfDepth=.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
+        const bodyHalfWidth=record.demoMapPiece?.032:.095,bodyHalfDepth=record.demoMapPiece?.027:.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
         const style=renderedTotemStyle(record);
         if(style==='organic' || style==='flat-disc'){
             const radius=style==='organic'?.28:.32,light=totemNotificationLight(record),base={...record.position,y:groundBaseY+(style==='organic'?radius:.045)};
             drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,base,radius,{color:totemColour,alpha:arrival*.92,emissive:.12,...(style==='flat-disc'?{scale:{x:1,y:.16,z:1}}:{})});
-            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...base,y:base.y+(style==='organic'?radius:.07)},.045,{color:light.colour,alpha:arrival*.86,emissive:light.strength+.22});return;
+            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...base,y:base.y+(style==='organic'?radius:.07)},.065,{color:light.colour,alpha:arrival*.94,emissive:light.strength+.45});return;
         }
         const postOptions={halfWidth:bodyHalfWidth,halfHeight:bodyHalfHeight,halfDepth:bodyHalfDepth,
             notification:totemNotificationLight(record),
@@ -5469,6 +5553,9 @@ function drawMarker(view) {
             highlighted:Boolean(record.totemSelectedCard)};
         if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,{...record.position,y:groundBaseY},{...postOptions,topColor:totemColour,woodGrain:.8,topTaper:.96});
         else drawTotemSculpture(gl, totemSculptureRenderer, view, { ...record.position, y:groundBaseY },postOptions);
+        const light=totemNotificationLight(record),tip={...record.position,y:groundBaseY+bodyHalfHeight*2+.015};
+        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,tip,record.demoMapPiece?.025:.065,{color:light.colour,alpha:arrival*.94,emissive:light.strength+.45,scale:{x:1,y:1.25,z:1}});
+        if(record.demoMapPiece)return;
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,style,
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival,
@@ -5788,10 +5875,11 @@ async function startImmersive() {
         session.addEventListener('squeezestart',event=>{
             if(event.inputSource?.hand || arWelcomeIntroPending || placementReady || demoKnowledgeWorkspace || demoWebModeOpen)return;
             captureDemoInputEventRay(event);if(butterflyGripStart(event.inputSource))return;
-            if(resolveDemoCellTarget()?.kind==='panel' || totemCardsRenderer?.hit(latestControllerRay))return;
+            const target=demoRecordAtPointer(),panelTarget=resolveDemoCellTarget(),signHit=totemCardsRenderer?.hit(latestControllerRay);
+            if(panelTarget?.kind==='panel' && (!target || panelTarget.distance<=target.hit.distance) || signHit && (!target || signHit.distance<=target.hit.distance))return;
             demoGrabInputSource=event.inputSource;beginControllerDemoHold();
         });
-        session.addEventListener('squeezeend',event=>{if(event.inputSource===demoGrabInputSource){releaseHeldDemoRecord();suppressSessionSelectUntil=performance.now()+280;}for(const insect of butterflyCompanions)if(insect.heldSource===event.inputSource)releaseDemoButterfly(insect);});
+        session.addEventListener('squeezeend',event=>{if(event.inputSource===demoGrabInputSource){captureDemoInputEventRay(event);releaseHeldDemoRecord();suppressSessionSelectUntil=performance.now()+280;}for(const insect of butterflyCompanions)if(insect.heldSource===event.inputSource)releaseDemoButterfly(insect);});
         const launchedSession=session;
         session.addEventListener('end', () => { void demoExitLifecycle.handleSessionEnd(launchedSession); },{once:true});
         const draw = (_time, frame) => {

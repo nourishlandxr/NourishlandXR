@@ -4,7 +4,20 @@ export const LIVING_MAP_DURATION_MS = 16700;
 
 // The Utility view explains a concept, not the visitor's actual placements.
 // Never rearrange scene records or reuse their plant names for this miniature.
-export function createDemoLivingMapConcept() {
+export function createDemoLivingMapConcept({interactive=false}={}) {
+    if(interactive){
+        const landscape=createDemoLivingMapConcept().landscape;
+        const zones=[
+            {id:'map-entry',name:'Totem 1',type:'zone',x:0,z:2.65},
+            {id:'map-forest',name:'Totem 2',type:'zone',x:2.85,z:0},
+            {id:'map-swales',name:'Totem 3',type:'zone',x:-2.85,z:1.65}
+        ];
+        const plants=[[1.6,-1.7],[3.35,-1.8],[4.7,.65]].map(([x,z],i)=>({id:`map-orb-${i}`,type:'plant',name:'',x,z,tree:true,areaId:zones[1].id}));
+        return {concept:true,interactive:true,items:[...zones,...plants],landscape,
+            areas:zones.map((totem,i)=>({id:totem.id,name:totem.name,totem,members:[totem,...plants.filter(p=>p.areaId===totem.id)],
+                left:i===0?-.9:i===1?.5:-5.2,right:i===0?.9:i===1?5.2:-.5,far:i===0?2:i===1?-2.5:-2.5,near:i===0?3.3:2.4})),
+            links:[[zones[0],zones[1]],[zones[1],zones[2]]]};
+    }
     const zone = (id, name, x) => ({ id, name, type: 'zone', x, z: 0, linked: true });
     const first = zone('map-area-1', 'Totem 1', -2.85), second = zone('map-area-2', 'Totem 2', 2.85);
     const plants = [
@@ -22,6 +35,25 @@ export function createDemoLivingMapConcept() {
     const trees = [[1.5,-2],[2.7,-2.25],[4.2,-1.85],[5,-.8],[4.8,1.1],[3.6,2],[1.75,1.7]]
         .map(([x,z],index)=>({x,z,size:.85+(index%3)*.12}));
     return {concept:true,items:[first,second,...plants],areas,links:[[first,second]],landscape:{swales,trees}};
+}
+
+// Placement order is independent of rendering, controller input and motion
+// preference. Reduced motion never automatically completes an interaction.
+export function createDemoLivingMapPlacement(model=createDemoLivingMapConcept({interactive:true})){
+    const ids=model.areas.map(area=>area.id);let placements=[];
+    return {
+        current:()=>model.items.find(item=>item.id===ids[placements.length]) || null,
+        snapshot:()=>placements.map(entry=>({...entry})),
+        place(id,at){
+            if(id!==ids[placements.length] || !Number.isFinite(at) || at<0)return false;
+            placements.push({id,at:Math.max(at,placements.at(-1)?.at || 0)});return true;
+        },
+        reset(){placements=[];}
+    };
+}
+export function livingMapDropAccepted(point,target,radius=72){
+    return Boolean(point && target && [point.x,point.y,target.x,target.y,radius].every(Number.isFinite)
+        && radius>0 && Math.hypot(point.x-target.x,point.y-target.y)<=radius);
 }
 
 export function createDemoLivingMapPlayback(duration = LIVING_MAP_DURATION_MS) {

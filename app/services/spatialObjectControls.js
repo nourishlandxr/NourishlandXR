@@ -2,7 +2,7 @@ import {spatialNote} from './spatialNotes.js';
 import {noteWidgetLibrary,createNoteWidget,WIDGET_LIMIT} from './noteWidgets.js';
 import {TOTEM_STYLES} from './totemAppearance.js';
 export const TOTEM_LIGHTS=[{label:'Teal',color:'#38d1dc'},{label:'Amber',color:'#ecc276'},{label:'Leaf',color:'#a5db8d'},{label:'Rose',color:'#eaa8b9'}];
-export function focusSpatialObjectControls(panel,record,{save=async()=>{},edit=()=>{},open=()=>{},refresh=()=>{}}={}) {
+export function focusSpatialObjectControls(panel,record,{save=async()=>{},edit=()=>{},open=()=>{},refresh=()=>{},demo=false}={}) {
     let marker=record.marker || record;
     const type=record.demoType || marker.type;
     if(type!=='note' && !['zone','area_checkpoint','intro_checkpoint','special'].includes(type))return false;
@@ -17,10 +17,10 @@ export function focusSpatialObjectControls(panel,record,{save=async()=>{},edit=(
             ...(note.type!=='plain'?[{id:'open',label:note.type==='dynamic'?'Open widgets':'Try interaction'}]:[]),
             ...(note.type==='dynamic'?[{id:'library',label:library?'Close Widget Library':'+ ADD WIDGET',disabled:note.widgets.length>=WIDGET_LIMIT},...(library?noteWidgetLibrary().map(item=>({id:'add:'+item.type,label:item.label,description:item.description})):[]),...note.widgets.map(item=>({id:'widget:'+item.id,label:'✎ '+item.title,description:'Edit, reorder or remove this widget.'}))]:[])
         ]:[
-            {id:'signs',label:signsVisible?'Hide signage':'Show signage',description:signsVisible?'Hide the direction and information signs attached to this Totem.':'Show the direction and information signs attached to this Totem.'},
-            ...TOTEM_STYLES.map(item=>({id:'style:'+item.id,label:item.label,selected:appearance.totemStyle===item.id,description:item.description})),
-            ...TOTEM_LIGHTS.map(item=>({id:'light:'+item.color,label:'Light · '+item.label,selected:appearance.notificationColor===item.color,description:'Change the glass notification tip colour.'})),
-            {id:'edit',label:'✎ Edit Totem',description:'Edit the title and information.'}
+            ...(demo?TOTEM_STYLES.slice(0,4):TOTEM_STYLES).map((item,i)=>({id:'style:'+item.id,group:'Totem model',label:String(i+1),ariaLabel:item.label,selected:(appearance.totemStyle || 'basic')===item.id,description:item.description})),
+            ...TOTEM_LIGHTS.map(item=>({id:'light:'+item.color,group:'Lights',kind:'swatch',color:item.color,label:item.label,selected:appearance.notificationColor===item.color,description:'Change the glass notification tip colour.'})),
+            {id:'signs',group:'Signage',label:signsVisible?'Hide signage':'Show signage',description:signsVisible?'Hide the direction and information signs attached to this Totem.':'Show the direction and information signs attached to this Totem.'},
+            ...(!demo?[{id:'edit',group:'Signage',label:'✎ Edit Totem',description:'Edit the title and information.'}]:[])
         ];
         panel?.setObjectContext({title:`Controls · ${type==='note'?'Note':'Totem'}`,hint:type==='note'?'Choose a Note experience, add widgets or use the pencil to edit.':'Show / hide signage, change this Totem form or choose its notification light.',actions,onAction:act});
     };
@@ -39,5 +39,5 @@ export function focusSpatialObjectControls(panel,record,{save=async()=>{},edit=(
         try{await save(record);refresh(record);focus();if(action.startsWith('add:'))edit(record,marker.appearance.spatial_note.widgets.at(-1).id);}
         catch(error){marker.appearance=before;record.demoTotemSignsVisible=oldSigns;record.totemSignsVisible=oldTotemSigns;record.infoVisible=oldInfo;focus();panel?.setContextualHint('Could not save: '+error.message);}
     };
-    panel?.showLearning({title:marker.name || 'Spatial object',body:marker.description || marker.notes || 'Information attached to this place.',mesh:'note'});focus();return true;
+    panel?.restore?.();panel?.showLearning({title:marker.name || 'Spatial object',body:marker.description || marker.notes || 'Information attached to this place.',mesh:'note'});focus();panel?.setExplorerOpen?.(true);return true;
 }

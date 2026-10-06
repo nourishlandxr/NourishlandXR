@@ -108,7 +108,7 @@ export function createSpatialTotemSculpture(gl) {
         void main(){
             vec3 normal=normalize(n),light=normalize(vec3(-.55,.7,.65)),viewer=normalize(eye);
             vec3 wood=texture2D(timber,tex).rgb;
-            float collar=smoothstep(.86,.875,tex.y);
+            float collar=smoothstep(.79,.815,tex.y);
             float foot=1.-smoothstep(.025,.07,tex.y);
             vec3 base=wood*mix(vec3(.69,.51,.35),tint,.36);
             base=mix(base,vec3(.13,.16,.13),foot*.62);

@@ -1,4 +1,5 @@
 import {pimToArKnowledge} from './pimModel.js';
+import {spatialControlLayout} from './spatialControlLayout.js';
 import {currentNxrLanguage,setNxrLanguage,translateNxrText as t,translateApp,localizedCanvasContext} from './i18n.js';
 import {rebaseXrPose} from './xrWorldRebase.js';
 import {ensureExplorerMolecule,initializeExplorerPreview,explorerMoleculeIndex,explorerMoleculeAction,explorerDetailDocument,explorerSelectedPath,explorerPuzzleFit,EXPLORER_RECIPES,EXPLORER_RECIPE} from './explorerMoleculeModel.js';
@@ -968,16 +969,26 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.explorer){
             ctx.fillStyle='#edf3e4';ctx.font='700 30px Manrope, system-ui';ctx.fillText('Controls',24,12,180);ctx.font='500 24px Manrope, system-ui';ctx.fillStyle='#cfdfd9';ctx.fillText(card.question,230,15,600);
-            for(const item of card.controls){ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,14);ctx.fill();ctx.stroke();if(item.kind==='slider'){ctx.textAlign='left';ctx.font='500 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText(item.action==='CellOpacity'?'Cell glass · '+Math.round(item.value*100)+'%':'Structure scale · '+item.value.toFixed(2)+'×',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}else {ctx.font=(item.kind==='mode'?'650 31px':'550 24px')+' Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.fillText(item.label,item.x+item.width/2,item.y+12,item.width-16);}}ctx.globalAlpha=1;ctx.font='500 18px Manrope, system-ui';ctx.fillStyle='#d5ded7';ctx.textAlign='center';for(const item of card.controls.filter(control=>control.kind==='mode'))infoPages(item.description,31,2)[0].forEach((line,index)=>ctx.fillText(line,item.x+item.width/2,124+index*22,item.width-16));ctx.textAlign='left';return c;
+            for(const item of card.controls){
+                if(item.kind==='heading'){ctx.globalAlpha=1;ctx.textAlign='left';ctx.font='650 23px Manrope, system-ui';ctx.fillStyle='#eef8e5';ctx.fillText(item.label,item.x,item.y,item.width);continue;}
+                ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;
+                ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,14);ctx.fill();ctx.stroke();
+                if(item.kind==='swatch'){ctx.fillStyle=item.color;ctx.beginPath();ctx.roundRect(item.x+item.width/2-17,item.y+10,34,34,8);ctx.fill();}
+                else if(item.kind==='slider'){ctx.textAlign='left';ctx.font='500 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText(item.action==='CellOpacity'?'Cell glass · '+Math.round(item.value*100)+'%':'Structure scale · '+item.value.toFixed(2)+'×',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}
+                else {ctx.font=(item.kind==='mode'?'650 31px':'650 27px')+' Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.fillText(item.label,item.x+item.width/2,item.y+12,item.width-16);}
+            }
+            ctx.globalAlpha=1;ctx.font='500 18px Manrope, system-ui';ctx.fillStyle='#d5ded7';ctx.textAlign='center';for(const item of card.controls.filter(control=>control.kind==='mode'))infoPages(item.description,31,2)[0].forEach((line,index)=>ctx.fillText(line,item.x+item.width/2,124+index*22,item.width-16));ctx.textAlign='left';return c;
         }
         if(card.media){
-            ctx.fillStyle=card.panelGuidance?'#dfffba':'#ffffff';ctx.font='700 31px system-ui';ctx.textBaseline='top';ctx.fillText('IMAGE PANEL',40,28,700);
-            if(card.hoverHint){ctx.fillStyle='rgba(8,20,31,.88)';ctx.beginPath();ctx.roundRect(40,78,770,46,12);ctx.fill();ctx.fillStyle='#d6e5eb';ctx.font='400 19px system-ui';ctx.fillText(card.hoverHint,56,91,740);}
-            const imageX=40,imageY=96,imageWidth=920,imageHeight=c.height-(card.caption?166:126);
-            ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,20);ctx.fill();
-            const drawMedia=(image,alpha)=>{if(!image || alpha<=0)return;const scale=Math.min(imageWidth/image.naturalWidth,imageHeight/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);ctx.restore();};
+            const imageX=8,imageY=8,imageWidth=984,imageHeight=c.height-84;
+            ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,24);ctx.fill();
+            ctx.save();ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,24);ctx.clip();
+            const drawMedia=(image,alpha)=>{if(!image || alpha<=0)return;const scale=Math.max(imageWidth/image.naturalWidth,imageHeight/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);ctx.restore();};
             drawMedia(card.previousImage,1-card.imageFade);drawMedia(card.image,card.imageFade);
-            if(card.caption){ctx.fillStyle='#d2e0e8';ctx.font='600 20px system-ui';ctx.textAlign='center';ctx.fillText(card.caption,500,c.height-48,904);ctx.textAlign='left';}
+            ctx.restore();ctx.fillStyle='rgba(4,15,18,.76)';ctx.beginPath();ctx.roundRect(imageX,c.height-76,imageWidth,68,[0,0,24,24]);ctx.fill();
+            ctx.fillStyle=card.panelGuidance?'#e6ffd1':'#ffffff';ctx.font='700 29px system-ui';ctx.textBaseline='top';ctx.fillText('IMAGE PANEL',28,24,700);
+            if(card.hoverHint){ctx.fillStyle='rgba(8,20,31,.88)';ctx.beginPath();ctx.roundRect(28,68,770,46,12);ctx.fill();ctx.fillStyle='#e4eef0';ctx.font='400 19px system-ui';ctx.fillText(card.hoverHint,44,81,740);}
+            if(card.caption){ctx.fillStyle='#f4f7f2';ctx.font='650 23px system-ui';ctx.textAlign='center';ctx.fillText(card.caption,500,c.height-57,920);ctx.textAlign='left';}
             return c;
         }
         if(card.settings){
@@ -1141,7 +1152,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         return hover;
     }
     function explorerControls(){
-        if(objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...objectContext.actions.map((item,index)=>({...item,action:'Object:'+item.id,x:22+(index%2)*484,y:62+Math.floor(index/2)*66,width:464,height:54}))];
+        if(objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...spatialControlLayout(objectContext.actions).map(item=>({...item,action:'Object:'+item.id}))];
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:panelModeChoice};
         return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...availablePimoModes().map((id,i)=>({action:'KnowledgeMode:'+id,label:KNOWLEDGE_MODES[id].label,x:22+i*326,y:62,width:304,height:54,kind:'mode',description:KNOWLEDGE_MODES[id].description,selected:state.mode===id}))];
     }
@@ -1157,8 +1168,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','Explorer options');
         for(const item of explorerControls()){
             if(item.action==='Explorer'){header.append(makeButton(item));continue;}
+            if(item.kind==='heading'){const heading=document.createElement('h3');heading.className='nlxr-object-control-heading';heading.textContent=item.label;options.append(heading);continue;}
             if(item.kind==='slider'){const label=document.createElement('label');label.className='nlxr-explorer-size';label.textContent=item.action==='CellOpacity'?'Cell surface · '+Math.round(item.value*100)+'% solid':'Structure scale · '+item.value.toFixed(2)+'×';const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label',item.action==='CellOpacity'?'PIMO cell opacity':'Explorer structure scale');slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));label.append(slider);options.append(label);}
-            else {const button=makeButton(item);button.setAttribute('aria-pressed',String(Boolean(item.selected)));if(item.kind==='mode'){const choice=document.createElement('div'),description=document.createElement('p');choice.className='nlxr-explorer-mode-choice';description.textContent=item.description;description.id=contentId+'-'+item.action.replace(':','-')+'-description';button.setAttribute('aria-describedby',description.id);choice.append(button,description);modes.append(choice);}else options.append(button);}
+            else {const button=makeButton(item);button.setAttribute('aria-pressed',String(Boolean(item.selected)));if(item.ariaLabel)button.setAttribute('aria-label',item.ariaLabel);if(item.kind==='swatch'){button.textContent='';button.setAttribute('aria-label',t('Light · '+item.label));const swatch=document.createElement('span');swatch.className='nlxr-light-swatch';swatch.style.backgroundColor=item.color;button.append(swatch);}if(item.kind==='mode'){const choice=document.createElement('div'),description=document.createElement('p');choice.className='nlxr-explorer-mode-choice';description.textContent=item.description;description.id=contentId+'-'+item.action.replace(':','-')+'-description';button.setAttribute('aria-describedby',description.id);choice.append(button,description);modes.append(choice);}else options.append(button);}
         }explorerElement.append(modes,options);
         translateApp(explorerElement);
         // Keep specialised assembly forms out of the everyday mode chooser.

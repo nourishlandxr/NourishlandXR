@@ -4,7 +4,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "INTRO 1.1",
         "act": "Introduce the tool",
         "title": "Knowledge connected to place",
-        "main": "NourishlandXR brings information, knowledge and observations into the places they belong.\n\nA plant can share its story. Something noticed today can be left for someone to discover later. Information can connect what you see with what you want to understand.\n\nAs more is added, a place becomes richer with knowledge that can be explored, shared and built on over time.",
+        "main": "NourishlandXR brings information, knowledge and observations into the places they belong.\n\nA plant can share its story.\n\nSomething noticed today can be left for someone to discover later. Information can connect what you see with what you want to understand.\n\nAs more is added, a place becomes richer with knowledge that can be explored, shared and built on over time.",
         "panel": "Hidden.",
         "hint": "See how it works.",
         "art": "opening"
@@ -13,7 +13,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "INTRO 1.2",
         "act": "Introduce the tool",
         "title": "Try the tools with sample content",
-        "main": "NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples. No experience is needed — just take your time and follow your curiosity.",
+        "main": "NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples.\n\nNo experience is needed — just take your time and follow your curiosity.",
         "panel": "Hidden. A real garden project is a separate experience after the sample demo.",
         "hint": "Start the demo.",
         "art": "opening"
@@ -240,7 +240,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Explore, learn and plan",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
-        "hint": "Play the map to see two gardens connect. Pause or replay whenever you choose, then discover learning before planting.",
+        "hint": "Grip each Totem inside the Living Frame. Place it on the pulsing circle: entrance, open forest, then swales. Replay to try again.",
         "art": null
     },
     {

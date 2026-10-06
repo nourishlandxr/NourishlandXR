@@ -4,8 +4,8 @@ export const BEE_COUNT=4;
 export const BEE_WING_SPEED=58;
 export const BEE_ENCOUNTER_DURATION_MS=14000;
 export const BEE_FIRST_ENCOUNTER_MS=11000;
-export function beeWingsAtRest({nectar=false,flyby=0,displacement=0,pointerContact=false}={}){
-    return Boolean(nectar && flyby<.02 && displacement<=.012 && !pointerContact);
+export function beeWingsAtRest({nectar=false,flyby=0,displacement=0,pointerContact=false,speed=0,flowerDistance=0}={}){
+    return Boolean(nectar && flyby<.02 && displacement<=.012 && !pointerContact && speed<.025 && flowerDistance<.006);
 }
 
 function seededUnit(index){let value=(index+1)*0x9e3779b1;value^=value>>>16;value=Math.imul(value,0x21f0aaad);value^=value>>>15;return (value>>>0)/4294967295;}

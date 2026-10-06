@@ -10,8 +10,8 @@ export const DEMO_NOTE_WIDGETS=Object.freeze([
 ]);
 export function demoNoteWidgetPlacement(count){
     // The demo's Control panel docks left. Grow the first arm to the right.
-    const bays=[{x:.70,y:0},{x:0,y:.50},{x:0,y:-.50},{x:-.70,y:0},{x:.70,y:-.50}];
-    return bays.slice(0,count).map((bay,index)=>({...bay,index,width:.58,height:.36}));
+    const bays=[{x:.98,y:0},{x:0,y:.46},{x:0,y:-.46},{x:-.98,y:0},{x:.98,y:-.46}];
+    return bays.slice(0,count).map((bay,index)=>({...bay,index,width:.86,height:.336}));
 }
 export function mountDemoNoteShowcase(root,record,{onChange=()=>{},onClose=()=>{}}={}){
     let editing=false,arm=false,expanded=true,destroyed=false,timer=null;
