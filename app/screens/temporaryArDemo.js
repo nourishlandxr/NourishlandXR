@@ -1,12 +1,12 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
 import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
-import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress} from '../services/demoLivingMapModel.js';
+import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress,LIVING_MAP_ORB_SETTLE_MS} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
 let demoLivingMapPlacement=null;
-const DEMO_MAP_RECT=Object.freeze({x:190,y:395,width:1020,height:435});
+const DEMO_MAP_RECT=Object.freeze({x:190,y:370,width:1020,height:500});
 const demoLivingMapPlayback=createDemoLivingMapPlayback();
 let demoLivingMapWasPlaying=false;
 function demoLivingMapElapsed(now=performance.now()){
@@ -14,7 +14,7 @@ function demoLivingMapElapsed(now=performance.now()){
     return demoLivingMapPreviewClock ? demoLivingMapPreviewClock(now,demoLivingMapStartedAt) : demoLivingMapPlayback.elapsed(now);
 }
 function demoLivingMapIsPlaying(now){
-    if(demoLivingMapPlacement){const placed=demoLivingMapPlacement.snapshot();return Boolean(demoLivingMapPlacement.current() || now-demoLivingMapStartedAt<(placed.at(-1)?.at || 0)+2800);}
+    if(demoLivingMapPlacement){const placed=demoLivingMapPlacement.snapshot();return Boolean(demoLivingMapPlacement.current(now-demoLivingMapStartedAt) || now-demoLivingMapStartedAt<(placed.at(-1)?.at || 0)+2800);}
     const playing=demoLivingMapPlayback.playing(now);
     if(playing!==demoLivingMapWasPlaying){demoLivingMapWasPlaying=playing;introBoardTextureDirty=true;syncDemoPanelActions();}
     return playing;
@@ -639,7 +639,7 @@ function demoPanelActions() {
     ];
     const actions=[];
     if(introBoardStep==='UTILITY 1.1')actions.push(
-        ...(demoLivingMapPlacement?.current()?[{id:'place-map',label:'Place Totem'}]:[]),
+        ...(demoLivingMapPlacement?.current(demoLivingMapElapsed())?[{id:'place-map',label:'Place Totem'}]:[]),
         {id:'replay-map',label:'Replay living map'}
     );
     if(introBoardStep==='LEARNING 1.6')actions.push({id:'finish-core',label:'Finish without learning example'});
@@ -1405,7 +1405,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             const replay=document.createElement('button');replay.type='button';replay.className='tryit-map-replay';replay.textContent='Replay living map';replay.onclick=()=>handleDemoPanelAction('replay-map');board.append(replay);
             const play=document.createElement('button');play.type='button';play.className='tryit-map-replay';play.dataset.demoMapPlace='';play.textContent='Place Totem';play.onclick=()=>placeDemoMapTotem(true);replay.before(play);
             map.addEventListener('pointerup',event=>{
-                const target=demoLivingMapPlacement?.current();if(!target)return;
+                const target=demoLivingMapPlacement?.current(demoLivingMapElapsed());if(!target)return;
                 const bounds=map.getBoundingClientRect(),rect={x:0,y:0,width:map.width,height:map.height};
                 if(livingMapDropAccepted({x:(event.clientX-bounds.left)*map.width/bounds.width,y:(event.clientY-bounds.top)*map.height/bounds.height},demoLivingMapScene.project(target,rect),map.width*.075))placeDemoMapTotem(true);
             });
@@ -1797,7 +1797,7 @@ function paintWelcomeLayer(now) {
     if(!arWelcomeCanvas)return;
     const mapCanvas=appRoot?.querySelector('[data-demo-living-map]');
     if(introBoardStep==='UTILITY 1.1' && mapCanvas && demoLivingMapScene){
-        const width=Math.max(280,Math.round(mapCanvas.clientWidth)),height=Math.round(width*(window.matchMedia('(max-width:620px)').matches?.9:.74));
+        const width=Math.max(280,Math.round(mapCanvas.clientWidth)),height=Math.round(width*(window.matchMedia('(max-width:620px)').matches?.9:.62));
         if(mapCanvas.width!==width || mapCanvas.height!==height){mapCanvas.width=width;mapCanvas.height=height;}
         const ctx=localizedCanvasContext(mapCanvas.getContext('2d'));ctx.clearRect(0,0,width,height);
         demoLivingMapScene.draw(ctx,demoLivingMapElapsed(now),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:0,y:0,width,height});
@@ -2402,9 +2402,9 @@ function demoMapWorldPoint(px,py,depth=.1){
     return introLocalPosition(board,[local.x,local.y,depth]);
 }
 function spawnDemoMapTotem(){
-    clearDemoMapPiece();const target=demoLivingMapPlacement?.current();
+    clearDemoMapPiece();const target=demoLivingMapPlacement?.current(demoLivingMapElapsed());
     if(target && introBoardStep==='UTILITY 1.1'){
-        const position=demoMapWorldPoint(1080,370),halfHeight=.07;
+        const position=demoMapWorldPoint(DEMO_MAP_RECT.x+DEMO_MAP_RECT.width*.52,DEMO_MAP_RECT.y+DEMO_MAP_RECT.height*.42),halfHeight=.13;
         const piece={...createMinimalMarkerDraft('area_checkpoint',{name:target.name}),id:'demo-map-piece',name:target.name,
             demoType:'zone',demoMapPiece:true,demoInteractive:true,demoHalfHeight:halfHeight,position,groundBaseY:position.y-halfHeight,
             demoMapHome:{...position},demoTotemColor:'#795f41',demoTotemSignsVisible:false,rotationY:demoTotemRotationForPosition(position),
@@ -2416,7 +2416,7 @@ function spawnDemoMapTotem(){
     introBoardTextureDirty=true;updateSimulatedMarkers();syncDemoPanelActions();
 }
 function placeDemoMapTotem(alternative=false){
-    const target=demoLivingMapPlacement?.current();if(!target || !demoLivingMapScene || introBoardStep!=='UTILITY 1.1')return false;
+    const elapsed=demoLivingMapElapsed(),target=demoLivingMapPlacement?.current(elapsed);if(!target || !demoLivingMapScene || introBoardStep!=='UTILITY 1.1')return false;
     const piece=markers.find(record=>record.demoMapPiece);
     if(!alternative){
         const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
@@ -2426,10 +2426,15 @@ function placeDemoMapTotem(alternative=false){
             setGuide('Move the Totem to the pulsing circle and release.');return false;
         }
     }
-    if(!demoLivingMapPlacement.place(target.id,demoLivingMapElapsed()))return false;
+    if(!demoLivingMapPlacement.place(target.id,elapsed))return false;
     demoFeedback?.sound('totem');pulseDemoHaptics(demoGrabInputSource || limInputSource);
     spawnDemoMapTotem();paintWelcomeLayer(performance.now());
-    setGuide(demoLivingMapPlacement.current()?'The next Totem is ready inside the Living Frame.':'Your three Totems connect one living place. Continue when ready.');return true;
+    if(demoLivingMapPlacement.snapshot().length===2)setTimeout(()=>{
+        if(introBoardStep==='UTILITY 1.1' && demoLivingMapPlacement?.current(demoLivingMapElapsed())){
+            spawnDemoMapTotem();paintWelcomeLayer(performance.now());setGuide('The Orbs are in place. Now set Totem 3 at the swale entrance.');
+        }
+    },LIVING_MAP_ORB_SETTLE_MS);
+    setGuide(demoLivingMapPlacement.current(demoLivingMapElapsed())?'The next Totem is ready inside the Living Frame.':demoLivingMapPlacement.snapshot().length===2?'Watch the three Orbs appear before placing the swale Totem.':'Your three Totems connect one living place. Continue when ready.');return true;
 }
 
 function showDemoBeforePlanting(){
@@ -3787,7 +3792,7 @@ function demoRecordRayHit(record) {
         const point={x:origin.x+ray.x*distance,y:origin.y+ray.y*distance,z:origin.z+ray.z*distance};
         const offset={x:point.x-record.position.x,y:point.y-centerY,z:point.z-record.position.z};
         const localX=offset.x*right.x+offset.z*right.z;
-        if(Math.abs(localX)>(record.demoMapPiece?.07:.28) || point.y<ground-.04 || point.y>ground+halfHeight*2+.04)return null;
+        if(Math.abs(localX)>(record.demoMapPiece?.12:.28) || point.y<ground-.04 || point.y>ground+halfHeight*2+.04)return null;
         return {distance,point,position:point,localX,localY:point.y-centerY,radius:.28};
     }
     const offset={x:record.position.x-origin.x,y:record.position.y-origin.y,z:record.position.z-origin.z};
@@ -4784,7 +4789,7 @@ function drawIntroNoteContent(ctx) {
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
         demoLivingMapScene.draw(ctx,demoLivingMapElapsed(),window.matchMedia('(prefers-reduced-motion: reduce)').matches,DEMO_MAP_RECT);
         ctx.fillStyle='#dfecc8';ctx.font=`500 29px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('Open to visitors, teachers, students and people caring for land.',700,850,870);
+        ctx.fillText('Open to visitors, teachers, students and people caring for land.',700,900,870);
         ctx.restore();return;
     }
     // Give the copy the full readable centre of the glass screen without
@@ -5538,7 +5543,7 @@ function drawMarker(view) {
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - demoTotemHalfHeight(record);
-        const bodyHalfWidth=record.demoMapPiece?.032:.095,bodyHalfDepth=record.demoMapPiece?.027:.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
+        const bodyHalfWidth=record.demoMapPiece?.055:.095,bodyHalfDepth=record.demoMapPiece?.05:.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
         const style=renderedTotemStyle(record);
         if(style==='organic' || style==='flat-disc'){
             const radius=style==='organic'?.28:.32,light=totemNotificationLight(record),base={...record.position,y:groundBaseY+(style==='organic'?radius:.045)};
@@ -5549,7 +5554,7 @@ function drawMarker(view) {
             notification:totemNotificationLight(record),
             color:totemColour,alpha:arrival*demoTotemVisualOpacity(record),rotationY,style,
             signsVisible:record.demoTotemSignsVisible,faded:record.demoTotemFaded,controlOpacity:arrival,
-            highlighted:Boolean(record.totemSelectedCard)};
+            highlighted:Boolean(record.totemSelectedCard || record.demoMapPiece)};
         if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,{...record.position,y:groundBaseY},{...postOptions,topColor:totemColour,woodGrain:.8,topTaper:.96});
         else drawTotemSculpture(gl, totemSculptureRenderer, view, { ...record.position, y:groundBaseY },postOptions);
         if(record.demoMapPiece)return;

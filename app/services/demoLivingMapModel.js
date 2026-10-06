@@ -1,6 +1,7 @@
 const finite = value => Number.isFinite(Number(value));
 const ease = value => { const t = Math.max(0, Math.min(1, value)); return t * t * (3 - 2 * t); };
 export const LIVING_MAP_DURATION_MS = 16700;
+export const LIVING_MAP_ORB_SETTLE_MS = 2100;
 
 // The Utility view explains a concept, not the visitor's actual placements.
 // Never rearrange scene records or reuse their plant names for this miniature.
@@ -42,10 +43,14 @@ export function createDemoLivingMapConcept({interactive=false}={}) {
 export function createDemoLivingMapPlacement(model=createDemoLivingMapConcept({interactive:true})){
     const ids=model.areas.map(area=>area.id);let placements=[];
     return {
-        current:()=>model.items.find(item=>item.id===ids[placements.length]) || null,
+        current:elapsed=>{
+            if(placements.length===2 && Number(elapsed)<placements[1].at+LIVING_MAP_ORB_SETTLE_MS)return null;
+            return model.items.find(item=>item.id===ids[placements.length]) || null;
+        },
         snapshot:()=>placements.map(entry=>({...entry})),
         place(id,at){
-            if(id!==ids[placements.length] || !Number.isFinite(at) || at<0)return false;
+            if(id!==ids[placements.length] || !Number.isFinite(at) || at<0
+                || placements.length===2 && at<placements[1].at+LIVING_MAP_ORB_SETTLE_MS)return false;
             placements.push({id,at:Math.max(at,placements.at(-1)?.at || 0)});return true;
         },
         reset(){placements=[];}

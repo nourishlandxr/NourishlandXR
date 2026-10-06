@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapModel,createDemoLivingMapSchedule,demoLivingMapAreaProgress,demoLivingMapItemProgress,demoLivingMapProgress,demoLivingMapStage,LIVING_MAP_DURATION_MS} from '../app/services/demoLivingMapModel.js';
+import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapModel,createDemoLivingMapPlacement,createDemoLivingMapSchedule,demoLivingMapAreaProgress,demoLivingMapItemProgress,demoLivingMapProgress,demoLivingMapStage,LIVING_MAP_DURATION_MS,LIVING_MAP_ORB_SETTLE_MS} from '../app/services/demoLivingMapModel.js';
 import {livingMapPreviewRecords} from '../tools/demo-living-map-fixture.js';
 
 test('complete sample preserves identities, ownership, links and source records',()=>{
@@ -75,6 +75,23 @@ test('concept keeps two distinct gardens, centered Totems and just six Orbs',()=
     for(const row of model.landscape.swales){assert.ok(row.every(point=>point.x<-.8));assert.ok(new Set(row.map(point=>point.z)).size>10);}
     for(const tree of model.landscape.trees)assert.ok(Math.hypot(tree.x-2.85,tree.z)>1.7);
     assert.ok(model.items.filter(item=>item.type==='plant').every(item=>item.name===''));
+});
+
+test('interactive map stages three Totems and reveals forest Orbs before the swale placement',()=>{
+    const model=createDemoLivingMapConcept({interactive:true}),placement=createDemoLivingMapPlacement(model);
+    assert.deepEqual(model.areas.map(area=>area.totem.name),['Totem 1','Totem 2','Totem 3']);
+    assert.deepEqual(model.items.filter(item=>item.type==='plant').map(item=>item.areaId),Array(3).fill('map-forest'));
+    assert.equal(model.landscape.swales.length,3);
+    assert.equal(model.landscape.trees.length>0,true);
+    assert.equal(placement.current(0).id,'map-entry');
+    assert.equal(placement.place('map-entry',500),true);
+    assert.equal(placement.current(500).id,'map-forest');
+    assert.equal(placement.place('map-forest',1800),true);
+    assert.equal(placement.current(1800),null);
+    assert.equal(placement.place('map-swales',1800),false);
+    assert.equal(placement.current(1800+LIVING_MAP_ORB_SETTLE_MS).id,'map-swales');
+    assert.equal(placement.place('map-swales',1800+LIVING_MAP_ORB_SETTLE_MS),true);
+    assert.deepEqual(placement.snapshot().map(item=>item.id),['map-entry','map-forest','map-swales']);
 });
 
 test('approved order: landscape, Totem 1, Orbs 1, Totem 2, curved link, Orbs 2',()=>{

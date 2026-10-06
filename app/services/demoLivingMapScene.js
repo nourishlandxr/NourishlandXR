@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {translateNxrText,localizedCanvasContext} from './i18n.js';
-import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage } from './demoLivingMapModel.js';
+import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage, LIVING_MAP_ORB_SETTLE_MS } from './demoLivingMapModel.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
@@ -162,7 +162,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                     ring.material.opacity=born*(reducedMotion || age>1600?.65:.65+.25*Math.sin(age/180));
                 });
                 paths.forEach((path,index)=>{const arrival=placed[index+1],t=model.interactive?arrival?(reducedMotion?1:Math.max(0,Math.min(1,(elapsed-arrival.at-200)/1500))):0:progress.path;path.visible=t>0;path.geometry.setDrawRange(0,Math.floor(t*32)*30);});
-                const current=placement?.current();targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.09*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.65:.5+.18*Math.sin(elapsed/430);}
+                const current=placement?.current(elapsed);targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.09*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.65:.5+.18*Math.sin(elapsed/430);}
                 if(welcomeScreen){welcomeScreen.visible=placed.length>0;welcomeScreen.position.set(model.areas[0].totem.x-.65,.62,model.areas[0].totem.z);welcomeScreen.quaternion.copy(camera.quaternion);welcomeScreen.scale.setScalar(Math.max(.001,bornFor(model.areas[0].id)));}
                 scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,progress.scenery);shrub.count=Math.floor(planted*progress.scenery);
                 renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
@@ -171,7 +171,14 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
             if(model.concept){
                 ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
-                ctx.fillText(model.interactive?['Welcome at the entrance','Three Orbs in the open forest','A Totem at the swales','Three Totems · one connected place'][placed.length]:demoLivingMapStage(elapsed,reducedMotion),x+w/2,y+tagHeight/2,w-20);
+                let interactiveLabel='';
+                if(model.interactive){
+                    if(placed.length===0)interactiveLabel='Place Totem 1 at the visitor entrance';
+                    else if(placed.length===1)interactiveLabel='Place Totem 2 in the open forest';
+                    else if(placed.length===2)interactiveLabel=elapsed<placed[1].at+LIVING_MAP_ORB_SETTLE_MS?'Three Orbs join the forest Totem':'Place Totem 3 at the swale entrance';
+                    else interactiveLabel='Three Totems · one connected place';
+                }
+                ctx.fillText(model.interactive?translateNxrText(interactiveLabel):demoLivingMapStage(elapsed,reducedMotion),x+w/2,y+tagHeight/2,w-20);
                 // Only the two Totems need labels; no plant-name tag cloud.
                 for(const item of cloudItems){
                     if(bornFor(item.id)<.85)continue;
