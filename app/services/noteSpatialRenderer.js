@@ -31,9 +31,12 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
         const glassColour=/^#[\da-f]{6}$/i.test(record.appearance?.color || '')?record.appearance.color:'#0c1f1b';ctx.fillStyle=glassColour+'66';ctx.beginPath();ctx.roundRect(5,5,1014,390,36);ctx.fill();ctx.strokeStyle='rgba(215,237,219,.76)';ctx.lineWidth=3;ctx.stroke();
         const element=card.element,title=element.querySelector('h2,h3')?.textContent || marker.name;
         ctx.fillStyle='#fffdf1';ctx.font='700 42px "Trebuchet MS", system-ui';ctx.fillText(title,36,58,950);
-        const paragraphs=[...element.querySelectorAll('p,li,figcaption,small')].map(item=>translateNxrText(item.textContent)).filter(Boolean);let y=102;
-        ctx.font='500 28px "Trebuchet MS", system-ui';for(const paragraph of paragraphs){let line='';for(const word of paragraph.split(/\s+/)){if(ctx.measureText(line+' '+word).width>948){if(y<222)ctx.fillText(line,36,y);y+=31;line=word;}else line+=(line?' ':'')+word;}if(y<222)ctx.fillText(line,36,y);y+=36;}
-        const image=element.querySelector('img');if(image?.complete && image.naturalWidth){const scale=Math.min(948/image.naturalWidth,125/image.naturalHeight);ctx.drawImage(image,38,88,image.naturalWidth*scale,image.naturalHeight*scale);}
+        const image=element.querySelector('img');
+        const paragraphs=[...element.querySelectorAll('p,li,figcaption,small')].filter(item=>!image || item.tagName!=='FIGCAPTION');let y=102;
+        for(const node of paragraphs){const paragraph=translateNxrText(node.textContent);if(!paragraph)continue;ctx.font='500 28px "Trebuchet MS", system-ui';
+            if(node.hasAttribute('data-note-action-date')){ctx.fillStyle='rgba(188,220,151,.18)';ctx.beginPath();ctx.roundRect(30,y-29,Math.min(940,ctx.measureText(paragraph).width+44),39,12);ctx.fill();ctx.font='700 32px "Trebuchet MS", system-ui';}
+            ctx.fillStyle='#fffdf1';let line='';for(const word of paragraph.split(/\s+/)){if(ctx.measureText(line+' '+word).width>948){if(y<222)ctx.fillText(line,36,y);y+=31;line=word;}else line+=(line?' ':'')+word;}if(y<222)ctx.fillText(line,36,y);y+=36;}
+        if(image?.complete && image.naturalWidth){const scale=Math.min(948/image.naturalWidth,120/image.naturalHeight);ctx.drawImage(image,(1024-image.naturalWidth*scale)/2,84,image.naturalWidth*scale,image.naturalHeight*scale);ctx.fillStyle='#fffdf1';ctx.font='500 24px "Trebuchet MS", system-ui';ctx.fillText(element.querySelector('figcaption')?.textContent || '',36,229,948);}
         const actions=[...element.querySelectorAll('button,input'),...(card.id==='main'?[root.querySelector('[data-note-close]')].filter(Boolean):[])];
         const page=Math.min(pages.get(card.id)||0,Math.max(0,Math.ceil(actions.length/6)-1));pages.set(card.id,page);
         const visible=actions.length>8?actions.slice(page*6,page*6+6):actions;
@@ -53,7 +56,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             if(closing && closingAt===null)closingAt=performance.now();if(!closing)closingAt=null;
             const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,time=performance.now(),amount=reduced?1:closing?Math.max(0,1-(time-closingAt)/260):Math.min(1,(time-openingAt)/480);
             const widgets=expanded?[...root.querySelectorAll('[data-note-widget]')]:[],hasAddPanel=widgets.some(element=>element.classList.contains('note-widget-picker')),bays=widgetPlacement(widgets.length,hasAddPanel);
-            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-compact')?.58:.86,height:element?.classList.contains('note-widget-compact')?.178:.264,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0)+':'+record.appearance?.color,title:element.textContent,fadeDuration:index<0?0:reduced?1:350}});
+            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-compact')?.58:.86,height:element?.classList.contains('note-widget-compact')?.178:.264,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0)+':'+record.appearance?.color+':'+(element.querySelector('img')?.complete ? element.querySelector('img').naturalWidth : 0),title:element.textContent,fadeDuration:index<0?0:reduced?1:350}});
             const ids=new Set(widgets.map(element=>element.dataset.noteWidget));for(const id of widgetBirths.keys())if(!ids.has(id))widgetBirths.delete(id);
             layout=[card(main,'main',pose.center),...widgets.map((element,index)=>{
                 const id=element.dataset.noteWidget;if(!widgetBirths.has(id))widgetBirths.set(id,time);

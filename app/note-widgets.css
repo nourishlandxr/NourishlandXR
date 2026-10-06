@@ -18,6 +18,12 @@
 .note-widget figure {margin:0;}.note-widget img {width:100%;height:92px;object-fit:contain;border-radius:10px;}.note-widget figcaption {font-size:12px;}
 .note-experience button,.note-edit-workspace button {min-height:44px;border:1px solid rgba(226,245,220,.55);border-radius:999px;padding:9px 16px;background:rgba(214,239,210,.12);color:#fffdf3;font:650 15px Manrope,system-ui;cursor:pointer;}
 .note-check {display:block;width:100%;text-align:left;margin:6px 0;}.note-check[aria-pressed="true"] {background:rgba(168,225,165,.24);}
+.note-action-timer .note-action-tag {margin:0 0 6px;font-size:14px;color:#d1e6ae;font-weight:700;}
+.note-action-timer .note-action-date {margin:0;padding:8px 10px;border:1px solid #b8d49a;border-radius:12px;background:rgba(188,220,151,.14);font-size:20px;font-weight:750;letter-spacing:.02em;}
+.note-action-timer small {display:block;margin:6px 0;color:#e3ead8;font-size:12px;}
+.note-action-timer :is(.note-date-spinner,.note-action-presets) {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;margin:6px 0;}
+.demo-note-showcase .note-action-timer button {font-size:11px;margin:0;padding:4px 6px;min-height:28px;}
+.demo-note-showcase .note-widget:has(.note-action-timer) {max-height:210px;}
 .note-connectors {position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;}.note-connectors line {stroke:rgba(199,227,184,.50);stroke-width:.3;stroke-dasharray:120;animation:note-string .35s ease both;}
 .note-spatial-board.is-collapsing .note-widget {animation:note-retract .26s ease both;}.note-spatial-board.is-collapsing .note-connectors {opacity:0;transition:opacity .2s;}
 .note-edit-workspace form {display:grid;gap:14px;padding:20px;}.note-edit-workspace label {display:grid;gap:6px;color:#fffdf3;}.note-edit-workspace :is(input,textarea,select) {min-height:44px;padding:10px;background:#f4f7ed;color:#163b28;border:1px solid #879c7d;border-radius:10px;font:16px Manrope,system-ui;}

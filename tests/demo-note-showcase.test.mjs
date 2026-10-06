@@ -12,14 +12,14 @@ import {initializeExplorerPreview,explorerMoleculeView,selectExplorerNode,explor
 import {bindExplorerMoleculeInteraction} from '../app/services/explorerMoleculeInteraction.js';
 import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
 class Root extends EventTarget {innerHTML='';replaceChildren(){this.innerHTML='';}}
-test('Note chooser offers three choices and transforms its connected card with a stable identity',()=>{
+test('Note chooser offers four choices and transforms its connected card with a stable identity',()=>{
  const root=new Root(),note={id:'sample',name:'Note',description:'Original',appearance:{}},changed=[];
  const ui=mountDemoNoteShowcase(root,note,{onChange:item=>changed.push(item.description)});
  assert.doesNotMatch(root.innerHTML,/data-note-close|data-demo-note="edit"|<form|<input|<textarea/);
  ui.action('widget:timer');assert.equal(note.appearance.spatial_note,undefined);
  ui.action('add');const id=root.innerHTML.match(/data-note-widget="([^"]+)"/)[1];
- assert.match(root.innerHTML,/Timer/);assert.match(root.innerHTML,/Checkbox/);assert.match(root.innerHTML,/Extra panel/);assert.doesNotMatch(root.innerHTML,/cancel-arm|data-note-close/);
- ui.action('widget:timer');assert.equal(note.appearance.spatial_note.widgets.length,1);assert.equal(note.appearance.spatial_note.widgets[0].id,id);assert.equal(note.appearance.spatial_note.widgets[0].configuration.seconds,120);
+ assert.match(root.innerHTML,/Timer/);assert.match(root.innerHTML,/Checkbox/);assert.match(root.innerHTML,/Extra panel/);assert.match(root.innerHTML,/Photo/);assert.doesNotMatch(root.innerHTML,/cancel-arm|data-note-close/);
+ ui.action('widget:timer');assert.equal(note.appearance.spatial_note.widgets.length,1);assert.equal(note.appearance.spatial_note.widgets[0].id,id);assert.equal(note.appearance.spatial_note.widgets[0].configuration.seconds,864000);
  assert.equal(note.description,'Original');assert.doesNotMatch(root.innerHTML,/note-widget-picker/);ui.destroy();assert.equal(root.innerHTML,'');
 });
 test('Note surfaces do not steal Continue or Control panel rays, including misses',()=>{
