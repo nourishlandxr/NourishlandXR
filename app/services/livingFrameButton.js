@@ -6,12 +6,12 @@ export function drawLivingFrameButton(ctx, labelText, aimed=false) {
     ctx.shadowBlur=0;ctx.shadowColor='transparent';
     ctx.fillStyle=aimed?'#f3ffe9':'#bdd2c5';
     ctx.beginPath();ctx.roundRect(16,16,868,328,48);ctx.fill();
-    ctx.fillStyle=aimed?'#28483d':'#142d26';
+    const glass=ctx.createLinearGradient(0,24,0,336);glass.addColorStop(0,aimed?'rgba(102,155,135,.92)':'rgba(61,100,86,.86)');glass.addColorStop(.45,'rgba(18,48,39,.88)');glass.addColorStop(1,'rgba(8,28,23,.95)');ctx.fillStyle=glass;
     ctx.beginPath();ctx.roundRect(24,24,852,312,40);ctx.fill();
     ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f5faef';
     const text=String(labelText || 'Continue');
-    let size=100;ctx.font=`600 ${size}px system-ui, sans-serif`;
-    while(size>44 && ctx.measureText(text).width>780){size-=2;ctx.font=`600 ${size}px system-ui, sans-serif`;}
+    let size=112;ctx.font=`650 ${size}px Manrope, system-ui, sans-serif`;
+    while(size>48 && ctx.measureText(text).width>800){size-=2;ctx.font=`650 ${size}px Manrope, system-ui, sans-serif`;}
     ctx.fillText(text,450,180,780);
     ctx.restore();
 }

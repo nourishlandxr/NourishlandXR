@@ -193,7 +193,7 @@ function reserveChildren(index,node,state,time,available=childIds(index,node,sta
 }
 export function selectExplorerNode(record,knowledge,target,time=now()){
     const state=ensureExplorerMolecule(record,knowledge),index=explorerMoleculeIndex(knowledge,record);let id=target.explorerNodeId || target.id || target.nodeId || 'core';
-    if(target.explorerOutput){const source=index.nodes.get(id);if(!source)return false;if(source.children.includes(target.explorerOutput)){if(!state.expanded.includes(id))state.expanded.push(id);reserveChildren(index,source,state,time);}id=target.explorerOutput;}
+    if(target.explorerOutput){const source=index.nodes.get(id);if(!source)return false;if(source.children.includes(target.explorerOutput)){if(!state.assembled.includes(id+'>'+target.explorerOutput))return prepareExplorerConnection(record,knowledge,id,target.explorerOutput,time);if(!state.expanded.includes(id))state.expanded.push(id);reserveChildren(index,source,state,time);}id=target.explorerOutput;}
     // A completed grab already selected/discovered its semantic endpoint.
     // The host callback refreshes reading surfaces without expanding it again.
     if(target.explorerAssembly)return true;

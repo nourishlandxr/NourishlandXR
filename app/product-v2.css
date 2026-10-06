@@ -440,6 +440,13 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 #app .v2-welcome h2{font-size:var(--v2-welcome-section-size)}
 #app .v2-welcome p:not(.v2-eyebrow){font-family:var(--v2-welcome-body-font);font-size:var(--v2-welcome-body-size);font-weight:400;line-height:1.6}
 @media(max-width:700px){#app .screen.v2-welcome{padding:12px 18px 16px}}
+/* Keep the complete entry flow on one ordinary viewport without inner scroll. */
+#app .screen.v2-welcome {padding-block:10px;gap:10px;--v2-welcome-title-size:clamp(1.8rem,4vw,3rem);--v2-welcome-body-size:clamp(.95rem,1.6vw,1.1rem);}
+#app .v2-welcome .v2-wheel-hero {min-height:0;padding-block:8px;gap:12px;}
+#app .v2-welcome .v2-hero-copy p {line-height:1.4;margin:4px 0;}
+#app .v2-welcome .v2-intro-sequence {min-height:92px;padding-block:4px;}
+#app .v2-welcome .v2-intro-sequence article {padding:8px 0 2px;}
+#app .v2-welcome .v2-living-wheel [data-canvas] {height:clamp(120px,24dvh,240px);min-height:0;}
 
 /* Keep experience Settings inside narrow phone and Android WebView widths. */
 #app .settings-screen{box-sizing:border-box;width:min(100%,620px);max-width:100%;min-width:0;margin-inline:auto;align-items:stretch}

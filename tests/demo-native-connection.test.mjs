@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
-import { LIM_CELL_BY_ID } from '../app/services/limLearning.js';
+import { LIM_CELL_BY_ID, LIM_INTRO_CELL_BY_ID } from '../app/services/limLearning.js';
 import { DEMO_NATIVE_CONNECTION_EXAMPLES, demoNativeConnectionSpec, demoNativeTargetLineage, createDemoNativeConnection, acceptDemoNativeSource, beginDemoNativeTarget, finishDemoNativeConnection, retryDemoNativeTarget } from '../app/services/demoNativeConnection.js';
 import { welcomeExperienceFrames, welcomeCellAtPoint } from '../app/services/arWelcomeShowcase.js';
 import { demoWelcomeSurfaceHit } from '../app/services/demoWelcomeHit.js';
@@ -29,7 +29,7 @@ test('three selectable examples use authored cells and disclose the real-place q
         assert.equal(spec.targetId,example.targetId);
         assert.ok(spec.explanation && spec.fieldQuestion);
         assert.equal(PIGEON_PEA_PIM.nodes.find(node=>node.id===spec.sourceId)?.title,spec.sourceTitle);
-        assert.equal(LIM_CELL_BY_ID[spec.targetId]?.title,spec.targetTitle);
+        assert.equal((LIM_CELL_BY_ID[spec.targetId] || LIM_INTRO_CELL_BY_ID[spec.targetId])?.title,spec.targetTitle);
         const lineage=demoNativeTargetLineage(welcomeExperienceFrames(64000,false),spec.targetId);
         assert.ok(lineage?.key && lineage.ancestors.length);
         const frames=welcomeExperienceFrames(64000,false,undefined,undefined,{cellsActivatedAt:0,expandedLimIds:lineage.ancestors,expandedAt:Object.fromEntries(lineage.ancestors.map(id=>[id,0]))});
@@ -37,6 +37,15 @@ test('three selectable examples use authored cells and disclose the real-place q
         assert.ok(target?.opacity>.5,`${example.id} target must become visible`);
     }
     assert.throws(()=>demoNativeConnectionSpec(PIGEON_PEA_PIM,LIM_CELL_BY_ID,'unknown'));
+});
+
+test('harvest uses connect to authored Vision with resolvable learning content',()=>{
+    const spec=demoNativeConnectionSpec(PIGEON_PEA_PIM,LIM_CELL_BY_ID,'uses');
+    assert.equal(spec.targetId,'lim-intro-vision');
+    const resolver=createMeshSourceResolver();
+    const target=resolver.resolve(limMeshRef(spec.targetId));
+    assert.equal(target.title,'Vision');
+    assert.match(target.content,/future a project/);
 });
 
 test('demo Control Panel offers each example and explains the selected connection',()=>{

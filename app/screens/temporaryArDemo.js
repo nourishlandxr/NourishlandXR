@@ -1383,7 +1383,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         introBoardTextureDirty = true;
         paintBoardParagraphs(introBoardVisibleBody);
         if (paragraphIndex >= paragraphs.length) {
-            boardTypingTimer = setTimeout(finishTyping, 1100);
+            boardTypingTimer = setTimeout(finishTyping, demoParagraphReadingTime(paragraphs[paragraphIndex-1]));
             return;
         }
         boardTypingTimer = setTimeout(revealNextParagraph, demoParagraphReadingTime(paragraphs[paragraphIndex-1]));
@@ -1944,6 +1944,7 @@ function showArWelcomeShowcase() {
     const finishOpeningCopy=()=>{
         if(!openingTyping)return;
         openingTyping=false;clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
+        introBoardParagraphFadeTimes=openingParagraphs.map(()=>-Infinity);
         introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
         panel.classList.remove('is-typing');
     };
@@ -1952,17 +1953,22 @@ function showArWelcomeShowcase() {
         openingParagraphIndex++;
         introBoardParagraphFadeStartedAt=performance.now();introBoardParagraphFadeTimes[openingParagraphIndex-1]=introBoardParagraphFadeStartedAt;
         introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
-        if(openingParagraphIndex>=openingParagraphs.length){boardTypingTimer=setTimeout(finishOpeningCopy,800);return;}
+        if(openingParagraphIndex>=openingParagraphs.length){boardTypingTimer=setTimeout(finishOpeningCopy,demoParagraphReadingTime(openingParagraphs[openingParagraphIndex-1]));return;}
         boardTypingTimer=setTimeout(revealOpeningParagraph,demoParagraphReadingTime(openingParagraphs[openingParagraphIndex-1]));
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
+        if(introBoardStep==='INTRO 1.2'){finishOpeningCopy();return;}
+        clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
         ambientBeesStartedAt=arWelcomeClock.elapsed;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
         introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
-        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Start the demo',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
+        const continueOpeningCopy=()=>{if(openingTyping){finishOpeningCopy();return;}runArWelcomeTutorial(0);};
+        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Start the demo',onContinue:continueOpeningCopy,kind:'welcome'});
+        const openingButton=appRoot?.querySelector('[data-tryit-intro-continue]');
+        if(openingButton){openingButton.textContent='Start the demo';openingButton.onclick=continueOpeningCopy;}
         introBoardVisibleBody='';introBoardParagraphFadeTimes=[];openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
@@ -4626,7 +4632,7 @@ function wrappedTextureLines(ctx, text, maxWidth) {
     return lines;
 }
 
-function demoParagraphReadingTime(text){return Math.max(4200,String(text || '').trim().split(/\s+/).length*300+1100);}
+function demoParagraphReadingTime(text){return Math.max(6000,String(text || '').trim().split(/\s+/).length*350+1800);}
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
@@ -4864,7 +4870,8 @@ function drawIntroNoteContent(ctx) {
         glow.addColorStop(0,narrative.accent);glow.addColorStop(1,'rgba(0,0,0,0)');ctx.fillStyle=glow;ctx.fillRect(contentLeft,480,contentWidth,290);ctx.restore();
     }
     ctx.save();
-    if(narrative)ctx.globalAlpha*=narrative.alpha;
+    // The surface owns its transition; avoid tinting freshly revealed copy twice.
+    ctx.globalAlpha=1;
     // Accent colours illuminate the surface, while the copy stays bright and
     // neutral so blue and orange narrative stages remain equally readable.
     ctx.fillStyle = '#ffffff';

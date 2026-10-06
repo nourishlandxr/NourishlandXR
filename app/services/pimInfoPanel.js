@@ -45,7 +45,7 @@ export function pimInfoContent(document, path) {
 export function learningPanelMedia(content) {
     const image=content?.image || content?.sketchImage;
     if(!image)return null;
-    return {image,alt:(content.image ? content.imageAlt : content.sketchImageAlt) || content.title || '',caption:'',plant:false,fit:content.imageFit || 'cover'};
+    return {image,alt:(content.image ? content.imageAlt : content.sketchImageAlt) || content.title || '',caption:'',plant:false,fit:content.imageFit || 'contain'};
 }
 
 export function pimPanelMedia(document,selection=null,fallback=null,previous=null) {
@@ -983,7 +983,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const imageX=8,imageY=8,imageWidth=984,imageHeight=c.height-84;
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,24);ctx.fill();
             ctx.save();ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,24);ctx.clip();
-            const drawMedia=(image,alpha)=>{if(!image || alpha<=0)return;const scale=Math.max(imageWidth/image.naturalWidth,imageHeight/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);ctx.restore();};
+            const drawMedia=(image,alpha)=>{if(!image || alpha<=0)return;const scale=Math.min(imageWidth/image.naturalWidth,imageHeight/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);ctx.restore();};
             drawMedia(card.previousImage,1-card.imageFade);drawMedia(card.image,card.imageFade);
             ctx.restore();ctx.fillStyle='rgba(4,15,18,.76)';ctx.beginPath();ctx.roundRect(imageX,c.height-76,imageWidth,68,[0,0,24,24]);ctx.fill();
             ctx.fillStyle=card.panelGuidance?'#e6ffd1':'#ffffff';ctx.font='700 29px system-ui';ctx.textBaseline='top';ctx.fillText('IMAGE PANEL',28,24,700);
@@ -1044,8 +1044,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(card.trail){ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';ctx.fillText(card.trail,left,y,width);y+=32;}
             const actionTop=Math.min(...card.controls.filter(item=>item.kind==='utility'||item.kind==='reference'||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-76);
             const contentBottom=actionTop-14;
+            ctx.fillStyle='rgba(4,18,23,.38)';ctx.strokeStyle='rgba(211,241,231,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(left-10,y-10,width+20,Math.max(20,contentBottom-y+10),16);ctx.fill();ctx.stroke();
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y));ctx.clip();
-            ctx.fillStyle='#f3f8fc';ctx.font=(card.largeText?'500 31px':'500 27px')+' system-ui';
+            ctx.fillStyle='#ffffff';ctx.font=(card.largeText?'600 31px':'600 27px')+' Manrope, system-ui';
             const lineHeight=card.largeText?36:32;
             ctx.textAlign='left';card.lines.forEach(line=>{ctx.fillText(line,left,y,width);y+=lineHeight;});ctx.restore();
             if(card.hint){ctx.fillStyle='#d8e6e3';ctx.font='600 20px system-ui';ctx.textAlign='center';infoPages(card.hint,Math.max(24,Math.floor(width/11)),2)[0].forEach((line,index)=>ctx.fillText(line,left+width/2,actionTop-57+index*24,width-16));ctx.textAlign='left';}

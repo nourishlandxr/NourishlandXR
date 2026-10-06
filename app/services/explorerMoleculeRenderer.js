@@ -9,7 +9,7 @@ const motion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 const vec=p=>new THREE.Vector3(p.x,p.y,p.z);
 function labelCanvas(card){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=localizedCanvasContext(canvas.getContext('2d'));
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f4f5e8';ctx.shadowBlur=0;ctx.font=`600 ${card.attachment?48:58}px Manrope,system-ui`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffffff';ctx.shadowBlur=0;ctx.font=`750 ${card.attachment?48:64}px Manrope,system-ui`;
     const lines=[];let line='';for(const word of String(translateNxrText(card.title)).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>460&&line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
     lines.slice(0,3).forEach((text,i)=>{const y=105+(i-(Math.min(3,lines.length)-1)/2)*52;ctx.fillText(text,256,y,470);});
     if(card.status){ctx.font='500 28px Manrope,system-ui';ctx.fillText(card.status,256,230,470);}return canvas;
@@ -123,7 +123,7 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
                 }
             }
             gl.depthMask(mask);if(!depth)gl.disable(gl.DEPTH_TEST);if(!cull)gl.disable(gl.CULL_FACE);if(!blend)gl.disable(gl.BLEND);
-            labelSurfaces=nodes.filter(n=>n.progress>.55&&(field.lod!=='far'||n.depth<2||field.state.promoted.includes(n.id))&&(n.depth<3||field.lod==='close'||field.state.promoted.includes(n.id))).map(node=>{
+            labelSurfaces=nodes.filter(n=>n.progress>.55&&(field.lod!=='far'||n.depth<2||field.state.promoted.includes(n.id))&&(n.depth<3||field.lod==='close'||field.state.promoted.includes(n.id))).flatMap(node=>{
                 const toward=camera.clone().sub(node.world).normalize(),title=node.label,status=node.pending?(node.connector?'Align ends · release to lock':'Fit onto connector'):node.attachment?'Matching port':field.state.promoted.includes(node.id)?'Hub · '+node.count+(field.state.sampleCounts[node.id]?' sample entries':' entries'):node.depth>1&&node.count>3?node.count+' topics':'';
                 let faceNormal=toward,faceDistance=node.worldRadius;
                 if(!node.attachment && !node.connector){
@@ -132,7 +132,15 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
                 }
                 let labelRight=up.clone().cross(faceNormal);if(labelRight.lengthSq()<1e-6)labelRight=right.clone();labelRight.normalize();const labelUp=faceNormal.clone().cross(labelRight).normalize();
                 const labelWidth=node.worldRadius*(node.attachment?1.1:1.1),labelHeight=labelWidth*.65;
-                return {record,node:{...node,explorerNodeId:node.id,pimKnowledgeFace:node.id!=='core',pimKnowledgeContext:node.id==='core'},moleculeNode:node,center:node.world.clone().addScaledVector(faceNormal,faceDistance+.002),right:labelRight,up:labelUp,normal:faceNormal,width:labelWidth,height:labelHeight,opacity,interactive:opacity>.55,card:{id:node.id,title,status,core:node.id==='core',attachment:node.attachment,knowledgeFace:true,resolution:512,height:256,fadeDuration:0}};
+                const surface={record,node:{...node,explorerNodeId:node.id,pimKnowledgeFace:node.id!=='core',pimKnowledgeContext:node.id==='core'},moleculeNode:node,center:node.world.clone().addScaledVector(faceNormal,faceDistance+.002),right:labelRight,up:labelUp,normal:faceNormal,width:labelWidth,height:labelHeight,opacity,interactive:opacity>.55,card:{id:node.id,title,status,core:node.id==='core',attachment:node.attachment,knowledgeFace:true,resolution:512,height:256,fadeDuration:0}};
+                if(node.attachment || node.connector || field.lod==='far')return [surface];
+                // Fixed semantic faces, not a billboard that changes identity as it turns.
+                const normals=[];for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1])normals.push(new THREE.Vector3(x,y,z).normalize().applyQuaternion(node.worldRotation));
+                return normals.slice(0,1+(node.outputs || []).length).flatMap((normal,i)=>{
+                    if(normal.dot(toward)<.15)return [];
+                    const output=i?(node.outputs || [])[i-1]:null,r=up.clone().cross(normal);if(r.lengthSq()<1e-6)r.copy(right);r.normalize();
+                    return [{...surface,normal,right:r,up:normal.clone().cross(r).normalize(),center:node.world.clone().addScaledVector(normal,node.worldRadius*Math.sqrt(3)/2+.002),moleculeNode:output?{...node,outputTarget:output.id,outputIndex:i-1}:node,card:{...surface.card,id:node.id+':face:'+i,title:output?.label || title,status:output?'Select to build / read':status}}];
+                });
             });
             labels.draw(view,{id:'explorer-labels-'+String(record.id || record.marker?.id)},pose.position,labelSurfaces.map(s=>s.card));
             const tokenPose={position:new THREE.Vector3().setFromMatrixPosition(matrix),right:new THREE.Vector3().setFromMatrixColumn(matrix,0),up:new THREE.Vector3().setFromMatrixColumn(matrix,1),normal:new THREE.Vector3().setFromMatrixColumn(matrix,2)};

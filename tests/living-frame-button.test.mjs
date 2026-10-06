@@ -4,7 +4,7 @@ import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../app/servi
 
 test('button uses two filled edges and no stroke or text blur',()=>{
     const calls=[];
-    const ctx={clearRect:(...a)=>calls.push(['clear',...a]),save(){},restore(){},scale:(...a)=>calls.push(['scale',...a]),beginPath(){},roundRect:(...a)=>calls.push(['rect',...a]),fill:()=>calls.push(['fill']),fillText:(...a)=>calls.push(['text',...a]),measureText:text=>({width:text.length*40})};
+    const ctx={createLinearGradient:()=>({addColorStop(){}}),clearRect:(...a)=>calls.push(['clear',...a]),save(){},restore(){},scale:(...a)=>calls.push(['scale',...a]),beginPath(){},roundRect:(...a)=>calls.push(['rect',...a]),fill:()=>calls.push(['fill']),fillText:(...a)=>calls.push(['text',...a]),measureText:text=>({width:text.length*40})};
     drawLivingFrameButton(ctx,'Start the demo');
     assert.equal(ctx.shadowBlur,0);assert.equal(ctx.shadowColor,'transparent');
     assert.equal(calls.filter(call=>call[0]==='fill').length,2);

@@ -1,6 +1,10 @@
 // Shared presentation catalogue: English / Portuguese (Portugal) / Dutch.
 // Do not put object IDs, action names, source URLs or user data in this table.
 export const DEMO_INTERFACE_TRANSLATIONS = [
+ ['Uses → Vision','Usos → Visão','Toepassingen → Visie'],
+ ['Select to build / read','Selecione para construir / ler','Selecteer om te bouwen / lezen'],
+ ['Connect documented plant uses with the future you want for this place. A harvest can support food, shared meals or soil care. Choose the uses that belong in your project vision, then check their suitability and evidence.','Ligue os usos documentados da planta ao futuro que deseja para este lugar. Uma colheita pode contribuir para a alimentação, refeições partilhadas ou o cuidado do solo. Escolha os usos que fazem parte da visão do projeto e verifique a sua adequação e as evidências.','Verbind gedocumenteerde toepassingen van planten met de toekomst die je voor deze plek wilt. Een oogst kan bijdragen aan voedsel, gedeelde maaltijden of bodemzorg. Kies de toepassingen die bij je projectvisie passen en controleer hun geschiktheid en onderbouwing.'],
+ ['What will we use our harvests for, and how should those uses shape our vision for this place?','Para que vamos usar as nossas colheitas e como devem esses usos moldar a nossa visão para este lugar?','Waarvoor gaan we onze oogsten gebruiken en hoe moeten die toepassingen onze visie voor deze plek vormgeven?'],
  ['Totem model','Modelo de Totem','Totemmodel'],
  ['Checkbox','Caixa de verificação','Selectievakje'],
  ['Extra panel','Painel adicional','Extra paneel'],

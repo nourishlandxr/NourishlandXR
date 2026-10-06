@@ -1,3 +1,4 @@
+import {LIM_INTRO_CELL_BY_ID} from './limLearning.js';
 // The guided link uses authored cells in the two live meshes. No substitute
 // source or target cards are created for this exercise.
 export const DEMO_NATIVE_SOURCE_ID = 'food-forest';
@@ -9,9 +10,9 @@ export const DEMO_NATIVE_CONNECTION_EXAMPLES=Object.freeze([
     Object.freeze({id:'propagation',label:'Propagation → Propagation',sourceId:'propagation',targetId:'lim-plant-propagation',
         explanation:'Seed and establishment information becomes a learning path for observing how a new plant could grow here.',
         fieldQuestion:'Which local conditions would help or limit a new Pigeon Pea seedling?'}),
-    Object.freeze({id:'uses',label:'Uses → Uses and Making',sourceId:'uses',targetId:'lim-uses-making',
-        explanation:'Reference uses become a prompt to check what is relevant, safe and actually observed at this site.',
-        fieldQuestion:'Which uses are documented, and which are local observations that still need a source and date?'})
+    Object.freeze({id:'uses',label:'Uses → Vision',sourceId:'uses',targetId:'lim-intro-vision',
+        explanation:'Connect documented plant uses with the future you want for this place. A harvest can support food, shared meals or soil care. Choose the uses that belong in your project vision, then check their suitability and evidence.',
+        fieldQuestion:'What will we use our harvests for, and how should those uses shape our vision for this place?'})
 ]);
 
 export function demoNativeTargetLineage(frames,targetId=DEMO_NATIVE_TARGET_ID){
@@ -37,7 +38,7 @@ export function demoNativeConnectionSpec(pimDocument, limCells,exampleId=DEMO_NA
     const example=DEMO_NATIVE_CONNECTION_EXAMPLES.find(item=>item.id===exampleId);
     if(!example)throw new Error('That cell connection example is unavailable.');
     const source = pimDocument?.nodes?.find(node => node.id === example.sourceId);
-    const target = limCells?.[example.targetId];
+    const target = limCells?.[example.targetId] || LIM_INTRO_CELL_BY_ID[example.targetId];
     if (!source?.title || !target?.title) throw new Error('The guided connection cells are unavailable.');
     return Object.freeze({
         sourceId: source.id,

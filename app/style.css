@@ -749,7 +749,7 @@ body[data-project-theme] .tryit-demo .tryit-place.creator-ar-placement-guide { a
 .tryit-guided-choice.is-welcome-board.is-entering > h2 { animation:tryit-board-identity 1.15s .25s ease-out both; }
 .tryit-guided-choice.is-welcome-board > small { color:#dcef95; font-size:.66rem; font-weight:760; letter-spacing:.12em; }
 .tryit-guided-choice.is-welcome-board h2 { max-width:660px; margin:0; font-size:clamp(1.45rem,4.5vw,2.8rem); font-weight:720; line-height:1.06; text-wrap:balance; }
-.tryit-board-text-window { display:grid; align-content:start; gap:clamp(10px,1.8vh,20px); width:100%; min-height:0; margin:0; padding-top:clamp(12px,2vh,24px); overflow:hidden; border-top:1px solid rgba(220,239,149,.38); text-align:left; opacity:0; transition:opacity .55s ease; }
+.tryit-board-text-window { display:grid; align-content:start; gap:clamp(10px,1.8vh,20px); width:100%; min-height:0; margin:0; padding-top:clamp(12px,2vh,24px); overflow:hidden; border-top:1px solid rgba(220,239,149,.38); text-align:left; opacity:1; }
 .tryit-guided-choice.is-copy-ready .tryit-board-text-window { opacity:1; }
 .tryit-board-text-window p + p { padding-top:clamp(7px,1.3vh,12px); border-top:1px solid rgba(255,255,255,.1); }
 .tryit-guided-choice.is-welcome-board p { width:100%; max-width:none; color:rgba(255,255,255,.94); font-size:calc(clamp(1.08rem,min(3.2vw,2.55vh),1.55rem) + 2px); font-weight:580; line-height:1.38; text-wrap:pretty; }
@@ -11942,4 +11942,32 @@ body:has(.app-surface) {
     #app:has(.tryit-demo[data-demo-utility="true"]) .nlxr-info-panel {display:none;}
     #app .tryit-demo.is-simulated .tryit-guided-choice.is-utility-board {top:50%;padding:14px 16px;pointer-events:auto;}
     .tryit-demo.is-simulated [data-demo-living-map] {aspect-ratio:1000 / 900;}
+}
+/* Compact entry pages; allow document scrolling only on unusually short screens
+   or enlarged accessibility text, never trap content in a scrolling card. */
+#app:has(> .ar-introduction-preparation, > .nxr-desktop-ar-choice) {padding:12px 0 16px;}
+.ar-introduction-preparation .nl-botanical-texture--prep {height:24px;}
+.ar-introduction-preparation .ar-safety-card {padding:10px;}
+.ar-introduction-preparation .ar-preparation-points {grid-template-columns:1fr 1fr;gap:6px;}
+.ar-introduction-preparation .ar-preload-controls {padding:10px;gap:4px 10px;}
+.ar-introduction-preparation .ar-preparation-footer {position:static;padding:6px 0;}
+.nxr-desktop-ar-choice {gap:10px;max-width:680px;margin:auto;}
+.nxr-desktop-ar-choice .page-header {padding:0 0 10px;}
+.nxr-desktop-ar-choice h1 {font-size:clamp(1.5rem,4vw,2rem);}
+.nxr-desktop-ar-choice .panel {padding:14px;margin:0;}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window {opacity:1;animation:none;transition:none;}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {color:#fff;}
+#app:has(> .v2-welcome) {padding-top:10px;padding-bottom:16px;}
+.v2-welcome {gap:12px;}
+.v2-welcome .v2-wheel-hero {padding-block:12px;gap:16px;min-height:0;}
+.v2-welcome .v2-hero-heading h1 {font-size:clamp(1.8rem,4vw,3rem);line-height:1.08;}
+.v2-welcome .v2-lead {font-size:clamp(.95rem,1.6vw,1.12rem);line-height:1.4;}
+.v2-welcome .v2-living-wheel {max-height:28dvh;margin-block:0;}
+.v2-welcome .v2-living-wheel [data-canvas] {height:clamp(120px,24dvh,240px);min-height:0;}
+.v2-welcome .v2-intro-sequence {padding-block:8px;margin:0;}
+@media(max-width:620px) {
+ .v2-welcome .v2-wheel-hero {gap:10px;padding-block:6px;}
+ .v2-welcome .v2-actions {gap:6px;}
+ .v2-welcome .v2-actions button {min-height:42px;padding:8px 12px;}
+ .ar-introduction-preparation .ar-preparation-points {grid-template-columns:1fr;}
 }
