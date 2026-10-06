@@ -1,11 +1,11 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>AR preparation study</title>
 <link rel="stylesheet" href="../app/style.css"><link rel="stylesheet" href="../app/product-v2.css"><link rel="stylesheet" href="../app/living-objects.css">
-<main id="study" style="max-width:820px;margin:24px auto;padding:16px"></main><button id="creator-entry-study" type="button">Creator preparation study</button><pre id="metrics" style="white-space:pre-wrap;padding:16px"></pre>
+<main id="app"></main><button id="creator-entry-study" type="button">Creator preparation study</button><pre id="metrics" style="white-space:pre-wrap;padding:16px"></pre>
 <script type="module">
 import {arPreparationControlsMarkup,bindArPreparationControls} from '../app/services/arPreparationControls.js';
 import {renderArIntroductionPreparation} from '../app/services/arOnboarding.js';
 import {launchCreatorArFromPage} from '../app/services/creatorArNavigation.js';
-const root=document.querySelector('#study'),metrics=document.querySelector('#metrics');
+const root=document.querySelector('#app'),metrics=document.querySelector('#metrics');
 function update(){const p=root.querySelector('[data-ar-preload]');if(p?.dataset.preparedMs)metrics.textContent=`Preparation: ${p.dataset.preparedMs} ms; settled resources: ${p.dataset.preparedAssets}; ready: ${p.dataset.ready}. Same-session repeat uses prepared resources. This is not a headset/GPU benchmark.`;}
 document.querySelector('#creator-entry-study').onclick=()=>launchCreatorArFromPage(root,()=>{root.insertAdjacentHTML('beforeend','<p>Creator launch called directly from Enter AR.</p>');return true;});
 new MutationObserver(update).observe(root,{subtree:true,attributes:true});

@@ -1,10 +1,11 @@
 import {getSpatialVisualSettings,setSpatialVisualSettings,resolveGraphicsQuality} from './spatialVisualSettings.js';
 import {prepareArAssets,prepareNearFutureArAssets} from './arAssetPreparation.js';
-export function arPreparationControlsMarkup({simpleDesktop=false}={}){
+export function arPreparationControlsMarkup({simpleDesktop=false,rememberPreparation=false}={}){
  if(simpleDesktop)return `<section class="panel ar-preload-controls" data-ar-preload><h2>Getting ready</h2><p class="meta">The desktop introduction uses 2D plant information and learning pathways.</p><progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1"></progress><p role="status" data-ar-preload-status>Preparing the introduction…</p><button type="button" data-ar-preload-retry hidden>Retry preparation</button></section>`;
  const choice=getSpatialVisualSettings().graphicsQuality,suggested=resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED');
  return `<section class="panel ar-preload-controls" data-ar-preload><h2>Graphics</h2>
  <label>Graphics <select data-ar-graphics aria-label="Starting graphics quality">${[['auto','Auto · '+suggested],['low','LOW'],['medium','MED'],['high','HIGH']].map(([value,label])=>`<option value="${value}" ${choice===value?'selected':''}>${label}</option>`).join('')}</select></label>
+ ${rememberPreparation?'<label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>':''}
  <p class="meta">Auto adapts to your device. You can change graphics later in Settings.</p>
  <progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1"></progress>
  <p role="status" data-ar-preload-status>Preparing Nourishland…</p><button type="button" data-ar-preload-retry hidden>Retry preparation</button></section>`;

@@ -1275,6 +1275,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         setExplorerOpen(value=true){explorerClosed=!Boolean(value);render(true);},
         setSettingsOpen(value=true){settingsOpen=Boolean(value);renderSettings();},
         restore(){hidden=false;detached=false;element.style.visibility='';render(true);},
+        minimize(){act('Hide');},
         setCompact(value=true){const compact=Boolean(value) && !isDesktopDemo();railCollapsed=false;if(compact)mediaCollapsed=true;element.classList.toggle('is-opening-compact',compact);if(!element.querySelector('.nlxr-media-wing') && showPlantPreview() && !mediaCollapsed)render(true);else syncPanelWings();},
         recenter(){heading=null;pose=null;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;render();},
         setPathwayContext(value){pathwayContext=value ? {...value,actions:[...(value.actions || [])]} : null;updatePathway();},

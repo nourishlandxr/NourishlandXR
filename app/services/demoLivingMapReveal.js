@@ -32,18 +32,12 @@ export function drawLivingMapPreview(ctx,scene,elapsed,reduced,rect){
     const reveal=livingMapReveal(elapsed,reduced);
     if(reveal.preview<=0)return;
     ctx.save();ctx.globalAlpha=reveal.preview;
-    if(!reduced && reveal.dissolve>0){
-        ctx.beginPath();
-        for(let row=0;row<24;row++)for(let col=0;col<32;col++){
-            const threshold=(Math.sin(row*127.1+col*311.7)*43758.5453)%1;
-            if(Math.abs(threshold)>reveal.dissolve)ctx.rect(rect.x+col*rect.width/32,rect.y+row*rect.height/24,rect.width/32+1,rect.height/24+1);
-        }
-        ctx.clip();
-    }
+    // A continuous luminous fade avoids the former coarse checkerboard breakup.
+    if(reveal.magic>0){ctx.shadowColor='#d5ffb4';ctx.shadowBlur=24*reveal.magic;}
     scene.draw(ctx,elapsed,reduced,rect);ctx.restore();
     if(reveal.magic>0){
-        ctx.save();ctx.fillStyle='#f0ffd1';ctx.globalAlpha=reveal.magic*.8;
-        for(let i=0;i<42;i++){const t=(elapsed-4400)/1700,x=rect.x+rect.width*((i*.618)%1),y=rect.y+rect.height*((i*.381)%1)-t*(20+i%7*12);ctx.beginPath();ctx.arc(x+Math.sin(t*3+i)*14,y,1.5+i%3,0,Math.PI*2);ctx.fill();}
+        ctx.save();ctx.fillStyle='#f0ffd1';ctx.globalAlpha=reveal.magic*.65;ctx.shadowColor='#d5ffb4';ctx.shadowBlur=10;
+        for(let i=0;i<24;i++){const t=(elapsed-4400)/1700,x=rect.x+rect.width*((i*.618)%1),y=rect.y+rect.height*((i*.381)%1)-t*(20+i%7*12);ctx.beginPath();ctx.arc(x+Math.sin(t*3+i)*14,y,.8+i%3*.35,0,Math.PI*2);ctx.fill();}
         ctx.restore();
     }
 }

@@ -74,8 +74,8 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel, sim
             </div>
             <details class="ar-device-support"><summary>Device support</summary><p>Use a compatible Android phone or spatial device. On desktop, we recommend the plain NLXR introduction; the plain desktop introduction needs no camera. iPhone and iPad cannot currently launch this WebXR AR mode.</p><p class="meta">Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p></details>
         </section>
-        ${arPreparationControlsMarkup({simpleDesktop})}
-        <div class="ar-preparation-footer"><label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>
+        ${arPreparationControlsMarkup({simpleDesktop,rememberPreparation:!simpleDesktop})}
+        <div class="ar-preparation-footer">${simpleDesktop?'<label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>':''}
         <p role="status" data-ar-entry-status hidden></p>
         <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary ar-preparation-start" type="button" data-ar-introduction-continue>${simpleDesktop?'Begin introduction':'Start AR'}</button></div></div>
     </div>`;

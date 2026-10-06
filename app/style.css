@@ -11929,19 +11929,19 @@ body:has(.app-surface) {
 #app .tryit-demo.is-simulated .is-utility-board h2 {font-size:clamp(1.3rem,3vw,2rem);margin:8px 0 12px;animation:none;}
 #app .tryit-demo.is-simulated .is-utility-board .tryit-board-text-window {max-height:none;min-height:0;padding:0;}
 #app .tryit-demo.is-simulated .is-utility-board .tryit-board-text-window p {font-size:clamp(.9rem,1.8vw,1.1rem);line-height:1.4;margin:0;}
-.tryit-demo.is-simulated [data-demo-living-map] {display:block;width:100%;height:auto;aspect-ratio:1000 / 620;margin:10px 0;}
+.tryit-demo.is-simulated [data-demo-living-map] {display:block;width:min(52%,280px);height:auto;aspect-ratio:1000 / 620;margin:10px auto;}
 #app .tryit-demo.is-simulated .is-utility-board .tryit-map-caption {font-size:clamp(.9rem,1.8vw,1.1rem);margin:8px 0;color:#dfecc8;}
 #app .tryit-demo.is-simulated .tryit-map-replay {min-height:36px;padding:5px 14px;font-size:.85rem;margin-top:4px;}
 #app .tryit-demo.is-simulated .is-utility-board > .tryit-context-trigger {position:static!important;display:inline-flex;align-items:center;justify-content:center;transform:none!important;width:min(100%,280px);height:auto;min-height:44px;margin:6px 8px;padding:8px 14px;font-size:14px;border-radius:16px;}
 .tryit-demo.is-simulated[data-demo-utility="true"] .tryit-live-welcome canvas {visibility:hidden;}
-.tryit-demo.is-simulated[data-demo-utility="true"] [data-tryit-sim-markers] {opacity:.18;pointer-events:none;}
+.tryit-demo.is-simulated[data-demo-utility="true"] [data-tryit-sim-markers] {opacity:1;}
 .tryit-spatial-living-map {position:fixed;left:3vw;top:24%;width:min(48vw,760px);z-index:12320;opacity:0;pointer-events:none;color:#f4f2df;text-align:center;}
 .tryit-spatial-living-map canvas {display:block;width:100%;cursor:grab;filter:drop-shadow(0 24px 20px rgba(0,0,0,.3));}
 .tryit-spatial-living-map canvas:active {cursor:grabbing;}
 .tryit-spatial-living-map p {margin:0 0 12px;font-size:15px;}
 .tryit-spatial-living-map button {min-height:44px;margin:3px;padding:8px 14px;background:#163c30;color:#fff8e4;border:1px solid #b6d293;border-radius:12px;}
 .tryit-demo.is-simulated[data-living-map="true"] [data-demo-living-map] {pointer-events:none;}
-#app .tryit-demo.is-simulated[data-landscape-revealed="true"] .is-living-map-board .tryit-board-text-window {display:none;}
+#app .tryit-demo.is-simulated[data-landscape-revealed="true"] .is-living-map-board .tryit-board-text-window {display:block;min-height:0;height:auto;margin:18px 0;}
 @media(min-width:621px) {
  #app .tryit-demo.is-simulated[data-living-map="true"] .tryit-guided-choice.is-utility-board {left:76%;width:44vw;max-height:calc(100dvh - 190px);}
 }

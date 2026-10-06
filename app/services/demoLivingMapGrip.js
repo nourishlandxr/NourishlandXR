@@ -26,18 +26,19 @@ function pairFrame(a,b){
     const z=new THREE.Vector3().crossVectors(x,up).normalize();
     return new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(x,up,z));
 }
-// Pure gesture state: two opposite contacts, no translation or scaling. Losing
+// Two opposite contacts carry and rotate a plate without scaling. Losing
 // either source ends the pair, so a later re-grip starts without a jump.
 export function createLivingMapTwoGrip(){
-    let pair=null;
+    let pair=null,position=null;
     return {
-        get active(){return Boolean(pair);},reset(){pair=null;},
+        get active(){return Boolean(pair);},get position(){return position;},reset(){pair=null;position=null;},
         update(samples,origin,rotation){
             const held=samples.filter(s=>s.pressed && s.tracked);
             if(pair){
                 const a=held.find(s=>s.source===pair.a),b=held.find(s=>s.source===pair.b);
                 if(!a || !b){pair=null;return null;}
                 const current=pairFrame(a,b);if(!current){pair=null;return null;}
+                position=vector(a.position).add(vector(b.position)).multiplyScalar(.5).sub(pair.midpoint).add(pair.origin);
                 return limitLivingMapTilt(current.multiply(pair.frame.clone().invert()).multiply(pair.rotation));
             }
             for(let i=0;i<held.length;i++)for(let j=i+1;j<held.length;j++){
@@ -46,14 +47,14 @@ export function createLivingMapTwoGrip(){
                 const ca=livingMapGripContact(a.position,origin,rotation),cb=livingMapGripContact(b.position,origin,rotation);
                 if(!ca || !cb || ca.x*cb.x+ca.z*cb.z>=0)continue;
                 const frame=pairFrame(a,b);if(!frame)continue;
-                pair={a:a.source,b:b.source,frame,rotation:quaternion(rotation)};return null;
+                pair={a:a.source,b:b.source,frame,rotation:quaternion(rotation),midpoint:vector(a.position).add(vector(b.position)).multiplyScalar(.5),origin:vector(origin)};position=vector(origin);return null;
             }
             return null;
         }
     };
 }
 
-export function createLivingMapGripInput({enabled,origin,rotation,onRotate,canUse=()=>true,onGrab=()=>{}}){
+export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMove=()=>{},canUse=()=>true,onGrab=()=>{}}){
     const gesture=createLivingMapTwoGrip(),held=new Map(),suppressed=new Map();let session=null,space=null,abort=null;
     function sample(source,frame){
         try{
@@ -97,11 +98,11 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,canUs
                 if(!value.pressed){release(source);continue;}
                 const grip=held.get(source);if(!grip)continue;
                 const position=vector(value.position).add(grip.offset);
-                if(position.distanceTo(vector(origin()))>1.1){release(source);continue;}
+                if(!gesture.active && position.distanceTo(vector(origin()))>1.1){release(source);continue;}
                 samples.push({...value,position,source,handedness:source.handedness});
             }
             for(const source of held.keys())if(!samples.some(s=>s.source===source))release(source);
-            const next=gesture.update(samples,origin(),rotation());if(next)onRotate(next);
+            const next=gesture.update(samples,origin(),rotation());if(next){onMove(gesture.position);onRotate(next);}
         },
         destroy(){abort?.abort();reset();suppressed.clear();session=null;}
     };

@@ -8,10 +8,17 @@ export function noteAnchorPose(record,viewer){
     if(!record.demoNotePose){const dx=viewer[12]-center.x,dz=viewer[14]-center.z,length=Math.hypot(dx,dz) || 1;record.demoNotePose={right:{x:dz/length,y:0,z:-dx/length},up:{x:0,y:1,z:0},normal:{x:dx/length,y:0,z:dz/length}};}
     return {center,right:{...record.demoNotePose.right},up:{...record.demoNotePose.up}};
 }
-export function noteCardActionOffset(index){
-    const l=NOTE_CARD_LAYOUT;
-    return {x:((l.buttonX+index%2*l.columnStep+l.buttonWidth/2)/l.canvasWidth-.5)*l.width,
-        y:(.5-(l.buttonY+Math.floor(index/2)*l.rowStep+l.buttonHeight/2)/l.canvasHeight)*l.height};
+export function noteCardButtonLayout(count,hasBody=true){
+    const top=hasBody?202:100,rows=Math.max(1,Math.ceil(count/2)),step=(390-top)/rows;
+    return Array.from({length:count},(_,index)=>({x:36+(index%2)*482,y:top+Math.floor(index/2)*step,width:index===count-1 && count%2?942:460,height:step-8}));
+}
+export function noteCardActionOffset(index,count=8,hasBody=true){
+    const l=NOTE_CARD_LAYOUT,b=noteCardButtonLayout(count,hasBody)[index];
+    return {x:((b.x+b.width/2)/l.canvasWidth-.5)*l.width,y:(.5-(b.y+b.height/2)/l.canvasHeight)*l.height};
+}
+export function noteSurfaceFacing(center,viewer){
+    const dx=viewer[12]-center.x,dz=viewer[14]-center.z,length=Math.hypot(dx,dz)||1;
+    return {right:{x:dz/length,y:0,z:-dx/length},up:{x:0,y:1,z:0}};
 }
 export function resolveNoteCardButton(root,id,actionIndex,fallback){
     if(actionIndex<0)return fallback; // Synthetic page navigation is not DOM-backed.
@@ -27,7 +34,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
     const observer=new MutationObserver(()=>revision++);observer.observe(root,{childList:true,subtree:true,characterData:true,attributes:true});
     const imageLoaded=()=>revision++;root.addEventListener('load',imageLoaded,true);
     const canvas=card=>{
-        const c=document.createElement('canvas');c.width=1024;c.height=400;const ctx=localizedCanvasContext(c.getContext('2d'));
+        const c=document.createElement('canvas');c.width=1024;c.height=512;const ctx=localizedCanvasContext(c.getContext('2d'));ctx.scale(1,512/400);
         const glassColour=/^#[\da-f]{6}$/i.test(record.appearance?.color || '')?record.appearance.color:'#0c1f1b';ctx.fillStyle=glassColour+'66';ctx.beginPath();ctx.roundRect(5,5,1014,390,36);ctx.fill();ctx.strokeStyle='rgba(215,237,219,.76)';ctx.lineWidth=3;ctx.stroke();
         const element=card.element,title=element.querySelector('h2,h3')?.textContent || marker.name;
         ctx.fillStyle='#fffdf1';ctx.font='700 42px "Trebuchet MS", system-ui';ctx.fillText(title,36,58,950);
@@ -41,8 +48,8 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
         const page=Math.min(pages.get(card.id)||0,Math.max(0,Math.ceil(actions.length/6)-1));pages.set(card.id,page);
         const visible=actions.length>8?actions.slice(page*6,page*6+6):actions;
         if(actions.length>8){for(const [label,delta,disabled] of [['Previous items',-1,page===0],['More items',1,(page+1)*6>=actions.length]]){const button=document.createElement('button');button.textContent=label;button.disabled=disabled;button.onclick=()=>{pages.set(card.id,page+delta);revision++;};visible.push(button);}}
-        const l=NOTE_CARD_LAYOUT;card.buttons=visible.map((button,index)=>({button,actionIndex:actions.indexOf(button),x:l.buttonX+(index%2)*l.columnStep,y:l.buttonY+Math.floor(index/2)*l.rowStep,width:l.buttonWidth,height:l.buttonHeight}));
-        for(const item of card.buttons){ctx.fillStyle='rgba(204,234,213,.14)';ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,18);ctx.fill();ctx.strokeStyle='rgba(238,248,230,.68)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle=item.button.disabled?'#9aa99a':'#fffdf3';ctx.font='650 24px "Trebuchet MS", system-ui';ctx.fillText(item.button.textContent || item.button.getAttribute('aria-label') || 'Add plant / item',item.x+14,item.y+26,item.width-28);}
+        const buttons=noteCardButtonLayout(visible.length,paragraphs.length>0 || Boolean(image));card.buttons=visible.map((button,index)=>({button,actionIndex:actions.indexOf(button),...buttons[index]}));
+        for(const item of card.buttons){ctx.fillStyle='rgba(204,234,213,.14)';ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,18);ctx.fill();ctx.strokeStyle='rgba(238,248,230,.68)';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle=item.button.disabled?'#9aa99a':'#fffdf3';ctx.font=`650 ${Math.min(42,item.height*.75)}px "Trebuchet MS", system-ui`;ctx.textBaseline='middle';ctx.fillText(item.button.textContent || item.button.getAttribute('aria-label') || 'Add plant / item',item.x+14,item.y+item.height/2,item.width-28);}
         canvases.set(card.id,card);return c;
     };
     const renderer=createSpatialTotemCards(gl,{canvas,surfaces:()=>layout,containedFeedback:true});
@@ -56,7 +63,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             if(closing && closingAt===null)closingAt=performance.now();if(!closing)closingAt=null;
             const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,time=performance.now(),amount=reduced?1:closing?Math.max(0,1-(time-closingAt)/260):Math.min(1,(time-openingAt)/480);
             const widgets=expanded?[...root.querySelectorAll('[data-note-widget]')]:[],hasAddPanel=widgets.some(element=>element.classList.contains('note-widget-picker')),bays=widgetPlacement(widgets.length,hasAddPanel);
-            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-compact')?.58:.86,height:element?.classList.contains('note-widget-compact')?.178:.264,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0)+':'+record.appearance?.color+':'+(element.querySelector('img')?.complete ? element.querySelector('img').naturalWidth : 0),title:element.textContent,fadeDuration:index<0?0:reduced?1:350}});
+            const card=(element,id,center,index=-1)=>({center,...noteSurfaceFacing(center,currentViewer),width:element?.classList.contains('note-widget-compact')?.70:.86,height:element?.classList.contains('note-widget-compact')?.264:.336,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0)+':'+record.appearance?.color+':'+(element.querySelector('img')?.complete ? element.querySelector('img').naturalWidth : 0),title:element.textContent,fadeDuration:index<0?0:reduced?1:350}});
             const ids=new Set(widgets.map(element=>element.dataset.noteWidget));for(const id of widgetBirths.keys())if(!ids.has(id))widgetBirths.delete(id);
             layout=[card(main,'main',pose.center),...widgets.map((element,index)=>{
                 const id=element.dataset.noteWidget;if(!widgetBirths.has(id))widgetBirths.set(id,time);
