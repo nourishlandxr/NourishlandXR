@@ -1,11 +1,12 @@
 import * as THREE from '../vendor/three.module.min.js';
+import {translateNxrText,localizedCanvasContext,currentNxrLanguage} from './i18n.js';
 import {createKnowledgeArchitectureGeometry,architectureRegionAmount,KNOWLEDGE_CONTEXT_REGION} from './knowledgeArchitectureGeometry.js';
 import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 
 const motionPreference=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 function architectureAtlas(object){
     const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=2048;
-    const ctx=canvas.getContext('2d');
+    const ctx=localizedCanvasContext(canvas.getContext('2d'));
     for(let slot=0;slot<32;slot++){
         const face=slot===KNOWLEDGE_CONTEXT_REGION ? object.contextFace : object.faces?.[slot];
         const domain=slot<6 ? object.regions?.[slot] : object.regions?.[Math.floor((slot-6)/3)];
@@ -21,7 +22,7 @@ function architectureAtlas(object){
             const tip=slot<6 && domain?.opened,fontSize=slot===KNOWLEDGE_CONTEXT_REGION?30:tip?20:slot<6?26:26,lineHeight=tip?25:32,textWidth=tip?148:210;
             ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`600 ${fontSize}px Manrope,system-ui`;
             const lines=[];let line='';
-            for(const word of String(face?.title || '').split(/\s+/)){
+            for(const word of String(translateNxrText(face?.title || '')).split(/\s+/)){
                 const next=line?line+' '+word:word;
                 if(ctx.measureText(next).width>textWidth && line){lines.push(line);line=word;}else line=next;
             }
@@ -76,7 +77,7 @@ export function createKnowledgeArchitectureRenderer(gl){
             upload(cache.position,cache.geometry.attributes.position.array);upload(cache.normal,cache.geometry.attributes.normal.array);upload(cache.uv,cache.geometry.attributes.uv.array);upload(cache.region,cache.geometry.attributes.region.array);upload(cache.edges,edges.attributes.position.array);
             cache.edgeCount=edges.attributes.position.count;edges.dispose();cache.geometryKey=key;
         }
-        const artworkKey=JSON.stringify([object.faces?.map(face=>face?[face.title,face.accent,face.selected]:null),object.contextFace?.title,(object.regions || []).map(region=>[region.opened,region.level,region.accent])]);
+        const artworkKey=JSON.stringify([currentNxrLanguage(),object.faces?.map(face=>face?[face.title,face.accent,face.selected]:null),object.contextFace?.title,(object.regions || []).map(region=>[region.opened,region.level,region.accent])]);
         if(artworkKey!==cache.artworkKey){
             const active=gl.getParameter(gl.ACTIVE_TEXTURE);gl.activeTexture(gl.TEXTURE0);const prior=gl.getParameter(gl.TEXTURE_BINDING_2D);
             gl.bindTexture(gl.TEXTURE_2D,cache.texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);

@@ -16,9 +16,9 @@ export function textureSupportsMipmaps(source) {
 }
 
 export function spatialCardTextureContent(card) {
-    if(card.element)return JSON.stringify({id:card.id,title:card.title,revision:card.revision,resolution:card.resolution,height:card.height});
+    if(card.element)return JSON.stringify({language:currentNxrLanguage(),id:card.id,title:card.title,revision:card.revision,resolution:card.resolution,height:card.height});
     // Quantise only the painted fade. Geometry, input and aim remain full cadence.
-    return JSON.stringify(card.media?{...card,imageFade:Math.round(card.imageFade*24)/24}:card);
+    return JSON.stringify({language:currentNxrLanguage(),content:card.media?{...card,imageFade:Math.round(card.imageFade*24)/24}:card});
 }
 
 function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9, style=currentTotemModel()) {
@@ -257,7 +257,7 @@ function shader(gl,type,source) {
 
 function wrapped(ctx,text,x,y,width,lineHeight,maxLines) {
     const lines=[];let line='';
-    for(const paragraph of String(text||'').split('\n')) {
+    for(const paragraph of String(translateNxrText(text)||'').split('\n')) {
         for(const word of paragraph.split(/\s+/)) {
             const candidate=(line ? line+' ' : '')+word;
             if(line && ctx.measureText(candidate).width>width){lines.push(line);line=word;}else line=candidate;
@@ -273,7 +273,7 @@ function cardCanvas(card, detail) {
         : detail ? TOTEM_TEXT_RESOLUTION.detail
             : boardStyle==='header' || boardStyle==='header-detail' || boardStyle==='header-compact' ? TOTEM_TEXT_RESOLUTION.header : TOTEM_TEXT_RESOLUTION.plaque;
     const canvas=document.createElement('canvas');canvas.width=resolution[0];canvas.height=resolution[1];
-    const ctx=canvas.getContext('2d');
+    const ctx=localizedCanvasContext(canvas.getContext('2d'));
     // Preserve the existing logical type layout while rasterizing at double density.
     ctx.scale(2,2);
     ctx.textAlign='center';ctx.textBaseline='middle';
@@ -395,3 +395,4 @@ export function createSpatialTotemCards(gl, options = {}) {
         destroy(){for(const entry of textures.values())gl.deleteTexture(entry.texture);textures.clear();gl.deleteBuffer(buffer);gl.deleteProgram(program);surfaces=[];}
     };
 }
+import {translateNxrText,localizedCanvasContext,currentNxrLanguage} from './i18n.js';

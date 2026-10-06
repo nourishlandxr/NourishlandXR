@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
+import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage } from './demoLivingMapModel.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.

@@ -1,4 +1,5 @@
 import {currentInfoOpacity} from './spatialVisualSettings.js';
+import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {drawArWelcomePanel,welcomeBoundary,WELCOME_SHAPE} from './arWelcomePanel.js';
 import {drawArWelcomeRoots,LIVING_RIM} from './arWelcomeRoots.js';
 import {LIM_ALL_CELLS, LIM_FACES, LIM_GRAPHS, LIM_INTRO_BRANCHES} from './limLearning.js';
@@ -334,7 +335,7 @@ export function welcomeCellAtPoint(frames,x,y) {
 
 // Labels share the face transform, so their centre cannot drift off the cell.
 export function fitWelcomeCellLabel(ctx,label,radius,depth) {
- const lines=label.split(' '), maxWidth=radius*1.48;
+ const lines=translateNxrText(label).split(' '), maxWidth=radius*1.48;
  let font=32;
  do {ctx.font=`620 ${font}px system-ui`;if(lines.every(line=>ctx.measureText(line).width<=maxWidth))break;font--;}
  while(font>16);

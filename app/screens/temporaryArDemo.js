@@ -58,7 +58,8 @@ import { createSpatialTotemSculpture, destroySpatialTotemSculpture, drawTotemScu
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
-import { currentNxrLanguage, translateNxrText } from '../services/i18n.js';
+import { currentNxrLanguage, translateNxrText, translateApp, localizedCanvasContext } from '../services/i18n.js';
+import {renderDemoLanguageChoice} from '../services/demoLanguageChoice.js';
 import { getSpatialVisualSettings, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
@@ -388,11 +389,7 @@ function limDeviceContext(pointerType = 'unknown') {
     };
 }
 const demoLocalizedText = value => translateNxrText(value);
-const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
-    ? WELCOME_BOARD_PARAGRAPHS_PT
-    : currentNxrLanguage() === 'nl-NL'
-        ? WELCOME_BOARD_PARAGRAPHS.map(demoLocalizedText)
-        : WELCOME_BOARD_PARAGRAPHS;
+const welcomeBoardParagraphs = () => WELCOME_BOARD_PARAGRAPHS.map(demoLocalizedText);
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
 const demoIntroLabel = () => arWelcomeOpeningActive?'NourishlandXR':guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
@@ -1782,14 +1779,14 @@ function paintWelcomeLayer(now) {
     if(introBoardStep==='UTILITY 1.1' && mapCanvas && demoLivingMapScene){
         const width=Math.max(280,Math.round(mapCanvas.clientWidth)),height=Math.round(width*(window.matchMedia('(max-width:620px)').matches?.9:.74));
         if(mapCanvas.width!==width || mapCanvas.height!==height){mapCanvas.width=width;mapCanvas.height=height;}
-        const ctx=mapCanvas.getContext('2d');ctx.clearRect(0,0,width,height);
+        const ctx=localizedCanvasContext(mapCanvas.getContext('2d'));ctx.clearRect(0,0,width,height);
         demoLivingMapScene.draw(ctx,demoLivingMapElapsed(now),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:0,y:0,width,height});
     }
     arWelcomeClock.tick(Date.now(),!document.hidden);
     const rainStage=simulatedMode || demoRainIntensity<=0?'':demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
     const demoRoot=appRoot?.querySelector('.tryit-demo');
     if(demoRoot && demoRoot.dataset.rainStage!==rainStage)demoRoot.dataset.rainStage=rainStage;
-    const context=arWelcomeCanvas.getContext('2d');
+    const context=localizedCanvasContext(arWelcomeCanvas.getContext('2d'));
     context.save();
     context.scale(arWelcomeCanvas.width/2500,arWelcomeCanvas.height/2100);
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
@@ -1840,7 +1837,7 @@ function paintSimulatedRainV2(now){
     const width=window.innerWidth,height=window.innerHeight,ratio=Math.min(window.devicePixelRatio||1,1.5);
     if(rainV2Canvas.width!==Math.round(width*ratio))rainV2Canvas.width=Math.round(width*ratio);
     if(rainV2Canvas.height!==Math.round(height*ratio))rainV2Canvas.height=Math.round(height*ratio);
-    const context=rainV2Canvas.getContext('2d');
+    const context=localizedCanvasContext(rainV2Canvas.getContext('2d'));
     if(!context)return;
     context.setTransform(ratio,0,0,ratio,0,0);
     context.clearRect(0,0,width,height);
@@ -4489,7 +4486,7 @@ function unusedLegacyMarkerTexture() {
     if (!gl) return;
     const label = document.createElement('canvas');
     label.width = 360; label.height = 112;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     const type = { plant: 'Plant', note: 'Note', poi: 'Point of interest', marker: 'Marker' }[markerType];
     ctx.fillStyle = 'rgba(17,58,32,.92)'; ctx.beginPath(); ctx.roundRect(0, 0, 360, 112, 18); ctx.fill();
     ctx.fillStyle = '#dcef95'; ctx.beginPath(); ctx.arc(36, 56, 17, 0, Math.PI * 2); ctx.fill();
@@ -4526,6 +4523,7 @@ function drawWrappedTextureText(ctx, text, x, y, maxWidth, lineHeight, maxLines 
 }
 
 function wrappedTextureLines(ctx, text, maxWidth) {
+    text=demoLocalizedText(text);
     const words = String(text || '').split(/\s+/);
     const lines = [];
     let line = '';
@@ -4543,6 +4541,7 @@ function wrappedTextureLines(ctx, text, maxWidth) {
 }
 
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
+    text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
     for (let fontSize = 66; fontSize >= 22; fontSize -= 2) {
         const lineHeight = Math.round(fontSize * 1.22);
@@ -4564,7 +4563,7 @@ function createSpatialKnowledgeTexture(record) {
     const label = document.createElement('canvas');
     label.width = record.demoType === 'zone' ? 720 : PIM_TEXTURE_SIZE.width;
     label.height = record.demoType === 'zone' ? 1120 : PIM_TEXTURE_SIZE.height;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     if (record.demoType === 'plant') {
         if(record.knowledgeExplorer && !simulatedMode)return null;
         const bloomProgress = record.pimBloomStarted
@@ -4649,7 +4648,7 @@ function canvasTexture(label, texture = null, flipY = false) {
 function createXrRecoveryTexture(){
     const label=xrRecoveryCanvas ||= document.createElement('canvas');
     label.width=1200;label.height=560;
-    const ctx=label.getContext('2d');
+    const ctx=localizedCanvasContext(label.getContext('2d'));
     ctx.clearRect(0,0,label.width,label.height);
     const failed=xrRecoveryStatus==='failed';
     ctx.fillStyle=failed?'rgba(54,22,18,.96)':'rgba(9,37,29,.94)';
@@ -4687,7 +4686,7 @@ function createIntroNoteTexture(texture = null) {
     const width=arWelcomeShowcaseActive?2500:1400,height=arWelcomeShowcaseActive?2100:1080;
     if(label.width!==width)label.width=width;
     if(label.height!==height)label.height=height;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     ctx.clearRect(0, 0, label.width, label.height);
     if(arWelcomeShowcaseActive){
         arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,drawRoots:arWelcomeSharedBoard && introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},cellOpacity:currentCellOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
@@ -4828,7 +4827,7 @@ function createIntroControlTexture(labelText, texture = null, aimed=false) {
     const label = document.createElement('canvas');
     label.width = 2048;
     label.height = 1024;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     drawLivingFrameButton(ctx,labelText,aimed);
     const result=canvasTexture(label, texture);
     applyLivingFrameButtonSampling(gl);
@@ -4839,7 +4838,7 @@ function createIntroPointerTexture(texture = null) {
     const label = document.createElement('canvas');
     label.width = 256;
     label.height = 256;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     const glow = ctx.createRadialGradient(128, 128, 32, 128, 128, 120);
     glow.addColorStop(0, 'rgba(226,244,181,.42)');
     glow.addColorStop(.58, 'rgba(154,211,122,.16)');
@@ -4864,7 +4863,7 @@ function createIntroPointerTexture(texture = null) {
 }
 
 function createNotePlacementTexture(texture = null) {
-    const label=document.createElement('canvas');label.width=480;label.height=320;const ctx=label.getContext('2d');
+    const label=document.createElement('canvas');label.width=480;label.height=320;const ctx=localizedCanvasContext(label.getContext('2d'));
     const face=ctx.createLinearGradient(50,35,430,285);face.addColorStop(0,'rgba(117,151,139,.3)');face.addColorStop(1,'rgba(48,86,73,.18)');
     ctx.fillStyle=face;ctx.strokeStyle='rgba(235,250,224,.92)';ctx.lineWidth=7;ctx.setLineDash([18,12]);ctx.beginPath();ctx.roundRect(42,42,396,236,34);ctx.fill();ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle='rgba(235,250,224,.9)';ctx.font='750 28px system-ui';ctx.textAlign='center';ctx.fillText('NOTE',240,176);
@@ -4872,7 +4871,7 @@ function createNotePlacementTexture(texture = null) {
 }
 
 function createTotemPlacementTexture(texture = null) {
-    const label=document.createElement('canvas');label.width=360;label.height=900;const ctx=label.getContext('2d');
+    const label=document.createElement('canvas');label.width=360;label.height=900;const ctx=localizedCanvasContext(label.getContext('2d'));
     const glow=ctx.createLinearGradient(0,80,0,860);glow.addColorStop(0,'rgba(217,244,200,.16)');glow.addColorStop(.75,'rgba(91,165,120,.28)');glow.addColorStop(1,'rgba(223,255,196,.08)');
     ctx.fillStyle=glow;ctx.strokeStyle='rgba(224,255,207,.9)';ctx.lineWidth=7;ctx.setLineDash([20,14]);ctx.beginPath();ctx.roundRect(104,74,152,690,38);ctx.fill();ctx.stroke();ctx.setLineDash([]);
     ctx.fillStyle='rgba(211,247,181,.3)';ctx.beginPath();ctx.ellipse(180,782,142,46,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='rgba(224,255,207,.78)';ctx.lineWidth=5;ctx.stroke();
@@ -4884,7 +4883,7 @@ function createIntroKnowledgeTexture() {
     const label = document.createElement('canvas');
     label.width = 1400;
     label.height = 900;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     const cells = [
         [490, 285], [630, 285], [770, 285], [910, 285],
         [490, 615], [630, 615], [770, 615], [910, 615],
@@ -5046,7 +5045,7 @@ function createBoundaryTexture() {
     if (!gl) return null;
     const label = document.createElement('canvas');
     label.width = 512; label.height = 512;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     ctx.strokeStyle = 'rgba(137,200,239,.78)';
     ctx.lineWidth = 9;
     ctx.setLineDash([22, 14]);
@@ -5069,7 +5068,7 @@ function createDemoNoteTexture(record) {
     const label = document.createElement('canvas');
     label.width = 1024;
     label.height = 384;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     const noteColor = record?.appearance?.color || '#506d68';
     ctx.clearRect(0, 0, label.width, label.height);
     const gradient=ctx.createLinearGradient(12,12,1012,372);
@@ -5107,7 +5106,7 @@ function createMarkerTexture(record) {
     const label = document.createElement('canvas');
     label.width = 256;
     label.height = 256;
-    const ctx = label.getContext('2d');
+    const ctx = localizedCanvasContext(label.getContext('2d'));
     if (record.type === 'plant') {
         const life = ctx.createRadialGradient(102, 94, 10, 128, 128, 94);
         life.addColorStop(0, '#f5ffe8');
@@ -5884,7 +5883,10 @@ async function startImmersive() {
     }
 }
 
-export function openTemporaryArDemoWindow(app) {
+export function openTemporaryArDemoWindow(app, {languageChosen=false}={}) {
+    // Keep lightweight non-DOM harnesses on the existing desktop compatibility
+    // route; the real app root always supports the language chooser surface.
+    if(!languageChosen && typeof app?.querySelectorAll==='function')return renderDemoLanguageChoice(app,{onContinue:()=>openTemporaryArDemoWindow(app,{languageChosen:true}),onCancel:()=>window.renderLaunchScreen?.()});
     if(isDesktopLearningBookTarget()){
         app.innerHTML=`<section class="screen ar-safety-screen nxr-desktop-ar-choice"><header class="page-header"><p class="welcome-label">NourishlandXR · desktop</p><h1>A spatial experience belongs in a real space.</h1><p class="subtitle">The AR demo is not designed for desktop use. It needs a compatible phone or headset for spatial tracking and interaction with the environment.</p></header><section class="panel nxr-desktop-ar-option"><h2>Explore the illustrated introduction</h2><p>On desktop, our existing book-style prototype explains how places, plant information and learning connect. There is no simulated AR mode.</p><button type="button" class="primary" data-desktop-learning-book>Open illustrated introduction</button></section><button type="button" data-desktop-ar-back>← Back to welcome</button></section>`;
         app.querySelector('[data-desktop-learning-book]')?.addEventListener('click',()=>renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()}),{once:true});

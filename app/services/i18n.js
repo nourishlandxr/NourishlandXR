@@ -1,6 +1,10 @@
 // NourishlandXR interface language service.
 // English remains the source of truth and the default. A runtime translation
 // pass swaps the rendered DOM into the selected supported language.
+import {DEMO_INTERFACE_TRANSLATIONS} from './demoInterfaceTranslations.js';
+import {DEMO_NARRATION_TRANSLATIONS} from './demoNarrationTranslations.js';
+import {DEMO_PLANT_TRANSLATIONS} from './demoPlantTranslations.js';
+import {DEMO_LEARNING_TRANSLATIONS} from './demoLearningTranslations.js';
 const SETTINGS_KEY = 'nourishland-xr-settings';
 export const SUPPORTED_LANGUAGES = Object.freeze({
     en: 'English',
@@ -8,33 +12,38 @@ export const SUPPORTED_LANGUAGES = Object.freeze({
     'nl-NL': 'Nederlands (Nederland)'
 });
 
-export function currentNxrLanguage() {
+function storedLanguage() {
     try {
-        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        const settings = JSON.parse(globalThis.localStorage?.getItem(SETTINGS_KEY) || '{}');
         return SUPPORTED_LANGUAGES[settings.language] ? settings.language : 'en';
     } catch {
         return 'en';
     }
 }
+let activeLanguage = storedLanguage();
+export const currentNxrLanguage = () => activeLanguage;
+globalThis.addEventListener?.('storage',event=>{if(event.key===SETTINGS_KEY){activeLanguage=storedLanguage();applyNxrLanguage();translateApp(globalThis.document?.getElementById('app'));}});
 
 export function applyNxrLanguage() {
     const language = currentNxrLanguage();
-    document.documentElement.lang = language;
-    document.body.dataset.language = language;
+    if(globalThis.document?.documentElement)document.documentElement.lang = language;
+    if(globalThis.document?.body)document.body.dataset.language = language;
     return language;
 }
 
 export function setNxrLanguage(language) {
     const value = SUPPORTED_LANGUAGES[language] ? language : 'en';
+    activeLanguage = value;
     try {
-        const settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+        const settings = JSON.parse(globalThis.localStorage?.getItem(SETTINGS_KEY) || '{}');
         settings.language = value;
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+        globalThis.localStorage?.setItem(SETTINGS_KEY, JSON.stringify(settings));
     } catch {
         // Storage unavailable — keep the in-memory language below.
     }
     applyNxrLanguage();
-    translateApp(document.getElementById('app'));
+    translateApp(globalThis.document?.getElementById('app'));
+    globalThis.dispatchEvent?.(new Event('nxr-languagechange'));
     return value;
 }
 
@@ -976,18 +985,31 @@ const DUTCH_DYNAMIC_PHRASES = [
     [/^(.+) (color|size|opacity) saved\. Pointer mode remains on\.$/, value => `${value[1]} ${value[2] === 'color' ? 'kleur' : value[2] === 'size' ? 'formaat' : 'dekking'} opgeslagen. Aanwijzermodus blijft actief.`]
 ];
 
-const phraseTableFor = language => language === 'pt-PT' ? PHRASES : language === 'nl-NL' ? DUTCH_PHRASES : null;
+const phraseMaps = {'pt-PT':new Map(), 'nl-NL':new Map()};
+const translatedSources=new Map();
+export function registerNxrTranslations(rows) {
+    for(const [english,portuguese,dutch] of rows){
+        for(const [language,value] of [['pt-PT',portuguese],['nl-NL',dutch]]){
+            if(typeof value!=='string' || !value.trim())throw new TypeError('Both demo translations are required: '+english);
+            phraseMaps[language].set(normalize(english).toLocaleLowerCase('en'),value);
+            translatedSources.set(normalize(value).toLocaleLowerCase('en'),english);
+        }
+    }
+}
+for(const [language,table] of [['pt-PT',PHRASES],['nl-NL',DUTCH_PHRASES]])for(const [key,value] of Object.entries(table)){phraseMaps[language].set(normalize(key).toLocaleLowerCase('en'),value);translatedSources.set(normalize(value).toLocaleLowerCase('en'),key);}
+registerNxrTranslations(DEMO_INTERFACE_TRANSLATIONS);
+registerNxrTranslations(DEMO_NARRATION_TRANSLATIONS);
+registerNxrTranslations(DEMO_PLANT_TRANSLATIONS);
+registerNxrTranslations(DEMO_LEARNING_TRANSLATIONS);
 const dynamicPhraseTableFor = language => language === 'pt-PT' ? DYNAMIC_PHRASES : language === 'nl-NL' ? DUTCH_DYNAMIC_PHRASES : null;
 
 const lookup = (text, language = currentNxrLanguage()) => {
     if (!text) return null;
-    const phrases = phraseTableFor(language);
+    const phrases = phraseMaps[language];
     const dynamicPhrases = dynamicPhraseTableFor(language);
     if (!phrases) return null;
-    const direct = phrases[text];
-    if (direct) return direct;
-    const lower = Object.entries(phrases).find(([key]) => key.toLocaleLowerCase() === text.toLocaleLowerCase());
-    if (lower) return lower[1];
+    const direct = phrases.get(normalize(text).toLocaleLowerCase('en'));
+    if (direct) return /[a-z]/i.test(text) && text===text.toUpperCase() ? direct.toLocaleUpperCase(language) : direct;
     for (const [pattern, replacement] of dynamicPhrases) {
         const match = String(text).match(pattern);
         if (match) return replacement(match);
@@ -995,13 +1017,44 @@ const lookup = (text, language = currentNxrLanguage()) => {
     return null;
 };
 
-export function translateNxrText(value) {
+export function translateNxrText(value, language = currentNxrLanguage()) {
+    if(value==null)return value;
     const text = normalize(value);
-    return lookup(text) || value;
+    const source=translatedSources.get(text.toLocaleLowerCase('en'));
+    if(language==='en')return source && !phraseMaps['pt-PT'].has(text.toLocaleLowerCase('en')) && !phraseMaps['nl-NL'].has(text.toLocaleLowerCase('en'))?source:value;
+    const direct=lookup(text,language);
+    if(direct)return direct;
+    if(source){const translated=lookup(normalize(source),language);if(translated)return translated;}
+    // Translate complete authored paragraphs before wrapping or adding metadata.
+    // Never translate identifiers, URLs or arbitrary individual words in prose.
+    const parts=String(value).split(/(\n+|\s+[›>·↔—]\s+|:\s+)/);
+    if(parts.length>1)return parts.map((part,index)=>index%2?part:translateNxrText(part,language)).join('');
+    const prefix=String(value).match(/^([✎+☐☑✓▣]\s+|[←‹]\s*|HINT\s*[·:]\s*)(.+)$/s);
+    if(prefix)return prefix[1]+translateNxrText(prefix[2],language);
+    const suffix=String(value).match(/^(.+?)(\s+[→›↗]|\s+\d+(?:[.,]\d+)?(?:%|×|\s*(?:Hz|FPS|ms|topics|entries|sample entries))?)$/);
+    if(suffix)return translateNxrText(suffix[1],language)+translateNxrText(suffix[2],language);
+    return value;
+}
+export const hasNxrTranslation = (value,language=currentNxrLanguage()) => language==='en' || Boolean(lookup(normalize(value),language));
+
+// Per-context facade, not a Canvas prototype patch. Native XR textures and DOM
+// consume the same catalogue. Bound methods preserve the browser's receiver.
+const canvasContexts=new WeakMap();
+export function localizedCanvasContext(context){
+    if(!context)return context;
+    if(canvasContexts.has(context))return canvasContexts.get(context);
+    const methods=new Map(),proxy=new Proxy(context,{
+        get(target,key){
+            const value=Reflect.get(target,key,target);if(typeof value!=='function')return value;
+            if(!methods.has(key))methods.set(key,['fillText','strokeText','measureText'].includes(key)?(text,...args)=>value.call(target,translateNxrText(text),...args):value.bind(target));
+            return methods.get(key);
+        },set(target,key,value){return Reflect.set(target,key,value,target);}
+    });canvasContexts.set(context,proxy);canvasContexts.set(proxy,proxy);return proxy;
 }
 
-export function translateApp(root = document.body) {
-    if (currentNxrLanguage() === 'en') return root;
+const textSources=new WeakMap(),attributeSources=new WeakMap();
+
+export function translateApp(root = globalThis.document?.body) {
     if (!root) return root;
 
     const textChanges = [];
@@ -1010,14 +1063,12 @@ export function translateApp(root = document.body) {
         const node = walker.currentNode;
         if (node.parentElement?.closest('script,style,noscript,textarea,[data-nxr-skip]')) continue;
         const raw = node.nodeValue || '';
+        const previous=textSources.get(node),source=previous?.painted===raw?previous.source:raw;
         const trimmed = normalize(raw);
         if (!trimmed) continue;
-        const replacement = lookup(trimmed);
-        if (replacement && replacement !== trimmed) {
-            const leading = raw.slice(0, raw.indexOf(trimmed));
-            const trailing = raw.slice(raw.indexOf(trimmed) + trimmed.length);
-            textChanges.push([node, leading + replacement + trailing]);
-        }
+        const translated=translateNxrText(source),painted=String(translated);
+        textSources.set(node,{source,painted});
+        if(painted!==raw)textChanges.push([node,painted]);
     }
     textChanges.forEach(([node, value]) => { node.nodeValue = value; });
 
@@ -1026,9 +1077,10 @@ export function translateApp(root = document.body) {
         ['placeholder', 'aria-label', 'title'].forEach(attribute => {
             const value = element.getAttribute(attribute);
             if (!value) return;
-            const trimmed = normalize(value);
-            const replacement = lookup(trimmed);
-            if (replacement && replacement !== trimmed) element.setAttribute(attribute, replacement);
+            const sources=attributeSources.get(element) || {};attributeSources.set(element,sources);
+            const previous=sources[attribute],source=previous?.painted===value?previous.source:value;
+            const painted=String(translateNxrText(source));sources[attribute]={source,painted};
+            if(painted!==value)element.setAttribute(attribute,painted);
         });
     });
 

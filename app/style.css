@@ -11880,7 +11880,7 @@ body:has(.app-surface) {
 .ar-introduction-preparation .page-header { padding:0;gap:4px;margin:0; }
 .ar-introduction-preparation .page-header h1 { margin:0;font-size:1.7rem;line-height:1.2; }
 .ar-introduction-preparation .page-header .subtitle { margin:0;font-size:.92rem;line-height:1.4; }
-.ar-introduction-preparation .nl-botanical-texture--prep { width:100%;height:64px;flex:none;margin:0;border-radius:14px; }
+.ar-introduction-preparation .nl-botanical-texture--prep { width:100%;height:44px;flex:none;margin:0;border-radius:14px; }
 .ar-introduction-preparation .ar-safety-card { width:100%;box-sizing:border-box;padding:12px;margin:0;gap:8px; }
 .ar-introduction-preparation .ar-preparation-points { grid-template-columns:1fr 1fr;gap:8px; }
 .ar-introduction-preparation .ar-preparation-points > div { grid-template-columns:28px minmax(0,1fr);padding:8px;gap:8px;border-radius:10px; }
@@ -11906,6 +11906,15 @@ body:has(.app-surface) {
  .ar-introduction-preparation .ar-preparation-points { grid-template-columns:1fr; }
  .ar-introduction-preparation .page-header h1 { font-size:1.55rem; }
 }
+
+/* A short startup language card; no hidden/clipped content on smaller phones. */
+#app .demo-language-choice{width:min(100%,680px);min-height:0;margin:auto;padding:16px;gap:12px}
+.demo-language-choice .page-header{padding:0;margin:0;gap:6px}
+.demo-language-choice .page-header h1{margin:0;font-size:clamp(1.45rem,5vw,2rem);line-height:1.15}
+.demo-language-choice .panel{padding:14px;margin:0;gap:10px}
+.demo-language-choice p{margin:0;line-height:1.4}
+.demo-language-choice .button-row{gap:8px;margin:0;flex-wrap:wrap}
+.demo-language-choice [data-demo-language]{min-height:48px;flex:1 1 140px;white-space:normal}
 
 .tryit-butterfly-model {position:fixed;width:86px;height:86px;pointer-events:none;z-index:12310;object-fit:contain;}
 .tryit-demo.is-immersive .tryit-butterfly-model {display:none;}

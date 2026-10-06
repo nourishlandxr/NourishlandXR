@@ -1,3 +1,4 @@
+import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {
     PIM_SPATIAL_CONFIG,
     pimNodeHue,
@@ -83,7 +84,7 @@ function splitLongWord(context, word, maxWidth) {
 export function wrapPimTextLines(context, text, maxWidth, options = {}) {
     const width = Math.max(1, Number(maxWidth) || 1);
     const breakWords = options.breakWords !== false;
-    const paragraphs = String(text ?? '').split(/\r?\n/);
+    const paragraphs = String(translateNxrText(text) ?? '').split(/\r?\n/);
     const lines = [];
     paragraphs.forEach((paragraph, paragraphIndex) => {
         const words = paragraph.trim().split(/\s+/).filter(Boolean);
@@ -490,7 +491,7 @@ export function createPlantInformationHoneycombTexture(gl, knowledge, expandedPa
     const textureCanvas = document.createElement('canvas');
     textureCanvas.width = size.width;
     textureCanvas.height = size.height;
-    const context = textureCanvas.getContext('2d', { alpha: true });
+    const context = localizedCanvasContext(textureCanvas.getContext('2d', { alpha: true }));
     if (!context) return null;
     drawPlantInformationHoneycomb(context, textureCanvas, knowledge, expandedPaths, {
         ...options,

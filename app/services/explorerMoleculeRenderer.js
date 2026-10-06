@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
+import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {createExplorerFacetGeometry} from './explorerFacetGeometry.js';
 import {createSpatialTotemCards,hitTotemSurface} from './spatialTotemCards.js';
 import {knowledgePoseMatrix,localObjectMatrix} from './knowledgeObjectModel.js';
@@ -7,9 +8,9 @@ import {explorerMoleculeView,explorerPuzzleFit,explorerChildFrame,EXPLORER_BOND_
 const motion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 const vec=p=>new THREE.Vector3(p.x,p.y,p.z);
 function labelCanvas(card){
-    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=canvas.getContext('2d');
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=localizedCanvasContext(canvas.getContext('2d'));
     ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f4f5e8';ctx.shadowBlur=0;ctx.font=`600 ${card.attachment?48:58}px Manrope,system-ui`;
-    const lines=[];let line='';for(const word of String(card.title).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>460&&line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
+    const lines=[];let line='';for(const word of String(translateNxrText(card.title)).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>460&&line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
     lines.slice(0,3).forEach((text,i)=>{const y=105+(i-(Math.min(3,lines.length)-1)/2)*52;ctx.fillText(text,256,y,470);});
     if(card.status){ctx.font='500 28px Manrope,system-ui';ctx.fillText(card.status,256,230,470);}return canvas;
 }

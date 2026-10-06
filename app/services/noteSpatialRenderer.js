@@ -1,4 +1,5 @@
 import {createSpatialTotemCards} from './spatialTotemCards.js';
+import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {createSpatialTetherRenderer,drawSpatialTether,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {noteWidgetPlacement} from './spatialNotes.js';
 export function resolveNoteCardButton(root,id,actionIndex,fallback){
@@ -15,11 +16,11 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
     const observer=new MutationObserver(()=>revision++);observer.observe(root,{childList:true,subtree:true,characterData:true,attributes:true});
     const imageLoaded=()=>revision++;root.addEventListener('load',imageLoaded,true);
     const canvas=card=>{
-        const c=document.createElement('canvas');c.width=1024;c.height=640;const ctx=c.getContext('2d');
+        const c=document.createElement('canvas');c.width=1024;c.height=640;const ctx=localizedCanvasContext(c.getContext('2d'));
         ctx.fillStyle='rgba(12,31,27,.42)';ctx.beginPath();ctx.roundRect(5,5,1014,630,36);ctx.fill();ctx.strokeStyle='rgba(215,237,219,.76)';ctx.lineWidth=3;ctx.stroke();
         const element=card.element,title=element.querySelector('h2,h3')?.textContent || marker.name;
         ctx.fillStyle='#fffdf1';ctx.font='700 48px "Trebuchet MS", system-ui';ctx.fillText(title,36,66,950);
-        const paragraphs=[...element.querySelectorAll('p,li,figcaption,small')].map(item=>item.textContent).filter(Boolean);let y=116;
+        const paragraphs=[...element.querySelectorAll('p,li,figcaption,small')].map(item=>translateNxrText(item.textContent)).filter(Boolean);let y=116;
         ctx.font='500 29px "Trebuchet MS", system-ui';for(const paragraph of paragraphs){let line='';for(const word of paragraph.split(/\s+/)){if(ctx.measureText(line+' '+word).width>948){if(y<355)ctx.fillText(line,36,y);y+=35;line=word;}else line+=(line?' ':'')+word;}if(y<355)ctx.fillText(line,36,y);y+=42;}
         const image=element.querySelector('img');if(image?.complete && image.naturalWidth){const scale=Math.min(948/image.naturalWidth,230/image.naturalHeight);ctx.drawImage(image,38,108,image.naturalWidth*scale,image.naturalHeight*scale);}
         const actions=[...element.querySelectorAll('button,input'),...(card.id==='main'?[root.querySelector('[data-note-close]')].filter(Boolean):[])];

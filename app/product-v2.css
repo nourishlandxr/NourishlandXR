@@ -412,7 +412,15 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 
 /* The welcome is a page, not a card inside the narrow application shell. */
 #app:has(> .v2-welcome){width:100%;max-width:none;margin:0;padding:0;box-sizing:border-box}
-#app .screen.v2-welcome{width:100%;max-width:none;min-height:100svh;box-sizing:border-box;padding:clamp(18px,3vw,34px) clamp(20px,5vw,84px) 48px}
+#app .screen.v2-welcome{width:100%;max-width:none;min-height:100svh;box-sizing:border-box;padding:clamp(12px,2vw,22px) clamp(20px,5vw,84px) 20px}
+#app .v2-welcome .v2-masthead{padding-bottom:12px;margin-bottom:14px;gap:16px}
+#app .v2-welcome .v2-wheel-hero{padding:8px 0 18px;gap:8px 22px;grid-template-columns:minmax(0,1fr) minmax(190px,280px)}
+#app .v2-welcome .v2-actions{gap:8px;margin:12px 0}
+#app .v2-welcome .v2-hero-copy p{margin:4px 0;line-height:1.45}
+#app .v2-welcome .v2-intro-sequence{min-height:112px}
+#app .v2-welcome .v2-intro-sequence article{padding:14px 0 4px}
+#app .v2-welcome .v2-intro-sequence h2{margin:5px 0}
+@media(max-width:700px){#app .v2-welcome .v2-wheel-hero{grid-template-columns:minmax(0,1fr) minmax(120px,.8fr);gap:6px}#app .v2-welcome .v2-masthead{gap:10px;flex-wrap:wrap}}
 .v2-welcome>:is(.v2-masthead,.v2-hero,.v2-intro-sequence,.v2-context){width:100%;max-width:1400px;margin-left:auto;margin-right:auto}
 #app .v2-welcome{
  --v2-welcome-heading-font:Georgia,'Times New Roman',serif;
@@ -425,7 +433,7 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
 #app .v2-welcome h1{font-size:var(--v2-welcome-title-size)}
 #app .v2-welcome h2{font-size:var(--v2-welcome-section-size)}
 #app .v2-welcome p:not(.v2-eyebrow){font-family:var(--v2-welcome-body-font);font-size:var(--v2-welcome-body-size);font-weight:400;line-height:1.6}
-@media(max-width:700px){#app .screen.v2-welcome{padding:16px 18px 40px}}
+@media(max-width:700px){#app .screen.v2-welcome{padding:12px 18px 16px}}
 
 /* Keep experience Settings inside narrow phone and Android WebView widths. */
 #app .settings-screen{box-sizing:border-box;width:min(100%,620px);max-width:100%;min-width:0;margin-inline:auto;align-items:stretch}
