@@ -225,7 +225,7 @@ test('the demo keeps the three simple Totem forms and uses physical plaques and 
     assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     assert.match(demoSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone' || !demoAreaVisible(record))"),demoSource.indexOf('const linkedTotems'));
-    assert.match(demoTotemDraw,/bodyHalfWidth=record\.demoMapPiece\?\.032:\.095,bodyHalfDepth=record\.demoMapPiece\?\.027:\.075,bodyHalfHeight=demoTotemHalfHeight\(record\)/);
+    assert.match(demoTotemDraw,/bodyHalfWidth=record\.demoMapPiece\?\.055:\.095,bodyHalfDepth=record\.demoMapPiece\?\.05:\.075,bodyHalfHeight=demoTotemHalfHeight\(record\)/);
     assert.doesNotMatch(demoTotemDraw,/crownRadius|scale:\{x:1,y:\.7,z:\.5\}/);
     assert.match(demoSource,/drawSpatialTotemPlaques\(gl,prismRenderer,sphereRenderer/);
     const plaqueSource=read('app/services/spatialTotemCards.js');
@@ -1301,7 +1301,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /suppressSessionSelectUntil=performance\.now\(\)\+700;[\s\S]*finishIntroBoard\(\);clearTimeout\(aimRevealTimer\);armDemoPlacement\('plant',\{explained:true\}\)/);
-    assert.match(source, /typingStartDelay = 220/);
+    assert.match(source, /typingStartDelay = 900/);
     assert.match(source, /function demoTextTypingDelay\(text, visibleLength\)/);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
     assert.match(styles, /tryit-board-identity 1\.15s \.25s/);
@@ -1528,7 +1528,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*bottom:auto !important;[^}]*grid-template-rows:auto auto minmax\(0,1fr\);[^}]*height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*min-height:calc\(100svh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*overflow:hidden;/);
     assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
-    assert.match(styles, /font-size:calc\(clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\) \+ 1px\)/);
+    assert.match(styles, /font-size:calc\(clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\) \+ 2px\)/);
     assert.match(source, /for \(let fontSize = 68; fontSize >= 24; fontSize -= 1\)/);
     assert.match(source, /revealOpeningParagraph,demoParagraphReadingTime/);
     assert.match(source, /introNarrationTimer = setTimeout/);
