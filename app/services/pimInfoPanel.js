@@ -290,6 +290,7 @@ function controlDescription(item={}){
 let panelInstance=0;
 export function createPimInfoPanel({ root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
+    let rayFilter=()=>true;
     let graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality;
     let floorOffset=getSpatialVisualSettings().floorOffset;
     let performanceSettings=null,infoOpacity=currentInfoOpacity(),orbModel=currentOrbModel(),totemModel=currentTotemModel();
@@ -1204,6 +1205,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     }
     function dockSpatialMedia(side){mediaDockSide=side || 'top';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
     const api={element,
+        setRayFilter(value){rayFilter=typeof value==='function'?value:()=>true;},
         showConfirmation(value={}){
             if(!confirmation){confirmationSnapshot={tab,page,hidden,settingsOpen,mediaCollapsed,detached,visibility:element.style.visibility};}
             confirmation={title:String(value.title || 'Close demo?'),body:String(value.body || 'Your current demo state will close. Choose Keep demo open to return, or Close demo to leave.')};
@@ -1399,6 +1401,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const transform=targetRaySpace ? event.frame?.getPose(targetRaySpace,referenceSpace)?.transform.matrix : null;
             if(!handRay && !transform)return;
             const ray=handRay || {origin:{x:transform[12],y:transform[13],z:transform[14]},direction:{x:-transform[8],y:-transform[9],z:-transform[10]}};
+            if(!rayFilter(ray))return;
             const target=hit(ray);if(!target){if(type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
             event.stopImmediatePropagation();
             const button=grip?null:targetButtonAtRay(target);

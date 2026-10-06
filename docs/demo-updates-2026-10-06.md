@@ -1,6 +1,24 @@
 # Demo update review
 
-Latest local version: 0.9353. Earlier sections below are historical checkpoints, not current verification claims.
+Latest local version: 0.9354. Earlier sections below are historical checkpoints, not current verification claims.
+
+## Simplified Note showcase and interaction repairs — 0.9354
+
+- The demo Note pencil no longer opens the generic editor/keyboard or a detached configuration wall. It opens a sample-edit preview on the Note itself: Try sample edit, Reset text and Done editing. Full creator authoring remains separate and is deliberately deferred from this showcase.
+- Selecting or placing a Note automatically restores the existing Control panel and opens its contextual Note tools. The demo tools are Edit preview, + Add widget and Show / hide widgets.
+- + grows a right-side connected arm, away from the left-docked Control panel. The arm offers three prepared gardening examples: Information (Thick Box), Timer and Checklist. Choosing one replaces the chooser with a working sample widget. Widget instances and behaviour use the reusable registry, not a separate demo implementation.
+- Note surfaces participate in nearest-hit resolution alongside Control panel, PIMO and LIMO. The Note is nonmodal: it does not suspend the Control panel or consume every XR Trigger. Continue closes the showcase and advances normally. Native hand-ray selection has the same route.
+- Native Note actions now resolve the current DOM button on every press. Timer refreshes can replace a card without changing its artwork; retaining the earlier button reference otherwise makes the card look correct but unclickable.
+- Integrated local review used the real Note renderer, Control panel and XR selectstart/selectend/select handlers. Control-panel pencil, native sample edit/reset, widget-arm opening, Timer selection/start and Continue while editing all responded with no observed WebGL errors. This component harness is not a complete physical Quest walkthrough.
+- Bee pointer contact/avoidance cannot retain nectar resting. Original wing tracks are explicitly sampled when returning to flight, including a same-time transition that can otherwise retain the mixer's cached rest pose. Gentle continuous controller buzz returns while bees are around, respects Haptics mute, and stops when they leave; contact remains a stronger short tap.
+- Explorer colours belong to parent branches and are inherited by extensions. Bonds/connectors use standard white glass. Child cells have their own grip targets and move independently of other branches; their connected descendants follow translation. Child cells expose multiple real topic/read/parent outputs, without inventing source facts. Root colour, child grip ownership and source-preserving movement are regression-tested.
+- Hero Dice gets a stronger soft grounding shadow, restrained low impact/touch sound, grip/touch haptics and a brief floor landing ring. Resting micro-collisions do not repeatedly fire impacts.
+- The opening eyebrow is NourishlandXR rather than a second Welcome.
+- Verification: 584 Node tests passed; frontend-only build succeeded at 0.9354; built welcome visibly displayed V0.9354. The build required a sandbox permission retry for the generated .htaccess file, without changing source permissions or touching API/workspace data.
+- Explorer production stereo review: 120 frames, 11 nodes, CPU submission median 4.70 ms / p95 9.60 ms, 0 texture uploads and 0 WebGL errors on this desktop/browser run. These are not Quest GPU/FPS measurements or a controlled before/after comparison.
+- No commit, push, deployment, desktop-book redesign or physical headset walkthrough was performed. Priority hardware check: select Note → pencil preview → sample edit/reset → + → Timer → Continue, then verify bee flapping/buzz, child grip movement and dice landing feedback.
+
+Local review: tools/preview-note-showcase-xr.html. The older keyboard fixture still tests the reusable creator editor; it is no longer the demo Note workflow.
 
 ## Native Note and usability repairs — 0.9353
 

@@ -49,7 +49,7 @@ import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_O
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { beePointerAvoidance, beePointerContact, demoBeePose, demoBeeEncounter } from '../services/demoAmbientLife.js';
+import { beePointerAvoidance, beePointerContact, beeWingsAtRest, demoBeePose, demoBeeEncounter } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from '../services/spatialObjectVisuals.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
@@ -82,7 +82,6 @@ import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction
 import { hitTotemPoint } from '../services/spatialTotemCards.js';
 import { spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
 import {spatialNoteEnabled,noteStarter} from '../services/spatialNotes.js';
-import {mountNoteExperience} from '../services/noteExperience.js';
 import {mountSpatialNoteEditor} from '../services/noteEditorDialog.js';
 import {focusSpatialObjectControls} from '../services/spatialObjectControls.js';
 import {renderedTotemStyle} from '../services/totemAppearance.js';
@@ -95,7 +94,8 @@ import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
-import {createSpatialNoteEditor} from '../services/spatialNoteEditor.js';
+import {mountDemoNoteShowcase,demoNoteWidgetPlacement} from '../services/demoNoteShowcase.js';
+import {noteSurfaceOwnsRay} from '../services/demoNoteRouting.js';
 import {rebaseDemoRecords,rebaseXrPoint,rebaseXrPose,rebaseXrMatrix} from '../services/xrWorldRebase.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
@@ -395,7 +395,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => arWelcomeOpeningActive?'Welcome':guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
+const demoIntroLabel = () => arWelcomeOpeningActive?'NourishlandXR':guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
 let demoJourneyStage='why';
 
 function setDemoJourneyStage(stageId) {
@@ -1669,7 +1669,9 @@ function currentLimPointerTarget() {
 function currentLimPointerCell(){return currentLimPointerTarget()?.node || null;}
 function resolveDemoCellTarget(){
     const panel=infoPanel?.hit(latestControllerRay);
+    const note=demoNoteRenderer?.hit(latestControllerRay);
     return nearestDemoXrTarget([
+        note?{kind:'note',id:note.card?.id,distance:note.distance,target:note}:null,
         panel ? {kind:'panel',id:panel.card?.id || 'control-panel',distance:panel.distance,target:panel} : null,
         butterflyRayTarget(),
         demoInfoTarget(),
@@ -2058,11 +2060,11 @@ function welcomeHandTarget(point){
     return node?{...target,node,kind:'lim-cell'}:null;
 }
 
-function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100,panelOnly=false) {
+function welcomeSurfaceHit(position,scaleX,scaleY,width=2500,height=2100,panelOnly=false,inputRay=null) {
     if(!introWorldAnchor)return null;
     const matrix=billboardMatrix(position,scaleX,scaleY,introWorldAnchor);
     const surface=demoBillboardSurfaceSize(scaleX,scaleY);
-    const origin=demoPointerWorldOrigin(),direction=demoPointerWorldRay();
+    const origin=inputRay?.origin || demoPointerWorldOrigin(),direction=inputRay?.direction || demoPointerWorldRay();
     if(!origin || !direction)return null;
     return demoWelcomeSurfaceHit({origin,direction},{center:position,
         right:{x:matrix[0]/scaleX,y:0,z:matrix[2]/scaleX},up:{x:0,y:1,z:0},
@@ -2718,6 +2720,7 @@ function guideNoteConversion(record) {
         pathwayNotePlacementPending=false;placementReady=false;
         setGuide('Your observation Note is anchored to this place.');
         completeLearningPath('placed');
+        focusDemoNoteControls(record);
         return;
     }
     setGuide('The sample message is placed beside the two plant profiles.');
@@ -2731,6 +2734,7 @@ function guideNoteConversion(record) {
         },
         {stepLabel:'ELEMENTS 1.17'}
     );
+    focusDemoNoteControls(record);
 }
 
 function shiftSimulatedSceneForStage(type) {
@@ -3048,7 +3052,8 @@ function collapseDemoPimForLimo(record) {
 }
 
 function toggleDemoPlantProfile(record) {
-    if(demoKnowledgeWorkspace) return;
+    if(demoKnowledgeIsModal()) return;
+    if(demoNoteRenderer || demoKnowledgeRoot?.classList.contains('demo-note-showcase'))closeDemoKnowledge(true);
     if (!record || record.demoType !== 'plant') return;
     const now=performance.now();
     if(now-(record.demoLastProfileToggleAt ?? -Infinity)<280)return;
@@ -3864,28 +3869,37 @@ function selectDemoNoteTemplateAtPointer() {
 
 function focusDemoObjectControls(record){
     if(!record)return false;
+    if(record.demoType==='note')return focusDemoNoteControls(record);
     return focusSpatialObjectControls(infoPanel,record,{edit:openDemoNoteEditor,open:openDemoNoteExperience,refresh:item=>{refreshDemoRecord(item);item.totemCardsRefreshed=0;updateSimulatedMarkers();}});
 }
-function selectDemoNote(record){focusDemoObjectControls(record);if(spatialNoteEnabled(record))openDemoNoteExperience(record);else infoPanel?.setExplorerOpen(true);return true;}
-function showNativeDemoNoteEditor(root,title,input=null){
-    try{demoNoteRenderer?.destroy();demoNoteRenderer=null;demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialNoteEditor({gl,root,title,onStatus:setGuide});if(input)demoKnowledgeMirror.focusInput(input);}
-    catch(error){console.warn('Native Note editor closed safely:',error);closeDemoKnowledge(true);setGuide('The editor could not open. Your Note is preserved and the demo is still available.');}
+function focusDemoNoteControls(record){
+    infoPanel?.restore();infoPanel?.showLearning({title:record.name,body:record.description || record.notes,mesh:'note'});
+    infoPanel?.setObjectContext({title:'Controls · Note',hint:'Sample Note tools. Full authoring comes later.',actions:[{id:'edit',label:'✎ Edit preview'},{id:'add',label:'+ Add widget'},{id:'toggle',label:'Show / hide widgets'}],onAction:id=>{openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.(id);}});
+    infoPanel?.setExplorerOpen(true);return true;
+}
+function selectDemoNote(record){openDemoNoteExperience(record);return true;}
+function demoKnowledgeIsModal(){return Boolean(demoKnowledgeWorkspace && !demoNoteRenderer && !demoKnowledgeRoot?.classList.contains('demo-note-showcase'));}
+function demoNoteOwnsPointer(ray=latestControllerRay){
+    const next=appRoot?.querySelector('[data-tryit-intro-continue]');
+    const nextHit=next && !next.hidden && introWorldAnchor?welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,360,false,ray):null;
+    return noteSurfaceOwnsRay(demoNoteRenderer?.hit(ray),[infoPanel?.hit(ray),nextHit]);
 }
 function openDemoNoteExperience(record){
+    if(demoKnowledgeRoot?.dataset.noteRecord===String(record.id) && demoKnowledgeWorkspace?.action){focusDemoNoteControls(record);return;}
     closeDemoKnowledge(true);
-    const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
-    demoKnowledgeWorkspace=mountNoteExperience(root,record,{onClose:()=>closeDemoKnowledge(true)});
+    const root=document.createElement('section');root.dataset.noteRecord=String(record.id);demoKnowledgeRoot=root;appRoot.append(root);
+    demoKnowledgeWorkspace=mountDemoNoteShowcase(root,record,{onChange:item=>{item.demoContent={...item.demoContent,title:item.name,description:item.description,lines:[item.description]};refreshDemoRecord(item);updateSimulatedMarkers();focusDemoNoteControls(item);},onClose:()=>closeDemoKnowledge(true)});
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');
-    if(session && gl){demoNoteRenderer=createNoteSpatialRenderer(gl,root,record,viewerMatrix,{onInput:input=>{
-        showNativeDemoNoteEditor(root,'NOTE WIDGET',input);
-    }});}
+    if(session && gl){root.style.cssText='position:fixed;left:-20000px;pointer-events:none';demoNoteRenderer=createNoteSpatialRenderer(gl,root,record,viewerMatrix,{widgetPlacement:demoNoteWidgetPlacement});}
+    focusDemoNoteControls(record);
 }
 function openDemoNoteEditor(record,widgetId=''){
+    if(record.demoType==='note'){openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.('edit');return;}
     closeDemoKnowledge(true);
     const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
     demoKnowledgeWorkspace=mountSpatialNoteEditor(root,record,{widgetId,objectLabel:record.demoType==='zone'?'Totem':'Note',onSave:async update=>{Object.assign(record,update);record.demoContent={...record.demoContent,title:update.name,description:update.description,lines:[update.description]};refreshDemoRecord(record);updateSimulatedMarkers();},onClose:()=>{closeDemoKnowledge(true);focusDemoObjectControls(record);if(widgetId){openDemoNoteExperience(record);root.remove();demoKnowledgeRoot?.querySelector('[data-note-expand]')?.click();}}});
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');infoPanel?.suspend(true);
-    if(session && !domOverlayEnabled && gl)showNativeDemoNoteEditor(root,'EDIT NOTE');
+    if(session && !domOverlayEnabled && gl){closeDemoKnowledge(true);setGuide('Totem text editing is available in the creator tools. Use Controls to try its light and signage.');}
 }
 
 function releaseHeldDemoRecord() {
@@ -4116,6 +4130,7 @@ function renderInterface(simulated) {
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
+    infoPanel.setRayFilter(ray=>!demoNoteOwnsPointer(ray));
     if(!simulated && gl) {infoPanel.attach(gl);infoPanel.bindSession(session,referenceSpace);}
     appRoot.querySelector('.tryit-demo')?.classList.toggle('uses-webgl-controls', webglControlFallback);
     appRoot.querySelector('.tryit-demo')?.classList.toggle('is-quest-vr', questImmersiveMode);
@@ -4182,6 +4197,7 @@ function renderInterface(simulated) {
     const placementPointer = appRoot.querySelector('[data-tryit-place]');
     appRoot.querySelector('.tryit-demo')?.append(placementPointer);
     introContinue.addEventListener('beforexrselect', event => event.preventDefault());
+    introContinue.addEventListener('click',()=>{if(demoNoteRenderer || demoKnowledgeRoot?.classList.contains('demo-note-showcase'))closeDemoKnowledge(true);},{capture:true});
     placementPointer.addEventListener('beforexrselect', event => event.preventDefault());
     placementPointer.addEventListener('pointerdown', event => {
         if (!placementReady) {
@@ -4322,7 +4338,7 @@ function setupRenderer() {
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
-    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):null;return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=> (arWelcomeSettleStage || !arWelcomeIntroPending) && getSpatialVisualSettings().heroDice!==false,canGrab:target=>{if(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
+    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):null;return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=> (arWelcomeSettleStage || !arWelcomeIntroPending) && getSpatialVisualSettings().heroDice!==false,onFeedback:(kind,source)=>{demoFeedback?.start();demoFeedback?.sound('dice');if(source)demoFeedback?.pulse(source,kind==='grab'?.22:.12,45);},canGrab:target=>{if(placementReady || demoKnowledgeIsModal() || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay),demoNoteRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
 }
 
 function demoControllerInputSource() {
@@ -4455,7 +4471,9 @@ function pollDemoHandPinch() {
     const source=latestTrackedHandStates.find(entry=>entry.state===latestHandState)?.source;
     if(butterflyHeldBy(source) || infoPanel?.getHeldInputSource()===source || infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPinchActive=pinching;return;}
     if (pinching && !handPinchActive) {
-        let handled=Boolean(infoPanel?.activateHand(latestControllerRay,source,latestHandState));
+        let handled=Boolean(demoNoteOwnsPointer() && demoNoteRenderer?.activate(latestControllerRay));
+        if(!handled && demoNoteRenderer && activateImmersiveDemoControl()){closeDemoKnowledge(true);handled=true;}
+        if(!handled)handled=Boolean(infoPanel?.activateHand(latestControllerRay,source,latestHandState));
         if(!handled && placementReady){pressPlacementPointer();handled=true;}
         if(!handled)handled=Boolean(selectDemoProfileCell());
         if(!handled)handled=Boolean(selectDemoNoteTemplateAtPointer());
@@ -5282,7 +5300,8 @@ function drawSpatialAmbientLife(view){
         visitor.flightPosition={...position};visitor.flightAt=arWelcomeClock.elapsed;
         visitor.encounterId=bee.flyby>.2?index+':'+bee.encounterIndex:'';
         bee.worldYaw=(visitor.flightYaw ?? bee.heading)+Math.sin(arWelcomeClock.elapsed*.0017+index)*.16;
-        bee.nectar=Boolean(visitor.nectar && bee.flyby<.02);
+        const displacement=Math.hypot(ambientBeeAvoidance[index]?.x || 0,ambientBeeAvoidance[index]?.y || 0,ambientBeeAvoidance[index]?.z || 0);
+        bee.nectar=beeWingsAtRest({nectar:visitor.nectar,flyby:bee.flyby,displacement,pointerContact:beePointerContact(position,latestControllerRay)});
         ambientBeeModel?.drawXR?.(view,position,arWelcomeClock.elapsed,{...bee,viewer:viewerMatrix});
     }
 }
@@ -5694,7 +5713,9 @@ async function startImmersive() {
             // Resolve the same nearest surface used by the visible laser so a
             // PIMO in front of LIMO receives the trigger the visitor sees.
             if(event.inputSource===limInputSource || event.inputSource===limInputSuppressSource && performance.now()<limActivationSessionSuppressUntil)return;
-            if(demoKnowledgeWorkspace) {if(demoNoteRenderer?.activate(latestControllerRay))return;const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
+            if(demoKnowledgeIsModal()){const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
+            if(demoNoteOwnsPointer() && demoNoteRenderer?.activate(latestControllerRay))return;
+            if(demoNoteRenderer && activateImmersiveDemoControl()){closeDemoKnowledge(true);return;}
             if (demoWebModeOpen) return;
             if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
@@ -5738,8 +5759,8 @@ async function startImmersive() {
                 if(limInputSource!==event.inputSource){limInputSuppressSource=null;limInputSource=event.inputSource;limActivation.start(pressedCell.node.key,performance.now(),'xr-hold-fallback');startLimActivationFrame();}
                 return;
             }
-            if(['pim-cell','panel'].includes(pressedCell?.kind))return;
-            if(demoKnowledgeWorkspace) return;
+            if(['pim-cell','panel','note'].includes(pressedCell?.kind))return;
+            if(demoKnowledgeIsModal()) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
             if (arWelcomeIntroPending || placementReady) return;
@@ -5802,7 +5823,7 @@ async function startImmersive() {
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
             runXrFrameStep('floor dice input',()=>heroDiceToy?.update(frame,_time));
             runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
-            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace && !demoNoteRenderer)));
+            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || demoKnowledgeIsModal()));
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
             runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
             runXrFrameStep('hand pinch',()=>{if(!knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});
@@ -5821,7 +5842,8 @@ async function startImmersive() {
                     return ambientBeeFlowerVisits.some(visitor=>beePointerContact(visitor?.flightPosition,ray));
                 }):[];
                 const beeEncounters=getSpatialVisualSettings().insects?ambientBeeFlowerVisits.filter(visitor=>visitor?.encounterId && visitor.flightPosition && viewerMatrix && Math.hypot(visitor.flightPosition.x-viewerMatrix[12],visitor.flightPosition.y-viewerMatrix[13],visitor.flightPosition.z-viewerMatrix[14])<.95).map(visitor=>visitor.encounterId):[];
-                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeContactSources,beeEncounters});
+                const beesAround=session.visibilityState!=='hidden' && getSpatialVisualSettings().insects && ambientBeeFlowerVisits.some(visitor=>visitor?.flightPosition && viewerMatrix && Math.hypot(visitor.flightPosition.x-viewerMatrix[12],visitor.flightPosition.y-viewerMatrix[13],visitor.flightPosition.z-viewerMatrix[14])<3.5);
+                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeContactSources,beeEncounters,beeAround:beesAround});
             });
             let layer=null;
             try { layer=frame.session.renderState.baseLayer; }

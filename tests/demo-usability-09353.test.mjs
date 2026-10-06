@@ -8,13 +8,13 @@ import {initializeExplorerPreview,explorerMoleculeView,selectExplorerNode} from 
 import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../app/services/demoFeedback.js';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
-test('Note editing uses a bounded native keyboard, never an HTML capture',()=>{
+test('bounded creator keyboard remains available but demo Note uses a nonmodal showcase',()=>{
  const code=read('app/services/spatialNoteEditor.js'),demo=read('app/screens/temporaryArDemo.js');
  assert.doesNotMatch(code,/html2canvas|requestAnimationFrame|setInterval/);
  assert.equal(noteKeyboardValue('abc','⌫'),'ab');assert.equal(noteKeyboardValue('a','b',true),'aB');assert.equal(noteKeyboardValue('https:','/'),'https:/');assert.equal(noteKeyboardValue('🐝','⌫'),'');
  const notes=demo.slice(demo.indexOf('function openDemoNoteExperience'),demo.indexOf('function placeMarker'));
- assert.match(notes,/showNativeDemoNoteEditor/);assert.doesNotMatch(notes,/createSpatialDashboardMirror/);
- assert.match(demo,/function showNativeDemoNoteEditor[\s\S]*?createSpatialNoteEditor/);
+ assert.match(notes,/mountDemoNoteShowcase/);assert.doesNotMatch(notes,/createSpatialDashboardMirror/);
+ assert.doesNotMatch(demo,/showNativeDemoNoteEditor|createSpatialNoteEditor/);
  assert.match(code,/if\(destroyed\)return/);assert.match(code,/root\.removeEventListener\('input',refresh\)/);
 });
 test('reference-space reset rebases placed Orbs and axes exactly once without changing knowledge',()=>{
@@ -33,7 +33,7 @@ test('mode-only Explorer provides three compact branches and preserves existing 
  assert.doesNotMatch(controls,/pimToArKnowledge|CellOpacity|KnowledgeSave|KnowledgeMolecule/);assert.match(panel,/cellOpacity:meshCellOpacity/);
 });
 test('dice shadow softens and expands as a dice is lifted',()=>{
- const ground=diceShadowAppearance({y:.19},0),high=diceShadowAppearance({y:1.19},0);assert.ok(high.radius>ground.radius);assert.ok(high.opacity<ground.opacity);assert.ok(ground.opacity<=.3);
+ const ground=diceShadowAppearance({y:.19},0),high=diceShadowAppearance({y:1.19},0);assert.ok(high.radius>ground.radius);assert.ok(high.opacity<ground.opacity);assert.ok(ground.opacity<=.4);
 });
 test('each close bee encounter sends one gentle haptic and contact is stronger',()=>{
  const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...values)=>{pulses.push(values);return Promise.resolve();}}]}},feedback=createDemoFeedback();

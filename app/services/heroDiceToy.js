@@ -9,7 +9,7 @@ import {rebaseXrPoint} from './xrWorldRebase.js';
 export const HERO_TOY_RADIUS=.19,HERO_TOY_REACH=2.2;
 const one=new THREE.Vector3(1,1,1),serial=v=>({x:v.x,y:v.y,z:v.z});
 // Small fixed substeps keep a throw stable across 60/72/90/120 Hz sessions.
-export function createHeroDicePhysics(home,{radius=HERO_TOY_RADIUS,vertices=null}={}){
+export function createHeroDicePhysics(home,{radius=HERO_TOY_RADIUS,vertices=null,onImpact=()=>{}}={}){
     const state={home:{...home},position:{x:home.x,y:home.y+radius,z:home.z},rotation:{x:0,y:0,z:0,w:1},velocity:{x:0,y:0,z:0},angularVelocity:{x:0,y:0,z:0},held:false};
     function bound(){const p=state.position,dx=p.x-state.home.x,dz=p.z-state.home.z,d=Math.hypot(dx,dz);if(d>HERO_TOY_REACH){const nx=dx/d,nz=dz/d;p.x=state.home.x+nx*HERO_TOY_REACH;p.z=state.home.z+nz*HERO_TOY_REACH;const outward=state.velocity.x*nx+state.velocity.z*nz;if(outward>0){state.velocity.x-=nx*outward*1.3;state.velocity.z-=nz*outward*1.3;}}if(p.y>state.home.y+2.4){p.y=state.home.y+2.4;state.velocity.y=Math.min(0,-state.velocity.y*.3);}}
     return {state,bound,
@@ -17,17 +17,19 @@ export function createHeroDicePhysics(home,{radius=HERO_TOY_RADIUS,vertices=null
             v.y-=9.81*step;p.x+=v.x*step;p.y+=v.y*step;p.z+=v.z*step;
             const q=new THREE.Quaternion(state.rotation.x,state.rotation.y,state.rotation.z,state.rotation.w),axis=new THREE.Vector3(w.x,w.y,w.z),speed=axis.length();if(speed>.001)q.premultiply(new THREE.Quaternion().setFromAxisAngle(axis.normalize(),Math.min(14,speed)*step)).normalize();state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};
             let support=radius;if(vertices){support=0;const point=new THREE.Vector3();for(let i=0;i<vertices.length;i+=3)support=Math.max(support,-point.fromArray(vertices,i).applyQuaternion(q).y);}
-            if(p.y<state.home.y+support){p.y=state.home.y+support;v.y=Math.abs(v.y)>.45?-v.y*.32:0;const friction=Math.exp(-3.5*step);v.x*=friction;v.z*=friction;w.x+=(v.z/radius-w.x)*Math.min(1,step*8);w.z+=(-v.x/radius-w.z)*Math.min(1,step*8);w.y*=Math.exp(-5*step);if(Math.hypot(v.x,v.z)<.01){v.x=v.z=0;w.x=w.z=0;}}
+            if(p.y<state.home.y+support){p.y=state.home.y+support;if(v.y<-.65)onImpact({speed:-v.y,position:{...p}});v.y=Math.abs(v.y)>.45?-v.y*.32:0;const friction=Math.exp(-3.5*step);v.x*=friction;v.z*=friction;w.x+=(v.z/radius-w.x)*Math.min(1,step*8);w.z+=(-v.x/radius-w.z)*Math.min(1,step*8);w.y*=Math.exp(-5*step);if(Math.hypot(v.x,v.z)<.01){v.x=v.z=0;w.x=w.z=0;}}
             bound();
         }}
     };
 }
-export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings().heroDice!==false,canGrab=()=>true}={}){
+export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings().heroDice!==false,canGrab=()=>true,onFeedback=()=>{}}={}){
     const painter=createDiceRenderer(gl,{radius:HERO_TOY_RADIUS,appearance:'hero'}),geometry=painter.geometry,positions=geometry.attributes.position;
     const shadow=createDiceGroundShadow(gl);
+    let impactAt=-Infinity,impactPosition=null;
+    const impact=value=>{const time=performance.now();if(time-impactAt<160)return;impactAt=time;impactPosition=value.position;onFeedback('impact',null,Math.min(1,value.speed/4));};
     let physics=null,session=null,space=null,abort=null,active=null,lastTime=null,visibleSince=null;const inputs=new Map(),rays=new Map(),pinches=new WeakMap(),suppressed=new WeakMap(),pushed=new WeakSet();
     const model=()=>physics?new THREE.Matrix4().compose(new THREE.Vector3(physics.state.position.x,physics.state.position.y,physics.state.position.z),new THREE.Quaternion(physics.state.rotation.x,physics.state.rotation.y,physics.state.rotation.z,physics.state.rotation.w),one):null;
-    function ensure(){if(!visible()){visibleSince=null;return false;}const origin=home?.();if(!origin)return false;visibleSince ??= performance.now();if(!physics)physics=createHeroDicePhysics(origin,{vertices:positions.array});else physics.state.home.y=origin.y;return true;}
+    function ensure(){if(!visible()){visibleSince=null;return false;}const origin=home?.();if(!origin)return false;visibleSince ??= performance.now();if(!physics)physics=createHeroDicePhysics(origin,{vertices:positions.array,onImpact:impact});else physics.state.home.y=origin.y;return true;}
     function hit(ray){if(!physics || !visible() || !ray?.origin || !ray.direction)return null;const matrix=model(),origin=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),direction=new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z).normalize(),local=new THREE.Ray(origin.clone(),direction).applyMatrix4(matrix.clone().invert()),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),point=new THREE.Vector3();let nearest=null;
         for(let i=0;i<positions.count;i+=3){a.fromBufferAttribute(positions,i);b.fromBufferAttribute(positions,i+1);c.fromBufferAttribute(positions,i+2);if(!local.intersectTriangle(a,b,c,true,point))continue;const world=point.clone().applyMatrix4(matrix),distance=world.distanceTo(origin);if(!nearest || distance<nearest.distance)nearest={toy:true,point:world,center:world,distance};}return nearest;}
     function rayFor(source){const m=rays.get(source);return m?{origin:new THREE.Vector3().setFromMatrixPosition(m),direction:new THREE.Vector3(0,0,-1).transformDirection(m)}:null;}
@@ -36,12 +38,12 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
         try{const pose=frame?.getPose(source.targetRaySpace,space);if(pose)rays.set(source,new THREE.Matrix4().fromArray(pose.transform.matrix));}catch{ /* Use the last tracked pointer pose. */ }
         const ray=rayFor(source),target=hit(ray);if(!target || !canGrab({...target,inputRay:ray,source,near:false}))return false;
         const velocity=new THREE.Vector3(physics.state.velocity.x,physics.state.velocity.y,physics.state.velocity.z).addScaledVector(ray.direction,.65);velocity.y+=.12;velocity.clampLength(0,1.2);
-        physics.state.velocity=serial(velocity);physics.state.angularVelocity={x:ray.direction.z*2,y:.6,z:-ray.direction.x*2};pushed.add(source);suppressed.set(source,performance.now()+500);return true;
+        physics.state.velocity=serial(velocity);physics.state.angularVelocity={x:ray.direction.z*2,y:.6,z:-ray.direction.x*2};pushed.add(source);suppressed.set(source,performance.now()+500);onFeedback('touch',source);return true;
     }
     function begin(source,near=false){if(active || !ensure())return false;const input=inputs.get(source),ray=rayFor(source),target=near?{toy:true,distance:0}:hit(ray);if(!input || !target || !canGrab({...target,inputRay:ray,source,near}))return false;
         // Preserve the original contact and distance when the grip begins.
         const matrix=model();
-        active={source,offset:input.clone().invert().multiply(matrix),samples:[{time:performance.now(),position:{...physics.state.position},rotation:{...physics.state.rotation}}]};physics.state.held=true;physics.state.velocity={x:0,y:0,z:0};physics.state.angularVelocity={x:0,y:0,z:0};return true;
+        active={source,offset:input.clone().invert().multiply(matrix),samples:[{time:performance.now(),position:{...physics.state.position},rotation:{...physics.state.rotation}}]};physics.state.held=true;physics.state.velocity={x:0,y:0,z:0};physics.state.angularVelocity={x:0,y:0,z:0};onFeedback('grab',source);return true;
     }
     function release(source,throwing=true){if(active?.source!==source)return false;const samples=active.samples,last=samples.at(-1),first=samples.find(s=>last.time-s.time<120) || samples[0],dt=(last.time-first.time)/1000;
         if(throwing && dt>.008){const v=new THREE.Vector3(last.position.x-first.position.x,last.position.y-first.position.y,last.position.z-first.position.z).multiplyScalar(1/dt).clampLength(0,4.5);physics.state.velocity=serial(v);const q=new THREE.Quaternion(last.rotation.x,last.rotation.y,last.rotation.z,last.rotation.w).multiply(new THREE.Quaternion(first.rotation.x,first.rotation.y,first.rotation.z,first.rotation.w).invert());if(q.w<0)q.set(-q.x,-q.y,-q.z,-q.w);const angle=2*Math.acos(Math.min(1,q.w)),axis=new THREE.Vector3(q.x,q.y,q.z).normalize().multiplyScalar(Math.min(12,angle/dt));physics.state.angularVelocity=serial(axis);}
@@ -68,6 +70,6 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
                 const m=input.clone().multiply(active.offset),p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();m.decompose(p,q,s);physics.state.position=serial(p);physics.state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};active.samples.push({time,position:{...physics.state.position},rotation:{...physics.state.rotation}});active.samples=active.samples.filter(sample=>time-sample.time<180);}else physics.step(dt);
         },
         rebase(matrix){if(!physics)return;if(active)release(active.source,false);rebaseXrPoint(physics.state.position,matrix);rebaseXrPoint(physics.state.home,matrix);rebaseXrPoint(physics.state.velocity,matrix,true);const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix)).multiply(new THREE.Quaternion(physics.state.rotation.x,physics.state.rotation.y,physics.state.rotation.z,physics.state.rotation.w));physics.state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};},
-        draw(view){if(ensure()){const t=Math.min(1,Math.max(0,(performance.now()-visibleSince)/1000)),opacity=t*t*(3-2*t);shadow.draw(view,physics.state.position,physics.state.home.y,opacity);painter.draw(view,model(),opacity);}},destroy(){unbind();shadow.destroy();painter.destroy();physics=null;}
+        draw(view){if(ensure()){const t=Math.min(1,Math.max(0,(performance.now()-visibleSince)/1000)),opacity=t*t*(3-2*t);shadow.draw(view,physics.state.position,physics.state.home.y,opacity);const age=(performance.now()-impactAt)/650;if(age>=0 && age<1 && impactPosition)shadow.drawImpact(view,impactPosition,physics.state.home.y,age);painter.draw(view,model(),opacity);}},destroy(){unbind();shadow.destroy();painter.destroy();physics=null;}
     };
 }

@@ -1409,7 +1409,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
     const profileContinuation=source.slice(source.indexOf('function continueAfterDemoPim'),source.indexOf('function showDemoPanelIntroduction'));
     assert.match(profileContinuation, /clearLimSelection\(\);limMeshVisible=false;[\s\S]*if\(record\.tutorialStage==='plant'\)showDemoPanelIntroduction\(record\);\s*else showDemoAction\('note'\)/);
-    assert.match(source, /if\(demoKnowledgeWorkspace\) \{if\(demoNoteRenderer\?\.activate\(latestControllerRay\)\)return;const hit=spatialDashboardRayHit/);
+    assert.match(source, /if\(demoKnowledgeIsModal\(\)\)\{const hit=spatialDashboardRayHit/);
+    assert.match(source,/if\(demoNoteOwnsPointer\(\) && demoNoteRenderer\?\.activate\(latestControllerRay\)\)return/);
+    assert.match(source,/if\(demoNoteRenderer && activateImmersiveDemoControl\(\)\)\{closeDemoKnowledge\(true\);return;/);
     assert.match(source, /if\(stage\) stage\.inert=true/);
     assert.match(source, /function openDemoVirtualTag\(record\)[\s\S]*if \(!simulatedMode \|\| session\)[\s\S]*advancePastVirtualTag\(record\)[\s\S]*openDemoKnowledge\(record\)/);
     assert.match(source, /stage\.inert = false;[\s\S]*stage\.removeAttribute\('aria-hidden'\)/);

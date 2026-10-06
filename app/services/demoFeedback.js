@@ -1,5 +1,5 @@
 // Demo-only streamed music and lightweight, original touch tones.
-export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeStrength: .18, beeApproachStrength:.12 });
+export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeStrength: .18, beeApproachStrength:.12,beeBuzzStrength:.035 });
 export function createDemoFeedback() {
     let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
     const beeContactAt=new WeakMap();
@@ -42,20 +42,21 @@ export function createDemoFeedback() {
         const now=context.currentTime;
         if(now-lastSound<.065)return;
         lastSound=now;
-        const notes=kind==='cell'?[1174,1761]:kind==='placement'?[330,660]:kind==='totem'?[440,660]:[620];
+        const notes=kind==='dice'?[130,196]:kind==='cell'?[1174,1761]:kind==='placement'?[330,660]:kind==='totem'?[440,660]:[620];
         const duration=kind==='menu'?.085:kind==='cell'?.28:.20;
         notes.forEach((frequency,index)=>{
             const oscillator=context.createOscillator(),gain=context.createGain(),start=now+index*.025;
-            oscillator.type='sine';oscillator.frequency.value=frequency;
+            oscillator.type=kind==='dice'?'triangle':'sine';oscillator.frequency.value=frequency;
             gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.1/notes.length,start+.008);
             gain.gain.exponentialRampToValueAtTime(.0001,start+duration);
             oscillator.connect(gain);gain.connect(fxGain);oscillator.start(start);oscillator.stop(start+duration+.01);
             oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
         });
     }
-    function tick(time,{sources=[],heldSource=null,beeContactSources=[],beeEncounters=[]}={}) {
+    function tick(time,{sources=[],heldSource=null,beeContactSources=[],beeEncounters=[],beeAround=false}={}) {
         if(destroyed || time-lastTick<120)return;
         lastTick=time;
+        for(const previous of pulsing)if(!sources.includes(previous))pulse(previous,0,1);
         for(const source of sources){
             // Grab entry already sends one 100 ms confirmation. Let it finish;
             // holding an object must never restart that vibration every frame.
@@ -67,6 +68,7 @@ export function createDemoFeedback() {
             else if(beeEncounters.some(id=>!(encounters.get(source) || []).includes(id)) && time-(beeContactAt.get(source) ?? -Infinity)>1400){
                 encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,40);beeContactAt.set(source,time);
             }
+            else if(beeAround)pulse(source,DEMO_FEEDBACK.beeBuzzStrength*(.85+.15*Math.sin(time*.004)),145);
             else if(pulsing.has(source))pulse(source,0,1);
         }
     }

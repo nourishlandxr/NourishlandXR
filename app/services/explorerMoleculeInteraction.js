@@ -39,7 +39,7 @@ export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=
     listen('end',()=>{for(const source of holds.keys())cancelHold(source);claimedSources.clear();active=null;inputMatrices.clear();rayMatrices.clear();});
     return {
         update(value){
-            if(active && (active.target.record.knowledgeExplorer.mode!=='explore' || ![active.target.record.explorerMolecule?.root,active.target.record.explorerMolecule?.pending,active.target.record.explorerMolecule?.pendingConnector,...Object.values(active.target.record.explorerMolecule?.wingObjects || {})].includes(active.target.object)))finish(active.source);
+            if(active && (active.target.record.knowledgeExplorer.mode!=='explore' || ![active.target.record.explorerMolecule?.root,active.target.record.explorerMolecule?.pending,active.target.record.explorerMolecule?.pendingConnector,...Object.values(active.target.record.explorerMolecule?.wingObjects || {}),...Object.values(active.target.record.explorerMolecule?.nodeObjects || {})].includes(active.target.object)))finish(active.source);
             for(const source of session.inputSources || []){
                 let grip=null,rayPose=null;try{grip=value.getPose(source.gripSpace || source.targetRaySpace,space);rayPose=value.getPose(source.targetRaySpace,space);}catch{/* Lost input cancels its gesture. */}
                 const handState=source.hand?handTrackingState(value,source,space):null,wrist=handState?.rawJoints.get('wrist'),index=handState?.rawJoints.get('index-finger-tip'),thumb=handState?.rawJoints.get('thumb-tip');

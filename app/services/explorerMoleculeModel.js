@@ -6,6 +6,7 @@ import {PIM_COMPASS_BY_ID} from './pimCompass.js';
 export const EXPLORER_LIMIT=24, EXPLORER_CHILDREN=3, EXPLORER_TRANSITION_MS=650;
 export const EXPLORER_RECIPES='explorer-recipes', EXPLORER_RECIPE='explorer-community-recipe';
 export const EXPLORER_BOND_RADIUS=.014;
+export const EXPLORER_CONNECTOR_COLOUR='#e6eef2';
 const indexes=new WeakMap();
 const projections=new WeakMap();
 const directions=['top','upper-right','lower-right','bottom','lower-left','upper-left'];
@@ -75,6 +76,11 @@ export function ensureExplorerMolecule(record,knowledge){
     state.wings ||= index.roots.filter(id=>state.assembled.includes('core>'+id));
     state.customWings ||= [];state.labels ||= {};state.colours ||= {};state.wingObjects ||= {};state.libraryPage ||= 0;
     for(const id of state.wings){if(!state.positions[id])continue;state.wingObjects[id] ||= {id:'explorer:wing:'+id,position:{...state.positions[id]},rotation:{x:0,y:0,z:0,w:1},scale:1,radius:.078};}
+    state.nodeObjects ||= {};
+    for(const [id,position] of Object.entries(state.positions)){
+        const node=index.nodes.get(id);if(!node || node.depth<2)continue;
+        state.nodeObjects[id] ||= {id:'explorer:node:'+id,position:{...position},rotation:{x:0,y:0,z:0,w:1},scale:1,radius:explorerNodeRadius(node,state)};
+    }
     return state;
 }
 export function explorerAttachedWings(state,index){return state.wings.filter(id=>index.nodes.has(id)&&state.assembled.includes('core>'+id));}
@@ -92,8 +98,24 @@ export function initializeExplorerPreview(record,knowledge,time=now()){
     touch(record,time);return state;
 }
 export function explorerNodePosition(state,index,id){
-    const p=state.positions[id],domain=index.nodes.get(id)?.domainId,wing=state.wingObjects[domain],origin=state.positions[domain];if(!p || !wing || !origin)return p;
-    return point(v(p).sub(v(origin)).multiplyScalar(wing.scale).applyQuaternion(new THREE.Quaternion(wing.rotation.x,wing.rotation.y,wing.rotation.z,wing.rotation.w)).add(v(wing.position)));
+    const p=state.positions[id];if(!p)return p;
+    const node=index.nodes.get(id);if(node?.depth>1)return point(v(state.nodeObjects?.[id]?.position || p).applyMatrix4(explorerChildFrame(state,index,id)));
+    return state.wingObjects[node?.domainId]?.position || p;
+}
+// Moving a child carries its connected subtree, not unrelated branches.
+export function explorerChildFrame(state,index,id){
+    const node=index.nodes.get(id),wing=state.wingObjects[node?.domainId],origin=state.positions[node?.domainId],matrix=new THREE.Matrix4();
+    if(!wing || !origin)return matrix;
+    matrix.compose(v(wing.position),new THREE.Quaternion(wing.rotation.x,wing.rotation.y,wing.rotation.z,wing.rotation.w),new THREE.Vector3().setScalar(wing.scale)).multiply(new THREE.Matrix4().makeTranslation(-origin.x,-origin.y,-origin.z));
+    const offset=new THREE.Vector3();
+    for(let parent=index.nodes.get(node.parentId);parent?.depth>1;parent=index.nodes.get(parent.parentId)){
+        const object=state.nodeObjects?.[parent.id],start=state.positions[parent.id];if(object && start)offset.add(v(object.position).sub(v(start)));
+    }
+    return matrix.multiply(new THREE.Matrix4().makeTranslation(offset.x,offset.y,offset.z));
+}
+export function explorerOutputs(node,index){
+    const children=node.children.slice(0,3).map(id=>({id,label:index.nodes.get(id)?.label || 'Topic'}));
+    return [...children,{id:node.id,label:'Read'},{id:node.parentId || 'core',label:'Parent'}].slice(0,4);
 }
 function nodeScale(state,node){return state.wingObjects[node.domainId]?.scale || 1;}
 export function customizeExplorerOrganism(record,knowledge,values){
@@ -128,7 +150,7 @@ export function removeExplorerWing(record,knowledge,id){
     if(state.puzzle || !state.wings.includes(id))return false;
     const ids=new Set([...index.nodes.values()].filter(n=>n.domainId===id).map(n=>n.id));
     state.wings=state.wings.filter(key=>key!==id);state.expanded=state.expanded.filter(key=>!ids.has(key));state.discovered=state.discovered.filter(key=>!ids.has(key));state.promoted=state.promoted.filter(key=>!ids.has(key));state.assembled=state.assembled.filter(key=>!key.split('>').some(part=>ids.has(part)));
-    for(const key of ids){delete state.positions[key];delete state.births[key];delete state.pages[key];delete state.sampleCounts[key];}delete state.wingObjects[id];
+    for(const key of ids){delete state.positions[key];delete state.nodeObjects?.[key];delete state.births[key];delete state.pages[key];delete state.sampleCounts[key];}delete state.wingObjects[id];
     if(ids.has(state.selectedId))state.selectedId='core';if(ids.has(EXPLORER_RECIPE))state.contributionAdded=false;touch(record);return true;
 }
 export function explorerNodeCount(index,id,state){
@@ -164,7 +186,8 @@ function reserveChildren(index,node,state,time,available=childIds(index,node,sta
     });
 }
 export function selectExplorerNode(record,knowledge,target,time=now()){
-    const state=ensureExplorerMolecule(record,knowledge),index=explorerMoleculeIndex(knowledge,record),id=target.explorerNodeId || target.id || target.nodeId || 'core';
+    const state=ensureExplorerMolecule(record,knowledge),index=explorerMoleculeIndex(knowledge,record);let id=target.explorerNodeId || target.id || target.nodeId || 'core';
+    if(target.explorerOutput){const source=index.nodes.get(id);if(!source)return false;if(source.children.includes(target.explorerOutput)){if(!state.expanded.includes(id))state.expanded.push(id);reserveChildren(index,source,state,time);}id=target.explorerOutput;}
     // A completed grab already selected/discovered its semantic endpoint.
     // The host callback refreshes reading surfaces without expanding it again.
     if(target.explorerAssembly)return true;
@@ -280,7 +303,7 @@ export function explorerMoleculeView(record,knowledge,distance,time=now(),reduce
         const source=index.nodes.get(id);if(!source || state.lod==='far'&&source.depth>1&&!hubPaths.has(id) || state.lod==='medium'&&source.depth>2&&!hubPaths.has(id))return;
         const birth=state.births[id],progress=reducedMotion || !Number.isFinite(birth)?1:Math.min(1,Math.max(0,(time-birth)/EXPLORER_TRANSITION_MS)),ease=progress*progress*(3-2*progress);
         const parent=explorerNodePosition(state,index,parentId),from=id===EXPLORER_RECIPE?state.attachmentOrigin || parent:parent,p=point(v(from).lerp(v(explorerNodePosition(state,index,id)),ease));
-        const node={...source,position:p,radius:explorerNodeRadius(source,state)*nodeScale(state,source)*(.2+.8*ease),colour:index.nodes.get(source.domainId)?.colour || colours[index.rootSlots.get(source.domainId) ?? 0],count:explorerNodeCount(index,id,state),progress:ease};nodes.push(node);bonds.push({id:parentId+'>'+id,from:parentId,to:id,type:source.contribution?'contribution':'contains',progress:ease});
+        const node={...source,outputs:explorerOutputs(source,index),position:p,radius:explorerNodeRadius(source,state)*nodeScale(state,source)*(.2+.8*ease),colour:index.nodes.get(source.domainId)?.colour || colours[index.roots.indexOf(source.domainId)%colours.length],count:explorerNodeCount(index,id,state),progress:ease};nodes.push(node);bonds.push({id:parentId+'>'+id,from:parentId,to:id,type:source.contribution?'contribution':'contains',progress:ease});
         if(expand && state.expanded.includes(id)){const children=childIds(index,source,state),page=state.pages[id] || 0;for(const child of children.slice(page*EXPLORER_CHILDREN,page*EXPLORER_CHILDREN+EXPLORER_CHILDREN))visit(child,id);}
     };
     // Only wings assembled by this user spend the detail budget.
@@ -291,7 +314,7 @@ export function explorerMoleculeView(record,knowledge,distance,time=now(),reduce
     if(state.puzzle && state.lod==='close' && nodes.some(n=>n.id===state.puzzle.parentId)){
         const puzzle=state.puzzle,slot=explorerPuzzleSlot(record,knowledge),source=index.nodes.get(puzzle.childId),colour=colours[index.rootSlots.get(source.domainId) ?? 0],connector=puzzle.phase==='connector';
         const body=connector?state.pendingConnector:{position:slot.position,rotation:slot.rotation,length:slot.length};
-        nodes.push({...source,id:'pending-connector',label:'Connector',position:body.position,rotation:body.rotation,length:slot.length,radius:EXPLORER_BOND_RADIUS,colour,connector:true,pending:connector,progress:1});
+        nodes.push({...source,id:'pending-connector',label:'Connector',position:body.position,rotation:body.rotation,length:slot.length,radius:EXPLORER_BOND_RADIUS,colour:EXPLORER_CONNECTOR_COLOUR,connector:true,pending:connector,progress:1});
         if(!connector)nodes.push({...source,id:'pending-piece',label:source.label,position:state.pending.position,radius:state.pending.radius,colour,pending:true,progress:1});
         nodes.push({id:'connection-socket',label:connector?'Connector socket':'Topic socket',depth:4,children:[],position:connector?slot.from:slot.to,rotation:slot.rotation,radius:.022,colour:'#d5d8ae',attachment:true,progress:1});
     }

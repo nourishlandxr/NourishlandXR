@@ -2,7 +2,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import {createExplorerFacetGeometry} from './explorerFacetGeometry.js';
 import {createSpatialTotemCards,hitTotemSurface} from './spatialTotemCards.js';
 import {knowledgePoseMatrix,localObjectMatrix} from './knowledgeObjectModel.js';
-import {explorerMoleculeView,explorerPuzzleFit,EXPLORER_BOND_RADIUS} from './explorerMoleculeModel.js';
+import {explorerMoleculeView,explorerPuzzleFit,explorerChildFrame,EXPLORER_BOND_RADIUS,EXPLORER_CONNECTOR_COLOUR} from './explorerMoleculeModel.js';
 
 const motion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 const vec=p=>new THREE.Vector3(p.x,p.y,p.z);
@@ -35,14 +35,25 @@ export function hitExplorerMolecule(ray,entries,record=null){
             if(node.progress<.55 || node.pending&&!pieceObject(entry,node))continue;const p=node.connector?hitExplorerConnector(ray,node):r.intersectSphere(new THREE.Sphere(node.world,node.worldRadius),new THREE.Vector3());if(!p)continue;const distance=p.distanceTo(origin);
             if(!nearest || distance<nearest.distance)nearest=target(entry,node,p,distance);
         }
+        for(const port of entry.outputs || []){
+            const p=r.intersectSphere(new THREE.Sphere(port.world,port.radius),new THREE.Vector3());if(!p)continue;
+            const distance=p.distanceTo(origin);if(!nearest || distance<nearest.distance)nearest=target(entry,{...port.node,outputTarget:port.output.id,outputIndex:port.index},p,distance);
+        }
         for(const surface of entry.surfaces){if(surface.moleculeNode.pending&&!pieceObject(entry,surface.moleculeNode))continue;const hit=hitTotemSurface(ray,[surface]);if(hit&&(!nearest||hit.distance<nearest.distance))nearest={...target(entry,surface.moleculeNode,vec(hit.center),hit.distance),...hit,object:pieceObject(entry,surface.moleculeNode),pose:objectPose(entry,surface.moleculeNode)};}
     }return nearest;
 }
-function pieceObject(entry,node){return node.pending?(node.connector?entry.state.pendingConnector:entry.state.pending):node.depth===1&&entry.state.wingObjects?.[node.domainId] || entry.state.root;}
-function objectPose(entry,node){return node.pending || node.depth===1&&entry.state.wingObjects?.[node.domainId]?entry.tokenPose:entry.pose;}
+function pieceObject(entry,node){return node.pending?(node.connector?entry.state.pendingConnector:entry.state.pending):node.depth===1&&entry.state.wingObjects?.[node.domainId] || entry.state.nodeObjects?.[node.id] || entry.state.root;}
+function objectPose(entry,node){
+    if(node.depth>1 && entry.state.nodeObjects?.[node.id]){
+        if(!entry.tokenPose && !entry.pose)return entry.pose;
+        const matrix=(entry.tokenPose?knowledgePoseMatrix(entry.tokenPose):knowledgePoseMatrix(entry.pose).multiply(localObjectMatrix(entry.state.root))).multiply(explorerChildFrame(entry.state,entry.index,node.id));
+        return {position:new THREE.Vector3().setFromMatrixPosition(matrix),right:new THREE.Vector3().setFromMatrixColumn(matrix,0),up:new THREE.Vector3().setFromMatrixColumn(matrix,1),normal:new THREE.Vector3().setFromMatrixColumn(matrix,2)};
+    }
+    return node.pending || node.depth===1&&entry.state.wingObjects?.[node.domainId]?entry.tokenPose:entry.pose;
+}
 function target(entry,node,p,distance){
     const normal=p.clone().sub(node.world).normalize();
-    return {record:entry.record,knowledge:entry.knowledge,object:pieceObject(entry,node),pose:objectPose(entry,node),face:{faceId:node.id},distance,point:p,center:node.world,normal,interactive:true,card:{id:node.id,knowledgeFace:true},node:{...node,path:node.path || '',pimKnowledgeFace:node.id!=='core',pimKnowledgeContext:node.id==='core',explorerNodeId:node.id,explorerAttachment:Boolean(node.attachment)}};
+    return {record:entry.record,knowledge:entry.knowledge,object:pieceObject(entry,node),pose:objectPose(entry,node),face:{faceId:node.id+(node.outputTarget?':'+node.outputIndex:'')},distance,point:p,center:node.world,normal,interactive:true,card:{id:node.id,knowledgeFace:true},node:{...node,path:node.path || '',pimKnowledgeFace:node.id!=='core',pimKnowledgeContext:node.id==='core',explorerNodeId:node.id,explorerOutput:node.outputTarget,explorerAttachment:Boolean(node.attachment)}};
 }
 export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
     let entries=[],labelSurfaces=[];
@@ -78,17 +89,25 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
                 const a=byId.get(bond.from),b=byId.get(bond.to);if(!a||!b)continue;const direction=b.world.clone().sub(a.world).normalize(),start=a.world.clone().addScaledVector(direction,a.worldRadius),end=b.world.clone().addScaledVector(direction,-b.worldRadius),length=start.distanceTo(end);if(length<.005)continue;
                 const model=new THREE.Matrix4().compose(start.clone().lerp(end,.5),new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),direction),new THREE.Vector3(EXPLORER_BOND_RADIUS*scale,length,EXPLORER_BOND_RADIUS*scale));
                 const elapsed=time-field.state.births[b.id],pulse=b.contribution&&!motion?.matches&&elapsed>650&&elapsed<1100?(elapsed-650)/450:-1;
-                paint(cylinder,model,projection,new THREE.Color(b.colour).lerp(new THREE.Color('#919d8b'),.5).toArray(),opacity*b.progress,0,pulse);
+                gl.depthMask(false);paint(cylinder,model,projection,new THREE.Color(EXPLORER_CONNECTOR_COLOUR).toArray(),opacity*b.progress*.65,0,pulse);gl.depthMask(opacity>.99);
             }
             const hover=hitExplorerMolecule(ray(),[{record,...field,nodes,surfaces:[],pose}],record)?.node?.explorerNodeId;
             for(const node of nodes){
-                const discovered=node.id==='core'||field.state.discovered.includes(node.id),selected=field.state.selectedId===node.id,colour=new THREE.Color(node.colour).lerp(new THREE.Color('#b1b7a1'),discovered?.12:.50);
+                const discovered=node.id==='core'||field.state.discovered.includes(node.id),selected=field.state.selectedId===node.id,colour=new THREE.Color(node.colour).lerp(new THREE.Color('#b1b7a1'),discovered?.06:.12);
                 const axis=new THREE.Vector3(0,1,0).applyQuaternion(node.worldRotation),orientation=node.attachment?new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),axis):node.worldRotation;
                 const dimensions=node.connector?new THREE.Vector3(node.worldRadius,node.worldLength,node.worldRadius):new THREE.Vector3().setScalar(node.worldRadius);
                 const model=new THREE.Matrix4().compose(node.world,orientation,dimensions);
                 const pressed=record.pimObjectPressId===pieceObject({state:field.state},node)?.id+'|'+node.id?record.pimObjectPressProgress || 0:0;
                 paint(node.connector?cylinder:node.attachment?socket:sphere,model,projection,colour.toArray(),opacity,pressed*.12+(node.attachment&&explorerPuzzleFit(record,knowledge).valid?.13:selected?.055:hover===node.id?.035:0));
                 if(node.connector){for(const side of [-1,1]){const end=node.world.clone().addScaledVector(axis,node.worldLength/2*side),ring=new THREE.Matrix4().compose(end,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),axis),new THREE.Vector3().setScalar(node.worldRadius*1.3));paint(socket,ring,projection,new THREE.Color('#d5d8ae').toArray(),opacity);}}
+            }
+            const outputs=[];
+            for(const node of nodes.filter(node=>node.depth>1 && !node.pending && !node.attachment && !node.connector && node.progress>.55)){
+                for(const [index,output] of (node.outputs || []).entries()){
+                    const axis=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0)][index].applyQuaternion(node.worldRotation),world=node.world.clone().addScaledVector(axis,node.worldRadius*1.015),radius=node.worldRadius*.27;
+                    const model=new THREE.Matrix4().compose(world,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),axis),new THREE.Vector3().setScalar(radius));
+                    gl.depthMask(false);paint(socket,model,projection,new THREE.Color(EXPLORER_CONNECTOR_COLOUR).toArray(),opacity*.72);outputs.push({node,output,index,world,radius});
+                }
             }
             gl.depthMask(mask);if(!depth)gl.disable(gl.DEPTH_TEST);if(!cull)gl.disable(gl.CULL_FACE);if(!blend)gl.disable(gl.BLEND);
             labelSurfaces=nodes.filter(n=>n.progress>.55&&(field.lod!=='far'||n.depth<2||field.state.promoted.includes(n.id))&&(n.depth<3||field.lod==='close'||field.state.promoted.includes(n.id))).map(node=>{
@@ -104,7 +123,7 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
             });
             labels.draw(view,{id:'explorer-labels-'+String(record.id || record.marker?.id)},pose.position,labelSurfaces.map(s=>s.card));
             const tokenPose={position:new THREE.Vector3().setFromMatrixPosition(matrix),right:new THREE.Vector3().setFromMatrixColumn(matrix,0),up:new THREE.Vector3().setFromMatrixColumn(matrix,1),normal:new THREE.Vector3().setFromMatrixColumn(matrix,2)};
-            if(opacity>.55)entries.push({record,knowledge,...field,nodes,surfaces:[...labelSurfaces],pose,tokenPose});
+            if(opacity>.55)entries.push({record,knowledge,...field,nodes,outputs,surfaces:[...labelSurfaces],pose,tokenPose});
             record.knowledgeObjectPose=pose;return labelSurfaces;
         },
         end(){labels.end();},

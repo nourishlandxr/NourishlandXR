@@ -8,6 +8,12 @@ export function beeRenderYaw(pose={},origin={x:0,z:0}){
     const turn=Math.atan2(Math.sin(facing-flight),Math.cos(facing-flight));
     return flight+turn*engagement+(pose.headTurn || 0);
 }
+export function applyBeeWingPose(model,nectar){
+    if(nectar){for(const rest of model.wingRest || []){rest.bone.quaternion.copy(rest.rotation);rest.bone.position.copy(rest.position);rest.bone.scale.copy(rest.scale);}return;}
+    // Manual nectar resting can leave the mixer's cached value unchanged on
+    // the same-time flight transition. Sample the original wing tracks directly.
+    for(const track of model.wingAnimation || [])track.bone[track.property].fromArray(track.interpolant.evaluate(model.hoverAction.time));
+}
 export function createBeeXRRenderer(gl,model,bitmap){
     if(!gl.getExtension('OES_texture_float') || gl.getParameter(gl.MAX_VERTEX_TEXTURE_IMAGE_UNITS)<1)return null;
     const shaders=[],buffers=[],textures=[];
@@ -62,7 +68,7 @@ export function createBeeXRRenderer(gl,model,bitmap){
                 // One shared rig must be re-evaluated for each bee. Updating it
                 // with delta=0 can retain another bee's manually rested wings.
                 model.mixer.setTime(elapsed/1000+offset);
-                if(pose.nectar)for(const rest of model.wingRest || []){rest.bone.quaternion.copy(rest.rotation);rest.bone.position.copy(rest.position);rest.bone.scale.copy(rest.scale);}
+                applyBeeWingPose(model,pose.nectar);
                 model.wrapper.updateMatrixWorld(true);model.mesh.skeleton.update();
                 normalise.copy(model.mesh.matrixWorld).multiply(model.mesh.bindMatrixInverse);
                 gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);
