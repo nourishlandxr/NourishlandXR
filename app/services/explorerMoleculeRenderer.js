@@ -86,8 +86,15 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
             field.state.renderedCount=nodes.filter(n=>!n.attachment&&!n.connector).length;field.state.renderedBonds=field.bonds.length;
             const depth=gl.isEnabled(gl.DEPTH_TEST),cull=gl.isEnabled(gl.CULL_FACE),blend=gl.isEnabled(gl.BLEND),mask=gl.getParameter(gl.DEPTH_WRITEMASK);
             gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(opacity>.99);gl.useProgram(program);gl.uniform3fv(uniforms.camera,camera.toArray());
+            const facePort=(node,toward,preferred=-1)=>{
+                const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)].map(axis=>axis.applyQuaternion(node.worldRotation));
+                const desired=toward.clone().sub(node.world).normalize(),axis=preferred>=0&&preferred<4?axes[preferred]:axes.sort((a,b)=>b.dot(desired)-a.dot(desired))[0];
+                return node.world.clone().addScaledVector(axis,node.worldRadius);
+            };
             for(const bond of field.bonds){
-                const a=byId.get(bond.from),b=byId.get(bond.to);if(!a||!b)continue;const direction=b.world.clone().sub(a.world).normalize(),start=a.world.clone().addScaledVector(direction,a.worldRadius),end=b.world.clone().addScaledVector(direction,-b.worldRadius),length=start.distanceTo(end);if(length<.005)continue;
+                const a=byId.get(bond.from),b=byId.get(bond.to);if(!a||!b)continue;
+                const childIndex=a.outputs?.findIndex(output=>output.id===b.id) ?? -1;
+                const start=facePort(a,b.world,childIndex),end=facePort(b,a.world),direction=end.clone().sub(start).normalize(),length=start.distanceTo(end);if(length<.005)continue;
                 const model=new THREE.Matrix4().compose(start.clone().lerp(end,.5),new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),direction),new THREE.Vector3(EXPLORER_BOND_RADIUS*scale,length,EXPLORER_BOND_RADIUS*scale));
                 const elapsed=time-field.state.births[b.id],pulse=b.contribution&&!motion?.matches&&elapsed>650&&elapsed<1100?(elapsed-650)/450:-1;
                 gl.depthMask(false);paint(cylinder,model,projection,new THREE.Color(EXPLORER_CONNECTOR_COLOUR).toArray(),opacity*b.progress*.65,0,pulse);gl.depthMask(opacity>.99);
@@ -103,7 +110,7 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
                 if(node.connector){for(const side of [-1,1]){const end=node.world.clone().addScaledVector(axis,node.worldLength/2*side),ring=new THREE.Matrix4().compose(end,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),axis),new THREE.Vector3().setScalar(node.worldRadius*1.3));paint(socket,ring,projection,new THREE.Color('#d5d8ae').toArray(),opacity);}}
             }
             const outputs=[];
-            for(const node of nodes.filter(node=>node.depth>1 && !node.pending && !node.attachment && !node.connector && node.progress>.55)){
+            for(const node of nodes.filter(node=>node.depth>=1 && !node.pending && !node.attachment && !node.connector && node.progress>.55)){
                 for(const [index,output] of (node.outputs || []).entries()){
                     const axis=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0)][index].applyQuaternion(node.worldRotation),world=node.world.clone().addScaledVector(axis,node.worldRadius*1.015),radius=node.worldRadius*.27;
                     const model=new THREE.Matrix4().compose(world,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),axis),new THREE.Vector3().setScalar(radius));

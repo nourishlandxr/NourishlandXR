@@ -113,9 +113,13 @@ export function explorerChildFrame(state,index,id){
     }
     return matrix.multiply(new THREE.Matrix4().makeTranslation(offset.x,offset.y,offset.z));
 }
-export function explorerOutputs(node,index){
-    const children=node.children.slice(0,3).map(id=>({id,label:index.nodes.get(id)?.label || 'Topic'}));
-    return [...children,{id:node.id,label:'Read'},{id:node.parentId || 'core',label:'Parent'}].slice(0,4);
+export function explorerOutputs(node,index,state){
+    const page=state?.pages?.[node.id] || 0,children=childIds(index,node,state || {contributionAdded:true}).slice(page*EXPLORER_CHILDREN,page*EXPLORER_CHILDREN+EXPLORER_CHILDREN).map(id=>({id,label:index.nodes.get(id)?.label || 'Topic'}));
+    return children.length?children:[{id:node.id,label:'Read'}];
+}
+function explorerTone(colour,depth){
+    const base=new THREE.Color(colour),target=new THREE.Color(depth%2?'#263b35':'#f2f4ec');
+    return depth<=1?base.getStyle():base.lerp(target,Math.min(.52,.22+Math.floor((depth-2)/2)*.12)).getStyle();
 }
 function nodeScale(state,node){return state.wingObjects[node.domainId]?.scale || 1;}
 export function customizeExplorerOrganism(record,knowledge,values){
@@ -303,7 +307,8 @@ export function explorerMoleculeView(record,knowledge,distance,time=now(),reduce
         const source=index.nodes.get(id);if(!source || state.lod==='far'&&source.depth>1&&!hubPaths.has(id) || state.lod==='medium'&&source.depth>2&&!hubPaths.has(id))return;
         const birth=state.births[id],progress=reducedMotion || !Number.isFinite(birth)?1:Math.min(1,Math.max(0,(time-birth)/EXPLORER_TRANSITION_MS)),ease=progress*progress*(3-2*progress);
         const parent=explorerNodePosition(state,index,parentId),from=id===EXPLORER_RECIPE?state.attachmentOrigin || parent:parent,p=point(v(from).lerp(v(explorerNodePosition(state,index,id)),ease));
-        const node={...source,outputs:explorerOutputs(source,index),position:p,radius:explorerNodeRadius(source,state)*nodeScale(state,source)*(.2+.8*ease),colour:index.nodes.get(source.domainId)?.colour || colours[index.roots.indexOf(source.domainId)%colours.length],count:explorerNodeCount(index,id,state),progress:ease};nodes.push(node);bonds.push({id:parentId+'>'+id,from:parentId,to:id,type:source.contribution?'contribution':'contains',progress:ease});
+        const baseColour=index.nodes.get(source.domainId)?.colour || colours[index.roots.indexOf(source.domainId)%colours.length];
+        const node={...source,outputs:explorerOutputs(source,index,state),position:p,radius:explorerNodeRadius(source,state)*nodeScale(state,source)*(.2+.8*ease),colour:explorerTone(baseColour,source.depth),count:explorerNodeCount(index,id,state),progress:ease};nodes.push(node);bonds.push({id:parentId+'>'+id,from:parentId,to:id,type:source.contribution?'contribution':'contains',progress:ease});
         if(expand && state.expanded.includes(id)){const children=childIds(index,source,state),page=state.pages[id] || 0;for(const child of children.slice(page*EXPLORER_CHILDREN,page*EXPLORER_CHILDREN+EXPLORER_CHILDREN))visit(child,id);}
     };
     // Only wings assembled by this user spend the detail budget.

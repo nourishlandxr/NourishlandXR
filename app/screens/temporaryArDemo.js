@@ -5543,7 +5543,7 @@ function drawMarker(view) {
         if(style==='organic' || style==='flat-disc'){
             const radius=style==='organic'?.28:.32,light=totemNotificationLight(record),base={...record.position,y:groundBaseY+(style==='organic'?radius:.045)};
             drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,base,radius,{color:totemColour,alpha:arrival*.92,emissive:.12,...(style==='flat-disc'?{scale:{x:1,y:.16,z:1}}:{})});
-            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...base,y:base.y+(style==='organic'?radius:.07)},.065,{color:light.colour,alpha:arrival*.94,emissive:light.strength+.45});return;
+            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...base,y:base.y+(style==='organic'?radius:.07)},.045,{color:light.colour,alpha:arrival*.86,emissive:light.strength+.22});return;
         }
         const postOptions={halfWidth:bodyHalfWidth,halfHeight:bodyHalfHeight,halfDepth:bodyHalfDepth,
             notification:totemNotificationLight(record),
@@ -5552,8 +5552,7 @@ function drawMarker(view) {
             highlighted:Boolean(record.totemSelectedCard)};
         if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,{...record.position,y:groundBaseY},{...postOptions,topColor:totemColour,woodGrain:.8,topTaper:.96});
         else drawTotemSculpture(gl, totemSculptureRenderer, view, { ...record.position, y:groundBaseY },postOptions);
-        const light=totemNotificationLight(record),tip={...record.position,y:groundBaseY+bodyHalfHeight*2+.015};
-        drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,tip,record.demoMapPiece?.025:.065,{color:light.colour,alpha:arrival*.94,emissive:light.strength+.45,scale:{x:1,y:1.25,z:1}});
+        if(record.demoMapPiece)return;
         if(record.demoMapPiece)return;
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,style,
