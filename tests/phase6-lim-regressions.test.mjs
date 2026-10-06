@@ -93,7 +93,7 @@ test('spatial panel keeps its pose through head turns and only moves on grab or 
 test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
     assert.equal(DEMO_TEXT_TEXTURE_INTERVAL_MS,48);
     assert.equal(DEMO_LIM_TEXTURE_INTERVAL_MS,64);
-    assert.match(demoSource, /const textureInterval=limActivation\?\.active \|\| textIsTyping \|\| paragraphFadeActive \|\| openingCopyRevealActive \? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS/);
+    assert.match(demoSource, /const textureInterval=limActivation\?\.active \|\| textIsTyping \|\| paragraphFadeActive \|\| openingCopyRevealActive \? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive \? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS/);
     assert.match(demoSource, /introTextureUploadedAt >= textureInterval/);
     assert.match(demoSource, /if\(label\.width!==width\)label\.width=width/);
     assert.match(demoSource, /if\(label\.height!==height\)label\.height=height/);

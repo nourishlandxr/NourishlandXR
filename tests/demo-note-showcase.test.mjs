@@ -51,11 +51,12 @@ test('a shared bee rig resumes original wing motion even on a same-time rest-to-
  applyBeeWingPose(model,true);assert.ok(bone.quaternion.equals(rotation));applyBeeWingPose(model,false);assert.ok(bone.quaternion.angleTo(flying)<1e-6);
  model.hoverAction.time=.7;applyBeeWingPose(model,false);assert.ok(bone.quaternion.angleTo(flying)>.1);
 });
-test('soft ambient buzz is continuous, muted by Haptics, and stops when bees leave',()=>{
+test('bees within ambient range do not buzz; a close encounter gives one short pulse',()=>{
  const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...args)=>{pulses.push(args);return Promise.resolve();}}]}},fx=createDemoFeedback();
  for(const time of [120,240,360])fx.tick(time,{sources:[source],beeAround:true});
- assert.equal(pulses.length,3);assert.ok(pulses.every(([strength,duration])=>strength>0 && strength<=DEMO_FEEDBACK.beeBuzzStrength && duration===145));
- fx.tick(480,{sources:[source]});assert.deepEqual(pulses.at(-1),[0,1]);fx.setHaptics(false);const before=pulses.length;fx.tick(600,{sources:[source],beeAround:true});assert.equal(pulses.length,before);fx.destroy();
+ assert.equal(pulses.length,0);
+ fx.tick(480,{sources:[source],beeEncounters:['bee-1']});assert.deepEqual(pulses.at(-1),[DEMO_FEEDBACK.beeApproachStrength,40]);
+ fx.tick(600,{sources:[source],beeEncounters:['bee-1']});assert.equal(pulses.filter(([strength])=>strength>0).length,1);fx.setHaptics(false);const before=pulses.length;fx.tick(720,{sources:[source],beeEncounters:['bee-2']});assert.equal(pulses.length,before);fx.destroy();
 });
 test('dice landing emits impact feedback, resting micro-collisions do not',()=>{
  const impacts=[],physics=createHeroDicePhysics({x:0,y:0,z:0},{onImpact:value=>impacts.push(value)});physics.state.position.y=1;

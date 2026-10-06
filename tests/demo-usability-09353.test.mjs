@@ -35,10 +35,10 @@ test('mode-only Explorer provides three compact branches and preserves existing 
 test('dice shadow softens and expands as a dice is lifted',()=>{
  const ground=diceShadowAppearance({y:.19},0),high=diceShadowAppearance({y:1.19},0);assert.ok(high.radius>ground.radius);assert.ok(high.opacity<ground.opacity);assert.ok(ground.opacity<=.4);
 });
-test('each close bee encounter sends one gentle haptic and contact is stronger',()=>{
+test('each close bee encounter sends one gentle haptic and controller contact is silent',()=>{
  const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...values)=>{pulses.push(values);return Promise.resolve();}}]}},feedback=createDemoFeedback();
  feedback.tick(100,{sources:[source],beeEncounters:['0:1']});assert.deepEqual(pulses[0],[DEMO_FEEDBACK.beeApproachStrength,40]);
  feedback.tick(1600,{sources:[source],beeEncounters:['0:1']});assert.equal(pulses.filter(p=>p[0]>0).length,1);
  feedback.tick(1800,{sources:[source],beeEncounters:['1:1']});assert.equal(pulses.filter(p=>p[0]>0).length,2);
- feedback.tick(2900,{sources:[source],beeContactSources:[source]});assert.deepEqual(pulses.at(-1),[DEMO_FEEDBACK.beeStrength,45]);feedback.destroy();
+ const beforeContact=pulses.filter(([strength])=>strength>0).length;feedback.tick(2900,{sources:[source],beeContactSources:[source]});assert.equal(pulses.filter(([strength])=>strength>0).length,beforeContact);feedback.destroy();
 });

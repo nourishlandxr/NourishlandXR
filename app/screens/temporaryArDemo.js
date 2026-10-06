@@ -5196,7 +5196,7 @@ function drawIntroSpatial(view) {
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
     const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<1100;
-    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
+    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS;
     if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
