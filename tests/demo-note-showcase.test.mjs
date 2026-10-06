@@ -61,7 +61,10 @@ test('Explorer branches share colour, child cells have multiple outputs and inde
  for(const id of state.wings)selectExplorerNode(record,knowledge,{explorerNodeId:id},0);
  const field=explorerMoleculeView(record,knowledge,1,2000,true),child=field.nodes.find(node=>node.depth===2),other=field.nodes.find(node=>node.depth===2 && node.id!==child.id),object=state.nodeObjects[child.id];
  assert.ok(object);assert.ok(child.outputs.length>=2);
- for(const node of field.nodes.filter(node=>node.depth>1))assert.equal(node.colour,field.nodes.find(parent=>parent.id===node.domainId).colour);
+ for(const node of field.nodes.filter(node=>node.depth>1)){
+  const parent=field.nodes.find(item=>item.id===node.domainId),tone=new THREE.Color(node.colour).getHSL({h:0,s:0,l:0}),base=new THREE.Color(parent.colour).getHSL({h:0,s:0,l:0});
+  assert.ok(Math.abs(tone.h-base.h)<.005);assert.ok(Math.abs(tone.l-base.l)>.1);
+ }
  assert.equal(new Set(field.nodes.filter(node=>node.depth===1).map(node=>node.colour)).size,3);
  class Session extends EventTarget {inputSources=[];visibilityState='visible';}
  const session=new Session(),source={targetRaySpace:{},gripSpace:{}};session.inputSources=[source];

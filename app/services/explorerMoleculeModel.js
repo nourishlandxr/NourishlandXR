@@ -115,11 +115,13 @@ export function explorerChildFrame(state,index,id){
 }
 export function explorerOutputs(node,index,state){
     const page=state?.pages?.[node.id] || 0,children=childIds(index,node,state || {contributionAdded:true}).slice(page*EXPLORER_CHILDREN,page*EXPLORER_CHILDREN+EXPLORER_CHILDREN).map(id=>({id,label:index.nodes.get(id)?.label || 'Topic'}));
-    return children.length?children:[{id:node.id,label:'Read'}];
+    return [...children,{id:node.id,label:'Read'},{id:node.parentId || 'core',label:'Parent'}].slice(0,4);
 }
 function explorerTone(colour,depth){
-    const base=new THREE.Color(colour),target=new THREE.Color(depth%2?'#263b35':'#f2f4ec');
-    return depth<=1?base.getStyle():base.lerp(target,Math.min(.52,.22+Math.floor((depth-2)/2)*.12)).getStyle();
+    if(depth<=1)return colour;
+    const base=new THREE.Color(colour),hsl=base.getHSL({h:0,s:0,l:0}),step=Math.floor((depth-2)/2);
+    hsl.l=depth%2?Math.max(.12,hsl.l*(.68-step*.14)):Math.min(.9,hsl.l+(1-hsl.l)*(.30+step*.13));
+    return base.setHSL(hsl.h,hsl.s,hsl.l).getStyle();
 }
 function nodeScale(state,node){return state.wingObjects[node.domainId]?.scale || 1;}
 export function customizeExplorerOrganism(record,knowledge,values){
