@@ -78,6 +78,19 @@ export function ensureExplorerMolecule(record,knowledge){
     return state;
 }
 export function explorerAttachedWings(state,index){return state.wings.filter(id=>index.nodes.has(id)&&state.assembled.includes('core>'+id));}
+export function initializeExplorerPreview(record,knowledge,time=now()){
+    const state=ensureExplorerMolecule(record,knowledge);
+    if(state.readerPreview || state.wings.length || state.puzzle)return state;
+    state.readerPreview=true;
+    // A mode-only reader starts with three useful branches. Personal organisms
+    // and specialised creator assembly remain untouched.
+    const index=explorerMoleculeIndex(knowledge,record);
+    for(const [i,id] of index.roots.slice(0,3).entries()){
+        state.wings.push(id);state.assembled.push('core>'+id);state.positions[id]={...domainPorts[i*2]};state.births[id]=time;
+        state.wingObjects[id]={id:'explorer:wing:'+id,position:{...state.positions[id]},rotation:{x:0,y:0,z:0,w:1},scale:1,radius:.078};
+    }
+    touch(record,time);return state;
+}
 export function explorerNodePosition(state,index,id){
     const p=state.positions[id],domain=index.nodes.get(id)?.domainId,wing=state.wingObjects[domain],origin=state.positions[domain];if(!p || !wing || !origin)return p;
     return point(v(p).sub(v(origin)).multiplyScalar(wing.scale).applyQuaternion(new THREE.Quaternion(wing.rotation.x,wing.rotation.y,wing.rotation.z,wing.rotation.w)).add(v(wing.position)));

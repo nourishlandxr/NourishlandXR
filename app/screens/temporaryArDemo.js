@@ -95,6 +95,8 @@ import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { mountCreatorArKnowledge } from '../services/creatorArKnowledge.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
+import {createSpatialNoteEditor} from '../services/spatialNoteEditor.js';
+import {rebaseDemoRecords,rebaseXrPoint,rebaseXrPose,rebaseXrMatrix} from '../services/xrWorldRebase.js';
 import { mountPlantInformationWeb } from '../components/plantInformationWeb.js';
 import { PIGEON_PEA_PIM } from '../services/pigeonPeaPim.js';
 import { DEMO_NEIGHBOUR_PLANT_IDS, demoNeighbourPim } from '../services/demoNeighbourPim.js';
@@ -393,7 +395,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => arWelcomeOpeningActive?'Welcome · start when ready':guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
+const demoIntroLabel = () => arWelcomeOpeningActive?'Welcome':guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
 let demoJourneyStage='why';
 
 function setDemoJourneyStage(stageId) {
@@ -898,11 +900,11 @@ function showDemoPanelIntroduction(record,index=0){
     infoPanel?.setMediaCollapsed(index!==0);
     infoPanel?.setExplorerOpen(index!==0);
     infoPanel?.setSettingsOpen(false);
-    showIntroBoard(step.title,step.main,index===0?'View choices':'Discover another plant',()=>{
+    showIntroBoard(step.title,step.main,index===0?'View choices':'Continue',()=>{
         if(index===0){showDemoPanelIntroduction(record,1);return;}
         knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
         infoPanel?.setExplorerOpen(false);infoPanel?.setSettingsOpen(false);
-        showIntroBoard('Play with the environment',['Take a moment to settle into this place. Natural spaces and extended reality can invite observation, discovery and play.','Try holding the Hero Dice. A butterfly can be caught with Trigger when it crosses your laser. Release it in the air to keep flying, or near a panel or cell to let it rest briefly.'],'Discover another plant',()=>showDemoAction('plant2'),{stepLabel:'PLAY 1.1',nextGuide:'Grip moves objects. Trigger catches butterflies. Joystick up moves farther; down moves nearer.'});
+        showIntroBoard('Play with the environment',['Take a moment to settle into this place. Natural spaces and extended reality can invite observation, discovery and play.','Try holding the Hero Dice. A butterfly can be caught with Trigger when it crosses your laser. Release it in the air to keep flying, or near a panel or cell to let it rest briefly.'],'Continue',()=>showDemoAction('plant2'),{stepLabel:'PLAY 1.1',nextGuide:'Grip moves objects. Trigger catches butterflies. Joystick up moves farther; down moves nearer.'});
     },{stepLabel:id,nextGuide:step.hint,keepPanel:true});
     infoPanel?.guideTool(index===0?'ToggleMedia':'Explorer');
 }
@@ -1757,9 +1759,19 @@ function bindLimSessionInteractions(arSession) {
         const resolved=resolveDemoCellTarget(),node=resolved?.kind==='lim-cell'?resolved.node:null;
         if(node || event.inputSource===limInputSource || event.inputSource===limInputSuppressSource && performance.now()<limActivationSessionSuppressUntil){event.preventDefault?.();event.stopImmediatePropagation?.();if(node)limActivation.consumeSyntheticClick(node.key,performance.now());return;}
     };
-    const visibility=()=>{if(arSession.visibilityState==='hidden'){limActivation.cancel('session-hidden');limInputSource=null;cancelDemoInteractionState('session-hidden');}};
+    const visibility=()=>{if(arSession.visibilityState==='hidden'){limActivation.cancel('session-hidden');limInputSource=null;cancelDemoInteractionState('session-hidden');}else if(arSession.visibilityState==='visible'){preservePlacedDemoPlants(markers);introBoardTextureDirty=true;}};
+    const reset=event=>{
+        const matrix=event.transform?.inverse?.matrix;if(!matrix)return;
+        cancelDemoInteractionState('reference-space-reset');rebaseDemoRecords(markers,matrix);
+        // Anchors are matrices; points and reading poses use separate helpers.
+        if(ambientWorldFrame!==introWorldAnchor)rebaseXrMatrix(ambientWorldFrame,matrix);rebaseXrMatrix(introWorldAnchor,matrix);rebaseXrPoint(ambientWorldAnchor,matrix);rebaseXrPose(demoKnowledgePanel,matrix);
+        for(const insect of butterflyCompanions){rebaseXrPoint(insect.position,matrix);rebaseXrPoint(insect.handPosition,matrix);rebaseXrPose(insect.flightAnchor,matrix);}
+        if(Number.isFinite(groundYEstimate))groundYEstimate+=matrix[13];infoPanel?.rebase(matrix);heroDiceToy?.rebase(matrix);hitMatrix=null;introBoardTextureDirty=true;
+    };
+    referenceSpace?.addEventListener('reset',reset);
     arSession.addEventListener('selectstart',selectStart,true);arSession.addEventListener('selectend',selectEnd,true);arSession.addEventListener('select',select,true);arSession.addEventListener('visibilitychange',visibility);
-    limSessionCleanup=()=>{arSession.removeEventListener('selectstart',selectStart,true);arSession.removeEventListener('selectend',selectEnd,true);arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;limInputSuppressSource=null;};
+    const boundSpace=referenceSpace;
+    limSessionCleanup=()=>{boundSpace?.removeEventListener('reset',reset);arSession.removeEventListener('selectstart',selectStart,true);arSession.removeEventListener('selectend',selectEnd,true);arSession.removeEventListener('select',select,true);arSession.removeEventListener('visibilitychange',visibility);limInputSource=null;limInputSuppressSource=null;};
 }
 
 function paintWelcomeLayer(now) {
@@ -1926,7 +1938,7 @@ function showArWelcomeShowcase() {
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
         introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
-        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Start the sample demo',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
+        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Start the demo',onContinue:()=>runArWelcomeTutorial(0),kind:'welcome'});
         introBoardVisibleBody='';openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
@@ -1942,7 +1954,7 @@ function showArWelcomeShowcase() {
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
         if(arWelcomeClock.elapsed>=arWelcomeOpeningDuration){
             introBoardVisibleBody=introBoardBody;introBoardTextureDirty=true;
-            const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.textContent='Start the demo';button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;
+            const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;
         }
         boardTypingTimer=setTimeout(waitForOpeningCopy,100);
     };
@@ -2012,7 +2024,7 @@ function showArWelcomeShowcase() {
         setIntroBoardNextGuide('');
         const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(continueButton){
-            continueButton.textContent=demoLocalizedText('Start the sample demo');
+            continueButton.textContent=demoLocalizedText('Start the demo');
             continueButton.hidden=false;
             continueButton.disabled=false;
             continueButton.onclick=()=>{
@@ -2075,7 +2087,7 @@ function showDemoTutorialMedia(key,content={}) {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Discover the first plant',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
+    {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Continue',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
     {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:'curiosity',button:'See how it works',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]},
     {code:'SPACE 1.3',title:'Settle into this space',art:null,button:'Place the first sample',nextGuide:'Take your time. Place the sample when you are ready.',paragraphs:['A Project connects information to a real place. We will begin with one plant and its information.','There is no rush. Explore the first sample and get comfortable with the panels before trying playful interactions.']}
 ];
@@ -3044,6 +3056,7 @@ function toggleDemoPlantProfile(record) {
     const recordIndex = markers.indexOf(record);
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     const opening=!record.demoExpanded;knowledgeExplorer(record);
+    record.demoPlacementHighlight=false;
     if(opening && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='curiosity';knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});}
     record.demoExpanded = opening;
     if (record.demoExpanded) {
@@ -3264,7 +3277,7 @@ function updateSimulatedMarkers() {
         const anchor = record.simulatedAnchor || { x: 50, y: 50 };
         if (record.demoType === 'plant') {
             const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
-            return renderSimulatedPlant(record, index, anchor, offset).replace('tryit-sim-marker tryit-sim-marker-plant',`tryit-sim-marker tryit-sim-marker-plant${highlighted.has(record.id)?' is-sign-target':''}`);
+            return renderSimulatedPlant(record, index, anchor, offset).replace('tryit-sim-marker tryit-sim-marker-plant',`tryit-sim-marker tryit-sim-marker-plant${highlighted.has(record.id)?' is-sign-target':''}${record.demoPlacementHighlight?' is-placement-highlight':''}`);
         }
         if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('nlxr-totem-system',`nlxr-totem-system is-totem-${renderedTotemStyle(record)}`).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
@@ -3854,13 +3867,17 @@ function focusDemoObjectControls(record){
     return focusSpatialObjectControls(infoPanel,record,{edit:openDemoNoteEditor,open:openDemoNoteExperience,refresh:item=>{refreshDemoRecord(item);item.totemCardsRefreshed=0;updateSimulatedMarkers();}});
 }
 function selectDemoNote(record){focusDemoObjectControls(record);if(spatialNoteEnabled(record))openDemoNoteExperience(record);else infoPanel?.setExplorerOpen(true);return true;}
+function showNativeDemoNoteEditor(root,title,input=null){
+    try{demoNoteRenderer?.destroy();demoNoteRenderer=null;demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialNoteEditor({gl,root,title,onStatus:setGuide});if(input)demoKnowledgeMirror.focusInput(input);}
+    catch(error){console.warn('Native Note editor closed safely:',error);closeDemoKnowledge(true);setGuide('The editor could not open. Your Note is preserved and the demo is still available.');}
+}
 function openDemoNoteExperience(record){
     closeDemoKnowledge(true);
     const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
     demoKnowledgeWorkspace=mountNoteExperience(root,record,{onClose:()=>closeDemoKnowledge(true)});
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');
     if(session && gl){demoNoteRenderer=createNoteSpatialRenderer(gl,root,record,viewerMatrix,{onInput:input=>{
-        demoNoteRenderer?.destroy();demoNoteRenderer=null;demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'NOTE WIDGET',background:'#142d26',ink:'#f5faef',onStatus:setGuide,onError:error=>{setGuide('Widget editor could not render. Return to AR and try again.');closeDemoKnowledge(true);}});demoKnowledgeMirror.focusInput(input);
+        showNativeDemoNoteEditor(root,'NOTE WIDGET',input);
     }});}
 }
 function openDemoNoteEditor(record,widgetId=''){
@@ -3868,7 +3885,7 @@ function openDemoNoteEditor(record,widgetId=''){
     const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
     demoKnowledgeWorkspace=mountSpatialNoteEditor(root,record,{widgetId,objectLabel:record.demoType==='zone'?'Totem':'Note',onSave:async update=>{Object.assign(record,update);record.demoContent={...record.demoContent,title:update.name,description:update.description,lines:[update.description]};refreshDemoRecord(record);updateSimulatedMarkers();},onClose:()=>{closeDemoKnowledge(true);focusDemoObjectControls(record);if(widgetId){openDemoNoteExperience(record);root.remove();demoKnowledgeRoot?.querySelector('[data-note-expand]')?.click();}}});
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');infoPanel?.suspend(true);
-    if(session && !domOverlayEnabled && gl){demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'EDIT NOTE',background:'#142d26',ink:'#f5faef',onStatus:setGuide,onError:error=>{setGuide('Note editor could not render. Return to AR and try again.');closeDemoKnowledge(true);}});demoKnowledgeMirror.focusInput(root.querySelector('[data-widget-edit][open] input') || root.querySelector('[name=title]'));}
+    if(session && !domOverlayEnabled && gl)showNativeDemoNoteEditor(root,'EDIT NOTE');
 }
 
 function releaseHeldDemoRecord() {
@@ -3955,6 +3972,8 @@ function placeMarker() {
         demoOrbColor: type === 'plant' ? 'pigeonPea' : type === 'plant2' ? 'green' : '',
         demoOrbShape: type === 'plant' ? 'orb' : type === 'plant2' ? 'orb' : '',
         demoAlive: type !== 'note',
+        demoPlacementHighlight:['plant','plant2'].includes(type),
+        demoPlacementHighlightAt:performance.now(),
         demoExpanded: false,
         demoInteractive: !['plant', 'plant2'].includes(type),
         demoPanelOffset: panelOffsets[type],
@@ -4055,7 +4074,7 @@ function drawDemoKnowledge(view) {
     gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);
     gl.uniformMatrix4fv(gl.getUniformLocation(program,'mvp'),false,multiply(view.projectionMatrix,multiply(view.transform.inverse.matrix,model)));
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,demoKnowledgeMirror.texture);gl.uniform1i(gl.getUniformLocation(program,'t'),0);gl.uniform1f(gl.getUniformLocation(program,'opacity'),1);
-    gl.disable(gl.CULL_FACE);gl.drawArrays(gl.TRIANGLES,0,6);
+    gl.disable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.drawArrays(gl.TRIANGLES,0,6);gl.depthMask(true);
     const axes=demoControllerInputSource()?.gamepad?.axes || [];const vertical=axes[3] ?? axes[1] ?? 0;
     if(Math.abs(vertical)>.4 && performance.now()-demoKnowledgeScrollAt>150){demoKnowledgeMirror.scrollBy(vertical*120);demoKnowledgeScrollAt=performance.now();}
 }
@@ -4507,7 +4526,7 @@ function wrappedTextureLines(ctx, text, maxWidth) {
 
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     const paragraphs = String(text || '').split(/\n\n/);
-    for (let fontSize = 60; fontSize >= 22; fontSize -= 2) {
+    for (let fontSize = 66; fontSize >= 22; fontSize -= 2) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .5);
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
@@ -4662,6 +4681,8 @@ function createIntroNoteTexture(texture = null) {
 }
 
 function drawIntroNoteContent(ctx) {
+    // The glass/rim fades in first. Text appears once at its final white value.
+    if(arWelcomeOpeningActive && arWelcomeClock.elapsed<900)return;
     if(introBoardStep==='UTILITY 1.1' && demoLivingMapScene){
         ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
         ctx.fillStyle='#dfecc8';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
@@ -4684,26 +4705,19 @@ function drawIntroNoteContent(ctx) {
     const contentCenter = contentLeft + contentWidth / 2;
     const titleWidth = 960;
     ctx.save();
-    const gentleIntroFade=arWelcomeIntroPending && !arWelcomeSettleStage;
-    if(gentleIntroFade){
-        const elapsed=arWelcomeClock?.elapsed || 0;
-        ctx.globalAlpha*=.72+.28*(.5+.5*Math.sin(elapsed/2400));
-    }
-    ctx.shadowColor = 'rgba(0,20,18,.38)';
-    ctx.shadowBlur = 2;
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    if(arWelcomeSettleStage)ctx.globalAlpha*=Math.max(0,Math.min(1,(arWelcomeClock.elapsed-arWelcomeSettleStartedAt)/850));
-    ctx.fillStyle = 'rgba(232,246,225,.7)';
+    ctx.fillStyle = '#ffffff';
     ctx.font = `600 29px ${DEMO_PRESENTATION_FONT}`;
     ctx.fillText(introBoardStep.startsWith('UTILITY ')?introBoardStep:demoIntroLabel(), contentCenter, 345, contentWidth);
     const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
     if(openingElapsed!==null){
         if(arWelcomeOpeningActive || openingElapsed<DEMO_WELCOME_OPENING_MS){
-            const fade=arWelcomeOpeningActive?Math.min(1,openingElapsed/900):1;
             const openingTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
             let openingTitleSize=96;
-            ctx.globalAlpha*=fade;ctx.fillStyle='#f7fbf4';
+            ctx.fillStyle='#ffffff';
             do {ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
             ctx.fillText(openingTitle,contentCenter,420);
             if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){
@@ -4746,8 +4760,8 @@ function drawIntroNoteContent(ctx) {
     // Accent colours illuminate the surface, while the copy stays bright and
     // neutral so blue and orange narrative stages remain equally readable.
     ctx.fillStyle = '#ffffff';
-    ctx.shadowColor = 'rgba(0,20,17,.52)';
-    ctx.shadowBlur = 4;
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
     const typedBody = narrative?.text || introBoardVisibleBody;
     const visibleParagraphs = typedBody.split(/\n\n/);
     // Keep the first body line clear of the divider and the clipping edge;
@@ -5199,6 +5213,7 @@ function drawSpatialButterfly(view){
         if(insect.lastElapsed!==elapsed){
             const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             const pose=demoButterflyPose(elapsed,insect.startedAt,{reducedMotion,perchMs:insect.perchMs,seed:insect.seed});if(!pose)continue;
+            if(insect.releasedPerch)pose.opacity=1;
             pose.wingPhase=insect.seed*1.9;pose.size=insect.size;
             if(pose.flight>0 && perch)insect.flightAnchor ||= {...perch,center:{...perch.center}};
             const anchor=insect.flightAnchor || perch;if(!anchor)continue;
@@ -5265,6 +5280,7 @@ function drawSpatialAmbientLife(view){
         const visitor=ambientBeeFlowerVisits[index] ||= {},last=visitor.flightPosition;
         if(last && visitor.flightAt!==arWelcomeClock.elapsed){const dx=position.x-last.x,dz=position.z-last.z;if(Math.hypot(dx,dz)>.00001)visitor.flightYaw=Math.atan2(dx,dz);}
         visitor.flightPosition={...position};visitor.flightAt=arWelcomeClock.elapsed;
+        visitor.encounterId=bee.flyby>.2?index+':'+bee.encounterIndex:'';
         bee.worldYaw=(visitor.flightYaw ?? bee.heading)+Math.sin(arWelcomeClock.elapsed*.0017+index)*.16;
         bee.nectar=Boolean(visitor.nectar && bee.flyby<.02);
         ambientBeeModel?.drawXR?.(view,position,arWelcomeClock.elapsed,{...bee,viewer:viewerMatrix});
@@ -5315,7 +5331,7 @@ function ambientBeeWorldPosition(bee,index=0){
         ambientEncounterOrigin={index:bee.encounterIndex,x:viewerMatrix[12],y:viewerMatrix[13],z:viewerMatrix[14]};
     }
     const curious=beeCuriosity(progress);
-    const encounter=bee.encounterIndex+ambientEncounterSeed,faceDistance=.66+(encounter%3)*.10+Math.abs(progress-.5)*.34;
+    const encounter=bee.encounterIndex+ambientEncounterSeed+index,faceDistance=.66+(encounter%3)*.10+Math.abs(progress-.5)*.34;
     const approach=Math.abs(encounter)%4,faceAcross=(bee.waistVisit?(index%2?.20:-.20):[.38,-.34,.10,.28][approach])+(progress-.5)*.20,faceHeight=bee.waistVisit?-.65:[.10,.08,.42,.28][approach];
     const facePosition={
         x:ambientEncounterOrigin.x+rightX*faceAcross-frontX*faceDistance,
@@ -5410,7 +5426,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1),
-            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
+            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, placementHighlight:record.demoPlacementHighlight,placementAge:performance.now()-(record.demoPlacementHighlightAt || 0), held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {
@@ -5548,7 +5564,7 @@ function drawMarker(view) {
         for(const plant of markers){
             if(plant.demoType!=='plant' || !plant.demoExpanded || !plant.knowledgeExplorer || !demoAreaVisible(plant) || demoKnowledgeWorkspace)continue;
             plant.knowledgeFloor=calibratedDemoGroundY();
-            knowledgeRenderer.draw(view,plant,knowledgeFor(plant),demoPimExpandedNodeIds(plant),ensureDemoPimPose(plant),performance.now());
+            knowledgeRenderer.draw(view,plant,knowledgeFor(plant),demoPimExpandedNodeIds(plant),ensureDemoPimPose(plant),introFrameToken || performance.now());
         }
         knowledgeRenderer.end();
     }
@@ -5804,7 +5820,8 @@ async function startImmersive() {
                     const ray=demoControllerRayForInputEvent({frame,inputSource:source});
                     return ambientBeeFlowerVisits.some(visitor=>beePointerContact(visitor?.flightPosition,ray));
                 }):[];
-                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeContactSources});
+                const beeEncounters=getSpatialVisualSettings().insects?ambientBeeFlowerVisits.filter(visitor=>visitor?.encounterId && visitor.flightPosition && viewerMatrix && Math.hypot(visitor.flightPosition.x-viewerMatrix[12],visitor.flightPosition.y-viewerMatrix[13],visitor.flightPosition.z-viewerMatrix[14])<.95).map(visitor=>visitor.encounterId):[];
+                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeContactSources,beeEncounters});
             });
             let layer=null;
             try { layer=frame.session.renderState.baseLayer; }

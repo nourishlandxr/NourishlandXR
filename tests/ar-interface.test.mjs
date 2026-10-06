@@ -1527,7 +1527,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
     assert.match(styles, /font-size:clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\)/);
-    assert.match(source, /for \(let fontSize = 60; fontSize >= 22; fontSize -= 2\)/);
+    assert.match(source, /for \(let fontSize = 66; fontSize >= 22; fontSize -= 2\)/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.doesNotMatch(source, /arWelcomeVisionActivated|visionActivated:/);

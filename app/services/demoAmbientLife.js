@@ -35,7 +35,10 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
     const lead=candidate ? (candidate.index+encounterSeed)%BEE_COUNT : -1;
     const waistVisit=Boolean(candidate && candidate.index%3===2);
     const encounter=candidate && (lead===index || waistVisit && (lead+1)%BEE_COUNT===index) ? candidate : null;
-    const flybyProgress=encounter?.progress || 0,flyby=encounter?.envelope || 0;
+    const follower=encounter && waistVisit && lead!==index;
+    const delay=follower?1100+variation*700:0;
+    const flybyProgress=encounter?clamp01((encounter.progress*BEE_ENCOUNTER_DURATION_MS-delay)/(BEE_ENCOUNTER_DURATION_MS-delay)):0;
+    const flyby=encounter?smooth(flybyProgress/.18)*(1-smooth((flybyProgress-.82)/.18)):0;
     const orbitX=.5+Math.cos(phase)*(.22+.07*Math.sin(time*.13+index));
     const orbitY=.5+Math.sin(phase*.83+index*.4)*(.20+.08*Math.cos(time*.17+index));
     const orbitDepth=Math.sin(phase*.71-.9)+Math.sin(time*.19+index)*.12;

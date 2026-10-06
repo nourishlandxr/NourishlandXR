@@ -46,6 +46,7 @@ function target(entry,node,p,distance){
 }
 export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
     let entries=[],labelSurfaces=[];
+    const frameFields=new WeakMap(),scratchMvp=new THREE.Matrix4(),scratchNormal=new THREE.Matrix3();
     const labels=createSpatialTotemCards(gl,{canvas:labelCanvas,ray,surfaces:()=>labelSurfaces,containedFeedback:true});
     const vertex=shader(gl,gl.VERTEX_SHADER,'attribute vec3 position,normal;uniform mat4 model,mvp;uniform mat3 normalMatrix;varying vec3 n,world;varying float along;void main(){along=position.y+.5;n=normalMatrix*normal;world=(model*vec4(position,1.)).xyz;gl_Position=mvp*vec4(position,1.);}');
     const fragment=shader(gl,gl.FRAGMENT_SHADER,'precision mediump float;varying vec3 n,world;varying float along;uniform vec3 colour,camera;uniform float opacity,emphasis,pulse;void main(){vec3 normal=normalize(n),key=normalize(vec3(-.45,.7,1.)),eye=normalize(camera-world);float diffuse=max(0.,dot(normal,key));float fill=max(0.,dot(normal,normalize(vec3(.65,-.2,-.7))));float light=.30+.62*diffuse+.13*fill;float highlight=pow(max(0.,dot(normal,normalize(key+eye))),24.)*.14;float ripple=step(0.,pulse)*(1.-smoothstep(0.,.12,abs(along-pulse)))*.14;gl_FragColor=vec4(colour*light+vec3(highlight+emphasis+ripple),opacity);}');
@@ -56,14 +57,17 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
     const solids=createExplorerMoleculeGeometry(),sphere=geometry(solids.node),cylinder=geometry(solids.bond),socket=geometry(new THREE.BoxGeometry(1.45,1.45,.18));
     function paint(shape,model,projection,colour,opacity,emphasis=0,pulse=-1){
         for(const name of ['position','normal']){gl.bindBuffer(gl.ARRAY_BUFFER,shape[name]);gl.enableVertexAttribArray(attributes[name]);gl.vertexAttribPointer(attributes[name],3,gl.FLOAT,false,0,0);}
-        gl.uniformMatrix4fv(uniforms.model,false,model.elements);gl.uniformMatrix4fv(uniforms.mvp,false,projection.clone().multiply(model).elements);gl.uniformMatrix3fv(uniforms.normalMatrix,false,new THREE.Matrix3().getNormalMatrix(model).elements);gl.uniform3fv(uniforms.colour,colour);gl.uniform1f(uniforms.opacity,opacity);gl.uniform1f(uniforms.emphasis,emphasis);gl.uniform1f(uniforms.pulse,pulse);gl.drawArrays(gl.TRIANGLES,0,shape.count);
+        gl.uniformMatrix4fv(uniforms.model,false,model.elements);gl.uniformMatrix4fv(uniforms.mvp,false,scratchMvp.copy(projection).multiply(model).elements);gl.uniformMatrix3fv(uniforms.normalMatrix,false,scratchNormal.getNormalMatrix(model).elements);gl.uniform3fv(uniforms.colour,colour);gl.uniform1f(uniforms.opacity,opacity);gl.uniform1f(uniforms.emphasis,emphasis);gl.uniform1f(uniforms.pulse,pulse);gl.drawArrays(gl.TRIANGLES,0,shape.count);
     }
     return {
         begin(){entries=[];labelSurfaces=[];labels.begin();},
         draw(view,record,knowledge,pose,opacity=1,time=performance.now()){
             const cameraMatrix=new THREE.Matrix4().fromArray(view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements),camera=new THREE.Vector3().setFromMatrixPosition(cameraMatrix);
             const base=knowledgePoseMatrix(pose),state=record.explorerMolecule,rootMatrix=base.clone().multiply(state?localObjectMatrix(state.root):new THREE.Matrix4()),rootPosition=new THREE.Vector3().setFromMatrixPosition(rootMatrix);
-            const field=explorerMoleculeView(record,knowledge,camera.distanceTo(rootPosition),time,motion?.matches),matrix=base.clone().multiply(localObjectMatrix(field.state.root)),projection=new THREE.Matrix4().fromArray(view.projectionMatrix).multiply(new THREE.Matrix4().fromArray(view.transform.inverse.matrix));
+            // Share model traversal across stereo eyes; projection remains eye-specific.
+            let cached=frameFields.get(record);
+            if(!cached || cached.time!==time || cached.knowledge!==knowledge || cached.state!==record.explorerMolecule){cached={time,knowledge,field:explorerMoleculeView(record,knowledge,camera.distanceTo(rootPosition),time,motion?.matches),state:record.explorerMolecule};frameFields.set(record,cached);}
+            const field=cached.field,matrix=base.clone().multiply(localObjectMatrix(field.state.root)),projection=new THREE.Matrix4().fromArray(view.projectionMatrix).multiply(new THREE.Matrix4().fromArray(view.transform.inverse.matrix));
             const right=new THREE.Vector3().setFromMatrixColumn(cameraMatrix,0).normalize(),up=new THREE.Vector3().setFromMatrixColumn(cameraMatrix,1).normalize(),normal=new THREE.Vector3().setFromMatrixColumn(cameraMatrix,2).normalize(),scale=field.state.root.scale;
             const rootRotation=new THREE.Quaternion().setFromRotationMatrix(matrix.clone().scale(new THREE.Vector3(1/scale,1/scale,1/scale)));
             const nodes=field.nodes.map(n=>({...n,world:vec(n.position).applyMatrix4(matrix),worldRadius:n.radius*scale,worldLength:(n.length || 0)*scale,worldRotation:rootRotation.clone().multiply(n.rotation?new THREE.Quaternion(n.rotation.x,n.rotation.y,n.rotation.z,n.rotation.w):new THREE.Quaternion())})),byId=new Map(nodes.map(n=>[n.id,n]));

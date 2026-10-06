@@ -86,7 +86,7 @@ test('demo uses one continuous welcome before beginning the Why stage', () => {
     assert.doesNotMatch(greeting, /Follow one plant to see how it connects to this place/);
     assert.match(greeting, /!openingTyping && welcomeAutoAdvanceReady/);
     assert.match(greeting, /panel\.querySelector\('h2'\)\.textContent=introBoardTitle/);
-    assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the sample demo'\)/);
+    assert.match(greeting, /continueButton\.textContent=demoLocalizedText\('Start the demo'\)/);
     assert.match(greeting, /setHeaderProgress\(null\)/);
     assert.match(greeting, /continueButton\.hidden=true;\s*runArWelcomeTutorial\(0\)/);
     assert.match(demo, /if\(index<=2\)setDemoJourneyStage\('why'\)/);
@@ -115,7 +115,7 @@ test('the first-time journey introduces the Control panel before four practical 
     assert.match(demo,/Why does this matter\?/);
     assert.match(demo,/ctx\.fillStyle = '#ffffff'/);
     assert.doesNotMatch(demo,/body:'On your left: your interactive companion/);
-    assert.match(panel,/const spatialHeight=\(\)=>phoneAR\?900:headset\?600:height\(\)/);
+    assert.match(panel,/const spatialHeight=\(\)=>phoneAR\?900:headset\?700:height\(\)/);
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-intro-reveal/);
     assert.match(styles,/@keyframes nlxr-intro-copy-fade/);
 });
@@ -218,10 +218,11 @@ test('Areas lead into the final learning feature with quiet mapped objects', () 
     assert.match(demo, /showNativeConnectionIntroduction/);
 });
 
-test('main intro gently fades while it narrates and the green welcome board has no old tagline', () => {
+test('main intro keeps white text stable and loads the glass panel before copy', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const showcase = read('app/services/arWelcomeShowcase.js');
-    assert.match(demo, /ctx\.globalAlpha\*=\.72\+\.28\*\(\.5\+\.5\*Math\.sin\(elapsed\/2400\)\)/);
+    assert.doesNotMatch(demo, /ctx\.globalAlpha\*=\.72\+\.28/);
+    assert.match(demo,/if\(arWelcomeOpeningActive && arWelcomeClock.elapsed<900\)return/);
     assert.match(showcase, /openingOpacity=reducedMotion\?1:1-smooth\(time,duration-3000,2600\)/);
     assert.doesNotMatch(showcase, /Explore the wonders of plants and ecosystems in an immersive, interactive way/);
 });

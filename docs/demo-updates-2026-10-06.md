@@ -1,6 +1,23 @@
 # Demo update review
 
-Latest local version: 0.9352. Follow-up repairs progressed through 0.9350, 0.9351 and 0.9352.
+Latest local version: 0.9353. Earlier sections below are historical checkpoints, not current verification claims.
+
+## Native Note and usability repairs — 0.9353
+
+- Note pencil editing and widget text entry now use a bounded 720 × 620 native canvas editor/keyboard. They no longer invoke HTML page capture. Keyboard supports text, numbers, symbols, clear/backspace, paging, Save and Back to AR. Resources and listeners are released on close; a failed editor opening safely returns to the demo.
+- Browser walkthrough exercised the actual pixel-hit actions: title typing, Timer editing from four to two minutes, Save and return. No WebGL errors; 30 idle frames produced zero extra texture uploads.
+- PIMO Controls contains only Tag / Curiosity / Explorer (plus Done). Note and Totem contextual controls remain intact. Cell glass is a main General Settings slider, shared by PIMO and LIMO.
+- Explorer no longer builds and discards Curiosity surfaces. Its Controls no longer converts/copies the plant document during every eye draw. Stereo eyes share a frame's model traversal; shader scratch matrices are reused. A fresh mode-only reader starts with three compact connected branches. Existing personal organisms and specialised assembly APIs are preserved.
+- Production stereo renderer review: 120 frames, 11 visible nodes, 0 texture uploads, 0 WebGL errors. On this local desktop/browser run, CPU render submission was 7.40 ms median / 11.50 ms p95. These are not headset FPS or GPU timing measurements, nor a before/after comparison.
+- Living Frame now draws opening glass before white text. Removed text opacity breathing/fades and shadows; increased paragraph/button font ceiling. Initial Continue leads to the introduction, then one Start the demo action. Early Discover first plant and repeated Discover another plant progression labels become Continue.
+- New Orbs have a fading-in pulsing ring until selected. XR reference-space resets rebase placed records, reading poses, anchors, panels, butterflies and dice; visibility resume preserves placed plants. Physical headset removal/resume remains to verify.
+- Image button/IMAGE PANEL naming and Control panel label highlights clarify A closer look. Main Control panel branding is distinct; source/reference buttons sit below the reading text. The native panel reserves additional vertical room for the larger controls.
+- Minimized Control panel is a transparent round Show control with larger discreet text, circular ray bounds and grip/hold-drag movement. Ordinary Trigger restores it.
+- Bee waist companions have offset approach timing and differing destinations, alongside their existing independent entry/orbit/animation variations. Each close encounter provides one gentle haptic; contact is a stronger short tap with cooldown. Replaced butterflies remain visible while resting. Hero Dice has a soft height-dependent floor contact shadow without a shadow-map render.
+- Verification: 576 Node tests passed; syntax and whitespace checks passed; frontend-only build succeeded. Built welcome visibly displayed V0.9353.
+- Local review fixtures: tools/preview-native-note-editor.html and tools/preview-native-explorer-budget.html. Neither ships in the hosted frontend. No commit, push, deployment, book redesign or physical Quest walkthrough was performed in this update.
+
+Priority headset acceptance: Note pencil → type → widget add/edit → Save → return without freeze; Explorer sustained frame timing while moving/expanding; Orb survival after removing/replacing the headset; circle grip/restore; glass/text contrast; haptic feel and butterfly surface rest.
 
 ## Follow-up repairs — 0.9352
 

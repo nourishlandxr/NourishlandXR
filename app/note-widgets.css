@@ -28,6 +28,17 @@
 @keyframes panel-tool-guidance {50% {border-color:#d7f9bc;box-shadow:0 0 0 4px rgba(184,230,155,.23);}}
 @media(prefers-reduced-motion:reduce) {.nlxr-info-panel .is-guidance-target {animation:none!important;}}
 .nlxr-info-panel.is-hidden {width:max-content!important;min-width:0!important;min-height:0!important;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;}
-.nlxr-info-panel.is-hidden button {min-height:48px;padding:10px 18px;border-radius:24px;background:rgba(24,55,43,.76);color:#fffdf3;border:1px solid rgba(221,242,213,.68);}
+.nlxr-info-panel.is-hidden button {width:88px!important;height:88px!important;min-height:0!important;padding:0!important;border-radius:50%!important;background:rgba(19,38,34,.25)!important;color:#fff!important;border:1px solid rgba(237,255,245,.66)!important;box-shadow:none!important;font:600 23px/1.2 system-ui!important;touch-action:none;cursor:grab;}
+.nlxr-info-panel.is-hidden button::before,.nlxr-info-panel.is-hidden button::after {display:none!important;}
+.nlxr-info-panel .nlxr-panel-brand {color:#fff!important;font-weight:800!important;letter-spacing:.045em;}
+.nlxr-info-panel.is-panel-guidance .nlxr-panel-brand,.nlxr-info-panel.is-panel-guidance .nlxr-media-wing header {color:#dfffba!important;outline:1px solid rgba(220,255,193,.65);border-radius:8px;}
+.tryit-demo .tryit-guided-choice .tryit-board-text-window {transition:none!important;}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {color:#fff!important;transition:none!important;transform:none!important;}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p:is(.is-current,.is-revealed) {opacity:1!important;}
+.tryit-demo .tryit-guided-choice.is-welcome-board p {font-size:clamp(1.12rem,2.15vw,1.55rem);}
+.tryit-intro-continue {font-size:clamp(1.2rem,2.2vw,1.6rem)!important;}
+.tryit-sim-marker-plant.is-placement-highlight::after {content:'';position:absolute;inset:-9px;border:2px solid rgba(194,250,207,.8);border-radius:50%;pointer-events:none;animation:placed-orb-guidance 1.9s ease-in-out infinite;}
+@keyframes placed-orb-guidance {50%{transform:scale(1.1);opacity:.55;}}
+@media(prefers-reduced-motion:reduce){.tryit-sim-marker-plant.is-placement-highlight::after{animation:none;}}
 .nlxr-reference-links {display:flex;flex-wrap:wrap;gap:10px;padding:12px 0;}.nlxr-reference-links a {padding:8px 12px;border:1px solid rgba(198,225,185,.65);border-radius:12px;color:inherit;text-decoration:none;}
 .nlxr-info-panel .is-selected {border-color:#dcf4c8;background:rgba(171,219,145,.25);}

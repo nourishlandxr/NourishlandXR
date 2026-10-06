@@ -105,7 +105,6 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
     return {
         begin(){surfaces=[];cards.begin();glass.begin();objects.begin();},
         draw(view,record,knowledge,expanded,pose,time=performance.now()){
-            recordSurfaces=knowledgeSurfaces(record,knowledge,expanded,pose,time);
             if(knowledgeExplorer(record).mode==='explore'){
                 // The seed keeps its physical orientation while people explore.
                 if(!record.knowledgeExplorePose){const m=view.transform.matrix || new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert().elements,len=Math.hypot(m[8],m[10]) || 1,right={x:m[10]/len,y:0,z:-m[8]/len},normal={x:m[8]/len,y:0,z:m[10]/len};record.knowledgeExplorePose={position:{x:m[12]-normal.x*.75+right.x*.25,y:Math.max((record.knowledgeFloor || 0)+.65,m[13]-.30),z:m[14]-normal.z*.75+right.z*.25},right,normal,up:{x:0,y:1,z:0}};}
@@ -118,6 +117,8 @@ export function createKnowledgeSpatialRenderer(gl,{ray=()=>null,tether=null}={})
                 // surfaces and opening transition remain unchanged below.
                 if(folded.length){const objectsSurfaces=recordSurfaces;recordSurfaces=folded;glass.draw(view,{id:'knowledge-glass-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));cards.draw(view,{id:'knowledge-'+String(record.id || record.marker?.id)},pose.position,folded.map(surface=>surface.card));recordSurfaces=objectsSurfaces;}return;
             }
+            // Explorer must never build the flat Curiosity tree just to discard it.
+            recordSurfaces=knowledgeSurfaces(record,knowledge,expanded,pose,time);
             surfaces.push(...recordSurfaces);
             const state=knowledgeExplorer(record),byId=new Map(recordSurfaces.map(surface=>[surface.node.path || 'core',surface]));
             if(state.connections && tether){

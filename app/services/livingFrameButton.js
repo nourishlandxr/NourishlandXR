@@ -10,7 +10,7 @@ export function drawLivingFrameButton(ctx, labelText, aimed=false) {
     ctx.beginPath();ctx.roundRect(24,24,852,312,40);ctx.fill();
     ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f5faef';
     const text=String(labelText || 'Continue');
-    let size=88;ctx.font=`600 ${size}px system-ui, sans-serif`;
+    let size=100;ctx.font=`600 ${size}px system-ui, sans-serif`;
     while(size>44 && ctx.measureText(text).width>780){size-=2;ctx.font=`600 ${size}px system-ui, sans-serif`;}
     ctx.fillText(text,450,180,780);
     ctx.restore();

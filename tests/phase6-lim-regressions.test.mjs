@@ -87,7 +87,7 @@ test('spatial panel keeps its pose through head turns and only moves on grab or 
     assert.doesNotMatch(panelSource, /if\(!manuallyPositioned && panelPoseOutsideSafeBounds\(matrix,pose\)\)/);
     assert.doesNotMatch(panelSource, /Object\.assign\(pose,facePanelTowardEyes\(pose\.center/);
     assert.match(panelSource, /else if\(!pose\)\{[\s\S]*pose=next;[\s\S]*if\(headset && firstPlacement\)[\s\S]*firstPlacement=false;[\s\S]*\}/);
-    assert.match(panelSource, /const spatialHeight=\(\)=>phoneAR\?900:headset\?600:height\(\)/);
+    assert.match(panelSource, /const spatialHeight=\(\)=>phoneAR\?900:headset\?700:height\(\)/);
 });
 
 test('Phase 6 typing coalesces expensive welcome texture uploads', () => {

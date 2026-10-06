@@ -3,6 +3,8 @@ import {createDiceRenderer} from './diceRenderer.js';
 import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 import {handTrackingState} from './xrPointer.js';
 import {spatialDepthDelta} from './spatialMoveControl.js';
+import {createDiceGroundShadow} from './diceGroundShadow.js';
+import {rebaseXrPoint} from './xrWorldRebase.js';
 
 export const HERO_TOY_RADIUS=.19,HERO_TOY_REACH=2.2;
 const one=new THREE.Vector3(1,1,1),serial=v=>({x:v.x,y:v.y,z:v.z});
@@ -22,6 +24,7 @@ export function createHeroDicePhysics(home,{radius=HERO_TOY_RADIUS,vertices=null
 }
 export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings().heroDice!==false,canGrab=()=>true}={}){
     const painter=createDiceRenderer(gl,{radius:HERO_TOY_RADIUS,appearance:'hero'}),geometry=painter.geometry,positions=geometry.attributes.position;
+    const shadow=createDiceGroundShadow(gl);
     let physics=null,session=null,space=null,abort=null,active=null,lastTime=null,visibleSince=null;const inputs=new Map(),rays=new Map(),pinches=new WeakMap(),suppressed=new WeakMap(),pushed=new WeakSet();
     const model=()=>physics?new THREE.Matrix4().compose(new THREE.Vector3(physics.state.position.x,physics.state.position.y,physics.state.position.z),new THREE.Quaternion(physics.state.rotation.x,physics.state.rotation.y,physics.state.rotation.z,physics.state.rotation.w),one):null;
     function ensure(){if(!visible()){visibleSince=null;return false;}const origin=home?.();if(!origin)return false;visibleSince ??= performance.now();if(!physics)physics=createHeroDicePhysics(origin,{vertices:positions.array});else physics.state.home.y=origin.y;return true;}
@@ -64,6 +67,7 @@ export function createHeroDiceToy(gl,{home,visible=()=>getSpatialVisualSettings(
                 if(!active.source.hand){const axes=active.source.gamepad?.axes || [],delta=spatialDepthDelta(axes.length>2?axes[3]:axes[1],Math.min(50,dt*1000)),ray=rayFor(active.source);if(delta && ray){const prior=input.clone().multiply(active.offset),p=new THREE.Vector3().setFromMatrixPosition(prior),depth=p.clone().sub(ray.origin).dot(ray.direction),next=Math.max(.35,Math.min(2.5,depth+delta));p.addScaledVector(ray.direction,next-depth);prior.setPosition(p);active.offset=input.clone().invert().multiply(prior);}}
                 const m=input.clone().multiply(active.offset),p=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();m.decompose(p,q,s);physics.state.position=serial(p);physics.state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};active.samples.push({time,position:{...physics.state.position},rotation:{...physics.state.rotation}});active.samples=active.samples.filter(sample=>time-sample.time<180);}else physics.step(dt);
         },
-        draw(view){if(ensure()){const t=Math.min(1,Math.max(0,(performance.now()-visibleSince)/1000)),opacity=t*t*(3-2*t);painter.draw(view,model(),opacity);}},destroy(){unbind();painter.destroy();physics=null;}
+        rebase(matrix){if(!physics)return;if(active)release(active.source,false);rebaseXrPoint(physics.state.position,matrix);rebaseXrPoint(physics.state.home,matrix);rebaseXrPoint(physics.state.velocity,matrix,true);const q=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix)).multiply(new THREE.Quaternion(physics.state.rotation.x,physics.state.rotation.y,physics.state.rotation.z,physics.state.rotation.w));physics.state.rotation={x:q.x,y:q.y,z:q.z,w:q.w};},
+        draw(view){if(ensure()){const t=Math.min(1,Math.max(0,(performance.now()-visibleSince)/1000)),opacity=t*t*(3-2*t);shadow.draw(view,physics.state.position,physics.state.home.y,opacity);painter.draw(view,model(),opacity);}},destroy(){unbind();shadow.destroy();painter.destroy();physics=null;}
     };
 }

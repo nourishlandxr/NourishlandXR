@@ -317,6 +317,10 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         gl.depthMask(false);
         const still=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
         const time=still ? 0 : (options.time ?? performance.now()/1000);
+        if(options.placementHighlight){
+            const fade=Math.min(1,Math.max(0,(options.placementAge || 0)/600)),pulse=still?.5:.5+.5*Math.sin(time*2.8);
+            drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*(1.75+pulse*.16),{crown:true,orbModel:'basic',billboard:true,halo:true,time:0,color:[.76,.95,.79],alpha:(.55+pulse*.25)*fade,emissive:.35});
+        }
         drawSpatialSphere(gl, renderer,
             view.projectionMatrix, view.transform.inverse.matrix, position,
             radius * (selected ? 1.04 : 1), {

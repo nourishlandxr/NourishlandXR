@@ -1,8 +1,9 @@
 // Demo-only streamed music and lightweight, original touch tones.
-export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeStrength: .075 });
+export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeStrength: .18, beeApproachStrength:.12 });
 export function createDemoFeedback() {
     let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
     const beeContactAt=new WeakMap();
+    const encounters=new WeakMap();
     const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35,haptics:true};
     try{const saved=JSON.parse(globalThis.localStorage?.getItem('nxr-demo-sound') || '{}');for(const key of ['music','fx'])if(Number.isFinite(saved[key]))levels[key]=Math.max(0,Math.min(1,saved[key]));if(typeof saved.haptics==='boolean')levels.haptics=saved.haptics;}catch{}
     const save=()=>{try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}};
@@ -52,7 +53,7 @@ export function createDemoFeedback() {
             oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
         });
     }
-    function tick(time,{sources=[],heldSource=null,beeContactSources=[]}={}) {
+    function tick(time,{sources=[],heldSource=null,beeContactSources=[],beeEncounters=[]}={}) {
         if(destroyed || time-lastTick<120)return;
         lastTick=time;
         for(const source of sources){
@@ -61,7 +62,10 @@ export function createDemoFeedback() {
             if(source===heldSource)continue;
             else if(beeContactSources.includes(source) && time-(beeContactAt.get(source) ?? -Infinity)>850){
                 // A brief contact tap, with a quiet gap even during sustained contact.
-                pulse(source,DEMO_FEEDBACK.beeStrength,24);beeContactAt.set(source,time);
+                pulse(source,DEMO_FEEDBACK.beeStrength,45);beeContactAt.set(source,time);
+            }
+            else if(beeEncounters.some(id=>!(encounters.get(source) || []).includes(id)) && time-(beeContactAt.get(source) ?? -Infinity)>1400){
+                encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,40);beeContactAt.set(source,time);
             }
             else if(pulsing.has(source))pulse(source,0,1);
         }

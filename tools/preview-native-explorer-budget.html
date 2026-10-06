@@ -1,0 +1,24 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Native Explorer stereo budget</title><style>body{margin:24px;background:#455b4c;color:#fff;font:18px system-ui}canvas{display:block;width:100%;max-width:1400px;background:#243b30}button{padding:12px;font:inherit}#panels{display:none}output{display:block;margin:16px 0}</style><h1>Explorer · production stereo renderer</h1><p>Two eye views with the actual Explorer and Control panel. The check measures local CPU render submission and texture uploads, not Quest GPU frame rate.</p><button id="check">Check 120 stereo frames</button><output id="result">Preparing…</output><canvas id="surface" width="1400" height="700"></canvas><section id="panels"></section>
+<script type="module">
+import * as THREE from '../app/vendor/three.module.min.js';
+import {createKnowledgeSpatialRenderer} from '../app/services/knowledgeSpatialRenderer.js';
+import {createPimInfoPanel} from '../app/services/pimInfoPanel.js';
+import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
+import {PIGEON_PEA_PIM} from '../app/services/pigeonPeaPim.js';
+import {knowledgeExplorer,knowledgeExplorerAction} from '../app/services/knowledgeExplorer.js';
+import {initializeExplorerPreview,selectExplorerNode} from '../app/services/explorerMoleculeModel.js';
+import {setPimoDeveloperOverride} from '../app/services/pimoSpatialCapabilities.js';
+const canvas=document.getElementById('surface'),result=document.getElementById('result'),gl=canvas.getContext('webgl',{alpha:true}),record={id:'stereo-budget',demoType:'plant',name:'Pigeon Pea',demoExpandedNodeIds:[]};
+setPimoDeveloperOverride(true);knowledgeExplorer(record);knowledgeExplorerAction(record,'KnowledgeMode:explore');initializeExplorerPreview(record,knowledge,performance.now()-2000);for(const id of record.explorerMolecule.wings)selectExplorerNode(record,knowledge,{explorerNodeId:id},performance.now()-2000);
+let uploads=0;for(const name of ['texImage2D','texSubImage2D']){const original=gl[name].bind(gl);gl[name]=(...args)=>{uploads++;return original(...args);};}
+const renderer=createKnowledgeSpatialRenderer(gl),panel=createPimInfoPanel({root:document.getElementById('panels'),headset:true});panel.focusPlant(record,PIGEON_PEA_PIM);panel.setExplorerOpen(true);panel.attach(gl);
+const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements,pose={position:{x:.33,y:1.45,z:-1.4},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:0,z:1}};
+let checking=false,times=[],startUploads=0,frames=0,errors=0;
+document.getElementById('check').onclick=()=>{checking=true;times=[];frames=0;startUploads=uploads;errors=0;result.textContent='Checking stereo frames…';};
+window.addEventListener('error',event=>result.textContent='ERROR: '+event.message);
+function draw(time){requestAnimationFrame(draw);const started=performance.now();panel.update(viewer,time,null);gl.enable(gl.SCISSOR_TEST);
+ for(const [eye,x] of [[-.032,0],[.032,700]]){const camera=new THREE.PerspectiveCamera(58,1,.05,20);camera.position.set(eye,1.6,0);camera.updateMatrixWorld();const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};gl.viewport(x,0,700,700);gl.scissor(x,0,700,700);gl.clearColor(.14,.23,.18,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);renderer.begin();renderer.draw(view,record,knowledge,[],pose,time);renderer.end();panel.draw(view);}
+ gl.disable(gl.SCISSOR_TEST);if(checking){times.push(performance.now()-started);if(gl.getError())errors++;if(++frames===120){checking=false;times.sort((a,b)=>a-b);result.textContent='120 stereo frames · '+record.explorerMolecule.renderedCount+' nodes · CPU median '+times[60].toFixed(2)+' ms · p95 '+times[114].toFixed(2)+' ms · '+(uploads-startUploads)+' texture uploads · '+errors+' WebGL errors';}}
+ else if(!times.length)result.textContent='Ready · '+record.explorerMolecule.renderedCount+' nodes · mode-only Controls';
+}draw(performance.now());
+</script></html>

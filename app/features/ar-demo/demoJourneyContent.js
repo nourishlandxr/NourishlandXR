@@ -15,7 +15,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Try the tools with sample content",
         "main": "NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples. No experience is needed — just take your time and follow your curiosity.",
         "panel": "Hidden. A real garden project is a separate experience after the sample demo.",
-        "hint": "Start the sample demo.",
+        "hint": "Start the demo.",
         "art": "opening"
     },
     {
@@ -96,14 +96,14 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "A detail you can return to",
         "main": "You can keep exploring, or take a closer look at the related image.",
         "panel": "Authored Fresh peas information, breadcrumb and matching media if available.",
-        "hint": "Continue to learn about Media.",
+        "hint": "Continue to see the Image panel.",
         "art": null
     },
     {
         "id": "PANEL 1.1",
         "act": "Meet the panel tools",
         "title": "A closer look",
-        "main": "Want a closer look? Media shows the image connected to your selection.",
+        "main": "Want a closer look? The Image panel shows the image connected to your selection. Its label and the Control panel label are highlighted so you can find them. Use the Image button on the Control panel to show or hide the picture.",
         "panel": "Open the selected cell or plant’s authored image. Media is a panel opener, visually distinct from demo progression actions.",
         "hint": "Review the image, then continue.",
         "art": null

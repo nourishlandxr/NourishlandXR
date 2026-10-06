@@ -25,7 +25,7 @@ test('four bees visit gently, with a waist-level pair at spaced intervals',()=>{
 });
 test('numeric settings have clampable stepped sliders and no percentage cycle buttons',()=>{
  const rows=panelSettingsControls({headset:true}),sliders=rows.filter(item=>item.kind==='slider');
- assert.deepEqual(sliders.map(item=>item.action),['InfoOpacity','TextSize','SpatialScale','FloorOffset']);
+ assert.deepEqual(sliders.map(item=>item.action),['InfoOpacity','TextSize','SpatialScale','FloorOffset','CellOpacity']);
  for(const slider of sliders){assert.equal(panelSliderValue(slider,-10000),slider.min);assert.equal(panelSliderValue(slider,10000),slider.max);assert.ok(!slider.label?.includes('%'));}
  const opacity=sliders.find(item=>item.action==='InfoOpacity');assert.equal(panelSliderValue(opacity,opacity.x+18+(opacity.width-36)*.8),.8);
  const source=read('app/services/pimInfoPanel.js');assert.match(source,/sliderGrab.surface/);assert.match(source,/finishingSliderSource===event.inputSource/);assert.doesNotMatch(source,/if\(settingsOpen\)\{mediaCollapsed/);assert.doesNotMatch(source,/mediaDetached \|\| !settingsOpen/);
