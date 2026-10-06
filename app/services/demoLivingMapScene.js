@@ -22,6 +22,9 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     };
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#66573e', 0, -.23, 0, 6.3, .4, 4.2);
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#61714a', 0, -.025, 0, 6.25, .05, 4.15);
+    if(model.interactive)for(const x of [-6,6]){
+        const rim=mesh(geometry(new THREE.TorusGeometry(.22,.04,6,20)),'#b8d7a4',x,.06,0,1);rim.rotation.x=-Math.PI/2;
+    }
     const scenery = new THREE.Group();scene.add(scenery);scenery.visible=false;
     // Shared geometry for small planting clusters and tree canopies.
     const shrub = new THREE.InstancedMesh(sphere, material('#455e3b'), 65);
@@ -111,25 +114,19 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     if(!model.concept)for(const item of model.items)if(!cloudItems.some(entry=>entry.id===item.id))cloudItems.push(item);
     let lastPaint=-Infinity, disposed=false, settledPaint=false, lastReduced=null;
     const projected = new THREE.Vector3();
-    return {
-        canvas,schedule,
-        project(item,rect){
-            const tagHeight=(rect.width>=700?20:rect.width>=440?14:12)+10,cloudHeight=tagHeight+18;
-            projected.set(item.x,.095,item.z).project(camera);
-            return {x:rect.x+(projected.x+1)*rect.width/2,y:rect.y+cloudHeight+(1-projected.y)*(rect.height-cloudHeight)/2};
-        },
-        draw(ctx, elapsed, reducedMotion, rect) {
-            if(disposed)return;
-            const {x,y,width:w,height:h}=rect;
-            const columns=model.concept?2:w>=700?4:w>=440?3:2;
-            const fontSize=w>=700?20:w>=440?14:12,tagHeight=fontSize+10;
-            const cloudHeight=model.concept?tagHeight+18:Math.ceil(cloudItems.length/columns)*(tagHeight+7)+18;
-            const landY=y+cloudHeight,landHeight=Math.max(60,h-cloudHeight);
-            const renderHeight=Math.round(width*landHeight/w);
-            if(canvas.height!==renderHeight){
-                renderer.setSize(width,renderHeight,false);
-                camera.aspect=w/landHeight;camera.updateProjectionMatrix();settledPaint=false;lastPaint=-Infinity;
-            }
+    const rotation=new THREE.Quaternion();
+    function guidance(elapsed){
+        const placed=placement?.snapshot() || [];
+        if(placed.length===0)return 'Place a Totem at the visitor entrance';
+        if(placed.length===1)return 'Place a Totem in the open forest';
+        if(placed.length===2)return elapsed<placed[1].at+LIVING_MAP_ORB_SETTLE_MS?'Three Orbs join the forest Totem':'Place a Totem at the swale entrance';
+        return 'Three Totems · one connected place';
+    }
+    function totemLabel(elapsed){
+        const placed=placement?.snapshot() || [],current=placement?.current(elapsed),id=current?.id || placed.at(-1)?.id || 'map-entry';
+        return id==='map-entry'?'Totem 1 · Visitor entrance':id==='map-forest'?'Totem 2 · Open forest':'Totem 3 · Swale entrance';
+    }
+    function update(elapsed,reducedMotion,paint=true){
             const placed=placement?.snapshot() || [];
             if(model.interactive){
                 model.items.forEach(item=>{
@@ -143,7 +140,8 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             if(elapsed<lastPaint || lastReduced!==reducedMotion)settledPaint=false;
             if(!settledPaint && (elapsed-lastPaint>=1000/24 || elapsed<lastPaint || lastReduced!==reducedMotion)){
                 const rise=model.concept ? .85+.15*progress.camera : progress.camera, wide=progress.wide;
-                camera.position.set(1.8*rise,2.1+5.8*rise+wide,8.5+.2*rise+1.1*wide);camera.lookAt(0,.15,0);
+                const inverse=rotation.clone().invert();
+                camera.position.set(1.8*rise,2.1+5.8*rise+wide,8.5+.2*rise+1.1*wide).applyQuaternion(inverse);camera.up.set(0,1,0).applyQuaternion(inverse);camera.lookAt(0,0,0);
                 camera.zoom=1;camera.updateProjectionMatrix();camera.updateMatrixWorld();
                 let extentX=0,extentY=0;
                 const fitPoint=(px,py,pz)=>{projected.set(px,py,pz).project(camera);extentX=Math.max(extentX,Math.abs(projected.x));extentY=Math.max(extentY,Math.abs(projected.y));};
@@ -165,28 +163,45 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 const current=placement?.current(elapsed);targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.09*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.65:.5+.18*Math.sin(elapsed/430);}
                 if(welcomeScreen){welcomeScreen.visible=placed.length>0;welcomeScreen.position.set(model.areas[0].totem.x-.65,.62,model.areas[0].totem.z);welcomeScreen.quaternion.copy(camera.quaternion);welcomeScreen.scale.setScalar(Math.max(.001,bornFor(model.areas[0].id)));}
                 scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,progress.scenery);shrub.count=Math.floor(planted*progress.scenery);
-                renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
+                if(paint)renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
             }
+
+        scene.updateMatrixWorld(true);return {placed,bornFor};
+    }
+    return {
+        canvas,schedule,scene,guidance,totemLabel,
+        update:(elapsed,reduced)=>update(elapsed,reduced,false),
+        rotate(delta){rotation.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-delta));settledPaint=false;lastPaint=-Infinity;},
+        setRotation(value){rotation.copy(value);settledPaint=false;lastPaint=-Infinity;},
+        project(item,rect){
+            const tagHeight=(rect.width>=700?20:rect.width>=440?14:12)+10,cloudHeight=tagHeight+18;
+            projected.set(item.x,.095,item.z).project(camera);
+            return {x:rect.x+(projected.x+1)*rect.width/2,y:rect.y+cloudHeight+(1-projected.y)*(rect.height-cloudHeight)/2};
+        },
+        draw(ctx, elapsed, reducedMotion, rect) {
+            if(disposed)return;
+            const {x,y,width:w,height:h}=rect;
+            const columns=model.concept?2:w>=700?4:w>=440?3:2;
+            const fontSize=w>=700?20:w>=440?14:12,tagHeight=fontSize+10;
+            const cloudHeight=model.concept?tagHeight+18:Math.ceil(cloudItems.length/columns)*(tagHeight+7)+18;
+            const landY=y+cloudHeight,landHeight=Math.max(60,h-cloudHeight);
+            const renderHeight=Math.round(width*landHeight/w);
+            if(canvas.height!==renderHeight){
+                renderer.setSize(width,renderHeight,false);
+                camera.aspect=w/landHeight;camera.updateProjectionMatrix();settledPaint=false;lastPaint=-Infinity;
+            }
+            const {placed,bornFor}=update(elapsed,reducedMotion);
             ctx.drawImage(canvas,x,landY,w,landHeight);
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
             if(model.concept){
                 ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
-                let interactiveLabel='';
-                if(model.interactive){
-                    if(placed.length===0)interactiveLabel='Place Totem 1 at the visitor entrance';
-                    else if(placed.length===1)interactiveLabel='Place Totem 2 in the open forest';
-                    else if(placed.length===2)interactiveLabel=elapsed<placed[1].at+LIVING_MAP_ORB_SETTLE_MS?'Three Orbs join the forest Totem':'Place Totem 3 at the swale entrance';
-                    else interactiveLabel='Three Totems · one connected place';
-                }
-                ctx.fillText(model.interactive?translateNxrText(interactiveLabel):demoLivingMapStage(elapsed,reducedMotion),x+w/2,y+tagHeight/2,w-20);
-                const destination=placement?.current(elapsed);
-                if(destination){
-                    const point=this.project(destination,rect);
-                    ctx.fillStyle='#fff8d1';ctx.font=`700 ${fontSize}px system-ui`;
-                    ctx.fillText(translateNxrText(destination.name),point.x,point.y+tagHeight,160);
-                }
+                const title=model.interactive?translateNxrText(totemLabel(elapsed)):demoLivingMapStage(elapsed,reducedMotion);
+                const cloudWidth=Math.min(w-12,ctx.measureText(title).width+28);
+                ctx.fillStyle='rgba(19,48,37,.94)';ctx.beginPath();ctx.roundRect(x+(w-cloudWidth)/2,y,cloudWidth,tagHeight,tagHeight/2);ctx.fill();
+                ctx.fillStyle='#f4f2df';ctx.fillText(title,x+w/2,y+tagHeight/2,w-28);
                 // Labels stay beside the three placed Totems.
                 for(const item of cloudItems){
+                    if(model.interactive)continue;
                     if(bornFor(item.id)<.85)continue;
                     projected.set(item.x,.85,item.z).project(camera);
                     const px=x+(projected.x+1)*w/2,py=landY+(1-projected.y)*landHeight/2;

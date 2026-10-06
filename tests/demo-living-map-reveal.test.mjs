@@ -1,0 +1,27 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {livingMapReveal,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted} from '../app/services/demoLivingMapReveal.js';
+test('reading precedes dissolve, reveal and enabled placement, including replay and reduced motion',()=>{
+    for(const reduced of [false,true]){
+        assert.equal(livingMapReveal(4300,reduced).preview,1);
+        assert.equal(livingMapReveal(4300,reduced).appear,0);
+        assert.equal(livingMapReveal(7599,reduced).ready,false);
+        const final=livingMapReveal(7600,reduced);
+        assert.equal(final.preview,0);assert.equal(final.appear,1);assert.equal(final.ready,true);
+        assert.equal(livingMapReveal(0,reduced).ready,false);
+    }
+    assert.ok(livingMapReveal(5200).dissolve>0);assert.ok(livingMapReveal(6500).appear>0);
+    assert.equal(livingMapReveal(5200,true).magic,0);
+});
+test('controller releases follow rotated terrain rather than the old frame surface',()=>{
+    const origin={x:.4,y:1,z:-1.2},item={x:2.85,z:0};
+    const home=livingMapWorldPoint(item,origin),turned=livingMapWorldPoint(item,origin,Math.PI/2);
+    assert.ok(Math.abs(turned.x-origin.x)<1e-8);assert.ok(Math.abs(turned.z-(origin.z-2.85*.085))<1e-8);
+    const ray={origin:{...turned,y:turned.y+.5},direction:{x:0,y:-1,z:0}},release=livingMapRayPoint(ray,origin);
+    assert.equal(livingMapWorldDropAccepted(release,turned),true);
+    assert.equal(livingMapWorldDropAccepted(release,home),false);
+    assert.equal(livingMapWorldDropAccepted({...turned,y:turned.y+.2},turned),false);
+    assert.equal(livingMapWorldDropAccepted(null,turned),false);
+    assert.equal(livingMapRayPoint({...ray,direction:{x:0,y:1,z:0}},origin),null);
+    assert.equal(livingMapRayPoint({...ray,direction:{x:1,y:0,z:0}},origin),null);
+});

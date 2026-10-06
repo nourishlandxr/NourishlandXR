@@ -11921,7 +11921,7 @@ body:has(.app-surface) {
 .tryit-butterfly-model {position:fixed;width:86px;height:86px;pointer-events:none;z-index:12310;object-fit:contain;}
 .tryit-demo.is-immersive .tryit-butterfly-model {display:none;}
 
-/* The flat demo keeps the live miniature inside its readable Living Frame card. */
+/* Living Frame preview followed by a separate interactive miniature. */
 #app .tryit-demo.is-simulated .tryit-guided-choice.is-utility-board {
     display:block;top:48%;left:50%;bottom:auto;width:min(1100px,calc(100vw - 24px));height:auto;min-height:0;max-height:calc(100dvh - 170px);
     padding:18px 20px;overflow:auto;transform:translate(-50%,-50%);animation:none;
@@ -11935,6 +11935,26 @@ body:has(.app-surface) {
 #app .tryit-demo.is-simulated .is-utility-board > .tryit-context-trigger {position:static!important;display:inline-flex;align-items:center;justify-content:center;transform:none!important;width:min(100%,280px);height:auto;min-height:44px;margin:6px 8px;padding:8px 14px;font-size:14px;border-radius:16px;}
 .tryit-demo.is-simulated[data-demo-utility="true"] .tryit-live-welcome canvas {visibility:hidden;}
 .tryit-demo.is-simulated[data-demo-utility="true"] [data-tryit-sim-markers] {opacity:.18;pointer-events:none;}
+.tryit-spatial-living-map {position:fixed;left:3vw;top:24%;width:min(48vw,760px);z-index:12320;opacity:0;pointer-events:none;color:#f4f2df;text-align:center;}
+.tryit-spatial-living-map canvas {display:block;width:100%;cursor:grab;filter:drop-shadow(0 24px 20px rgba(0,0,0,.3));}
+.tryit-spatial-living-map canvas:active {cursor:grabbing;}
+.tryit-spatial-living-map p {margin:0 0 12px;font-size:15px;}
+.tryit-spatial-living-map button {min-height:44px;margin:3px;padding:8px 14px;background:#163c30;color:#fff8e4;border:1px solid #b6d293;border-radius:12px;}
+.tryit-demo.is-simulated[data-living-map="true"] [data-demo-living-map] {pointer-events:none;}
+#app .tryit-demo.is-simulated[data-landscape-revealed="true"] .is-living-map-board .tryit-board-text-window {display:none;}
+@media(min-width:621px) {
+ #app .tryit-demo.is-simulated[data-living-map="true"] .tryit-guided-choice.is-utility-board {left:76%;width:44vw;max-height:calc(100dvh - 190px);}
+}
+@media(max-width:620px) {
+ .tryit-spatial-living-map {top:270px;bottom:auto;left:2vw;width:96vw;}
+ .tryit-spatial-living-map p {font-size:12px;margin:0 0 4px;}
+ #app .tryit-demo.is-simulated[data-living-map="true"] .tryit-guided-choice.is-utility-board {top:100px;left:12px;transform:none;max-height:160px;width:calc(100vw - 24px);}
+ #app .tryit-demo.is-simulated[data-landscape-revealed="true"] .is-living-map-board h2 {font-size:20px;margin:3px 0;}
+ #app .tryit-demo.is-simulated[data-landscape-revealed="true"] .is-living-map-board .tryit-map-caption {font-size:13px;line-height:1.35;}
+ #app .tryit-demo.is-simulated[data-landscape-revealed="true"] .is-living-map-board [data-demo-living-map],
+ #app .tryit-demo.is-simulated[data-landscape-revealed="true"] .is-living-map-board .tryit-map-replay {display:none;}
+ .tryit-demo.is-simulated[data-living-map="true"] [data-demo-living-map] {max-height:130px;object-fit:contain;}
+}
 @media(min-width:960px) {
     #app .tryit-demo.is-simulated.is-desktop-spatial-preview .is-utility-board {left:72%;width:min(54vw,1100px);}
 }

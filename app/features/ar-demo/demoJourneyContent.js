@@ -240,7 +240,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Explore, learn and plan",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
-        "hint": "Grip each Totem inside the Living Frame. Place it on the pulsing circle: entrance, open forest, then swales. Replay to try again.",
+        "hint": "Grip both opposite plate edges to turn and gently tilt the landscape. Release either grip to stop. Place Totems from beside the frame onto the pulsing circles: entrance, open forest, then swales. Totem names appear in a cloud above the plate.",
         "art": null
     },
     {
