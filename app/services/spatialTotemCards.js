@@ -16,6 +16,7 @@ export function textureSupportsMipmaps(source) {
 }
 
 export function spatialCardTextureContent(card) {
+    if(card.element)return JSON.stringify({id:card.id,title:card.title,revision:card.revision,resolution:card.resolution,height:card.height});
     // Quantise only the painted fade. Geometry, input and aim remain full cadence.
     return JSON.stringify(card.media?{...card,imageFade:Math.round(card.imageFade*24)/24}:card);
 }
@@ -380,7 +381,7 @@ export function createSpatialTotemCards(gl, options = {}) {
                 gl.uniform2f(locations.size,surface.width,surface.height);
                 const fadeOpacity = Number.isFinite(surface.opacity) ? surface.opacity : 1;
                 const arrival=record?.demoArriveAt ? Math.min(1,Math.max(0,(now-record.demoArriveAt)/900)) : 1;
-                gl.uniform1f(locations.opacity,(reduced ? 1 : Math.min(1,(now-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
+                gl.uniform1f(locations.opacity,(reduced || entry.fadeDuration<=0 ? 1 : Math.min(1,(now-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
                 gl.uniform1f(locations.isControl,surface.card.control || options.containedFeedback?1:0);
                 gl.uniform1f(locations.pressProgress,Math.max(0,Math.min(1,surface.pressProgress || 0)));
                 gl.uniform1f(locations.feedback,selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id || record.handHoverCardId===surface.card.id ? .55 : 0));

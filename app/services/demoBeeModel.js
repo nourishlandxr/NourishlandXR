@@ -125,7 +125,7 @@ function makeBee(gltf,resources){
         tracks.push(path==='rotation'?new THREE.QuaternionKeyframeTrack(name,times,values):new THREE.VectorKeyframeTrack(name,times,values));
     });
     const mixer=new THREE.AnimationMixer(root);mixer.clipAction(new THREE.AnimationClip('hover',-1,tracks)).setEffectiveTimeScale(BEE_ANIMATION_SPEED).play();
-    const wingRest=skin.joints.filter(index=>gltf.json.nodes[index]?.name?.includes('_wing')).map(index=>({bone:nodes[index],rotation:nodes[index].quaternion.clone(),position:nodes[index].position.clone()}));
+    const wingRest=skin.joints.filter(index=>gltf.json.nodes[index]?.name?.includes('_wing')).map(index=>({bone:nodes[index],rotation:nodes[index].quaternion.clone(),position:nodes[index].position.clone(),scale:nodes[index].scale.clone()}));
     return {wrapper,mixer,root,mesh,wingRest,baseScale:wrapper.scale.x};
 }
 

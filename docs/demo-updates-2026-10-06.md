@@ -1,6 +1,25 @@
 # Demo update review
 
-Local version: 0.9348 (+0.0001 from the preceding 0.9347).
+Latest local version: 0.9352. Follow-up repairs progressed through 0.9350, 0.9351 and 0.9352.
+
+## Follow-up repairs — 0.9352
+
+- Living Frame action: 2048 x 1024 power-of-two artwork, filled rounded silhouette instead of translucent stroke, high-contrast face, shadow-free text and optional capped anisotropic filtering. DOM counterpart removes blur and text shadows. Existing spatial size and ray target are unchanged.
+- Bee entrances use staggered seeded delays and independent animation offsets. The shared native rig is re-evaluated per pose, including same-frame nectar-to-flight switches; rest restores wing rotation, translation and scale. The user's double-wing appearance still needs a physical headset visual check.
+- Explorer now uses the reference truncated-octahedron form: eight large hexagonal information faces and six smaller square connector faces, 44 triangles per node. Small square attachment pads, six-sided connector geometry, no label stroke/glow and labels located on visible information faces. No measured Quest FPS claim.
+- Widgets: dark editor/loading background; only one asynchronous dashboard capture at a time; ignore completion errors after disposal; content-only native card keys exclude live DOM/action graphs; per-card content revisions avoid repainting every widget for one timer; zero-duration label fades are safe. Native Note rendering errors close the workspace safely rather than taking down the demo. Exact user-reported headset crash was not reproduced locally and is not claimed resolved end-to-end.
+- Butterfly grab detection remains on the ray but no longer clamps the visible laser. Surface resting requires release within 12 cm of an actual hit surface; free-air release immediately resumes flight at the held position. Faster flight wing animation. The play introduction now follows the first plant and panel lessons, rather than startup.
+- Verification: 571 Node tests pass. Browser verified native Note ray open, Timer editing/save, connected widgets and faceted Explorer rendering. Welcome version and final build verification are recorded in the handoff. Fixtures are local-only; desktop book remains unchanged.
+
+## Approved 3D map update — 0.9349
+
+- Utility 1.1 now uses the approved animation in its existing Three.js miniature renderer, not the schematic SVG. The concept layout does not modify actual placed demo records.
+- Area 1 has three curved swale planting rows; Area 2 has an open centre, perimeter trees and a centred Totem 2. Only two Totem labels and six Orbs appear; no example Note or plant-specific names.
+- Landscape is visible first, paused. Play reveals Totem 1, three Orbs, Totem 2, a curved connection over 3.2 seconds, then three more Orbs. Pause resumes in place; Replay resets the sequence. Reduced motion shows the complete layout immediately.
+- Existing 3D plants, ground depth, lighting and translucent Orbs remain. Totem collars use glass materials with light tips. Shared geometries, instanced planting and a capped render cadence keep the miniature contained.
+- Full Node suite: 565 passed, 0 failed. Frontend-only build passed at 0.9349. The built welcome screen visibly displayed V0.9349. Syntax checks and git diff --check passed.
+- Browser verified the real renderer, integrated Play/Pause/Replay controls, stopped-state control labels and reduced motion, without observed warning/error logs. Review fixture: tools/preview-map-3d.html; integrated fixture: tools/preview-demo-living-map.html. Fixtures do not ship in the frontend.
+- Still local, not deployed or physically headset-verified. No desktop book redesign.
 
 ## Implemented
 
@@ -28,6 +47,6 @@ Local version: 0.9348 (+0.0001 from the preceding 0.9347).
 ## Intentionally deferred
 
 - No book conversion or redesign. The existing prototype remains available, with its desktop AR call to action removed.
-- The new two-area land animation is a proposal only: swales in Area 1, open space with perimeter trees in Area 2, Totem 1, three Orbs, Totem 2, a curved connection, then three more Orbs. It is not integrated into the app map.
+- The formerly deferred two-area animation is now integrated in the 0.9349 update above.
 - No commit, push or deployment was requested or performed.
 - Physical Quest/phone verification remains necessary: distance fuzziness, glass readability in passthrough, controller/keyboard feel, butterfly placement, contact haptics, nectar animation and frame-rate improvement.

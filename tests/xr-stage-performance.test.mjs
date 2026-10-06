@@ -11,7 +11,7 @@ test('four native bees and both eyes share static mesh storage and one small rig
  const matrix={elements:new Float32Array(16),clone(){return {...this};},copy(){return this;},multiply(){return this;}};
  const attribute=size=>({array:new Float32Array(size*3),itemSize:size});
  let updates=0;
- const model={mixer:{update(){updates++;}},wrapper:{updateMatrixWorld(){}},mesh:{matrixWorld:matrix,bindMatrix:matrix,bindMatrixInverse:matrix,geometry:{attributes:{position:attribute(3),normal:attribute(3),uv:attribute(2),skinIndex:attribute(4),skinWeight:attribute(4)},index:{array:new Uint16Array([0,1,2,0,2,1])},groups:[{start:0,count:3,materialIndex:0},{start:3,count:3,materialIndex:1}]},skeleton:{bones:new Array(108),boneMatrices:new Float32Array(108*16),update(){}}}};
+ const model={mixer:{setTime(){updates++;}},wrapper:{updateMatrixWorld(){}},mesh:{matrixWorld:matrix,bindMatrix:matrix,bindMatrixInverse:matrix,geometry:{attributes:{position:attribute(3),normal:attribute(3),uv:attribute(2),skinIndex:attribute(4),skinWeight:attribute(4)},index:{array:new Uint16Array([0,1,2,0,2,1])},groups:[{start:0,count:3,materialIndex:0},{start:3,count:3,materialIndex:1}]},skeleton:{bones:new Array(108),boneMatrices:new Float32Array(108*16),update(){}}}};
  const renderer=createBeeXRRenderer(gl,model,{}),view={projectionMatrix:matrix.elements,transform:{matrix:matrix.elements,inverse:{matrix:matrix.elements}}};
  for(let eye=0;eye<2;eye++)for(let bee=0;bee<4;bee++)renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0});
  assert.equal(updates,1);
@@ -22,6 +22,11 @@ test('four native bees and both eyes share static mesh storage and one small rig
  assert.deepEqual(calls.filter(c=>c[0]==='depthMask').map(c=>c[1]),Array.from({length:8},()=>[true,false,true]).flat());
  assert.equal(calls.filter(c=>c[0]==='bufferData').length,6,'geometry is uploaded once');
  const upload=calls.filter(c=>c[0]==='texSubImage2D');assert.equal(upload.length,1);assert.equal(upload[0].at(-1).byteLength,6912);
+ renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0,nectar:true});
+ renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0,nectar:false});
+ assert.equal(updates,3,'rest-to-flight re-evaluates the rig even in the same frame');
+ renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0,animationOffset:.137});
+ assert.equal(updates,4,'another bee has an independent wing phase');
  renderer.destroy();assert.equal(calls.filter(c=>c[0]==='deleteTexture').length,2);
 });
 

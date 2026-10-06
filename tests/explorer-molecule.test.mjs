@@ -35,7 +35,10 @@ test('rendered molecular bodies are closed solids with volume on every axis',()=
     }
     try{
         for(const solid of Object.values(solids)){solid.computeBoundingBox();const size=solid.boundingBox.getSize(new THREE.Vector3());assert.ok(Math.min(size.x,size.y,size.z)>=1);}
-        assert.ok(volume(solids.node)>3.8);assert.ok(volume(solids.bond)>2.7);
+        assert.ok(volume(solids.node)>3);assert.ok(volume(solids.bond)>2.5);
+        assert.equal(solids.node.userData.faces.filter(face=>face.kind==='information').length,8);
+        assert.equal(solids.node.userData.faces.filter(face=>face.kind==='connector').length,6);
+        assert.equal(solids.node.attributes.position.count,132,'44 shared-shape triangles, no sphere tessellation');
     }finally{Object.values(solids).forEach(g=>g.dispose());}
 });
 

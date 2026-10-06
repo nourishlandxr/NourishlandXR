@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
+import {createExplorerFacetGeometry} from './explorerFacetGeometry.js';
 import {createSpatialTotemCards,hitTotemSurface} from './spatialTotemCards.js';
 import {knowledgePoseMatrix,localObjectMatrix} from './knowledgeObjectModel.js';
 import {explorerMoleculeView,explorerPuzzleFit,EXPLORER_BOND_RADIUS} from './explorerMoleculeModel.js';
@@ -7,15 +8,16 @@ const motion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 const vec=p=>new THREE.Vector3(p.x,p.y,p.z);
 function labelCanvas(card){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=canvas.getContext('2d');
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f4f5e8';ctx.shadowColor='#172c25';ctx.shadowBlur=5;ctx.lineWidth=6;ctx.strokeStyle='#24382de8';ctx.font=`600 ${card.attachment?68:80}px Manrope,system-ui`;
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f4f5e8';ctx.shadowBlur=0;ctx.font=`600 ${card.attachment?48:58}px Manrope,system-ui`;
     const lines=[];let line='';for(const word of String(card.title).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>460&&line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
-    lines.slice(0,3).forEach((text,i)=>{const y=105+(i-(Math.min(3,lines.length)-1)/2)*68;ctx.strokeText(text,256,y,470);ctx.fillText(text,256,y,470);});
-    if(card.status){ctx.font='500 38px Manrope,system-ui';ctx.strokeText(card.status,256,230,470);ctx.fillText(card.status,256,230,470);}return canvas;
+    lines.slice(0,3).forEach((text,i)=>{const y=105+(i-(Math.min(3,lines.length)-1)/2)*52;ctx.fillText(text,256,y,470);});
+    if(card.status){ctx.font='500 28px Manrope,system-ui';ctx.fillText(card.status,256,230,470);}return canvas;
 }
 function shader(gl,type,source){const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){const log=gl.getShaderInfoLog(s);gl.deleteShader(s);throw Error(log);}return s;}
 // Closed solids, shared by every element. Labels are a separate reading layer.
 export function createExplorerMoleculeGeometry(){
-    return {node:new THREE.SphereGeometry(1,16,12),bond:new THREE.CylinderGeometry(1,1,1,12,1,false)};
+    const node=createExplorerFacetGeometry();
+    return {node,bond:new THREE.CylinderGeometry(1,1,1,6,1,false)};
 }
 export function hitExplorerConnector(ray,node){
     const inverse=node.worldRotation.clone().invert(),o=vec(ray.origin).sub(node.world).applyQuaternion(inverse),d=vec(ray.direction).normalize().applyQuaternion(inverse),radius=node.worldRadius,half=node.worldLength/2,candidates=[];
@@ -50,8 +52,8 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
     const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const attributes=Object.fromEntries(['position','normal'].map(n=>[n,gl.getAttribLocation(program,n)])),uniforms=Object.fromEntries(['model','mvp','normalMatrix','camera','colour','opacity','emphasis','pulse'].map(n=>[n,gl.getUniformLocation(program,n)]));
     const buffers=[];
-    function geometry(source){const g=source.toNonIndexed();const result={count:g.attributes.position.count};for(const name of ['position','normal']){const b=gl.createBuffer();buffers.push(b);gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,g.attributes[name].array,gl.STATIC_DRAW);result[name]=b;}g.dispose();source.dispose();return result;}
-    const solids=createExplorerMoleculeGeometry(),sphere=geometry(solids.node),cylinder=geometry(solids.bond),socket=geometry(new THREE.TorusGeometry(1,.18,6,16));
+    function geometry(source){const g=source.index?source.toNonIndexed():source;const result={count:g.attributes.position.count};for(const name of ['position','normal']){const b=gl.createBuffer();buffers.push(b);gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,g.attributes[name].array,gl.STATIC_DRAW);result[name]=b;}g.dispose();if(g!==source)source.dispose();return result;}
+    const solids=createExplorerMoleculeGeometry(),sphere=geometry(solids.node),cylinder=geometry(solids.bond),socket=geometry(new THREE.BoxGeometry(1.45,1.45,.18));
     function paint(shape,model,projection,colour,opacity,emphasis=0,pulse=-1){
         for(const name of ['position','normal']){gl.bindBuffer(gl.ARRAY_BUFFER,shape[name]);gl.enableVertexAttribArray(attributes[name]);gl.vertexAttribPointer(attributes[name],3,gl.FLOAT,false,0,0);}
         gl.uniformMatrix4fv(uniforms.model,false,model.elements);gl.uniformMatrix4fv(uniforms.mvp,false,projection.clone().multiply(model).elements);gl.uniformMatrix3fv(uniforms.normalMatrix,false,new THREE.Matrix3().getNormalMatrix(model).elements);gl.uniform3fv(uniforms.colour,colour);gl.uniform1f(uniforms.opacity,opacity);gl.uniform1f(uniforms.emphasis,emphasis);gl.uniform1f(uniforms.pulse,pulse);gl.drawArrays(gl.TRIANGLES,0,shape.count);
@@ -87,8 +89,14 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
             gl.depthMask(mask);if(!depth)gl.disable(gl.DEPTH_TEST);if(!cull)gl.disable(gl.CULL_FACE);if(!blend)gl.disable(gl.BLEND);
             labelSurfaces=nodes.filter(n=>n.progress>.55&&(field.lod!=='far'||n.depth<2||field.state.promoted.includes(n.id))&&(n.depth<3||field.lod==='close'||field.state.promoted.includes(n.id))).map(node=>{
                 const toward=camera.clone().sub(node.world).normalize(),title=node.label,status=node.pending?(node.connector?'Align ends · release to lock':'Fit onto connector'):node.attachment?'Matching port':field.state.promoted.includes(node.id)?'Hub · '+node.count+(field.state.sampleCounts[node.id]?' sample entries':' entries'):node.depth>1&&node.count>3?node.count+' topics':'';
-                const labelRight=up.clone().cross(toward).normalize(),labelUp=toward.clone().cross(labelRight).normalize();
-                return {record,node:{...node,explorerNodeId:node.id,pimKnowledgeFace:node.id!=='core',pimKnowledgeContext:node.id==='core'},moleculeNode:node,center:node.world.clone().addScaledVector(toward,node.worldRadius+.003),right:labelRight,up:labelUp,normal:toward,width:node.attachment?.10:node.id==='core'?.25:.24,height:node.attachment?.05:.12,opacity,interactive:opacity>.55,card:{id:node.id,title,status,core:node.id==='core',attachment:node.attachment,knowledgeFace:true,resolution:512,height:256,fadeDuration:0}};
+                let faceNormal=toward,faceDistance=node.worldRadius;
+                if(!node.attachment && !node.connector){
+                    const normals=[];for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1])normals.push(new THREE.Vector3(x,y,z).normalize().applyQuaternion(node.worldRotation));
+                    faceNormal=normals.sort((a,b)=>b.dot(toward)-a.dot(toward))[0];faceDistance=node.worldRadius*Math.sqrt(3)/2;
+                }
+                let labelRight=up.clone().cross(faceNormal);if(labelRight.lengthSq()<1e-6)labelRight=right.clone();labelRight.normalize();const labelUp=faceNormal.clone().cross(labelRight).normalize();
+                const labelWidth=node.worldRadius*(node.attachment?1.1:1.1),labelHeight=labelWidth*.65;
+                return {record,node:{...node,explorerNodeId:node.id,pimKnowledgeFace:node.id!=='core',pimKnowledgeContext:node.id==='core'},moleculeNode:node,center:node.world.clone().addScaledVector(faceNormal,faceDistance+.002),right:labelRight,up:labelUp,normal:faceNormal,width:labelWidth,height:labelHeight,opacity,interactive:opacity>.55,card:{id:node.id,title,status,core:node.id==='core',attachment:node.attachment,knowledgeFace:true,resolution:512,height:256,fadeDuration:0}};
             });
             labels.draw(view,{id:'explorer-labels-'+String(record.id || record.marker?.id)},pose.position,labelSurfaces.map(s=>s.card));
             const tokenPose={position:new THREE.Vector3().setFromMatrixPosition(matrix),right:new THREE.Vector3().setFromMatrixColumn(matrix,0),up:new THREE.Vector3().setFromMatrixColumn(matrix,1),normal:new THREE.Vector3().setFromMatrixColumn(matrix,2)};

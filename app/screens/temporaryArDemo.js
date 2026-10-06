@@ -3,6 +3,7 @@ import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '..
 import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
 import {createDemoLivingMapConcept,createDemoLivingMapPlayback,demoLivingMapProgress} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
+import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
 const demoLivingMapPlayback=createDemoLivingMapPlayback();
 let demoLivingMapWasPlaying=false;
@@ -25,7 +26,7 @@ import {demoTotemHeightForScreen,shiftDemoAreaToFloor} from '../services/demoFlo
 import {createDemoFeedback,DEMO_FEEDBACK} from '../services/demoFeedback.js';
 let demoFeedback=null,demoFeedbackInputSource=null;
 import {BEE_COUNT} from '../services/demoAmbientLife.js';
-import {demoButterflyPose} from '../services/demoButterflyPose.js';
+import {demoButterflyPose,butterflyDropSurface} from '../services/demoButterflyPose.js';
 import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,totemNotificationLight} from '../services/totemSignSelection.js';
@@ -901,7 +902,7 @@ function showDemoPanelIntroduction(record,index=0){
         if(index===0){showDemoPanelIntroduction(record,1);return;}
         knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
         infoPanel?.setExplorerOpen(false);infoPanel?.setSettingsOpen(false);
-        showDemoAction('plant2');
+        showIntroBoard('Play with the environment',['Take a moment to settle into this place. Natural spaces and extended reality can invite observation, discovery and play.','Try holding the Hero Dice. A butterfly can be caught with Trigger when it crosses your laser. Release it in the air to keep flying, or near a panel or cell to let it rest briefly.'],'Discover another plant',()=>showDemoAction('plant2'),{stepLabel:'PLAY 1.1',nextGuide:'Grip moves objects. Trigger catches butterflies. Joystick up moves farther; down moves nearer.'});
     },{stepLabel:id,nextGuide:step.hint,keepPanel:true});
     infoPanel?.guideTool(index===0?'ToggleMedia':'Explorer');
 }
@@ -2076,7 +2077,7 @@ function showDemoTutorialMedia(key,content={}) {
 const DEMO_ORIENTATION_STEPS = [
     {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Discover the first plant',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
     {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:'curiosity',button:'See how it works',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]},
-    {code:'SPACE 1.3',title:'Play with the environment',art:null,button:'Place the first sample',nextGuide:'Grip moves. Trigger interacts. While holding the dice or a butterfly, push the joystick up to move farther and down to move nearer.',paragraphs:['We want people to interact more with real spaces, especially natural places. Extended reality can add another way to observe, discover and play with that environment.','Try holding the Hero Dice, or point at a butterfly and hold the trigger to carry it. Release the butterfly wherever you choose: it rests briefly, then flies away again.']}
+    {code:'SPACE 1.3',title:'Settle into this space',art:null,button:'Place the first sample',nextGuide:'Take your time. Place the sample when you are ready.',paragraphs:['A Project connects information to a real place. We will begin with one plant and its information.','There is no rush. Explore the first sample and get comfortable with the panels before trying playful interactions.']}
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
@@ -3859,7 +3860,7 @@ function openDemoNoteExperience(record){
     demoKnowledgeWorkspace=mountNoteExperience(root,record,{onClose:()=>closeDemoKnowledge(true)});
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');
     if(session && gl){demoNoteRenderer=createNoteSpatialRenderer(gl,root,record,viewerMatrix,{onInput:input=>{
-        demoNoteRenderer?.destroy();demoNoteRenderer=null;demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'NOTE WIDGET',onStatus:setGuide});demoKnowledgeMirror.focusInput(input);
+        demoNoteRenderer?.destroy();demoNoteRenderer=null;demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'NOTE WIDGET',background:'#142d26',ink:'#f5faef',onStatus:setGuide,onError:error=>{setGuide('Widget editor could not render. Return to AR and try again.');closeDemoKnowledge(true);}});demoKnowledgeMirror.focusInput(input);
     }});}
 }
 function openDemoNoteEditor(record,widgetId=''){
@@ -3867,7 +3868,7 @@ function openDemoNoteEditor(record,widgetId=''){
     const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
     demoKnowledgeWorkspace=mountSpatialNoteEditor(root,record,{widgetId,objectLabel:record.demoType==='zone'?'Totem':'Note',onSave:async update=>{Object.assign(record,update);record.demoContent={...record.demoContent,title:update.name,description:update.description,lines:[update.description]};refreshDemoRecord(record);updateSimulatedMarkers();},onClose:()=>{closeDemoKnowledge(true);focusDemoObjectControls(record);if(widgetId){openDemoNoteExperience(record);root.remove();demoKnowledgeRoot?.querySelector('[data-note-expand]')?.click();}}});
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');infoPanel?.suspend(true);
-    if(session && !domOverlayEnabled && gl){demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'EDIT NOTE',onStatus:setGuide,onError:error=>setGuide(error.message)});demoKnowledgeMirror.focusInput(root.querySelector('[data-widget-edit][open] input') || root.querySelector('[name=title]'));}
+    if(session && !domOverlayEnabled && gl){demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'EDIT NOTE',background:'#142d26',ink:'#f5faef',onStatus:setGuide,onError:error=>{setGuide('Note editor could not render. Return to AR and try again.');closeDemoKnowledge(true);}});demoKnowledgeMirror.focusInput(root.querySelector('[data-widget-edit][open] input') || root.querySelector('[name=title]'));}
 }
 
 function releaseHeldDemoRecord() {
@@ -4044,7 +4045,7 @@ function spatialPimSidePanelFromViewer(viewerMatrix) {
 }
 
 function drawDemoKnowledge(view) {
-    if(demoNoteRenderer){demoNoteRenderer.draw(view,viewerMatrix);return;}
+    if(demoNoteRenderer){try{demoNoteRenderer.draw(view,viewerMatrix);}catch(error){console.warn('Note widgets closed safely:',error);closeDemoKnowledge(true);setGuide('Widgets could not render. Your Note is preserved; the demo is still open.');}return;}
     if(!demoKnowledgeMirror || !demoKnowledgePanel) return;
     const model=spatialDashboardPanelMatrix(demoKnowledgePanel);
     // Existing demo quad spans ±.20 by ±.08 and has top-down texture UVs.
@@ -4394,10 +4395,15 @@ const butterflyTriggerSources=new WeakSet();
 function butterflyHeldBy(source){return Boolean(source && (butterflyGestureSources.has(source) || butterflyCompanions.some(insect=>insect.heldSource===source)));}
 function releaseDemoButterfly(insect){
     const perch=infoPanel?.getPerchPose(insect.side),position=insect.handPosition || insect.position;
-    const hit=latestControllerRay?[infoPanel?.hit(latestControllerRay),knowledgeRenderer?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0]:null;
-    const rest=hit?.point || hit?.position || position;
+    const hits=latestControllerRay?[infoPanel?.hit(latestControllerRay),knowledgeRenderer?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay),demoNoteRenderer?.hit(latestControllerRay)].filter(Boolean):[];
+    const surface=butterflyDropSurface(position,hits);
+    const landed=Boolean(surface);
+    const rest=landed?surface:position;
     const anchor=perch || insect.flightAnchor || {right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}};
-    insect.heldSource=null;insect.startedAt=arWelcomeClock.elapsed;insect.flightAnchor=rest?{...anchor,center:{...rest,y:rest.y+.025}}:null;insect.releasedPerch=Boolean(rest);insect.perchMs=4500;insect.lastElapsed=NaN;
+    insect.heldSource=null;insect.perchMs=landed?4500:0;
+    insect.startedAt=arWelcomeClock.elapsed-(landed?0:4500);insect.releasedPerch=landed;
+    const resumed=landed?null:demoButterflyPose(arWelcomeClock.elapsed,insect.startedAt,{perchMs:0,seed:insect.seed});
+    insect.flightAnchor=rest?{...anchor,center:{x:rest.x-(anchor.right.x*(resumed?.x || 0)+anchor.normal.x*(resumed?.z || 0)),y:rest.y+(landed ? .025 : 0)-(resumed?.y || 0),z:rest.z-(anchor.right.z*(resumed?.x || 0)+anchor.normal.z*(resumed?.z || 0))}}:null;insect.lastElapsed=NaN;insect.encounter=null;
 }
 function butterflyRayTarget(){
  const ray=latestControllerRay;if(!ray)return null;let nearest=null;
@@ -4788,31 +4794,13 @@ function drawIntroNoteContent(ctx) {
 
 function createIntroControlTexture(labelText, texture = null, aimed=false) {
     const label = document.createElement('canvas');
-    label.width = 1024;
-    label.height = 512;
+    label.width = 2048;
+    label.height = 1024;
     const ctx = label.getContext('2d');
-    ctx.scale(1024/900,512/360);
-    const panel = ctx.createLinearGradient(50, 24, 850, 336);
-    panel.addColorStop(0, aimed?'rgba(210,230,210,.25)':'rgba(28,37,39,.05)');
-    panel.addColorStop(1, 'rgba(28,37,39,.10)');
-    ctx.fillStyle = panel;
-    ctx.strokeStyle = aimed?'rgba(245,247,222,.96)':'rgba(220,218,202,.72)';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.roundRect(16, 16, 868, 328, 64);
-    ctx.fill();
-    ctx.stroke();
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillStyle = '#e1dfd2';
-    ctx.shadowColor = 'rgba(0,0,0,.38)';
-    ctx.shadowBlur = 4;
-    const controlText=String(labelText || 'Continue').toUpperCase();
-    let controlFontSize=84;ctx.font=`600 ${controlFontSize}px system-ui, sans-serif`;
-    while(controlFontSize>54 && ctx.measureText(controlText).width>800){controlFontSize-=2;ctx.font=`600 ${controlFontSize}px system-ui, sans-serif`;}
-    ctx.fillText(controlText, 450, 180,820);
-    ctx.shadowBlur = 0;
-    return canvasTexture(label, texture);
+    drawLivingFrameButton(ctx,labelText,aimed);
+    const result=canvasTexture(label, texture);
+    applyLivingFrameButtonSampling(gl);
+    return result;
 }
 
 function createIntroPointerTexture(texture = null) {
@@ -5616,9 +5604,8 @@ function drawDemoInputPointer(view,pointerSource) {
     const hoveredRecordTarget=demoRecordAtPointer();
     const hoveredRecordHit=hoveredRecordTarget?.hit || null;
     const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
-    const butterfly=butterflyRayTarget();
-    const butterflySurface=butterfly?{distance:butterfly.distance,point:butterfly.insect.position}:null;
-    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,butterflySurface,demoNoteRenderer?.hit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    // Butterflies can be caught along the ray, but never clamp the laser tip.
+    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,demoNoteRenderer?.hit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.

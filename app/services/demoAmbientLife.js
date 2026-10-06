@@ -6,6 +6,7 @@ export const BEE_ENCOUNTER_DURATION_MS=14000;
 export const BEE_FIRST_ENCOUNTER_MS=11000;
 
 function seededUnit(index){let value=(index+1)*0x9e3779b1;value^=value>>>16;value=Math.imul(value,0x21f0aaad);value^=value>>>15;return (value>>>0)/4294967295;}
+export function beeEntryDelay(index,seed=0){return index===0?0:index*1450+seededUnit(seed+index*31)*700;}
 export function demoBeeEncounter(age,{enabled=true,seed=0}={}){
     if(!enabled || age<BEE_FIRST_ENCOUNTER_MS)return null;
     let start=BEE_FIRST_ENCOUNTER_MS,index=0;
@@ -23,7 +24,7 @@ export function demoBeeEncounter(age,{enabled=true,seed=0}={}){
 
 export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounterSeed=0}={}){
     if(!Number.isFinite(startedAt))return null;
-    const age=elapsed-startedAt-index*850;
+    const age=elapsed-startedAt-beeEntryDelay(index,encounterSeed);
     if(age<0)return null;
     // Start in separate sectors of the Living Frame. The session seed varies
     // their sources and speeds while keeping each flight path continuous.
@@ -42,6 +43,7 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
     const wanderingY=Math.sin(phase*1.37+index)*.035;
     return {
         entry:smooth(age/4200),
+        animationOffset:index*.137+variation*.23,
         x:(orbitX+wanderingX)*(1-flyby)+(.82-flybyProgress*.64)*flyby,
         y:(orbitY+wanderingY)*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,
         depth:orbitDepth*(1-flyby)+(.5+.5*Math.sin(Math.PI*flybyProgress))*flyby,

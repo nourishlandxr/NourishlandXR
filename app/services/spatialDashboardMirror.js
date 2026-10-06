@@ -198,6 +198,8 @@ export function createSpatialDashboardMirror(options = {}) {
     if (!gl || !root) throw new Error('A WebGL context and dashboard root are required.');
     const width = Number(options.width) || DEFAULT_VIEWPORT_WIDTH;
     const height = Number(options.height) || DEFAULT_VIEWPORT_HEIGHT;
+    const background=options.background || '#f5f7ef';
+    const ink=options.ink || '#243328';
     const canvas = document.createElement('canvas');
     canvas.width = width;
     canvas.height = height;
@@ -211,12 +213,12 @@ export function createSpatialDashboardMirror(options = {}) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const paintStatus = (title, detail) => {
-        context.fillStyle = '#f5f7ef';
+        context.fillStyle = background;
         context.fillRect(0, 0, width, height);
-        context.fillStyle = '#243328';
+        context.fillStyle = ink;
         context.font = '800 42px system-ui, sans-serif';
         context.fillText(title, 64, 92);
-        context.fillStyle = '#56645b';
+        context.fillStyle = ink;
         context.font = '500 25px system-ui, sans-serif';
         context.fillText(detail, 64, 140);
     };
@@ -268,7 +270,7 @@ export function createSpatialDashboardMirror(options = {}) {
         const html2canvas = await loadHtml2canvas();
         await html2canvas(root, {
             canvas,
-            backgroundColor: '#f5f7ef',
+            backgroundColor: background,
             width,
             height,
             x: 0,
@@ -296,6 +298,7 @@ export function createSpatialDashboardMirror(options = {}) {
                 cloneRoot.style.setProperty('width', `${width}px`, 'important');
                 cloneRoot.style.setProperty('max-width', 'none', 'important');
                 cloneRoot.style.setProperty('margin', '0', 'important');
+                cloneRoot.style.setProperty('background', background, 'important');
             }
         });
         if (destroyed || generation !== refreshGeneration) return;
@@ -303,17 +306,21 @@ export function createSpatialDashboardMirror(options = {}) {
         options.onUpdate?.();
     };
 
+    let capturing=false,captureAgain=false;
     const refresh = () => {
         if (destroyed) return refreshPromise;
+        if(capturing){captureAgain=true;return refreshPromise;}
         clearTimeout(refreshTimer);
         refreshPromise = new Promise(resolve => {
             refreshTimer = window.setTimeout(() => {
+                capturing=true;
                 capture().catch(error => {
+                    if(destroyed)return;
                     paintStatus('DASHBOARD UNAVAILABLE', String(error?.message || 'Dashboard rendering failed.').slice(0, 78));
                     upload();
                     options.onUpdate?.();
                     options.onError?.(error);
-                }).finally(resolve);
+                }).finally(()=>{capturing=false;resolve();if(captureAgain && !destroyed){captureAgain=false;refresh();}});
             }, 35);
         });
         return refreshPromise;

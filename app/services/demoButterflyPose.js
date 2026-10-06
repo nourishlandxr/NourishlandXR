@@ -2,6 +2,11 @@ import {butterflyFlightPoint,butterflyFlightHeading} from './demoInsectFlight.js
 const smooth=x=>{const t=Math.max(0,Math.min(1,x));return t*t*(3-2*t);};
 export const BUTTERFLY_PERCH_MS=60000;
 export const BUTTERFLY_TAKEOFF_MS=4500;
+export function butterflyDropSurface(position,hits,tolerance=.12){
+    if(!position)return null;
+    return hits.map(hit=>hit?.point || hit?.position).filter(point=>point && Math.hypot(point.x-position.x,point.y-position.y,point.z-position.z)<=tolerance)
+        .sort((a,b)=>Math.hypot(a.x-position.x,a.y-position.y,a.z-position.z)-Math.hypot(b.x-position.x,b.y-position.y,b.z-position.z))[0] || null;
+}
 export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs=BUTTERFLY_PERCH_MS,seed=0}={}){
     if(!Number.isFinite(startedAt) || elapsed<startedAt)return null;
     const age=elapsed-startedAt,time=Math.max(0,age-perchMs)/1000;

@@ -11772,11 +11772,15 @@ body:has(.app-surface) {
     min-width:min(360px,76vw);
     min-height:80px;
     padding:20px 34px;
-    border:4px solid rgba(234,246,240,.88);
+    border:2px solid #bdd2c5;
     border-radius:18px;
-    background:rgba(9,25,28,.08);
+    background:#142d26;
     color:#f7fbf3;
     box-shadow:none;
+    text-shadow:none;
+    backdrop-filter:none;
+    -webkit-backdrop-filter:none;
+    filter:none;
     font-size:clamp(1.7rem,2.5vw,2rem);
     font-weight:680;
     letter-spacing:0;
@@ -11784,7 +11788,7 @@ body:has(.app-surface) {
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"]:is(:hover,:focus-visible),
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]):is(:hover,:focus-visible) {
     border-color:#f7fff8;
-    background:rgba(25,54,55,.18);
+    background:#28483d;
     outline:none;
     transform:translateX(-50%) translateY(-2px);
 }

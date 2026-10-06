@@ -54,18 +54,22 @@ export function createBeeXRRenderer(gl,model,bitmap){
         gl.bindTexture(gl.TEXTURE_2D,bones);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,4,count,0,gl.RGBA,gl.FLOAT,null);
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-        let lastElapsed=NaN,lastNectar=false;
+        let lastElapsed=NaN,lastNectar=false,lastOffset=NaN;
         const normalise=model.mesh.matrixWorld.clone();
         return {draw(view,origin,elapsed,pose){
-            if(lastElapsed!==elapsed || lastNectar!==Boolean(pose.nectar)){
-                model.mixer.update(Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0);
-                if(pose.nectar)for(const rest of model.wingRest || []){rest.bone.quaternion.copy(rest.rotation);rest.bone.position.copy(rest.position);}
+            const offset=pose.animationOffset || 0;
+            if(lastElapsed!==elapsed || lastNectar!==Boolean(pose.nectar) || lastOffset!==offset){
+                // One shared rig must be re-evaluated for each bee. Updating it
+                // with delta=0 can retain another bee's manually rested wings.
+                model.mixer.setTime(elapsed/1000+offset);
+                if(pose.nectar)for(const rest of model.wingRest || []){rest.bone.quaternion.copy(rest.rotation);rest.bone.position.copy(rest.position);rest.bone.scale.copy(rest.scale);}
                 model.wrapper.updateMatrixWorld(true);model.mesh.skeleton.update();
                 normalise.copy(model.mesh.matrixWorld).multiply(model.mesh.bindMatrixInverse);
                 gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);
                 gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,count,gl.RGBA,gl.FLOAT,model.mesh.skeleton.boneMatrices);
                 lastElapsed=elapsed;
                 lastNectar=Boolean(pose.nectar);
+                lastOffset=offset;
             }
             gl.useProgram(program);
             for(const a of attributes){if(a.location<0)continue;gl.bindBuffer(gl.ARRAY_BUFFER,a.buffer);gl.enableVertexAttribArray(a.location);gl.vertexAttribPointer(a.location,a.size,gl.FLOAT,false,0,0);}

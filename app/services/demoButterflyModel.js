@@ -5,7 +5,7 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 // the original, unchanged GLB. Geometry/materials are shared by all phases.
 const URL=new globalThis.URL('../assets/animated_butterfly.glb',import.meta.url);
 export const BUTTERFLY_RENDER_BUDGETS=Object.freeze({low:{pixels:192,interval:50},medium:{pixels:256,interval:42},high:{pixels:384,interval:33}});
-export const BUTTERFLY_FLIGHT_SPEED=4.8;
+export const BUTTERFLY_FLIGHT_SPEED=7.2;
 export function butterflyRestingFold(elapsed,phase=0,reduced=false){
     if(reduced)return .96;
     // One occasional opening per window, with different pauses and durations

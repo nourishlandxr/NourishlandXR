@@ -1,4 +1,15 @@
 import test from 'node:test';
+import {beeEntryDelay} from '../app/services/demoAmbientLife.js';
+
+test('bee arrivals and wing phases are independent rather than a synchronized pair',()=>{
+    assert.equal(beeEntryDelay(0,12),0);
+    const delays=[0,1,2,3].map(i=>beeEntryDelay(i,12));
+    for(let i=1;i<delays.length;i++)assert.ok(delays[i]-delays[i-1]>750);
+    assert.notEqual(beeEntryDelay(1,12),beeEntryDelay(1,13));
+    assert.equal(demoBeePose(1000,0,1),null);
+    const a=demoBeePose(8000,0,0),b=demoBeePose(8000,0,1);
+    assert.notEqual(a.animationOffset,b.animationOffset);
+});
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { BEE_ENCOUNTER_DURATION_MS, BEE_FIRST_ENCOUNTER_MS, demoBeeEncounter, demoBeePose, drawDemoAmbientLife } from '../app/services/demoAmbientLife.js';
