@@ -387,6 +387,7 @@ let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
 let introBoardParagraphFadeStartedAt=-Infinity;
 let introBoardParagraphFadeTimes=[];
+let introTextPageIndex=0,introTextVisibleCount=0,introTextPageTransition=null;
 let introOpeningCopySkipped=false;
 let introTextureUploadedAt = 0;
 let introFrameToken = 0;
@@ -1360,6 +1361,7 @@ function clearDemoNarration() {
     skipDemoNarration=null;
     introBoardVisibleBody='';
     introBoardParagraphFadeTimes=[];
+    introTextPageIndex=0;introTextVisibleCount=0;introTextPageTransition=null;
     introBoardTextureDirty=true;
     appRoot?.querySelectorAll('[data-tryit-guided-choice] .tryit-board-text-window p').forEach(paragraph=>{paragraph.textContent='';});
 }
@@ -1996,6 +1998,7 @@ function showArWelcomeShowcase() {
     introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
     arWelcomeOpeningDuration=Math.max(arWelcomeOpeningDuration,DEMO_WELCOME_TITLE_HOLD_MS+introBoardBody.split(/\n\n/).reduce((total,text)=>total+demoParagraphReadingTime(text),0)+1100);
     introBoardVisibleBody='';
+    introTextPageIndex=0;introTextVisibleCount=0;introTextPageTransition=null;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
     infoPanel?.setCompact(true);
@@ -4771,10 +4774,40 @@ function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
 }
 
 function introReadingWindow(layout,count,height){
-    let first=0;const end=Math.min(count,layout.paragraphLines.length);
-    const size=()=>layout.paragraphLines.slice(first,end).reduce((sum,lines)=>sum+lines.length*layout.lineHeight,0)+Math.max(0,end-first-1)*layout.paragraphGap;
-    while(first<end-1 && size()>height)first++;
-    return {first,end,height:size()};
+    const visibleEnd=Math.min(count,layout.paragraphLines.length),pages=[];
+    let first=0,end=0,pageHeight=0;
+    for(let index=0;index<visibleEnd;index++){
+        const paragraphHeight=layout.paragraphLines[index].length*layout.lineHeight;
+        const gap=end>first?layout.paragraphGap:0;
+        if(end>first && pageHeight+gap+paragraphHeight>height){pages.push({first,end,height:pageHeight});first=index;end=index;pageHeight=0;}
+        pageHeight+=(end>first?layout.paragraphGap:0)+paragraphHeight;
+        end=index+1;
+    }
+    if(end>first)pages.push({first,end,height:pageHeight});
+    const pageIndex=Math.max(0,pages.length-1);
+    return {...(pages[pageIndex] || {first:0,end:0,height:0}),pageIndex,pages};
+}
+
+function resolveIntroTextPage(targetPage,targetCount,now){
+    const fadeMs=320;
+    if(!introTextPageTransition && targetPage!==introTextPageIndex)
+        introTextPageTransition={from:introTextPageIndex,fromCount:introTextVisibleCount,to:targetPage,toCount:targetCount,phase:'out',startedAt:now};
+    else if(!introTextPageTransition && targetCount!==introTextVisibleCount)
+        introTextPageTransition={from:introTextPageIndex,fromCount:introTextVisibleCount,to:targetPage,toCount:targetCount,phase:'out',startedAt:now};
+    else if(introTextPageTransition && (targetPage!==introTextPageTransition.to || targetCount!==introTextPageTransition.toCount)){
+        introTextPageTransition.to=targetPage;introTextPageTransition.toCount=targetCount;
+    }
+    const transition=introTextPageTransition;
+    if(!transition)return {page:introTextPageIndex,count:introTextVisibleCount,opacity:1,active:false};
+    let progress=Math.min(1,Math.max(0,(now-transition.startedAt)/fadeMs));
+    if(transition.phase==='out' && progress>=1){transition.phase='in';transition.startedAt=now;progress=0;}
+    if(transition.phase==='in' && progress>=1){
+        introTextPageIndex=transition.to;introTextVisibleCount=transition.toCount;introTextPageTransition=null;
+        return {page:introTextPageIndex,count:introTextVisibleCount,opacity:1,active:false};
+    }
+    return transition.phase==='out'
+        ? {page:transition.from,count:transition.fromCount,opacity:1-progress,active:true}
+        : {page:transition.to,count:transition.toCount,opacity:progress,active:true};
 }
 
 function createSpatialKnowledgeTexture(record) {
@@ -4969,12 +5002,15 @@ function drawIntroNoteContent(ctx) {
                 const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,360);
                 ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
                 const count=introOpeningCopySkipped || window.matchMedia('(prefers-reduced-motion: reduce)').matches?layout.paragraphLines.length:layout.paragraphLines.filter((lines,index)=>openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS+layout.paragraphLines.slice(0,index).reduce((total,prior)=>total+demoParagraphReadingTime(prior.join(' ')),0)).length;
-                const windowLayout=introReadingWindow(layout,count,360);let y=515;
+                const windowLayout=introReadingWindow(layout,count,360);
+                const pageTransition=resolveIntroTextPage(windowLayout.pageIndex,count,performance.now());
+                const displayPages=introReadingWindow(layout,pageTransition.count,360).pages;
+                const displayWindow=displayPages[pageTransition.page] || {first:0,end:0};let y=515;
                 for(const [index,lines] of layout.paragraphLines.entries()){
-                    if(index<windowLayout.first || index>=windowLayout.end)continue;
+                    if(index<displayWindow.first || index>=displayWindow.end)continue;
                     const previous=layout.paragraphLines.slice(0,index).map(lines=>lines.join(' '));
                     const age=introOpeningCopySkipped?Infinity:openingElapsed-DEMO_WELCOME_TITLE_HOLD_MS-previous.reduce((total,text)=>total+demoParagraphReadingTime(text),0);
-                    ctx.save();ctx.globalAlpha=1;ctx.beginPath();ctx.rect(contentLeft,y-2,contentWidth,(window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.max(0,Math.min(1,age/1100)))*(lines.length*layout.lineHeight+4));ctx.clip();
+                    ctx.save();ctx.globalAlpha=pageTransition.opacity;ctx.beginPath();ctx.rect(contentLeft,y-2,contentWidth,(window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.max(0,Math.min(1,age/1100)))*(lines.length*layout.lineHeight+4));ctx.clip();
                     for(const line of lines){ctx.fillText(line,contentCenter,y);y+=layout.lineHeight;}ctx.restore();y+=layout.paragraphGap;
                 }
             }
@@ -5025,7 +5061,10 @@ function drawIntroNoteContent(ctx) {
     ctx.font = `600 ${bodyLayout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
     const bodyX = contentCenter;
     const windowLayout=introReadingWindow(bodyLayout,visibleParagraphs.filter(Boolean).length,bodyBottom-bodyTop);
-    const bodyHeight=windowLayout.height;
+    const pageTransition=resolveIntroTextPage(windowLayout.pageIndex,visibleParagraphs.filter(Boolean).length,performance.now());
+    const displayPages=introReadingWindow(bodyLayout,pageTransition.count,bodyBottom-bodyTop).pages;
+    const displayWindow=displayPages[pageTransition.page] || {first:0,end:0,height:0};
+    const bodyHeight=displayWindow.height;
     let paragraphY = bodyTop+Math.max(0,(bodyBottom-bodyTop-bodyHeight)/2);
     let clipped = false;
     ctx.save();
@@ -5034,10 +5073,10 @@ function drawIntroNoteContent(ctx) {
     ctx.clip();
     ctx.textBaseline = 'top';
     outer: for (const [paragraphIndex, completeLines] of bodyLayout.paragraphLines.entries()) {
-        if(paragraphIndex<windowLayout.first || paragraphIndex>=windowLayout.end)continue;
+        if(paragraphIndex<displayWindow.first || paragraphIndex>=displayWindow.end)continue;
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
         ctx.save();
-        const reveal=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/1100));ctx.globalAlpha=1;ctx.beginPath();ctx.rect(contentLeft,paragraphY-2,contentWidth,reveal*(completeLines.length*bodyLayout.lineHeight+4));ctx.clip();
+        const reveal=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/1100));ctx.globalAlpha=pageTransition.opacity;ctx.beginPath();ctx.rect(contentLeft,paragraphY-2,contentWidth,reveal*(completeLines.length*bodyLayout.lineHeight+4));ctx.clip();
         for (const [lineIndex, line] of visibleLines.entries()) {
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
             if (lineY > bodyBottom) { clipped = true;ctx.restore();break outer; }
@@ -5189,14 +5228,15 @@ function drawIntroSpatial(view) {
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
         const mapAnimating=introBoardStep==='UTILITY 1.1' && livingMapReveal(demoLivingMapElapsed(now),reducedMotion).preview>0;
         const paragraphFadeActive=!reducedMotion && now-introBoardParagraphFadeStartedAt<1100;
-        if(openingCopyRevealActive || mapAnimating || paragraphFadeActive || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
+        if(openingCopyRevealActive || mapAnimating || paragraphFadeActive || introTextPageTransition || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
     const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<1100;
-    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS;
+    const textPageTransitionActive=Boolean(introTextPageTransition);
+    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive || textPageTransitionActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS;
     if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
