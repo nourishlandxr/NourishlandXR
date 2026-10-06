@@ -87,13 +87,13 @@ test('spatial panel keeps its pose through head turns and only moves on grab or 
     assert.doesNotMatch(panelSource, /if\(!manuallyPositioned && panelPoseOutsideSafeBounds\(matrix,pose\)\)/);
     assert.doesNotMatch(panelSource, /Object\.assign\(pose,facePanelTowardEyes\(pose\.center/);
     assert.match(panelSource, /else if\(!pose\)\{[\s\S]*pose=next;[\s\S]*if\(headset && firstPlacement\)[\s\S]*firstPlacement=false;[\s\S]*\}/);
-    assert.match(panelSource, /const spatialHeight=\(\)=>phoneAR\?900:headset\?700:height\(\)/);
+    assert.match(panelSource, /const spatialHeight=\(\)=>guided\?Math\.max\(phoneAR\?900:headset\?700:620,height\(\)\):phoneAR\?900:headset\?700:height\(\)/);
 });
 
 test('Phase 6 typing coalesces expensive welcome texture uploads', () => {
     assert.equal(DEMO_TEXT_TEXTURE_INTERVAL_MS,48);
     assert.equal(DEMO_LIM_TEXTURE_INTERVAL_MS,64);
-    assert.match(demoSource, /const textureInterval=limActivation\?\.active \|\| textIsTyping \|\| paragraphFadeActive \? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS/);
+    assert.match(demoSource, /const textureInterval=limActivation\?\.active \|\| textIsTyping \|\| paragraphFadeActive \|\| openingCopyRevealActive \? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS/);
     assert.match(demoSource, /introTextureUploadedAt >= textureInterval/);
     assert.match(demoSource, /if\(label\.width!==width\)label\.width=width/);
     assert.match(demoSource, /if\(label\.height!==height\)label\.height=height/);

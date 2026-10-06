@@ -25,5 +25,6 @@ test('butterfly catch target does not shorten the visible laser',()=>{
     const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
     const pointer=source.slice(source.indexOf('function drawDemoControllerPointer'),source.indexOf('async function startImmersive'));
     assert.doesNotMatch(pointer,/butterflySurface/);
-    assert.match(source,/Widgets could not render\. Your Note is preserved/);
+    assert.match(source,/catch\(error\)\{console\.warn\('Note widgets closed safely:',error\);note\.renderer\.destroy\(\);note\.workspace\.destroy\(\);note\.root\.remove\(\);demoPlacedNoteViews\.delete\(id\)/);
+    assert.doesNotMatch(source,/catch\(error\)\{[^}]*markers\.(splice|filter)/);
 });
