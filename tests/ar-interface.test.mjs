@@ -1429,7 +1429,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /revealNextParagraph/);
-    assert.match(source, /boardTypingTimer = setTimeout\(revealParagraph, 320\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(revealParagraph, 700\)/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /record\.awaitingProfileReveal = true;[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready'\)/);
@@ -1508,7 +1508,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introBoardVisibleBody = paragraphs\.slice\(0, paragraphIndex\)\.join/);
     assert.match(source, /paragraphIndex\+\+/);
     assert.match(source, /return 62;/);
-    assert.match(source, /boardTypingTimer = setTimeout\(revealNextParagraph, 500\)/);
+    assert.match(source, /boardTypingTimer = setTimeout\(revealNextParagraph, 1800\)/);
     assert.doesNotMatch(source, /boardControlTimer/);
     assert.doesNotMatch(source, /'▌'/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after,[\s\S]*?content:none;/);
@@ -1528,8 +1528,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \{[^}]*bottom:auto !important;[^}]*grid-template-rows:auto auto minmax\(0,1fr\);[^}]*height:calc\(100dvh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*min-height:calc\(100svh - max\(8px,env\(safe-area-inset-top\)\)\);[^}]*overflow:hidden;/);
     assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
-    assert.match(styles, /font-size:clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\)/);
-    assert.match(source, /for \(let fontSize = 66; fontSize >= 22; fontSize -= 2\)/);
+    assert.match(styles, /font-size:calc\(clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\) \+ 1px\)/);
+    assert.match(source, /for \(let fontSize = 67; fontSize >= 23; fontSize -= 1\)/);
+    assert.match(source, /revealOpeningParagraph,2500/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.doesNotMatch(source, /arWelcomeVisionActivated|visionActivated:/);

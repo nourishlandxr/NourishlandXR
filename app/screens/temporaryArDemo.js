@@ -1282,7 +1282,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     if (typing) {
         paragraph.textContent = '';
         panel.classList.add('is-typing');
-        boardTypingTimer = setTimeout(revealParagraph, 320);
+        boardTypingTimer = setTimeout(revealParagraph, 700);
     } else {
         finishTyping();
     }
@@ -1386,7 +1386,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             boardTypingTimer = setTimeout(finishTyping, 120);
             return;
         }
-        boardTypingTimer = setTimeout(revealNextParagraph, 500);
+        boardTypingTimer = setTimeout(revealNextParagraph, 1800);
     };
     skipDemoNarration = finishTyping;
     if (board) {
@@ -1949,7 +1949,7 @@ function showArWelcomeShowcase() {
         introBoardParagraphFadeStartedAt=performance.now();introBoardParagraphFadeTimes[openingParagraphIndex-1]=introBoardParagraphFadeStartedAt;
         introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
         if(openingParagraphIndex>=openingParagraphs.length){boardTypingTimer=setTimeout(finishOpeningCopy,800);return;}
-        boardTypingTimer=setTimeout(revealOpeningParagraph,1350);
+        boardTypingTimer=setTimeout(revealOpeningParagraph,2500);
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
@@ -1967,7 +1967,7 @@ function showArWelcomeShowcase() {
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         syncDemoPanelActions();
         panel.classList.add('is-typing');paintOpeningCopy('');
-        boardTypingTimer=setTimeout(revealOpeningParagraph,320);
+        boardTypingTimer=setTimeout(revealOpeningParagraph,700);
     };
     rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitForOpeningCopy=()=>{
@@ -4616,18 +4616,18 @@ function wrappedTextureLines(ctx, text, maxWidth) {
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
-    for (let fontSize = 66; fontSize >= 22; fontSize -= 2) {
+    for (let fontSize = 67; fontSize >= 23; fontSize -= 1) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .5);
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
         const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
             + Math.max(0, paragraphLines.length - 1) * paragraphGap;
-        if (totalHeight <= maxHeight || fontSize === 22) {
+        if (totalHeight <= maxHeight || fontSize === 23) {
             return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
     }
-    return { fontSize: 22, lineHeight: 27, paragraphGap: 11, paragraphLines: [] };
+    return { fontSize: 23, lineHeight: 28, paragraphGap: 12, paragraphLines: [] };
 }
 
 function createSpatialKnowledgeTexture(record) {
@@ -4876,7 +4876,7 @@ function drawIntroNoteContent(ctx) {
     outer: for (const [paragraphIndex, completeLines] of bodyLayout.paragraphLines.entries()) {
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
         ctx.save();
-        ctx.globalAlpha*=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/620));
+        ctx.globalAlpha*=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/800));
         for (const [lineIndex, line] of visibleLines.entries()) {
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
             if (lineY > bodyBottom) { clipped = true;ctx.restore();break outer; }
