@@ -225,7 +225,7 @@ test('the demo keeps the three simple Totem forms and uses physical plaques and 
     assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     assert.match(demoSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone' || !demoAreaVisible(record))"),demoSource.indexOf('const linkedTotems'));
-    assert.match(demoTotemDraw,/bodyHalfWidth=\.095,bodyHalfDepth=\.075,bodyHalfHeight=demoTotemHalfHeight\(record\)/);
+    assert.match(demoTotemDraw,/bodyHalfWidth=record\.demoMapPiece\?\.032:\.095,bodyHalfDepth=record\.demoMapPiece\?\.027:\.075,bodyHalfHeight=demoTotemHalfHeight\(record\)/);
     assert.doesNotMatch(demoTotemDraw,/crownRadius|scale:\{x:1,y:\.7,z:\.5\}/);
     assert.match(demoSource,/drawSpatialTotemPlaques\(gl,prismRenderer,sphereRenderer/);
     const plaqueSource=read('app/services/spatialTotemCards.js');

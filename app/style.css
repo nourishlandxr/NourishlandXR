@@ -11917,13 +11917,6 @@ body:has(.app-surface) {
 }
 
 /* A short startup language card; no hidden/clipped content on smaller phones. */
-#app .demo-language-choice{width:min(100%,680px);min-height:0;margin:auto;padding:16px;gap:12px}
-.demo-language-choice .page-header{padding:0;margin:0;gap:6px}
-.demo-language-choice .page-header h1{margin:0;font-size:clamp(1.45rem,5vw,2rem);line-height:1.15}
-.demo-language-choice .panel{padding:14px;margin:0;gap:10px}
-.demo-language-choice p{margin:0;line-height:1.4}
-.demo-language-choice .button-row{gap:8px;margin:0;flex-wrap:wrap}
-.demo-language-choice [data-demo-language]{min-height:48px;flex:1 1 140px;white-space:normal}
 
 .tryit-butterfly-model {position:fixed;width:86px;height:86px;pointer-events:none;z-index:12310;object-fit:contain;}
 .tryit-demo.is-immersive .tryit-butterfly-model {display:none;}

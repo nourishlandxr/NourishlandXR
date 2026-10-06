@@ -63,7 +63,6 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText, translateApp, localizedCanvasContext } from '../services/i18n.js';
-import {renderDemoLanguageChoice} from '../services/demoLanguageChoice.js';
 import { getSpatialVisualSettings, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
@@ -5971,10 +5970,7 @@ async function startImmersive() {
     }
 }
 
-export function openTemporaryArDemoWindow(app, {languageChosen=false}={}) {
-    // Keep lightweight non-DOM harnesses on the existing desktop compatibility
-    // route; the real app root always supports the language chooser surface.
-    if(!languageChosen && typeof app?.querySelectorAll==='function')return renderDemoLanguageChoice(app,{onContinue:()=>openTemporaryArDemoWindow(app,{languageChosen:true}),onCancel:()=>window.renderLaunchScreen?.()});
+export function openTemporaryArDemoWindow(app) {
     if(isDesktopLearningBookTarget()){
         app.innerHTML=`<section class="screen ar-safety-screen nxr-desktop-ar-choice"><header class="page-header"><p class="welcome-label">NourishlandXR · desktop</p><h1>A spatial experience belongs in a real space.</h1><p class="subtitle">The AR demo is not designed for desktop use. It needs a compatible phone or headset for spatial tracking and interaction with the environment.</p></header><section class="panel nxr-desktop-ar-option"><h2>Explore the illustrated introduction</h2><p>On desktop, our existing book-style prototype explains how places, plant information and learning connect. There is no simulated AR mode.</p><button type="button" class="primary" data-desktop-learning-book>Open illustrated introduction</button></section><button type="button" data-desktop-ar-back>← Back to welcome</button></section>`;
         app.querySelector('[data-desktop-learning-book]')?.addEventListener('click',()=>renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()}),{once:true});

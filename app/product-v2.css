@@ -9,7 +9,13 @@ body { background:var(--v2-paper); }
 #app .v2-masthead-meta button { border:0; background:none; padding:4px 0; color:var(--v2-ink); text-decoration:underline; text-underline-offset:3px; }
 #app .v2-wordmark { font-size:23px; font-weight:700; letter-spacing:-1px; padding:0; border:0; background:none; box-shadow:none; color:var(--v2-ink); }
 #app .v2-wordmark span { font-size:11px; vertical-align:super; letter-spacing:1px; margin-left:5px; }
-#app .v2-masthead > button:last-child { background:transparent; border:1px solid var(--v2-line); padding:10px 14px; border-radius:99px; font-size:12px; }
+#app .v2-header-tools { position:relative; display:flex; align-items:center; gap:8px; margin-left:auto; }
+#app .v2-header-tools > button { background:transparent; border:1px solid var(--v2-line); padding:10px 14px; border-radius:99px; font-size:12px; }
+#app .v2-header-tools > .v2-language-trigger { display:flex; align-items:center; gap:6px; padding:9px 11px; }
+#app .v2-language-menu { position:absolute; z-index:100; top:calc(100% + 8px); right:0; min-width:205px; padding:6px; border:1px solid var(--v2-line); border-radius:14px; background:var(--v2-surface); box-shadow:0 12px 32px #253f3226; }
+#app .v2-language-menu[hidden] { display:none; }
+#app .v2-language-menu button { display:flex; width:100%; align-items:center; justify-content:space-between; border:0; border-radius:9px; padding:9px 11px; background:transparent; text-align:left; color:var(--v2-ink); }
+#app .v2-language-menu button:hover,#app .v2-language-menu button[aria-selected="true"] { background:var(--v2-soft); }
 #app :is(.v2-unified,.v2-screen) :is(button,input,select,textarea) { font:inherit; }
 #app :is(.v2-unified,.v2-screen) button { cursor:pointer; min-height:44px; }
 #app :is(.v2-unified,.v2-screen) button:disabled { cursor:default; opacity:.55; }
@@ -139,8 +145,8 @@ body:not([data-nxr-headset="quest"]) .creator-ar-taskbar { border-radius:22px!im
  #app .v2-masthead-meta { margin-left:auto; gap:7px; font-size:11px; }
  #app .v2-masthead-meta button { font-size:11px; }
  #app .v2-welcome .v2-wordmark { font-size:18px; }
- #app .v2-welcome .v2-masthead > button:last-child { padding:8px 10px; }
- #app .v2-masthead > button:last-child { margin-left:auto; }
+ #app .v2-header-tools { margin-left:auto; gap:5px; }
+ #app .v2-header-tools > button { padding:8px 10px; }
  .v2-hero { grid-template-columns:1fr; gap:0; padding:12px 0 28px; position:relative; }
  .v2-hero > .v2-botanical { position:absolute; width:130px; right:0; top:-8px; opacity:.32; pointer-events:none; }
  .v2-hero > div { position:relative; z-index:1; }
