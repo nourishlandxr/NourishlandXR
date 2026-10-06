@@ -6,6 +6,17 @@ import { bookChildren, bookLearningChildren, bookLearningPath, bookNodePath, ren
 import { LIM_ALL_CELLS, LIM_INTRO_CELLS } from '../app/services/limLearning.js';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
 import { openTemporaryArDemoWindow } from '../app/screens/temporaryArDemo.js';
+import {launchCreatorArFromPage} from '../app/services/creatorArNavigation.js';
+import {startArNote} from '../app/services/arNote.js';
+
+test('desktop creator and visitor gates never attempt a spatial session',async()=>{
+    const previous=globalThis.matchMedia;globalThis.matchMedia=()=>({matches:true});let launches=0;
+    try{
+        assert.equal(await launchCreatorArFromPage(null,()=>{launches++;return true;}),false);
+        assert.equal(launches,0);
+        await assert.rejects(startArNote(null,null),/AR is not available on desktop/);
+    }finally{globalThis.matchMedia=previous;}
+});
 
 test('desktop book never intercepts touch-first or headset AR', () => {
     assert.equal(isDesktopLearningBookTarget({ finePointer: true, mobileBrowser: false, headset: false }), true);
@@ -29,19 +40,19 @@ test('book branches use the authored LIM and PIM parent-child identities', () =>
     assert.ok(bookChildren(LIM_INTRO_CELLS, 'lim-intro-analysis').some(node => node.id === 'lim-intro-analysis-climate'));
 });
 
-test('desktop AR choice recommends the practical guide and leaves AR available', () => {
+test('desktop entry offers the existing book and removes simulated AR access', () => {
     const demo = readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
     const launch = readFileSync(new URL('../app/screens/launch.js', import.meta.url), 'utf8');
     const css = readFileSync(new URL('../app/living-objects.css', import.meta.url), 'utf8');
     assert.match(launch, /Try the AR introduction →/);
     assert.match(demo, /data-desktop-learning-book/);
-    assert.match(demo, /data-desktop-plain-ar/);
-    assert.match(demo, /we do not recommend this route for ordinary desktop use/);
+    assert.doesNotMatch(demo, /data-desktop-plain-ar/);
+    assert.match(demo, /The AR demo is not designed for desktop use/);
     assert.doesNotMatch(demo.slice(demo.indexOf('export async function startTemporaryArDemo')), /return renderDesktopLearningBook/);
     assert.match(css, /\.nxr-desktop-ar-options/);
 });
 
-test('desktop AR entry opens the choice and its recommended guide', () => {
+test('desktop entry explains device compatibility and opens the original book prototype', () => {
     const previousMatchMedia = globalThis.matchMedia;
     const handlers = new Map();
     const app = {
@@ -53,8 +64,8 @@ test('desktop AR entry opens the choice and its recommended guide', () => {
     globalThis.matchMedia = () => ({ matches: true });
     try {
         openTemporaryArDemoWindow(app);
-        assert.match(app.innerHTML, /RECOMMENDED ON DESKTOP/);
-        assert.match(app.innerHTML, /Open AR introduction/);
+        assert.match(app.innerHTML, /compatible phone or headset/);
+        assert.doesNotMatch(app.innerHTML, /Open AR introduction/);
         handlers.get('[data-desktop-learning-book]')();
         assert.match(app.innerHTML, /Project, Areas and Totem map/);
     } finally {

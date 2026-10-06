@@ -14,7 +14,7 @@ test('Quest Control panel keeps its navigation rail and Continue reachable', () 
     assert.equal(folded.some(item=>item.action==='MovePanel'),false);
     assert.equal(folded.some(item=>['ToggleMenu','ToggleMedia'].includes(item.action)),false);
     assert.equal(folded.some(item=>item.action==='ToggleTools'),false);
-    assert.equal(spatialPanelControls({hidden:true})[0].label,'Control panel');
+    assert.equal(spatialPanelControls({hidden:true})[0].label,'▣ Show panel');
 });
 import { hitTotemSurface } from '../app/services/spatialTotemCards.js';
 import { createPimHold, bindSpatialPimHold } from '../app/services/pimActivationHold.js';

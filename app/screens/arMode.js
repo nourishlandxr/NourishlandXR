@@ -16,6 +16,14 @@ import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, li
 import { createSpatialTotemCards, drawSpatialTotemButtons,drawSpatialTotemPlaques,totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {liveNoteEnabled,liveNoteTopics,mountLiveNote} from '../services/liveNotes.js';
+import {spatialNoteEnabled} from '../services/spatialNotes.js';
+import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from '../services/desktopLearningBookTarget.js';
+import {mountNoteExperience} from '../services/noteExperience.js';
+import {mountNoteWidgetEditor} from '../services/noteWidgetEditor.js';
+import {mountSpatialNoteEditor} from '../services/noteEditorDialog.js';
+import {focusSpatialObjectControls} from '../services/spatialObjectControls.js';
+import {createNoteSpatialRenderer} from '../services/noteSpatialRenderer.js';
+let creatorNoteRenderer=null;
 import { applySpatialNoteTemplate, spatialNoteTemplate, spatialNoteTemplateOptions } from '../services/spatialNoteTemplates.js';
 /*
  * Creator AR placement mode
@@ -845,7 +853,7 @@ function creatorTotemOpacity(record,now=performance.now()){
 }
 function activateCreatorTotemCard(hit) {
     if(!hit)return false;
-    const record=hit.record,id=hit.card.id;infoPanel?.setMediaCollapsed(true);
+    const record=hit.record,id=hit.card.id;focusCreatorObjectControls(record);infoPanel?.setMediaCollapsed(true);
     if(id==='__signs'){
         record.demoTotemSignsVisible=!record.demoTotemSignsVisible;record.demoSignsChangedAt=performance.now();
         record.demoTotemFadeFrom=creatorTotemOpacity(record);record.demoTotemFadeStartedAt=performance.now();record.demoTotemFaded=false;
@@ -854,7 +862,7 @@ function activateCreatorTotemCard(hit) {
         record.demoTotemFadeFrom=creatorTotemOpacity(record);record.demoTotemFadeStartedAt=performance.now();
         record.demoTotemFaded=!record.demoTotemFaded;record.totemSelectedCard='';
     }else selectTotemSign(record,hit.detail?'':id,sessionMarkers);
-    pulseCreatorHaptics();renderSessionMarkers();return true;
+    focusCreatorObjectControls(record);pulseCreatorHaptics();renderSessionMarkers();return true;
 }
 
 function creatorPlantKnowledge(record) {
@@ -900,6 +908,7 @@ function spatialPimSidePanelFromViewer(viewerMatrix) {
 function closeCreatorKnowledge({force = false} = {}) {
     if (!creatorKnowledgeWorkspace && !creatorKnowledgeRoot) return true;
     if (!force && creatorKnowledgeWorkspace) return creatorKnowledgeWorkspace.close();
+    creatorNoteRenderer?.destroy();creatorNoteRenderer=null;
     creatorKnowledgeWorkspace?.destroy(); creatorKnowledgeWorkspace = null;
     closeQuestSpatialWebPanel();
     creatorKnowledgeRoot?.remove(); creatorKnowledgeRoot = null;
@@ -958,13 +967,36 @@ function openCreatorLiveNote(record) {
     closeQuestSpatialWebPanel();closeQuestSpecialPalette();closeMarkerContextToolbar();closePlacePicker();clearMarkerHoldGesture();clearControllerMarkerPress();
     creatorKnowledgeReturnFocus=document.activeElement;creatorKnowledgeRecord=record;
     const root=document.createElement('section');creatorKnowledgeRoot=root;overlayRoot.append(root);overlayRoot.classList.add('has-creator-knowledge');
-    creatorKnowledgeWorkspace=mountLiveNote(root,record.marker,{onClose:()=>closeCreatorKnowledge({force:true})});
+    creatorKnowledgeWorkspace=(spatialNoteEnabled(record.marker)?mountNoteExperience:mountLiveNote)(root,record.marker,{onClose:()=>closeCreatorKnowledge({force:true})});
     root.classList.add('is-ar-pim-side-note');
     if(questHeadsetSession && gl){
+        if(spatialNoteEnabled(record.marker)){
+            creatorNoteRenderer=createNoteSpatialRenderer(gl,root,record,latestViewerMatrix || questBeltViewerMatrix,{onInput:input=>{
+                creatorNoteRenderer?.destroy();creatorNoteRenderer=null;questSpatialWebVisible=true;questSpatialDashboardPanel=spatialPimSidePanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);questSpatialDashboardMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'NOTE WIDGET',onStatus:setPlacementStatus});questSpatialDashboardMirror.focusInput(input);
+            }});return;
+        }
         questSpatialWebVisible=true;
         questSpatialDashboardPanel=spatialPimSidePanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);
         questSpatialDashboardMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'LIVE NOTE',onStatus:setPlacementStatus,onError:error=>setPlacementStatus(error.message)});
     }
+}
+
+function focusCreatorObjectControls(record){
+    return focusSpatialObjectControls(infoPanel,record,{
+        save:async item=>{item.marker=await updateAreaCompatibleMarker(item,item.marker);},
+        edit:(item,widgetId)=>item.marker.type==='note'?openCreatorNoteEditor(item,widgetId):openInlineEditor(item),
+        open:openCreatorLiveNote,
+        refresh:()=>renderSessionMarkers()
+    });
+}
+function openCreatorNoteEditor(record,widgetId=''){
+    closeCreatorKnowledge({force:true});
+    closeQuestSpatialWebPanel();
+    creatorKnowledgeReturnFocus=document.activeElement;creatorKnowledgeRecord=record;
+    const root=document.createElement('section');creatorKnowledgeRoot=root;overlayRoot.append(root);overlayRoot.classList.add('has-creator-knowledge');
+    creatorKnowledgeWorkspace=mountSpatialNoteEditor(root,record.marker,{widgetId,onSave:async marker=>{record.marker=await updateAreaCompatibleMarker(record,marker);renderSessionMarkers();},onClose:()=>{closeCreatorKnowledge({force:true});focusCreatorObjectControls(record);if(widgetId && spatialNoteEnabled(record.marker)){openCreatorLiveNote(record);creatorKnowledgeRoot?.querySelector('[data-note-expand]')?.click();}}});
+    root.classList.add('is-ar-pim-side-note');
+    if(questHeadsetSession && gl){questSpatialWebVisible=true;questSpatialDashboardPanel=spatialPimSidePanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);questSpatialDashboardMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'EDIT NOTE',onStatus:setPlacementStatus,onError:error=>setPlacementStatus(error.message)});questSpatialDashboardMirror.focusInput(root.querySelector('[data-widget-edit][open] input') || root.querySelector('[name=title]'));}
 }
 
 function creatorPimState(record) {
@@ -1224,6 +1256,7 @@ function queueContextAppearanceSave(record, appearance, property) {
 function openMarkerContextToolbar(record, force = false) {
     if (!record || (!force && interactionMode !== 'select')) return;
     contextToolbarRecord = record;
+    focusCreatorObjectControls(record);
     closeAreaChooser();
     closePlacePicker();
     closeUnplacedBag();
@@ -2194,7 +2227,7 @@ function finishControllerMarkerPress() {
     if (!press?.record) return false;
     const target = controllerMarkerAtAim();
     if(target?.marker?.id!==press.record.marker.id)return true;
-    if (hasPlantProfile(target) || liveNoteEnabled(target.marker) || interactionMode==='view') {
+    if (hasPlantProfile(target) || liveNoteEnabled(target.marker) || spatialNoteEnabled(target.marker) || interactionMode==='view') {
         const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(target.marker.id)}"]`);
         if (element) {
             beginMarkerInteraction(target, {
@@ -2279,6 +2312,7 @@ function activateKnowledgeSelection() {
 }
 
 function activateControllerSelection() {
+    if(creatorNoteRenderer?.activate(latestControllerRay))return true;
     if (!creatorKnowledgeRoot && !readyPlacementType && activateCreatorTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return true;
     if(creatorKnowledgeRoot) return activateKnowledgeSelection();
     if (readyPlacementType) {
@@ -2300,7 +2334,7 @@ function activateControllerSelection() {
     }
     const markerTarget = controllerMarkerAtAim();
     if (markerTarget) {
-        if (hasPlantProfile(markerTarget) || liveNoteEnabled(markerTarget.marker)) {
+        if (hasPlantProfile(markerTarget) || liveNoteEnabled(markerTarget.marker) || spatialNoteEnabled(markerTarget.marker)) {
             const element = overlayRoot?.querySelector(`[data-ar-marker-id="${CSS.escape(markerTarget.marker.id)}"]`);
             if (element) {
                 beginMarkerInteraction(markerTarget, {
@@ -4145,6 +4179,7 @@ function drawSpatialMarkers(view) {
             const totemColor = markerRgb(record.marker, colors.area_checkpoint);
             if (totemStyle === 'organic') {
                 const radius = Math.max(.12, Math.min(.36, halfHeight * .56));
+                const light=totemNotificationLight(record);drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...groundPosition,y:groundPosition.y+radius*2+.025},.045,{color:light.colour,alpha:.84,emissive:light.strength+.22});
                 drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + radius }, radius, {
                     color: totemColor,
                     alpha: .94,
@@ -4154,6 +4189,7 @@ function drawSpatialMarkers(view) {
             }
             if (totemStyle === 'flat-disc') {
                 const radius = Math.max(.14, Math.min(.38, halfHeight * .56));
+                const light=totemNotificationLight(record);drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...groundPosition,y:groundPosition.y+.085},.035,{color:light.colour,alpha:.84,emissive:light.strength+.22});
                 drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + .035 }, radius, {
                     color: totemColor,
                     alpha: .98,
@@ -4764,6 +4800,7 @@ function openInlineEditor(record, force = false) {
         : '';
     editor.innerHTML = `<form class="creator-ar-editor-form" data-ar-editor-form><div class="creator-ar-editor-heading"><p class="welcome-label">Quick edit · ${escapeHtml(record.areaName)}</p><button type="button" data-ar-edit-in-web>Edit in Web Mode</button></div><label class="creator-ar-rename">Rename<input name="name" value="${escapeHtml(record.marker.name)}" required /></label>${markerControls}${areaBoardControls}${startingBoardControls}${profileNote}<div class="creator-ar-editor-actions"><button class="creator-ar-delete" type="button" data-ar-delete-marker>Delete</button><span></span><button type="button" data-ar-editor-cancel>Cancel</button><button class="primary" type="submit">Save</button></div><p class="meta" data-ar-editor-status></p></form>`;
     const editorForm = editor.querySelector('[data-ar-editor-form]');
+    let noteConfiguration=null;
     const appearanceFieldset = editor.querySelector('.creator-ar-appearance');
     if (appearanceFieldset) {
         const opacityField = document.createElement('label');
@@ -4792,6 +4829,8 @@ function openInlineEditor(record, force = false) {
         information.value = record.marker.description || record.marker.notes || '';
         informationField.append(information);
         editorForm.insertBefore(informationField, appearanceFieldset);
+        const noteConfig=document.createElement('fieldset');editorForm.insertBefore(noteConfig,appearanceFieldset);
+        noteConfiguration=mountNoteWidgetEditor(noteConfig,record.marker,{onStarter:starter=>{editorForm.elements.name.value=starter.title;information.value=starter.content;}});
         const live = record.marker.appearance?.live_note || {};
         const liveField=document.createElement('fieldset');
         liveField.innerHTML=`<legend>Live Note</legend><label><input type="checkbox" name="liveNoteEnabled" ${live.enabled?'checked':''}> Open this note as connected cells</label><label>Topic cells<textarea name="liveNoteTopics" rows="5" placeholder="Area | What makes this place special&#10;Plant guild | How these plants work together&#10;Technique | What is being tried here"></textarea></label><p>One topic per line: title | information. Up to 12 topics. Your original note stays intact.</p>`;
@@ -4881,7 +4920,7 @@ function openInlineEditor(record, force = false) {
                     color: form.elements.markerColor.value,
                     size: form.elements.markerSize.value,
                     opacity: Number(form.elements.markerOpacity?.value ?? markerAppearanceOpacity(record.marker)),
-                    ...(type === 'note' ? { note_template:spatialNoteTemplate(form.elements.noteTemplate?.value).id, surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled', live_note:{...appearance.live_note,enabled:Boolean(form.elements.liveNoteEnabled?.checked),topics:liveNoteTopics(form.elements.liveNoteTopics?.value,appearance.live_note?.topics)} } : {})
+                    ...(type === 'note' ? { spatial_note:noteConfiguration?.value(),note_template:spatialNoteTemplate(form.elements.noteTemplate?.value).id, surface: form.elements.noteSurface?.value === 'outline' ? 'outline' : 'filled', live_note:{...appearance.live_note,enabled:Boolean(form.elements.liveNoteEnabled?.checked),topics:liveNoteTopics(form.elements.liveNoteTopics?.value,appearance.live_note?.topics)} } : {})
                 },
                 plant_profile: type === 'plant' ? {
                     ...(record.marker.plant_profile || {}),
@@ -4942,6 +4981,8 @@ function openInlineEditor(record, force = false) {
 
 function beginMarkerInteraction(record, event, { directHold = false, element = event.currentTarget } = {}) {
     if (creatorKnowledgeRoot) return;
+    if(!directHold && ['zone','area_checkpoint','intro_checkpoint'].includes(record.marker.type))focusCreatorObjectControls(record);
+    if(record.marker.type==='note' && !directHold){focusCreatorObjectControls(record);if(spatialNoteEnabled(record.marker) && interactionMode!=='select'){event.preventDefault();event.stopPropagation();openCreatorLiveNote(record);return;}}
     if (liveNoteEnabled(record.marker) && !directHold && interactionMode !== 'select') {event.preventDefault();event.stopPropagation();openCreatorLiveNote(record);return;}
     if (hasPlantProfile(record) && !directHold) {
         event.preventDefault();
@@ -6128,6 +6169,7 @@ export function isArModeActive() {
 }
 
 export async function startArMode(projectId, areaId = '', checkpointId = '', initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') {
+    if(isDesktopLearningBookTarget()){window.__nxrArStartError=new Error(DESKTOP_AR_EXPLANATION);return false;}
     if (exitPromise || arExitRequested) return false;
     if (session) return true;
     if (startPromise) return startPromise;
@@ -6301,6 +6343,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawQuestSpatialBelt(view);
                 drawQuestSpatialSpecialPalette(view);
                 drawQuestSpatialWebPanel(view);
+                creatorNoteRenderer?.draw(view,latestViewerMatrix);
                 drawCalibratedTotemPath(view);
                 drawSpatialMarkers(view);
                 if (questBeltUsesSpatialRenderer() && totemCardsRenderer) {

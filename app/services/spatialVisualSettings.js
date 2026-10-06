@@ -24,7 +24,7 @@ export function currentGraphicsQuality(){return resolveGraphicsQuality(preferenc
 export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
 export function currentRainQuality(){return preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,insects:true,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:1,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+let preferences={cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,insects:true,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
@@ -40,6 +40,7 @@ function validated(change){
 try{
     const saved=JSON.parse(globalThis.localStorage?.getItem(storageKey) || 'null');
     Object.assign(preferences,validated(saved));
+    if(saved && saved.cellGlassRevision!==1){preferences.cellOpacity=.42;globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}
     // HIGH refresh is a per-session trial. A reload recovers from a saved 120 Hz.
     if(preferences.refreshRate===120 || preferences.refreshRate==='auto')preferences.refreshRate=90;
     // Adopt the new default once; later deliberate style choices stay saved.

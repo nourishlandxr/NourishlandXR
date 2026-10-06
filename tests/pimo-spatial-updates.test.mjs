@@ -53,8 +53,8 @@ test('floor toy bounces, settles and stays within reach at each Quest refresh ra
   assert.ok(bounced);assert.equal(p.state.velocity.y,0);assert.ok(Math.abs(p.state.position.y-HERO_TOY_RADIUS)<1e-8);
  }
 });
-test('the actual Totem collar uses configurable cyan and expires without an extra mesh',()=>{
- assert.equal(totemNotificationLight({},100).strength,0);const r={signBeaconStartedAt:0};assert.equal(totemNotificationLight(r,300).colour,TOTEM_NOTIFICATION_COLOUR);assert.ok(totemNotificationLight(r,300).strength>0);assert.equal(totemNotificationLight(r,13000).strength,0);
+test('the Totem glass tip has a calm idle light and a stronger notification pulse',()=>{
+ const idle=totemNotificationLight({},100).strength;assert.ok(idle>0 && idle<.3);const r={signBeaconStartedAt:0};assert.equal(totemNotificationLight(r,300).colour,TOTEM_NOTIFICATION_COLOUR);assert.ok(totemNotificationLight(r,300).strength>idle);assert.ok(totemNotificationLight(r,13000).strength<.3);const customised=totemNotificationLight({appearance:{notificationColor:'#eaa8b9'}},100);assert.deepEqual(customised.colour,[234/255,168/255,185/255]);
 });
 test('reused XRFrame wrappers refresh hands, share one frame sample and clear missing poses',()=>{
  const names=[...new Set(XR_HAND_JOINT_CONNECTIONS.flat())],source={hand:new Map(names.map(n=>[n,n])),handedness:'right'},space={};let x=0,lost=false;

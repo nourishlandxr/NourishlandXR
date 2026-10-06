@@ -12,6 +12,13 @@ function fixture(){const record={demoType:'plant',name:'Pigeon Pea',demoExpanded
 function select(record,id){const object=ensureKnowledgeObjects(record,knowledge).items[0],face=object.faces.find(face=>face?.conceptId===id);assert.ok(face,id+' must be visible');assert.equal(selectKnowledgeObjectFace(record,knowledge,{id,knowledgeFaceId:face.faceId}),true);}
 function geometryFor(record){const object=ensureKnowledgeObjects(record,knowledge).items[0],geometry=createKnowledgeArchitectureGeometry(object.seedRadius,object.regions,Infinity,true);setKnowledgeArchitectureGeometry(object,geometry);ensureKnowledgeObjects(record,knowledge);return geometry;}
 
+test('unchanged frames reuse face records while an edited region accent invalidates them',()=>{
+    const record=fixture(),workspace=ensureKnowledgeObjects(record,knowledge),object=workspace.items[0],faces=object.faces;
+    for(let frame=0;frame<100;frame++)assert.equal(ensureKnowledgeObjects(record,knowledge).items[0].faces,faces);
+    object.regions[0].accent='#abcdef';ensureKnowledgeObjects(record,knowledge);
+    assert.notEqual(object.faces,faces);assert.equal(object.faces[0].accent,'#abcdef');
+});
+
 test('a seed opens into a six-direction star with finite shared geometry and contained atlas coordinates',()=>{
     const seed=createKnowledgeArchitectureGeometry(.16),star=createKnowledgeArchitectureGeometry(.16,Array.from({length:6},()=>({opened:true,level:3})),Infinity,true);
     for(const geometry of [seed,star]){

@@ -1,3 +1,4 @@
+@import url('./note-widgets.css');
 /* Shared spatial knowledge cues; motion is feedback, never the only signal. */
 .nlxr-orb-crown { position:absolute; left:50%; top:50%; width:72px; height:72px; transform:translate(-50%,-50%); pointer-events:none; color:var(--demo-orb-ring,#e2cca0); opacity:.52; filter:drop-shadow(0 2px 3px rgba(15,35,24,.28)); }
 .nlxr-orb-crown i { position:absolute; left:50%; top:50%; width:4px; height:8px; border-radius:3px; background:currentColor; transform:translate(-50%,-50%) rotate(calc(var(--bud)*60deg)) translateY(-34px); transition:opacity .25s ease; }
@@ -2237,7 +2238,7 @@ body[data-project-theme] .creator-ar-context-toolbar button {
  background:rgba(239,239,225,.14)!important;
 }
 :is(.tryit-sim-plant-profile,.creator-ar-plant-profile) .plant-knowledge-map[data-pim-layout="honeycomb"] :is(.plant-knowledge-cell-copy b,.plant-knowledge-cell-copy small,.plant-knowledge-core-copy strong) {
- font-family:Georgia,"Times New Roman",serif;font-weight:600;
+ font-family:Manrope,"Trebuchet MS",system-ui,sans-serif;font-weight:700;
 }
 
 /* Quest testing: welcoming glass action, with a quieter warm label. */
@@ -2246,7 +2247,7 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 
 /* Clear action boundary at Quest viewing distances. */
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
-.tryit-demo .tryit-context-trigger[data-context-mode="continue"] {border-width:7px;}
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"] {border-width:2px;border-radius:22px;background:linear-gradient(135deg,rgba(221,239,218,.12),rgba(29,48,42,.20))!important;color:#fffdf3!important;text-shadow:0 1px 2px rgba(0,20,14,.8);}
 
 /* Aim feedback stays in place so the target never escapes the pointer. */
 .nlxr-setting-options button:is(:hover,:focus-visible),
@@ -2492,3 +2493,5 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):not(.is-media-collapsed):has(> .nlxr-media-wing) {
     overflow:visible;
 }
+/* Legacy placement links never expose an unsupported desktop AR launch. */
+body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],button[onclick*="startArMode"],button[onclick*="startExplorerAr"],button[onclick*="startArWithSkipCheck"],button[onclick*="startWelcomeAr"],button[onclick*="toggleGlobalAr"]) {display:none!important;}

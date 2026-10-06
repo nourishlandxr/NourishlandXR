@@ -1,4 +1,5 @@
 import { dashboardIcon } from '../services/workspaceIcons.js';
+import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from '../services/desktopLearningBookTarget.js';
 
 function actionCard(item, className = '') {
     const icon = item.icon ? `<span class="location-tool-icon" aria-hidden="true">${dashboardIcon(item.icon)}</span>` : '';
@@ -109,9 +110,9 @@ export function renderProjectEntry(config) {
         ${growthJourneyHtml}
 
         <section class="dashboard-ar-path${spotlightTarget === 'arPath' ? ' tutorial-spotlight-target' : ''}" aria-labelledby="openArTitle">
-            <button class="global-ar-action dashboard-open-ar ar-square-action" type="button" aria-label="Open project in AR" onclick="${config.openArAction}">
+            ${isDesktopLearningBookTarget()?`<p class="workspace-ar-notice" id="openArTitle">${DESKTOP_AR_EXPLANATION}</p>`:`<button class="global-ar-action dashboard-open-ar ar-square-action" type="button" aria-label="Open project in AR" onclick="${config.openArAction}">
                 <strong id="openArTitle">AR</strong>
-            </button>
+            </button>`}
             <button class="dashboard-field-guide" type="button" onclick="${config.fieldGuideAction}" aria-label="Open ${config.nonPlantMode ? 'Collection Library' : 'Content'}"><span aria-hidden="true">${dashboardIcon('webhub')}</span><strong>${config.nonPlantMode ? 'COLLECTION LIBRARY' : 'CONTENT'}</strong></button>
         </section>
 

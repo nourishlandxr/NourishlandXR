@@ -68,10 +68,10 @@ test('Demo Totem keeps one welcome header and four slim horizontal signs',()=>{
     assert.ok(surfaces.some(surface=>surface.card.id==='area' && surface.detail),'welcome opens above the compact plaque');
 });
 
-test('Neighbouring zone direction appears only with linked positions and a known Totem heading',()=>{
+test('Neighbouring zone direction points to the known Totem even before the link is shown',()=>{
     const source={position:{x:0,z:0},rotationY:0,demoLinkVisible:false};
     const partner={position:{x:2,z:0}};
-    assert.deepEqual(resolveTotemNavigation(source,partner),{reliable:false,side:'',arrow:''});
+    assert.deepEqual(resolveTotemNavigation(source,partner),{reliable:true,side:'right',arrow:'→'});
     source.demoLinkVisible=true;
     assert.deepEqual(resolveTotemNavigation(source,partner),{reliable:true,side:'right',arrow:'→'});
     delete source.rotationY;

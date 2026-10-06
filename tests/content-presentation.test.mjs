@@ -21,7 +21,8 @@ test('guided narrative discovers one plant before introducing Areas and Totems',
     const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function pairedDemoTotemPosition'));
     assert.match(guide, /SPACE 1.1/);
     assert.match(guide, /SPACE 1.2/);
-    assert.doesNotMatch(guide, /SPACE 1.3|ELEMENTS 1.2/);
+    assert.match(guide,/SPACE 1.3[\s\S]*Play with the environment/);
+    assert.doesNotMatch(guide,/ELEMENTS 1.2/);
     assert.match(area, /This is the Plant Orb/);
     assert.ok(DEMO_GUIDED_STEPS.findIndex(s=>s.id==='ELEMENTS 1.7') < DEMO_GUIDED_STEPS.findIndex(s=>s.id==='ELEMENTS 1.18'));
     assert.match(placement, /markers\.push\(marker\);[\s\S]*if \(type === 'plant'\) guidePlantConversion\(placedRecord\)/);
@@ -104,7 +105,7 @@ test('the first-time journey introduces the Control panel before four practical 
     assert.match(demo,/title:guidedDemoStep\('SPACE 1\.1'\)\.title[\s\S]*title:guidedDemoStep\('SPACE 1\.2'\)\.title/);
     assert.equal(DEMO_ARCHETYPE_START_MS,20500);
     assert.doesNotMatch(demo,/welcomeNarrative\(openingElapsed/);
-    assert.match(demo,/title:guidedDemoStep\('SPACE 1\.1'\)\.title[\s\S]*title:guidedDemoStep\('SPACE 1\.2'\)\.title,art:null/);
+    assert.match(demo,/title:guidedDemoStep\('SPACE 1\.1'\)\.title[\s\S]*title:guidedDemoStep\('SPACE 1\.2'\)\.title,art:'curiosity'/);
     assert.match(demo,/infoPanel\?\.suspend\(true\)/);
     assert.match(demo,/if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.suspend\(false\)/);
     assert.doesNotMatch(demo,/do not need prior plant, farming or technology knowledge|For a beginner|beginners can enter/);

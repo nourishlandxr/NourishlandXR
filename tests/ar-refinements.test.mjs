@@ -16,9 +16,11 @@ test('butterfly perches for a minute and takeoff and repeated approaches are con
  for(let time=BUTTERFLY_PERCH_MS;time<240000;time+=100){const a=demoButterflyPose(time,0),b=demoButterflyPose(time+1,0);for(const key of ['x','y','z','close','flight'])assert.ok(Number.isFinite(a[key]) && Math.abs(b[key]-a[key])<.002);}
  assert.ok(demoButterflyPose(132000,0).close>.8);
 });
-test('four bees share one staggered visitor encounter and each can visit',()=>{
+test('four bees visit gently, with a waist-level pair at spaced intervals',()=>{
  assert.equal(BEE_COUNT,4);const visitors=new Set();
- for(let age=0;age<260000;age+=250){const poses=Array.from({length:BEE_COUNT},(_,i)=>demoBeePose(age,0,i));const visitorsNow=poses.map((pose,i)=>pose?.flyby>0?i:-1).filter(i=>i>=0);assert.ok(visitorsNow.length<=1);visitorsNow.forEach(i=>visitors.add(i));}
+ let paired=false;
+ for(let age=0;age<360000;age+=250){const poses=Array.from({length:BEE_COUNT},(_,i)=>demoBeePose(age,0,i));const visitorsNow=poses.map((pose,i)=>pose?.flyby>0?i:-1).filter(i=>i>=0);assert.ok(visitorsNow.length<=2);if(visitorsNow.length===2){paired=true;assert.ok(visitorsNow.every(i=>poses[i].waistVisit));}visitorsNow.forEach(i=>visitors.add(i));}
+ assert.equal(paired,true);
  assert.equal(visitors.size,4);assert.ok(demoBeeEncounter(12000));
 });
 test('numeric settings have clampable stepped sliders and no percentage cycle buttons',()=>{

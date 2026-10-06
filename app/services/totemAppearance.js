@@ -59,5 +59,6 @@ export function totemStylePreset(value) {
 // Global experiments affect the standard post, without changing stored project data.
 export function renderedTotemStyle(value){
     const stored=normalizeTotemStyle(value);
+    if(value?.appearance?.totemStyleExplicit)return stored;
     return stored==='basic' ? currentTotemModel() : stored;
 }

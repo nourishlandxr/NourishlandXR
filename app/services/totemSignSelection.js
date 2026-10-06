@@ -29,11 +29,14 @@ export const SIGN_DESTINATION_HIGHLIGHT=Object.freeze({color:Object.freeze([.98,
 export const TOTEM_NOTIFICATION_COLOUR=Object.freeze([.22,.82,.86]);
 // The post shaders apply this only to their existing collar, without geometry.
 export function totemNotificationLight(record,now=performance.now()){
+    const hex=String((record?.marker || record)?.appearance?.notificationColor || '').replace('#','');
+    const colour=/^[\da-f]{6}$/i.test(hex)?hex.match(/../g).map(value=>parseInt(value,16)/255):record?.notificationColour || TOTEM_NOTIFICATION_COLOUR;
     const age=now-record?.signBeaconStartedAt;
-    if(!Number.isFinite(age) || age<0 || record.signNotificationSelected===false || (age>12000 && !record.signNotificationSelected))return {colour:TOTEM_NOTIFICATION_COLOUR,strength:0};
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    const strength=reduced?1:.08+.92*Math.pow(.5-.5*Math.cos(age*Math.PI*2/1800),1.4);
-    return {colour:record.notificationColour || TOTEM_NOTIFICATION_COLOUR,strength:strength*(record.signNotificationSelected?1:Math.min(1,(12000-age)/900))};
+    if(!Number.isFinite(age) || age<0 || record.signNotificationSelected===false || (age>12000 && !record.signNotificationSelected))return {colour,strength:reduced?.22:.18+.10*(.5+.5*Math.sin(now/2300)),phase:reduced?0:now/1000};
+    const local=age%4800,burst=Math.pow(Math.max(0,Math.sin(local*Math.PI/460)),4),wave=.5+.5*Math.sin(age/850);
+    const strength=reduced?1:.25+.5*burst+.25*wave;
+    return {colour,strength:strength*(record.signNotificationSelected?1:Math.max(0,Math.min(1,(12000-age)/900))),phase:reduced?0:now/1000};
 }
 const buffers=new WeakMap();
 const unitShapes=Object.fromEntries(['ellipse','box'].map(shape=>{

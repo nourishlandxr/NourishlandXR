@@ -2,7 +2,7 @@ const clamp01=value=>Math.max(0,Math.min(1,value));
 const smooth=value=>{const t=clamp01(value);return t*t*(3-2*t);};
 export const BEE_COUNT=4;
 export const BEE_WING_SPEED=58;
-export const BEE_ENCOUNTER_DURATION_MS=7000;
+export const BEE_ENCOUNTER_DURATION_MS=14000;
 export const BEE_FIRST_ENCOUNTER_MS=11000;
 
 function seededUnit(index){let value=(index+1)*0x9e3779b1;value^=value>>>16;value=Math.imul(value,0x21f0aaad);value^=value>>>15;return (value>>>0)/4294967295;}
@@ -31,7 +31,9 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
     const time=age/1000,phase=time*(.30+variation*.08)
         +seededUnit(encounterSeed+101)*Math.PI*2+index*Math.PI*2/BEE_COUNT+(variation-.5)*.4;
     const candidate=demoBeeEncounter(elapsed-startedAt,{enabled:encounters,seed:encounterSeed});
-    const encounter=candidate && (candidate.index+encounterSeed)%BEE_COUNT===index ? candidate : null;
+    const lead=candidate ? (candidate.index+encounterSeed)%BEE_COUNT : -1;
+    const waistVisit=Boolean(candidate && candidate.index%3===2);
+    const encounter=candidate && (lead===index || waistVisit && (lead+1)%BEE_COUNT===index) ? candidate : null;
     const flybyProgress=encounter?.progress || 0,flyby=encounter?.envelope || 0;
     const orbitX=.5+Math.cos(phase)*(.22+.07*Math.sin(time*.13+index));
     const orbitY=.5+Math.sin(phase*.83+index*.4)*(.20+.08*Math.cos(time*.17+index));
@@ -39,6 +41,7 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
     const wanderingX=Math.sin(phase*.63+index)*.045;
     const wanderingY=Math.sin(phase*1.37+index)*.035;
     return {
+        entry:smooth(age/4200),
         x:(orbitX+wanderingX)*(1-flyby)+(.82-flybyProgress*.64)*flyby,
         y:(orbitY+wanderingY)*(1-flyby)+(.48-Math.sin(Math.PI*flybyProgress)*.035)*flyby,
         depth:orbitDepth*(1-flyby)+(.5+.5*Math.sin(Math.PI*flybyProgress))*flyby,
@@ -52,12 +55,20 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
         flyby,
         flybyProgress,
         encounterPhase:encounter?.phase || 'ambient',
+        waistVisit:waistVisit && Boolean(encounter),
         encounterIndex:encounter?.index ?? -1,
         encounterEndAt:encounter ? encounter.start+BEE_ENCOUNTER_DURATION_MS : NaN
     };
 }
 
-export function beePointerAvoidance(position,ray,clearance=.34){
+export function beePointerContact(position,ray,radius=.055){
+    if(!position || !ray?.origin || !ray?.direction)return false;
+    const {origin:o,direction:d}=ray,length=d.x*d.x+d.y*d.y+d.z*d.z;
+    if(length<1e-8)return false;
+    const t=((position.x-o.x)*d.x+(position.y-o.y)*d.y+(position.z-o.z)*d.z)/length;
+    return t>=0 && t<=2.5 && Math.hypot(position.x-o.x-d.x*t,position.y-o.y-d.y*t,position.z-o.z-d.z*t)<=radius;
+}
+export function beePointerAvoidance(position,ray,clearance=.16){
     if(!position || !ray?.origin || !ray?.direction)return {x:0,y:0,z:0};
     const direction=ray.direction,origin=ray.origin;
     const lengthSquared=direction.x**2+direction.y**2+direction.z**2;
@@ -66,7 +77,8 @@ export function beePointerAvoidance(position,ray,clearance=.34){
     const away={x:position.x-origin.x-direction.x*projection,y:position.y-origin.y-direction.y*projection,z:position.z-origin.z-direction.z*projection};
     const distance=Math.hypot(away.x,away.y,away.z);
     if(distance>=clearance)return {x:0,y:0,z:0};
-    const strength=(1-distance/clearance)*.28;
+    // Allow the laser through the body before a slow, small sidestep.
+    const strength=(1-distance/clearance)*.025;
     const normal=distance>1e-5?{x:away.x/distance,y:away.y/distance,z:away.z/distance}:{x:0,y:1,z:0};
     return {x:normal.x*strength,y:normal.y*strength,z:normal.z*strength};
 }

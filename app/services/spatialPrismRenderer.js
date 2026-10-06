@@ -124,7 +124,7 @@ export function createSpatialPrismRenderer(gl) {
             float rim = pow(1.0 - facing, 3.0);
             float sheen = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 28.0);
             shaded += vec3(.8,.86,.74) * (sheen * .16 + rim * .07);
-            float collar=smoothstep(.88,.89,localPosition.y)*(1.-smoothstep(.925,.935,localPosition.y));
+            float collar=smoothstep(.70,.75,localPosition.y);
             float base=smoothstep(-.95,-.94,localPosition.y)*(1.-smoothstep(-.90,-.89,localPosition.y));
             shaded=mix(shaded,shaded*.55,base*.65);
             shaded=mix(shaded,mix(topColor,vec3(.9,.97,.84),.6),collar*.9);
@@ -136,7 +136,8 @@ export function createSpatialPrismRenderer(gl) {
                 shaded*=1.0+woodGrain*(grain*.07+fine*.025);
                 shaded=mix(shaded,shaded*.78,woodGrain*collar);
             }
-            shaded=mix(shaded,notificationColour*2.2,collar*notificationStrength);
+            float glassGrain=.5+.5*sin(localPosition.x*115.+sin(localPosition.y*90.)*.6);
+            shaded=mix(shaded,notificationColour*(.72+.16*glassGrain+notificationStrength*1.5)+vec3(.8,.94,.9)*sheen*.55,collar);
             gl_FragColor = vec4(shaded, alpha);
         }
     `);

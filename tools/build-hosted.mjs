@@ -26,6 +26,8 @@ const frontendEntries = [
     'pim.css',
     'product-v2.css',
     'living-objects.css',
+    'creator-workspace.css',
+    'note-widgets.css',
     'assets',
     'components',
     'features',
@@ -71,7 +73,7 @@ fs.copyFileSync(path.join(root, 'deploy', 'xr.htaccess'), path.join(webDist, '.h
 const indexPath = path.join(webDist, 'index.html');
 const versionQuery = encodeURIComponent(buildVersion);
 const versionedIndex = fs.readFileSync(indexPath, 'utf8')
-    .replace(/href="(style|pim|product-v2|living-objects)\.css(?:\?v=[^"]*)?"/g, (_match,name) => `href="${name}.css?v=${versionQuery}"`)
+    .replace(/href="(style|pim|product-v2|living-objects|creator-workspace|note-widgets)\.css(?:\?v=[^"]*)?"/g, (_match,name) => `href="${name}.css?v=${versionQuery}"`)
     .replace(/src="main\.js(?:\?v=[^"]*)?"/, `src="main.js?v=${versionQuery}"`);
 fs.writeFileSync(indexPath, versionedIndex);
 fs.writeFileSync(path.join(webDist, 'services', 'buildInfo.js'), `export const BUILD_INFO = Object.freeze(${JSON.stringify({

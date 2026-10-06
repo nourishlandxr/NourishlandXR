@@ -108,7 +108,7 @@ export function createSpatialTotemSculpture(gl) {
         void main(){
             vec3 normal=normalize(n),light=normalize(vec3(-.55,.7,.65)),viewer=normalize(eye);
             vec3 wood=texture2D(timber,tex).rgb;
-            float collar=smoothstep(.945,.949,tex.y)*(1.-smoothstep(.964,.968,tex.y));
+            float collar=smoothstep(.86,.875,tex.y);
             float foot=1.-smoothstep(.025,.07,tex.y);
             vec3 base=wood*mix(vec3(.69,.51,.35),tint,.36);
             base=mix(base,vec3(.13,.16,.13),foot*.62);
@@ -131,7 +131,9 @@ export function createSpatialTotemSculpture(gl) {
             shaded+=vec3(.92,.81,.58)*spec*(.055+collar*.13);
             shaded+=vec3(.60,.68,.48)*pow(1.-max(dot(normal,viewer),0.),3.)*.045;
             shaded=mix(shaded,shaded+vec3(.09,.065,.025),aim);
-            shaded=mix(shaded,notificationColour*2.2,collar*notificationStrength);
+            float glassGrain=.5+.5*sin(tex.x*90.+sin(tex.y*110.)*.65);
+            vec3 glass=notificationColour*(.72+.18*glassGrain)+vec3(.74,.93,.88)*spec*.9+vec3(.24,.37,.33)*pow(1.-max(dot(normal,viewer),0.),3.);
+            shaded=mix(shaded,glass+notificationColour*notificationStrength*1.5,collar);
             gl_FragColor=vec4(shaded,max(alpha,(1.-smoothstep(.031,.034,d))*controlOpacity*.90));
         }
     `);

@@ -1,0 +1,4 @@
+// Keep record identity for narration callbacks; omit GPU resources and caches.
+const sceneKey=key=>/^(demo|totem|sign|knowledgeExplorer|appearance|information|pimStored)/.test(key) || ['id','type','name','description','notes','position','rotationY','simulatedAnchor','tutorialStage','revealTitle','revealLines'].includes(key);
+export function captureDemoScene(records){return records.map(record=>{const data={};for(const [key,value] of Object.entries(record)){if(!sceneKey(key) || /texture|cache|surface|mesh|element|canvas/i.test(key))continue;try{data[key]=structuredClone(value);}catch{}}return {record,data};});}
+export function restoreDemoScene(snapshot){return (snapshot || []).map(({record,data})=>{for(const key of Object.keys(record))if(sceneKey(key) && !/texture|cache|surface|mesh|element|canvas/i.test(key))delete record[key];Object.assign(record,structuredClone(data));return record;});}

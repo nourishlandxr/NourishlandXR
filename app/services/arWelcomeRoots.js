@@ -380,13 +380,17 @@ const RIM_PATCHES=Object.freeze(Array.from({length:13},(_,i)=>({
  leaves:3+Math.floor(hash(i,313)*4)
 })));
 let flowerSiteTime=-1,flowerSiteCache=[];
+export function livingRimFlower(patch,index){
+ const seed=patch.seed*31+index;
+ return {count:3+Math.floor(hash(patch.seed,463)*6),angle:patch.angle+(patch.seed%2?1:-1)*(.012+index*(.016+hash(seed,467)*.026)),reach:10+index*(5+hash(seed,479)*8),size:.62+hash(seed,487)*1.22,petals:4+Math.floor(hash(seed,491)*5),shape:Math.floor(hash(seed,499)*3),colour:Math.floor(hash(seed,503)*6)};
+}
 export function livingFrameFlowerSites(elapsed=0){
  const tick=Math.floor(elapsed/1000);if(tick===flowerSiteTime)return flowerSiteCache;flowerSiteTime=tick;
- flowerSiteCache=RIM_PATCHES.filter(p=>p.seed%4!==1).flatMap(p=>Array.from({length:6},(_,n)=>{
+ flowerSiteCache=RIM_PATCHES.filter(p=>p.seed%4!==1).flatMap(p=>Array.from({length:livingRimFlower(p,0).count},(_,n)=>{
   const bloomAt=n<3?95000:240000+(n-3)*85000;
   if(elapsed<(n<3?LIVING_RIM.flowersAt:bloomAt+10000)+p.delay*.35+n*2300+12000)return null;
-  const angle=p.angle+(p.seed%2?1:-1)*(.02+n*.025),branch=stageEase((elapsed-bloomAt-p.delay-n*2100)/LIVING_RIM.growthMs);
-  const base=polarPoint(angle,p.radius),target=polarPoint(angle+.009,p.radius+15+n*9);
+  const spec=livingRimFlower(p,n),angle=spec.angle,branch=stageEase((elapsed-bloomAt-p.delay-n*2100)/LIVING_RIM.growthMs);
+  const base=polarPoint(angle,p.radius),target=polarPoint(angle+.009,p.radius+spec.reach);
   return {x:mix(base.x,target.x,branch),y:mix(base.y,target.y,branch)};
  }).filter(Boolean));return flowerSiteCache;
 }
@@ -487,22 +491,24 @@ function drawLivingRim(ctx,{elapsed=0,reducedMotion=false,quality=currentGraphic
     ctx.fillStyle='rgba(227,171,133,.45)';ctx.beginPath();ctx.arc(fruit.x-.8,fruit.y-.9,.65*berries,0,Math.PI*2);ctx.fill();
    }
   }
-  if(patch.seed%4!==1)for(let n=0;n<6;n++){
+  if(patch.seed%4!==1)for(let n=0;n<livingRimFlower(patch,0).count;n++){
    const bloomAt=n<3?95000:240000+(n-3)*85000;
    const branch=grow(bloomAt,patch.delay+n*2100);
    const flower=reducedMotion?1:stageEase((elapsed-(n<3?LIVING_RIM.flowersAt:bloomAt+10000)-patch.delay*.35-n*2300)/LIVING_RIM.flowerGrowthMs);
    if(branch<=0)continue;
-   const a=patch.angle+(patch.seed%2?1:-1)*(.02+n*.025);
-   const base=polarPoint(a,patch.radius),target=polarPoint(a+.009,patch.radius+15+n*9);
+   const spec=livingRimFlower(patch,n),a=spec.angle;
+   const base=polarPoint(a,patch.radius),target=polarPoint(a+.009,patch.radius+spec.reach);
    const tip={x:mix(base.x,target.x,branch),y:mix(base.y,target.y,branch)};
    ctx.strokeStyle=n%2?'#52714d':'#6d8051';ctx.lineWidth=1.2;
    ctx.beginPath();ctx.moveTo(base.x,base.y);ctx.quadraticCurveTo(base.x+Math.cos(a)*8,base.y+Math.sin(a)*8,tip.x,tip.y);ctx.stroke();
    if(flower<=0)continue;
-   ctx.save();ctx.translate(tip.x,tip.y);ctx.rotate(patch.seed*.73+n);ctx.scale(flower,flower);
-   ctx.fillStyle=['#7962c8','#a98add','#efca47','#eadb8a','#c48da9','#eee5df'][(patch.seed+n)%6];
-   for(let j=0;j<5;j++){
-    ctx.save();ctx.rotate(j*Math.PI*2/5);ctx.beginPath();ctx.moveTo(0,0);
-    ctx.quadraticCurveTo(-4,-4,-2.5,-8);ctx.lineTo(0,-6.8);ctx.lineTo(2.5,-8);
+   ctx.save();ctx.translate(tip.x,tip.y);ctx.rotate(patch.seed*.73+n);ctx.scale(flower*spec.size,flower*spec.size);
+   ctx.fillStyle=['#7962c8','#a98add','#efca47','#eadb8a','#c48da9','#eee5df'][spec.colour];
+   for(let j=0;j<spec.petals;j++){
+    ctx.save();ctx.rotate(j*Math.PI*2/spec.petals);ctx.beginPath();ctx.moveTo(0,0);
+    if(spec.shape===0){ctx.bezierCurveTo(-5,-3,-4,-10,0,-9);ctx.bezierCurveTo(4,-10,5,-3,0,0);}
+    else if(spec.shape===1){ctx.lineTo(-2,-5);ctx.lineTo(0,-10);ctx.lineTo(2,-5);}
+    else {ctx.quadraticCurveTo(-4,-4,-2.5,-8);ctx.lineTo(0,-6.8);ctx.lineTo(2.5,-8);}
     ctx.quadraticCurveTo(4,-4,0,0);ctx.fill();
     ctx.fillStyle='rgba(244,218,232,.16)';ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-2,-4,0,-6.8);ctx.quadraticCurveTo(2,-3,0,0);ctx.fill();
     ctx.strokeStyle='rgba(105,57,94,.26)';ctx.lineWidth=.55;ctx.beginPath();ctx.moveTo(0,-1);ctx.lineTo(0,-5.8);ctx.stroke();ctx.restore();

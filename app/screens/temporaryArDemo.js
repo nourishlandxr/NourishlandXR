@@ -31,7 +31,7 @@ import { bindSpatialPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaques, resolveTotemNavigation, totemLayoutForRecord } from '../services/spatialTotemCards.js';
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
-import {drawArWelcomePanel,WELCOME_RIM_MOTION} from '../services/arWelcomePanel.js';
+import {drawArWelcomePanel,WELCOME_RIM_MOTION,WELCOME_SHAPE} from '../services/arWelcomePanel.js';
 import { livingFrameFlowerSites, WELCOME_ROOT_MILESTONES, WELCOME_ROOT_REFRESH_MS, advanceWelcomeRootProgress, welcomeRootsNeedRefresh } from '../services/arWelcomeRoots.js';
 import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
@@ -41,7 +41,7 @@ import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_O
 import { createMinimalMarkerDraft, relateMinimalMarkers } from '../services/markerWorkflow.js';
 import { placementPointerMarkup } from '../services/placementPointer.js';
 import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatialMoveControl.js';
-import { beePointerAvoidance, demoBeePose, demoBeeEncounter } from '../services/demoAmbientLife.js';
+import { beePointerAvoidance, beePointerContact, demoBeePose, demoBeeEncounter } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from '../services/spatialObjectVisuals.js';
 import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
@@ -73,6 +73,14 @@ import { createXRHandOutline } from '../services/xrHandOutline.js';
 import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction.js';
 import { hitTotemPoint } from '../services/spatialTotemCards.js';
 import { spatialNoteTemplate } from '../services/spatialNoteTemplates.js';
+import {spatialNoteEnabled,noteStarter} from '../services/spatialNotes.js';
+import {mountNoteExperience} from '../services/noteExperience.js';
+import {mountSpatialNoteEditor} from '../services/noteEditorDialog.js';
+import {focusSpatialObjectControls} from '../services/spatialObjectControls.js';
+import {renderedTotemStyle} from '../services/totemAppearance.js';
+import {createNoteSpatialRenderer} from '../services/noteSpatialRenderer.js';
+import {captureDemoScene,restoreDemoScene} from '../services/demoSceneHistory.js';
+let demoNoteRenderer=null;
 import { PIM_SPATIAL_CONFIG, PIM_SPATIAL_LAYOUT_OPTIONS, pimCreateInteractionState, pimNodeAtPath, pimNodeChildren, pimResetInteractionState, pimSpatialPanel, pimSpatialPoseAboveAnchor, pimToggleNodeState, pimViewportSafeArea, pimVisibleNodes, pimNodeVisualPosition } from '../services/plantInformationMesh.js';
 import { PIM_BLOOM_DURATION_MS, PIM_TEXTURE_SIZE, createPlantInformationHoneycombTexture, pimHoneycombTargetAtPercent, pimHoneycombTextureSize } from '../services/plantInformationMeshCanvas.js?v=0.9001';
 import { resolvePlantPim } from '../services/pimLegacyAdapter.js';
@@ -377,7 +385,7 @@ const welcomeBoardParagraphs = () => currentNxrLanguage() === 'pt-PT'
         : WELCOME_BOARD_PARAGRAPHS;
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
+const demoIntroLabel = () => arWelcomeOpeningActive?'Welcome · start when ready':guidedDemoStep(introBoardStep)?.act || (introBoardStep?.startsWith('LEARNING')?'Learning connection':'Sample demo');
 let demoJourneyStage='why';
 
 function setDemoJourneyStage(stageId) {
@@ -630,8 +638,7 @@ function demoPanelActions() {
     actions.push({id:'close',label:'Close demo'});
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
     const firstProfile=demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM && markers.some(record=>record.tutorialStage==='plant' && record.demoExpanded && !record.demoProfileInteracted);
-    const tasksPending=firstProfile && DEMO_INTERACTION_TASKS.some(task=>!demoInteractionTasks.has(task.id));
-    if(continueButton && !continueButton.hidden)actions.push({id:'continue',label:continueButton.textContent.trim() || 'Continue',primary:true,disabled:continueButton.disabled || tasksPending});
+    if(continueButton && !continueButton.hidden)actions.push({id:'continue',label:continueButton.textContent.trim() || 'Continue',primary:true,disabled:continueButton.disabled});
     const navigation=actions.filter(item=>item.id==='back' || item.id==='forward');
     const priorities=actions.filter(item=>item.id==='close' || item.id==='continue');
     const ordinary=actions.filter(item=>!navigation.includes(item) && !priorities.includes(item));
@@ -853,7 +860,6 @@ function inviteVirtualTag(record) {
 
 function continueAfterDemoPim(record) {
     if (!record || record.demoProfileInteracted) return false;
-    if(record.tutorialStage==='plant' && DEMO_INTERACTION_TASKS.some(task=>!demoInteractionTasks.has(task.id))){syncDemoInteractionTasks();setIntroBoardNextGuide('Select the Orb, then open a cell to complete the interaction checklist.');return false;}
     infoPanel?.setTaskProgress(null);
     record.demoPimoLesson='done';
     knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
@@ -877,7 +883,8 @@ function showDemoPanelIntroduction(record,index=0){
         knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);
         infoPanel?.setExplorerOpen(false);infoPanel?.setSettingsOpen(false);
         showDemoAction('plant2');
-    },{stepLabel:id,nextGuide:step.hint});
+    },{stepLabel:id,nextGuide:step.hint,keepPanel:true});
+    infoPanel?.guideTool(index===0?'ToggleMedia':'Explorer');
 }
 
 const LIM_APPLICATION_LENSES = Object.freeze([
@@ -1054,6 +1061,7 @@ function demoTotemVisualOpacity(record,now=performance.now()) {
     return (record.demoTotemFadeFrom ?? target)*(1-progress)+target*progress;
 }
 function selectDemoTotemSign(record,cardId) {
+    focusDemoObjectControls(record);
     selectTotemSign(record,cardId,markers);
     const card=demoTotemCards(record).find(item=>item.id===record.totemSelectedCard);
     const target=markers.find(item=>item.id===(card?.navigation?.destinationId || card?.references?.[0]));
@@ -1067,6 +1075,7 @@ function selectedDemoTotemTargets() {
 
 function activateDemoTotemCard(hit) {
     if(!hit)return false;
+    focusDemoObjectControls(hit.record);
     demoFeedback?.sound('totem');pulseDemoHaptics(demoGrabInputSource || limInputSource);
     infoPanel?.setMediaCollapsed(true);
     if(hit.card?.id==='__signs'){
@@ -1075,6 +1084,7 @@ function activateDemoTotemCard(hit) {
         setDemoAreaFaded(hit.record,false);
         hit.record.totemSelectedCard='';
         hit.record.totemCardsRefreshed=0;
+        focusDemoObjectControls(hit.record);
         infoPanel?.setContextualHint(hit.record.demoTotemSignsVisible?'Signs are visible. Each directional plaque points toward nearby Orbs, Notes or Totems.':'Signs are hidden. Turn them on to follow directional plaques to nearby Orbs, Notes or Totems.');
         updateSimulatedMarkers();return true;
     }
@@ -1265,6 +1275,8 @@ const DEMO_QUICK_ACCESS_COPY=Object.freeze({
 });
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
+    if(!options.historyReplay && !options.keepPanel && options.stepLabel && !options.stepLabel.startsWith('PIMO') && options.tutorialStep!==DEMO_TUTORIAL_STEPS.PIM)infoPanel?.showLearning({title:'',hideTitle:true,body:'',discardPreviousImage:true});
+    if(guidedDemoStep(options.stepLabel)?.act==='Meet the panel tools'){infoPanel?.guideTool('Explorer');infoPanel?.setContextualHint('Grip moves panels and objects. Trigger interacts with buttons and cells.');}
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-living-map',String(options.stepLabel==='UTILITY 1.1'));
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-demo-utility',String(Boolean(options.stepLabel?.startsWith('UTILITY '))));
     if(options.stepLabel==='UTILITY 1.1'){
@@ -1398,10 +1410,12 @@ function rememberDemoSlide(slide){
     const code=String(slide?.stepLabel || '').trim();
     if(!code)return;
     const previous=demoSlideHistory[demoSlideHistoryIndex];
-    if(previous?.stepLabel===code){demoSlideHistory[demoSlideHistoryIndex]={...slide};syncDemoPanelActions();return;}
+    const remember=entry=>queueMicrotask(()=>{if(demoSlideHistory[demoSlideHistoryIndex]!==entry)return;entry.scene=captureDemoScene(markers);entry.panel=infoPanel?.snapshot();entry.state={demoStage,placementReady,demoJourneyStage,demoOrientationStep,demoTutorialStep,limMeshVisible,arWelcomeIntroPending,arWelcomeSettleStage,arWelcomeSettleStartedAt,arWelcomeOpeningActive,arWelcomeRootMilestone,arWelcomeRootMilestoneStartedAt,selectedLimCell,limExpandedCells:[...limExpandedCells],limHiddenCells:[...limHiddenCells],limExpandedAt:[...limExpandedAt],nativeConnectionState:nativeConnectionState?structuredClone(nativeConnectionState):null};});
+    if(previous?.stepLabel===code){const entry={...slide};demoSlideHistory[demoSlideHistoryIndex]=entry;remember(entry);syncDemoPanelActions();return;}
     demoSlideHistory=demoSlideHistory.slice(0,demoSlideHistoryIndex+1);
     demoSlideHistory.push({...slide});
     demoSlideHistoryIndex=demoSlideHistory.length-1;
+    remember(demoSlideHistory[demoSlideHistoryIndex]);
     syncDemoPanelActions();
 }
 
@@ -1419,6 +1433,11 @@ function nextDemoSlideCode(){
 function showDemoSlideFromHistory(index){
     const slide=demoSlideHistory[index];
     if(!slide || index<0 || index>=demoSlideHistory.length)return;
+    clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);clearTimeout(aimRevealTimer);clearTimeout(pointerPressTimer);clearTimeout(demoHoldTimer);
+    closeDemoKnowledge(true);releaseHeldDemoRecord();limActivation?.reset();
+    const currentRecords=markers;if(slide.scene)markers=restoreDemoScene(slide.scene);
+    for(const record of currentRecords)if(!markers.includes(record))knowledgeRenderer?.clear(record);
+    if(slide.state){const state=slide.state;({demoStage,placementReady,demoJourneyStage,demoOrientationStep,demoTutorialStep,limMeshVisible,arWelcomeIntroPending,arWelcomeSettleStage,arWelcomeSettleStartedAt,arWelcomeOpeningActive,arWelcomeRootMilestone,arWelcomeRootMilestoneStartedAt,selectedLimCell,nativeConnectionState}=state);limExpandedCells=new Set(state.limExpandedCells);limHiddenCells=new Set(state.limHiddenCells);limExpandedAt=new Map(state.limExpandedAt);}
     demoSlideHistoryIndex=index;
     demoSlideHistoryReplay=true;
     if(slide.kind==='intro'){
@@ -1436,6 +1455,10 @@ function showDemoSlideFromHistory(index){
         else if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=()=>{const next=demoSlideHistoryIndex+1;if(next<demoSlideHistory.length)showDemoSlideFromHistory(next);else slide.onContinue?.();};}
     }
     demoSlideHistoryReplay=false;
+    if(slide.panel)infoPanel?.restoreSnapshot(slide.panel);
+    for(const record of markers){knowledgeRenderer?.clear(record);refreshDemoRecord(record);}
+    updateSimulatedMarkers();introBoardTextureDirty=true;
+    const pointer=appRoot?.querySelector('[data-tryit-place]');if(pointer)pointer.hidden=!placementReady;
     syncDemoPanelActions();
 }
 
@@ -1459,7 +1482,7 @@ function showPersistentPimPrompt(record) {
     const firstStep={uses:'PIMO 1.2a',culinary:'PIMO 1.2b','fresh-peas':'PIMO 1.2c'}[record.demoGuidedNodeId] || 'PIMO 1.2';
     const id=first?(record.knowledgeExplorer?.mode==='tag'?'ELEMENTS 1.7':firstStep):'ELEMENTS 1.12';
     const step=guidedDemoStep(id);
-    const button=first?'Take a closer look':'Leave something behind';
+    const button=first?'Continue to panel tools':'Leave something behind';
     showIntroBoard(step.title,step.main,button,()=>continueAfterDemoPim(record),{
         tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true
     });
@@ -1624,6 +1647,7 @@ function resolveDemoCellTarget(){
     const panel=infoPanel?.hit(latestControllerRay);
     return nearestDemoXrTarget([
         panel ? {kind:'panel',id:panel.card?.id || 'control-panel',distance:panel.distance,target:panel} : null,
+        butterflyRayTarget(),
         demoInfoTarget(),
         currentLimPointerTarget()
     ]);
@@ -1706,7 +1730,7 @@ function bindLimSessionInteractions(arSession) {
     };
     const select=event=>{
         if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE){event.stopImmediatePropagation?.();return;}
-        if(!arWelcomeShowcaseActive || !['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
+        if(!arWelcomeShowcaseActive || butterflyTriggerSources.has(event.inputSource) || !['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
         captureDemoInputEventRay(event);
         const resolved=resolveDemoCellTarget(),node=resolved?.kind==='lim-cell'?resolved.node:null;
         if(node || event.inputSource===limInputSource || event.inputSource===limInputSuppressSource && performance.now()<limActivationSessionSuppressUntil){event.preventDefault?.();event.stopImmediatePropagation?.();if(node)limActivation.consumeSyntheticClick(node.key,performance.now());return;}
@@ -1738,7 +1762,7 @@ function paintWelcomeLayer(now) {
             drawRoots:!simulatedMode && arWelcomeSharedBoard && introBoardVisible,
             rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},
-            drawCellLabels:true,cellOpacity:simulatedMode?1:currentCellOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''
+            drawCellLabels:true,cellOpacity:currentCellOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''
         });
     arWelcomeRenderedFrames=frames;
     context.restore();
@@ -1803,15 +1827,15 @@ function showArWelcomeShowcase() {
     const seedBytes=new Uint32Array(1);
     if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seedBytes);else seedBytes[0]=Math.floor(Math.random()*0xffffffff);
     arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;limMeshActivatedAt=NaN;arWelcomeOpeningActive=true;arWelcomeOpeningDuration=reducedOpening?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_OPENING_MS;arWelcomeOpeningSeed=seedBytes[0];arWelcomeClock=createWelcomePresentationClock();
-    ambientBeesStartedAt=0;
+    ambientBeesStartedAt=NaN;
     arWelcomeRootMilestone=WELCOME_ROOT_MILESTONES.arrival;arWelcomeRootMilestoneStartedAt=0;arWelcomeRootsLastRefreshAt=-Infinity;
-    limPathwayState=loadLimPathwayState(window.localStorage,LIM_PATHWAYS,LIM_CELL_BY_ID);
-    if(limPathwayState.status==='active')updateLimPathway(pauseLimPathway(limPathwayState));
+    // A sample demo starts clean; never inherit the previous visit's LIMO trail.
+    limPathwayState=idleLimPathwayState();
     const reservedCells=welcomeExperienceFrames(64000,false,arWelcomeClusters).flatMap(frame=>frame.nodes);
     limDiagnostic('rendered-cells',{count:reservedCells.length,uniqueIds:new Set(reservedCells.map(node=>node.limId || node.key)).size,reservedCount:LIM_ALL_CELLS.length});
     limInteractionCleanup();limSessionCleanup();limActivationSessionSuppressUntil=0;
     limActivation=createLimActivationController({
-        durationForKey:key=>limNodeByKey(key)?.depth>0?0:undefined,
+        duration:0,
         onProgress:()=>{introBoardTextureDirty=true;},
         onStart:(_key,source)=>{if(source?.startsWith('xr'))pulseDemoHaptics(limInputSource);introBoardTextureDirty=true;},
         onCancel:()=>{introBoardTextureDirty=true;},
@@ -1875,6 +1899,7 @@ function showArWelcomeShowcase() {
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
+        ambientBeesStartedAt=arWelcomeClock.elapsed;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
@@ -1893,7 +1918,10 @@ function showArWelcomeShowcase() {
     rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitForOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
-        if(arWelcomeClock.elapsed>=arWelcomeOpeningDuration){beginOpeningCopy();return;}
+        if(arWelcomeClock.elapsed>=arWelcomeOpeningDuration){
+            introBoardVisibleBody=introBoardBody;introBoardTextureDirty=true;
+            const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.textContent='Start the demo';button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;
+        }
         boardTypingTimer=setTimeout(waitForOpeningCopy,100);
     };
     boardTypingTimer=setTimeout(waitForOpeningCopy,100);
@@ -2025,7 +2053,8 @@ function showDemoTutorialMedia(key,content={}) {
 
 const DEMO_ORIENTATION_STEPS = [
     {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Discover the first plant',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
-    {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:null,button:'See how it works',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]}
+    {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:'curiosity',button:'See how it works',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]},
+    {code:'SPACE 1.3',title:'Play with the environment',art:null,button:'Place the first sample',nextGuide:'Grip moves. Trigger interacts. While holding the dice or a butterfly, push the joystick up to move farther and down to move nearer.',paragraphs:['We want people to interact more with real spaces, especially natural places. Extended reality can add another way to observe, discover and play with that environment.','Try holding the Hero Dice, or point at a butterfly and hold the trigger to carry it. Release the butterfly wherever you choose: it rests briefly, then flies away again.']}
 ];
 
 const POST_PLACEMENT_AREA_STEP = {
@@ -2054,9 +2083,6 @@ function runArWelcomeTutorial(index=0) {
         infoPanel?.suspend(false);
         infoPanel?.setContextualHint('Continue when you are ready.');
     }
-    if(index===0)showDemoTutorialMedia('companion');
-    else if(step?.art)showDemoTutorialMedia(step.art);
-    else infoPanel?.setMediaCollapsed(true);
     showIntroBoard(step.title,step.paragraphs,step.button,()=>{
         if(demoOrientationStep!==index)return;
         suppressSessionSelectUntil=performance.now()+700;
@@ -2064,7 +2090,10 @@ function runArWelcomeTutorial(index=0) {
         if(index<DEMO_ORIENTATION_STEPS.length-1){runArWelcomeTutorial(index+1);return;}
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-intro-pending');
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
-    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:step.code,nextGuide:step.nextGuide,deferContinueUntilCopyReady:index===0,onTextComplete:index===1 && step.art?()=>setTimeout(()=>{if(demoOrientationStep===1)showDemoTutorialMedia(step.art);},900):undefined});
+    },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:step.code,nextGuide:step.nextGuide,dynamicCopy:index===2,keepPanel:index===2,deferContinueUntilCopyReady:index===0});
+    if(index===0){showDemoTutorialMedia('companion');infoPanel?.setContextualHint('Grip moves panels and objects. Trigger interacts with buttons and cells.');}
+    else if(step?.art)showDemoTutorialMedia(step.art);
+    else if(index!==2)infoPanel?.setMediaCollapsed(true);
 }
 
 function guidePlantConversion(record) {
@@ -2543,7 +2572,7 @@ async function acceptNativeLimCell(key) {
         meshComposition.fail(error);
         retryDemoNativeTarget(state,'The cells did not connect.');
         nativeConnectionPanelGuide();
-        setGuide('Hold the learning cell again to retry.');
+        setGuide('Select the learning cell again to retry.');
         return false;
     }
 }
@@ -2769,14 +2798,13 @@ function armDemoPlacement(type, {explained=false}={}) {
     };
     const [title, introduction] = introductions[type];
     const mediaKey=type==='totem'?'totem':type==='note'?'note':'orb';
-    if(type==='plant' || type==='plant2')infoPanel?.setMediaCollapsed(true);
-    else showDemoTutorialMedia(mediaKey);
+    showDemoTutorialMedia(mediaKey);
     if(type==='note')infoPanel?.setContextualHint('The prepared message describes the two sample profiles.');
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
         const questTriggerPlacement=Boolean(session && demoControllerInputSource()?.targetRayMode!=='screen');
-        if(type==='plant')infoPanel?.showLearning({id:'demo-plant-context',title:'Pigeon Pea sample',body:'This prepared profile demonstrates plant information. A real project can use its own plant profiles.',editable:false});
+        if(type==='plant')showDemoTutorialMedia('curiosity',{id:'demo-plant-context',title:'',hideTitle:true,body:'This prepared profile demonstrates plant information. A real project can use its own plant profiles.'});
         const placementCopy = type === 'plant'
             ? {title:guidedDemoStep('ELEMENTS 1.5').title,body:DEMO_GUIDED_COPY['ELEMENTS 1.5'],next:`Aim at a clear spot in front of you, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place the sample Orb. Use the right joystick to adjust distance.`}
             : type === 'plant2'
@@ -3215,7 +3243,7 @@ function updateSimulatedMarkers() {
             const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
             return renderSimulatedPlant(record, index, anchor, offset).replace('tryit-sim-marker tryit-sim-marker-plant',`tryit-sim-marker tryit-sim-marker-plant${highlighted.has(record.id)?' is-sign-target':''}`);
         }
-        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('nlxr-totem-system',`nlxr-totem-system is-totem-${currentTotemModel()}`).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
+        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('nlxr-totem-system',`nlxr-totem-system is-totem-${renderedTotemStyle(record)}`).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         return simulatedRecordMarkup({
@@ -3365,11 +3393,11 @@ function bindSimulatedInformationPanels(layer) {
         compactMarker.setAttribute('role', 'button');
         compactMarker.setAttribute('tabindex', '0');
         compactMarker.setAttribute('aria-label', `Change Note type. Current ${record.demoContent?.title || record.name || 'Note'}`);
-        compactMarker.addEventListener('click', () => cycleDemoNoteTemplate(record));
+        compactMarker.addEventListener('click', () => selectDemoNote(record));
         compactMarker.addEventListener('keydown', event => {
             if (event.key !== 'Enter' && event.key !== ' ') return;
             event.preventDefault();
-            cycleDemoNoteTemplate(record);
+            selectDemoNote(record);
         });
     });
     layer.querySelectorAll('.tryit-sim-marker.is-expanded').forEach(panel => {
@@ -3795,7 +3823,29 @@ function beginHandDemoGrab(inputSource=null) {
 function selectDemoNoteTemplateAtPointer() {
     const target = demoRecordAtPointer();
     if (!target || target.record?.demoType !== 'note') return false;
-    return cycleDemoNoteTemplate(target.record);
+    return selectDemoNote(target.record);
+}
+
+function focusDemoObjectControls(record){
+    if(!record)return false;
+    return focusSpatialObjectControls(infoPanel,record,{edit:openDemoNoteEditor,open:openDemoNoteExperience,refresh:item=>{refreshDemoRecord(item);item.totemCardsRefreshed=0;updateSimulatedMarkers();}});
+}
+function selectDemoNote(record){focusDemoObjectControls(record);if(spatialNoteEnabled(record))openDemoNoteExperience(record);else infoPanel?.setExplorerOpen(true);return true;}
+function openDemoNoteExperience(record){
+    closeDemoKnowledge(true);
+    const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
+    demoKnowledgeWorkspace=mountNoteExperience(root,record,{onClose:()=>closeDemoKnowledge(true)});
+    root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');
+    if(session && gl){demoNoteRenderer=createNoteSpatialRenderer(gl,root,record,viewerMatrix,{onInput:input=>{
+        demoNoteRenderer?.destroy();demoNoteRenderer=null;demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'NOTE WIDGET',onStatus:setGuide});demoKnowledgeMirror.focusInput(input);
+    }});}
+}
+function openDemoNoteEditor(record,widgetId=''){
+    closeDemoKnowledge(true);
+    const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
+    demoKnowledgeWorkspace=mountSpatialNoteEditor(root,record,{widgetId,objectLabel:record.demoType==='zone'?'Totem':'Note',onSave:async update=>{Object.assign(record,update);record.demoContent={...record.demoContent,title:update.name,description:update.description,lines:[update.description]};refreshDemoRecord(record);updateSimulatedMarkers();},onClose:()=>{closeDemoKnowledge(true);focusDemoObjectControls(record);if(widgetId){openDemoNoteExperience(record);root.remove();demoKnowledgeRoot?.querySelector('[data-note-expand]')?.click();}}});
+    root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');infoPanel?.suspend(true);
+    if(session && !domOverlayEnabled && gl){demoKnowledgePanel=spatialPimSidePanelFromViewer(viewerMatrix);demoKnowledgeMirror=createSpatialDashboardMirror({gl,root,width:720,height:620,title:'EDIT NOTE',onStatus:setGuide,onError:error=>setGuide(error.message)});demoKnowledgeMirror.focusInput(root.querySelector('[data-widget-edit][open] input') || root.querySelector('[name=title]'));}
 }
 
 function releaseHeldDemoRecord() {
@@ -3933,6 +3983,7 @@ function pressPlacementPointer(event) {
 function closeDemoKnowledge(force=false) {
     if(!demoKnowledgeWorkspace) return;
     if(!force) {demoKnowledgeWorkspace.close();return;}
+    demoNoteRenderer?.destroy();demoNoteRenderer=null;
     demoKnowledgeMirror?.destroy();demoKnowledgeMirror=null;demoKnowledgePanel=null;
     demoKnowledgeWorkspace.destroy();demoKnowledgeWorkspace=null;demoKnowledgeRoot?.remove();demoKnowledgeRoot=null;
     const stage=appRoot?.querySelector('.tryit-stage'); if(stage) stage.inert=false;
@@ -3971,6 +4022,7 @@ function spatialPimSidePanelFromViewer(viewerMatrix) {
 }
 
 function drawDemoKnowledge(view) {
+    if(demoNoteRenderer){demoNoteRenderer.draw(view,viewerMatrix);return;}
     if(!demoKnowledgeMirror || !demoKnowledgePanel) return;
     const model=spatialDashboardPanelMatrix(demoKnowledgePanel);
     // Existing demo quad spans ±.20 by ±.08 and has top-down texture UVs.
@@ -4011,7 +4063,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
@@ -4316,15 +4368,22 @@ function pollDemoControllerSkip() {
 }
 
 const butterflyPinchStates=new WeakMap(),butterflyGestureSources=new WeakSet();
+const butterflyTriggerSources=new WeakSet();
 function butterflyHeldBy(source){return Boolean(source && (butterflyGestureSources.has(source) || butterflyCompanions.some(insect=>insect.heldSource===source)));}
 function releaseDemoButterfly(insect){
     const perch=infoPanel?.getPerchPose(insect.side),position=insect.handPosition || insect.position;
-    insect.heldSource=null;insect.startedAt=arWelcomeClock.elapsed;insect.flightAnchor=perch && position?{...perch,center:{...position}}:null;insect.perchMs=0;insect.lastElapsed=NaN;
+    const hit=latestControllerRay?[infoPanel?.hit(latestControllerRay),knowledgeRenderer?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0]:null;
+    const rest=hit?.point || hit?.position || position;
+    const anchor=perch || insect.flightAnchor || {right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}};
+    insect.heldSource=null;insect.startedAt=arWelcomeClock.elapsed;insect.flightAnchor=rest?{...anchor,center:{...rest,y:rest.y+.025}}:null;insect.releasedPerch=Boolean(rest);insect.perchMs=4500;insect.lastElapsed=NaN;
+}
+function butterflyRayTarget(){
+ const ray=latestControllerRay;if(!ray)return null;let nearest=null;
+ for(const insect of butterflyCompanions){if(insect.heldSource || !insect.position)continue;const p=insect.position,dx=p.x-ray.origin.x,dy=p.y-ray.origin.y,dz=p.z-ray.origin.z,t=dx*ray.direction.x+dy*ray.direction.y+dz*ray.direction.z;if(t<0 || t>2.5 || nearest && t>=nearest.distance)continue;const error=Math.hypot(dx-ray.direction.x*t,dy-ray.direction.y*t,dz-ray.direction.z*t);if(error<.08)nearest={kind:'butterfly',id:'butterfly-'+insect.seed,distance:t,insect,point:p};}return nearest;
 }
 function butterflyGripStart(source){
- const ray=latestControllerRay;if(!ray)return false;let nearest=null,distance=Infinity;
- for(const insect of butterflyCompanions){if(insect.heldSource || !insect.position)continue;const p=insect.position,dx=p.x-ray.origin.x,dy=p.y-ray.origin.y,dz=p.z-ray.origin.z,t=dx*ray.direction.x+dy*ray.direction.y+dz*ray.direction.z;if(t<0 || t>distance)continue;const error=Math.hypot(dx-ray.direction.x*t,dy-ray.direction.y*t,dz-ray.direction.z*t);if(error<.10){nearest=insect;distance=t;}}
- if(!nearest)return false;nearest.heldSource=source;nearest.controllerDistance=distance;nearest.handPosition={...nearest.position};return true;
+ const target=resolveDemoCellTarget();if(target?.kind!=='butterfly')return false;
+ const nearest=target.insect;nearest.heldSource=source;nearest.controllerDistance=target.distance;nearest.handPosition={...nearest.position};nearest.releasedPerch=false;return true;
 }
 function pollButterflyPinches(){
     for(const insect of butterflyCompanions)if(insect.heldSource?.hand && !latestTrackedHandStates.some(entry=>entry.source===insect.heldSource)){releaseDemoButterfly(insect);}
@@ -4513,7 +4572,9 @@ function canvasTexture(label, texture = null, flipY = false) {
     const storage=demoTextureStorage.get(texture);
     if(storage?.width===label.width && storage?.height===label.height)gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,gl.RGBA,gl.UNSIGNED_BYTE,label);
     else {gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,label);demoTextureStorage.set(texture,{width:label.width,height:label.height});}
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    const mipmapped=[label.width,label.height].every(value=>value>0 && (value & (value-1))===0);
+    if(mipmapped)gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, mipmapped?gl.LINEAR_MIPMAP_LINEAR:gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -4583,9 +4644,9 @@ function drawIntroNoteContent(ctx) {
         ctx.fillText('Knowledge connected to any land',700,350,920);
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
         ctx.fillText('School gardens · University campuses · Farms · Public landscapes',700,385,920);
-        demoLivingMapScene.draw(ctx,demoLivingMapElapsed(),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:210,y:420,width:980,height:470});
+        demoLivingMapScene.draw(ctx,demoLivingMapElapsed(),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:210,y:420,width:980,height:415});
         ctx.fillStyle='#dfecc8';ctx.font=`500 29px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('Open to visitors, teachers, students and people caring for land.',700,925,900);
+        ctx.fillText('Open to visitors, teachers, students and people caring for land.',700,866,900);
         ctx.restore();return;
     }
     // Give the copy the full readable centre of the glass screen without
@@ -4610,8 +4671,8 @@ function drawIntroNoteContent(ctx) {
     ctx.fillText(introBoardStep.startsWith('UTILITY ')?introBoardStep:demoIntroLabel(), contentCenter, 345, contentWidth);
     const openingElapsed=arWelcomeIntroPending && !arWelcomeSettleStage ? (arWelcomeClock?.elapsed || 0) : null;
     if(openingElapsed!==null){
-        if(openingElapsed<DEMO_WELCOME_OPENING_MS){
-            const fade=openingElapsed<DEMO_WELCOME_DESCRIPTION_HOLD_MS?1:Math.max(0,1-(openingElapsed-DEMO_WELCOME_DESCRIPTION_HOLD_MS)/(DEMO_WELCOME_OPENING_MS-DEMO_WELCOME_DESCRIPTION_HOLD_MS));
+        if(arWelcomeOpeningActive || openingElapsed<DEMO_WELCOME_OPENING_MS){
+            const fade=arWelcomeOpeningActive?Math.min(1,openingElapsed/900):1;
             const openingTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
             let openingTitleSize=96;
             ctx.globalAlpha*=fade;ctx.fillStyle='#f7fbf4';
@@ -4705,15 +4766,16 @@ function drawIntroNoteContent(ctx) {
 
 function createIntroControlTexture(labelText, texture = null, aimed=false) {
     const label = document.createElement('canvas');
-    label.width = 900;
-    label.height = 360;
+    label.width = 1024;
+    label.height = 512;
     const ctx = label.getContext('2d');
+    ctx.scale(1024/900,512/360);
     const panel = ctx.createLinearGradient(50, 24, 850, 336);
     panel.addColorStop(0, aimed?'rgba(210,230,210,.25)':'rgba(28,37,39,.05)');
     panel.addColorStop(1, 'rgba(28,37,39,.10)');
     ctx.fillStyle = panel;
     ctx.strokeStyle = aimed?'rgba(245,247,222,.96)':'rgba(220,218,202,.72)';
-    ctx.lineWidth = 22;
+    ctx.lineWidth = 4;
     ctx.beginPath();
     ctx.roundRect(16, 16, 868, 328, 64);
     ctx.fill();
@@ -5135,7 +5197,7 @@ function drawSpatialButterfly(view){
                 if(insect.encounter?.index!==pose.encounterIndex)insect.encounter={index:pose.encounterIndex,x:viewerMatrix[12]-viewerMatrix[8]*.85+viewerMatrix[0]*(insect.red?-.18:.18),y:viewerMatrix[13]-.10,z:viewerMatrix[14]-viewerMatrix[10]*.85+viewerMatrix[2]*(insect.red?-.18:.18)};
                 position={x:position.x+(insect.encounter.x-position.x)*pose.close,y:position.y+(insect.encounter.y-position.y)*pose.close,z:position.z+(insect.encounter.z-position.z)*pose.close};
             }
-            if(pose.flight>0)position=keepButterflyOutsideFrame(position,insect.side);
+            if(pose.flight>0 && !insect.releasedPerch)position=keepButterflyOutsideFrame(position,insect.side);
             position=keepInsectAboveFloor(position,calibratedDemoGroundY());
             if(pose.state!=='landed' && insect.position){const dx=position.x-insect.position.x,dy=position.y-insect.position.y,dz=position.z-insect.position.z,horizontal=Math.hypot(dx,dz);if(horizontal>.0001){pose.yaw=Math.atan2(dx,dz);pose.pitch=-Math.atan2(dy,horizontal)*.4;}}
             if(pose.state==='landed')pose.yaw=insect.red?-.85:.85;
@@ -5194,6 +5256,7 @@ function drawSpatialAmbientLife(view){
         if(last && visitor.flightAt!==arWelcomeClock.elapsed){const dx=position.x-last.x,dz=position.z-last.z;if(Math.hypot(dx,dz)>.00001)visitor.flightYaw=Math.atan2(dx,dz);}
         visitor.flightPosition={...position};visitor.flightAt=arWelcomeClock.elapsed;
         bee.worldYaw=(visitor.flightYaw ?? bee.heading)+Math.sin(arWelcomeClock.elapsed*.0017+index)*.16;
+        bee.nectar=Boolean(visitor.nectar && bee.flyby<.02);
         ambientBeeModel?.drawXR?.(view,position,arWelcomeClock.elapsed,{...bee,viewer:viewerMatrix});
     }
 }
@@ -5206,11 +5269,13 @@ function ambientBeeWorldPosition(bee,index=0){
     const frontX=frame[8]/frontLength,frontZ=frame[10]/frontLength;
     // Map the flight ring to the Living Frame's roughly 540 px flower rim,
     // using the same original 1400 x 1080 board coordinates as its artwork.
-    const across=(bee.x-.5)*AR_PHONE_COMFORT.boardScale[0]*.4*1800/1400;
-    const vertical=(.5-bee.y)*AR_PHONE_COMFORT.boardScale[1]*.16*1800/1080;
-    // Keep the flight loop just in front of the Living Frame. Sending it
-    // metres behind the board made depth testing erase bees without a fade.
-    const hoverDepth=.085+((bee.depth+1)*.5)*.05;
+    const orbitAngle=Math.atan2(.5-bee.y,bee.x-.5);
+    const orbitRadius=WELCOME_SHAPE.radius+45+Math.sin(index+arWelcomeClock.elapsed/2700)*24;
+    const across=Math.cos(orbitAngle)*orbitRadius/1400*AR_PHONE_COMFORT.boardScale[0]*.4;
+    const vertical=(Math.sin(orbitAngle)*orbitRadius-10)/1080*AR_PHONE_COMFORT.boardScale[1]*.16;
+    // Enter from behind the rim, then stay just in front of its flowers;
+    // the reading surface in the centre is not the ambient flight path.
+    const hoverDepth=(-.18)*(1-(bee.entry ?? 1))+(.085+((bee.depth+1)*.5)*.05)*(bee.entry ?? 1);
     let ambientPosition={
         x:ambientWorldAnchor.x+rightX*across+frontX*hoverDepth,
         y:ambientWorldAnchor.y+vertical,
@@ -5232,6 +5297,7 @@ function ambientBeeWorldPosition(bee,index=0){
     }
     const flowerVisitor=ambientBeeFlowerVisits[index] ||= {};
     ambientPosition=blendInsectWithFlower(ambientPosition,visit,flowerVisitor);
+    flowerVisitor.nectar=Boolean(visit.nectar && flowerVisitor.flowerVisit && arWelcomeClock.elapsed-flowerVisitor.flowerVisit.startedAt>7500);
     const flyby=Math.max(0,Math.min(1,Number(bee.flyby)||0));
     if(!flyby)return beeWorldAvoidance(ambientPosition,index);
     const progress=Math.max(0,Math.min(1,Number(bee.flybyProgress)||0));
@@ -5240,7 +5306,7 @@ function ambientBeeWorldPosition(bee,index=0){
     }
     const curious=beeCuriosity(progress);
     const encounter=bee.encounterIndex+ambientEncounterSeed,faceDistance=.66+(encounter%3)*.10+Math.abs(progress-.5)*.34;
-    const approach=Math.abs(encounter)%4,faceAcross=[.38,-.34,.10,.28][approach]+(progress-.5)*.20,faceHeight=[.10,.08,.42,.28][approach];
+    const approach=Math.abs(encounter)%4,faceAcross=(bee.waistVisit?(index%2?.20:-.20):[.38,-.34,.10,.28][approach])+(progress-.5)*.20,faceHeight=bee.waistVisit?-.65:[.10,.08,.42,.28][approach];
     const facePosition={
         x:ambientEncounterOrigin.x+rightX*faceAcross-frontX*faceDistance,
         y:ambientEncounterOrigin.y+faceHeight-Math.sin(Math.PI*progress)*.025,
@@ -5262,7 +5328,7 @@ function ambientBeeWorldPosition(bee,index=0){
 function beeWorldAvoidance(position,index){
     const target=beePointerAvoidance(position,latestControllerRay);
     const offset=ambientBeeAvoidance[index] || {x:0,y:0,z:0};
-    const time=arWelcomeClock.elapsed,delta=Math.max(0,Math.min(100,time-(ambientBeeAvoidanceTime[index] ?? time-16))),blend=1-Math.exp(-delta/105);ambientBeeAvoidanceTime[index]=time;
+    const time=arWelcomeClock.elapsed,delta=Math.max(0,Math.min(100,time-(ambientBeeAvoidanceTime[index] ?? time-16))),blend=1-Math.exp(-delta/600);ambientBeeAvoidanceTime[index]=time;
     const eased={x:offset.x+(target.x-offset.x)*blend,y:offset.y+(target.y-offset.y)*blend,z:offset.z+(target.z-offset.z)*blend};
     ambientBeeAvoidance[index]=eased;
     return keepInsectAboveFloor({x:position.x+eased.x,y:position.y+eased.y,z:position.z+eased.z},calibratedDemoGroundY());
@@ -5346,7 +5412,12 @@ function drawMarker(view) {
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - demoTotemHalfHeight(record);
         const bodyHalfWidth=.095,bodyHalfDepth=.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
-        const style=currentTotemModel();
+        const style=renderedTotemStyle(record);
+        if(style==='organic' || style==='flat-disc'){
+            const radius=style==='organic'?.28:.32,light=totemNotificationLight(record),base={...record.position,y:groundBaseY+(style==='organic'?radius:.045)};
+            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,base,radius,{color:totemColour,alpha:arrival*.92,emissive:.12,...(style==='flat-disc'?{scale:{x:1,y:.16,z:1}}:{})});
+            drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...base,y:base.y+(style==='organic'?radius:.07)},.045,{color:light.colour,alpha:arrival*.86,emissive:light.strength+.22});return;
+        }
         const postOptions={halfWidth:bodyHalfWidth,halfHeight:bodyHalfHeight,halfDepth:bodyHalfDepth,
             notification:totemNotificationLight(record),
             color:totemColour,alpha:arrival*demoTotemVisualOpacity(record),rotationY,style,
@@ -5523,7 +5594,9 @@ function drawDemoInputPointer(view,pointerSource) {
     const hoveredRecordTarget=demoRecordAtPointer();
     const hoveredRecordHit=hoveredRecordTarget?.hit || null;
     const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
-    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const butterfly=butterflyRayTarget();
+    const butterflySurface=butterfly?{distance:butterfly.distance,point:butterfly.insect.position}:null;
+    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,butterflySurface,demoNoteRenderer?.hit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.
@@ -5589,13 +5662,14 @@ async function startImmersive() {
             if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
             if(xrRecoveryStatus==='failed'){returnToWelcome();return;}
             captureDemoInputEventRay(event);
+            if(butterflyTriggerSources.has(event.inputSource)){butterflyTriggerSources.delete(event.inputSource);return;}
             // The dedicated LIM listener normally consumes this event first.
             // Keep an independent route here because some Quest runtimes do
             // not deliver capture-phase XRInputSourceEvents consistently.
             // Resolve the same nearest surface used by the visible laser so a
             // PIMO in front of LIMO receives the trigger the visitor sees.
             if(event.inputSource===limInputSource || event.inputSource===limInputSuppressSource && performance.now()<limActivationSessionSuppressUntil)return;
-            if(demoKnowledgeWorkspace) {const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
+            if(demoKnowledgeWorkspace) {if(demoNoteRenderer?.activate(latestControllerRay))return;const hit=spatialDashboardRayHit(latestControllerRay,demoKnowledgePanel,demoKnowledgeMirror || {});if(hit) demoKnowledgeMirror?.activateAt(hit.pixelX,hit.pixelY);return;}
             if (demoWebModeOpen) return;
             if(arWelcomeIntroPending){activateImmersiveDemoControl();return;}
             if (placementReady) return pressPlacementPointer();
@@ -5631,6 +5705,7 @@ async function startImmersive() {
             if(event.inputSource?.hand)return;
             if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
             captureDemoInputEventRay(event);
+            if(!demoKnowledgeWorkspace && !placementReady && butterflyGripStart(event.inputSource)){butterflyTriggerSources.add(event.inputSource);event.stopImmediatePropagation?.();return;}
             // If the capture-phase LIM listener is unavailable, still keep a
             // trigger aimed at the mesh out of the plant grab state machine.
             const pressedCell=resolveDemoCellTarget();
@@ -5648,6 +5723,7 @@ async function startImmersive() {
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
             captureDemoInputEventRay(event);
+            const butterfly=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(butterfly && butterflyTriggerSources.has(event.inputSource)){releaseDemoButterfly(butterfly);suppressSessionSelectUntil=performance.now()+280;return;}
             if(event.inputSource===limInputSource){
                 const heldKey=limActivation.activeKey;
                 if(heldKey && currentLimPointerCell()?.key===heldKey)limActivation.end(heldKey,performance.now());
@@ -5695,13 +5771,13 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
-            runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
+            runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const elapsed=insect.depthUpdatedAt?Math.max(0,Math.min(60,_time-insect.depthUpdatedAt)):16;insect.depthUpdatedAt=_time;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}const axes=insect.heldSource.gamepad?.axes || [];insect.controllerDistance=Math.max(.25,Math.min(2.5,insect.controllerDistance+spatialDepthDelta(axes.length>2?axes[3]:axes[1],elapsed)));insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
             runXrFrameStep('floor dice input',()=>heroDiceToy?.update(frame,_time));
             runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
-            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace)));
+            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(demoKnowledgeWorkspace && !demoNoteRenderer)));
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
             runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
             runXrFrameStep('hand pinch',()=>{if(!knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});
@@ -5715,9 +5791,11 @@ async function startImmersive() {
             runXrFrameStep('PIM hold',()=>pimHold?.tick(_time));
             runXrFrameStep('held element update',()=>{if(!demoKnowledgeWorkspace)updateHeldDemoRecordPosition();});
             runXrFrameStep('demo touch feedback',()=>{
-                const bee=Number.isFinite(ambientBeesStartedAt) && getSpatialVisualSettings().insects && !window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                    && (demoBeeEncounter(arWelcomeClock.elapsed-ambientBeesStartedAt,{seed:ambientEncounterSeed})?.envelope || 0)>.7;
-                demoFeedback?.tick(_time,{sources:session.inputSources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeClose:bee});
+                const sources=[...session.inputSources],beeContactSources=getSpatialVisualSettings().insects?sources.filter(source=>{
+                    const ray=demoControllerRayForInputEvent({frame,inputSource:source});
+                    return ambientBeeFlowerVisits.some(visitor=>beePointerContact(visitor?.flightPosition,ray));
+                }):[];
+                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeContactSources});
             });
             let layer=null;
             try { layer=frame.session.renderState.baseLayer; }
@@ -5759,24 +5837,12 @@ async function startImmersive() {
 }
 
 export function openTemporaryArDemoWindow(app) {
-    // Start preparation while choosing the introduction, without consuming an XR entry gesture.
-    prepareArAssets({experience:isDesktopLearningBookTarget()?'desktop':'demo'}).catch(error=>console.warn('AR preparation:',error));
-    if (isDesktopLearningBookTarget()) {
-        app.innerHTML = `<div class="screen ar-safety-screen nxr-desktop-ar-choice" data-desktop-ar-choice>
-            <div class="page-header"><p class="welcome-label">NourishlandXR · desktop introduction</p><h1>See how NLXR works</h1><p class="subtitle">Start with a place, follow its plant information, then see how learning can guide practical action. On desktop, we recommend this plain, interactive introduction.</p></div>
-            <div class="nxr-desktop-ar-options">
-                <section class="panel nxr-desktop-ar-option is-recommended"><span class="nxr-desktop-ar-tag">RECOMMENDED ON DESKTOP</span><h2>NLXR introduction</h2><p>A short, practical tour of Projects, Areas, directional Totems, plant information, learning, connected databases and field guides. Plant knowledge and learning pathways open with explanations beside them.</p><button class="primary" type="button" data-desktop-learning-book>Start the introduction</button></section>
-                <section class="panel nxr-desktop-ar-option"><span class="nxr-desktop-ar-tag">OPTIONAL · WEBXR OR EMULATOR</span><h2>AR introduction</h2><p>Open the plain browser version, or use a WebXR-capable browser or emulator. The immersive experience is designed for compatible phones and headsets; we do not recommend this route for ordinary desktop use.</p><button type="button" data-desktop-plain-ar>Open AR introduction</button></section>
-            </div><button class="nxr-desktop-ar-back" type="button" data-desktop-ar-back>← Back to welcome</button>
-        </div>`;
-        app.querySelector('[data-desktop-learning-book]')?.addEventListener('click', () => renderDesktopLearningBook(app, { moringaDocument: MORINGA_PIM, onExit: () => window.renderLaunchScreen?.() }), { once: true });
-        app.querySelector('[data-desktop-plain-ar]')?.addEventListener('click', () => {
-            if (shouldSkipArIntroductionPreparation() && arAssetsReady('desktop')) startTemporaryArDemo(app);
-            else renderArIntroductionPreparation(app, { simpleDesktop:true,onContinue: () => startTemporaryArDemo(app), onCancel: () => openTemporaryArDemoWindow(app) });
-        }, { once: true });
-        app.querySelector('[data-desktop-ar-back]')?.addEventListener('click', () => window.renderLaunchScreen?.(), { once: true });
-        return;
+    if(isDesktopLearningBookTarget()){
+        app.innerHTML=`<section class="screen ar-safety-screen nxr-desktop-ar-choice"><header class="page-header"><p class="welcome-label">NourishlandXR · desktop</p><h1>A spatial experience belongs in a real space.</h1><p class="subtitle">The AR demo is not designed for desktop use. It needs a compatible phone or headset for spatial tracking and interaction with the environment.</p></header><section class="panel nxr-desktop-ar-option"><h2>Explore the illustrated introduction</h2><p>On desktop, our existing book-style prototype explains how places, plant information and learning connect. There is no simulated AR mode.</p><button type="button" class="primary" data-desktop-learning-book>Open illustrated introduction</button></section><button type="button" data-desktop-ar-back>← Back to welcome</button></section>`;
+        app.querySelector('[data-desktop-learning-book]')?.addEventListener('click',()=>renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()}),{once:true});
+        app.querySelector('[data-desktop-ar-back]')?.addEventListener('click',()=>window.renderLaunchScreen?.(),{once:true});return;
     }
+    prepareArAssets({experience:'demo'}).catch(error=>console.warn('AR preparation:',error));
     if (shouldSkipArIntroductionPreparation() && arAssetsReady()) return startTemporaryArDemo(app);
     renderArIntroductionPreparation(app, {
         onContinue: () => startTemporaryArDemo(app),
@@ -5785,6 +5851,8 @@ export function openTemporaryArDemoWindow(app) {
 }
 
 export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null } = {}) {
+    // Development fixtures may inspect XR, but public desktop entry is a book.
+    if(!livingMapPreviewRecords && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();

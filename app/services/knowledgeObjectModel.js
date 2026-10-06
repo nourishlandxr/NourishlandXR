@@ -3,7 +3,7 @@ import {PIM_COMPASS_BY_ID} from './pimCompass.js';
 import {createKnowledgeArchitectureGeometry,architectureRegionAmount,KNOWLEDGE_REGION_DIRECTIONS} from './knowledgeArchitectureGeometry.js';
 
 export const KNOWLEDGE_DICE_RADIUS=.16, KNOWLEDGE_OBJECT_LIMIT=1;
-const indexes=new WeakMap(),framesByObject=new WeakMap(),vector=v=>({x:v.x,y:v.y,z:v.z});
+const indexes=new WeakMap(),framesByObject=new WeakMap(),faceCaches=new WeakMap(),vector=v=>({x:v.x,y:v.y,z:v.z});
 const REGION_COLOURS=['#47dcb2','#c9e44b','#ffb34e','#49c5f0','#ef75b6','#ab8cff'];
 
 export function knowledgeObjectIndex(knowledge){
@@ -32,6 +32,10 @@ function frameFields(frame){
 function buildFaces(index,workspace,object){
     let frames=framesByObject.get(object);
     if(!frames){const geometry=createKnowledgeArchitectureGeometry(object.seedRadius,object.regions);setKnowledgeArchitectureGeometry(object,geometry);frames=geometry.userData.knowledgeFrames;geometry.dispose();}
+    const key=JSON.stringify([workspace.selectedFaceId,workspace.activeRegionId,object.title,object.regions.map(region=>[region.rootId,region.focusId,region.opened,region.level,region.page,region.accent])]);
+    const cached=faceCaches.get(object);
+    if(cached?.frames===frames && cached.key===key)return;
+    faceCaches.set(object,{frames,key});
     const faces=Array(24).fill(null);
     object.regions.forEach((region,slot)=>{
         const root=index.nodes.get(region.rootId);if(!root)return;

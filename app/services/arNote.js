@@ -5,6 +5,7 @@ import { allowArScreenRotation, releaseArScreenRotation } from './arScreenOrient
 import { readingPositions, hitReadingPlant, visitorTrackingCopy } from './visitorSpatialState.js';
 import { html } from './productExperience.js';
 import { createPlantKnowledgeResolver } from './spatialKnowledgePresentation.js';
+import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from './desktopLearningBookTarget.js';
 
 let session=null, starting=false, resetReadingSpace=null, endingPromise=null;
 const diagnostics=[];
@@ -74,6 +75,7 @@ function drawReadingPanel(context,width,height,plant) {
 }
 
 export async function startArNote(marker,profile,options={}) {
+    if(isDesktopLearningBookTarget())throw new Error(DESKTOP_AR_EXPLANATION);
     if(session || starting)return;
     if(!window.isSecureContext)throw new Error('AR requires HTTPS.');
     if(!navigator.xr)throw new Error('WebXR is unavailable in this browser.');

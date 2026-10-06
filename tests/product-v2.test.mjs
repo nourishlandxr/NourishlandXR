@@ -25,7 +25,9 @@ test('AR entry distinguishes insecure, unsupported and supported devices without
  assert.equal(arReadiness({secure:false,xr:true}).ready,false);
  assert.equal(arReadiness({secure:true,xr:false}).ready,false);
  assert.equal(arReadiness({secure:true,xr:true,supported:false}).ready,false);
- assert.equal(arReadiness({secure:true,xr:true,supported:true}).ready,true);
+ assert.equal(arReadiness({secure:true,xr:true,supported:true,desktop:false}).ready,true);
+ assert.equal(arReadiness({secure:true,xr:true,supported:true,desktop:true}).ready,false);
+ assert.match(arReadiness({desktop:true}).detail,/AR is not available on desktop/);
 });
 test('reading positions are session-relative, bounded and do not alter the pose',()=>{
  const pose={transform:{position:{x:10,y:1.7,z:20},matrix:[1,0,0,0,0,1,0,0,0,0,1,0,10,1.7,20,1]}};

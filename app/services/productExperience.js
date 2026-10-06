@@ -1,4 +1,5 @@
 // Presentation contracts only. Stored identifiers and spatial data stay unchanged.
+import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from './desktopLearningBookTarget.js';
 export const html = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 export const key = value => encodeURIComponent(String(value ?? ''));
 export const safeImage = value => /^(https?:\/\/|\/?(?:assets|workspace|api)\/|data:image\/(?:png|jpeg|webp);base64,)/i.test(String(value || '')) ? String(value) : '';
@@ -32,7 +33,8 @@ export const VISITOR_TABS = Object.freeze([{id:'place',label:'Explore'},{id:'pla
 export function visitorNavigation(active) {
     return `<nav class="v2-place-nav" aria-label="Explore this place">${VISITOR_TABS.map(tab=>`<button type="button" data-visitor-view="${tab.id}" ${active===tab.id?'aria-current="page"':''}>${tab.label}</button>`).join('')}</nav>`;
 }
-export function arReadiness({secure = true, xr = false, supported = true} = {}) {
+export function arReadiness({secure = true, xr = false, supported = true, desktop=isDesktopLearningBookTarget()} = {}) {
+    if(desktop)return {ready:false,label:'AR needs a spatial device',detail:DESKTOP_AR_EXPLANATION};
     if (!secure) return {ready:false,label:'AR needs a secure connection',detail:'Open this experience using HTTPS. You can still read the field guide.'};
     if (!xr || !supported) return {ready:false,label:'Explore without the camera',detail:'This browser does not offer immersive AR. Plants, knowledge and the map remain available here.'};
     return {ready:true,label:'Your device can try AR',detail:'Start when you are standing safely. Your browser will ask for camera access if needed.'};

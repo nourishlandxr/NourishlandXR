@@ -13,8 +13,10 @@ test('demo music streams, touch tones release resources, haptics throttle and st
         feedback.pulse(source,DEMO_FEEDBACK.holdStrength,100);
         feedback.tick(120,{sources:[source],heldSource:source});assert.equal(pulses.length,1);assert.equal(pulses[0][0],DEMO_FEEDBACK.holdStrength);
         feedback.tick(121,{sources:[source],beeClose:true});assert.equal(pulses.length,1);
-        feedback.tick(240,{sources:[source],beeClose:true});assert.equal(pulses[1][0],DEMO_FEEDBACK.beeStrength);
-        feedback.tick(360,{sources:[source]});assert.equal(pulses[2][0],0);
+        feedback.tick(240,{sources:[source],beeClose:true});assert.equal(pulses[1][0],0,'proximity must never vibrate');
+        feedback.tick(360,{sources:[source],beeContactSources:[source]});assert.deepEqual(pulses[2],[DEMO_FEEDBACK.beeStrength,24]);
+        feedback.tick(480,{sources:[source],beeContactSources:[source]});assert.equal(pulses[3][0],0,'sustained contact has a quiet cooldown');
+        feedback.tick(1440,{sources:[source],beeContactSources:[source]});assert.deepEqual(pulses[4],[DEMO_FEEDBACK.beeStrength,24]);
         feedback.destroy();assert.equal(paused,1);assert.equal(closed,1);assert.equal(audio.src,'');feedback.start();assert.equal(plays,1);
     }finally{globalThis.Audio=originalAudio;globalThis.AudioContext=originalContext;}
 });

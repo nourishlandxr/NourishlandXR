@@ -1,6 +1,6 @@
 // Shared deliberate activation state for Learning Information Mesh cells.
 // Plant PIM continues to use pimActivationHold.js and its own interaction state.
-export const LIM_ACTIVATION_MS = 300;
+export const LIM_ACTIVATION_MS = 0;
 
 export function createLimActivationController({
     duration = LIM_ACTIVATION_MS,
@@ -11,7 +11,7 @@ export function createLimActivationController({
     onCancel = () => {},
     onComplete = () => {}
 } = {}) {
-    const holdDuration = Math.max(1, Number(duration) || LIM_ACTIVATION_MS);
+    const holdDuration = Math.max(0, Number(duration) || 0);
     let activeKey = '';
     let startedAt = 0;
     let progress = 0;
@@ -36,7 +36,7 @@ export function createLimActivationController({
         activeKey = '';
         startedAt = 0;
         completedKey = key;
-        suppressUntil = (Number(timestamp) || now()) + 450;
+        suppressUntil = (Number.isFinite(Number(timestamp)) ? Number(timestamp) : now()) + 450;
         emitProgress(key, 1);
         onComplete(key);
         return true;
@@ -49,6 +49,7 @@ export function createLimActivationController({
         get active() { return Boolean(activeKey); },
         start(key, timestamp = now(), source = 'pointer') {
             if (!key) return false;
+            if(String(key)===completedKey && timestamp<suppressUntil)return false;
             if (activeKey === key) return false;
             if (activeKey) cancel('replaced');
             completedKey = '';
@@ -56,7 +57,7 @@ export function createLimActivationController({
             startedAt = Number(timestamp) || 0;
             emitProgress(activeKey, 0);
             onStart(activeKey, source);
-            if(durationForKey?.(activeKey)===0)return complete(activeKey,timestamp);
+            if(holdDuration===0 || durationForKey?.(activeKey)===0)return complete(activeKey,timestamp);
             return true;
         },
         tick(key = activeKey, timestamp = now()) {
@@ -87,13 +88,8 @@ export function createLimActivationController({
         },
         cancel,
         consumeSyntheticClick(key, timestamp = now()) {
-            const current = Number(timestamp) || now();
-            const suppressed = String(key || '') === completedKey || current < suppressUntil;
-            if (suppressed) {
-                completedKey = '';
-                return true;
-            }
-            return false;
+            const current = Number.isFinite(Number(timestamp)) ? Number(timestamp) : now();
+            return String(key || '') === completedKey && current < suppressUntil;
         },
         reset() {
             if (activeKey) cancel('reset');

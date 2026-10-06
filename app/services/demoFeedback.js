@@ -2,6 +2,7 @@
 export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeStrength: .075 });
 export function createDemoFeedback() {
     let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
+    const beeContactAt=new WeakMap();
     const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35,haptics:true};
     try{const saved=JSON.parse(globalThis.localStorage?.getItem('nxr-demo-sound') || '{}');for(const key of ['music','fx'])if(Number.isFinite(saved[key]))levels[key]=Math.max(0,Math.min(1,saved[key]));if(typeof saved.haptics==='boolean')levels.haptics=saved.haptics;}catch{}
     const save=()=>{try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}};
@@ -51,14 +52,17 @@ export function createDemoFeedback() {
             oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
         });
     }
-    function tick(time,{sources=[],heldSource=null,beeClose=false}={}) {
+    function tick(time,{sources=[],heldSource=null,beeContactSources=[]}={}) {
         if(destroyed || time-lastTick<120)return;
         lastTick=time;
         for(const source of sources){
             // Grab entry already sends one 100 ms confirmation. Let it finish;
             // holding an object must never restart that vibration every frame.
             if(source===heldSource)continue;
-            else if(beeClose)pulse(source,DEMO_FEEDBACK.beeStrength,115);
+            else if(beeContactSources.includes(source) && time-(beeContactAt.get(source) ?? -Infinity)>850){
+                // A brief contact tap, with a quiet gap even during sustained contact.
+                pulse(source,DEMO_FEEDBACK.beeStrength,24);beeContactAt.set(source,time);
+            }
             else if(pulsing.has(source))pulse(source,0,1);
         }
     }

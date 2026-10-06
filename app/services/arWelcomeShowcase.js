@@ -538,12 +538,11 @@ export function welcomeOpeningFrames(elapsed,seed=0x4e4c5852,duration=AR_WELCOME
 
 const vegetationClearanceCache=new WeakMap();
 export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,options={}) {
- // The welcome surface must be readable on the first XR frame. Its former
- // whole-panel fade started at zero and could leave Quest users facing an
- // empty screen while the session clock waited for visibility updates.
+ // Fade the welcome gently without a completely blank first Quest frame.
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);
  if(options.drawPanel!==false){
- drawArWelcomePanel(ctx,{elapsed,reducedMotion,...(options.simpleDesktop?{backgroundOpacity:1,simple:true}:{})});
+ ctx.save();if(options.opening && !reducedMotion)ctx.globalAlpha=.18+.82*smooth(elapsed,0,900);
+ drawArWelcomePanel(ctx,{elapsed,reducedMotion,...(options.simpleDesktop?{backgroundOpacity:1,simple:true}:{})});ctx.restore();
  }
  if(options.drawRoots!==false){
  let reservedCells=vegetationClearanceCache.get(graphs);
@@ -558,7 +557,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  ctx.textAlign='center';ctx.textBaseline='middle';
  ctx.globalAlpha=reducedMotion?1:smooth(elapsed,500,3000);ctx.fillStyle='#dcef95';ctx.font='750 30px system-ui';ctx.fillText('A LIVING WORLD OF KNOWLEDGE',700,412);
  ctx.fillStyle='#fff';ctx.font='760 72px system-ui';ctx.fillText('NourishlandXR',700,500);
-  ctx.font='24px system-ui';ctx.fillText(welcomeCanContinue(elapsed)?'Continue when ready · hold a cell to explore':'Let the knowledge unfold',700,690);
+  ctx.font='24px system-ui';ctx.fillText(welcomeCanContinue(elapsed)?'Continue when ready · select a cell to explore':'Let the knowledge unfold',700,690);
  }
  }
  ctx.restore();

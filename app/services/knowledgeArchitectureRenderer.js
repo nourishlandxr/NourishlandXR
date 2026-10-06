@@ -18,7 +18,7 @@ function architectureAtlas(object){
             if(domain?.opened && slot!==KNOWLEDGE_CONTEXT_REGION){
                 ctx.strokeStyle=face?.selected?'#edf1bf':'#'+accent.getHexString();ctx.lineWidth=face?.selected?7:2;ctx.strokeRect(12,12,232,232);
             }
-            const tip=slot<6 && domain?.opened,fontSize=slot===KNOWLEDGE_CONTEXT_REGION?40:tip?24:slot<6?32:34,lineHeight=tip?28:40,textWidth=tip?148:210;
+            const tip=slot<6 && domain?.opened,fontSize=slot===KNOWLEDGE_CONTEXT_REGION?30:tip?20:slot<6?26:26,lineHeight=tip?25:32,textWidth=tip?148:210;
             ctx.textAlign='center';ctx.textBaseline='middle';ctx.font=`600 ${fontSize}px Manrope,system-ui`;
             const lines=[];let line='';
             for(const word of String(face?.title || '').split(/\s+/)){
@@ -26,7 +26,7 @@ function architectureAtlas(object){
                 if(ctx.measureText(next).width>textWidth && line){lines.push(line);line=word;}else line=next;
             }
             if(line)lines.push(line);
-            ctx.fillStyle='#f5f9ea';ctx.shadowColor='#163b2c';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
+            ctx.fillStyle='#f5f9ea';ctx.shadowBlur=0;ctx.shadowOffsetY=0;
             lines.slice(0,3).forEach((text,i)=>ctx.fillText(text+(i===2 && lines.length>3?'…':''),128,128+(i-(Math.min(lines.length,3)-1)/2)*lineHeight,textWidth));
             ctx.shadowBlur=0;ctx.shadowOffsetY=0;
             if(slot<6 && domain?.level>1){ctx.font='600 16px Manrope,system-ui';ctx.fillText(domain.level>=3?'Hub':'Developed',128,175,128);}

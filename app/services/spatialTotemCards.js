@@ -157,7 +157,7 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     return totemCardSurfaces(position,right,cards,selectedId,{
         signsVisible:signsVisible || closing,faded:faded && fadeProgress>=1,
         signOpacity:(signsVisible ? signProgress : 1-signProgress)*fadeAlpha,signInteractive:signsVisible && !faded,
-        style:record?.demoType==='zone' ? currentTotemModel() : renderedTotemStyle(record?.marker || record),
+        style:renderedTotemStyle(record?.marker || record),
         bodyHalfWidth,bodyHalfDepth:record?.demoType==='zone' ? .075 : bodyHalfWidth*.5,bodyHalfHeight,demoZone:record?.demoType==='zone'
     });
 }
@@ -166,7 +166,7 @@ export function resolveTotemNavigation(record, partner, facingRotation=record?.r
     const rotation=Number(facingRotation);
     const dx=Number(partner?.position?.x)-Number(record?.position?.x);
     const dz=Number(partner?.position?.z)-Number(record?.position?.z);
-    if(!record?.demoLinkVisible || !partner || !Number.isFinite(rotation) || !Number.isFinite(dx) || !Number.isFinite(dz) || Math.hypot(dx,dz)<=.05) {
+    if(!partner || !Number.isFinite(rotation) || !Number.isFinite(dx) || !Number.isFinite(dz) || Math.hypot(dx,dz)<=.05) {
         return {reliable:false,side:'',arrow:''};
     }
     const right={x:Math.cos(rotation),z:-Math.sin(rotation)};
@@ -281,8 +281,10 @@ function cardCanvas(card, detail) {
     if(Number.isFinite(card.glassOpacity)){
         const width=canvas.width/2,height=canvas.height/2;
         ctx.save();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-        ctx.beginPath();ctx.roundRect(7,7,width-14,height-14,boardStyle==='header-compact'?height/2:24);
-        ctx.fillStyle=boardStyle==='header-compact'?`rgba(37,48,43,${card.glassOpacity})`:`rgba(8,30,28,${card.glassOpacity})`;ctx.fill();
+        ctx.beginPath();
+        if(boardStyle==='attached-sign' && card.boardSide){const left=card.boardSide==='left',tip=left?7:width-7,edge=left?70:width-70;ctx.moveTo(tip,height/2);ctx.lineTo(edge,7);ctx.lineTo(left?width-7:7,7);ctx.lineTo(left?width-7:7,height-7);ctx.lineTo(edge,height-7);ctx.closePath();}
+        else ctx.roundRect(7,7,width-14,height-14,boardStyle==='header-compact'?height/2:24);
+        ctx.fillStyle=boardStyle==='header-compact'?`rgba(37,48,43,${Math.max(.74,card.glassOpacity)})`:`rgba(8,30,28,${card.glassOpacity})`;ctx.fill();
         ctx.strokeStyle='rgba(213,232,207,.84)';ctx.lineWidth=5;ctx.stroke();ctx.restore();
     }
     if(card.control){
@@ -291,7 +293,7 @@ function cardCanvas(card, detail) {
         return canvas;
     }
     if(boardStyle==='attached-sign'){
-        ctx.shadowColor='rgba(3,15,12,.85)';ctx.shadowBlur=4;ctx.shadowOffsetY=2;
+        ctx.shadowColor='rgba(3,15,12,.85)';ctx.shadowBlur=0;ctx.shadowOffsetY=1;
         if(card.directional){
             const left=card.boardSide==='left',title=String(card.title || '').replace(/^[←→]\s*|\s*[←→]$/g,'');
             ctx.fillStyle='#f0cb7c';ctx.font=`750 108px ${face}`;ctx.textAlign=left?'left':'right';ctx.fillText(left?'←':'→',left?36:988,128,130);
@@ -300,7 +302,7 @@ function cardCanvas(card, detail) {
         return canvas;
     }
     if(boardStyle==='header-compact'){
-        ctx.shadowBlur=1;ctx.fillStyle='#bce4d7';ctx.font=`700 ${String(card.title || '').length>20?92:116}px Georgia, serif`;ctx.fillText(card.title,512,256,900);
+        ctx.shadowBlur=0;ctx.fillStyle='#fffdf1';ctx.font=`750 ${String(card.title || '').length>20?132:168}px ${face}`;ctx.fillText(card.title,512,256,900);
         return canvas;
     }
     if(boardStyle==='header-detail'){

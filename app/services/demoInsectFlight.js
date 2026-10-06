@@ -9,7 +9,7 @@ export function insectFlowerVisit(age,index=0,{enabled=true,period=47000}={}){
 export function beeFlowerVisit(age,index=0,{enabled=true}={}){
  if(!enabled || age<0)return {amount:0,index:0};
  const period=18000+index*1700,time=age+index*9173,cycle=Math.floor(time/period),local=time-cycle*period;
- return {amount:1,index:cycle*7+index*11,transfer:local<4200?smooth(local/4200):1};
+ return {amount:1,index:cycle*7+index*11,transfer:local<6500?smooth(local/6500):1,nectar:local>=7500 && local<period-1200};
 }
 export function beeCuriosity(progress){
  const t=clamp(progress);

@@ -1,5 +1,6 @@
 import {arPreparationControlsMarkup,bindArPreparationControls} from './arPreparationControls.js';
 import {arAssetsReady} from './arAssetPreparation.js';
+import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from './desktopLearningBookTarget.js';
 // Start immediately from the click gesture: an awaited capability probe or data
 // fetch before requestSession can consume WebXR's required user activation.
 let launchPromise = null,preparationPromise=null;
@@ -31,6 +32,10 @@ function prepareCreatorEntry(root,launch){
 }
 
 export function launchCreatorArFromPage(root, launch, prepared=false) {
+    if(isDesktopLearningBookTarget()){
+        if(root && typeof document!=='undefined'){let notice=root.querySelector('[data-workspace-ar-notice]');if(!notice){notice=document.createElement('p');notice.dataset.workspaceArNotice='true';notice.className='workspace-ar-notice';notice.setAttribute('role','status');root.append(notice);}notice.textContent=DESKTOP_AR_EXPLANATION;notice.hidden=false;}
+        return Promise.resolve(false);
+    }
     if (launchPromise) return launchPromise;
     if(!prepared && root && typeof document!=='undefined' && (!preparationRemembered() || !arAssetsReady('creator')))return prepareCreatorEntry(root,launch);
     const origin = root?.querySelector('.screen') || root;

@@ -4,10 +4,17 @@ import {createKnowledgeArchitectureRenderer} from './knowledgeArchitectureRender
 import {ensureKnowledgeObjects,knowledgeObjectIndex,knowledgePoseMatrix,localObjectMatrix,setKnowledgeArchitectureGeometry,visibleKnowledgeObjects} from './knowledgeObjectModel.js';
 
 export const KNOWLEDGE_OBJECT_INSTRUCTION='Hold a domain face to unfold its wing. Explore the inset panels. Grab the structure to turn or move it.';
+const facetCache=new WeakMap();
+export function knowledgeFacetRegions(geometry){
+    let regions=facetCache.get(geometry);if(regions)return regions;
+    const attribute=geometry.attributes.region;
+    regions=attribute?Array.from({length:geometry.attributes.position.count/3},(_,i)=>attribute.getX(i*3)):diceFacetRegions(geometry,7);
+    facetCache.set(geometry,regions);return regions;
+}
 export function knowledgeFaceCanvas(card){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=canvas.getContext('2d');
     ctx.fillStyle='rgba(14,32,29,.16)';ctx.beginPath();ctx.roundRect(4,4,504,248,28);ctx.fill();ctx.strokeStyle=card.hovered?'#f0fbf8':card.selected?'#dceabd':'#adc6bc';ctx.lineWidth=card.selected || card.hovered?8:3;ctx.stroke();
-    ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='600 56px Manrope, system-ui';
+    ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='600 40px Manrope, system-ui';
     const lines=[];let line='';for(const word of String(card.title).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>452 && line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
     lines.slice(0,3).forEach((text,i)=>ctx.fillText(text+(i===2 && lines.length>3?'…':''),256,100+(i-(Math.min(3,lines.length)-1)/2)*60,460));
     ctx.font='500 25px Manrope, system-ui';ctx.fillStyle='#c6dacf';ctx.fillText(card.context?'Return to context':card.role==='information'?'Press to read':card.role==='branch'?'Press to explore':'Read · Explore this',256,211,460);return canvas;
@@ -31,7 +38,9 @@ export function hitKnowledgeObject(ray,record,knowledge,pose,geometry){
     const workspace=ensureKnowledgeObjects(record,knowledge),basis=knowledgePoseMatrix(pose),position=geometry.attributes.position,index=knowledgeObjectIndex(knowledge);
     let best=null;const a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),point=new THREE.Vector3(),origin=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),direction=new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z).normalize();
     for(const object of visibleKnowledgeObjects(workspace)){
-        const matrix=basis.clone().multiply(localObjectMatrix(object)),localRay=new THREE.Ray(origin.clone(),direction.clone()).applyMatrix4(matrix.clone().invert()),regions=diceFacetRegions(geometry,7);
+        const matrix=basis.clone().multiply(localObjectMatrix(object)),localRay=new THREE.Ray(origin.clone(),direction.clone()).applyMatrix4(matrix.clone().invert());
+        if(!localRay.intersectsSphere(new THREE.Sphere(new THREE.Vector3(),object.radius+.04)))continue;
+        const regions=knowledgeFacetRegions(geometry);
         for(let i=0;i<position.count;i+=3){
             a.fromBufferAttribute(position,i);b.fromBufferAttribute(position,i+1);c.fromBufferAttribute(position,i+2);
             if(!localRay.intersectTriangle(a,b,c,true,point))continue;const world=point.clone().applyMatrix4(matrix),distance=world.distanceTo(origin);if(best && distance>=best.distance)continue;
@@ -59,7 +68,7 @@ export function createKnowledgeObjectRenderer(gl,{tether=null}={}){
         hit(ray,record=null){return entries.filter(e=>!record || e.record===record).map(e=>hitKnowledgeObject(ray,e.record,e.knowledge,e.pose,e.geometry)).filter(Boolean).sort((a,b)=>a.distance-b.distance)[0] || null;},
         near(point){
             if(!point)return null;let nearest=null;const worldPoint=new THREE.Vector3(point.x,point.y,point.z),triangle=new THREE.Triangle(),closest=new THREE.Vector3();
-            for(const entry of entries){const w=ensureKnowledgeObjects(entry.record,entry.knowledge),basis=knowledgePoseMatrix(entry.pose),index=knowledgeObjectIndex(entry.knowledge),positions=entry.geometry.attributes.position,regions=diceFacetRegions(entry.geometry,7);
+            for(const entry of entries){const w=ensureKnowledgeObjects(entry.record,entry.knowledge),basis=knowledgePoseMatrix(entry.pose),index=knowledgeObjectIndex(entry.knowledge),positions=entry.geometry.attributes.position,regions=knowledgeFacetRegions(entry.geometry);
                 for(const object of visibleKnowledgeObjects(w)){
                     const matrix=basis.clone().multiply(localObjectMatrix(object)),localPoint=worldPoint.clone().applyMatrix4(matrix.clone().invert());if(localPoint.length()>object.radius+.045/object.scale)continue;
                     for(let i=0;i<positions.count;i+=3){

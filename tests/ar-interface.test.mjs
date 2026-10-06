@@ -1267,7 +1267,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /drawWrappedTextureText\(ctx, keyword/);
     assert.match(styles, /tryit-intro-knowledge-arrive/);
     assert.match(source, /showIntroBoard\(step.title,step.paragraphs,step.button/);
-    assert.match(source, /title:guidedDemoStep\('SPACE 1\.1'\)\.title[\s\S]*title:guidedDemoStep\('SPACE 1\.2'\)\.title,art:null[\s\S]*POST_PLACEMENT_AREA_STEP/);
+    assert.match(source, /title:guidedDemoStep\('SPACE 1\.1'\)\.title[\s\S]*title:guidedDemoStep\('SPACE 1\.2'\)\.title,art:'curiosity'[\s\S]*POST_PLACEMENT_AREA_STEP/);
     assert.ok(DEMO_TUTORIAL_ART.structure.image.endsWith('/assets/demo-tutorial-art/04b-one-place-clear-structure.png'));
     assert.match(source, /'food-forest'[\s\S]*Create a food forest[\s\S]*'native-forest'[\s\S]*Identify a native forest/);
     assert.match(source, /Complete the opening introduction to unlock these optional packages/);
@@ -1409,7 +1409,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /record\.tutorialStage === 'plant2'\) showDemoAction\('note'\)/);
     const profileContinuation=source.slice(source.indexOf('function continueAfterDemoPim'),source.indexOf('function showDemoPanelIntroduction'));
     assert.match(profileContinuation, /clearLimSelection\(\);limMeshVisible=false;[\s\S]*if\(record\.tutorialStage==='plant'\)showDemoPanelIntroduction\(record\);\s*else showDemoAction\('note'\)/);
-    assert.match(source, /if\(demoKnowledgeWorkspace\) \{const hit=spatialDashboardRayHit/);
+    assert.match(source, /if\(demoKnowledgeWorkspace\) \{if\(demoNoteRenderer\?\.activate\(latestControllerRay\)\)return;const hit=spatialDashboardRayHit/);
     assert.match(source, /if\(stage\) stage\.inert=true/);
     assert.match(source, /function openDemoVirtualTag\(record\)[\s\S]*if \(!simulatedMode \|\| session\)[\s\S]*advancePastVirtualTag\(record\)[\s\S]*openDemoKnowledge\(record\)/);
     assert.match(source, /stage\.inert = false;[\s\S]*stage\.removeAttribute\('aria-hidden'\)/);
@@ -1423,7 +1423,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(styles, /\.tryit-demo\.is-quest-vr > \.tryit-intro-continue/);
     assert.match(source, /Choose a location and tap the aiming circle to place the Note/);
     assert.doesNotMatch(source, /Nothing from Try It Now is saved/);
-    assert.doesNotMatch(source, /Start the demo|Show the centre aim|Name your Plant/);
+    assert.match(source, /Start the demo/);
+    assert.doesNotMatch(source, /Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /revealNextParagraph/);
     assert.match(source, /boardTypingTimer = setTimeout\(revealParagraph, 320\)/);
@@ -1458,8 +1459,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);
     assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
     assert.equal(DEMO_TEXT_TEXTURE_INTERVAL_MS,48);
-    assert.match(source, /label\.width = 900/);
-    assert.match(source, /label\.height = 360/);
+    assert.match(source, /label\.width = 1024;\s*label\.height = 512/);
     assert.deepEqual(INTRO_CONTROL_POSITION,[.42,.16,-2.755]);
     assert.match(source, /const mainScreen=introBoardStep\.startsWith\('UTILITY '\) && simulatedMode \? board : arWelcomeLayer \|\| board/);
     assert.match(source, /const phoneFooterAction=simulatedMode && !desktopPreview/);
@@ -1472,7 +1472,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /background:linear-gradient\(155deg,rgba\(9,28,19,\.94\),rgba\(3,13,9,\.93\)\)/);
     assert.match(source, /welcomeSurfaceHit\(introLocalPosition\(introWorldAnchor,INTRO_CONTROL_POSITION\),INTRO_CONTROL_SCALE\[0\],INTRO_CONTROL_SCALE\[1\],900,360\)/);
     assert.match(source, /arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell\(\)/);
-    assert.match(source, /title:guidedDemoStep\('SPACE 1\.1'\)\.title[\s\S]*title:guidedDemoStep\('SPACE 1\.2'\)\.title,art:null[\s\S]*showDemoTutorialMedia\(step\.art\)/);
+    assert.match(source, /title:guidedDemoStep\('SPACE 1\.1'\)\.title[\s\S]*title:guidedDemoStep\('SPACE 1\.2'\)\.title,art:'curiosity'[\s\S]*showDemoTutorialMedia\(step\.art\)/);
     assert.match(source, /showLearning\(\{id:`demo-tutorial-\$\{key\}`,title:'',hideTitle:true,imageFit:'contain'/);
     assert.match(source, /function prepareStableLimoSurface\(\)[\s\S]*record\.demoInteractive=true;[\s\S]*record\.demoAlive=true;/);
     assert.doesNotMatch(source.match(/function prepareStableLimoSurface\(\) \{[\s\S]*?\n\}/)?.[0] || '', /demoExpanded=false|demoExpandedNodeIds=\[\]/);
@@ -1680,7 +1680,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /border-radius: 32% 23% 35% 25% \/ 25% 34% 24% 37%/);
     assert.match(styles, /\.tryit-sim-totem-card::after/);
     assert.match(read('app/services/spatialTotemCards.js'), /hitTotemSurface/);
-    assert.match(pimCanvasSource, /context\.strokeText\(line, x, y\)/);
+    assert.doesNotMatch(pimCanvasSource, /context\.strokeText\(line, x, y\)/);
     assert.match(pimCanvasSource, /drawOutlinedLines\(context, coreLines, center\.x/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\)/);
     assert.match(source, /DEMO_NOTE_TEMPLATE_KEYS/);

@@ -426,6 +426,7 @@ export function createSpatialDashboardMirror(options = {}) {
         width,
         height,
         activateAt,
+        focusInput:showKeyboard,
         scrollBy,
         refresh,
         destroy,

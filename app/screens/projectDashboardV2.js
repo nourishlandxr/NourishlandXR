@@ -1,4 +1,5 @@
 import { dashboardIcon } from '../services/workspaceIcons.js';
+import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from '../services/desktopLearningBookTarget.js';
 import { loadProjectDashboardV2Model } from '../services/projectDashboardV2Model.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { buildSiteMapLayout } from './projectDashboard.js';
@@ -162,7 +163,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
         app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2" data-project-id="${projectKey}">
             <header class="nlxr-db-v2-header workspace-art-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div><p class="workspace-header-summary">A workspace for your living landscape.</p>${offlineStatus}</div></header>
             <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">${dashboardIcon('plant')}</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">${dashboardIcon('area')}</span> Map</button><button type="button" data-v2-mode="content"><span aria-hidden="true">${dashboardIcon('webhub')}</span> Knowledge</button></nav>
-            <div class="nlxr-db-v2-ar-strip" aria-label="AR access"><button type="button" class="nlxr-db-v2-ar-button" data-v2-open-ar><span class="nlxr-db-v2-ar-icon" aria-hidden="true">${dashboardIcon('ar')}</span><span class="nlxr-db-v2-ar-copy"><strong>Open AR mode</strong><small>Create and position plants, notes and area markers.</small></span><span class="nlxr-db-v2-ar-meta"><b>AR</b><i aria-hidden="true">→</i></span></button></div>
+            ${isDesktopLearningBookTarget()?`<p class="workspace-ar-notice">${DESKTOP_AR_EXPLANATION}</p>`:`<div class="nlxr-db-v2-ar-strip" aria-label="AR access"><button type="button" class="nlxr-db-v2-ar-button" data-v2-open-ar><span class="nlxr-db-v2-ar-icon" aria-hidden="true">${dashboardIcon('ar')}</span><span class="nlxr-db-v2-ar-copy"><strong>Open AR mode</strong><small>Create and position plants, notes and area markers.</small></span><span class="nlxr-db-v2-ar-meta"><b>AR</b><i aria-hidden="true">→</i></span></button></div>`}
             ${model.loadWarnings?.length ? `<aside class="v2-notice" role="status">Some area content could not be read: ${model.loadWarnings.map(item=>escapeHtml(item.name)).join(', ')}. Totals include available records only. <button type="button" onclick="window.renderProjectDashboard('${projectKey}')">Retry</button></aside>` : ''}
             <main class="nlxr-db-v2-mode-panel">${previewModeMarkup(model, 'overview')}</main>
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>

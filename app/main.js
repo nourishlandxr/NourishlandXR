@@ -1,6 +1,7 @@
 import {prepareArAssets} from './services/arAssetPreparation.js';
 import { isArActive as isVisitorArActive } from './services/arNote.js';
 import { launchCreatorArFromPage } from './services/creatorArNavigation.js';
+import {isDesktopLearningBookTarget} from './services/desktopLearningBookTarget.js';
 import { enhanceProductScreen } from './services/productExperience.js';
 import { renderVisitorExperience, clearVisitorCache, cancelVisitorExperience } from './screens/visitorExperience.js';
 import { SiteManager } from './managers/siteManager.js';
@@ -40,6 +41,7 @@ import { isDefaultHomeArea } from './services/arExperienceConfig.js';
 import { applyNxrLanguage, translateApp } from './services/i18n.js';
 
 const app = document.getElementById('app');
+document.body.dataset.desktopAr=isDesktopLearningBookTarget()?'unavailable':'available';
 // Only common fonts on the welcome page; garden data and demo media remain scoped.
 prepareArAssets({experience:'creator'}).catch(error=>console.warn('AR preparation:',error));
 const CURRENT_VIEW_KEY = 'nourishland-xr-current-view-v1';
@@ -658,6 +660,7 @@ const decodeArArgument = value => {
     try { return decodeURIComponent(text); } catch { return text; }
 };
 window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') => (async () => {
+    if(isDesktopLearningBookTarget())return launchCreatorArFromPage(app,()=>false,true);
     const decodedProjectId = decodeArArgument(projectId);
     const decodedAreaId = decodeArArgument(areaId);
     const decodedCheckpointId = decodeArArgument(checkpointId);
