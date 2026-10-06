@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createDemoLivingMapModel,createDemoLivingMapSchedule,demoLivingMapAreaProgress,demoLivingMapItemProgress,demoLivingMapProgress,LIVING_MAP_DURATION_MS} from '../app/services/demoLivingMapModel.js';
+import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapModel,createDemoLivingMapSchedule,demoLivingMapAreaProgress,demoLivingMapItemProgress,demoLivingMapProgress,demoLivingMapStage,LIVING_MAP_DURATION_MS} from '../app/services/demoLivingMapModel.js';
 import {livingMapPreviewRecords} from '../tools/demo-living-map-fixture.js';
 
 test('complete sample preserves identities, ownership, links and source records',()=>{
@@ -40,7 +40,7 @@ test('reduced motion and replay retain the complete spatial payoff',()=>{
 
 test('land begins empty and every plant appears after its own Totem, before its Area boundary',()=>{
     const model=createDemoLivingMapModel(livingMapPreviewRecords()),schedule=createDemoLivingMapSchedule(model);
-    assert.equal(schedule.duration,LIVING_MAP_DURATION_MS);
+    assert.equal(schedule.duration,13000); // The original record-based map stays unchanged.
     for(const item of model.items)assert.equal(demoLivingMapItemProgress(schedule,item.id,0),0);
     for(const area of model.areas){
         const totem=schedule.items[area.id],boundary=schedule.areas[area.id];
@@ -55,6 +55,64 @@ test('land begins empty and every plant appears after its own Totem, before its 
     assert.ok(schedule.items[second.id].startAt>schedule.areas[first.id].startAt+schedule.areas[first.id].duration);
     assert.ok(schedule.pathStartedAt>schedule.areas[second.id].startAt+schedule.areas[second.id].duration);
     assert.equal(demoLivingMapProgress(0,false,schedule).scenery,0);
+});
+
+test('concept keeps two distinct gardens, centered Totems and just six Orbs',()=>{
+    const model=createDemoLivingMapConcept();
+    assert.equal(model.items.length,8);
+    assert.equal(model.items.filter(item=>item.type==='plant').length,6);
+    assert.equal(model.items.filter(item=>item.type==='note').length,0);
+    assert.deepEqual(model.areas.map(area=>area.name),['Area 1','Area 2']);
+    assert.deepEqual(model.areas.map(area=>area.totem.name),['Totem 1','Totem 2']);
+    for(const area of model.areas){
+        assert.equal(area.totem.x,(area.left+area.right)/2);
+        assert.ok(Math.abs(area.totem.z-(area.far+area.near)/2)<.1);
+        assert.equal(area.members.filter(item=>item.type==='plant').length,3);
+        for(const item of area.members)assert.ok(item.x>area.left && item.x<area.right && item.z>area.far && item.z<area.near);
+    }
+    assert.equal(model.links.length,1);
+    assert.equal(model.landscape.swales.length,3);
+    for(const row of model.landscape.swales){assert.ok(row.every(point=>point.x<-.8));assert.ok(new Set(row.map(point=>point.z)).size>10);}
+    for(const tree of model.landscape.trees)assert.ok(Math.hypot(tree.x-2.85,tree.z)>1.7);
+    assert.ok(model.items.filter(item=>item.type==='plant').every(item=>item.name===''));
+});
+
+test('approved order: landscape, Totem 1, Orbs 1, Totem 2, curved link, Orbs 2',()=>{
+    const model=createDemoLivingMapConcept(),schedule=createDemoLivingMapSchedule(model);
+    const [first,second]=model.areas;
+    assert.equal(schedule.duration,LIVING_MAP_DURATION_MS);
+    assert.equal(demoLivingMapProgress(0,false,schedule).scenery,1);
+    assert.equal(demoLivingMapStage(0),'Swale garden and open tree garden');
+    for(const item of model.items)assert.equal(demoLivingMapItemProgress(schedule,item.id,0),0);
+    const end=id=>schedule.items[id].startAt+schedule.items[id].duration;
+    const firstOrbs=first.members.filter(item=>item.type==='plant'),secondOrbs=second.members.filter(item=>item.type==='plant');
+    for(const orb of firstOrbs){assert.ok(schedule.items[orb.id].startAt>end(first.id));assert.ok(end(orb.id)<schedule.items[second.id].startAt);}
+    assert.ok(end(second.id)<schedule.pathStartedAt);
+    for(const orb of secondOrbs)assert.ok(schedule.items[orb.id].startAt>=schedule.pathStartedAt+schedule.pathDuration);
+    assert.equal(demoLivingMapProgress(10800,false,schedule).path,0);
+    assert.equal(demoLivingMapProgress(14000,false,schedule).path,1);
+    assert.equal(demoLivingMapStage(14000),'Three Orbs appear in Area 2');
+    for(const item of model.items)assert.equal(demoLivingMapItemProgress(schedule,item.id,LIVING_MAP_DURATION_MS),1);
+});
+
+test('concept replay and reduced motion reveal the same final scene',()=>{
+    const model=createDemoLivingMapConcept(),schedule=createDemoLivingMapSchedule(model);
+    for(const item of model.items){assert.equal(demoLivingMapItemProgress(schedule,item.id,0,true),1);assert.equal(demoLivingMapItemProgress(schedule,item.id,0),0);}
+    assert.equal(demoLivingMapProgress(0,true,schedule).settled,true);
+    assert.equal(demoLivingMapStage(0,true),'Two connected areas');
+    assert.equal(demoLivingMapProgress(0,false,schedule).path,0);
+});
+
+test('playback begins paused, resumes without jumps and cleanly replays',()=>{
+    const playback=createDemoLivingMapPlayback();
+    assert.equal(playback.elapsed(99999),0);assert.equal(playback.playing(99999),false);
+    playback.play(100000);assert.equal(playback.elapsed(102700),2700);
+    playback.pause(103000);assert.equal(playback.elapsed(110000),3000);assert.equal(playback.playing(110000),false);
+    playback.play(120000);assert.equal(playback.elapsed(121000),4000);
+    assert.equal(playback.elapsed(150000),LIVING_MAP_DURATION_MS);assert.equal(playback.playing(150000),false);
+    playback.play(160000);assert.equal(playback.elapsed(160000),0);
+    playback.reset(170000,true);assert.equal(playback.elapsed(170500),500);
+    playback.reset(180000);assert.equal(playback.elapsed(190000),0);assert.equal(playback.playing(190000),false);
 });
 
 test('replay resets every object and reduced motion reveals the complete sample immediately',()=>{

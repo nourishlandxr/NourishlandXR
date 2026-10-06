@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Approved map · actual 3D renderer</title>
+<style>
+body{margin:0;background:#17271f;color:#f4f2df;font:16px system-ui}main{max-width:1000px;margin:auto;padding:16px}h1{font-size:1.25rem;font-weight:500}canvas{display:block;width:100%;aspect-ratio:1.8}nav{display:flex;gap:12px;flex-wrap:wrap;align-items:center}button,a{background:#2a4439;color:#f4f2df;border:1px solid #789b89;border-radius:12px;padding:10px 16px;font:inherit}label{display:flex;gap:8px;align-items:center}input[type=range]{width:180px}small{color:#cedccd}#status{min-height:1.5em}
+</style></head><body><main><h1>Living map · <span id="version"></span> · actual 3D scene</h1><small>Swale garden → Totem 1 → three Orbs → Totem 2 → curved connection → three more Orbs</small>
+<canvas id="map" role="img" aria-label="Three-dimensional swale garden and open tree garden with two Totems and six Orbs"></canvas>
+<p id="status" role="status"></p><nav><button id="play">Play</button><button id="replay">Replay</button><label>Time <input type="range" id="time" aria-label="Animation time" min="0" max="16700" step="100" value="0"><output id="seconds">0.0s</output></label><label><input type="checkbox" id="reduced">Reduced motion</label><a href="preview-demo-living-map.html">Integrated Utility 1.1</a></nav></main>
+<script type="module">
+import {createDemoLivingMapConcept,createDemoLivingMapPlayback,demoLivingMapStage,LIVING_MAP_DURATION_MS} from '../app/services/demoLivingMapModel.js';
+import {createDemoLivingMapScene} from '../app/services/demoLivingMapScene.js';
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+document.querySelector('#version').textContent='V'+BUILD_INFO.version;
+const model=createDemoLivingMapConcept(),scene=createDemoLivingMapScene(model),clock=createDemoLivingMapPlayback();
+const canvas=document.querySelector('#map'),ctx=canvas.getContext('2d'),play=document.querySelector('#play'),slider=document.querySelector('#time'),reduced=document.querySelector('#reduced'),status=document.querySelector('#status');
+let inspectAt=null,lastKey='',frame;
+play.onclick=()=>{if(inspectAt!==null){clock.reset(performance.now());inspectAt=null;}if(clock.playing(performance.now()))clock.pause(performance.now());else clock.play(performance.now());};
+document.querySelector('#replay').onclick=()=>{inspectAt=null;clock.reset(performance.now(),true);};
+slider.oninput=()=>{clock.pause(performance.now());inspectAt=Number(slider.value);};
+slider.max=LIVING_MAP_DURATION_MS;
+function draw(now){
+    const elapsed=inspectAt ?? clock.elapsed(now),w=Math.max(280,Math.round(canvas.clientWidth)),h=Math.round(w/1.8),reduce=reduced.checked || matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const key=[elapsed,w,h,reduce].join(':');
+    if(key!==lastKey){canvas.width=w;canvas.height=h;scene.draw(ctx,elapsed,reduce,{x:0,y:0,width:w,height:h});lastKey=key;}
+    slider.value=elapsed;document.querySelector('#seconds').textContent=(elapsed/1000).toFixed(1)+'s';
+    play.textContent=clock.playing(now) && inspectAt===null?'Pause':'Play';
+    status.textContent=demoLivingMapStage(elapsed,reduce)+(clock.playing(now) && inspectAt===null?' · playing':' · paused');
+    frame=requestAnimationFrame(draw);
+}
+frame=requestAnimationFrame(draw);
+addEventListener('pagehide',()=>{cancelAnimationFrame(frame);scene.dispose();});
+</script></body></html>

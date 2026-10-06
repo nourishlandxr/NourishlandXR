@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress } from './demoLivingMapModel.js';
+import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage } from './demoLivingMapModel.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1000, height = 560 } = {}) {
@@ -25,60 +25,79 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
     // Shared geometry for small planting clusters and tree canopies.
     const shrub = new THREE.InstancedMesh(sphere, material('#455e3b'), 65);
     const transform = new THREE.Object3D(); let planted = 0;
-    for (let i = 0; i < 110 && planted < 65; i++) {
+    for (let i = 0; !model.concept && i < 110 && planted < 65; i++) {
         const angle = i * 2.39996, radius = 1.2 + (i % 13) * .36;
         const x = Math.cos(angle) * radius, z = Math.sin(angle) * radius * .65;
         if (model.items.some(item => Math.hypot(item.x - x, item.z - z) < .6)) continue;
         transform.position.set(x, .12, z); transform.scale.set(.15 + (i % 4) * .035, .12 + (i % 3) * .04, .17);
         transform.updateMatrix(); shrub.setMatrixAt(planted++, transform.matrix);
     }
+    // Ordered planting follows the swales; the second garden stays open.
+    for(const row of model.landscape?.swales || []){
+        const points=row.map(({x,z})=>new THREE.Vector3(x,.055,z));
+        const curve=new THREE.CatmullRomCurve3(points);
+        mesh(geometry(new THREE.TubeGeometry(curve,32,.065,5,false)),'#8c805a',0,0,0,1,1,1,scenery);
+        row.filter((_,i)=>i%3===0).forEach(({x,z},i)=>{
+            transform.position.set(x,.13,z+.17);transform.scale.set(.16,.12+(i%3)*.035,.14);
+            transform.updateMatrix();shrub.setMatrixAt(planted++,transform.matrix);
+        });
+    }
     shrub.count = planted; scenery.add(shrub);
-    for (const [x, z, size] of [[-4.6,-2.6,1],[-2,-3,.85],[1.8,-2.9,1.2],[4.4,-2.2,.9],[4.8,1.7,.8]]) {
+    const contextTrees=model.landscape?.trees?.map(({x,z,size})=>[x,z,size]) || [[-4.6,-2.6,1],[-2,-3,.85],[1.8,-2.9,1.2],[4.4,-2.2,.9],[4.8,1.7,.8]];
+    for (const [x, z, size] of contextTrees) {
         if (model.items.some(item => Math.hypot(item.x - x, item.z - z) < .8)) continue;
         mesh(cylinder, '#756048', x, size * .55, z, .07, size * 1.1, .07, scenery);
         mesh(sphere, '#34533c', x, size * 1.25, z, size * .55, size * .65, size * .52, scenery);
         mesh(sphere, '#567249', x - .22, size * 1.5, z + .1, size * .42, size * .4, size * .4, scenery);
     }
-    for (const [x,z,sx,sz] of [[-3.4,1.8,1.5,.65],[2.7,1.9,1.3,.6]]) {
+    for (const [x,z,sx,sz] of (model.concept?[]:[[-3.4,1.8,1.5,.65],[2.7,1.9,1.3,.6]])) {
         mesh(geometry(new THREE.BoxGeometry(1,1,1)), '#867254', x, .025, z, sx, .065, sz, scenery);
     }
     const routes = model.links.length ? model.links : [[{x:-5,z:2.4},{x:5,z:-1.6}]];
     const paths = routes.map(([a,b]) => {
-        const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(a.x,.055,a.z), new THREE.Vector3((a.x+b.x)/2,.055,(a.z+b.z)/2+.65),new THREE.Vector3(b.x,.055,b.z)]);
+        const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(a.x,.075,a.z), new THREE.Vector3((a.x+b.x)/2,.075,(a.z+b.z)/2+.65),new THREE.Vector3(b.x,.075,b.z)]);
         const path=mesh(geometry(new THREE.TubeGeometry(curve,32,.09,5,false)), '#c1ae85', 0,0,0,1);path.visible=false;return path;
     });
     const boundaries = model.areas.map((area,index) => {
         const {left:l,right:r,near:n,far:f} = area;
         const corners = [[l,f],[r,f],[r,n],[l,n],[l,f]];
-        const points = Array.from({length:65},(_,i)=>{const edge=Math.min(3,Math.floor(i/16)),t=(i-edge*16)/16,a=corners[edge],b=corners[edge+1];return new THREE.Vector3(a[0]+(b[0]-a[0])*t,.075,a[1]+(b[1]-a[1])*t);});
+        const points = Array.from({length:65},(_,i)=>{
+            if(model.concept){const angle=i*Math.PI/32;return new THREE.Vector3((l+r)/2+(r-l)/2*Math.cos(angle),.075,(n+f)/2+(n-f)/2*Math.sin(angle));}
+            const edge=Math.min(3,Math.floor(i/16)),t=(i-edge*16)/16,a=corners[edge],b=corners[edge+1];return new THREE.Vector3(a[0]+(b[0]-a[0])*t,.075,a[1]+(b[1]-a[1])*t);
+        });
         const lineMaterial = new THREE.LineBasicMaterial({color:index ? '#a6c9b3' : '#d0d99d'}); materials.set('boundary'+index,lineMaterial);
         const line = new THREE.Line(geometry(new THREE.BufferGeometry().setFromPoints(points)),lineMaterial); scene.add(line);
         const fillMaterial = new THREE.MeshBasicMaterial({color:index ? '#85b8a2' : '#b0c679',transparent:true,opacity:.065,depthWrite:false}); materials.set('fill'+index,fillMaterial);
-        const fill = new THREE.Mesh(geometry(new THREE.PlaneGeometry(r-l,n-f)),fillMaterial); fill.rotation.x=-Math.PI/2;fill.position.set((l+r)/2,.06,(n+f)/2);scene.add(fill);
+        const fill = new THREE.Mesh(geometry(model.concept?new THREE.CircleGeometry(1,48):new THREE.PlaneGeometry(r-l,n-f)),fillMaterial); fill.rotation.x=-Math.PI/2;fill.position.set((l+r)/2,.06,(n+f)/2);if(model.concept)fill.scale.set((r-l)/2,(n-f)/2,1);scene.add(fill);
         line.visible=false;fill.visible=false;
         return {area,line,fill};
     });
     const markers = model.items.map((item,index) => {
         const group = new THREE.Group(); group.position.set(item.x,0,item.z);group.visible=false;scene.add(group);
+        let orb=null;
         if (item.type === 'plant') {
-            const grass = /vetiver/i.test(item.name), tree = /jackfruit|lychee|acacia/i.test(item.name);
+            const grass = /vetiver/i.test(item.name), tree = item.tree || /jackfruit|lychee|acacia/i.test(item.name);
             mesh(cylinder,'#7a7650',0,.28,0,.025,.56,.025,group);
             if(grass)for(let j=0;j<7;j++){const blade=mesh(sphere,'#7d9b55',(j-3)*.035,.26,0,.025,.3,.04,group);blade.rotation.z=(j-3)*.15;}
             else for(let j=0;j<(tree?8:6);j++){const angle=j*2.4;const leaf=mesh(sphere,index%2?'#70965a':'#8da55d',Math.cos(angle)*.14,.18+j*.07,Math.sin(angle)*.14,tree?.16:.115,.065,tree?.13:.08,group);leaf.rotation.z=Math.sin(angle)*.5;}
             const orbMaterial=new THREE.MeshPhongMaterial({color:'#bed8a3',transparent:true,opacity:.24,shininess:65,depthWrite:false});materials.set('orb'+index,orbMaterial);
-            const orb=new THREE.Mesh(sphere,orbMaterial);orb.position.y=.4;orb.scale.setScalar(.38);group.add(orb);
+            orb=new THREE.Mesh(sphere,orbMaterial);orb.position.y=.4;orb.scale.setScalar(.38);group.add(orb);
         } else if(item.type === 'zone') {
             mesh(cylinder,'#795f41',0,.34,0,.1,.68,.1,group);
-            mesh(sphere,'#d8cf9b',0,.7,0,.09,.065,.09,group);
+            const glass=new THREE.MeshPhongMaterial({color:'#bfe0d6',transparent:true,opacity:.48,shininess:85,depthWrite:false});materials.set('totem-glass'+index,glass);
+            const collar=new THREE.Mesh(cylinder,glass);collar.position.y=.54;collar.scale.set(.16,.25,.16);group.add(collar);
+            const tip=new THREE.MeshPhongMaterial({color:'#fff2b7',emissive:'#b7a152',emissiveIntensity:.65,shininess:50});materials.set('totem-tip'+index,tip);
+            const beacon=new THREE.Mesh(sphere,tip);beacon.position.y=.72;beacon.scale.set(.11,.09,.11);group.add(beacon);
         } else {
             const note=mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#d5bd84',0,.24,0,.16,.2,.055,group);note.rotation.y=.35;
         }
         const ringMaterial=new THREE.MeshBasicMaterial({color:item.type==='note'?'#dec88e':'#c7e4ae',transparent:true,opacity:.8,depthWrite:false});materials.set('ring'+index,ringMaterial);
         const ring=new THREE.Mesh(geometry(new THREE.RingGeometry(.17,.195,32)),ringMaterial);ring.rotation.x=-Math.PI/2;ring.position.y=.095;group.add(ring);
-        return {item,group,ring};
+        if(model.concept && item.type==='plant')ring.visible=false;
+        return {item,group,ring,orb};
     });
-    const cloudItems=model.areas.flatMap(area=>[area.totem,...area.members.filter(item=>item.id!==area.id)]);
-    for(const item of model.items)if(!cloudItems.some(entry=>entry.id===item.id))cloudItems.push(item);
+    const cloudItems=model.concept?model.areas.map(area=>area.totem):model.areas.flatMap(area=>[area.totem,...area.members.filter(item=>item.id!==area.id)]);
+    if(!model.concept)for(const item of model.items)if(!cloudItems.some(entry=>entry.id===item.id))cloudItems.push(item);
     let lastPaint=-Infinity, disposed=false, settledPaint=false, lastReduced=null;
     const projected = new THREE.Vector3();
     return {
@@ -86,9 +105,9 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
         draw(ctx, elapsed, reducedMotion, rect) {
             if(disposed)return;
             const {x,y,width:w,height:h}=rect;
-            const columns=w>=700?4:w>=440?3:2;
+            const columns=model.concept?2:w>=700?4:w>=440?3:2;
             const fontSize=w>=700?20:w>=440?14:12,tagHeight=fontSize+10;
-            const cloudHeight=Math.ceil(cloudItems.length/columns)*(tagHeight+7)+18;
+            const cloudHeight=model.concept?tagHeight+18:Math.ceil(cloudItems.length/columns)*(tagHeight+7)+18;
             const landY=y+cloudHeight,landHeight=Math.max(60,h-cloudHeight);
             const renderHeight=Math.round(width*landHeight/w);
             if(canvas.height!==renderHeight){
@@ -98,20 +117,22 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
             const progress=demoLivingMapProgress(elapsed,reducedMotion,schedule);
             if(elapsed<lastPaint || lastReduced!==reducedMotion)settledPaint=false;
             if(!settledPaint && (elapsed-lastPaint>=1000/24 || elapsed<lastPaint || lastReduced!==reducedMotion)){
-                const rise=progress.camera, wide=progress.wide;
+                const rise=model.concept ? .85+.15*progress.camera : progress.camera, wide=progress.wide;
                 camera.position.set(1.8*rise,2.1+5.8*rise+wide,8.5+.2*rise+1.1*wide);camera.lookAt(0,.15,0);
                 camera.zoom=1;camera.updateProjectionMatrix();camera.updateMatrixWorld();
                 let extentX=0,extentY=0;
                 const fitPoint=(px,py,pz)=>{projected.set(px,py,pz).project(camera);extentX=Math.max(extentX,Math.abs(projected.x));extentY=Math.max(extentY,Math.abs(projected.y));};
                 for(let i=0;i<32;i++){const angle=i*Math.PI/16;fitPoint(Math.cos(angle)*6.3,.05,Math.sin(angle)*4.2);fitPoint(Math.cos(angle)*6.3,-.43,Math.sin(angle)*4.2);}
                 // Include the tallest context trees in the final composition.
-                if(progress.scenery>0)for(const [px,pz,py] of [[-4.6,-2.6,1.9],[-2,-3,1.6],[1.8,-2.9,2.3],[4.4,-2.2,1.7],[4.8,1.7,1.5]])fitPoint(px,py*progress.scenery,pz);
+                if(progress.scenery>0)for(const [px,pz,size] of contextTrees)fitPoint(px,size*1.9*progress.scenery,pz);
                 camera.zoom=Math.min(.92/extentX,.88/extentY);camera.updateProjectionMatrix();
-                boundaries.forEach(({area,line,fill})=>{const boundary=demoLivingMapAreaProgress(schedule,area.id,elapsed,reducedMotion);line.visible=boundary>0;line.geometry.setDrawRange(0,Math.round(boundary*64)+1);fill.visible=boundary>=.99;});
-                markers.forEach(({item,group,ring})=>{
+                boundaries.forEach(({area,line,fill})=>{const boundary=model.concept?1:demoLivingMapAreaProgress(schedule,area.id,elapsed,reducedMotion);line.visible=boundary>0;line.geometry.setDrawRange(0,Math.round(boundary*64)+1);fill.visible=boundary>=.99;});
+                markers.forEach(({item,group,ring,orb})=>{
                     const born=demoLivingMapItemProgress(schedule,item.id,elapsed,reducedMotion);
-                    group.visible=born>0;group.scale.setScalar(Math.max(.001,born));
-                    group.position.y=item.type==='zone'?-.68*(1-born):.12*(1-born);
+                    const landscapePlant=model.concept && item.type==='plant';
+                    group.visible=landscapePlant || born>0;group.scale.setScalar(landscapePlant?1:Math.max(.001,born));
+                    group.position.y=landscapePlant?0:item.type==='zone'?-.68*(1-born):.12*(1-born);
+                    if(landscapePlant){orb.visible=born>0;orb.scale.setScalar(.38*born);orb.material.opacity=.32*born;}
                     const age=elapsed-schedule.items[item.id].startAt;
                     ring.material.opacity=born*(reducedMotion || age>1600?.65:.65+.25*Math.sin(age/180));
                 });
@@ -121,6 +142,20 @@ export function createDemoLivingMapScene(model, { width = 1000, height = 560 } =
             }
             ctx.drawImage(canvas,x,landY,w,landHeight);
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
+            if(model.concept){
+                ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
+                ctx.fillText(demoLivingMapStage(elapsed,reducedMotion),x+w/2,y+tagHeight/2,w-20);
+                // Only the two Totems need labels; no plant-name tag cloud.
+                for(const item of cloudItems){
+                    if(demoLivingMapItemProgress(schedule,item.id,elapsed,reducedMotion)<.85)continue;
+                    projected.set(item.x,.85,item.z).project(camera);
+                    const px=x+(projected.x+1)*w/2,py=landY+(1-projected.y)*landHeight/2;
+                    const labelWidth=ctx.measureText(item.name).width+16;
+                    ctx.fillStyle='rgba(16,35,29,.9)';ctx.beginPath();ctx.roundRect(px-labelWidth/2,py-tagHeight,labelWidth,tagHeight,8);ctx.fill();
+                    ctx.fillStyle='#f4f2df';ctx.fillText(item.name,px,py-tagHeight/2);
+                }
+                ctx.restore();return;
+            }
             // Tags occupy a separate cloud above the landscape. Stable slots
             // keep them apart while strings retain their spatial connection.
             const tags=[];

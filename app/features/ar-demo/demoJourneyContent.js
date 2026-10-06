@@ -240,7 +240,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Explore, learn and plan",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
-        "hint": "Replay the map, then discover learning before planting.",
+        "hint": "Play the map to see two gardens connect. Pause or replay whenever you choose, then discover learning before planting.",
         "art": null
     },
     {

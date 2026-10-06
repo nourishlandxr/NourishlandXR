@@ -1,11 +1,18 @@
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
 import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
-import {createDemoLivingMapModel,demoLivingMapProgress} from '../services/demoLivingMapModel.js';
+import {createDemoLivingMapConcept,createDemoLivingMapPlayback,demoLivingMapProgress} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
+const demoLivingMapPlayback=createDemoLivingMapPlayback();
+let demoLivingMapWasPlaying=false;
 function demoLivingMapElapsed(now=performance.now()){
-    return demoLivingMapPreviewClock ? demoLivingMapPreviewClock(now,demoLivingMapStartedAt) : now-demoLivingMapStartedAt;
+    return demoLivingMapPreviewClock ? demoLivingMapPreviewClock(now,demoLivingMapStartedAt) : demoLivingMapPlayback.elapsed(now);
+}
+function demoLivingMapIsPlaying(now){
+    const playing=demoLivingMapPlayback.playing(now);
+    if(playing!==demoLivingMapWasPlaying){demoLivingMapWasPlaying=playing;introBoardTextureDirty=true;syncDemoPanelActions();}
+    return playing;
 }
 import {supportsSpatialPIMO} from '../services/pimoSpatialCapabilities.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
@@ -436,6 +443,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
 }
 function clearSessionState() {
     demoLivingMapScene?.dispose();demoLivingMapScene=null;demoLivingMapStartedAt=0;demoLivingMapPreviewClock=null;
+    demoLivingMapPlayback.reset(performance.now());demoLivingMapWasPlaying=false;
     markers.forEach(preserveKnowledgeContext);
     disposeKnowledgeDesktopViews(appRoot);
     demoFeedback?.destroy();demoFeedback=null;demoFeedbackInputSource=null;
@@ -625,7 +633,10 @@ function demoPanelActions() {
         {id:'close-confirm',label:'Close demo',primary:true}
     ];
     const actions=[];
-    if(introBoardStep==='UTILITY 1.1')actions.push({id:'replay-map',label:'Replay living map'});
+    if(introBoardStep==='UTILITY 1.1')actions.push(
+        {id:'play-map',label:demoLivingMapPlayback.playing(performance.now())?'Pause living map':'Play living map'},
+        {id:'replay-map',label:'Replay living map'}
+    );
     if(introBoardStep==='LEARNING 1.6')actions.push({id:'finish-core',label:'Finish without learning example'});
     const desktopDemo=Boolean(appRoot?.querySelector('.tryit-demo.is-desktop-spatial-preview'));
     if(simulatedMode && demoControlIsVisible('[data-tryit-open-live-tag]'))actions.push({id:'live-tag',label:'Open Plant Live Tag'});
@@ -647,6 +658,8 @@ function demoPanelActions() {
 }
 
 function syncDemoPanelActions() {
+    const mapPlay=appRoot?.querySelector('[data-demo-map-play]');
+    if(mapPlay){const label=demoLivingMapPlayback.playing(performance.now())?'Pause living map':'Play living map';if(mapPlay.textContent!==label)mapPlay.textContent=label;}
     if(!infoPanel)return;
     const actions=demoPanelActions(),signature=JSON.stringify(actions);
     // Exit confirmation stays in the panel beside Keep demo open; the stage
@@ -693,7 +706,13 @@ function handleDemoPanelAction(action) {
     if(action==='close'){requestDemoClose();return;}
     if(action==='finish-core'){showDemoClosingMessage();return;}
     if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
-    if(action==='replay-map'){demoLivingMapStartedAt=performance.now();introBoardTextureDirty=true;paintWelcomeLayer(performance.now());return;}
+    if(action==='replay-map' || action==='play-map'){
+        const now=performance.now();
+        if(action==='replay-map'){demoLivingMapStartedAt=now;demoLivingMapPlayback.reset(now,true);}
+        else if(demoLivingMapPlayback.playing(now))demoLivingMapPlayback.pause(now);
+        else demoLivingMapPlayback.play(now);
+        introBoardTextureDirty=true;paintWelcomeLayer(now);syncDemoPanelActions();return;
+    }
     if(action==='continue'){appRoot?.querySelector('[data-tryit-intro-continue]:not([hidden])')?.click();return;}
     if(action==='live-tag'){appRoot?.querySelector('[data-tryit-open-live-tag]:not([hidden])')?.click();return;}
     if(action==='pim-lim'){openPimLimBridge(activePimLimBridge);return;}
@@ -1282,7 +1301,8 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     if(options.stepLabel==='UTILITY 1.1'){
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         demoLivingMapStartedAt=performance.now();
-        if(!demoLivingMapScene)try{demoLivingMapScene=createDemoLivingMapScene(createDemoLivingMapModel(markers,{simulated:simulatedMode}));}catch(error){console.warn('Living map preview unavailable:',error);}
+        demoLivingMapPlayback.reset(demoLivingMapStartedAt);
+        if(!demoLivingMapScene)try{demoLivingMapScene=createDemoLivingMapScene(createDemoLivingMapConcept());}catch(error){console.warn('Living map preview unavailable:',error);}
     }else if(demoLivingMapScene){demoLivingMapScene.dispose();demoLivingMapScene=null;}
     useSharedWelcomeBoard(true);
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
@@ -1366,9 +1386,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         if(options.stepLabel?.startsWith('UTILITY ') && simulatedMode)board.classList.remove('is-lim-shared-surface');
         if(options.stepLabel==='UTILITY 1.1' && simulatedMode && demoLivingMapScene){
             board.classList.remove('is-lim-shared-surface');
-            const map=document.createElement('canvas');map.dataset.demoLivingMap='';map.setAttribute('role','img');map.setAttribute('aria-label','Living miniature garden: Pigeon Pea, Moringa and a Note in My area; Vetiver, Acacia, Jackfruit, Lychee and a Note in Second Area. A path connects the two Totems.');board.append(map);
+            const map=document.createElement('canvas');map.dataset.demoLivingMap='';map.setAttribute('role','img');map.setAttribute('aria-label','3D concept garden: Area 1 has curved swales; Area 2 has an open centre and perimeter trees. Totem 1, three Orbs, Totem 2, a curved connection and three more Orbs appear in stages.');board.append(map);
             const caption=document.createElement('p');caption.className='tryit-map-caption';caption.textContent='Open to visitors, teachers, students and people caring for land.';board.append(caption);
             const replay=document.createElement('button');replay.type='button';replay.className='tryit-map-replay';replay.textContent='Replay living map';replay.onclick=()=>handleDemoPanelAction('replay-map');board.append(replay);
+            const play=document.createElement('button');play.type='button';play.className='tryit-map-replay';play.dataset.demoMapPlay='';play.textContent='Play living map';play.onclick=()=>handleDemoPanelAction('play-map');replay.before(play);
         }
         const firstArrival = prepareTutorialBoard(board);
         setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.'),{reveal:false});
@@ -1958,8 +1979,9 @@ function showArWelcomeShowcase() {
     const frame=now=>{
         if(!arWelcomeShowcaseActive)return;
         const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,limMeshVisible,limMeshActivatedAt,limExpandedAt.size,limHiddenCells.size,welcomeSequenceCanContinue()].join('|');
-        const mapAnimating=introBoardStep==='UTILITY 1.1' && !demoLivingMapProgress(demoLivingMapElapsed(now),reduced,demoLivingMapScene?.schedule).settled;
+        const mapPlaying=introBoardStep==='UTILITY 1.1' && demoLivingMapIsPlaying(now);
+        const state=[introBoardTitle,introBoardVisibleBody,introBoardVisible,arWelcomeSharedBoard,arWelcomeIntroPending,limMeshVisible,limMeshActivatedAt,limExpandedAt.size,limHiddenCells.size,welcomeSequenceCanContinue(),mapPlaying].join('|');
+        const mapAnimating=introBoardStep==='UTILITY 1.1' && (demoLivingMapPreviewClock || mapPlaying) && !demoLivingMapProgress(demoLivingMapElapsed(now),reduced,demoLivingMapScene?.schedule).settled;
         if(simulatedMode && now-last>=50 && (!reduced || mapAnimating || arWelcomeOpeningActive || arWelcomeClock.elapsed<AR_WELCOME_SHOWCASE_DURATION || limRevealIsAnimating() || state!==lastState)){
             paintWelcomeLayer(now);introBoardTextureDirty=true;last=now;lastState=state;
         }
@@ -2328,7 +2350,7 @@ function showDemoLivingMap(){
         'Learn before planting',showDemoBeforePlanting,
         {stepLabel:step.id,dynamicCopy:true,nextGuide:step.hint});
     infoPanel?.showLearning({id:'demo-living-map',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
-    infoPanel?.setContextualHint('Replay living map is available in the Control Panel.');
+    infoPanel?.setContextualHint('Use Play living map to begin. Pause or Replay are available in the Control Panel.');
     paintWelcomeLayer(performance.now());
 }
 
@@ -4904,7 +4926,7 @@ function drawIntroSpatial(view) {
         const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
-        const mapAnimating=introBoardStep==='UTILITY 1.1' && !demoLivingMapProgress(demoLivingMapElapsed(now),reducedMotion,demoLivingMapScene?.schedule).settled;
+        const mapAnimating=introBoardStep==='UTILITY 1.1' && (demoLivingMapPreviewClock || demoLivingMapIsPlaying(now)) && !demoLivingMapProgress(demoLivingMapElapsed(now),reducedMotion,demoLivingMapScene?.schedule).settled;
         if(mapAnimating || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
