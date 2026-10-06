@@ -1203,6 +1203,9 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     function explorerSpatialPose(){return explorerPose || explorerDockPose();}
     function explorerNearDock(){const dock=explorerDockPose();return Boolean(dock && explorerPose && Math.hypot(explorerPose.center.x-dock.center.x,explorerPose.center.y-dock.center.y,explorerPose.center.z-dock.center.z)<.16);}
     function finishExplorerDock(){if(explorerNearDock()){explorerPose=null;explorerPosition=null;explorerElement.classList.add('is-magnetized');}}
+    function settingsDockPose(){return spatialMediaDockPose(!mediaCollapsed && mediaDockSide==='left'?'top':'left');}
+    function settingsNearDock(){const dock=settingsDockPose();return Boolean(dock && settingsPose && Math.hypot(settingsPose.center.x-dock.center.x,settingsPose.center.y-dock.center.y,settingsPose.center.z-dock.center.z)<.24);}
+    function finishSettingsDock(){if(settingsNearDock()){settingsPose=null;settingsElement.classList.add('is-magnetized');}}
     function spatialDimensions(){return {mainWidth:(hidden ? .14 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .14 : headset ? .588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
     function spatialMediaDockPose(side){
         if(!pose)return null;
@@ -1306,6 +1309,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
             const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
+            if(spatialMove?.panel==='settings' && grab?.source?.hand && xrFrame){const state=handTrackingState(xrFrame,grab.source,grab.referenceSpace);if(!state?.tracked || !state.pinch)finishSettingsDock();}
             if(grab?.source?.hand && xrFrame){const state=handTrackingState(xrFrame,grab.source,grab.referenceSpace),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');if(!state?.tracked || !state.pinch){if(spatialMove?.panel==='explorer')finishExplorerDock();spatialMove=null;spatialGrabPending=null;sliderGrab=null;}else if(index && thumb){const origin={x:(index.x+thumb.x)/2,y:(index.y+thumb.y)/2,z:(index.z+thumb.z)/2};if(!grab.handAnchor){grab.handAnchor=origin;grab.panelAnchor={...(grab.panel==='explorer'?explorerSpatialPose():grab.panel==='settings'?settingsPose || spatialMediaDockPose('left'):grab.panel==='media'?mediaPose || spatialMediaDockPose(mediaDockSide):pose).center};}handMoveRay=state.pointer?{...state.pointer,direction:grab.handDirection || state.pointer.direction}:null;grab.handCenter={x:grab.panelAnchor.x+origin.x-grab.handAnchor.x,y:grab.panelAnchor.y+origin.y-grab.handAnchor.y,z:grab.panelAnchor.z+origin.z-grab.handAnchor.z};}}
             if(grab && !grab.source?.hand && xrFrame?.getPose && grab.source?.targetRaySpace && grab.referenceSpace){
                 try{heldTransform=xrFrame.getPose(grab.source.targetRaySpace,grab.referenceSpace)?.transform.matrix || null;}catch{heldTransform=null;}
@@ -1329,7 +1333,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 const center=spatialMove.handCenter || panelCenterFromGrab(heldRay,spatialMove,current);
                 const facing=facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]});
                 const moved={...current,center,...facing,anchorHeading:facing.right};
-                if(spatialMove.panel==='explorer'){explorerPose=moved;if(explorerNearDock())explorerPose=explorerDockPose();}else if(spatialMove.panel==='settings'){settingsPose=moved;}else if(spatialMove.panel==='media'){
+                if(spatialMove.panel==='explorer'){explorerPose=moved;if(explorerNearDock())explorerPose=explorerDockPose();}else if(spatialMove.panel==='settings'){settingsPose=moved;if(settingsNearDock())settingsPose=settingsDockPose();settingsElement.classList.toggle('is-magnetized',settingsNearDock());}else if(spatialMove.panel==='media'){
                     mediaPose=moved;const candidate=spatialDockCandidate(mediaPose);
                     if(candidate){mediaPose=spatialMediaDockPose(candidate.side);spatialMove.dockSide=candidate.side;}else spatialMove.dockSide=null;
                 }else{pose=moved;heading=facing.right;manuallyPositioned=true;}
@@ -1405,7 +1409,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
             if(type==='selectend' && spatialMove?.source===event.inputSource){
                 const moving=spatialMove,candidate=moving.panel==='media'?spatialDockCandidate(mediaPose):null;
-                if(moving.panel==='explorer')finishExplorerDock();finishingMoveSource=event.inputSource;spatialMove=null;
+                if(moving.panel==='explorer')finishExplorerDock();if(moving.panel==='settings')finishSettingsDock();finishingMoveSource=event.inputSource;spatialMove=null;
                 if(moving.panel==='media' && candidate)dockSpatialMedia(candidate.side);
                 event.stopImmediatePropagation();return;
             }
@@ -1433,7 +1437,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             // The shared pinch edge already selects a hand button once.
             if(event.inputSource?.hand && type==='select'){spatialGrabPending=null;panelGestureSource=null;return;}
             if(type==='selectstart' && target.card?.settings)panelGestureSource=event.inputSource;
-            if(type==='selectstart' && target.card?.settings && !button){panelGestureSource=event.inputSource;settingsPose ||= spatialMediaDockPose('left');spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'settings',cardId:'settings',startedAt:performance.now()-PANEL_GRAB_HOLD_MS};return;}
+            if(type==='selectstart' && target.card?.settings && !button){panelGestureSource=event.inputSource;settingsPose ||= settingsDockPose();spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'settings',cardId:'settings',startedAt:performance.now()-PANEL_GRAB_HOLD_MS};return;}
             if(type==='selectstart' && button?.kind==='slider'){
                 sliderGrab={source:event.inputSource,referenceSpace,button,surface:{...target}};panelGestureSource=event.inputSource;slideAtTarget(button,target);return;
             }

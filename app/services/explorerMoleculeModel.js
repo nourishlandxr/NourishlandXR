@@ -6,7 +6,7 @@ import {PIM_COMPASS_BY_ID} from './pimCompass.js';
 export const EXPLORER_LIMIT=24, EXPLORER_CHILDREN=3, EXPLORER_TRANSITION_MS=650;
 export const EXPLORER_RECIPES='explorer-recipes', EXPLORER_RECIPE='explorer-community-recipe';
 export const EXPLORER_BOND_RADIUS=.014;
-export const EXPLORER_CONNECTOR_COLOUR='#e6eef2';
+export const EXPLORER_CONNECTOR_COLOUR='#986439';
 const indexes=new WeakMap();
 const projections=new WeakMap();
 const directions=['top','upper-right','lower-right','bottom','lower-left','upper-left'];

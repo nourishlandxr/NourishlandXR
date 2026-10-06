@@ -179,7 +179,13 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                     else interactiveLabel='Three Totems · one connected place';
                 }
                 ctx.fillText(model.interactive?translateNxrText(interactiveLabel):demoLivingMapStage(elapsed,reducedMotion),x+w/2,y+tagHeight/2,w-20);
-                // Only the two Totems need labels; no plant-name tag cloud.
+                const destination=placement?.current(elapsed);
+                if(destination){
+                    const point=this.project(destination,rect);
+                    ctx.fillStyle='#fff8d1';ctx.font=`700 ${fontSize}px system-ui`;
+                    ctx.fillText(translateNxrText(destination.name),point.x,point.y+tagHeight,160);
+                }
+                // Labels stay beside the three placed Totems.
                 for(const item of cloudItems){
                     if(bornFor(item.id)<.85)continue;
                     projected.set(item.x,.85,item.z).project(camera);

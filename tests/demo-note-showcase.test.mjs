@@ -12,15 +12,15 @@ import {initializeExplorerPreview,explorerMoleculeView,selectExplorerNode,explor
 import {bindExplorerMoleculeInteraction} from '../app/services/explorerMoleculeInteraction.js';
 import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
 class Root extends EventTarget {innerHTML='';replaceChildren(){this.innerHTML='';}}
-test('Note pencil previews a sample on the Note, resets, and adds a widget only after the arm chooser',()=>{
+test('Note chooser offers three choices and transforms its connected card with a stable identity',()=>{
  const root=new Root(),note={id:'sample',name:'Note',description:'Original',appearance:{}},changed=[];
  const ui=mountDemoNoteShowcase(root,note,{onChange:item=>changed.push(item.description)});
- ui.action('edit');assert.match(root.innerHTML,/Try sample edit/);assert.doesNotMatch(root.innerHTML,/<form|<input|<textarea/);
- ui.action('sample');assert.notEqual(note.description,'Original');ui.action('reset');assert.equal(note.description,'Original');
+ assert.doesNotMatch(root.innerHTML,/data-note-close|data-demo-note="edit"|<form|<input|<textarea/);
  ui.action('widget:timer');assert.equal(note.appearance.spatial_note,undefined);
- ui.action('add');assert.match(root.innerHTML,/data-note-widget="demo-add-arm"/);assert.match(root.innerHTML,/Choose what belongs/);
- ui.action('widget:timer');assert.equal(note.appearance.spatial_note.widgets.length,1);assert.equal(note.appearance.spatial_note.widgets[0].configuration.seconds,120);assert.doesNotMatch(root.innerHTML,/demo-add-arm/);
- ui.action('add');ui.action('cancel-arm');assert.equal(note.appearance.spatial_note.widgets.length,1);ui.destroy();assert.equal(root.innerHTML,'');
+ ui.action('add');const id=root.innerHTML.match(/data-note-widget="([^"]+)"/)[1];
+ assert.match(root.innerHTML,/Timer/);assert.match(root.innerHTML,/Checkbox/);assert.match(root.innerHTML,/Extra panel/);assert.doesNotMatch(root.innerHTML,/cancel-arm|data-note-close/);
+ ui.action('widget:timer');assert.equal(note.appearance.spatial_note.widgets.length,1);assert.equal(note.appearance.spatial_note.widgets[0].id,id);assert.equal(note.appearance.spatial_note.widgets[0].configuration.seconds,120);
+ assert.equal(note.description,'Original');assert.doesNotMatch(root.innerHTML,/note-widget-picker/);ui.destroy();assert.equal(root.innerHTML,'');
 });
 test('Note surfaces do not steal Continue or Control panel rays, including misses',()=>{
  assert.equal(noteSurfaceOwnsRay(null,[]),false);assert.equal(noteSurfaceOwnsRay({distance:1.5},[{distance:1}]),false);

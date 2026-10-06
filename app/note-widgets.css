@@ -7,6 +7,9 @@
 .note-anchor p,.note-widget p,.note-widget li {font-size:15px;line-height:1.45;white-space:normal;}
 .note-widget {position:absolute;left:calc(50% + var(--widget-x)*405px);top:calc(50% + var(--widget-y)*395px);width:min(320px,calc(100vw - 48px));max-height:210px;overflow:auto;z-index:1;transform:translate(-50%,-50%);animation:note-unfold .38s ease both;animation-delay:calc(var(--widget-order)*65ms);}
 .note-widget-picker {width:min(230px,calc(100vw - 64px));max-height:170px;padding:12px;}
+.demo-note-showcase {background:transparent;border:0;box-shadow:none;}
+.demo-note-showcase .note-widget-compact {width:min(230px,calc(100vw - 64px));padding:12px;border-radius:20px;}
+.demo-note-showcase .note-widget button {border-radius:16px;min-height:34px;margin:4px;padding:6px 12px;color:#fffdf3;background:rgba(215,236,213,.13);border:1px solid rgba(215,235,203,.6);}
 .note-widget-picker h3 {font-size:16px;margin-bottom:8px;}
 .note-widget-picker-actions {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;}
 .note-widget-picker-actions button {display:flex;align-items:center;gap:6px;min-height:32px;padding:5px 8px;font-size:12px;}

@@ -1341,7 +1341,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     board?.classList.toggle('is-utility-board',Boolean(options.stepLabel?.startsWith('UTILITY ')));
     const deferContinueUntilCopyReady = Boolean(options.deferContinueUntilCopyReady);
     rememberDemoSlide({stepLabel:introBoardStep,title:localizedTitle,body:bodyText,buttonLabel,onContinue,options:{...options},kind:'intro'});
-    let typingStartDelay = 220;
+    let typingStartDelay = 900;
     let paragraphIndex = 0;
     let typing = true;
     let completionNotified = false;
@@ -1383,10 +1383,10 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         introBoardTextureDirty = true;
         paintBoardParagraphs(introBoardVisibleBody);
         if (paragraphIndex >= paragraphs.length) {
-            boardTypingTimer = setTimeout(finishTyping, 120);
+            boardTypingTimer = setTimeout(finishTyping, 1100);
             return;
         }
-        boardTypingTimer = setTimeout(revealNextParagraph, 1800);
+        boardTypingTimer = setTimeout(revealNextParagraph, demoParagraphReadingTime(paragraphs[paragraphIndex-1]));
     };
     skipDemoNarration = finishTyping;
     if (board) {
@@ -1417,7 +1417,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.add('is-persistent-demo-board');
         if (firstArrival) {
             introSceneStartedAt = performance.now();
-            typingStartDelay = 220;
+            typingStartDelay = 900;
         }
     }
     finalActions?.setAttribute('hidden', '');
@@ -1440,7 +1440,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     boardTypingTimer = setTimeout(revealNextParagraph, typingStartDelay);
     boardTypingWatchdogTimer = setTimeout(
         finishTyping,
-        Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + paragraphs.length * 2200)
+        Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + paragraphs.reduce((total,text)=>total+demoParagraphReadingTime(text),0)+2000)
     );
     setGuide('');
     if(options.stepLabel==='UTILITY 1.1')spawnDemoMapTotem();
@@ -1882,8 +1882,11 @@ function showArWelcomeShowcase() {
     arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;limMeshActivatedAt=NaN;arWelcomeOpeningActive=true;arWelcomeOpeningDuration=reducedOpening?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_OPENING_MS;arWelcomeOpeningSeed=seedBytes[0];arWelcomeClock=createWelcomePresentationClock();
     ambientBeesStartedAt=NaN;
     arWelcomeRootMilestone=WELCOME_ROOT_MILESTONES.arrival;arWelcomeRootMilestoneStartedAt=0;arWelcomeRootsLastRefreshAt=-Infinity;
-    // A sample demo starts clean; never inherit the previous visit's LIMO trail.
+    // Reset transient learning state for every demo visit.
     limPathwayState=idleLimPathwayState();
+    contextCellKey='';limPointerKey='';nativeConnectionState=null;clearNativeConnectionHold();
+    limMeshActivatedAt=NaN;arWelcomeRenderedFrames=[];
+    infoPanel?.setPathwayContext(null);infoPanel?.setLearningModules(null);
     const reservedCells=welcomeExperienceFrames(64000,false,arWelcomeClusters).flatMap(frame=>frame.nodes);
     limDiagnostic('rendered-cells',{count:reservedCells.length,uniqueIds:new Set(reservedCells.map(node=>node.limId || node.key)).size,reservedCount:LIM_ALL_CELLS.length});
     limInteractionCleanup();limSessionCleanup();limActivationSessionSuppressUntil=0;
@@ -1905,6 +1908,7 @@ function showArWelcomeShowcase() {
     introBoardStep='INTRO 1.1';
     introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.1').title);
     introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
+    arWelcomeOpeningDuration=Math.max(arWelcomeOpeningDuration,DEMO_WELCOME_TITLE_HOLD_MS+introBoardBody.split(/\n\n/).reduce((total,text)=>total+demoParagraphReadingTime(text),0)+1100);
     introBoardVisibleBody='';
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
@@ -1949,7 +1953,7 @@ function showArWelcomeShowcase() {
         introBoardParagraphFadeStartedAt=performance.now();introBoardParagraphFadeTimes[openingParagraphIndex-1]=introBoardParagraphFadeStartedAt;
         introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
         if(openingParagraphIndex>=openingParagraphs.length){boardTypingTimer=setTimeout(finishOpeningCopy,800);return;}
-        boardTypingTimer=setTimeout(revealOpeningParagraph,2500);
+        boardTypingTimer=setTimeout(revealOpeningParagraph,demoParagraphReadingTime(openingParagraphs[openingParagraphIndex-1]));
     };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
@@ -2944,6 +2948,10 @@ function advanceDemo() {
     appRoot?.querySelector('[data-tryit-action]')?.setAttribute('hidden', '');
     if (nextStage === 'finish') return returnToWelcome();
     if (nextStage === 'reset') {
+        closeDemoKnowledge(true);limActivation?.cancel();clearLimSelection();
+        limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();
+        limPathwayState=idleLimPathwayState();nativeConnectionState=null;clearNativeConnectionHold();
+        contextCellKey='';limMeshActivatedAt=NaN;arWelcomeRenderedFrames=[];
         markers.forEach(record => {if(record.texture)gl?.deleteTexture(record.texture);});
         markers = [];
         marker = null;
@@ -3947,7 +3955,7 @@ function focusDemoObjectControls(record){
 }
 function focusDemoNoteControls(record){
     infoPanel?.restore();infoPanel?.showLearning({title:record.name,body:record.description || record.notes,mesh:'note'});
-    infoPanel?.setObjectContext({title:'Controls · Note',hint:'Sample Note tools. Full authoring comes later.',actions:[{id:'edit',label:'✎ Edit preview'},{id:'add',label:'+ Add widget'},{id:'toggle',label:'Show / hide widgets'}],onAction:id=>{openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.(id);}});
+    infoPanel?.setObjectContext({title:'Controls · Note',hint:'Add a connected widget. Grip any Note card to move it.',actions:[{id:'add',label:'+ Add widget'}],onAction:id=>{openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.(id);}});
     infoPanel?.setExplorerOpen(true);return true;
 }
 function selectDemoNote(record){openDemoNoteExperience(record);return true;}
@@ -4618,18 +4626,19 @@ function wrappedTextureLines(ctx, text, maxWidth) {
     return lines;
 }
 
+function demoParagraphReadingTime(text){return Math.max(4200,String(text || '').trim().split(/\s+/).length*300+1100);}
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
-    for (let fontSize = 67; fontSize >= 23; fontSize -= 1) {
+    for (let fontSize = 68; fontSize >= 24; fontSize -= 1) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .5);
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
         const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
             + Math.max(0, paragraphLines.length - 1) * paragraphGap;
-        if (totalHeight <= maxHeight || fontSize === 23) {
-            return { fontSize, lineHeight, paragraphGap, paragraphLines };
+        if (totalHeight <= maxHeight || fontSize === 24) {
+            return { fontSize:fontSize+1, lineHeight:lineHeight+1, paragraphGap, paragraphLines };
         }
     }
     return { fontSize: 23, lineHeight: 28, paragraphGap: 12, paragraphLines: [] };
@@ -4820,8 +4829,9 @@ function drawIntroNoteContent(ctx) {
                 ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
                 let y=515;
                 for(const [index,lines] of layout.paragraphLines.entries()){
-                    const age=openingElapsed-DEMO_WELCOME_TITLE_HOLD_MS-index*1350;
-                    ctx.save();ctx.globalAlpha*=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.max(0,Math.min(1,age/620));
+                    const previous=layout.paragraphLines.slice(0,index).map(lines=>lines.join(' '));
+                    const age=openingElapsed-DEMO_WELCOME_TITLE_HOLD_MS-previous.reduce((total,text)=>total+demoParagraphReadingTime(text),0);
+                    ctx.save();ctx.globalAlpha*=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.max(0,Math.min(1,age/1100));
                     for(const line of lines){ctx.fillText(line,contentCenter,y);y+=layout.lineHeight;}ctx.restore();y+=layout.paragraphGap;
                 }
             }
@@ -5030,14 +5040,14 @@ function drawIntroSpatial(view) {
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
         const mapAnimating=introBoardStep==='UTILITY 1.1' && (demoLivingMapPlacement?demoLivingMapIsPlaying(now):(demoLivingMapPreviewClock || demoLivingMapIsPlaying(now)) && !demoLivingMapProgress(demoLivingMapElapsed(now),reducedMotion,demoLivingMapScene?.schedule).settled);
-        const paragraphFadeActive=!reducedMotion && now-introBoardParagraphFadeStartedAt<620;
+        const paragraphFadeActive=!reducedMotion && now-introBoardParagraphFadeStartedAt<1100;
         if(mapAnimating || paragraphFadeActive || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
-    const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<620;
+    const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<1100;
     const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : DEMO_LIM_TEXTURE_INTERVAL_MS;
     if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
@@ -5579,6 +5589,7 @@ function drawMarker(view) {
     gl.enableVertexAttribArray(uv); gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
     drawIntroSpatial(view);
     markers.forEach(record => {
+        if(demoNoteRenderer && demoKnowledgeRoot?.dataset.noteRecord===String(record.id))return;
         if(record.demoType==='note' && record.appearance?.note_template==='pollinators' && performance.now()-(record.noteScrolledAt||0)>2600){
             record.noteScrolledAt=performance.now();record.noteScrollIndex=(Number(record.noteScrollIndex)||0)+1;
             replaceDemoTexture(record);
@@ -5876,13 +5887,15 @@ async function startImmersive() {
             suppressSessionSelectUntil = performance.now() + 280;
         });
         session.addEventListener('squeezestart',event=>{
+            captureDemoInputEventRay(event);
+            if(demoNoteOwnsPointer() && demoNoteRenderer?.beginGrab(latestControllerRay,event.inputSource)){event.stopImmediatePropagation();return;}
             if(event.inputSource?.hand || arWelcomeIntroPending || placementReady || demoKnowledgeWorkspace || demoWebModeOpen)return;
             captureDemoInputEventRay(event);if(butterflyGripStart(event.inputSource))return;
             const target=demoRecordAtPointer(),panelTarget=resolveDemoCellTarget(),signHit=totemCardsRenderer?.hit(latestControllerRay);
             if(panelTarget?.kind==='panel' && (!target || panelTarget.distance<=target.hit.distance) || signHit && (!target || signHit.distance<=target.hit.distance))return;
             demoGrabInputSource=event.inputSource;beginControllerDemoHold();
         });
-        session.addEventListener('squeezeend',event=>{if(event.inputSource===demoGrabInputSource){captureDemoInputEventRay(event);releaseHeldDemoRecord();suppressSessionSelectUntil=performance.now()+280;}for(const insect of butterflyCompanions)if(insect.heldSource===event.inputSource)releaseDemoButterfly(insect);});
+        session.addEventListener('squeezeend',event=>{if(demoNoteRenderer?.releaseGrab(event.inputSource)){event.stopImmediatePropagation();return;}if(event.inputSource===demoGrabInputSource){captureDemoInputEventRay(event);releaseHeldDemoRecord();suppressSessionSelectUntil=performance.now()+280;}for(const insect of butterflyCompanions)if(insect.heldSource===event.inputSource)releaseDemoButterfly(insect);});
         const launchedSession=session;
         session.addEventListener('end', () => { void demoExitLifecycle.handleSessionEnd(launchedSession); },{once:true});
         const draw = (_time, frame) => {
@@ -5907,6 +5920,7 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
+            if(demoNoteRenderer?.heldSource){const ray=demoControllerRayForInputEvent({frame,inputSource:demoNoteRenderer.heldSource});demoNoteRenderer.updateGrab(ray);}
             runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const elapsed=insect.depthUpdatedAt?Math.max(0,Math.min(60,_time-insect.depthUpdatedAt)):16;insect.depthUpdatedAt=_time;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}const axes=insect.heldSource.gamepad?.axes || [];insect.controllerDistance=Math.max(.25,Math.min(2.5,insect.controllerDistance+spatialDepthDelta(axes.length>2?axes[3]:axes[1],elapsed)));insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);

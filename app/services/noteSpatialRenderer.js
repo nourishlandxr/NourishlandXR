@@ -18,7 +18,7 @@ export function resolveNoteCardButton(root,id,actionIndex,fallback){
 // and the native cards forward their actions to the same visitor controls.
 export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},widgetPlacement=noteWidgetPlacement}={}){
     const tether=createSpatialTetherRenderer(gl),canvases=new Map(),pages=new Map(),widgetBirths=new Map();let revision=0,pose=null,layout=[],openingAt=performance.now(),closingAt=null,wasExpanded=false;
-    const marker=record.marker || record;
+    const marker=record.marker || record,positions=new Map();let held=null;
     const observer=new MutationObserver(()=>revision++);observer.observe(root,{childList:true,subtree:true,characterData:true,attributes:true});
     const imageLoaded=()=>revision++;root.addEventListener('load',imageLoaded,true);
     const canvas=card=>{
@@ -40,7 +40,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
     const renderer=createSpatialTotemCards(gl,{canvas,surfaces:()=>layout,containedFeedback:true});
     const api={
         draw(view,currentViewer=viewer){
-            if(!pose && currentViewer){const p=record.position || {x:0,y:1,z:-1};pose={center:{x:p.x,y:p.y+.25,z:p.z},right:{x:currentViewer[0],y:currentViewer[1],z:currentViewer[2]},up:{x:currentViewer[4],y:currentViewer[5],z:currentViewer[6]}};}
+            if(!pose && currentViewer){const p=record.position || {x:0,y:1,z:-1};pose={center:{x:p.x,y:p.y,z:p.z},right:{x:currentViewer[0],y:currentViewer[1],z:currentViewer[2]},up:{x:currentViewer[4],y:currentViewer[5],z:currentViewer[6]}};}
             if(!pose)return;
             const main=root.querySelector('.note-anchor');if(!main)return;
             const board=root.querySelector('.note-spatial-board'),expanded=Boolean(board?.classList.contains('is-expanded')),closing=Boolean(board?.classList.contains('is-collapsing'));
@@ -48,12 +48,13 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             if(closing && closingAt===null)closingAt=performance.now();if(!closing)closingAt=null;
             const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,time=performance.now(),amount=reduced?1:closing?Math.max(0,1-(time-closingAt)/260):Math.min(1,(time-openingAt)/480);
             const widgets=expanded?[...root.querySelectorAll('[data-note-widget]')]:[],hasAddPanel=widgets.some(element=>element.classList.contains('note-widget-picker')),bays=widgetPlacement(widgets.length,hasAddPanel);
-            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-picker')?.58:.86,height:element?.classList.contains('note-widget-picker')?.23:.336,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0),title:element.textContent,fadeDuration:reduced?1:350}});
+            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-compact')?.58:.86,height:element?.classList.contains('note-widget-compact')?.23:.336,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0),title:element.textContent,fadeDuration:reduced?1:350}});
             const ids=new Set(widgets.map(element=>element.dataset.noteWidget));for(const id of widgetBirths.keys())if(!ids.has(id))widgetBirths.delete(id);
             layout=[card(main,'main',pose.center),...widgets.map((element,index)=>{
                 const id=element.dataset.noteWidget;if(!widgetBirths.has(id))widgetBirths.set(id,time);
                 const progress=reduced?1:Math.min(1,(time-widgetBirths.get(id))/480),unfold=progress*progress*(3-2*progress),bay=bays[index],spread=.55+.45*unfold;
                 const center={x:pose.center.x+(pose.right.x*bay.x+pose.up.x*bay.y)*spread,y:pose.center.y+(pose.right.y*bay.x+pose.up.y*bay.y)*spread,z:pose.center.z+(pose.right.z*bay.x+pose.up.z*bay.y)*spread};
+                const offset=positions.get(id);if(offset){center.x=pose.center.x+offset.x;center.y=pose.center.y+offset.y;center.z=pose.center.z+offset.z;}
                 return {...card(element,id,center,index),opacity:Math.min(amount,unfold)};
             })];
             renderer.begin();renderer.draw(view,{id:'note-'+marker.id},pose.center,layout.map(surface=>surface.card),'');renderer.end();
@@ -68,6 +69,10 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             }
         },
         hit:ray=>renderer.hit(ray),
+        beginGrab(ray,source){const hit=renderer.hit(ray);if(!hit || !pose)return false;const surface=layout.find(item=>item.card.id===hit.card.id);if(!surface)return false;held={source,id:hit.card.id,distance:hit.distance,offset:{x:surface.center.x-ray.origin.x-ray.direction.x*hit.distance,y:surface.center.y-ray.origin.y-ray.direction.y*hit.distance,z:surface.center.z-ray.origin.z-ray.direction.z*hit.distance}};return true;},
+        updateGrab(ray){if(!held || !pose || !ray)return;const center={x:ray.origin.x+ray.direction.x*held.distance+held.offset.x,y:ray.origin.y+ray.direction.y*held.distance+held.offset.y,z:ray.origin.z+ray.direction.z*held.distance+held.offset.z};if(held.id==='main'){pose.center=center;}else positions.set(held.id,{x:center.x-pose.center.x,y:center.y-pose.center.y,z:center.z-pose.center.z});},
+        releaseGrab(source){if(held?.source!==source)return false;held=null;return true;},
+        get heldSource(){return held?.source;},
         activate(ray){const hit=renderer.hit(ray);if(!hit)return false;const entry=canvases.get(hit.card.id),x=(hit.localX/hit.width+.5)*1024,y=(.5-hit.localY/hit.height)*400;
             const target=entry?.buttons?.find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);
             // Timer renders replace DOM nodes even when a card's artwork is

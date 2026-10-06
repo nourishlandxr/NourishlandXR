@@ -97,7 +97,12 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
                 const start=facePort(a,b.world,childIndex),end=facePort(b,a.world),direction=end.clone().sub(start).normalize(),length=start.distanceTo(end);if(length<.005)continue;
                 const model=new THREE.Matrix4().compose(start.clone().lerp(end,.5),new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),direction),new THREE.Vector3(EXPLORER_BOND_RADIUS*scale,length,EXPLORER_BOND_RADIUS*scale));
                 const elapsed=time-field.state.births[b.id],pulse=b.contribution&&!motion?.matches&&elapsed>650&&elapsed<1100?(elapsed-650)/450:-1;
-                gl.depthMask(false);paint(cylinder,model,projection,new THREE.Color(EXPLORER_CONNECTOR_COLOUR).toArray(),opacity*b.progress*.65,0,pulse);gl.depthMask(opacity>.99);
+                gl.depthMask(false);paint(cylinder,model,projection,new THREE.Color(EXPLORER_CONNECTOR_COLOUR).toArray(),opacity*b.progress,0,pulse);
+                for(const endpoint of [start,end]){
+                    const joint=new THREE.Matrix4().compose(endpoint,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),direction),new THREE.Vector3().setScalar(EXPLORER_BOND_RADIUS*scale*2));
+                    paint(socket,joint,projection,new THREE.Color('#b38454').toArray(),opacity*b.progress);
+                }
+                gl.depthMask(opacity>.99);
             }
             const hover=hitExplorerMolecule(ray(),[{record,...field,nodes,surfaces:[],pose}],record)?.node?.explorerNodeId;
             for(const node of nodes){

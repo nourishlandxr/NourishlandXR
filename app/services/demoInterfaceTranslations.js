@@ -2,6 +2,9 @@
 // Do not put object IDs, action names, source URLs or user data in this table.
 export const DEMO_INTERFACE_TRANSLATIONS = [
  ['Totem model','Modelo de Totem','Totemmodel'],
+ ['Checkbox','Caixa de verificação','Selectievakje'],
+ ['Extra panel','Painel adicional','Extra paneel'],
+ ['Add a connected widget. Grip any Note card to move it.','Adicione um widget ligado. Agarre qualquer cartão de Nota para o mover.','Voeg een verbonden widget toe. Pak een notitiekaart vast om deze te verplaatsen.'],
  ['Lights','Luzes','Lichten'],
  ['Signage','Sinalética','Bewegwijzering'],
  ['Place Totem','Colocar Totem','Totem plaatsen'],
