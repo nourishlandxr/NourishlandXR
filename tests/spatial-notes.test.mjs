@@ -34,16 +34,16 @@ test('timer uses a saved deadline across reloads and can reset',()=>{
 });
 test('spatial placement keeps five widgets separate from the anchor and each other',()=>{
  const bays=noteWidgetPlacement(10);assert.equal(bays.length,5);
+ const withPicker=noteWidgetPlacement(6,true);assert.equal(withPicker.length,6);assert.equal(withPicker[5].width,.86);
  const boxes=[{x:0,y:0,width:.6,height:.38},...bays];
  for(const [i,a] of boxes.entries())for(const b of boxes.slice(i+1))assert.ok(Math.abs(a.x-b.x)>=(a.width+b.width)/2 || Math.abs(a.y-b.y)>=(a.height+b.height)/2);
 });
-test('creator Controls convert Notes, add widgets and edit the saved record identity',async()=>{
- let context,edited,saves=0;const panel={showLearning(){},setObjectContext:value=>context=value},record={marker:{id:'n',type:'note',name:'Observation',notes:'Keep this',appearance:{}}};
- focusSpatialObjectControls(panel,record,{save:async value=>{saves++;value.marker=structuredClone(value.marker);},edit:(_record,id)=>edited=id});
+test('creator Controls open the connected Add Widget clone instead of creating an editor screen',async()=>{
+ let context,edited,opened,saves=0;const panel={showLearning(){},setObjectContext:value=>context=value},record={marker:{id:'n',type:'note',name:'Observation',notes:'Keep this',appearance:{}}};
+ focusSpatialObjectControls(panel,record,{save:async value=>{saves++;value.marker=structuredClone(value.marker);},edit:(_record,id)=>edited=id,open:(_record,options)=>opened=options});
  await context.onAction('type:dynamic');assert.equal(spatialNote(record.marker).type,'dynamic');assert.equal(record.marker.notes,'Keep this');
- await context.onAction('add:timer');assert.equal(spatialNote(record.marker).widgets[0].type,'timer');assert.equal(edited,record.marker.appearance.spatial_note.widgets[0].id);
- for(let i=0;i<5;i++)await context.onAction('add:thick-box');assert.equal(spatialNote(record.marker).widgets.length,5);assert.equal(saves,6);
- assert.ok(context.actions.find(item=>item.id==='library').disabled);
+ await context.onAction('library');assert.equal(spatialNote(record.marker).widgets.length,0);assert.equal(edited,undefined);assert.equal(saves,1);assert.deepEqual(opened,{expandWidgets:true,showAddPanel:true});
+ assert.ok(context.actions.find(item=>item.id==='library'));
 });
 test('Totem Controls own style, light and explicit signage labels, with failed-save rollback',async()=>{
  let context,hint;const panel={showLearning(){},setObjectContext:value=>context=value,setContextualHint:value=>hint=value},record={marker:{type:'area_checkpoint',name:'Area 2',appearance:{signsVisible:true}},totemSignsVisible:true,infoVisible:true};

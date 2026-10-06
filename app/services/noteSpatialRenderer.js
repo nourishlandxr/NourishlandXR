@@ -47,8 +47,8 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             if(expanded && !wasExpanded)openingAt=performance.now();wasExpanded=expanded;
             if(closing && closingAt===null)closingAt=performance.now();if(!closing)closingAt=null;
             const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches,time=performance.now(),amount=reduced?1:closing?Math.max(0,1-(time-closingAt)/260):Math.min(1,(time-openingAt)/480);
-            const widgets=expanded?[...root.querySelectorAll('[data-note-widget]')]:[],bays=widgetPlacement(widgets.length);
-            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:.86,height:.336,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0),title:element.textContent,fadeDuration:reduced?1:350}});
+            const widgets=expanded?[...root.querySelectorAll('[data-note-widget]')]:[],hasAddPanel=widgets.some(element=>element.classList.contains('note-widget-picker')),bays=widgetPlacement(widgets.length,hasAddPanel);
+            const card=(element,id,center,index=-1)=>({center,right:pose.right,up:pose.up,width:element?.classList.contains('note-widget-picker')?.58:.86,height:element?.classList.contains('note-widget-picker')?.23:.336,opacity:index<0?1:amount,card:{id,element,revision:element.innerHTML+':'+(pages.get(id)||0),title:element.textContent,fadeDuration:reduced?1:350}});
             const ids=new Set(widgets.map(element=>element.dataset.noteWidget));for(const id of widgetBirths.keys())if(!ids.has(id))widgetBirths.delete(id);
             layout=[card(main,'main',pose.center),...widgets.map((element,index)=>{
                 const id=element.dataset.noteWidget;if(!widgetBirths.has(id))widgetBirths.set(id,time);

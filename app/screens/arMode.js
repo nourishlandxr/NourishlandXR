@@ -961,13 +961,13 @@ async function openCreatorKnowledge(record = selectedKnowledgeRecord(), {path = 
     updateKnowledgeControls();
 }
 
-function openCreatorLiveNote(record) {
+function openCreatorLiveNote(record,options={}) {
     if (!overlayRoot || creatorKnowledgeRoot || readyPlacementType || dragState) return;
     placementArmGeneration += 1;
     closeQuestSpatialWebPanel();closeQuestSpecialPalette();closeMarkerContextToolbar();closePlacePicker();clearMarkerHoldGesture();clearControllerMarkerPress();
     creatorKnowledgeReturnFocus=document.activeElement;creatorKnowledgeRecord=record;
     const root=document.createElement('section');creatorKnowledgeRoot=root;overlayRoot.append(root);overlayRoot.classList.add('has-creator-knowledge');
-    creatorKnowledgeWorkspace=(spatialNoteEnabled(record.marker)?mountNoteExperience:mountLiveNote)(root,record.marker,{onClose:()=>closeCreatorKnowledge({force:true})});
+    creatorKnowledgeWorkspace=spatialNoteEnabled(record.marker)?mountNoteExperience(root,record.marker,{editable:true,initiallyExpanded:Boolean(options.expandWidgets),showAddPanel:Boolean(options.showAddPanel),onAddWidget:async marker=>{record.marker=await updateAreaCompatibleMarker(record,marker);renderSessionMarkers();return record.marker;},onClose:()=>closeCreatorKnowledge({force:true})}):mountLiveNote(root,record.marker,{onClose:()=>closeCreatorKnowledge({force:true})});
     root.classList.add('is-ar-pim-side-note');
     if(questHeadsetSession && gl){
         if(spatialNoteEnabled(record.marker)){

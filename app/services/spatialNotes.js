@@ -11,9 +11,9 @@ export function spatialNote(marker) {
 }
 export const spatialNoteEnabled = marker => marker?.type==='note' && spatialNote(marker).type!=='plain';
 // Keep the anchor unobscured. Three side bays and two vertical bays fit up to five widgets.
-export function noteWidgetPlacement(count) {
-    const bays=[{x:-.98,y:0},{x:0,y:.46},{x:.98,y:0},{x:0,y:-.46},{x:.98,y:-.46}];
-    return bays.slice(0,Math.min(WIDGET_LIMIT,count)).map((bay,index)=>({...bay,width:.86,height:.336,index}));
+export function noteWidgetPlacement(count,includeAddPanel=false) {
+    const bays=[{x:-.98,y:0},{x:0,y:.46},{x:.98,y:0},{x:0,y:-.46},{x:.98,y:-.46},{x:-.98,y:-.46}];
+    return bays.slice(0,Math.min(WIDGET_LIMIT+(includeAddPanel?1:0),count)).map((bay,index)=>({...bay,width:.86,height:.336,index}));
 }
 const widget=(type,title,content='',configuration={})=>({type,title,content,configuration});
 export const DYNAMIC_NOTE_STARTERS=Object.freeze([
