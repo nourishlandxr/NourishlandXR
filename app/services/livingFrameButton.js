@@ -1,14 +1,16 @@
-// Raster artwork with a filled silhouette, not a fragile translucent stroke.
+// Soft glass button rendered to the existing high-resolution XR texture.
 // Logical coordinates match the existing button surface and ray-hit bounds.
 export function drawLivingFrameButton(ctx, labelText, aimed=false,disabled=false) {
     ctx.clearRect(0,0,2048,1024);
     ctx.save();ctx.scale(2048/900,1024/360);
     ctx.shadowBlur=0;ctx.shadowColor='transparent';
-    ctx.fillStyle=disabled?'#63726c':aimed?'#f3ffe9':'#e5f6ed';
+    ctx.fillStyle=disabled?'rgba(31,49,44,.48)':aimed?'rgba(176,218,197,.34)':'rgba(24,53,45,.42)';
     ctx.beginPath();ctx.roundRect(16,16,868,328,48);ctx.fill();
-    const glass=ctx.createLinearGradient(0,24,0,336);glass.addColorStop(0,aimed?'rgba(102,155,135,.92)':'rgba(61,100,86,.86)');glass.addColorStop(.45,'rgba(18,48,39,.88)');glass.addColorStop(1,'rgba(8,28,23,.95)');ctx.fillStyle=glass;
+    const glass=ctx.createLinearGradient(0,24,0,336);glass.addColorStop(0,aimed?'rgba(231,255,242,.28)':'rgba(218,246,231,.16)');glass.addColorStop(.16,aimed?'rgba(134,190,163,.24)':'rgba(119,169,146,.13)');glass.addColorStop(.52,'rgba(17,43,36,.32)');glass.addColorStop(1,'rgba(7,24,22,.55)');ctx.fillStyle=glass;
     ctx.beginPath();ctx.roundRect(24,24,852,312,40);ctx.fill();
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=disabled?'#a3ada8':'#ffffff';
+    ctx.strokeStyle=disabled?'rgba(207,224,215,.24)':aimed?'rgba(239,255,244,.78)':'rgba(213,244,226,.48)';ctx.lineWidth=3;
+    ctx.beginPath();ctx.roundRect(26,26,848,308,38);ctx.stroke();
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=disabled?'rgba(236,242,238,.62)':'#ffffff';
     const text=String(labelText || 'Continue');
     let size=112;ctx.font=`650 ${size}px Manrope, system-ui, sans-serif`;
     while(size>84 && ctx.measureText(text).width>800){size-=2;ctx.font=`650 ${size}px Manrope, system-ui, sans-serif`;}

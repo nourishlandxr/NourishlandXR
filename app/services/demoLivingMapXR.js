@@ -16,7 +16,8 @@ export function createDemoLivingMapXR(gl,scene){
     gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image'].map(k=>[k,gl.getUniformLocation(program,k)]));
     const attributes=['p','n','uv'].map(k=>gl.getAttribLocation(program,k));
-    const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),painted=new WeakMap();
+    const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),materialColours=new WeakMap(),renderNodes=[];
+    scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});
     function geometry(source){
         if(cache.has(source))return cache.get(source);
         const data=source.index?source.toNonIndexed():source;
@@ -44,7 +45,7 @@ export function createDemoLivingMapXR(gl,scene){
         const material=node.material;if(Array.isArray(material))return;
         const entry=geometry(batch?.geometry || node.geometry);
         entry.buffers.forEach((buffer,i)=>{if(attributes[i]<0)return;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(attributes[i]);gl.vertexAttribPointer(attributes[i],i===2?2:3,gl.FLOAT,false,0,0);});
-        const c=material.color.clone().convertLinearToSRGB();gl.uniform3f(uniforms.colour,c.r,c.g,c.b);gl.uniform1f(uniforms.alpha,opacity*material.opacity);
+        let c=materialColours.get(material);if(!c){const colour=material.color.clone().convertLinearToSRGB();c=[colour.r,colour.g,colour.b];materialColours.set(material,c);}gl.uniform3f(uniforms.colour,c[0],c[1],c[2]);gl.uniform1f(uniforms.alpha,opacity*material.opacity);
         gl.uniformMatrix4fv(uniforms.model,false,matrix.elements);
         gl.uniform1f(uniforms.textured,material.map?1:0);
         if(material.map){
@@ -62,17 +63,15 @@ export function createDemoLivingMapXR(gl,scene){
     return {
         draw(view,origin,rotation,opacity,guidance=''){
             if(opacity<=0)return;
-            const key=[...view.projectionMatrix,...view.transform.inverse.matrix,origin.x,origin.y,origin.z,rotation?.x ?? rotation,rotation?.y ?? 0,rotation?.z ?? 0,rotation?.w ?? 0,opacity,guidance].join(':');
-            if(painted.get(view)===key)return;
-            painted.set(view,key);
             root.compose(new THREE.Vector3(origin.x,origin.y-.025*(1-opacity),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(LIVING_MAP_WORLD_SCALE*(.94+.06*opacity)));
             gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
-            scene.traverseVisible(node=>{if(!node.isMesh && !node.isLine)return;world.multiplyMatrices(root,node.matrixWorld);drawNode(node,world,opacity,node.isInstancedMesh?batchInstances(node):null);});
+            for(const node of renderNodes){let visible=true;for(let parent=node;parent;parent=parent.parent)if(!parent.visible){visible=false;break;}if(!visible)continue;world.multiplyMatrices(root,node.matrixWorld);drawNode(node,world,opacity,node.isInstancedMesh?batchInstances(node):null);}
             if(guidance){
                 const text=translateNxrText(guidance);
                 if(text!==lastGuidance){const ctx=localizedCanvasContext(cloudCanvas.getContext('2d'));ctx.clearRect(0,0,1024,160);ctx.fillStyle='rgba(19,48,37,.95)';ctx.beginPath();ctx.roundRect(4,4,1016,152,76);ctx.fill();ctx.strokeStyle='#b8d7a4';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#fff8e4';ctx.font='600 44px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,512,80,950);cloudTexture.needsUpdate=true;lastGuidance=text;}
-                const eye=new THREE.Matrix4().fromArray(view.transform.inverse.matrix).invert(),facing=new THREE.Quaternion().setFromRotationMatrix(eye);
-                world.compose(new THREE.Vector3(origin.x,origin.y+.32,origin.z),facing,new THREE.Vector3(.30,.047,1));drawNode(cloud,world,opacity);
+                // Guidance belongs to the landscape plate. It no longer billboards
+                // toward the headset, so head turns do not make it feel locked on.
+                world.compose(new THREE.Vector3(origin.x,origin.y+.32,origin.z),livingMapRotation(rotation),new THREE.Vector3(.30,.047,1));drawNode(cloud,world,opacity);
             }
             gl.depthMask(true);gl.disable(gl.BLEND);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.activeTexture(gl.TEXTURE0);
         },

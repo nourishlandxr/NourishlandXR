@@ -53,7 +53,7 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     const quest=panelSettingsControls({headset:true,handVisualMode:'outline'});
     const graphics=panelSettingsControls({graphicsOpen:true,rainQuality:'hq',graphicsQuality:'high'});
     const performance=panelSettingsControls({graphicsOpen:true,headset:true,performanceSettings:{actual:120,supported:[72,90,120],showFps:true},demoSound:{music:.5,fx:.5,haptics:true}});
-    const actions=['InfoOpacity','TextSize','SpatialScale','FloorOffset','HeroDice','CellOpacity','GraphicsMenu','SettingsHelp','CloseSettings'];
+    const actions=['InfoOpacity','TextSize','SpatialScale','FloorOffset','HeroDice','LivingFrame','CellOpacity','GraphicsMenu','SettingsHelp','CloseSettings'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
     assert.deepEqual(quest.map(item=>item.action),[...actions.slice(0,4),'HandMode',...actions.slice(4)]);
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').value,.5);
@@ -64,6 +64,10 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality','RainQuality','Insects','OrbModel','SettingsHelp','CloseSettings']);
     assert.ok(performance.find(item=>item.action==='RefreshRate').y<performance.find(item=>item.action==='ShowFps').y);
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Hand tracking');
+    assert.equal(desktop.find(item=>item.action==='HeroDice').label,'Floor dice');
+    assert.equal(desktop.find(item=>item.action==='HeroDice').selected,true);
+    assert.equal(desktop.find(item=>item.action==='LivingFrame').label,'Living Frame');
+    assert.equal(desktop.find(item=>item.action==='LivingFrame').selected,true);
     assert.equal(panelSettingsControls({headset:true,handVisualMode:'pointer'}).find(item=>item.action==='HandMode').label,'Pointer');
     for(const items of [desktop,quest,graphics,performance]){
         for(const [index,a] of items.entries()){

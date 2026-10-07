@@ -212,7 +212,8 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,264),
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
-        {...choice('HeroDice',getSpatialVisualSettings().heroDice===false?'Off':'On','hero-dice','Floor dice',488),height:50},
+        {...choice('HeroDice','Floor dice','hero-dice','Floor dice',488,56,438),height:50,selected:getSpatialVisualSettings().heroDice!==false},
+        {...choice('LivingFrame','Living Frame','living-frame','Living Frame',488,506,438),height:50,selected:getSpatialVisualSettings().livingFrame!==false},
         slider('CellOpacity','cell-opacity','PIMO / LIMO cell glass',cellOpacity,0,1,.01,570),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
@@ -465,6 +466,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         }
         if(action==='Insects')setSpatialVisualSettings({insects:!getSpatialVisualSettings().insects});
         if(action==='HeroDice')setSpatialVisualSettings({heroDice:getSpatialVisualSettings().heroDice===false});
+        if(action==='LivingFrame')setSpatialVisualSettings({livingFrame:getSpatialVisualSettings().livingFrame===false});
         if(action==='RainQuality'){
             const values=Object.keys(RAIN_QUALITIES);rainQuality=values[(values.indexOf(rainQuality)+1)%values.length];setSpatialVisualSettings({rainQuality});
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);
@@ -557,7 +559,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(item.kind==='tab'){button.setAttribute('role','tab');button.setAttribute('aria-selected',String(item.selected));button.setAttribute('aria-controls',contentId);button.id=contentId+'-'+item.action;button.tabIndex=item.selected?0:-1;}
         if(item.action===guidanceAction)button.classList.add('is-guidance-target');
         if(item.action==='Utility:close-confirm')button.classList.add('is-glass-danger');
-        if(item.action.startsWith('Object:')){button.setAttribute('aria-pressed',String(Boolean(item.selected)));button.classList.toggle('is-selected',Boolean(item.selected));}
+        if(item.action.startsWith('Object:') || ['HeroDice','LivingFrame'].includes(item.action)){button.setAttribute('aria-pressed',String(Boolean(item.selected)));button.classList.toggle('is-selected',Boolean(item.selected));}
         button.addEventListener('click',event=>{event.stopPropagation();if(performance.now()<minimizedDragUntil)return;act(item.action);});return button;
     }
     function syncPanelOpenerButtons(){

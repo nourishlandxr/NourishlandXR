@@ -28,13 +28,14 @@ test('XR skips painting the hidden desktop Living Frame canvas from startup',()=
  vm.runInNewContext(body+'}',{arWelcomeCanvas:{getContext(){throw Error('Hidden canvas must not paint');}},simulatedMode:false});
  const context=vm.createContext({arWelcomeCanvas:{},simulatedMode:false});vm.runInContext(body+'}',context);vm.runInContext('paintWelcomeLayer(0)',context);
 });
-test('native map draws a planting cluster once per eye and reuses its uploaded mesh',()=>{
+test('native map redraws every XR view while reusing mesh uploads and cached material colours',()=>{
  const previous=globalThis.document;globalThis.document={createElement:()=>({width:0,height:0})};
  const calls=[],gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(_p,name)=>name},{get:(target,key)=>key in target?target[key]:key.startsWith('create')?()=>({}):key===key.toUpperCase()?key:(...args)=>calls.push([key,...args])});
  const scene=new THREE.Scene(),geometry=new THREE.BoxGeometry(1,1,1),material=new THREE.MeshBasicMaterial({color:'#456b38'}),cluster=new THREE.InstancedMesh(geometry,material,65);
+ let colourConversions=0;const clone=material.color.clone.bind(material.color);material.color.clone=()=>{colourConversions++;return clone();};
  for(let i=0;i<65;i++)cluster.setMatrixAt(i,new THREE.Matrix4().makeTranslation(i,0,0));scene.add(cluster);scene.updateMatrixWorld();
  const renderer=createDemoLivingMapXR(gl,scene),matrix=new THREE.Matrix4().elements,view={projectionMatrix:matrix,transform:{inverse:{matrix}}};
- try{renderer.draw(view,{x:0,y:1,z:-1},0,1);const uploads=calls.filter(c=>c[0]==='bufferData').length;renderer.draw(view,{x:0,y:1,z:-1},0,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,1,'repeated view state is skipped');const otherEye={projectionMatrix:new THREE.Matrix4().makeRotationY(.02).elements,transform:{inverse:{matrix:new THREE.Matrix4().elements}}};renderer.draw(otherEye,{x:0,y:1,z:-1},0,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,2,'the other eye receives its own draw');assert.equal(calls.filter(c=>c[0]==='bufferData').length,uploads);assert.equal(calls.find(c=>c[0]==='drawArrays')[3],65*36);}
+ try{renderer.draw(view,{x:0,y:1,z:-1},0,1);const uploads=calls.filter(c=>c[0]==='bufferData').length;renderer.draw(view,{x:0,y:1,z:-1},0,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,2,'a cleared XR framebuffer is redrawn');const otherEye={projectionMatrix:new THREE.Matrix4().makeRotationY(.02).elements,transform:{inverse:{matrix:new THREE.Matrix4().elements}}};renderer.draw(otherEye,{x:0,y:1,z:-1},0,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,3,'the other eye receives its own draw');assert.equal(calls.filter(c=>c[0]==='bufferData').length,uploads);assert.equal(colourConversions,1,'static colour conversion is cached');assert.equal(calls.find(c=>c[0]==='drawArrays')[3],65*36);}
  finally{renderer.destroy();geometry.dispose();material.dispose();globalThis.document=previous;}
 });
 test('map placements explain entrance, local information and swales; PIMO reopens from its initial view',()=>{

@@ -2,15 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../app/services/livingFrameButton.js';
 
-test('button uses two filled edges and no stroke or text blur',()=>{
+test('button uses translucent glass, a soft edge highlight and crisp text',()=>{
     const calls=[];
-    const ctx={createLinearGradient:()=>({addColorStop(){}}),clearRect:(...a)=>calls.push(['clear',...a]),save(){},restore(){},scale:(...a)=>calls.push(['scale',...a]),beginPath(){},roundRect:(...a)=>calls.push(['rect',...a]),fill:()=>calls.push(['fill']),fillText:(...a)=>calls.push(['text',...a]),measureText:text=>({width:text.length*40})};
+    const ctx={createLinearGradient:()=>({addColorStop(){}}),clearRect:(...a)=>calls.push(['clear',...a]),save(){},restore(){},scale:(...a)=>calls.push(['scale',...a]),beginPath(){},roundRect:(...a)=>calls.push(['rect',...a]),fill:()=>calls.push(['fill']),stroke:()=>calls.push(['stroke']),fillText:(...a)=>calls.push(['text',...a]),measureText:text=>({width:text.length*40})};
     drawLivingFrameButton(ctx,'Start the demo');
     assert.equal(ctx.shadowBlur,0);assert.equal(ctx.shadowColor,'transparent');
-    assert.equal(calls.filter(call=>call[0]==='fill').length,2);
+    assert.equal(calls.filter(call=>call[0]==='fill').length,2);assert.equal(calls.filter(call=>call[0]==='stroke').length,1);
     assert.deepEqual(calls[0],['clear',0,0,2048,1024]);
     assert.deepEqual(calls.find(call=>call[0]==='text'),['text','Start the demo',450,180,780]);
-    assert.equal(ctx.fillStyle,'#ffffff');
+    assert.equal(ctx.fillStyle,'#ffffff');assert.deepEqual(calls.filter(call=>call[0]==='rect').at(-1),['rect',26,26,848,308,38]);
 });
 
 test('button anisotropy is capped and safely optional',()=>{

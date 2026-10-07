@@ -37,7 +37,8 @@ export function createLivingMapTwoGrip(){
             if(pair){
                 const a=held.find(s=>s.source===pair.a),b=held.find(s=>s.source===pair.b);
                 if(!a || !b){pair=null;return null;}
-                const current=pairFrame(a,b);if(!current){pair=null;return null;}
+                const ordered=[a,b].sort((left,right)=>left.handedness==='left'?-1:right.handedness==='left'?1:0);
+                const current=pairFrame(ordered[0],ordered[1]);if(!current){pair=null;return null;}
                 position=vector(a.position).add(vector(b.position)).multiplyScalar(.5).sub(pair.midpoint).add(pair.origin);
                 return limitLivingMapTilt(current.multiply(pair.frame.clone().invert()).multiply(pair.rotation));
             }
@@ -46,8 +47,9 @@ export function createLivingMapTwoGrip(){
                 if(a.handedness===b.handedness || !['left','right'].includes(a.handedness) || !['left','right'].includes(b.handedness))continue;
                 const ca=livingMapGripContact(a.position,origin,rotation),cb=livingMapGripContact(b.position,origin,rotation);
                 if(!ca || !cb || ca.x*cb.x+ca.z*cb.z>=0)continue;
-                const frame=pairFrame(a,b);if(!frame)continue;
-                pair={a:a.source,b:b.source,frame,rotation:quaternion(rotation),midpoint:vector(a.position).add(vector(b.position)).multiplyScalar(.5),origin:vector(origin)};position=vector(origin);return null;
+                const ordered=[a,b].sort((left,right)=>left.handedness==='left'?-1:right.handedness==='left'?1:0);
+                const frame=pairFrame(ordered[0],ordered[1]);if(!frame)continue;
+                pair={a:ordered[0].source,b:ordered[1].source,frame,rotation:quaternion(rotation),midpoint:vector(a.position).add(vector(b.position)).multiplyScalar(.5),origin:vector(origin)};position=vector(origin);return null;
             }
             return null;
         }

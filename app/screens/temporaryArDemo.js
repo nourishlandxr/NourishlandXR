@@ -5170,12 +5170,16 @@ function introWorldAnchorFromViewer(matrix) {
 
 function drawIntroSpatial(view) {
     if ((!introSceneActive && !arWelcomeShowcaseActive) || !viewerMatrix || !program || !buffer) return;
+    if(getSpatialVisualSettings().livingFrame===false){
+        if(arWelcomeShowcaseActive && arWelcomeClockFrame!==introFrameToken){arWelcomeClock.tick(Date.now(),session?.visibilityState!=='hidden');arWelcomeClockFrame=introFrameToken;}
+        return;
+    }
     if(!introWorldAnchor){
         introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
         limDiagnostic('root-placement',{anchor: introWorldAnchor ? Array.from(introWorldAnchor.slice(12,15)) : null,mode:sessionMode});
     }
     const now = performance.now();
-    let openingCopyRevealActive=false;
+    let openingCopyRevealActive=false,mapAnimating=false;
     if(arWelcomeShowcaseActive){
         // XR sessions may report visible-blurred (or omit visibilityState).
         // Only a truly hidden session should pause the opening clock.
@@ -5184,7 +5188,7 @@ function drawIntroSpatial(view) {
         if(arWelcomeOpeningActive && !reducedMotion){let start=DEMO_WELCOME_TITLE_HOLD_MS;for(const paragraph of introBoardBody.split(/\n\n/)){const age=arWelcomeClock.elapsed-start;if(age>=0 && age<1100)openingCopyRevealActive=true;start+=demoParagraphReadingTime(paragraph);}}
         const rootRefreshState={milestone:arWelcomeRootMilestone,elapsed:arWelcomeClock.elapsed,milestoneStartedAt:arWelcomeRootMilestoneStartedAt,reducedMotion};
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
-        const mapAnimating=introBoardStep==='UTILITY 1.1' && livingMapReveal(demoLivingMapElapsed(now),reducedMotion).preview>0;
+        mapAnimating=introBoardStep==='UTILITY 1.1' && livingMapReveal(demoLivingMapElapsed(now),reducedMotion).preview>0;
         const paragraphFadeActive=!reducedMotion && now-introBoardParagraphFadeStartedAt<1100;
         if(openingCopyRevealActive || mapAnimating || paragraphFadeActive || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
             introBoardTextureDirty=true;
@@ -5193,7 +5197,7 @@ function drawIntroSpatial(view) {
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
     const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<1100;
-    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS;
+    const textureInterval=mapAnimating?250:limActivation?.active || textIsTyping || paragraphFadeActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS;
     if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
@@ -5723,6 +5727,11 @@ function drawMarker(view) {
             fadeOpacity:record.demoTotemFaded ? Math.max(.78,demoTotemVisualOpacity(record)) : 1
         });
     });
+    const mapPiece=markers.find(record=>record.demoMapPiece),mapTarget=demoLivingMapPlacement?.current(demoLivingMapElapsed());
+    if(mapPiece?.position && mapTarget && demoLivingMapOrigin){
+        const destination=livingMapWorldPoint(mapTarget,demoLivingMapOrigin,demoLivingMapOrientation),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        drawSpatialGroundArrowPath(gl,tetherRenderer,view,mapPiece.position,destination,{width:.032,dashLength:.18,gapLength:.1,arrowSpacing:.5,arrowLength:.18,arrowWidth:.13,color:[.86,.96,.62,reduced?.86:.72+Math.sin(performance.now()/420)*.12]});
+    }
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible && demoAreaVisible(record));
     if (linkedTotems.length >= 2) {
         const [first, second] = linkedTotems;
