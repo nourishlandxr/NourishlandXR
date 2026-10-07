@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 const smooth = value => { const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t); };
 export const LIVING_MAP_REVEAL_READY_MS=7600;
+export function livingMapGreeneryProgress(elapsed,index=0,reduced=false){return reduced?1:smooth((elapsed-5700-Math.min(7,index)*90)/1100);}
 // Reading time is preserved even when motion is reduced.
 export function livingMapReveal(elapsed,reduced=false){
     const dissolve=smooth((elapsed-4400)/(reduced?450:1700));
@@ -12,7 +13,7 @@ export const LIVING_MAP_WORLD_SCALE=.085;
 export const LIVING_MAP_SURFACE_HALF_WIDTH=6.3*LIVING_MAP_WORLD_SCALE;
 export const LIVING_MAP_SURFACE_HALF_DEPTH=4.2*LIVING_MAP_WORLD_SCALE;
 // The loose miniature must be pickable from the side as well as the front.
-export function livingMapTotemRayHit(ray,center,radius=.125){
+export function livingMapTotemRayHit(ray,center,radius=.20){
     if(!ray?.origin || !ray.direction || !center)return null;
     const start=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),direction=new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z);
     if(direction.lengthSq()<1e-8)return null;

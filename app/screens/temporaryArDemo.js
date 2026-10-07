@@ -6,7 +6,7 @@ import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '..
 import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
 import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress,LIVING_MAP_ORB_SETTLE_MS} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
-import {livingMapReveal,drawLivingMapPreview,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapRotation,livingMapTotemRayHit} from '../services/demoLivingMapReveal.js';
+import {livingMapReveal,drawLivingMapPreview,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapRotation,livingMapTotemRayHit,LIVING_MAP_REVEAL_READY_MS} from '../services/demoLivingMapReveal.js';
 import {createDemoLivingMapXR} from '../services/demoLivingMapXR.js';
 import {livingMapPlacementCopy,resetDemoPlantForMap} from '../services/demoLivingMapPresentation.js';
 import {createLivingMapGripInput,limitLivingMapTilt} from '../services/demoLivingMapGrip.js';
@@ -27,7 +27,8 @@ function updateSpatialLivingMap(now){
     }
     if(reveal.ready && !markers.some(record=>record.demoMapPiece) && demoLivingMapPlacement?.current(elapsed))spawnDemoMapTotem();
     const placedCount=demoLivingMapPlacement?.snapshot().length || 0;
-    if(reveal.ready && demoMapNarrationCount!==placedCount){
+    const flatPreview=appRoot?.querySelector('[data-demo-living-map]');if(flatPreview)flatPreview.hidden=reveal.preview<=0;
+    if(reveal.appear>0 && demoMapNarrationCount!==placedCount){
         clearDemoNarration({preserveAction:true});demoMapNarrationCount=placedCount;
         introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));
         introBoardParagraphFadeStartedAt=now;introBoardParagraphFadeTimes=[now];introBoardTextureDirty=true;
@@ -787,18 +788,33 @@ function currentDemoStepSignature() {
     return [demoOrientationStep,demoTutorialStep,introBoardStep,introBoardTitle,demoStage,placementReady,demoWebModeOpen,nativeConnectionState?.phase || ''].join('|');
 }
 
+let demoFastSkipActive=false;
+function skipDemoMapWaits(){
+    if(introBoardStep!=='UTILITY 1.1' || demoMapIntroPaused || !demoLivingMapPlacement)return false;
+    const placed=demoLivingMapPlacement.snapshot();if(placed.length>=3)return false;
+    const now=performance.now(),elapsed=demoLivingMapElapsed(now),ready=Math.max(LIVING_MAP_REVEAL_READY_MS,placed.length===2?placed[1].at+LIVING_MAP_ORB_SETTLE_MS:0);
+    if(elapsed<ready)demoLivingMapStartedAt=now-ready;
+    updateSpatialLivingMap(now);return true;
+}
 function skipCurrentDemoStep() {
-    // Y is a tutorial testing shortcut. It never substitutes for placing or
-    // moving an object, working in Web Mode, or completing a live connection.
-    if (placementReady || demoHeldIndex >= 0 || demoWebModeOpen || nativeConnectionState && nativeConnectionState.phase!=='connected') return false;
-    const before = currentDemoStepSignature();
-    const skipNarration = skipDemoNarration;
-    skipNarration?.();
-    if (currentDemoStepSignature() !== before) return true;
-    const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    if (!continueButton || continueButton.hidden || continueButton.disabled) return Boolean(skipNarration);
-    continueButton.click();
-    return true;
+    if(demoHeldIndex>=0 || demoWebModeOpen || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return false;
+    demoFastSkipActive=true;
+    try{
+        const before=currentDemoStepSignature(),skipNarration=skipDemoNarration;
+        skipNarration?.();
+        if(currentDemoStepSignature()!==before)return true;
+        if(skipDemoMapWaits())return true;
+        // Skip reading delays without inventing a placement or plant choice.
+        if(placementReady || markers.some(record=>record.demoNativeChoicePending) || nativeConnectionState && nativeConnectionState.phase!=='connected')return Boolean(skipNarration);
+        const button=appRoot?.querySelector('[data-tryit-intro-continue]');
+        if(!button || button.hidden || button.disabled)return Boolean(skipNarration);
+        button.click();skipDemoMapWaits();return true;
+    }finally{
+        demoFastSkipActive=false;
+        introBoardParagraphFadeTimes=introBoardParagraphFadeTimes.map(()=>-Infinity);
+        introBoardParagraphFadeStartedAt=-Infinity;introTextureUploadedAt=-Infinity;introBoardTextureDirty=true;
+        syncDemoPanelActions();paintWelcomeLayer(performance.now());
+    }
 }
 
 async function retryQuestImmersive() {
@@ -1334,7 +1350,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
         boardTypingTimer = setTimeout(finishTyping, 800);
     };
     skipDemoNarration = finishTyping;
-    if (typing) {
+    if (typing && !demoFastSkipActive) {
         paragraph.textContent = '';
         panel.classList.add('is-typing');
         boardTypingTimer = setTimeout(revealParagraph, 700);
@@ -1500,7 +1516,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         if(options.stepLabel==='UTILITY 1.1' && simulatedMode && demoLivingMapScene){
             board.classList.remove('is-lim-shared-surface');
             const instructions=document.createElement('p');instructions.dataset.livingMapInstructions='';instructions.className='tryit-map-caption';board.append(instructions);
-            const map=document.createElement('canvas');map.dataset.demoLivingMap='';map.setAttribute('role','img');map.setAttribute('aria-label','3D garden. Place three Totems: entrance, open forest, then swales.');board.append(map);
+            const map=document.createElement('canvas');map.dataset.demoLivingMap='';map.hidden=Boolean(options.skipMapPreview);map.setAttribute('role','img');map.setAttribute('aria-label','3D garden. Place three Totems: entrance, open forest, then swales.');board.append(map);
             const replay=document.createElement('button');replay.type='button';replay.className='tryit-map-replay';replay.textContent='Replay living map';replay.onclick=()=>handleDemoPanelAction('replay-map');board.append(replay);
             const play=document.createElement('button');play.type='button';play.className='tryit-map-replay';play.dataset.demoMapPlace='';play.textContent='Place Totem';play.onclick=()=>placeDemoMapTotem(true);replay.before(play);
             map.addEventListener('pointerup',event=>{
@@ -1558,7 +1574,9 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             updateSequenceParagraph({index:paragraphs.length-1,paragraph:paragraphs.at(-1) || '',phase:'reading',startedAt:-Infinity});
             finishSequence();
         };
-        boardTypingTimer=setTimeout(()=>demoParagraphSequence?.start(),typingStartDelay);
+        if(demoFastSkipActive)skipDemoNarration();
+        else boardTypingTimer=setTimeout(()=>demoParagraphSequence?.start(),typingStartDelay);
+    }else if(demoFastSkipActive){finishTyping();
     }else{
         boardTypingTimer = setTimeout(revealNextParagraph, typingStartDelay);
         boardTypingWatchdogTimer = setTimeout(
@@ -2137,7 +2155,8 @@ function showArWelcomeShowcase() {
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
         syncDemoPanelActions();
         panel.classList.add('is-typing');paintOpeningCopy('');
-        boardTypingTimer=setTimeout(revealOpeningParagraph,700);
+        if(demoFastSkipActive)finishOpeningCopy();
+        else boardTypingTimer=setTimeout(revealOpeningParagraph,700);
     };
     rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitingButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(waitingButton){waitingButton.hidden=false;waitingButton.disabled=false;waitingButton.textContent='Continue';waitingButton.onclick=()=>{suppressSessionSelectUntil=performance.now()+700;clearDemoNarration();beginOpeningCopy();};}syncDemoPanelActions();
@@ -2576,14 +2595,22 @@ function showDemoLivingMap(){
     demoMapNarrationCount=-1;closeDemoKnowledge(true);releaseHeldDemoRecord();
     for(const record of markers){if(resetDemoPlantForMap(record)){knowledgeRenderer?.clear(record);infoPanel?.clearPlant?.(record);}if(record.demoType==='zone'){record.demoExpanded=false;record.totemSelectedCard='';record.totemCardsRefreshed=0;}}
     const step=guidedDemoStep('UTILITY 1.1');
-    showIntroBoard(step.title,'Let’s test adding these elements.','Continue',()=>{
-        demoMapIntroPaused=false;demoLivingMapStartedAt=performance.now();demoMapNarrationCount=-1;
-        showIntroBoard(step.title,'The map will appear in your space. Then pick up the highlighted Totem and place it on the pulsing circle.','Continue',showDemoBeforePlanting,{stepLabel:step.id,historyPhase:'activity',dynamicCopy:true,nextGuide:step.hint});
-    },{stepLabel:step.id,historyPhase:'intro',dynamicCopy:true,nextGuide:''});
+    showIntroBoard(step.title,'Let’s test adding these elements.','Continue',startDemoLivingMapActivity,{stepLabel:step.id,historyPhase:'intro',dynamicCopy:true,nextGuide:''});
     infoPanel?.showLearning({id:'demo-living-map',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);infoPanel?.setMediaCollapsed(true);infoPanel?.minimize();
     infoPanel?.setContextualHint('Grip both opposite edges to carry, turn and gently tilt the landscape. With tracked hands, pinch both edges. Release either grip to leave it in place. Place the Totem beside the frame on the pulsing circle.');
     paintWelcomeLayer(performance.now());
+}
+function startDemoLivingMapActivity(){
+    captureCurrentDemoSlide();
+    demoMapIntroPaused=false;demoLivingMapStartedAt=performance.now()-5700;demoMapNarrationCount=-1;
+    const step=guidedDemoStep('UTILITY 1.1');
+    // Continue releases the existing sample directly into space. Keep the
+    // same frame and scene instead of loading a second flat-map screen.
+    rememberDemoSlide({kind:'intro',stepLabel:step.id,title:step.title,body:livingMapPlacementCopy(0),buttonLabel:'Continue',onContinue:showDemoBeforePlanting,options:{stepLabel:step.id,historyPhase:'activity',skipMapPreview:true,dynamicCopy:true,nextGuide:step.hint}});
+    const button=appRoot?.querySelector('[data-tryit-intro-continue]');
+    if(button){button.hidden=false;button.disabled=false;button.onclick=()=>{if(button.disabled || introBoardStep!=='UTILITY 1.1' || demoMapIntroPaused)return;button.disabled=true;clearDemoNarration();showDemoBeforePlanting();};}
+    setIntroBoardNextGuide(step.hint);updateSpatialLivingMap(performance.now());syncDemoPanelActions();paintWelcomeLayer(performance.now());
 }
 
 function clearDemoMapPiece(){
@@ -4508,6 +4535,8 @@ function renderInterface(simulated) {
         bindHoldToConfirmButton(skipButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: () => skipCurrentDemoStep() }),
         bindHoldToConfirmButton(exitButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: requestDemoClose })
     ];
+    const skipKey=event=>{if(event.key?.toLowerCase()!=='y' || event.repeat || event.ctrlKey || event.altKey || event.metaKey || event.target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;if(skipCurrentDemoStep())event.preventDefault();};
+    window.addEventListener('keydown',skipKey);holdCleanups.push(()=>window.removeEventListener('keydown',skipKey));
     demoHoldButtonCleanup = () => holdCleanups.forEach(cleanup => cleanup());
     const reflowDemoViewport = () => {
         markers.filter(record => record.demoType === 'plant' && record.demoExpanded).forEach(record => {
@@ -6108,7 +6137,10 @@ async function startImmersive() {
         // its grip. A visible nearer panel still wins, matching the laser.
         session.addEventListener('squeezestart',event=>{
             if(event.inputSource?.hand || introBoardStep!=='UTILITY 1.1' || !demoLivingMapReady() || demoKnowledgeIsModal() || demoWebModeOpen)return;
-            const ray=captureDemoInputEventRay(event),piece=markers.find(record=>record.demoMapPiece),hit=piece && demoRecordRayHit(piece,ray);
+            const ray=captureDemoInputEventRay(event),piece=markers.find(record=>record.demoMapPiece);
+            const gripPose=event.inputSource.gripSpace?event.frame?.getPose(event.inputSource.gripSpace,referenceSpace)?.transform.matrix:null;
+            const near=piece && gripPose && Math.hypot(gripPose[12]-piece.position.x,gripPose[13]-piece.position.y,gripPose[14]-piece.position.z)<.22;
+            const hit=piece && (near?{distance:0,point:piece.position}:demoRecordRayHit(piece,ray));
             if(!ray || !hit)return;
             if([infoPanel?.hit(ray),demoNoteHit(ray)].filter(Boolean).some(surface=>surface.distance<hit.distance))return;
             demoGrabInputSource=event.inputSource;

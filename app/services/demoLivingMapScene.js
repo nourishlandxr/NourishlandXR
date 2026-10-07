@@ -4,6 +4,7 @@ import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapIt
 import {livingMapRoutes,sampleLivingMapRoute} from './demoLivingMapRoute.js';
 import {createLivingMapVisitors,LIVING_MAP_VISITOR_COLOURS} from './demoLivingMapVisitors.js';
 import {createTotemSculptureGeometry} from './spatialTotemSculpture.js';
+import {livingMapGreeneryProgress} from './demoLivingMapReveal.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
@@ -82,6 +83,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         line.visible=false;fill.visible=false;
         return {area,line,fill};
     });
+    const plantGrowthIndices=new Map(model.items.filter(item=>item.type==='plant').map((item,index)=>[item.id,index]));
     const markers = model.items.map((item,index) => {
         const group = new THREE.Group(); group.position.set(item.x,0,item.z);group.visible=false;scene.add(group);
         let orb=null;
@@ -140,10 +142,13 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const visitors=model.interactive?createLivingMapVisitors(model,routes):null;
     const pegs=[];
     if(visitors){
-        const profile=[[0,0],[.105,0],[.13,.04],[.12,.18],[.09,.29],[.065,.33],[0,.33]].map(([x,y])=>new THREE.Vector2(x,y));
+        // A rounded foot and shoulder add a second visual layer within the
+        // same body geometry: no additional meshes or draw calls per person.
+        const profile=[[0,0],[.09,0],[.12,.012],[.13,.04],[.125,.07],[.115,.09],[.115,.19],[.10,.25],[.08,.29],[.065,.33],[0,.33]].map(([x,y])=>new THREE.Vector2(x,y));
         const bodyGeometry=geometry(new THREE.LatheGeometry(profile,12));
+        const colours=[];for(let i=0;i<bodyGeometry.attributes.position.count;i++){const y=bodyGeometry.attributes.position.getY(i),shade=y<.08?.72:y>.26?1.12:1;colours.push(shade,shade,shade);}bodyGeometry.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));
         for(const geo of [bodyGeometry,sphere]){
-            const mat=new THREE.MeshLambertMaterial({color:'#ffffff'});materials.set('peg-'+pegs.length,mat);
+            const mat=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:geo===bodyGeometry});materials.set('peg-'+pegs.length,mat);
             const batch=new THREE.InstancedMesh(geo,mat,5);batch.visible=false;batch.userData.livingMapDynamic=true;
             LIVING_MAP_VISITOR_COLOURS.forEach((colour,i)=>batch.setColorAt(i,new THREE.Color(colour)));
             batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(batch);pegs.push(batch);
@@ -218,7 +223,8 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 markers.forEach(({item,group,ring,orb})=>{
                     const born=bornFor(item.id);
                     const landscapePlant=model.concept && item.type==='plant';
-                    group.visible=landscapePlant || born>0;group.scale.setScalar(landscapePlant?1:Math.max(.001,born));
+                    const growth=landscapePlant?livingMapGreeneryProgress(elapsed,plantGrowthIndices.get(item.id),reducedMotion):born;
+                    group.visible=landscapePlant || born>0;group.scale.setScalar(landscapePlant?Math.max(.001,growth):Math.max(.001,born));
                     group.position.y=landscapePlant?0:item.type==='zone'?-.68*(1-born):.12*(1-born);
                     if(landscapePlant){orb.visible=born>0;orb.scale.setScalar(.38*born);orb.material.opacity=.32*born;}
                     const age=elapsed-schedule.items[item.id].startAt;
@@ -227,7 +233,8 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 paths.forEach((path,index)=>{const arrival=placed[index+1],t=model.interactive?arrival?(reducedMotion?1:Math.max(0,Math.min(1,(elapsed-arrival.at-200)/1500))):0:progress.path;path.visible=t>0;path.geometry.setDrawRange(0,Math.floor(t*32)*30);});
                 const current=placement?.current(elapsed);targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.09*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.65:.5+.18*Math.sin(elapsed/430);}
                 if(welcomeScreen){welcomeScreen.visible=placed.length>0;welcomeScreen.position.set(model.areas[0].totem.x-.65,.62,model.areas[0].totem.z);welcomeScreen.quaternion.copy(camera.quaternion);welcomeScreen.scale.setScalar(Math.max(.001,bornFor(model.areas[0].id)));}
-                scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,progress.scenery);shrub.count=Math.floor(planted*progress.scenery);
+                const greenery=model.interactive?livingMapGreeneryProgress(elapsed,0,reducedMotion):progress.scenery;
+                scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,greenery);shrub.count=planted;
                 if(paint && !(visitors && placed.length>0))renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
             }
 
@@ -235,6 +242,9 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         if(paint && visitors && placed.length>0)renderer.render(scene,camera);
         return {placed,bornFor};
     }
+    // Static greenery is ready before the first flat preview or spatial eye
+    // draws. Only Orbs, Totems and visitors depend on placement progress.
+    update(0,true,false);
     return {
         canvas,schedule,scene,guidance,totemLabel,routes,visitors,
         update:(elapsed,reduced)=>update(elapsed,reduced,false),

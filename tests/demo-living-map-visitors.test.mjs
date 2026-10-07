@@ -12,6 +12,13 @@ test('visible Totem routes use the gap between trees and every segment clears th
         for(const route of routes){assert.deepEqual(sampleLivingMapRoute(route,0),{x:route[0].x,z:route[0].z});const end=sampleLivingMapRoute(route,1);assert.ok(Math.hypot(end.x-route.at(-1).x,end.z-route.at(-1).z)<1e-8);}
     }
 });
+test('rapid Totem placement queues welcome and Orb exploration before the final Area',()=>{
+ const model=createDemoLivingMapConcept({interactive:true}),visitors=createLivingMapVisitors(model,livingMapRoutes(model));
+ const placed=model.areas.map((area,i)=>({id:area.id,at:[0,250,2500][i]})),seen=Array.from({length:5},()=>new Set()),orbs=Array.from({length:5},()=>new Set());
+ for(let t=0;t<180000;t+=16){const states=visitors.update(t,placed.filter(p=>p.at<=t));for(const s of states){if(s.scale && s.focus){seen[s.index].add(s.interaction);if(s.interaction==='orb')orbs[s.index].add(s.focus);}if(t===4000)assert.ok(s.stage<3,'rapid clicks cannot skip visitors ahead');}}
+ for(let i=0;i<5;i++){assert.ok(seen[i].has('welcome'));assert.equal(orbs[i].size,3);assert.ok(seen[i].has('note'));}
+ assert.ok(new Set(visitors.states.map(s=>s.dwell)).size>1);assert.ok(new Set(visitors.states.map(s=>s.speed)).size>1);
+});
 
 test('five peg visitors progress through welcome, Orb discovery and ongoing third-Totem Notes without tree collisions',()=>{
     const model=createDemoLivingMapConcept({interactive:true}),routes=livingMapRoutes(model),visitors=createLivingMapVisitors(model,routes),obstacles=livingMapObstacles(model);
@@ -27,7 +34,7 @@ test('five peg visitors progress through welcome, Orb discovery and ongoing thir
             assert.ok((s.x/6.3)**2+(s.z/4.2)**2<=1,'visitor stays on plate');
             if(previous[s.index])assert.ok(Math.hypot(s.x-previous[s.index].x,s.z-previous[s.index].z)<=.011,'no stage-change teleport');
             interactions[count-1].add(s.interaction);if(s.interaction==='orb')orbIds.add(s.focus);
-            if(count===3 && s.interaction!=='walk')assert.equal(s.focus,model.areas[2].id);
+            if(s.stage===3 && s.interaction!=='walk' && s.pause<=0)assert.equal(s.focus,model.areas[2].id);
         }
         previous=states.map(s=>({x:s.x,z:s.z}));
     }
