@@ -22,3 +22,16 @@ test('paused sample contains greenery and later spatial frames retain their grow
  const painted=[],ctx={save(){},restore(){},globalAlpha:1},scene={draw:(_ctx,elapsed,reduced)=>painted.push({elapsed,reduced})},rect={x:0,y:0,width:100,height:100};
  drawLivingMapPreview(ctx,scene,0,false,rect);assert.deepEqual(painted,[{elapsed:0,reduced:true}]);
 });
+test('filled narration pages do not carry the plant story onto the next page',()=>{
+ const helper=source.slice(source.indexOf('function introReadingWindow('),source.indexOf('function createSpatialKnowledgeTexture('));
+ const ctx=vm.createContext({layout:{paragraphLines:[['a','b'],['A plant can share its story.'],['c','d','e']],lineHeight:100,paragraphGap:10}});
+ vm.runInContext(helper,ctx);
+ assert.equal(vm.runInContext('introReadingWindow(layout,2,330).first',ctx),0);
+ assert.equal(vm.runInContext('introReadingWindow(layout,3,330).first',ctx),2);
+});
+test('INTRO 1.2 declines stale first-slide copy and accepts its own narration',()=>{
+ const helper=source.slice(source.indexOf('function introVisibleCopy('),source.indexOf('function drawIntroNoteContent('));
+ const ctx=vm.createContext({introBoardStep:'INTRO 1.2',introBoardVisibleBody:'A plant can share its story.',DEMO_QUICK_ACCESS_COPY:{'INTRO 1.2':'For this demo, we prepared samples.'},demoLocalizedText:value=>value});
+ vm.runInContext(helper,ctx);assert.equal(vm.runInContext('introVisibleCopy()',ctx),'');
+ ctx.introBoardVisibleBody='For this demo';assert.equal(vm.runInContext('introVisibleCopy()',ctx),'For this demo');
+});

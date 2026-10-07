@@ -2,16 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {livingMapReveal,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapGreeneryProgress} from '../app/services/demoLivingMapReveal.js';
 test('greenery grows smoothly with a stagger, settles before pickup and respects reduced motion',()=>{
- assert.equal(livingMapGreeneryProgress(5700),0);assert.ok(livingMapGreeneryProgress(6250)>.4);assert.ok(livingMapGreeneryProgress(6250,2)<livingMapGreeneryProgress(6250));
- for(let i=0;i<8;i++){assert.equal(livingMapGreeneryProgress(7600,i),1);assert.equal(livingMapGreeneryProgress(0,i,true),1);}
+ assert.equal(livingMapGreeneryProgress(5700),0);assert.ok(livingMapGreeneryProgress(7000)>.4);assert.ok(livingMapGreeneryProgress(7000,2)<livingMapGreeneryProgress(7000));
+ for(let i=0;i<8;i++){assert.equal(livingMapGreeneryProgress(9800,i),1);assert.equal(livingMapGreeneryProgress(0,i,true),1);}
  assert.equal(livingMapGreeneryProgress(5700),0,'replay starts growth again');
 });
 test('reading precedes dissolve, reveal and enabled placement, including replay and reduced motion',()=>{
     for(const reduced of [false,true]){
         assert.equal(livingMapReveal(4300,reduced).preview,1);
         assert.equal(livingMapReveal(4300,reduced).appear,0);
-        assert.equal(livingMapReveal(7599,reduced).ready,false);
-        const final=livingMapReveal(7600,reduced);
+        assert.equal(livingMapReveal(9799,reduced).ready,false);
+        const final=livingMapReveal(9800,reduced);
         assert.equal(final.preview,0);assert.equal(final.appear,1);assert.equal(final.ready,true);
         assert.equal(livingMapReveal(0,reduced).ready,false);
     }

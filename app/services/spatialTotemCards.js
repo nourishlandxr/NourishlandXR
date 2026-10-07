@@ -123,7 +123,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const titleBottom=buttons[0].faceCenter.y-position.y+.075;
     const titleHeight=Math.max(.025,Math.min(.18,1.88*bodyHalfHeight-titleBottom-.015));
     const headerBoard = cards[0] ? {
-        ...place(0,titleBottom+titleHeight/2,demoZone ? .46 : .68,titleHeight,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
+        ...place(0,bodyHalfHeight*2+.12,demoZone ? .46 : .68,.11,{...cards[0],glassOpacity:0,freeText:true,boardStyle:'header-compact',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
@@ -304,7 +304,7 @@ function cardCanvas(card, detail) {
         return canvas;
     }
     if(boardStyle==='header-compact'){
-        ctx.shadowBlur=0;ctx.fillStyle='#fffdf1';ctx.font=`750 ${String(card.title || '').length>20?132:168}px ${face}`;ctx.fillText(card.title,512,256,900);
+        ctx.shadowBlur=2;ctx.shadowOffsetY=1;ctx.fillStyle='#f5faf7';ctx.font=`550 ${String(card.title || '').length>20?112:138}px ${face}`;wrapped(ctx,card.title,512,220,900,145,2);
         return canvas;
     }
     if(boardStyle==='header-detail'){
@@ -385,7 +385,7 @@ export function createSpatialTotemCards(gl, options = {}) {
                 gl.uniform1f(locations.opacity,(reduced || entry.fadeDuration<=0 ? 1 : Math.min(1,(now-entry.started)/entry.fadeDuration))*fadeOpacity*arrival);
                 gl.uniform1f(locations.isControl,surface.card.control || options.containedFeedback?1:0);
                 gl.uniform1f(locations.pressProgress,Math.max(0,Math.min(1,surface.pressProgress || 0)));
-                gl.uniform1f(locations.feedback,selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id || record.handHoverCardId===surface.card.id ? .55 : 0));
+                gl.uniform1f(locations.feedback,surface.card.freeText?0:selectedId===surface.card.id ? 1 : (aimed?.card?.id===surface.card.id || record.handHoverCardId===surface.card.id ? .55 : 0));
                 gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,entry.texture);gl.uniform1i(locations.artwork,0);gl.drawArrays(gl.TRIANGLES,0,6);
             }
             gl.depthMask(true);

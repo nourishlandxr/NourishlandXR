@@ -1,11 +1,11 @@
 import * as THREE from '../vendor/three.module.min.js';
 const smooth = value => { const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t); };
-export const LIVING_MAP_REVEAL_READY_MS=7600;
-export function livingMapGreeneryProgress(elapsed,index=0,reduced=false){return reduced?1:smooth((elapsed-5700-Math.min(7,index)*90)/1100);}
+export const LIVING_MAP_REVEAL_READY_MS=9800;
+export function livingMapGreeneryProgress(elapsed,index=0,reduced=false){return reduced?1:smooth((elapsed-5700-Math.min(7,index)*90)/2300);}
 // Reading time is preserved even when motion is reduced.
 export function livingMapReveal(elapsed,reduced=false){
-    const dissolve=smooth((elapsed-4400)/(reduced?450:1700));
-    const appear=smooth((elapsed-(reduced?4850:5700))/(reduced?450:1900));
+    const dissolve=smooth((elapsed-4400)/(reduced?450:2600));
+    const appear=smooth((elapsed-(reduced?4850:5700))/(reduced?450:4100));
     return {preview:1-dissolve,dissolve,appear,ready:elapsed>=LIVING_MAP_REVEAL_READY_MS,
         magic:reduced?0:Math.sin(Math.PI*smooth((elapsed-4400)/3200))};
 }

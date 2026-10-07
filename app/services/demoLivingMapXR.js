@@ -109,7 +109,7 @@ export function createDemoLivingMapXR(gl,scene){
             if(opacity<=0)return;
             const previousBuffer=gl.getParameter(gl.ARRAY_BUFFER_BINDING),restoreAttributes=saveAttributes();
             try{
-            root.compose(new THREE.Vector3(origin.x,origin.y-.025*(1-opacity),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(LIVING_MAP_WORLD_SCALE*(.94+.06*opacity)));
+            root.compose(new THREE.Vector3(origin.x,origin.y-.10*(1-opacity),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(LIVING_MAP_WORLD_SCALE*(.78+.22*opacity)));
             gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
             for(const node of renderNodes){let visible=true;for(let parent=node;parent;parent=parent.parent)if(!parent.visible){visible=false;break;}if(!visible)continue;world.multiplyMatrices(root,node.matrixWorld);drawNode(node,world,opacity,node.isInstancedMesh && !(instancing && node.userData.livingMapDynamic)?batchInstances(node):null);}
             if(guidance){

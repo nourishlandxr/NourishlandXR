@@ -435,7 +435,7 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     assert.match(read('app/living-objects.css'), /\.tryit-sim-orb\.is-plant::after \{[\s\S]*content:none;[\s\S]*display:none;/);
     assert.match(sphereSource, /createUvSphereGeometry\(latitudeBands = 12, longitudeBands = 16\)/);
     assert.doesNotMatch(sphereSource, /uniform float time|uniform float motion|ribbonA|ribbonB/);
-    assert.match(sphereSource, /const ringColor = options\.ringColor \|\| PLANT_RING_COLOR/);
+    assert.match(sphereSource, /const ringColor = \(options\.ringColor \|\| PLANT_RING_COLOR\)\.map/);
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-arrow-marker \.creator-ar-special-symbol \{[\s\S]*background:transparent;[\s\S]*box-shadow:none;/);
     assert.match(styles, /\.creator-ar-arrow-grid \.creator-ar-symbol-marker \{[\s\S]*background:transparent !important;/);
     assert.match(explorerSource, /drawSpatialContent:[\s\S]*drawSpatialOrb/);
@@ -1451,7 +1451,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.deepEqual(AR_PHONE_COMFORT.boardScale,[5.6,10.8]);
     assert.match(source, /const width=arWelcomeShowcaseActive\?2500:1400,height=arWelcomeShowcaseActive\?2100:1080/);
     assert.match(source, /if\(label\.height!==height\)label\.height=height/);
-    assert.match(source, /fitIntroBodyLayout\(ctx, narrative\?\.text \|\| introBoardBody, contentWidth, bodyBottom - bodyTop\)/);
+    assert.match(source, /fitIntroBodyLayout\(ctx, narrative\?\.text \|\| \(introBoardStep==='INTRO 1.2'\?DEMO_QUICK_ACCESS_COPY\['INTRO 1.2'\]:introBoardBody\), contentWidth, bodyBottom - bodyTop\)/);
     assert.match(source, /if\(introBoardNextGuideVisible && introBoardNextGuide\)/);
     assert.match(source, /function revealIntroBoardNextGuide\(\)/);
     assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', contentWidth\)/);

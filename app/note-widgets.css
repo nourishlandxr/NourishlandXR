@@ -61,8 +61,11 @@
 .tryit-demo .tryit-guided-choice.is-space-paragraph-sequence .tryit-board-text-window p.is-sequence-current.is-sequence-fading {opacity:0;transition-duration:.7s!important;}
 @media(prefers-reduced-motion:reduce) {.tryit-demo .tryit-guided-choice.is-space-paragraph-sequence .tryit-board-text-window p {transition:none!important;}}
 .tryit-intro-continue {font-size:clamp(1.2rem,2.2vw,1.6rem)!important;}
-.tryit-sim-marker-plant.is-placement-highlight::after {content:'';position:absolute;inset:-9px;border:2px solid rgba(194,250,207,.8);border-radius:50%;pointer-events:none;animation:placed-orb-guidance 1.9s ease-in-out infinite;}
-@keyframes placed-orb-guidance {50%{transform:scale(1.1);opacity:.55;}}
+.tryit-sim-marker-plant.is-placement-highlight::after {content:'';position:absolute;inset:-4px;border:0;background:radial-gradient(circle at 18% 22%,#d6e4cc 0 2px,transparent 3px),radial-gradient(circle at 84% 42%,#d6e4cc 0 2px,transparent 3px),radial-gradient(circle at 46% 92%,#d6e4cc 0 2px,transparent 3px);border-radius:50%;box-shadow:0 0 15px rgba(185,207,181,.25);pointer-events:none;animation:placed-orb-guidance 5s linear infinite;}
+@keyframes placed-orb-guidance {50%{transform:rotate(180deg);opacity:.6;}100%{transform:rotate(360deg);}}
+.tryit-sim-marker-plant .tryit-sim-orb {filter:saturate(.6);}
+.nlxr-totem-system .nlxr-totem-card-area {background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important;color:#f5faf7!important;text-shadow:0 1px 2px #15241f;top:-34px!important;}
+.nlxr-totem-system .nlxr-totem-card-area > :not(strong) {display:none!important;}
 @media(prefers-reduced-motion:reduce){.tryit-sim-marker-plant.is-placement-highlight::after{animation:none;}}
 .nlxr-reference-links {display:flex;flex-wrap:wrap;gap:10px;padding:12px 0;}.nlxr-reference-links a {padding:8px 12px;border:1px solid rgba(198,225,185,.65);border-radius:12px;color:inherit;text-decoration:none;}
 .nlxr-info-panel .is-selected {border-color:#dcf4c8;background:rgba(171,219,145,.25);}

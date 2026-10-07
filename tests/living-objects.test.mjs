@@ -117,11 +117,12 @@ test('Totem signs keep their first world orientation when the viewer turns',()=>
 });
 
 
-test('Totem nameplate fits below its notification strip and above the Signs control',()=>{
+test('Totem heading is plain text above the body and clear of the Signs control',()=>{
  for(const bodyHalfHeight of [.35,.69,1,1.3]){
   const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},totemKnowledgeCards(),'',{signsVisible:true,bodyHalfHeight});
   const signs=surfaces.find(s=>s.card.id==='__signs'),title=surfaces.find(s=>s.boardStyle==='header');
   assert.ok(title.center.y-title.height/2>signs.center.y+signs.height/2+.01);
-  assert.ok(title.center.y+title.height/2<1.88*bodyHalfHeight);
+  assert.ok(title.center.y-title.height/2>2*bodyHalfHeight);
+  assert.equal(title.card.freeText,true);assert.equal(title.card.glassOpacity,0);
  }
 });

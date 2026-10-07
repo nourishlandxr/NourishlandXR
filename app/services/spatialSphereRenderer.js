@@ -2,7 +2,7 @@ import {ORB_MODELS,GRAPHICS_PRESETS,currentGraphicsQuality,currentGraphicsPreset
 import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
 
 const DEFAULT_MARKER_COLOR = Object.freeze([0.39, 0.48, 0.23]);
-const DEFAULT_PLANT_COLOR = Object.freeze([0.42, 0.72, 0.34]);
+const DEFAULT_PLANT_COLOR = Object.freeze([0.55, 0.65, 0.49]);
 const PLANT_RING_COLOR = Object.freeze([0.88, 0.8, 0.56]);
 
 function compileShader(gl, type, source) {
@@ -280,8 +280,9 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
 export function drawSpatialOrb(gl, renderer, view, position, radius, options = {}) {
     if (!view?.projectionMatrix || !view?.transform?.inverse?.matrix) return;
     const plant = options.type === 'plant';
-    const sourceColor = options.color || (plant ? DEFAULT_PLANT_COLOR : DEFAULT_MARKER_COLOR);
-    const ringColor = options.ringColor || PLANT_RING_COLOR;
+    const authoredColor = options.color || (plant ? DEFAULT_PLANT_COLOR : DEFAULT_MARKER_COLOR);
+    const sourceColor=plant?authoredColor.map((value,index)=>value*.55+[.64,.69,.64][index]*.45):authoredColor;
+    const ringColor = (options.ringColor || PLANT_RING_COLOR).map((value,index)=>plant?value*.4+[.76,.80,.74][index]*.6:value);
     const visual=SPATIAL_OBJECT_VISUALS.orb;
     const model=plant?(ORB_MODELS[options.model]?options.model:currentOrbModel()):'basic';
     const appearance=ORB_MODELS[model];
@@ -318,8 +319,13 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         const still=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
         const time=still ? 0 : (options.time ?? performance.now()/1000);
         if(options.placementHighlight){
-            const fade=Math.min(1,Math.max(0,(options.placementAge || 0)/600)),pulse=still?.5:.5+.5*Math.sin(time*2.8);
-            drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*(1.75+pulse*.16),{crown:true,orbModel:'basic',billboard:true,halo:true,time:0,color:[.76,.95,.79],alpha:(.55+pulse*.25)*fade,emissive:.35});
+            const fade=Math.min(1,Math.max(0,(options.placementAge || 0)/600)),pulse=still?.5:.5+.5*Math.sin(time*1.8);
+            drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*(1.10+pulse*.035),{crown:true,orbModel:'basic',billboard:true,halo:true,time,color:[.72,.82,.72],alpha:(.26+pulse*.14)*fade,emissive:.18});
+            if(!still)for(let index=0;index<3;index++){
+                const angle=time*.65+index*Math.PI*2/3,orbit=radius*(1.28+.07*Math.sin(time+index));
+                const light={x:position.x+Math.cos(angle)*orbit,y:position.y+Math.sin(angle)*orbit*.72,z:position.z+Math.sin(time*.8+index)*radius*.32};
+                drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,light,radius*.065,{orbModel:'basic',detail:0,color:[.82,.89,.79],alpha:.66*fade,emissive:.35});
+            }
         }
         drawSpatialSphere(gl, renderer,
             view.projectionMatrix, view.transform.inverse.matrix, position,
@@ -340,7 +346,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     if (moving || selected || targeted) {
         gl.depthMask(false);
         drawSpatialSphere(gl, renderer, view.projectionMatrix, view.transform.inverse.matrix, position, radius * visual.haloScale, {
-            color:moving ? [.62,1,.52] : options.grabReady ? [.55,.86,1] : plant ? [.92,.83,.58] : [.82,1,.28],
+            color:moving ? [.68,.82,.64] : options.grabReady ? [.67,.78,.85] : plant ? [.80,.77,.65] : [.72,.81,.58],
             alpha:moving ? visual.movingHaloAlpha : selected ? visual.selectedHaloAlpha : visual.targetHaloAlpha,
             emissive:.75,opacity:options.opacity
         });
