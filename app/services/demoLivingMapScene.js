@@ -199,6 +199,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const cloudItems=model.concept?model.areas.map(area=>area.totem):model.areas.flatMap(area=>[area.totem,...area.members.filter(item=>item.id!==area.id)]);
     if(!model.concept)for(const item of model.items)if(!cloudItems.some(entry=>entry.id===item.id))cloudItems.push(item);
     let lastPaint=-Infinity, disposed=false, settledPaint=false, lastReduced=null;
+    let cameraPrepared=false,canvasPainted=false,scheduledPlacements=null;
     const projected = new THREE.Vector3();
     const rotation=new THREE.Quaternion();
     function guidance(elapsed){
@@ -214,17 +215,22 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     }
     function update(elapsed,reducedMotion,paint=true){
             const placed=placement?.snapshot() || [];
-            if(model.interactive){
+            if(model.interactive && (!scheduledPlacements || placed.length!==scheduledPlacements.length
+                || placed.some((entry,index)=>entry.id!==scheduledPlacements[index].id || entry.at!==scheduledPlacements[index].at))){
                 model.items.forEach(item=>{
                     const owner=placed.find(entry=>entry.id===(item.areaId || item.id));
-                    schedule.items[item.id]={startAt:owner?owner.at+(item.type==='plant'?400+model.items.filter(p=>p.type==='plant').indexOf(item)*220:0):Infinity,duration:item.type==='plant'?700:600};
+                    schedule.items[item.id]={startAt:owner?owner.at+(item.type==='plant'?400+plantGrowthIndices.get(item.id)*220:0):Infinity,duration:item.type==='plant'?700:600};
                 });
+                scheduledPlacements=placed;settledPaint=false;lastPaint=-Infinity;
             }
             const bornFor=id=>model.interactive && !Number.isFinite(schedule.items[id]?.startAt)?0:demoLivingMapItemProgress(schedule,id,elapsed,reducedMotion);
             const progress=demoLivingMapProgress(elapsed,reducedMotion,schedule);
             if(model.interactive){progress.camera=1;progress.wide=1;progress.scenery=1;progress.settled=!placement?.current() && elapsed>(placed.at(-1)?.at || 0)+2800;}
             if(elapsed<lastPaint || lastReduced!==reducedMotion)settledPaint=false;
-            if(!settledPaint && (elapsed-lastPaint>=1000/24 || elapsed<lastPaint || lastReduced!==reducedMotion)){
+            if(paint && !canvasPainted || !settledPaint && (elapsed-lastPaint>=1000/24 || elapsed<lastPaint || lastReduced!==reducedMotion)){
+                // Native XR uses the headset projection. Fit this separate
+                // preview camera only for canvas paints or its initial pose.
+                if(paint || !cameraPrepared){
                 const rise=model.concept ? .85+.15*progress.camera : progress.camera, wide=progress.wide;
                 const inverse=rotation.clone().invert();
                 camera.position.set(1.8*rise,2.1+5.8*rise+wide,8.5+.2*rise+1.1*wide).applyQuaternion(inverse);camera.up.set(0,1,0).applyQuaternion(inverse);camera.lookAt(0,0,0);
@@ -235,6 +241,8 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 // Include the tallest context trees in the final composition.
                 if(progress.scenery>0)for(const [px,pz,size] of contextTrees)fitPoint(px,size*1.9*progress.scenery,pz);
                 camera.zoom=Math.min(.97/extentX,.95/extentY);camera.updateProjectionMatrix();
+                cameraPrepared=true;
+                }
                 boundaries.forEach(({area,line,fill})=>{const boundary=model.concept?1:demoLivingMapAreaProgress(schedule,area.id,elapsed,reducedMotion);line.visible=boundary>0;line.geometry.setDrawRange(0,Math.round(boundary*64)+1);fill.visible=boundary>=.99;});
                 markers.forEach(({item,group,ring,orb})=>{
                     const born=bornFor(item.id);
@@ -251,11 +259,11 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 if(welcomeScreen){welcomeScreen.visible=placed.length>0;welcomeScreen.position.set(model.areas[0].totem.x-.65,.62,model.areas[0].totem.z);welcomeScreen.quaternion.copy(camera.quaternion);welcomeScreen.scale.setScalar(Math.max(.001,bornFor(model.areas[0].id)));}
                 const greenery=model.interactive?livingMapGreeneryProgress(elapsed,0,reducedMotion):progress.scenery;
                 scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,greenery);shrub.count=planted;
-                if(paint && !(visitors && placed.length>0))renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
+                if(paint && !(visitors && placed.length>0)){renderer.render(scene,camera);canvasPainted=true;}lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
             }
 
         animateVisitors(elapsed,placed,reducedMotion);scene.updateMatrixWorld(true);
-        if(paint && visitors && placed.length>0)renderer.render(scene,camera);
+        if(paint && visitors && placed.length>0){renderer.render(scene,camera);canvasPainted=true;}
         return {placed,bornFor};
     }
     // Static greenery is ready before the first flat preview or spatial eye

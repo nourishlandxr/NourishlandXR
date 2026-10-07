@@ -49,6 +49,7 @@ export function livingMapHeldContact(point,origin,rotation=0){
     const contact=livingMapRayPoint({origin:{x:point.x+normal.x,y:point.y+normal.y,z:point.z+normal.z},direction:{x:-normal.x,y:-normal.y,z:-normal.z}},origin,rotation);
     return contact && Math.hypot(point.x-contact.x,point.y-contact.y,point.z-contact.z)<.30?contact:null;
 }
+const previewImages=new WeakMap();
 export function drawLivingMapPreview(ctx,scene,elapsed,reduced,rect){
     const reveal=livingMapReveal(elapsed,reduced);
     if(reveal.preview<=0)return;
@@ -57,7 +58,19 @@ export function drawLivingMapPreview(ctx,scene,elapsed,reduced,rect){
     if(reveal.magic>0){ctx.shadowColor='#d5ffb4';ctx.shadowBlur=24*reveal.magic;}
     // The reading preview already contains its landscape. Growth belongs to
     // the spatial reveal, whose clock starts only after Continue.
-    scene.draw(ctx,0,true,rect);ctx.restore();
+    // Repainting the dissolve must not render another WebGL frame or rewind
+    // the live miniature. Cache just one flat image per scene and layout.
+    if(typeof document!=='undefined'){
+        const width=Math.max(1,Math.round(rect.width)),height=Math.max(1,Math.round(rect.height));
+        let cached=previewImages.get(scene);
+        if(!cached || cached.width!==width || cached.height!==height || cached.hideGuidance!==rect.hideGuidance){
+            const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+            scene.draw(canvas.getContext('2d'),0,true,{x:0,y:0,width,height,hideGuidance:rect.hideGuidance});
+            cached={canvas,width,height,hideGuidance:rect.hideGuidance};previewImages.set(scene,cached);
+        }
+        ctx.drawImage(cached.canvas,rect.x,rect.y,rect.width,rect.height);
+    }else scene.draw(ctx,0,true,rect);
+    ctx.restore();
     if(reveal.magic>0){
         ctx.save();ctx.fillStyle='#f0ffd1';ctx.globalAlpha=reveal.magic*.65;ctx.shadowColor='#d5ffb4';ctx.shadowBlur=10;
         for(let i=0;i<24;i++){const t=(elapsed-4400)/1700,x=rect.x+rect.width*((i*.618)%1),y=rect.y+rect.height*((i*.381)%1)-t*(20+i%7*12);ctx.beginPath();ctx.arc(x+Math.sin(t*3+i)*14,y,.8+i%3*.35,0,Math.PI*2);ctx.fill();}

@@ -52,41 +52,53 @@ export function createBeeXRRenderer(gl,model,bitmap){
         const wingIndexCount=model.mesh.geometry.groups.find(group=>group.materialIndex===1)?.count ?? 0;
         gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,indices,gl.STATIC_DRAW);
         const uniforms=Object.fromEntries(['projection','view','bind','normalise','origin','size','yaw','pitch','bank','bones','colour','opacity','solid'].map(name=>[name,gl.getUniformLocation(program,name)]));
-        const colour=gl.createTexture(),bones=gl.createTexture();textures.push(colour,bones);
+        const colour=gl.createTexture();textures.push(colour);
         gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
         gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,bitmap);
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-        gl.bindTexture(gl.TEXTURE_2D,bones);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,4,count,0,gl.RGBA,gl.FLOAT,null);
-        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
-        let lastElapsed=NaN,lastNectar=false,lastOffset=NaN;
-        const normalise=model.mesh.matrixWorld.clone();
+        // Keep the four bees' flight/rest poses across both eyes. A single
+        // last-pose cache repeats mixer, skeleton and upload work for eye two.
+        // Eight tiny bone textures are reused even as encounter offsets change.
+        const poses=new Map();
+        function poseSlot(key){
+            let cached=poses.get(key);
+            if(cached)poses.delete(key);
+            else if(poses.size>=8){const [oldKey,slot]=poses.entries().next().value;poses.delete(oldKey);cached=slot;cached.elapsed=NaN;}
+            else {
+                const bones=gl.createTexture();textures.push(bones);
+                gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);
+                gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,4,count,0,gl.RGBA,gl.FLOAT,null);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.NEAREST);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.NEAREST);
+                gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+                cached={bones,normalise:model.mesh.matrixWorld.clone(),elapsed:NaN};
+            }
+            poses.set(key,cached);return cached;
+        }
         return {draw(view,origin,elapsed,pose){
             const offset=pose.animationOffset || 0;
-            if(lastElapsed!==elapsed || lastNectar!==Boolean(pose.nectar) || lastOffset!==offset){
+            const cached=poseSlot(`${offset}:${Boolean(pose.nectar)}`);
+            if(cached.elapsed!==elapsed){
                 // One shared rig must be re-evaluated for each bee. Updating it
                 // with delta=0 can retain another bee's manually rested wings.
                 model.mixer.setTime(elapsed/1000+offset);
                 applyBeeWingPose(model,pose.nectar);
                 model.wrapper.updateMatrixWorld(true);model.mesh.skeleton.update();
-                normalise.copy(model.mesh.matrixWorld).multiply(model.mesh.bindMatrixInverse);
-                gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);
+                cached.normalise.copy(model.mesh.matrixWorld).multiply(model.mesh.bindMatrixInverse);
+                gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,cached.bones);
                 gl.texSubImage2D(gl.TEXTURE_2D,0,0,0,4,count,gl.RGBA,gl.FLOAT,model.mesh.skeleton.boneMatrices);
-                lastElapsed=elapsed;
-                lastNectar=Boolean(pose.nectar);
-                lastOffset=offset;
+                cached.elapsed=elapsed;
             }
             gl.useProgram(program);
             for(const a of attributes){if(a.location<0)continue;gl.bindBuffer(gl.ARRAY_BUFFER,a.buffer);gl.enableVertexAttribArray(a.location);gl.vertexAttribPointer(a.location,a.size,gl.FLOAT,false,0,0);}
             gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,index);
             gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
-            gl.uniformMatrix4fv(uniforms.bind,false,model.mesh.bindMatrix.elements);gl.uniformMatrix4fv(uniforms.normalise,false,normalise.elements);
+            gl.uniformMatrix4fv(uniforms.bind,false,model.mesh.bindMatrix.elements);gl.uniformMatrix4fv(uniforms.normalise,false,cached.normalise.elements);
             gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.size,.095*(pose.bodyScale || 1)*(1+pose.flyby*.3));
             gl.uniform1f(uniforms.yaw,beeRenderYaw(pose,origin));
             gl.uniform1f(uniforms.pitch,pose.pitch || 0);gl.uniform1f(uniforms.bank,pose.bank || 0);
             gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.uniform1i(uniforms.colour,0);
-            gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,bones);gl.uniform1i(uniforms.bones,1);
+            gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,cached.bones);gl.uniform1i(uniforms.bones,1);
             gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.depthMask(true);
             gl.uniform1f(uniforms.solid,1);gl.drawElements(gl.TRIANGLES,bodyIndexCount,gl.UNSIGNED_SHORT,0);
             if(wingIndexCount){
