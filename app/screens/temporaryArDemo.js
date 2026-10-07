@@ -107,7 +107,7 @@ import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
 import { renderDesktopLearningBook } from './desktopLearningBook.js';
 import { BIOMAP_CATEGORIES, DEMO_CONTENT, DEMO_JOURNEY_STAGES, DEMO_NOTE_TEMPLATE_KEYS, DEMO_ORB_MATERIALS, DEMO_PANEL_HINTS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, NOTE_TEMPLATES, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../features/ar-demo/demoContent.js';
-import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
+import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_HEADING_FONT, DEMO_HEADING_SIZE, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
 import { MORINGA_KNOWLEDGE, MORINGA_PIM, MORINGA_PROFILE } from '../features/ar-demo/demoPlantContent.js';
 import { demoBillboardSurfaceSize, demoBillboardTextureLocalPoint, demoGroundBaseY, demoPlacementPosition, demoPointerScreenPoint, demoViewerPointerFallbackAllowed, isDemoFloorHit } from '../features/ar-demo/demoGeometry.js';
 import { preservePlacedDemoPlants, selectDemoPlantRecord, selectGuidedDemoOrb as selectGuidedDemoOrbRecord } from '../features/ar-demo/demoSelection.js';
@@ -364,6 +364,7 @@ let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=
 let butterflyCompanions=[];
 let ambientBeeAvoidanceTime=[];
 let ambientEncounterSeed=Math.floor(Math.random()*10000);
+let ambientCloseVisitsSuppressed=false;
 let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientBeeReturn=[],ambientBeeFlowerVisits=[],ambientLastPaint=0;
 let rainV2Canvas=null,rainV2LastPaint=0;
 let demoRainIntensity=RAIN_QUALITIES[currentRainQuality()].intensity;
@@ -808,7 +809,9 @@ function skipCurrentDemoStep() {
         if(placementReady || markers.some(record=>record.demoNativeChoicePending) || nativeConnectionState && nativeConnectionState.phase!=='connected')return Boolean(skipNarration);
         const button=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(!button || button.hidden || button.disabled)return Boolean(skipNarration);
-        button.click();skipDemoMapWaits();return true;
+        // Y finishes the current reveal and exposes its action. Advancing is
+        // an explicit Continue press, so a freshly revealed button stays put.
+        button.hidden=false;return true;
     }finally{
         demoFastSkipActive=false;
         introBoardParagraphFadeTimes=introBoardParagraphFadeTimes.map(()=>-Infinity);
@@ -1708,7 +1711,7 @@ function welcomeFrames() {
     if(arWelcomeIntroPending && arWelcomeRenderedFrames.length)return arWelcomeRenderedFrames;
     return welcomeExperienceFrames(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,limHiddenCells,{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)});
 }
-const welcomeSequenceCanContinue=()=>arWelcomeClock.elapsed>=(window.matchMedia('(prefers-reduced-motion: reduce)').matches?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS);
+const welcomeSequenceCanContinue=()=>introOpeningCopySkipped || arWelcomeClock.elapsed>=(window.matchMedia('(prefers-reduced-motion: reduce)').matches?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_CONTINUE_MS);
 
 let selectedLimCell='',arWelcomeSettleStage=false,arWelcomeSettleStartedAt=NaN;
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
@@ -2022,7 +2025,7 @@ function paintDemoAmbientLife(now){
     if(ambientCanvas)ambientCanvas.style.visibility='hidden';
     if(!getSpatialVisualSettings().insects || !ambientBeeModel?.ready || !Number.isFinite(ambientBeesStartedAt)){ambientBeeModel?.hide?.();return;}
     const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    ambientBeeModel?.draw(arWelcomeClock.elapsed,ambientBeesStartedAt,reducedMotion,{attention:'control',encounterSeed:ambientEncounterSeed});
+    ambientBeeModel?.draw(arWelcomeClock.elapsed,ambientBeesStartedAt,reducedMotion,{attention:'control',encounters:!ambientCloseVisitsSuppressed,encounterSeed:ambientEncounterSeed});
 }
 
 function paintSimulatedRainV2(now){
@@ -2043,6 +2046,8 @@ function paintSimulatedRainV2(now){
 
 function showArWelcomeShowcase() {
     introOpeningCopySkipped=false;
+    ambientCloseVisitsSuppressed=false;
+    document.fonts?.load(`500 ${DEMO_HEADING_SIZE}px ${DEMO_HEADING_FONT}`).then(()=>{introBoardTextureDirty=true;introTextureUploadedAt=-Infinity;}).catch(()=>{});
     demoSlideHistory=[];demoSlideHistoryIndex=-1;demoSlideHistoryReplay=false;
     demoInteractionTasks=new Set();infoPanel?.setTaskProgress(null);
     infoPanel?.setHeaderProgress(null);
@@ -2122,7 +2127,7 @@ function showArWelcomeShowcase() {
         introBoardParagraphFadeTimes=openingParagraphs.map(()=>-Infinity);
         introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
         panel.classList.remove('is-typing');
-        const readyButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(readyButton)readyButton.disabled=false;
+        const readyButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(readyButton){readyButton.hidden=false;readyButton.disabled=false;}
         syncDemoPanelActions();
     };
     const revealOpeningParagraph=()=>{
@@ -2146,7 +2151,7 @@ function showArWelcomeShowcase() {
         const continueOpeningCopy=event=>{event?.stopImmediatePropagation?.();suppressSessionSelectUntil=performance.now()+700;if(introBoardStep!=='INTRO 1.2')return;openingTyping=false;clearDemoNarration();const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.disabled=true;button.onclick=null;}clearTimeout(arWelcomeUnlockTimer);arWelcomeIntroPending=false;arWelcomeSettleStage=false;runArWelcomeTutorial(0);};
         rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Let’s start',onContinue:continueOpeningCopy,kind:'welcome'});
         const openingButton=appRoot?.querySelector('[data-tryit-intro-continue]');
-        if(openingButton){openingButton.textContent='Let’s start';openingButton.disabled=false;openingButton.onclick=continueOpeningCopy;}
+        if(openingButton){openingButton.hidden=false;openingButton.textContent='Let’s start';openingButton.disabled=false;openingButton.onclick=continueOpeningCopy;}
         introBoardVisibleBody='';introBoardParagraphFadeTimes=[];openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
@@ -2170,7 +2175,11 @@ function showArWelcomeShowcase() {
     };
     boardTypingTimer=setTimeout(waitForOpeningCopy,100);
     skipDemoNarration=()=>{
-        if(arWelcomeOpeningActive){arWelcomeOpeningDuration=arWelcomeClock.elapsed;beginOpeningCopy();return;}
+        if(arWelcomeOpeningActive){
+            introOpeningCopySkipped=true;introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
+            clearTimeout(boardTypingTimer);clearTimeout(arWelcomeUnlockTimer);
+            const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;
+        }
         finishOpeningCopy();
     };
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
@@ -5081,28 +5090,32 @@ function createIntroNoteTexture(texture = null) {
     return canvasTexture(label, texture);
 }
 
+function drawDemoHeading(ctx,title,center=700,y=420,width=960){
+    ctx.font=`500 ${DEMO_HEADING_SIZE}px ${DEMO_HEADING_FONT}`;
+    const lines=wrappedTextureLines(ctx,title,width);
+    lines.forEach((line,index)=>ctx.fillText(line,center,y+index*80));
+    return y+(lines.length-1)*80;
+}
 function drawIntroNoteContent(ctx) {
     // The glass/rim fades in first. Text appears once at its final white value.
-    if(arWelcomeOpeningActive && arWelcomeClock.elapsed<900)return;
+    if(arWelcomeOpeningActive && !introOpeningCopySkipped && arWelcomeClock.elapsed<900)return;
     ctx.globalAlpha=1;
     if(introBoardStep==='UTILITY 1.1' && demoLivingMapScene){
         ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
         ctx.fillStyle='#dfecc8';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('UTILITY 1.1',700,245,920);
-        ctx.fillStyle='#f4f5e7';ctx.font=`700 48px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText(demoMapIntroPaused?'Let’s test adding these elements.':guidedDemoStep('UTILITY 1.1').title,700,300,920);
-        ctx.font=`500 28px ${DEMO_PRESENTATION_FONT}`;
-        if(!demoMapIntroPaused)ctx.fillText('Pick up the highlighted Totem and place it on the pulsing circle.',700,350,850);
+        ctx.fillText('UTILITY 1.1',700,345,880);
+        ctx.fillStyle='#f4f5e7';
+        const headingBottom=drawDemoHeading(ctx,demoMapIntroPaused?'Let’s test adding these elements.':guidedDemoStep('UTILITY 1.1').title);
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
         const elapsed=demoLivingMapElapsed(),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:410,height:350,hideGuidance:demoMapIntroPaused});
+        drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:headingBottom+85,height:300,hideGuidance:true});
         if(!demoMapIntroPaused && livingMapReveal(elapsed,reduced).preview<.05){
             ctx.font=`500 34px ${DEMO_PRESENTATION_FONT}`;
             const copy=demoLocalizedText(livingMapPlacementCopy(demoLivingMapPlacement?.snapshot().length || 0));
-            wrappedTextureLines(ctx,copy,850).forEach((line,index)=>ctx.fillText(line,700,370+index*44));
+            wrappedTextureLines(ctx,copy,850).forEach((line,index)=>ctx.fillText(line,700,headingBottom+115+index*44));
             ctx.font=`500 28px ${DEMO_PRESENTATION_FONT}`;
-            ctx.fillText('Grip a Totem beside the frame. Release it on the pulsing circle.',700,710,850);
-            ctx.fillText('Grip both plate edges to carry, turn and tilt. Release to leave it in place.',700,770,850);
+            ctx.fillText('Grip a Totem beside the frame. Release it on the pulsing circle.',700,795,850);
+            ctx.fillText('Grip both plate edges to carry, turn and tilt. Release to leave it in place.',700,855,850);
         }
         ctx.restore();return;
     }
@@ -5124,17 +5137,15 @@ function drawIntroNoteContent(ctx) {
     if(openingElapsed!==null){
         if(arWelcomeOpeningActive || openingElapsed<DEMO_WELCOME_OPENING_MS){
             const openingTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
-            let openingTitleSize=72;
             ctx.fillStyle='#e7ffed';
-            ctx.font=`800 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;
-            ctx.fillText(openingTitle,contentCenter,420,titleWidth);
-            if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){
+            const headingBottom=drawDemoHeading(ctx,openingTitle,contentCenter,420,titleWidth),bodyTop=headingBottom+95,bodyHeight=900-bodyTop;
+            if(introOpeningCopySkipped || openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){
                 ctx.fillStyle='#fff';ctx.textBaseline='top';
-                const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,360);
+                const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,bodyHeight);
                 ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
                 const count=introOpeningCopySkipped || window.matchMedia('(prefers-reduced-motion: reduce)').matches?layout.paragraphLines.length:layout.paragraphLines.filter((lines,index)=>openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS+layout.paragraphLines.slice(0,index).reduce((total,prior)=>total+demoParagraphReadingTime(prior.join(' ')),0)).length;
-                const windowLayout=introReadingWindow(layout,count,360);
-                const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;let y=515;
+                const windowLayout=introReadingWindow(layout,count,bodyHeight);
+                const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;let y=bodyTop;
                 for(const [index,lines] of layout.paragraphLines.entries()){
                     if(index<windowLayout.first || index>=windowLayout.end)continue;
                     const previous=layout.paragraphLines.slice(0,index).map(lines=>lines.join(' '));
@@ -5149,16 +5160,13 @@ function drawIntroNoteContent(ctx) {
     ctx.fillStyle = '#f7fbf4';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
-    let titleSize = 72;
-    const titleFont = DEMO_PRESENTATION_FONT;
-    ctx.font = `800 ${titleSize}px ${titleFont}`;
-    ctx.fillText(introBoardTitle, contentCenter, 420,titleWidth);
+    const headingBottom=drawDemoHeading(ctx,introBoardTitle,contentCenter,420,titleWidth);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(241,249,237,.25)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(contentLeft, 478);
-    ctx.lineTo(contentLeft + contentWidth, 478);
+    ctx.moveTo(contentLeft, headingBottom+58);
+    ctx.lineTo(contentLeft + contentWidth, headingBottom+58);
     ctx.stroke();
     const narrative = null;
     ctx.textAlign = 'center';
@@ -5180,7 +5188,7 @@ function drawIntroNoteContent(ctx) {
     // Keep the first body line clear of the divider and the clipping edge;
     // its ascenders were previously being cut because the baseline sat too
     // close to the clip rectangle.
-    const bodyTop = 498;
+    const bodyTop = headingBottom+78;
     const bodyBottom = introBoardNextGuideVisible && introBoardNextGuide ? 850 : 900;
     const bodyLayout = fitIntroBodyLayout(ctx, narrative?.text || introBoardBody, contentWidth, bodyBottom - bodyTop);
     ctx.font = `600 ${bodyLayout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
@@ -5706,8 +5714,10 @@ function drawSpatialAmbientLife(view){
     const interactionMoment=introBoardStep==='UTILITY 1.1' || Boolean(nativeConnectionState && nativeConnectionState.phase!=='connected')
         || Boolean(demoKnowledgeWorkspace || markers.some(record=>record.demoType==='plant' && record.demoExpanded && !record.demoProfileInteracted))
         || Boolean(introBoardStep.startsWith('ELEMENTS ') || introBoardStep.startsWith('LEARNING 1.') || introBoardStep.startsWith('PLAY '));
+    const enteringInteraction=interactionMoment && !ambientCloseVisitsSuppressed;
+    if(interactionMoment)ambientCloseVisitsSuppressed=true;
     for(let index=0;index<BEE_COUNT;index++){
-        const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion && !interactionMoment,encounterSeed:ambientEncounterSeed});
+        const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion && !ambientCloseVisitsSuppressed,encounterSeed:ambientEncounterSeed});
         if(!bee)continue;
         // The ambient anchor is established from the current viewer pose above.
         // Referencing the old `base` name here threw on every immersive frame as
@@ -5715,9 +5725,15 @@ function drawSpatialAmbientLife(view){
         // had already been cleared, that made the whole AR scene disappear.
         const position=ambientBeeWorldPosition(bee,index);
         const visitor=ambientBeeFlowerVisits[index] ||= {},last=visitor.flightPosition;
+        if(enteringInteraction && last)visitor.retreating=true;
+        if(visitor.retreating && last){
+            const distance=Math.hypot(position.x-last.x,position.y-last.y,position.z-last.z),dt=Math.max(0,Math.min(.1,(arWelcomeClock.elapsed-visitor.flightAt)/1000)),amount=distance>.001?Math.min(1,.75*dt/distance):1;
+            for(const key of ['x','y','z'])position[key]=last[key]+(position[key]-last[key])*amount;
+            if(amount===1)visitor.retreating=false;
+        }
         if(last && visitor.flightAt!==arWelcomeClock.elapsed){const dx=position.x-last.x,dy=position.y-last.y,dz=position.z-last.z;if(Math.hypot(dx,dz)>.00001)visitor.flightYaw=Math.atan2(dx,dz);visitor.flightSpeed=Math.hypot(dx,dy,dz)/Math.max(.001,(arWelcomeClock.elapsed-visitor.flightAt)/1000);}
         visitor.flightPosition={...position};visitor.flightAt=arWelcomeClock.elapsed;
-        visitor.encounterId=bee.flyby>.2?index+':'+bee.encounterIndex:'';
+        visitor.encounterId=!ambientCloseVisitsSuppressed && bee.flyby>.2?index+':'+bee.encounterIndex:'';
         bee.worldYaw=(visitor.flightYaw ?? bee.heading)+Math.sin(arWelcomeClock.elapsed*.0017+index)*.16;
         const displacement=Math.hypot(ambientBeeAvoidance[index]?.x || 0,ambientBeeAvoidance[index]?.y || 0,ambientBeeAvoidance[index]?.z || 0);
         const flowerDistance=visitor.nectarTarget?Math.hypot(position.x-visitor.nectarTarget.x,position.y-visitor.nectarTarget.y,position.z-visitor.nectarTarget.z):Infinity;
@@ -6140,7 +6156,7 @@ async function startImmersive() {
             const ray=captureDemoInputEventRay(event),piece=markers.find(record=>record.demoMapPiece);
             const gripPose=event.inputSource.gripSpace?event.frame?.getPose(event.inputSource.gripSpace,referenceSpace)?.transform.matrix:null;
             const near=piece && gripPose && Math.hypot(gripPose[12]-piece.position.x,gripPose[13]-piece.position.y,gripPose[14]-piece.position.z)<.22;
-            const hit=piece && (near?{distance:0,point:piece.position}:demoRecordRayHit(piece,ray));
+        const hit=piece && (near?{distance:0,point:piece.position}:livingMapTotemRayHit(ray,piece.position,.20));
             if(!ray || !hit)return;
             if([infoPanel?.hit(ray),demoNoteHit(ray)].filter(Boolean).some(surface=>surface.distance<hit.distance))return;
             demoGrabInputSource=event.inputSource;

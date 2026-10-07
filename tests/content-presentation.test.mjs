@@ -225,7 +225,7 @@ test('main intro keeps white text stable and loads the glass panel before copy',
     const demo = read('app/screens/temporaryArDemo.js');
     const showcase = read('app/services/arWelcomeShowcase.js');
     assert.doesNotMatch(demo, /ctx\.globalAlpha\*=\.72\+\.28/);
-    assert.match(demo,/if\(arWelcomeOpeningActive && arWelcomeClock.elapsed<900\)return/);
+    assert.match(demo,/if\(arWelcomeOpeningActive && !introOpeningCopySkipped && arWelcomeClock.elapsed<900\)return/);
     assert.match(showcase, /openingOpacity=reducedMotion\?1:1-smooth\(time,duration-3000,2600\)/);
     assert.doesNotMatch(showcase, /Explore the wonders of plants and ecosystems in an immersive, interactive way/);
 });

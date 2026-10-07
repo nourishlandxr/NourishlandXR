@@ -30,6 +30,10 @@ export const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
 export const DEMO_TOTEM_HALF_HEIGHT_METRES = 1;
 export const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 export const DEMO_PRESENTATION_FONT = '"Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';
+// Chez is used when the licensed face is installed. Fraunces is the bundled
+// page's organic display fallback; body copy keeps its clear sans-serif face.
+export const DEMO_HEADING_FONT = '"Bauhaus Chez", "Fraunces", Georgia, serif';
+export const DEMO_HEADING_SIZE = 72;
 
 export const DEMO_WELCOME_OPENING_MS = 12000;
 export const DEMO_WELCOME_TITLE_HOLD_MS = 2800;

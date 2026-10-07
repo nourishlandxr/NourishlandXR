@@ -2141,9 +2141,9 @@ body[data-project-theme] .creator-ar-context-toolbar button {
 /* Keep every welcome board on one readable type scale and text alignment. */
 .tryit-demo .tryit-guided-choice.is-welcome-board h2 {
     color:#fbfdf9!important;
-    font-family:"Manrope","Segoe UI Variable",Inter,system-ui,sans-serif!important;
+    font-family:"Bauhaus Chez","Fraunces",Georgia,serif!important;
     font-size:clamp(1.7rem,4vw,2.55rem)!important;
-    font-weight:700!important;
+    font-weight:500!important;
     line-height:1.12!important;
     text-align:center!important;
     text-wrap:balance;

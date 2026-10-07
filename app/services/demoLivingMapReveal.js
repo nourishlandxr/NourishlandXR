@@ -13,12 +13,13 @@ export const LIVING_MAP_WORLD_SCALE=.085;
 export const LIVING_MAP_SURFACE_HALF_WIDTH=6.3*LIVING_MAP_WORLD_SCALE;
 export const LIVING_MAP_SURFACE_HALF_DEPTH=4.2*LIVING_MAP_WORLD_SCALE;
 // The loose miniature must be pickable from the side as well as the front.
-export function livingMapTotemRayHit(ray,center,radius=.20){
+export function livingMapTotemRayHit(ray,center,radius=null){
     if(!ray?.origin || !ray.direction || !center)return null;
     const start=new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),direction=new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z);
     if(direction.lengthSq()<1e-8)return null;
     direction.normalize();
-    const point=new THREE.Ray(start,direction).intersectSphere(new THREE.Sphere(new THREE.Vector3(center.x,center.y,center.z),radius),new THREE.Vector3());
+    const cast=new THREE.Ray(start,direction);
+    const point=radius===null?cast.intersectBox(new THREE.Box3(new THREE.Vector3(center.x-.035,center.y-.095,center.z-.035),new THREE.Vector3(center.x+.035,center.y+.115,center.z+.035)),new THREE.Vector3()):cast.intersectSphere(new THREE.Sphere(new THREE.Vector3(center.x,center.y,center.z),radius),new THREE.Vector3());
     return point?{distance:point.distanceTo(start),point:{x:point.x,y:point.y,z:point.z},radius}:null;
 }
 export function livingMapRotation(value=0){
@@ -48,7 +49,9 @@ export function drawLivingMapPreview(ctx,scene,elapsed,reduced,rect){
     ctx.save();ctx.globalAlpha=reveal.preview;
     // A continuous luminous fade avoids the former coarse checkerboard breakup.
     if(reveal.magic>0){ctx.shadowColor='#d5ffb4';ctx.shadowBlur=24*reveal.magic;}
-    scene.draw(ctx,elapsed,reduced,rect);ctx.restore();
+    // The reading preview already contains its landscape. Growth belongs to
+    // the spatial reveal, whose clock starts only after Continue.
+    scene.draw(ctx,elapsed,elapsed===0?true:reduced,rect);ctx.restore();
     if(reveal.magic>0){
         ctx.save();ctx.fillStyle='#f0ffd1';ctx.globalAlpha=reveal.magic*.65;ctx.shadowColor='#d5ffb4';ctx.shadowBlur=10;
         for(let i=0;i<24;i++){const t=(elapsed-4400)/1700,x=rect.x+rect.width*((i*.618)%1),y=rect.y+rect.height*((i*.381)%1)-t*(20+i%7*12);ctx.beginPath();ctx.arc(x+Math.sin(t*3+i)*14,y,.8+i%3*.35,0,Math.PI*2);ctx.fill();}

@@ -6,6 +6,17 @@ import {localizedCanvasContext,translateNxrText} from './i18n.js';
 // its own perspective, depth and occlusion, including the land's solid sides.
 export function createDemoLivingMapXR(gl,scene){
     const resources=[],cache=new Map(),textures=new Map(),textureVersions=new Map(),instanceGeometry=new Map(),instanceBuffers=new WeakMap();
+    // This renderer shares the XR context with every panel and object. Keep
+    // its attribute pointers in a private VAO so deleting map buffers cannot
+    // invalidate the next slide's draws on the default VAO.
+    const vaoExtension=gl.createVertexArray?null:gl.getExtension?.('OES_vertex_array_object');
+    const vaoApi=gl.createVertexArray?{create:()=>gl.createVertexArray(),bind:value=>gl.bindVertexArray(value),remove:value=>gl.deleteVertexArray(value),binding:gl.VERTEX_ARRAY_BINDING}:vaoExtension?{create:()=>vaoExtension.createVertexArrayOES(),bind:value=>vaoExtension.bindVertexArrayOES(value),remove:value=>vaoExtension.deleteVertexArrayOES(value),binding:vaoExtension.VERTEX_ARRAY_BINDING_OES}:null;
+    const vao=vaoApi?.create();
+    function saveAttributes(){
+        if(vaoApi){const previous=gl.getParameter(vaoApi.binding);vaoApi.bind(vao);return ()=>vaoApi.bind(previous);}
+        const previous=Array.from({length:gl.getParameter(gl.MAX_VERTEX_ATTRIBS)},(_,index)=>({index,enabled:gl.getVertexAttrib(index,gl.VERTEX_ATTRIB_ARRAY_ENABLED),buffer:gl.getVertexAttrib(index,gl.VERTEX_ATTRIB_ARRAY_BUFFER_BINDING),size:gl.getVertexAttrib(index,gl.VERTEX_ATTRIB_ARRAY_SIZE),type:gl.getVertexAttrib(index,gl.VERTEX_ATTRIB_ARRAY_TYPE),normalized:gl.getVertexAttrib(index,gl.VERTEX_ATTRIB_ARRAY_NORMALIZED),stride:gl.getVertexAttrib(index,gl.VERTEX_ATTRIB_ARRAY_STRIDE),offset:gl.getVertexAttribOffset(index,gl.VERTEX_ATTRIB_ARRAY_POINTER)}));
+        return ()=>{for(const state of previous){if(state.buffer){gl.bindBuffer(gl.ARRAY_BUFFER,state.buffer);gl.vertexAttribPointer(state.index,state.size,state.type,state.normalized,state.stride,state.offset);}if(state.enabled && state.buffer)gl.enableVertexAttribArray(state.index);else gl.disableVertexAttribArray(state.index);}};
+    }
     const extension=gl.drawArraysInstanced?null:gl.getExtension?.('ANGLE_instanced_arrays');
     const instancing=gl.drawArraysInstanced?{divisor:(...args)=>gl.vertexAttribDivisor(...args),draw:(...args)=>gl.drawArraysInstanced(...args)}:extension?{divisor:(...args)=>extension.vertexAttribDivisorANGLE(...args),draw:(...args)=>extension.drawArraysInstancedANGLE(...args)}:null;
     const cloudCanvas=document.createElement('canvas');cloudCanvas.width=1024;cloudCanvas.height=160;
@@ -96,6 +107,8 @@ export function createDemoLivingMapXR(gl,scene){
         },
         draw(view,origin,rotation,opacity,guidance=''){
             if(opacity<=0)return;
+            const previousBuffer=gl.getParameter(gl.ARRAY_BUFFER_BINDING),restoreAttributes=saveAttributes();
+            try{
             root.compose(new THREE.Vector3(origin.x,origin.y-.025*(1-opacity),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(LIVING_MAP_WORLD_SCALE*(.94+.06*opacity)));
             gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
             for(const node of renderNodes){let visible=true;for(let parent=node;parent;parent=parent.parent)if(!parent.visible){visible=false;break;}if(!visible)continue;world.multiplyMatrices(root,node.matrixWorld);drawNode(node,world,opacity,node.isInstancedMesh && !(instancing && node.userData.livingMapDynamic)?batchInstances(node):null);}
@@ -107,7 +120,8 @@ export function createDemoLivingMapXR(gl,scene){
                 world.compose(new THREE.Vector3(origin.x,origin.y+.32,origin.z),livingMapRotation(rotation),new THREE.Vector3(.30,.047,1));drawNode(cloud,world,opacity);
             }
             gl.depthMask(true);gl.disable(gl.BLEND);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.activeTexture(gl.TEXTURE0);
+            }finally{restoreAttributes();gl.bindBuffer(gl.ARRAY_BUFFER,previousBuffer);}
         },
-        destroy(){for(const [kind,value] of resources)gl['delete'+kind](value);for(const [node,batch] of instanceGeometry){batch.geometry.dispose();if(batch.source!==node.geometry)batch.source.dispose();}instanceGeometry.clear();cache.clear();textures.clear();textureVersions.clear();cloudGeometry.dispose();cloudMaterial.dispose();cloudTexture.dispose();}
+        destroy(){if(vao)vaoApi.remove(vao);for(const [kind,value] of resources)gl['delete'+kind](value);for(const [node,batch] of instanceGeometry){batch.geometry.dispose();if(batch.source!==node.geometry)batch.source.dispose();}instanceGeometry.clear();cache.clear();textures.clear();textureVersions.clear();cloudGeometry.dispose();cloudMaterial.dispose();cloudTexture.dispose();}
     };
 }

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {existsSync} from 'node:fs';
 import {DEMO_NATIVE_PLANTS,nativePlantProfile,chooseDemoNativePlant,DEMO_NATIVE_PLANT_TRANSLATIONS} from '../app/services/demoNativePlants.js';
 import {resolvePlantPim} from '../app/services/pimLegacyAdapter.js';
 import {pimNodeById,pimToArKnowledge,validatePimDocument} from '../app/services/pimModel.js';
@@ -8,6 +9,7 @@ test('native demo PIMs unfold native food-forest planting into rainforest ecolog
     assert.deepEqual(DEMO_NATIVE_PLANTS.map(plant=>plant.name),['Blue Quandong','Finger Lime','Lemon Myrtle']);
     for(const plant of DEMO_NATIVE_PLANTS){
         const profile=nativePlantProfile(plant.id),document=resolvePlantPim(profile),projection=pimToArKnowledge(document);
+        for(const image of [plant.image,plant.wildlifeImage,plant.seedImage])assert.ok(existsSync(new URL(image)),`${plant.id} image is bundled`);
         assert.ok(validatePimDocument(document).valid,plant.id);
         const forest=pimNodeById(document,'native-forest-within-food-forest');
         assert.equal(forest.parentId,'food-forest');

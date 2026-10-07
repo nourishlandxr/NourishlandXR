@@ -9,8 +9,8 @@ function setup(extra={}){
  const context=vm.createContext({demoHeldIndex:-1,demoWebModeOpen:false,demoExitLifecycle:{state:'idle'},DEMO_EXIT_STATES:{IDLE:'idle'},introBoardStep:'SPACE 1.4',demoMapIntroPaused:false,demoLivingMapPlacement:null,currentDemoStepSignature:()=>context.introBoardStep,skipDemoNarration:()=>{finished++;button.disabled=false;},placementReady:false,markers:[],nativeConnectionState:null,appRoot:{querySelector:()=>button},introBoardParagraphFadeTimes:[100],introBoardParagraphFadeStartedAt:100,introTextureUploadedAt:100,introBoardTextureDirty:false,syncDemoPanelActions(){},paintWelcomeLayer(){},performance:{now:()=>10000},...extra});
  vm.runInContext(handler,context);return {context,button,skip:()=>vm.runInContext('skipCurrentDemoStep()',context),advances:()=>advances,finished:()=>finished};
 }
-test('Y clears text/button waits and advances once in the same call',()=>{
- const h=setup();assert.equal(h.skip(),true);assert.equal(h.finished(),1);assert.equal(h.advances(),1);
+test('Y clears text/button waits and leaves Continue ready on this slide',()=>{
+ const h=setup();assert.equal(h.skip(),true);assert.equal(h.finished(),1);assert.equal(h.advances(),0);assert.equal(h.button.hidden,false);assert.equal(h.button.disabled,false);
  assert.equal(vm.runInContext('demoFastSkipActive',h.context),false);assert.equal(h.context.introTextureUploadedAt,-Infinity);assert.equal(h.context.introBoardParagraphFadeTimes[0],-Infinity);
 });
 test('Y does not double-advance if finishing narration changed the stage',()=>{
