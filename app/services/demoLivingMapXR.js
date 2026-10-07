@@ -24,12 +24,13 @@ export function createDemoLivingMapXR(gl,scene){
     const cloud=new THREE.Mesh(cloudGeometry,cloudMaterial);let lastGuidance='';
     const compile=(type,source)=>{const shader=gl.createShader(type);resources.push(['Shader',shader]);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader;};
     const program=gl.createProgram();resources.push(['Program',program]);
-    gl.attachShader(program,compile(gl.VERTEX_SHADER,`attribute vec3 p,n,c;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;uniform mat4 projection,view,model;uniform float instanced;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}vec3 normal=normalize(mat3(model)*norm);light=.68+.32*max(0.,dot(normal,normalize(vec3(-.3,.8,.5))));v=uv;tint=pow(max(c,vec3(0.)),vec3(.4545));gl_Position=projection*view*model*point;}`));
+    gl.attachShader(program,compile(gl.VERTEX_SHADER,`attribute vec3 p,n,c,ic;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;uniform mat4 projection,view,model;uniform float instanced;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}vec3 normal=normalize(mat3(model)*norm);light=.68+.32*max(0.,dot(normal,normalize(vec3(-.3,.8,.5))));v=uv;tint=pow(max(c*(instanced>.5?ic:vec3(1.)),vec3(0.)),vec3(.4545));gl_Position=projection*view*model*point;}`));
     gl.attachShader(program,compile(gl.FRAGMENT_SHADER,`precision mediump float;uniform vec3 colour;uniform float alpha,textured;uniform sampler2D image;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 c=vec4(colour*tint,1.);if(textured>.5)c*=texture2D(image,v);if(c.a*alpha<.01)discard;gl_FragColor=vec4(c.rgb*light,c.a*alpha);}`));
     gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image','instanced'].map(k=>[k,gl.getUniformLocation(program,k)]));
     const attributes=['p','n','uv','c'].map(k=>gl.getAttribLocation(program,k));
     const matrixAttributes=['i0','i1','i2','i3'].map(k=>gl.getAttribLocation(program,k));
+    const instanceColourAttribute=gl.getAttribLocation(program,'ic');
     const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),materialColours=new WeakMap(),renderNodes=[];
     scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});let prepareIndex=0;
     function geometry(source){
@@ -55,7 +56,7 @@ export function createDemoLivingMapXR(gl,scene){
                 const k=i*count+j;point.fromBufferAttribute(data.attributes.position,j).applyMatrix4(instance);positions[k*3]=point.x;positions[k*3+1]=point.y;positions[k*3+2]=point.z;
                 if(data.attributes.normal){normal.fromBufferAttribute(data.attributes.normal,j).applyMatrix3(normalMatrix).normalize();normals[k*3]=normal.x;normals[k*3+1]=normal.y;normals[k*3+2]=normal.z;}
                 if(data.attributes.uv){uvs[k*2]=data.attributes.uv.getX(j);uvs[k*2+1]=data.attributes.uv.getY(j);}
-                colours[k*3]=colour.r;colours[k*3+1]=colour.g;colours[k*3+2]=colour.b;
+                colours[k*3]=colour.r*(data.attributes.color?.getX(j) ?? 1);colours[k*3+1]=colour.g*(data.attributes.color?.getY(j) ?? 1);colours[k*3+2]=colour.b*(data.attributes.color?.getZ(j) ?? 1);
             }
         }
         if(!result){const merged=new THREE.BufferGeometry();merged.setAttribute('position',new THREE.BufferAttribute(positions,3));merged.setAttribute('normal',new THREE.BufferAttribute(normals,3));merged.setAttribute('uv',new THREE.BufferAttribute(uvs,2));merged.setAttribute('color',new THREE.BufferAttribute(colours,3));result={geometry:merged,source:data,verticesPerInstance:count};instanceGeometry.set(node,result);}
@@ -79,7 +80,7 @@ export function createDemoLivingMapXR(gl,scene){
             gl.bindBuffer(gl.ARRAY_BUFFER,buffers.colour);
             const colourVersion=node.instanceColor?.version ?? 0;
             if(buffers.colourVersion!==colourVersion){gl.bufferData(gl.ARRAY_BUFFER,node.instanceColor?.array || new Float32Array(node.instanceMatrix.count*3).fill(1),gl.STATIC_DRAW);buffers.colourVersion=colourVersion;}
-            gl.enableVertexAttribArray(attributes[3]);gl.vertexAttribPointer(attributes[3],3,gl.FLOAT,false,0,0);instancing.divisor(attributes[3],1);
+            gl.enableVertexAttribArray(instanceColourAttribute);gl.vertexAttribPointer(instanceColourAttribute,3,gl.FLOAT,false,0,0);instancing.divisor(instanceColourAttribute,1);
         }
         let c=materialColours.get(material);if(!c){const colour=material.color.clone().convertLinearToSRGB();c=[colour.r,colour.g,colour.b];materialColours.set(material,c);}gl.uniform3f(uniforms.colour,c[0],c[1],c[2]);gl.uniform1f(uniforms.alpha,opacity*material.opacity);
         gl.uniformMatrix4fv(uniforms.model,false,matrix.elements);
@@ -95,7 +96,7 @@ export function createDemoLivingMapXR(gl,scene){
         gl.depthMask(!transparent);gl.disable(gl.CULL_FACE);
         const start=batch?0:node.geometry.drawRange.start,count=batch?node.count*batch.verticesPerInstance:Math.min(entry.count-start,node.geometry.drawRange.count);
         if(count>0){if(gpu)instancing.draw(gl.TRIANGLES,start,count,node.count);else gl.drawArrays(node.isLine?gl.LINE_STRIP:gl.TRIANGLES,start,count);}
-        if(gpu){for(const attribute of matrixAttributes){instancing.divisor(attribute,0);gl.disableVertexAttribArray(attribute);}instancing.divisor(attributes[3],0);}
+        if(gpu){for(const attribute of matrixAttributes){instancing.divisor(attribute,0);gl.disableVertexAttribArray(attribute);}instancing.divisor(instanceColourAttribute,0);gl.disableVertexAttribArray(instanceColourAttribute);instancing.divisor(attributes[3],0);}
     }
     return {
         prepareNext(){

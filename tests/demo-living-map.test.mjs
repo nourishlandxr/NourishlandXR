@@ -82,7 +82,8 @@ test('concept keeps two distinct gardens, centered Totems and just six Orbs',()=
     assert.equal(model.links.length,1);
     assert.equal(model.landscape.swales.length,3);
     for(const row of model.landscape.swales){assert.ok(row.every(point=>point.x<-.8));assert.ok(new Set(row.map(point=>point.z)).size>10);}
-    for(const tree of model.landscape.trees)assert.ok(Math.hypot(tree.x-2.85,tree.z)>1.7);
+    for(const tree of model.landscape.trees.filter(tree=>tree.habitat!=='swale'))assert.ok(Math.hypot(tree.x-2.85,tree.z)>1.7);
+    assert.equal(model.landscape.trees.filter(tree=>tree.habitat==='swale').length,5);
     assert.ok(model.items.filter(item=>item.type==='plant').every(item=>item.name===''));
 });
 

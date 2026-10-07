@@ -5,6 +5,7 @@ import {livingMapRoutes,sampleLivingMapRoute} from './demoLivingMapRoute.js';
 import {createLivingMapVisitors,LIVING_MAP_VISITOR_COLOURS} from './demoLivingMapVisitors.js';
 import {createTotemSculptureGeometry} from './spatialTotemSculpture.js';
 import {livingMapGreeneryProgress} from './demoLivingMapReveal.js';
+import {createLivingMapDetailKit} from './demoLivingMapDetail.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
@@ -24,13 +25,16 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const mesh = (geo, color, x, y, z, sx, sy = sx, sz = sx, parent = scene) => {
         const node = new THREE.Mesh(geo, material(color)); node.position.set(x, y, z); node.scale.set(sx, sy, sz); parent.add(node); return node;
     };
+    const detail=createLivingMapDetailKit({geometry,mesh,material});
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#66573e', 0, -.23, 0, 6.3, .4, 4.2);
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#61714a', 0, -.025, 0, 6.25, .05, 4.15);
     const edge=mesh(geometry(new THREE.TorusGeometry(1,.012,6,64)),'#bac894',0,-.01,0,6.2,4.12,1);edge.rotation.x=-Math.PI/2;
     if(model.interactive)for(const x of [-6,6]){
         const rim=mesh(geometry(new THREE.TorusGeometry(.22,.04,6,20)),'#b8d7a4',x,.06,0,1);rim.rotation.x=-Math.PI/2;
     }
-    const scenery = new THREE.Group();scene.add(scenery);scenery.visible=false;
+    const scenery = new THREE.Group();scene.add(scenery);scenery.visible=false;scenery.name='Living Map shared scenery';
+    const soil=new THREE.Group();soil.name='Living Map shared terrain';scene.add(soil);detail.terrain(soil,model);
+    for(const [y,r,h,c] of [[-.16,6.29,.035,'#8a7955'],[-.30,6.30,.025,'#514a39']])mesh(geometry(new THREE.CylinderGeometry(1,1,1,64)),c,0,y,0,r,h,4.195,soil);
     // Shared geometry for small planting clusters and tree canopies.
     const shrub = new THREE.InstancedMesh(sphere, material('#455e3b'), 65);
     const transform = new THREE.Object3D(); let planted = 0;
@@ -41,27 +45,14 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         transform.position.set(x, .12, z); transform.scale.set(.15 + (i % 4) * .035, .12 + (i % 3) * .04, .17);
         transform.updateMatrix(); shrub.setMatrixAt(planted++, transform.matrix);
     }
-    // Ordered planting follows the swales; the second garden stays open.
-    for(const row of model.landscape?.swales || []){
-        const points=row.map(({x,z})=>new THREE.Vector3(x,.055,z));
-        const curve=new THREE.CatmullRomCurve3(points);
-        mesh(geometry(new THREE.TubeGeometry(curve,32,.065,5,false)),'#8c805a',0,0,0,1,1,1,scenery);
-        row.filter((_,i)=>i%3===0).forEach(({x,z},i)=>{
-            transform.position.set(x,.13,z+.17);transform.scale.set(.16,.12+(i%3)*.035,.14);
-            transform.updateMatrix();shrub.setMatrixAt(planted++,transform.matrix);
-        });
-    }
+    // Berms, damp channels and mixed planting belong to the same scenery
+    // in the paused Living Frame sample and the interactive spatial map.
+    detail.swales(scenery,model.landscape?.swales || [],soil);
     shrub.count = planted; scenery.add(shrub);
-    const contextTrees=model.landscape?.trees?.map(({x,z,size})=>[x,z,size]) || [[-4.6,-2.6,1],[-2,-3,.85],[1.8,-2.9,1.2],[4.4,-2.2,.9],[4.8,1.7,.8]];
-    for (const [index, [x, z, size]] of contextTrees.entries()) {
+    const contextTrees=model.landscape?.trees?.map(tree=>[tree.x,tree.z,tree.size,tree]) || [[-4.6,-2.6,1],[-2,-3,.85],[1.8,-2.9,1.2],[4.4,-2.2,.9],[4.8,1.7,.8]];
+    for (const [index, [x, z, size, tree]] of contextTrees.entries()) {
         if (model.items.some(item => Math.hypot(item.x - x, item.z - z) < .8)) continue;
-        mesh(cylinder, '#756048', x, size * .55, z, .07, size * 1.1, .07, scenery);
-        // One continuous crown, with varied height, width, lean and colour.
-        // Avoid the repeated satellite ball perched on every tree.
-        const shapes=[[.58,.48,.50],[.39,.76,.42],[.65,.55,.43],[.48,.63,.58]];
-        const [sx,sy,sz]=shapes[index%shapes.length];
-        const crown=mesh(sphere,['#34533c','#4c6841','#3f6347','#567249'][index%4],x,size*(.95+sy*.55),z,size*sx,size*sy,size*sz,scenery);
-        crown.rotation.set(.08*Math.sin(index*2.1),index*.73,.12*Math.cos(index*1.7));
+        detail.tree(scenery,x,z,size,index,0,tree?.habitat==='swale'?tree.habit:null);
     }
     for (const [x,z,sx,sz] of (model.concept?[]:[[-3.4,1.8,1.5,.65],[2.7,1.9,1.3,.6]])) {
         mesh(geometry(new THREE.BoxGeometry(1,1,1)), '#867254', x, .025, z, sx, .065, sz, scenery);
@@ -93,9 +84,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         let orb=null;
         if (item.type === 'plant') {
             const grass = /vetiver/i.test(item.name), tree = item.tree || /jackfruit|lychee|acacia/i.test(item.name);
-            mesh(cylinder,'#7a7650',0,.28,0,.025,.56,.025,group);
-            if(grass)for(let j=0;j<7;j++){const blade=mesh(sphere,'#7d9b55',(j-3)*.035,.26,0,.025,.3,.04,group);blade.rotation.z=(j-3)*.15;}
-            else for(let j=0;j<(tree?8:6);j++){const angle=j*2.4;const leaf=mesh(sphere,index%2?'#70965a':'#8da55d',Math.cos(angle)*.14,.18+j*.07,Math.sin(angle)*.14,tree?.16:.115,.065,tree?.13:.08,group);leaf.rotation.z=Math.sin(angle)*.5;}
+            detail.plant(group,index,{grass,tree});
             const orbMaterial=new THREE.MeshPhongMaterial({color:'#bed8a3',transparent:true,opacity:.24,shininess:65,depthWrite:false});materials.set('orb'+index,orbMaterial);
             orb=new THREE.Mesh(sphere,orbMaterial);orb.position.y=.4;orb.scale.setScalar(.38);group.add(orb);
         } else if(item.type === 'zone') {
@@ -142,7 +131,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         const combined=geometry(new THREE.BufferGeometry());combined.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));combined.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));combined.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));
         const mat=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true});materials.set('merged-'+parent.uuid,mat);parent.add(new THREE.Mesh(combined,mat));
     }
-    mergeSolids(scenery);markers.forEach(marker=>mergeSolids(marker.group));
+    mergeSolids(soil);mergeSolids(scenery);markers.forEach(marker=>mergeSolids(marker.group));
     const visitors=model.interactive?createLivingMapVisitors(model,routes):null;
     const pegs=[];
     if(visitors){
@@ -150,17 +139,17 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         // same body geometry: no additional meshes or draw calls per person.
         const profile=[[0,0],[.09,0],[.12,.012],[.13,.04],[.125,.07],[.115,.09],[.115,.19],[.10,.25],[.08,.29],[.065,.33],[0,.33]].map(([x,y])=>new THREE.Vector2(x,y));
         const bodyGeometry=geometry(new THREE.LatheGeometry(profile,12));
-        const colours=[];for(let i=0;i<bodyGeometry.attributes.position.count;i++){const y=bodyGeometry.attributes.position.getY(i),shade=y<.08?.72:y>.26?1.12:1;colours.push(shade,shade,shade);}bodyGeometry.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));
-        for(const geo of [bodyGeometry,sphere]){
-            const mat=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:geo===bodyGeometry});materials.set('peg-'+pegs.length,mat);
-            const batch=new THREE.InstancedMesh(geo,mat,5);batch.visible=false;batch.userData.livingMapDynamic=true;
-            LIVING_MAP_VISITOR_COLOURS.forEach((colour,i)=>batch.setColorAt(i,new THREE.Color(colour)));
+        const peonParts=detail.peonGeometry(bodyGeometry);
+        for(const [kind,geo] of peonParts.entries()){
+            const mat=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true});materials.set('peg-'+kind,mat);
+            const batch=new THREE.InstancedMesh(geo,mat,5);batch.name=kind?'Peon faces':'Peon bodies';batch.visible=false;batch.userData.livingMapDynamic=true;
+            LIVING_MAP_VISITOR_COLOURS.forEach((colour,i)=>batch.setColorAt(i,new THREE.Color(kind?'#ffffff':colour)));
             batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(batch);pegs.push(batch);
         }
     }
-    const miniPimos=visitors?model.items.filter(item=>item.type==='plant').map(item=>{
-        const group=new THREE.Group();group.position.set(item.x,.95,item.z);group.visible=false;scene.add(group);
-        for(let i=0;i<7;i++){const angle=i*Math.PI/3;mesh(sphere,'#cce4ba',i?Math.cos(angle)*.22:0,i?Math.sin(angle)*.22:0,0,i?.07:.10,i?.07:.10,.05,group);}
+    const miniPimos=visitors?model.items.filter(item=>item.type==='plant').map((item,index)=>{
+        const group=new THREE.Group();group.position.set(item.x,1.18,item.z);group.name='Mini PIMO '+item.id;group.visible=false;scene.add(group);
+        detail.pimo(group,index);
         mergeSolids(group);return {item,group};
     }):[];
     const miniNotes=visitors?Array.from({length:3},(_,i)=>{
@@ -188,7 +177,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         pegs.forEach((batch,kind)=>{
             batch.visible=placed.length>0;
             states.forEach((s,i)=>{transform.position.set(s.x,.085+s.bob+(kind?.405:0),s.z);transform.rotation.set(0,s.heading,0);
-                const size=Math.max(.001,s.scale);transform.scale.set(kind?.12*size:size,kind?.12*size:size,kind?.12*size:size);
+                const size=Math.max(.001,s.scale);transform.scale.set(kind?.12*size:size,kind?.12*size*(1+(i%2)*.025):size,kind?.12*size:size);
                 transform.updateMatrix();batch.setMatrixAt(i,transform.matrix);});batch.instanceMatrix.needsUpdate=true;
         });
         miniPimos.forEach(({item,group})=>{const engaged=states.some(s=>s.focus===item.id && s.interaction==='orb');
@@ -225,7 +214,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             }
             const bornFor=id=>model.interactive && !Number.isFinite(schedule.items[id]?.startAt)?0:demoLivingMapItemProgress(schedule,id,elapsed,reducedMotion);
             const progress=demoLivingMapProgress(elapsed,reducedMotion,schedule);
-            if(model.interactive){progress.camera=1;progress.wide=1;progress.scenery=1;progress.settled=!placement?.current() && elapsed>(placed.at(-1)?.at || 0)+2800;}
+            if(model.interactive){progress.camera=1;progress.wide=1;progress.scenery=1;progress.settled=!placement?.current() && elapsed>Math.max(9800,(placed.at(-1)?.at || 0)+2800);}
             if(elapsed<lastPaint || lastReduced!==reducedMotion)settledPaint=false;
             if(paint && !canvasPainted || !settledPaint && (elapsed-lastPaint>=1000/24 || elapsed<lastPaint || lastReduced!==reducedMotion)){
                 // Native XR uses the headset projection. Fit this separate

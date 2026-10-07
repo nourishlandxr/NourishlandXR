@@ -34,7 +34,9 @@ export function createDemoLivingMapConcept({interactive=false}={}) {
         return {x,z:z+.34*Math.sin((x+5.1)/4.25*Math.PI)};
     }));
     const trees = [[1.5,-2],[2.7,-2.25],[4.2,-1.85],[5,-.8],[4.8,1.1],[3.6,2],[1.75,1.7]]
-        .map(([x,z],index)=>({x,z,size:.85+(index%3)*.12}));
+        .map(([x,z],index)=>({x,z,size:.85+(index%3)*.12,habitat:'forest'}));
+    trees.push(...[[-4.65,-1.55,1.10],[-2.65,-1.60,1.18],[-1.10,-1.45,1.08],[-4.5,.82,1.02],[-1.15,.92,.92]]
+        .map(([x,z,size],i)=>({x,z,size,habitat:'swale',habit:['paddle','umbrella','orchard','coppice','fronds'][i],canopyRadius:size*[.82,.68,.78,.68,.96][i]})));
     return {concept:true,items:[first,second,...plants],areas,links:[[first,second]],landscape:{swales,trees}};
 }
 

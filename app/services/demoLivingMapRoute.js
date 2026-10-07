@@ -30,7 +30,7 @@ export function planLivingMapRoute(start,end,obstacles=[]){
 }
 export function livingMapObstacles(model){
     const trees=(model.landscape?.trees || []).filter(tree=>!model.items.some(item=>Math.hypot(item.x-tree.x,item.z-tree.z)<.8));
-    return [...trees.map(tree=>({...tree,radius:tree.size*.55+.20})),...model.items.filter(item=>item.tree).map(item=>({...item,radius:.48}))];
+    return [...trees.map(tree=>({...tree,radius:(tree.canopyRadius ?? tree.size*.68)+.16})),...model.items.filter(item=>item.tree).map(item=>({...item,radius:.48}))];
 }
 export function livingMapRoutes(model){
     const obstacles=livingMapObstacles(model);
