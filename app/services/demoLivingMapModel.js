@@ -48,6 +48,11 @@ export function createDemoLivingMapPlacement(model=createDemoLivingMapConcept({i
             return model.items.find(item=>item.id===ids[placements.length]) || null;
         },
         snapshot:()=>placements.map(entry=>({...entry})),
+        restore(entries=[]){
+            const next=[];
+            for(const entry of entries){if(entry.id!==ids[next.length] || !Number.isFinite(entry.at) || entry.at<0 || entry.at<(next.at(-1)?.at || 0) || next.length===2 && entry.at<next[1].at+LIVING_MAP_ORB_SETTLE_MS)return false;next.push({id:entry.id,at:entry.at});}
+            placements=next;return true;
+        },
         place(id,at){
             if(id!==ids[placements.length] || !Number.isFinite(at) || at<0
                 || placements.length===2 && at<placements[1].at+LIVING_MAP_ORB_SETTLE_MS)return false;

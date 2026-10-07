@@ -47,8 +47,8 @@ test('creator Controls open the connected Add Widget clone instead of creating a
 });
 test('Totem Controls own style, light and explicit signage labels, with failed-save rollback',async()=>{
  let context,hint;const panel={showLearning(){},setObjectContext:value=>context=value,setContextualHint:value=>hint=value},record={marker:{type:'area_checkpoint',name:'Area 2',appearance:{signsVisible:true}},totemSignsVisible:true,infoVisible:true};
- focusSpatialObjectControls(panel,record);assert.equal(context.actions.find(item=>item.id==='signs').label,'Hide signage');
- await context.onAction('signs');assert.equal(record.totemSignsVisible,false);assert.equal(context.actions.find(item=>item.id==='signs').label,'Show signage');
+ focusSpatialObjectControls(panel,record);assert.equal(context.actions.find(item=>item.id==='signs').label,'Signage');assert.equal(context.actions.find(item=>item.id==='signs').selected,true);
+ await context.onAction('signs');assert.equal(record.totemSignsVisible,false);assert.equal(context.actions.find(item=>item.id==='signs').label,'Signage');assert.equal(context.actions.find(item=>item.id==='signs').selected,false);
  await context.onAction('style:basic');assert.equal(record.marker.appearance.totemStyle,'basic');assert.equal(record.marker.appearance.totemStyleExplicit,true);
  await context.onAction('light:#eaa8b9');assert.equal(record.marker.appearance.notificationColor,'#eaa8b9');
  focusSpatialObjectControls(panel,record,{save:async()=>{throw Error('offline');}});await context.onAction('signs');assert.equal(record.totemSignsVisible,false);assert.match(hint,/offline/);

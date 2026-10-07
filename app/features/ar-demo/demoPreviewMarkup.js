@@ -34,7 +34,7 @@ export function demoContentFor(record) {
 }
 
 export function demoPlantMedia(record) {
-    if (record?.demoAmbientNeighbour) {
+    if (record?.demoAmbientNeighbour || record?.demoNativeChoice) {
         const identity=record.demoKnowledgeProfile?.pim?.identity;
         return identity?.image ? {image:identity.image,alt:identity.imageAlt || record.name,caption:identity.imageCaption || record.name} : null;
     }
@@ -76,6 +76,7 @@ export function simulatedAreaLinkMarkup(records = []) {
 }
 
 export function simulatedRecordMarkup({ record, index, anchor, offset, content, lines = [], highlighted = false, held = false }) {
+    if(record.demoType==='note' && record.demoNoteCollapsed)return `<span class="tryit-sim-marker tryit-sim-marker-note is-note-reopen" data-demo-marker-index="${index}" style="${simulatedAnchorStyle(anchor)}" role="button" tabindex="0" aria-label="Reopen ${escapeSpatialText(record.name || 'Note')}">✦</span>`;
     const collapsible = record.demoExpanded && record.demoInteractive !== false ? ' role="button" tabindex="0" aria-label="Move this information panel. Tap to hide."' : '';
     const compactContent = record.demoType === 'note' && content
         ? `<strong>${content.title}</strong>${lines.map(line => `<small>${line}</small>`).join('')}`

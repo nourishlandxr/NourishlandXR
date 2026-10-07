@@ -6,7 +6,7 @@ import vm from 'node:vm';
 // Execute the actual button handlers: a click during narration must advance
 // once, clear the previous copy and cancel its pending reveal callbacks.
 const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
-const clear=source.slice(source.indexOf('function clearDemoNarration()'),source.indexOf('function showIntroBoard('));
+const clear=source.slice(source.indexOf('function clearDemoNarration('),source.indexOf('function showIntroBoard('));
 function context(){
     const paragraphs=[{textContent:'Old paragraph'}],cancelled=[],button={};let advances=0;
     const ctx=vm.createContext({boardTypingTimer:11,boardTypingWatchdogTimer:12,arWelcomeUnlockTimer:13,demoNarrationRevision:0,narrationRevision:0,skipDemoNarration:()=>{},introBoardVisibleBody:'Old paragraph',introBoardParagraphFadeTimes:[1],introBoardTextureDirty:false,appRoot:{querySelectorAll:()=>paragraphs,querySelector:()=>button},continueButton:button,clearTimeout:id=>cancelled.push(id),performance:{now:()=>100},onContinue:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},beginOpeningCopy:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},runArWelcomeTutorial:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},suppressSessionSelectUntil:0,typing:true,openingTyping:true,introBoardStep:'INTRO 1.2',arWelcomeIntroPending:true,arWelcomeSettleStage:true});

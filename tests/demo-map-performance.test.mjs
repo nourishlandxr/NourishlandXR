@@ -3,6 +3,19 @@ import assert from 'node:assert/strict';
 import * as THREE from '../app/vendor/three.module.min.js';
 import {createHeroDicePhysics,createHeroDiceVisibility} from '../app/services/heroDiceToy.js';
 import {createDemoLivingMapXR} from '../app/services/demoLivingMapXR.js';
+test('reading preloads hidden map meshes one at a time, with no reveal upload burst',()=>{
+    const previous=globalThis.document;globalThis.document={createElement:()=>({width:0,height:0})};
+    const calls=[],gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(_p,k)=>k,getExtension:()=>null},{get:(target,key)=>key in target?target[key]:key.startsWith('create')?()=>({}):key===key.toUpperCase()?key:(...args)=>calls.push([key,...args])});
+    const scene=new THREE.Scene(),mat=new THREE.MeshBasicMaterial(),geometries=[new THREE.BoxGeometry(),new THREE.SphereGeometry(1,8,6)];
+    const nodes=geometries.map(geo=>new THREE.Mesh(geo,mat));nodes.forEach(node=>{node.visible=false;scene.add(node);});scene.updateMatrixWorld();
+    const renderer=createDemoLivingMapXR(gl,scene),matrix=new THREE.Matrix4().elements,view={projectionMatrix:matrix,transform:{inverse:{matrix}}};
+    try{
+        assert.equal(renderer.prepareNext(),false);assert.equal(calls.filter(c=>c[0]==='bufferData').length,4);
+        assert.equal(renderer.prepareNext(),true);const uploads=calls.filter(c=>c[0]==='bufferData').length;assert.equal(uploads,8);
+        nodes.forEach(node=>node.visible=true);renderer.draw(view,{x:0,y:1,z:-1},0,1);renderer.draw(view,{x:0,y:1,z:-1},0,1);
+        assert.equal(calls.filter(c=>c[0]==='bufferData').length,uploads);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,4);
+    }finally{renderer.destroy();geometries.forEach(geo=>geo.dispose());mat.dispose();globalThis.document=previous;}
+});
 
 test('Dice visibility fades both ways, including an interrupted fade',()=>{
     const fade=createHeroDiceVisibility();assert.equal(fade.update(true,0),0);assert.equal(fade.update(true,800),1);

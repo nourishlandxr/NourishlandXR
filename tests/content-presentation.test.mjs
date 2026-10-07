@@ -62,7 +62,7 @@ test('placement instructions remain in slide history and describe the object tha
     const demo = read('app/screens/temporaryArDemo.js');
     assert.match(demo, /kind:'placement'/);
     assert.match(demo, /slide\.kind==='welcome' \|\| slide\.kind==='placement'/);
-    assert.match(DEMO_GUIDED_COPY['ELEMENTS 1.11'], /Moringa/);
+    assert.match(DEMO_GUIDED_COPY['ELEMENTS 1.11'], /Orb/);
     assert.doesNotMatch(demo, /Totem 2 is a sample PIMO layout/);
 });
 

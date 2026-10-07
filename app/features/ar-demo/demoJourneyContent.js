@@ -121,27 +121,27 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.9",
         "act": "Compare profiles",
         "title": "Another plant, another story",
-        "main": "Every plant brings a different story. Add Moringa beside Pigeon Pea and explore what it can share.",
+        "main": "Every plant brings a different story. Place another Orb beside Pigeon Pea, then choose an Australian rainforest sample.",
         "panel": "Keep the first sample and its information available.",
-        "hint": "Add the Moringa sample.",
+        "hint": "Place a second Plant Orb.",
         "art": null
     },
     {
         "id": "ELEMENTS 1.11",
         "act": "Compare profiles",
-        "title": "Add Moringa",
-        "main": "Place Moringa beside Pigeon Pea. Each plant keeps its own information, ready for you to explore.",
+        "title": "Place another Plant Orb",
+        "main": "Place a plain Orb beside Pigeon Pea. Then choose a rainforest plant for it in the Control Panel or the nearby chooser.",
         "panel": "Existing placement controls; media closed.",
-        "hint": "Place the Moringa Orb.",
+        "hint": "Place the second Orb, then choose its plant.",
         "art": null
     },
     {
         "id": "ELEMENTS 1.12",
         "act": "Compare profiles",
         "title": "Explore another story",
-        "main": "Select Moringa to open its information. You can return to Pigeon Pea whenever you like.",
+        "main": "Choose Blue Quandong, Finger Lime or Lemon Myrtle. Your choice gives this Orb its own plant information. Continue becomes available after your choice.",
         "panel": "Selected plant information only; Curiosity remains standard.",
-        "hint": "Select Moringa, or continue to add a sample Note.",
+        "hint": "Choose a plant to continue.",
         "art": null
     },
     {
@@ -175,7 +175,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "SPACE 1.4",
         "act": "Organise an area",
         "title": "Bring the pieces together",
-        "main": "So far, we have explored plants, knowledge and a local message. In a real place, many of these pieces can grow together. An Area keeps them organised, with a Totem as its welcome point.",
+        "main": "So far, we have explored plants, knowledge and a local message.\n\nIn a real place, these pieces can grow together.\n\nAn Area keeps them organised, with a Totem as its welcome point.",
         "panel": "Keep the sample plants and Note visible.",
         "hint": "Show the first Totem.",
         "art": null

@@ -2,6 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapModel,createDemoLivingMapPlacement,createDemoLivingMapSchedule,demoLivingMapAreaProgress,demoLivingMapItemProgress,demoLivingMapProgress,demoLivingMapStage,LIVING_MAP_DURATION_MS,LIVING_MAP_ORB_SETTLE_MS} from '../app/services/demoLivingMapModel.js';
 import {livingMapPreviewRecords} from '../tools/demo-living-map-fixture.js';
+test('map history restores placement order and pending Orb delay atomically',()=>{
+    const placement=createDemoLivingMapPlacement();placement.place('map-entry',8000);placement.place('map-forest',9000);
+    const snapshot=placement.snapshot();placement.reset();assert.equal(placement.restore(snapshot),true);
+    assert.equal(placement.current(10000),null);assert.equal(placement.current(11100).id,'map-swales');
+    for(const invalid of [[{id:'map-forest',at:9000}],[...snapshot,{id:'map-swales',at:10000}],[{id:'map-entry',at:NaN}]]){
+        assert.equal(placement.restore(invalid),false);assert.deepEqual(placement.snapshot(),snapshot);
+    }
+    assert.equal(placement.place('map-swales',11100),true);const complete=placement.snapshot();placement.reset();placement.restore(complete);assert.equal(placement.current(12000),null);
+});
 
 test('complete sample preserves identities, ownership, links and source records',()=>{
     const records=livingMapPreviewRecords(),before=structuredClone(records);

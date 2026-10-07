@@ -8,6 +8,7 @@ import {knowledgeExplorer,knowledgeExplorerOptions,KNOWLEDGE_VISUALS} from './kn
 import {createSpatialTotemCards,hitTotemSurface,hitTotemPoint} from './spatialTotemCards.js';
 import {drawSpatialTether} from './spatialTetherRenderer.js';
 import {currentInfoOpacity,currentGraphicsQuality,getSpatialVisualSettings} from './spatialVisualSettings.js';
+import {identityTextLayout,IDENTITY_GLYPH_Y_SCALE} from './demoTextWidgetLayout.js';
 
 const caches=new WeakMap();
 const motionPreference=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
@@ -78,18 +79,25 @@ function labelCanvas(card){
     if(card.identity)ctx.roundRect(18,62,476,388,34);
     else for(let i=0;i<6;i++){const angle=Math.PI/3*i,x=256+246*Math.cos(angle),y=256+284*Math.sin(angle);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();
     if(!card.inkOnly){
-    const tint=new THREE.Color(card.branchColour),shade=tint.clone().multiplyScalar(card.child?.22:.30);ctx.globalAlpha=card.infoOpacity;ctx.fillStyle='#'+shade.getHexString();ctx.fill();
+    const tint=new THREE.Color(card.identity?'#24596a':card.branchColour),shade=tint.clone().multiplyScalar(card.identity?.42:card.child?.22:.30);ctx.globalAlpha=card.infoOpacity;ctx.fillStyle='#'+shade.getHexString();ctx.fill();
     const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,`rgba(18,40,34,${card.infoOpacity})`);gradient.addColorStop(1,`rgba(7,21,24,${card.infoOpacity})`);ctx.globalAlpha=.30;ctx.fillStyle=gradient;ctx.fill();ctx.globalAlpha=1;
     }
     if(card.bodyOnly)return canvas;
     ctx.lineJoin='round';ctx.lineWidth=card.selected || card.hovered?12:9;ctx.strokeStyle=card.hovered?'#f0fbf8':card.selected?KNOWLEDGE_VISUALS.selectedBorder:card.branchColour;ctx.stroke();
     // Keep power-of-two artwork for filtered distance viewing, but compensate
     // glyphs for the world card's aspect ratio so the type is not stretched.
-    ctx.save();ctx.translate(256,256);ctx.scale(1,card.identity ? .43/.28:KNOWLEDGE_VISUALS.nodeWidth/KNOWLEDGE_VISUALS.nodeHeight);ctx.translate(-256,-256);
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffffff';ctx.shadowColor='rgba(3,16,21,.95)';ctx.shadowBlur=3;ctx.shadowOffsetY=1;ctx.font=card.identity?'700 46px Manrope, system-ui':`800 ${card.core?76:card.child?68:KNOWLEDGE_VISUALS.labelFont}px Manrope, system-ui`;
+    ctx.save();if(!card.identity){ctx.translate(256,256);ctx.scale(1,KNOWLEDGE_VISUALS.nodeWidth/KNOWLEDGE_VISUALS.nodeHeight);ctx.translate(-256,-256);}
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffffff';ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.font=card.identity?'700 39px Manrope, system-ui':`800 ${card.core?76:card.child?68:KNOWLEDGE_VISUALS.labelFont}px Manrope, system-ui`;
+    if(card.identity){
+        const fonts={title:'700 31px Manrope, system-ui',scientific:'italic 550 18px Manrope, system-ui',roles:'650 19px Manrope, system-ui',body:'550 18px Manrope, system-ui'},measure={};
+        for(const [key,font] of Object.entries(fonts))measure[key]=text=>{ctx.font=font;return ctx.measureText(text).width;};
+        const layout=identityTextLayout({title:card.title,scientific:card.scientific,roles:card.roles,body:card.subtitle},measure);
+        const colours={title:'#ffffff',scientific:'#e0f0ff',roles:'#c4f1e3',body:'#f5fbff'};
+        for(const key of Object.keys(layout)){ctx.font=fonts[key];ctx.fillStyle=colours[key];layout[key].lines.forEach((line,index)=>{const baseline=layout[key].baselines[index];ctx.save();ctx.translate(0,baseline);ctx.scale(1,IDENTITY_GLYPH_Y_SCALE);ctx.fillText(line,256,0,layout[key].width);ctx.restore();});}
+        ctx.restore();return canvas;
+    }
     const words=String(card.title).split(/\s+/),lines=[];let line='';for(const word of words){const next=line?line+' '+word:word;if(ctx.measureText(next).width>354 && line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
-    lines.slice(0,3).forEach((text,index)=>ctx.fillText(text+(index===2 && lines.length>3?'…':''),256,(card.identity?184:256)+(index-(Math.min(lines.length,3)-1)/2)*(card.identity?40:60),365));
-    if(card.identity){ctx.font='italic 500 27px Manrope, system-ui';ctx.fillStyle='#cfdfcf';ctx.fillText(card.scientific || '',256,224,414);ctx.font='600 23px Manrope, system-ui';ctx.fillText(card.roles || '',256,252,414);ctx.font='500 24px Manrope, system-ui';const words=String(card.subtitle || '').split(/\s+/);let text='',rows=[];for(const word of words){if((text+' '+word).length>32){rows.push(text);text=word;}else text+=(text?' ':'')+word;}rows.push(text);rows.slice(0,3).forEach((line,index)=>ctx.fillText(line,256,285+index*26,414));}
+    lines.slice(0,3).forEach((text,index)=>ctx.fillText(text+(index===2 && lines.length>3?'…':''),256,(index-(Math.min(lines.length,3)-1)/2)*60+256,365));
     ctx.restore();
     return canvas;
 }

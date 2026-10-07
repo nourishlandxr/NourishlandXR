@@ -5,6 +5,7 @@ import {DEMO_INTERFACE_TRANSLATIONS} from './demoInterfaceTranslations.js';
 import {DEMO_NARRATION_TRANSLATIONS} from './demoNarrationTranslations.js';
 import {DEMO_PLANT_TRANSLATIONS} from './demoPlantTranslations.js';
 import {DEMO_LEARNING_TRANSLATIONS} from './demoLearningTranslations.js';
+import {DEMO_NATIVE_PLANT_TRANSLATIONS} from './demoNativePlants.js';
 const SETTINGS_KEY = 'nourishland-xr-settings';
 export const SUPPORTED_LANGUAGES = Object.freeze({
     en: 'English',
@@ -1001,6 +1002,7 @@ registerNxrTranslations(DEMO_INTERFACE_TRANSLATIONS);
 registerNxrTranslations(DEMO_NARRATION_TRANSLATIONS);
 registerNxrTranslations(DEMO_PLANT_TRANSLATIONS);
 registerNxrTranslations(DEMO_LEARNING_TRANSLATIONS);
+registerNxrTranslations(DEMO_NATIVE_PLANT_TRANSLATIONS);
 const dynamicPhraseTableFor = language => language === 'pt-PT' ? DYNAMIC_PHRASES : language === 'nl-NL' ? DUTCH_DYNAMIC_PHRASES : null;
 
 const lookup = (text, language = currentNxrLanguage()) => {

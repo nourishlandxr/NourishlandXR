@@ -1320,7 +1320,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Adjust its position if needed/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
     assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
-    assert.match(source, /function releaseHeldDemoRecord\(\)/);
+    assert.match(source, /function releaseHeldDemoRecord\(placeMap=true\)/);
     assert.equal(DEMO_PLANT_ORB_HOLD_DELAY_MS,800);
     assert.match(simulationSource, /export function simulatedAnchorFromPointer\(/);
     assert.match(source, /record\.simulatedAnchor = simulatedAnchorFromPointer\(/);
@@ -1347,7 +1347,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /An Area keeps them organised/);
     assert.match(source, /const id=moringa\?'ELEMENTS 1\.12':'ELEMENTS 1\.6'/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /return to Pigeon Pea whenever you like/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Choose Blue Quandong, Finger Lime or Lemon Myrtle/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);

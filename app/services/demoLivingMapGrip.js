@@ -15,6 +15,7 @@ export function limitLivingMapTilt(rotation){
     return swing.multiply(twist).normalize();
 }
 export function livingMapGripContact(point,origin,rotation){
+    if(!point || !origin || ![point.x,point.y,point.z,origin.x,origin.y,origin.z].every(Number.isFinite))return null;
     const local=vector(point).sub(vector(origin)).applyQuaternion(quaternion(rotation).invert());
     const radius=Math.hypot(local.x/(6.3*LIVING_MAP_WORLD_SCALE),local.z/(4.2*LIVING_MAP_WORLD_SCALE));
     return Math.abs(local.y)<.17 && radius>=.45 && radius<=1.25 ? local : null;
@@ -72,17 +73,21 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
     }
     function begin(source,frame){
         if(!enabled() || !canUse(source) || held.has(source))return held.has(source);
-        const value=sample(source,frame);if(!value)return false;let contact=value.position;
-        if(!source.hand){const aim=frame?.getPose(source.targetRaySpace,space)?.transform.matrix;if(aim && !canUse(source,{ray:{origin:{x:aim[12],y:aim[13],z:aim[14]},direction:{x:-aim[8],y:-aim[9],z:-aim[10]}},distance:Infinity}))return false;}
+        const value=sample(source,frame);if(!value)return false;let contact=value.position,remote=false;
         if(!livingMapGripContact(contact,origin(),rotation()) && !source.hand){
             const pose=frame?.getPose(source.targetRaySpace,space);if(!pose)return false;
             const m=pose.transform.matrix,ray=new THREE.Ray(new THREE.Vector3(m[12],m[13],m[14]),new THREE.Vector3(-m[8],-m[9],-m[10]).normalize());
             const normal=new THREE.Vector3(0,1,0).applyQuaternion(quaternion(rotation())),plane=new THREE.Plane().setFromNormalAndCoplanarPoint(normal,vector(origin())),hit=ray.intersectPlane(plane,new THREE.Vector3());
-            if(!hit || hit.distanceTo(ray.origin)>3 || !livingMapGripContact(hit,origin(),rotation()) || !canUse(source,{ray:{origin:ray.origin,direction:ray.direction},distance:hit.distanceTo(ray.origin)}))return false;contact=hit;
+            if(!hit || hit.distanceTo(ray.origin)>3 || !livingMapGripContact(hit,origin(),rotation()) || !canUse(source,{ray:{origin:ray.origin,direction:ray.direction},distance:hit.distanceTo(ray.origin)}))return false;contact=hit;remote=true;
         }
         if(!livingMapGripContact(contact,origin(),rotation()))return false;
+        if(!source.hand && !remote && source.targetRaySpace){
+            const aim=frame?.getPose(source.targetRaySpace,space)?.transform.matrix;
+            if(aim && !canUse(source,{ray:{origin:{x:aim[12],y:aim[13],z:aim[14]},direction:{x:-aim[8],y:-aim[9],z:-aim[10]}},distance:0}))return false;
+        }
         const offset=vector(contact).sub(vector(value.position));
-        if(value.orientation)offset.applyQuaternion(value.orientation.clone().invert());
+        // Translation carries the contact. Wrist rotation must not swing a
+        // distant ray-length offset around the controller like a lever.
         held.set(source,{offset,last:contact});onGrab(source);return true;
     }
     function release(source){if(!held.has(source))return false;held.delete(source);gesture.reset();suppressed.set(source,performance.now()+400);return true;}
@@ -107,8 +112,7 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
                 if(value.pressed && !held.has(source))begin(source,frame);
                 if(!value.pressed){release(source);continue;}
                 const grip=held.get(source);if(!grip)continue;
-                const offset=grip.offset.clone();if(value.orientation)offset.applyQuaternion(value.orientation);
-                const position=vector(value.position).add(offset);
+                const position=vector(value.position).add(grip.offset);
                 if(!gesture.active && position.distanceTo(vector(origin()))>1.1){release(source);continue;}
                 samples.push({...value,position,source,handedness:source.handedness});
             }

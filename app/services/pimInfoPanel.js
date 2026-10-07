@@ -311,7 +311,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     const panelCanvases=new Map();let explorerPose=null,explorerPosition=null,explorerClosed=true,panelModeChoice=null,knowledgeRecord=null,knowledgeDocument=null;
     const explorerElement=document.createElement('aside');explorerElement.className='nlxr-settings-companion nlxr-explorer-companion';explorerElement.setAttribute('aria-label','Knowledge options');explorerElement.hidden=true;root?.append(explorerElement);
     let confirmation=null,confirmationSnapshot=null;
-    let objectContext=null,guidanceAction='',guidanceStartedAt=0,minimizedDragUntil=0;
+    let objectContext=null,stageContext=null,panelShift=null,guidanceAction='',guidanceStartedAt=0,minimizedDragUntil=0;
     let sliderGrab=null,finishingSliderSource=null,graphicsOpen=false,soundOpen=false,languageOpen=false;
     let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,panelGestureSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null,settingsPose=null;
     let removeXrControls=()=>{};
@@ -762,7 +762,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             event.preventDefault();
             const left=Math.max(8,Math.min(window.innerWidth-element.offsetWidth-8,event.clientX-grab.offsetX));
             const top=Math.max(8,Math.min(window.innerHeight-element.offsetHeight-8,event.clientY-grab.offsetY));
-            element.style.left=`${left}px`;element.style.top=`${top}px`;element.style.right='auto';element.style.bottom='auto';renderExplorer();onMove();
+            element.style.left=`${left}px`;element.style.top=`${top}px`;element.style.right='auto';element.style.bottom='auto';renderSettings();onMove();
         };
         const end=event=>{if(grab && event.pointerId===grab.pointerId)clear();};
         const start=event=>{
@@ -1160,6 +1160,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     function explorerControls(){
         if(selection?.controlsType==='LIMO' && !objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},{action:'Utility:limo-show',label:'Show cells',x:22,y:62,width:464,height:54},{action:'Utility:limo-hide',label:'Hide cells',x:506,y:62,width:464,height:54}];
         if(objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...spatialControlLayout(objectContext.actions).map(item=>({...item,action:'Object:'+item.id}))];
+        if(!knowledgeRecord && stageContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...spatialControlLayout(stageContext.actions || []).map(item=>({...item,action:'Utility:'+item.id}))];
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:panelModeChoice};
         return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...availablePimoModes().map((id,i)=>({action:'KnowledgeMode:'+id,label:KNOWLEDGE_MODES[id].label,x:22+i*326,y:62,width:304,height:54,kind:'mode',description:KNOWLEDGE_MODES[id].description,selected:state.mode===id}))];
     }
@@ -1169,7 +1170,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         explorerElement.hidden=hidden || detached || confirmation || explorerClosed || Boolean(renderer);element.classList.toggle('has-explorer-companion',!explorerElement.hidden);if(explorerElement.hidden)return;
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:availablePimoModes().includes(panelModeChoice)?panelModeChoice:'curiosity'},main=element.getBoundingClientRect();explorerElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
         explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? main.left)+'px';explorerElement.style.top=(explorerPosition?.y ?? Math.max(8,Math.min(main.bottom+12,window.innerHeight-166)))+'px';
-        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=objectContext?.linkedName || identity?.plant || record?.name || selection?.title || '';header.append(linked);
+        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
         const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
         const modes=document.createElement('nav');modes.className='nlxr-explorer-modes';modes.setAttribute('aria-label','Knowledge view');
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','Explorer options');
@@ -1263,9 +1264,18 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setObjectContext(value){objectContext=value;knowledgeRecord=null;knowledgeDocument=null;panelModeChoice=null;mediaCollapsed=true;loadPanelImage('');render(true);},
+        setStageContext(value,{preserveObject=false}={}){stageContext=value;if(!preserveObject){objectContext=null;knowledgeRecord=null;knowledgeDocument=null;}renderExplorer();},
+        makeRoomFor(point){
+            if(!pose || !point || spatialMove || spatialGrabPending)return false;
+            const delta={x:point.x-pose.center.x,y:point.y-pose.center.y,z:point.z-pose.center.z},dot=axis=>delta.x*axis.x+delta.y*axis.y+delta.z*axis.z,{mainWidth,mainHeight}=spatialDimensions();
+            if(Math.abs(dot(pose.right))>mainWidth/2+.3 || Math.abs(dot(pose.up))>mainHeight/2+.7 || Math.abs(dot(pose.normal))>.75)return false;
+            finishExplorerDock();finishSettingsDock();if(!mediaDetached)mediaPose=null;
+            const direction=dot(pose.right)>=0?-1:1,distance=mainWidth/2+.5;
+            panelShift={from:{...pose.center},to:{x:pose.center.x+pose.right.x*direction*distance,y:pose.center.y,z:pose.center.z+pose.right.z*direction*distance},startedAt:performance.now()};return true;
+        },
         guideTool(action='Explorer'){guidanceAction=action;guidanceStartedAt=performance.now();element.classList.toggle('is-panel-guidance',action==='ToggleMedia');render(true);},
-        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext};},
-        restoreSnapshot(value){if(!value)return;({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});render(true);},
+        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext};},
+        restoreSnapshot(value){if(!value)return;({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});render(true);},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setTaskProgress(value){
             if(!value){taskProgress=null;render();return;}
@@ -1333,7 +1343,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 spatialGrabPending=null;
             }
             if(spatialMove && heldRay?.origin && heldRay?.direction){
-                const depthSource=Array.from(xrFrame?.session?.inputSources || []).find(source=>source.handedness==='right' && source.gamepad) || spatialMove.source;
+                panelShift=null;
+                const depthSource=spatialMove.source;
                 const axes=depthSource?.gamepad?.axes || [],stick=Number(axes.length>2?axes[3]:axes[1]) || 0;
                 if(Math.abs(stick)>.15)spatialMove.distance=Math.max(.4,Math.min(2.5,spatialMove.distance-stick*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.9));
                 pose ||= next;
@@ -1345,7 +1356,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 if(spatialMove.panel==='explorer'){explorerPose=moved;if(explorerNearDock())explorerPose=explorerDockPose();}else if(spatialMove.panel==='settings'){settingsPose=moved;if(settingsNearDock())settingsPose=settingsDockPose();settingsElement.classList.toggle('is-magnetized',settingsNearDock());}else if(spatialMove.panel==='media'){
                     mediaPose=moved;const candidate=spatialDockCandidate(mediaPose);
                     if(candidate){mediaPose=spatialMediaDockPose(candidate.side);spatialMove.dockSide=candidate.side;}else spatialMove.dockSide=null;
-                }else{pose=moved;heading=facing.right;manuallyPositioned=true;}
+                }else{finishExplorerDock();finishSettingsDock();if(!mediaDetached)mediaPose=null;pose=moved;heading=facing.right;manuallyPositioned=true;}
             }else if(!pose){
                 pose=next;
                 if(headset && firstPlacement){
@@ -1354,6 +1365,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 }
                 firstPlacement=false;
             }
+            if(panelShift && pose && !spatialMove && !spatialGrabPending){const progress=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches?1:Math.min(1,Math.max(0,(time-panelShift.startedAt)/650)),amount=progress*progress*(3-2*progress);pose.center=Object.fromEntries(['x','y','z'].map(axis=>[axis,panelShift.from[axis]+(panelShift.to[axis]-panelShift.from[axis])*amount]));manuallyPositioned=true;if(progress===1)panelShift=null;}
             const directHover=updateHandContacts(xrFrame,time,touchBlocked);
             const hoverTarget=directHover || (inputRay ? hit(inputRay) : null),hoverButton=directHover?.button || targetButtonAtRay(hoverTarget);
             hoveredAction=hoverButton?.disabled?'':hoverButton?.action || '';
@@ -1375,7 +1387,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
-            explorerCard.linkedLabel=(objectContext?.linkedName || identity?.plant || record?.name || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
+            explorerCard.linkedLabel=(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,

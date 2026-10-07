@@ -8,6 +8,17 @@ import {noteSurfaceFacing,noteCardButtonLayout} from '../app/services/noteSpatia
 import {createDemoLivingMapXR} from '../app/services/demoLivingMapXR.js';
 import {livingMapPlacementCopy,resetDemoPlantForMap} from '../app/services/demoLivingMapPresentation.js';
 import {livingMapRayPoint} from '../app/services/demoLivingMapReveal.js';
+test('map progress narration keeps the real Continue callback usable, but changing slides invalidates it',()=>{
+ const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+ const clear=source.slice(source.indexOf('function clearDemoNarration('),source.indexOf('function showIntroBoard('));
+ const update=source.slice(source.indexOf('function updateSpatialLivingMap('),source.indexOf('const DEMO_MAP_RECT'));
+ const start=source.indexOf('continueButton.onclick = () => {',source.indexOf('function showIntroBoard('));const action=source.slice(start,source.indexOf('\n        };',start)+11);
+ const button={disabled:false},placement={snapshot:()=>[{id:'map-entry'},{id:'map-forest'}],current:()=>null};let advanced=0;
+ const context=vm.createContext({demoNarrationRevision:4,narrationRevision:4,continueButton:button,onContinue:()=>advanced++,typing:false,suppressSessionSelectUntil:0,performance:{now:()=>9000},clearTimeout,boardTypingTimer:null,boardTypingWatchdogTimer:null,introBoardVisibleBody:'',introBoardParagraphFadeTimes:[],introBoardTextureDirty:false,skipDemoNarration:null,
+  introBoardStep:'UTILITY 1.1',demoLivingMapScene:{},demoMapIntroPaused:false,demoLivingMapElapsed:()=>9000,livingMapReveal:()=>({appear:1,ready:true}),window:{matchMedia:()=>({matches:false})},demoLivingMapOrigin:{x:0,y:1,z:-1},markers:[{demoMapPiece:true}],demoLivingMapPlacement:placement,demoMapNarrationCount:-1,demoLocalizedText:v=>v,livingMapPlacementCopy,introBoardBody:'',introBoardParagraphFadeStartedAt:0,appRoot:{querySelector:()=>null,querySelectorAll:()=>[]}});
+ vm.runInContext(clear+update+action,context);vm.runInContext('updateSpatialLivingMap(9000)',context);button.onclick();assert.equal(advanced,1,'placement narration does not silently disable Continue');
+ button.disabled=false;vm.runInContext('clearDemoNarration()',context);button.onclick();assert.equal(advanced,1,'an old slide still cannot advance after replacement');
+});
 
 test('two hands carry the plate toward the viewer without scaling; release freezes its pose',()=>{
  const origin={x:0,y:1,z:-1.2},rotation=new THREE.Quaternion(),gesture=createLivingMapTwoGrip();

@@ -1,9 +1,26 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../app/vendor/three.module.min.js';
-import {createLivingMapTwoGrip,createLivingMapGripInput,limitLivingMapTilt,LIVING_MAP_MAX_TILT} from '../app/services/demoLivingMapGrip.js';
+import {createLivingMapTwoGrip,createLivingMapGripInput,limitLivingMapTilt,LIVING_MAP_MAX_TILT,livingMapGripContact} from '../app/services/demoLivingMapGrip.js';
 import {livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapTotemRayHit} from '../app/services/demoLivingMapReveal.js';
 const origin={x:0,y:1,z:-1},identity=new THREE.Quaternion(),left={},right={};
+test('missing plate pose cannot capture a grip while the map is loading',()=>{
+    assert.equal(livingMapGripContact({x:0,y:1,z:-1},null,identity),null);
+    assert.equal(livingMapGripContact({x:NaN,y:1,z:-1},origin,identity),null);
+});
+test('distant grips carry by hand translation without a wrist lever or behind-plate occlusion',()=>{
+    const session=new EventTarget(),sources=['left','right'].map(handedness=>({handedness,gripSpace:{},targetRaySpace:{},gamepad:{buttons:[{},{pressed:true}]}}));session.inputSources=sources;
+    let wrist=0,shift=0,position={...origin},rotation=identity.clone();const contacts=[];
+    const frame={getPose:key=>{const s=sources.find(s=>s.gripSpace===key || s.targetRaySpace===key),x=s.handedness==='left'?-.5:.5;
+        const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(key===s.targetRaySpace?-Math.PI/4:wrist,0,0));
+        return {transform:{matrix:new THREE.Matrix4().compose(new THREE.Vector3(x,1.5,-.5+shift),q,new THREE.Vector3(1,1,1)).elements}};}};
+    const input=createLivingMapGripInput({enabled:()=>true,origin:()=>position,rotation:()=>rotation,onMove:p=>position={...p},onRotate:q=>rotation=q,canUse:(_s,c)=>{if(c){contacts.push(c.distance);return c.distance<1;}return true;}});input.bind(session,{});
+    try{input.update(frame);assert.equal(input.active,true);assert.ok(contacts.every(d=>Number.isFinite(d) && d<1));
+        wrist=.2;input.update(frame);assert.ok(Math.abs(position.z-origin.z)<1e-8,'wrist tilt does not carry the tray forward');
+        shift=.25;input.update(frame);assert.ok(Math.abs(position.z-(origin.z+.25))<1e-8,'hands carry the tray naturally');
+        sources[0].gamepad.buttons[1].pressed=false;input.update(frame);const stopped={...position};shift=.4;input.update(frame);assert.deepEqual(position,stopped);
+    }finally{input.destroy();}
+});
 test('loose Totem can be grabbed from front, side and above without a facing-plane miss',()=>{
     for(const offset of [{x:1,y:0,z:0},{x:0,y:1,z:0},{x:0,y:0,z:1}]){
         const hit=livingMapTotemRayHit({origin:{x:origin.x+offset.x,y:origin.y+offset.y,z:origin.z+offset.z},direction:{x:-offset.x,y:-offset.y,z:-offset.z}},origin);

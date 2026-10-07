@@ -18,7 +18,7 @@ export function focusSpatialObjectControls(panel,record,{save=async()=>{},edit=(
         ]:[
             ...(demo?TOTEM_STYLES.slice(0,4):TOTEM_STYLES).map((item,i)=>({id:'style:'+item.id,group:'Totem model',label:String(i+1),ariaLabel:item.label,selected:(appearance.totemStyle || 'basic')===item.id,description:item.description})),
             ...TOTEM_LIGHTS.map(item=>({id:'light:'+item.color,group:'Lights',kind:'swatch',color:item.color,label:item.label,selected:appearance.notificationColor===item.color,description:'Change the glass notification tip colour.'})),
-            {id:'signs',group:'Signage',label:signsVisible?'Hide signage':'Show signage',description:signsVisible?'Hide the direction and information signs attached to this Totem.':'Show the direction and information signs attached to this Totem.'},
+            {id:'signs',group:'Signage',label:'Signage',selected:signsVisible,description:'Toggle the direction and information signs attached to this Totem.'},
             ...(!demo?[{id:'edit',group:'Signage',label:'✎ Edit Totem',description:'Edit the title and information.'}]:[])
         ];
         panel?.setObjectContext({title:`Controls · ${type==='note'?'Note':'Totem'}`,linkedName:marker.name || marker.label || 'Spatial object',hint:type==='note'?'Choose a Note experience, add widgets or use the pencil to edit.':'Show / hide signage, change this Totem form or choose its notification light.',actions,onAction:act});

@@ -109,20 +109,21 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const signBoard = (card, index, count) => {
         const side=card.boardSide==='left'?-1:card.boardSide==='right'?1:0;
         return {
-            ...place(side*boardAttach, .18+(count-1-index)*Math.min(.20,bodyHalfHeight*.21), boardWidth, boardHeight, {
+            ...place(side*boardAttach, bodyHalfHeight*(.80+(count-1-index)*.24), boardWidth, boardHeight, {
                 ...card,
                 glassOpacity:currentInfoOpacity(),
                 boardStyle:'attached-sign',
                 boardSide:card.boardSide || '',
-                directional:Boolean(card.navigation?.reliable)
+                directional:Boolean(card.navigation?.reliable),selected:card.id===selectedId
             }),
+            opacity:card.id===selectedId && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches? .9+.1*Math.sin(performance.now()/260):1,
             boardSide:card.boardSide || ''
         };
     };
     const titleBottom=buttons[0].faceCenter.y-position.y+.075;
     const titleHeight=Math.max(.025,Math.min(.18,1.88*bodyHalfHeight-titleBottom-.015));
     const headerBoard = cards[0] ? {
-        ...place(0,titleBottom+titleHeight/2,demoZone ? .64 : .68,titleHeight,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
+        ...place(0,titleBottom+titleHeight/2,demoZone ? .46 : .68,titleHeight,{...cards[0],glassOpacity:currentInfoOpacity(),boardStyle:'header-compact',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
@@ -133,10 +134,10 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         ...(signsVisible && !faded ? [
             headerBoard,
             ...signCards.map((card,index)=>signBoard(card,index,signCards.length))
-        ].filter(Boolean).map(surface=>({...surface,opacity:signOpacity,interactive:signInteractive})) : [])
+        ].filter(Boolean).map(surface=>({...surface,opacity:signOpacity*(surface.opacity ?? 1),interactive:signInteractive})) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.36,2.04*demoScale),1.18,.58,{...selected,glassOpacity:currentInfoOpacity(),body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
+    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.30,2.04*demoScale),.90,.42,{...selected,freeText:true,body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
     return surfaces;
 }
 
@@ -279,13 +280,13 @@ function cardCanvas(card, detail) {
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.shadowColor='rgba(5,10,8,.72)';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
     const face='Manrope, "Segoe UI", system-ui, sans-serif';
-    if(Number.isFinite(card.glassOpacity)){
+    if(Number.isFinite(card.glassOpacity) && !card.freeText){
         const width=canvas.width/2,height=canvas.height/2;
         ctx.save();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
         ctx.beginPath();
         if(boardStyle==='attached-sign' && card.boardSide){const left=card.boardSide==='left',tip=left?7:width-7,edge=left?70:width-70;ctx.moveTo(tip,height/2);ctx.lineTo(edge,7);ctx.lineTo(left?width-7:7,7);ctx.lineTo(left?width-7:7,height-7);ctx.lineTo(edge,height-7);ctx.closePath();}
         else ctx.roundRect(7,7,width-14,height-14,boardStyle==='header-compact'?height/2:24);
-        ctx.fillStyle=boardStyle==='header-compact'?`rgba(37,48,43,${Math.max(.74,card.glassOpacity)})`:`rgba(8,30,28,${card.glassOpacity})`;ctx.fill();
+        ctx.fillStyle=card.selected?`rgba(6,36,62,${Math.max(.5,card.glassOpacity)})`:boardStyle==='header-compact'?`rgba(37,48,43,${card.glassOpacity})`:`rgba(8,30,28,${card.glassOpacity})`;ctx.fill();
         ctx.strokeStyle='rgba(213,232,207,.84)';ctx.lineWidth=5;ctx.stroke();ctx.restore();
     }
     if(card.control){

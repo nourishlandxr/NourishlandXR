@@ -1,4 +1,5 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><title>Native Explorer stereo budget</title><style>body{margin:24px;background:#455b4c;color:#fff;font:18px system-ui}canvas{display:block;width:100%;max-width:1400px;background:#243b30}button{padding:12px;font:inherit}#panels{display:none}output{display:block;margin:16px 0}</style><h1>Explorer · production stereo renderer</h1><p>Two eye views with the actual Explorer and Control panel. The check measures local CPU render submission and texture uploads, not Quest GPU frame rate.</p><button id="check">Check 120 stereo frames</button><output id="result">Preparing…</output><canvas id="surface" width="1400" height="700"></canvas><section id="panels"></section>
+<nav aria-label="PIMO text previews"><button id="tag">Tag preview</button><button id="curiosity">Curiosity preview</button><button id="explore">Explorer preview</button></nav>
 <script type="module">
 import * as THREE from '../app/vendor/three.module.min.js';
 import {createKnowledgeSpatialRenderer} from '../app/services/knowledgeSpatialRenderer.js';
@@ -12,6 +13,7 @@ const canvas=document.getElementById('surface'),result=document.getElementById('
 setPimoDeveloperOverride(true);knowledgeExplorer(record);knowledgeExplorerAction(record,'KnowledgeMode:explore');initializeExplorerPreview(record,knowledge,performance.now()-2000);for(const id of record.explorerMolecule.wings)selectExplorerNode(record,knowledge,{explorerNodeId:id},performance.now()-2000);
 let uploads=0;for(const name of ['texImage2D','texSubImage2D']){const original=gl[name].bind(gl);gl[name]=(...args)=>{uploads++;return original(...args);};}
 const renderer=createKnowledgeSpatialRenderer(gl),panel=createPimInfoPanel({root:document.getElementById('panels'),headset:true});panel.focusPlant(record,PIGEON_PEA_PIM);panel.setExplorerOpen(true);panel.attach(gl);
+for(const mode of ['tag','curiosity','explore'])document.getElementById(mode).onclick=()=>{knowledgeExplorerAction(record,'KnowledgeMode:'+mode);renderer.clear(record);};
 const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements,pose={position:{x:.33,y:1.45,z:-1.4},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:0,z:1}};
 let checking=false,times=[],startUploads=0,frames=0,errors=0;
 document.getElementById('check').onclick=()=>{checking=true;times=[];frames=0;startUploads=uploads;errors=0;result.textContent='Checking stereo frames…';};

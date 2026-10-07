@@ -20,7 +20,7 @@ export function createDemoLivingMapXR(gl,scene){
     const attributes=['p','n','uv','c'].map(k=>gl.getAttribLocation(program,k));
     const matrixAttributes=['i0','i1','i2','i3'].map(k=>gl.getAttribLocation(program,k));
     const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),materialColours=new WeakMap(),renderNodes=[];
-    scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});
+    scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});let prepareIndex=0;
     function geometry(source){
         if(cache.has(source)){
             const entry=cache.get(source);
@@ -87,6 +87,13 @@ export function createDemoLivingMapXR(gl,scene){
         if(gpu){for(const attribute of matrixAttributes){instancing.divisor(attribute,0);gl.disableVertexAttribArray(attribute);}instancing.divisor(attributes[3],0);}
     }
     return {
+        prepareNext(){
+            // One mesh per frame during the reading interval, including meshes
+            // that appear only after placement. Both eyes share these buffers.
+            if(prepareIndex>=renderNodes.length)return true;
+            const node=renderNodes[prepareIndex++],batch=node.isInstancedMesh && !(instancing && node.userData.livingMapDynamic)?batchInstances(node):null;
+            geometry(batch?.geometry || node.geometry);return prepareIndex>=renderNodes.length;
+        },
         draw(view,origin,rotation,opacity,guidance=''){
             if(opacity<=0)return;
             root.compose(new THREE.Vector3(origin.x,origin.y-.025*(1-opacity),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(LIVING_MAP_WORLD_SCALE*(.94+.06*opacity)));
