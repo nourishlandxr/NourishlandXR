@@ -22,6 +22,17 @@ test('paused sample contains greenery and later spatial frames retain their grow
  const painted=[],ctx={save(){},restore(){},globalAlpha:1},scene={draw:(_ctx,elapsed,reduced)=>painted.push({elapsed,reduced})},rect={x:0,y:0,width:100,height:100};
  drawLivingMapPreview(ctx,scene,0,false,rect);assert.deepEqual(painted,[{elapsed:0,reduced:true}]);
 });
+test('dissolve repaints reuse the flat snapshot without rewinding the live scene',()=>{
+ const original=globalThis.document,painted=[],images=[];
+ globalThis.document={createElement:()=>({getContext:()=>({})})};
+ try{
+  const ctx={save(){},restore(){},drawImage:canvas=>images.push(canvas)},scene={draw:(_ctx,elapsed,reduced)=>painted.push({elapsed,reduced})},rect={x:0,y:0,width:100,height:100};
+  drawLivingMapPreview(ctx,scene,0,false,rect);
+  drawLivingMapPreview(ctx,scene,4800,true,rect);
+  assert.equal(painted.length,1);assert.equal(images[0],images[1]);
+  drawLivingMapPreview(ctx,scene,0,false,{...rect,width:120});assert.equal(painted.length,2);
+ }finally{if(original===undefined)delete globalThis.document;else globalThis.document=original;}
+});
 test('filled narration pages do not carry the plant story onto the next page',()=>{
  const helper=source.slice(source.indexOf('function introReadingWindow('),source.indexOf('function createSpatialKnowledgeTexture('));
  const ctx=vm.createContext({layout:{paragraphLines:[['a','b'],['A plant can share its story.'],['c','d','e']],lineHeight:100,paragraphGap:10}});

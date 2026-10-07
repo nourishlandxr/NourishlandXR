@@ -24,10 +24,15 @@ test('four native bees and both eyes share static mesh storage and one small rig
  const upload=calls.filter(c=>c[0]==='texSubImage2D');assert.equal(upload.length,1);assert.equal(upload[0].at(-1).byteLength,6912);
  renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0,nectar:true});
  renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0,nectar:false});
- assert.equal(updates,3,'rest-to-flight re-evaluates the rig even in the same frame');
+ assert.equal(updates,2,'rest-to-flight reuses the independently cached flight rig');
  renderer.draw(view,{x:0,y:0,z:-1},1000,{opacity:1,flyby:0,animationOffset:.137});
- assert.equal(updates,4,'another bee has an independent wing phase');
- renderer.destroy();assert.equal(calls.filter(c=>c[0]==='deleteTexture').length,2);
+ assert.equal(updates,3,'another bee has an independent wing phase');
+ const before=updates,uploads=calls.filter(c=>c[0]==='texSubImage2D').length;
+ for(let eye=0;eye<2;eye++)for(let bee=0;bee<4;bee++)renderer.draw(view,{x:0,y:0,z:-1},2000,{opacity:1,flyby:0,animationOffset:bee*.137,nectar:bee===2});
+ assert.equal(updates-before,4,'four different poses are evaluated once across both eyes');
+ assert.equal(calls.filter(c=>c[0]==='texSubImage2D').length-uploads,4);
+ for(let frame=0;frame<20;frame++)renderer.draw(view,{x:0,y:0,z:-1},3000+frame,{opacity:1,flyby:0,animationOffset:frame*.23});
+ renderer.destroy();assert.equal(calls.filter(c=>c[0]==='deleteTexture').length,9,'pose storage stays bounded and all textures are released');
 });
 
 test('unsupported vertex float textures choose a lightweight fallback',()=>{
