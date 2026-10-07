@@ -13,7 +13,7 @@ let demoLivingMapPlacement=null;
 let demoLivingMapXR=null,demoLivingMapOrigin=null,demoLivingMapOrientation={x:0,y:0,z:0,w:1},demoLivingMapGrip=null,demoMapNarrationCount=-1;
 function disposeSpatialLivingMap(){demoLivingMapGrip?.reset();demoLivingMapXR?.destroy();demoLivingMapXR=null;demoLivingMapOrigin=null;demoLivingMapOrientation={x:0,y:0,z:0,w:1};appRoot?.querySelector('[data-spatial-living-map]')?.remove();}
 function demoLivingMapReady(){return livingMapReveal(demoLivingMapElapsed()).ready;}
-function setDemoLivingMapRotation(value){const q=limitLivingMapTilt(value);demoLivingMapOrientation={x:q.x,y:q.y,z:q.z,w:q.w};demoLivingMapScene?.setRotation(q);introBoardTextureDirty=true;}
+function setDemoLivingMapRotation(value){const q=limitLivingMapTilt(value);demoLivingMapOrientation={x:q.x,y:q.y,z:q.z,w:q.w};demoLivingMapScene?.setRotation(q);if(livingMapReveal(demoLivingMapElapsed()).preview>0)introBoardTextureDirty=true;}
 function rotateDemoLivingMap(delta,tilt=0){if(!simulatedMode || !demoLivingMapReady())return;const q=livingMapRotation(delta).multiply(livingMapRotation(demoLivingMapOrientation));if(tilt)q.multiply({x:Math.sin(tilt/2),y:0,z:0,w:Math.cos(tilt/2)});setDemoLivingMapRotation(q);paintWelcomeLayer(performance.now());}
 function updateSpatialLivingMap(now){
     if(introBoardStep!=='UTILITY 1.1' || !demoLivingMapScene)return null;
@@ -46,7 +46,7 @@ function demoLivingMapElapsed(now=performance.now()){
     return demoLivingMapPreviewClock ? demoLivingMapPreviewClock(now,demoLivingMapStartedAt) : demoLivingMapPlayback.elapsed(now);
 }
 function demoLivingMapIsPlaying(now){
-    if(demoLivingMapPlacement){const placed=demoLivingMapPlacement.snapshot();return Boolean(demoLivingMapPlacement.current(now-demoLivingMapStartedAt) || now-demoLivingMapStartedAt<(placed.at(-1)?.at || 0)+2800);}
+    if(demoLivingMapPlacement){const placed=demoLivingMapPlacement.snapshot();return Boolean(placed.length || demoLivingMapPlacement.current(now-demoLivingMapStartedAt));}
     const playing=demoLivingMapPlayback.playing(now);
     if(playing!==demoLivingMapWasPlaying){demoLivingMapWasPlaying=playing;introBoardTextureDirty=true;syncDemoPanelActions();}
     return playing;
@@ -88,14 +88,14 @@ import { spatialDepthDelta, spatialMoveControlMarkup } from '../services/spatial
 import { beePointerAvoidance, beePointerContact, beeWingsAtRest, demoBeePose, demoBeeEncounter } from '../services/demoAmbientLife.js';
 import { createSpatialSphereRenderer, destroySpatialSphereRenderer, drawSpatialOrb, drawSpatialSphere } from '../services/spatialSphereRenderer.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from '../services/spatialObjectVisuals.js';
-import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialGroundArrowPath, drawSpatialTether } from '../services/spatialTetherRenderer.js';
+import { createSpatialTetherRenderer, destroySpatialTetherRenderer, drawSpatialPointerContact, drawSpatialGroundArrowPath, drawSpatialTotemPointer, drawSpatialTether } from '../services/spatialTetherRenderer.js';
 import { createSpatialPrismRenderer, destroySpatialPrismRenderer, drawSpatialPrism } from '../services/spatialPrismRenderer.js';
 import { createSpatialTotemSculpture, destroySpatialTotemSculpture, drawTotemSculpture } from '../services/spatialTotemSculpture.js';
 import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpatialTriangle } from '../services/spatialTriangleRenderer.js';
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText, translateApp, localizedCanvasContext } from '../services/i18n.js';
-import { getSpatialVisualSettings, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
+import { getSpatialVisualSettings, currentInfoOpacity, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
@@ -2524,7 +2524,7 @@ function placeDemoMapTotem(alternative=false){
     const piece=markers.find(record=>record.demoMapPiece);
     if(!alternative){
         const destination=demoLivingMapOrigin?livingMapWorldPoint(target,demoLivingMapOrigin,demoLivingMapOrientation):null;
-        if(!livingMapWorldDropAccepted(piece?.position,destination)) {
+        if(piece?.demoMapDropValid===false || !livingMapWorldDropAccepted(piece?.position,destination)) {
             if(piece){piece.position={...piece.demoMapHome};piece.groundBaseY=piece.position.y-demoTotemHalfHeight(piece);}
             setGuide('Move the Totem to the pulsing circle and release.');return false;
         }
@@ -3942,6 +3942,13 @@ function updateHeldDemoRecordPosition() {
     const ray = demoPointerWorldRay();
     const origin = demoPointerWorldOrigin();
     if (!record || !origin || !ray) return;
+    if(record.demoMapPiece && demoLivingMapOrigin){
+        const hit=livingMapRayPoint({origin,direction:ray},demoLivingMapOrigin,demoLivingMapOrientation);
+        // A miss retains the last valid map contact instead of a far grab depth.
+        record.demoMapDropValid=Boolean(hit);
+        if(hit){record.position={...hit,y:hit.y+demoTotemHalfHeight(record)};record.groundBaseY=hit.y;}
+        return;
+    }
     const distance = Math.max(.4, Math.min(4, Number(record.demoGrabDepth) || Number(record.demoDistance) || AR_EXPERIENCE_CONFIG.placementDistanceMetres));
     const lateral = record.demoGrabLateral || { x: 0, y: 0, z: 0 };
     record.position = {
@@ -3951,10 +3958,6 @@ function updateHeldDemoRecordPosition() {
             : origin.y + ray.y * distance + lateral.y,
         z: origin.z + ray.z * distance + lateral.z
     };
-    if(record.demoMapPiece && demoLivingMapOrigin){
-        const hit=livingMapRayPoint({origin,direction:ray},demoLivingMapOrigin,demoLivingMapOrientation);
-        if(hit)record.position=hit;
-    }
     if (record.demoType === 'zone') record.groundBaseY = record.position.y - demoTotemHalfHeight(record);
     record.informationPosition = null;
     record.informationPose = null;
@@ -4541,7 +4544,7 @@ function setupRenderer() {
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
-    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):null;return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=> (arWelcomeSettleStage || !arWelcomeIntroPending) && getSpatialVisualSettings().heroDice!==false,onFeedback:(kind,source)=>{demoFeedback?.start();demoFeedback?.sound('dice');if(source)demoFeedback?.pulse(source,kind==='grab'?.22:.12,45);},canGrab:target=>{if(demoLivingMapGrip?.owns(target.source) || placementReady || demoKnowledgeIsModal() || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay),demoNoteRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
+    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):null;return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=> introBoardStep!=='UTILITY 1.1' && (arWelcomeSettleStage || !arWelcomeIntroPending) && getSpatialVisualSettings().heroDice!==false,onFeedback:(kind,source)=>{demoFeedback?.start();demoFeedback?.sound('dice');if(source)demoFeedback?.pulse(source,kind==='grab'?.22:.12,45);},canGrab:target=>{if(demoLivingMapGrip?.owns(target.source) || placementReady || demoKnowledgeIsModal() || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay),demoNoteRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
 }
 
 function demoControllerInputSource() {
@@ -4909,7 +4912,7 @@ function createIntroNoteTexture(texture = null) {
         arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,drawRoots:arWelcomeSharedBoard && introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt)},cellOpacity:currentCellOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
         return canvasTexture(label,texture);
     }
-    drawArWelcomePanel(ctx,{elapsed:arWelcomeClock.elapsed,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,backgroundOpacity:.38});
+    drawArWelcomePanel(ctx,{elapsed:arWelcomeClock.elapsed,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches});
     drawIntroNoteContent(ctx);
     return canvasTexture(label, texture);
 }
@@ -5245,7 +5248,7 @@ function drawIntroSpatial(view) {
         : '';
     if (controlLabel) {
         const aimed=Boolean(latestControllerRay && welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,360));
-        const textureKey=controlLabel+'|'+aimed+'|'+continueButton.disabled;
+        const textureKey=controlLabel+'|'+aimed+'|'+continueButton.disabled+'|'+currentInfoOpacity();
         if (!introControlTexture || introControlTextureLabel !== textureKey) {
             introControlTexture = createIntroControlTexture(controlLabel, introControlTexture,aimed,continueButton.disabled);
             introControlTextureLabel = textureKey;
@@ -5720,7 +5723,6 @@ function drawMarker(view) {
         if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,{...record.position,y:groundBaseY},{...postOptions,topColor:totemColour,woodGrain:.8,topTaper:.96});
         else drawTotemSculpture(gl, totemSculptureRenderer, view, { ...record.position, y:groundBaseY },postOptions);
         if(record.demoMapPiece)return;
-        if(record.demoMapPiece)return;
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,style,
             signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),arrivalOpacity:arrival,
@@ -5729,8 +5731,7 @@ function drawMarker(view) {
     });
     const mapPiece=markers.find(record=>record.demoMapPiece),mapTarget=demoLivingMapPlacement?.current(demoLivingMapElapsed());
     if(mapPiece?.position && mapTarget && demoLivingMapOrigin){
-        const destination=livingMapWorldPoint(mapTarget,demoLivingMapOrigin,demoLivingMapOrientation),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        drawSpatialGroundArrowPath(gl,tetherRenderer,view,mapPiece.position,destination,{width:.032,dashLength:.18,gapLength:.1,arrowSpacing:.5,arrowLength:.18,arrowWidth:.13,color:[.86,.96,.62,reduced?.86:.72+Math.sin(performance.now()/420)*.12]});
+        drawSpatialTotemPointer(gl,tetherRenderer,view,{...mapPiece.position,y:mapPiece.position.y+demoTotemHalfHeight(mapPiece)+.05});
     }
     const linkedTotems = markers.filter(record => record.demoType === 'zone' && record.demoLinkVisible && demoAreaVisible(record));
     if (linkedTotems.length >= 2) {
@@ -5897,11 +5898,13 @@ function drawDemoInputPointer(view,pointerSource) {
     const hoveredRecordTarget=demoRecordAtPointer();
     const hoveredRecordHit=hoveredRecordTarget?.hit || null;
     const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
-    const mapPoint=introBoardStep==='UTILITY 1.1' && demoLivingMapReady() && demoLivingMapOrigin
-        ? livingMapRayPoint(latestControllerRay,demoLivingMapOrigin,demoLivingMapOrientation) : null;
+    const mapActive=introBoardStep==='UTILITY 1.1' && demoLivingMapReady() && demoLivingMapOrigin;
+    const mapDragging=mapActive && demoHeldIndex>=0 && markers[demoHeldIndex]?.demoMapPiece;
+    const mapPoint=mapActive ? livingMapRayPoint(latestControllerRay,demoLivingMapOrigin,demoLivingMapOrientation) : null;
     const mapSurface=mapPoint ? {point:mapPoint,distance:Math.hypot(mapPoint.x-origin.x,mapPoint.y-origin.y,mapPoint.z-origin.z)} : null;
+    if(mapDragging && !mapSurface)return;
     // Butterflies can be caught along the ray, but never clamp the laser tip.
-    const surface = [limSurface,controlSurface,greenSurface,placementSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = mapDragging?mapSurface:[limSurface,controlSurface,greenSurface,placementSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.
@@ -5911,7 +5914,7 @@ function drawDemoInputPointer(view,pointerSource) {
         y:contactPoint.y-direction.y*.004,
         z:contactPoint.z-direction.z*.004
     } : null;
-    const end = surfacePoint || controllerRayEnd(latestControllerRay, [], Math.min(XR_LASER_POINTER_CONFIG.length,2.5));
+    const end = surfacePoint || controllerRayEnd(latestControllerRay, [], Math.min(XR_LASER_POINTER_CONFIG.length,mapActive?.6:2.5));
     if (!end) return;
     drawSpatialTether(gl, tetherRenderer, view, start, end, {
         segments: XR_LASER_POINTER_CONFIG.segments,
@@ -5956,6 +5959,7 @@ async function startImmersive() {
         setupRenderer();
         demoLivingMapGrip?.destroy();
         demoLivingMapGrip=createLivingMapGripInput({
+            responseMs:30,
             enabled:()=>introBoardStep==='UTILITY 1.1' && demoLivingMapReady() && Boolean(demoLivingMapOrigin) && demoHeldIndex<0 && !demoKnowledgeIsModal() && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE,
             origin:()=>demoLivingMapOrigin,rotation:()=>demoLivingMapOrientation,onRotate:setDemoLivingMapRotation,onMove:p=>{demoLivingMapOrigin={x:p.x,y:p.y,z:p.z};},
             canUse:(source,contact)=>{if(butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || infoPanel?.getHeldInputSource()===source)return false;if(!contact)return true;return [infoPanel?.hit(contact.ray),knowledgeRenderer?.hit(contact.ray),totemCardsRenderer?.hit(contact.ray),demoNoteHit(contact.ray)].filter(Boolean).every(hit=>hit.distance>=contact.distance);},

@@ -1,6 +1,8 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage, LIVING_MAP_ORB_SETTLE_MS } from './demoLivingMapModel.js';
+import {livingMapRoutes,sampleLivingMapRoute} from './demoLivingMapRoute.js';
+import {createLivingMapVisitors,LIVING_MAP_VISITOR_COLOURS} from './demoLivingMapVisitors.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
@@ -15,13 +17,14 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const materials = new Map(), geometries = new Set();
     const material = color => { if (!materials.has(color)) materials.set(color, new THREE.MeshLambertMaterial({ color })); return materials.get(color); };
     const geometry = value => { geometries.add(value); return value; };
-    const sphere = geometry(new THREE.SphereGeometry(1, 12, 8));
-    const cylinder = geometry(new THREE.CylinderGeometry(1, 1, 1, 8));
+    const sphere = geometry(new THREE.SphereGeometry(1, 16, 10));
+    const cylinder = geometry(new THREE.CylinderGeometry(1, 1, 1, 12));
     const mesh = (geo, color, x, y, z, sx, sy = sx, sz = sx, parent = scene) => {
         const node = new THREE.Mesh(geo, material(color)); node.position.set(x, y, z); node.scale.set(sx, sy, sz); parent.add(node); return node;
     };
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#66573e', 0, -.23, 0, 6.3, .4, 4.2);
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#61714a', 0, -.025, 0, 6.25, .05, 4.15);
+    const edge=mesh(geometry(new THREE.TorusGeometry(1,.012,6,64)),'#bac894',0,-.01,0,6.2,4.12,1);edge.rotation.x=-Math.PI/2;
     if(model.interactive)for(const x of [-6,6]){
         const rim=mesh(geometry(new THREE.TorusGeometry(.22,.04,6,20)),'#b8d7a4',x,.06,0,1);rim.rotation.x=-Math.PI/2;
     }
@@ -57,9 +60,11 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     for (const [x,z,sx,sz] of (model.concept?[]:[[-3.4,1.8,1.5,.65],[2.7,1.9,1.3,.6]])) {
         mesh(geometry(new THREE.BoxGeometry(1,1,1)), '#867254', x, .025, z, sx, .065, sz, scenery);
     }
-    const routes = model.links.length ? model.links : [[{x:-5,z:2.4},{x:5,z:-1.6}]];
-    const paths = routes.map(([a,b]) => {
-        const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(a.x,.075,a.z), new THREE.Vector3((a.x+b.x)/2,.075,(a.z+b.z)/2+.65),new THREE.Vector3(b.x,.075,b.z)]);
+    const routes = livingMapRoutes(model);
+    const paths = routes.map(points => {
+        // Piecewise routes preserve checked tree clearance; a spline could cut
+        // back through the canopy when rounding a bend.
+        const curve=new THREE.Curve();curve.getPoint=(t,target=new THREE.Vector3())=>{const p=sampleLivingMapRoute(points,t);return target.set(p.x,.075,p.z);};
         const path=mesh(geometry(new THREE.TubeGeometry(curve,32,.09,5,false)), '#c1ae85', 0,0,0,1);path.visible=false;return path;
     });
     const boundaries = model.areas.map((area,index) => {
@@ -109,6 +114,62 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         welcomeTexture=new THREE.CanvasTexture(label);
         const glass=new THREE.MeshBasicMaterial({map:welcomeTexture,transparent:true,side:THREE.DoubleSide,depthWrite:false});materials.set('entry-welcome',glass);
         welcomeScreen=new THREE.Mesh(geometry(new THREE.CircleGeometry(.44,32)),glass);welcomeScreen.visible=false;scene.add(welcomeScreen);
+    }
+    // Bake the solid toy scenery into a single coloured mesh per group. Tiny
+    // leaves and trunks keep their detail without a draw call for every part.
+    function mergeSolids(parent){
+        const sources=parent.children.filter(node=>node.isMesh && !node.isInstancedMesh && !node.material.transparent && !Array.isArray(node.material));
+        if(sources.length<2)return;
+        const positions=[],normals=[],colours=[],point=new THREE.Vector3(),normal=new THREE.Vector3(),normalMatrix=new THREE.Matrix3();
+        for(const node of sources){node.updateMatrix();normalMatrix.getNormalMatrix(node.matrix);const data=node.geometry.index?node.geometry.toNonIndexed():node.geometry;
+            for(let i=0;i<data.attributes.position.count;i++){
+                point.fromBufferAttribute(data.attributes.position,i).applyMatrix4(node.matrix);positions.push(point.x,point.y,point.z);
+                normal.fromBufferAttribute(data.attributes.normal,i).applyMatrix3(normalMatrix).normalize();normals.push(normal.x,normal.y,normal.z);
+                const c=node.material.color;colours.push(c.r,c.g,c.b);
+            }
+            if(data!==node.geometry)data.dispose();parent.remove(node);
+        }
+        const combined=geometry(new THREE.BufferGeometry());combined.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));combined.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));combined.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));
+        const mat=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true});materials.set('merged-'+parent.uuid,mat);parent.add(new THREE.Mesh(combined,mat));
+    }
+    mergeSolids(scenery);markers.forEach(marker=>mergeSolids(marker.group));
+    const visitors=model.interactive?createLivingMapVisitors(model,routes):null;
+    const pegs=[];
+    if(visitors){
+        const profile=[[0,0],[.105,0],[.13,.04],[.12,.18],[.09,.29],[.065,.33],[0,.33]].map(([x,y])=>new THREE.Vector2(x,y));
+        const bodyGeometry=geometry(new THREE.LatheGeometry(profile,12));
+        for(const geo of [bodyGeometry,sphere]){
+            const mat=new THREE.MeshLambertMaterial({color:'#ffffff'});materials.set('peg-'+pegs.length,mat);
+            const batch=new THREE.InstancedMesh(geo,mat,5);batch.visible=false;batch.userData.livingMapDynamic=true;
+            LIVING_MAP_VISITOR_COLOURS.forEach((colour,i)=>batch.setColorAt(i,new THREE.Color(colour)));
+            batch.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(batch);pegs.push(batch);
+        }
+    }
+    const miniPimos=visitors?model.items.filter(item=>item.type==='plant').map(item=>{
+        const group=new THREE.Group();group.position.set(item.x,.95,item.z);group.visible=false;scene.add(group);
+        for(let i=0;i<7;i++){const angle=i*Math.PI/3;mesh(sphere,'#cce4ba',i?Math.cos(angle)*.22:0,i?Math.sin(angle)*.22:0,0,i?.07:.10,i?.07:.10,.05,group);}
+        mergeSolids(group);return {item,group};
+    }):[];
+    const miniNotes=visitors?Array.from({length:3},(_,i)=>{
+        const node=mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#eed9a5',model.areas[2].totem.x+(i-1)*.43,1.0,model.areas[2].totem.z,.27,.20,.035);node.visible=false;
+        // Simple ink dots make the miniature card read as a Note at toy scale.
+        const group=new THREE.Group();group.position.copy(node.position);scene.remove(node);node.position.set(0,0,0);group.add(node);scene.add(group);
+        for(let line=0;line<3;line++)mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#907853',-.025,.045-line*.052,.025,.15,.011,.018,group);
+        node.visible=true;mergeSolids(group);group.visible=false;return group;
+    }):[];
+    function animateVisitors(elapsed,placed,reduced){
+        if(!visitors)return;
+        const states=visitors.update(elapsed,placed,reduced);
+        pegs.forEach((batch,kind)=>{
+            batch.visible=placed.length>0;
+            states.forEach((s,i)=>{transform.position.set(s.x,.085+s.bob+(kind?.405:0),s.z);transform.rotation.set(0,s.heading,0);
+                const size=Math.max(.001,s.scale);transform.scale.set(kind?.12*size:size,kind?.12*size:size,kind?.12*size:size);
+                transform.updateMatrix();batch.setMatrixAt(i,transform.matrix);});batch.instanceMatrix.needsUpdate=true;
+        });
+        miniPimos.forEach(({item,group})=>{const engaged=states.some(s=>s.focus===item.id && s.interaction==='orb');
+            group.visible=engaged;group.scale.setScalar(reduced?1:.9+.08*Math.sin(elapsed/900));group.quaternion.copy(welcomeScreen.quaternion);});
+        miniNotes.forEach((group,i)=>{group.visible=placed.length===3 && states.some(s=>s.interaction==='note');
+            group.position.y=1.0+(reduced?0:Math.sin(elapsed/1200+i)*.035);group.quaternion.copy(welcomeScreen.quaternion);});
     }
     const cloudItems=model.concept?model.areas.map(area=>area.totem):model.areas.flatMap(area=>[area.totem,...area.members.filter(item=>item.id!==area.id)]);
     if(!model.concept)for(const item of model.items)if(!cloudItems.some(entry=>entry.id===item.id))cloudItems.push(item);
@@ -163,16 +224,18 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 const current=placement?.current(elapsed);targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.09*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.65:.5+.18*Math.sin(elapsed/430);}
                 if(welcomeScreen){welcomeScreen.visible=placed.length>0;welcomeScreen.position.set(model.areas[0].totem.x-.65,.62,model.areas[0].totem.z);welcomeScreen.quaternion.copy(camera.quaternion);welcomeScreen.scale.setScalar(Math.max(.001,bornFor(model.areas[0].id)));}
                 scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,progress.scenery);shrub.count=Math.floor(planted*progress.scenery);
-                if(paint)renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
+                if(paint && !(visitors && placed.length>0))renderer.render(scene,camera);lastPaint=elapsed;settledPaint=progress.settled;lastReduced=reducedMotion;
             }
 
-        scene.updateMatrixWorld(true);return {placed,bornFor};
+        animateVisitors(elapsed,placed,reducedMotion);scene.updateMatrixWorld(true);
+        if(paint && visitors && placed.length>0)renderer.render(scene,camera);
+        return {placed,bornFor};
     }
     return {
-        canvas,schedule,scene,guidance,totemLabel,
+        canvas,schedule,scene,guidance,totemLabel,routes,visitors,
         update:(elapsed,reduced)=>update(elapsed,reduced,false),
         rotate(delta){rotation.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-delta));settledPaint=false;lastPaint=-Infinity;},
-        setRotation(value){rotation.copy(value);settledPaint=false;lastPaint=-Infinity;},
+        setRotation(value){if(rotation.angleTo(value)<1e-6)return;rotation.copy(value);settledPaint=false;lastPaint=-Infinity;},
         project(item,rect){
             const tagHeight=(rect.width>=700?20:rect.width>=440?14:12)+10,cloudHeight=tagHeight+18;
             projected.set(item.x,.095,item.z).project(camera);

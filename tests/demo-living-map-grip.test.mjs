@@ -55,3 +55,17 @@ test('tracked hand pinches also require both opposite rim contacts',()=>{
     const input=createLivingMapGripInput({enabled:()=>true,origin:()=>origin,rotation:()=>identity,onRotate:()=>rotations++});input.bind(session,space);input.update(frame);assert.equal(input.active,true);assert.equal(rotations,0);
     states.get(sources[0].hand.get('thumb-tip')).x-=.1;input.update(frame);assert.equal(input.active,false);assert.equal(input.owns(sources[0]),false);assert.equal(rotations,0);input.destroy();
 });
+
+test('off-centre grips rotate around the held midpoint and retain left/right order',()=>{
+    const state=createLivingMapTwoGrip(),initial=samples();initial.forEach(s=>s.position.z+=.1);
+    state.update([...initial].reverse(),origin,identity);
+    const turn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2),midpoint=new THREE.Vector3(0,1,-.9),translation=new THREE.Vector3(.15,.1,.2);
+    const moved=initial.map(s=>({...s,position:s.position.clone().sub(midpoint).applyQuaternion(turn).add(midpoint).add(translation),up:s.up.clone().applyQuaternion(turn)}));
+    const result=state.update(moved,origin,identity);assert.ok(result.angleTo(turn)<1e-6);
+    const expected=new THREE.Vector3(origin.x,origin.y,origin.z).sub(midpoint).applyQuaternion(turn).add(midpoint).add(translation);
+    assert.ok(state.position.distanceTo(expected)<1e-6);
+    // Controller wrist roll can cancel the two up vectors; the last plate up
+    // keeps the tray stable instead of dropping the gesture.
+    moved[0].up.set(0,1,0);moved[1].up.set(0,-1,0);
+    assert.ok(state.update(moved,origin,identity).angleTo(turn)<1e-6);assert.equal(state.active,true);
+});

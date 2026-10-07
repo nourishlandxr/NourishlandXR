@@ -543,7 +543,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);
  if(options.drawPanel!==false){
  ctx.save();if(options.opening && !reducedMotion)ctx.globalAlpha=.18+.82*smooth(elapsed,0,900);
- drawArWelcomePanel(ctx,{elapsed,reducedMotion,backgroundOpacity:.38,...(options.simpleDesktop?{simple:true}:{})});ctx.restore();
+ drawArWelcomePanel(ctx,{elapsed,reducedMotion,...(options.simpleDesktop?{simple:true}:{})});ctx.restore();
  }
  if(options.drawRoots!==false){
  let reservedCells=vegetationClearanceCache.get(graphs);

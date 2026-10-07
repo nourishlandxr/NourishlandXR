@@ -254,6 +254,19 @@ export function drawSpatialGroundArrowPath(gl, renderer, view, start, end, optio
     gl.depthMask(true);
 }
 
+// Small floating placement cue. Two simple silhouettes give a soft glow
+// without a fullscreen bloom pass or a long arrow obscuring the landscape.
+export function drawSpatialTotemPointer(gl,renderer,view,tip){
+    if(!renderer || !view?.transform?.matrix || !tip)return;
+    const m=view.transform.matrix,length=Math.hypot(m[0],m[2]) || 1,rx=m[0]/length,rz=m[2]/length;
+    const outline=[[-.018,.092],[.018,.092],[-.018,.046],[-.018,.046],[.018,.092],[.018,.046],[-.038,.046],[.038,.046],[0,0]];
+    gl.useProgram(renderer.program);gl.bindBuffer(gl.ARRAY_BUFFER,renderer.buffer);gl.enableVertexAttribArray(renderer.positionLocation);gl.vertexAttribPointer(renderer.positionLocation,3,gl.FLOAT,false,12,0);
+    gl.uniformMatrix4fv(renderer.projectionLocation,false,view.projectionMatrix);gl.uniformMatrix4fv(renderer.viewLocation,false,view.transform.inverse.matrix);
+    gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);gl.depthMask(false);
+    for(const scale of [1.4,1]){const vertices=new Float32Array(outline.flatMap(([x,y])=>[tip.x+rx*x*scale,tip.y+y*scale,tip.z+rz*x*scale]));gl.bufferData(gl.ARRAY_BUFFER,vertices,gl.DYNAMIC_DRAW);gl.uniform4fv(renderer.colorLocation,[.90,.98,.65,scale===1?.92:.16]);gl.drawArrays(gl.TRIANGLES,0,9);}
+    gl.depthMask(true);
+}
+
 const contactVertices = new WeakMap();
 const contactUnitVertices = (()=>{
     const vertices=new Float32Array(24*6*2);

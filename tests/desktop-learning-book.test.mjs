@@ -44,7 +44,7 @@ test('desktop entry offers the existing book and removes simulated AR access', (
     const demo = readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
     const launch = readFileSync(new URL('../app/screens/launch.js', import.meta.url), 'utf8');
     const css = readFileSync(new URL('../app/living-objects.css', import.meta.url), 'utf8');
-    assert.match(launch, /Try the AR introduction →/);
+    assert.match(launch, /Try our demo →/);
     assert.match(demo, /data-desktop-learning-book/);
     assert.doesNotMatch(demo, /data-desktop-plain-ar/);
     assert.match(demo, /The AR demo is not designed for desktop use/);

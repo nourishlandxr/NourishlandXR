@@ -7,6 +7,7 @@ import {createLivingMapTwoGrip} from '../app/services/demoLivingMapGrip.js';
 import {noteSurfaceFacing,noteCardButtonLayout} from '../app/services/noteSpatialRenderer.js';
 import {createDemoLivingMapXR} from '../app/services/demoLivingMapXR.js';
 import {livingMapPlacementCopy,resetDemoPlantForMap} from '../app/services/demoLivingMapPresentation.js';
+import {livingMapRayPoint} from '../app/services/demoLivingMapReveal.js';
 
 test('two hands carry the plate toward the viewer without scaling; release freezes its pose',()=>{
  const origin={x:0,y:1,z:-1.2},rotation=new THREE.Quaternion(),gesture=createLivingMapTwoGrip();
@@ -42,4 +43,15 @@ test('map placements explain entrance, local information and swales; PIMO reopen
  assert.match(livingMapPlacementCopy(1),/starting point/);assert.match(livingMapPlacementCopy(2),/information about this Area/);assert.match(livingMapPlacementCopy(3),/swale/);
  const record={id:'plant-1',demoType:'plant',name:'Pigeon Pea',demoExpanded:true,demoExpandedNodeIds:['Uses'],demoSelectedNodeId:'Uses.food',knowledgeExplorer:{mode:'explore',pages:{Uses:3}},explorerMolecule:{expanded:['Uses']}};
  assert.equal(resetDemoPlantForMap(record),true);assert.equal(record.demoExpanded,false);assert.deepEqual(record.demoExpandedNodeIds,[]);assert.equal(record.demoSelectedNodeId,'');assert.equal(record.knowledgeExplorer,undefined);assert.equal(record.id,'plant-1');assert.equal(record.name,'Pigeon Pea');
+});
+
+test('held Totem retains its last map contact when the laser misses, and recovers on re-entry',()=>{
+ const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+ const body=source.slice(source.indexOf('function updateHeldDemoRecordPosition()'),source.indexOf('function captureDemoGrabPose('));
+ const record={demoMapPiece:true,position:{x:.15,y:1.0085,z:-1},groundBaseY:.91};let origin={x:2,y:2,z:-1};
+ const context=vm.createContext({simulatedMode:false,demoHeldIndex:0,markers:[record],demoPointerWorldRay:()=>({x:0,y:-1,z:0}),demoPointerWorldOrigin:()=>origin,demoLivingMapOrigin:{x:0,y:1,z:-1},demoLivingMapOrientation:{x:0,y:0,z:0,w:1},livingMapRayPoint,demoTotemHalfHeight:()=>.095});
+ vm.runInContext(body,context);const last={...record.position};vm.runInContext('updateHeldDemoRecordPosition()',context);
+ assert.deepEqual(record.position,last);assert.equal(record.demoMapDropValid,false,'miss cannot place at a stale contact');
+ origin={x:.2,y:2,z:-1};vm.runInContext('updateHeldDemoRecordPosition()',context);
+ assert.equal(record.demoMapDropValid,true);assert.ok(Math.abs(record.position.x-.2)<1e-8);assert.ok(Math.abs(record.groundBaseY-1.0085)<1e-8);assert.ok(Math.abs(record.position.y-1.1035)<1e-8,'Totem rests on the plate instead of sinking into it');
 });

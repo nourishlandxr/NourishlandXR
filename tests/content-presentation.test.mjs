@@ -46,7 +46,9 @@ test('post-LIMO discovery connects the authored Pigeon Pea and Living Landscapes
     assert.match(demo, /runArWelcomeTutorial\(0\)/);
     assert.doesNotMatch(guide, /Four ways to explore/);
     assert.match(guide, /guidedDemoStep\('SPACE 1\.2'\)\.title/);
-    assert.match(DEMO_GUIDED_COPY['ELEMENTS 1.5'], /Pigeon Pea/);
+    assert.match(DEMO_GUIDED_COPY['ELEMENTS 1.5'], /first Plant Orb/);
+    assert.doesNotMatch(DEMO_GUIDED_COPY['ELEMENTS 1.5'], /Pigeon Pea/);
+    assert.match(DEMO_GUIDED_COPY['ELEMENTS 1.6'], /Pigeon Pea/);
     assert.match(demo, /limMeshVisible=false/);
     assert.match(demo, /deferContinueUntilCopyReady:index===0/);
     assert.match(demo, /stepLabel:'LEARNING 1\.9'[\s\S]*Select \$\{nativeConnectionState\.sourceTitle\} in Pigeon Pea to continue/);

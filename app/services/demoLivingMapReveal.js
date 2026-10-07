@@ -25,7 +25,7 @@ export function livingMapRayPoint(ray,origin,rotation=0){
     if(Math.abs(denominator)<.001)return null;
     const distance=new THREE.Vector3(surface.x,surface.y,surface.z).sub(start).dot(normal)/denominator;
     if(distance<0 || distance>4)return null;
-    const point=start.addScaledVector(direction,distance),local=point.clone().sub(new THREE.Vector3(origin.x,origin.y-.025,origin.z)).applyQuaternion(livingMapRotation(rotation).invert()).multiplyScalar(1/(LIVING_MAP_WORLD_SCALE*.94));
+    const point=start.addScaledVector(direction,distance),local=point.clone().sub(new THREE.Vector3(origin.x,origin.y,origin.z)).applyQuaternion(livingMapRotation(rotation).invert()).multiplyScalar(1/LIVING_MAP_WORLD_SCALE);
     if((local.x/6.3)**2+(local.z/4.2)**2>1)return null;
     return {x:point.x,y:point.y,z:point.z};
 }

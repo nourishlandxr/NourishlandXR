@@ -4,7 +4,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "INTRO 1.1",
         "act": "Introduce the tool",
         "title": "Knowledge connected to place",
-        "main": "NourishlandXR brings information, knowledge and observations into the places they belong.\n\nA plant can share its story.\n\nSomething noticed today can be left for someone to discover later. Information can connect what you see with what you want to understand.\n\nAs more is added, a place becomes richer with knowledge that can be explored, shared and built on over time.",
+        "main": "NourishlandXR brings information, knowledge and observations into the places they belong.\n\nA plant can share its story.\n\nSomething noticed today can be left for someone to discover later. Information can connect what you see with what you want to understand.",
         "panel": "Hidden.",
         "hint": "See how it works.",
         "art": "opening"
