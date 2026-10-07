@@ -13,7 +13,7 @@ export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=
     function inputMatrix(source){return inputMatrices.get(source)?.clone() || null;}
     function targetFor(source){const m=rayMatrices.get(source);if(!m)return null;const inputRay={origin:new THREE.Vector3().setFromMatrixPosition(m),direction:new THREE.Vector3(0,0,-1).transformDirection(m)};const target=hit(source,inputRay);if(target)target.inputRay=inputRay;return target;}
     function begin(source,target,matrix,kind){
-        if(active || !target || !matrix || !canGrab({...target,source}))return false;
+        if(active || !target?.object || !matrix || !canGrab({...target,source}))return false;
         const basis=knowledgePoseMatrix(target.pose),world=basis.clone().multiply(localObjectMatrix(target.object));
         cancelHold(source);active={source,target,kind,offset:matrix.clone().invert().multiply(world)};return true;
     }

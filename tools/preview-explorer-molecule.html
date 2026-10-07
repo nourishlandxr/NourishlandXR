@@ -30,7 +30,7 @@ function refresh(){
     document.querySelector('#align').textContent=connector?'Align connector with socket':'Align topic with free end';document.querySelector('#align').disabled=!state.puzzle;
     document.querySelector('#attach').textContent=connector?'Lock connector':'Lock topic';document.querySelector('#attach').disabled=!explorerPuzzleFit(record,knowledge).valid;
     document.querySelector('#ranger').disabled=Boolean(state.puzzle)||state.wings.length>0;
-    topics.replaceChildren();for(const node of visible.nodes.filter(n=>!n.pending)){const b=document.createElement('button');b.textContent=node.label;b.onclick=()=>select({explorerNodeId:node.id,explorerAttachment:node.attachment});topics.append(b);}
+    topics.replaceChildren();for(const node of visible.nodes.filter(n=>!n.pending && !n.connector)){const b=document.createElement('button');b.textContent=node.label;b.onclick=()=>select({explorerNodeId:node.id,explorerAttachment:node.attachment});topics.append(b);if(node.id==='core' || node.id===state.selectedId)for(const output of (node.outputs || []).filter(output=>index.nodes.get(node.id)?.children.includes(output.id))){const face=document.createElement('button');face.textContent='Open '+output.label;face.onclick=()=>select({explorerNodeId:node.id,explorerOutput:output.id});topics.append(face);}}
     view.update({record,knowledge,expanded:record.demoExpandedNodeIds,onSelect:select,viewDistance,viewAngle});
     const path=explorerSelectedPath(record,knowledge),detailDocument=explorerDetailDocument(PIGEON_PEA_PIM,record);
     if(record.knowledgeExplorer.mode==='explore'){if(path)panel.select(record,detailDocument,path);else panel.focusPlant(record,detailDocument);}panel.refreshExplorer();

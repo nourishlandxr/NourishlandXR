@@ -23,10 +23,11 @@ test('reference-space reset rebases placed Orbs and axes exactly once without ch
  rebaseDemoRecords([record],matrix);assert.deepEqual(position,{x:5,y:1.2,z:-4});assert.deepEqual(right,{x:1,y:0,z:0});assert.equal(record.demoExpanded,true);
  const anchor=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,2,1,-3,1]);rebaseXrMatrix(anchor,matrix);assert.equal(anchor[12],5);assert.equal(anchor[14],-4);
 });
-test('mode-only Explorer provides three compact branches and preserves existing state',()=>{
+test('mode-only Explorer starts with topic faces on one dice and preserves existing state',()=>{
  const record={knowledgeExplorer:{mode:'explore',revision:0}};const state=initializeExplorerPreview(record,knowledge,1000);
- assert.equal(state.wings.length,3);assert.equal(explorerMoleculeView(record,knowledge,1,2000).nodes.length,4);
- const first=state.wings[0];assert.equal(selectExplorerNode(record,knowledge,{explorerNodeId:first},2000),true);
+ assert.equal(state.wings.length,0);const field=explorerMoleculeView(record,knowledge,1,2000);assert.equal(field.nodes.length,1);
+ const first=field.nodes[0].outputs[0];assert.equal(selectExplorerNode(record,knowledge,{explorerNodeId:'core',explorerOutput:first.id},2000),true);
+ assert.equal(state.puzzle.phase,'connector');assert.equal(state.assembled.length,0);
  const before=state.revision;initializeExplorerPreview(record,knowledge,3000);assert.equal(state.revision,before);
  const renderer=read('app/services/knowledgeSpatialRenderer.js');assert.ok(renderer.indexOf("mode==='explore'")<renderer.indexOf('recordSurfaces=knowledgeSurfaces'));
  const panel=read('app/services/pimInfoPanel.js'),controls=panel.slice(panel.indexOf('function explorerControls'),panel.indexOf('const explorerHeight'));

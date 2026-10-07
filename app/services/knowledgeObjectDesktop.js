@@ -4,7 +4,7 @@ import {createSpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {rotateKnowledgeObject} from './knowledgeObjectModel.js';
 import {ensureExplorerMolecule,explorerMoleculeIndex,commitExplorerPuzzle,magnetExplorerPuzzle} from './explorerMoleculeModel.js';
 import {gestureIntent,WHEEL_DRAG_RADIANS_PER_PIXEL,WHEEL_TOUCH_RADIANS_PER_PIXEL} from './wheel-model.js';
-const KNOWLEDGE_OBJECT_INSTRUCTION='Choose your wings in Knowledge options. Fit a connector, then fit the wing onto its free end. Drag the core to turn the organism; Shift-drag a wing to move its whole branch. Alt-drag a loose connector to turn it.';
+const KNOWLEDGE_OBJECT_INSTRUCTION='Open a topic face to build its branch. Drag the loose arm into the matching socket, release to attach, then fit the topic onto its free end. Drag the dice to turn it; Shift-drag a branch to move it. Alt-drag an arm to turn it.';
 
 export function mountKnowledgeObjectDesktop(container,options){
     const host=document.createElement('section');host.className='knowledge-object-field';host.setAttribute('aria-label','Explore knowledge objects');
@@ -26,12 +26,13 @@ export function mountKnowledgeObjectDesktop(container,options){
             const box=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio || 1,1.5),width=Math.max(1,Math.round(box.width*ratio)),height=Math.max(1,Math.round(box.height*ratio));
             if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;}
             const distance=settings.viewDistance || 1.5,angle=settings.viewAngle || 0;
-            camera.fov=82;camera.aspect=width/height;camera.position.set(Math.sin(angle)*distance,focus.y,Math.cos(angle)*distance);camera.lookAt(focus);camera.updateMatrixWorld();camera.updateProjectionMatrix();
+            const radius=Math.max(.35,(workspace.root.radius || .52)*workspace.root.scale);
+            camera.fov=Math.max(32,Math.min(82,2*Math.atan(radius*1.15/distance)*180/Math.PI));camera.aspect=width/height;camera.position.set(Math.sin(angle)*distance,focus.y,Math.cos(angle)*distance);camera.lookAt(focus);camera.updateMatrixWorld();camera.updateProjectionMatrix();
             gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
             const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};
             painter.begin();painter.draw(view,record,knowledge,expanded,pose,time);painter.end();
             canvas.dataset.objects=String(workspace.renderedCount ?? 1);canvas.dataset.connectors=String(workspace.renderedBonds ?? 0);canvas.dataset.lod=workspace.lod;canvas.dataset.rotation=JSON.stringify(selected.rotation);canvas.dataset.arrangement=JSON.stringify(workspace.positions);canvas.dataset.wings=JSON.stringify(workspace.wings);
-            hint.textContent=workspace.interaction==='move'?'Drag an object to move it. Choose Finish moving to return to turning.':KNOWLEDGE_OBJECT_INSTRUCTION;
+            hint.textContent=workspace.puzzle?.phase==='connector'?'Drag the loose arm into its matching socket. Release when the socket confirms the fit.':workspace.puzzle?.phase==='piece'?'Arm attached. Drag the topic onto its free end and release to build the branch.':workspace.interaction==='move'?'Drag an object to move it. Choose Finish moving to return to turning.':KNOWLEDGE_OBJECT_INSTRUCTION;
         }
         if(time-settings.record.knowledgeExplorer.changedAt<1000 || time<settleUntil || gesture)request(true);
     }

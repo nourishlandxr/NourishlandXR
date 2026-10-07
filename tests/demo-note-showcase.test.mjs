@@ -8,7 +8,7 @@ import {beeWingsAtRest} from '../app/services/demoAmbientLife.js';
 import {applyBeeWingPose} from '../app/services/demoBeeXR.js';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../app/services/demoFeedback.js';
 import {createHeroDicePhysics} from '../app/services/heroDiceToy.js';
-import {initializeExplorerPreview,explorerMoleculeView,selectExplorerNode,explorerNodePosition,explorerChildFrame} from '../app/services/explorerMoleculeModel.js';
+import {initializeExplorerPreview,explorerMoleculeView,selectExplorerNode,explorerNodePosition,explorerChildFrame,chooseExplorerWing,prepareExplorerConnection,alignExplorerPuzzle,commitExplorerPuzzle,explorerMoleculeIndex} from '../app/services/explorerMoleculeModel.js';
 import {bindExplorerMoleculeInteraction} from '../app/services/explorerMoleculeInteraction.js';
 import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
 class Root extends EventTarget {innerHTML='';replaceChildren(){this.innerHTML='';}}
@@ -65,7 +65,8 @@ test('dice landing emits impact feedback, resting micro-collisions do not',()=>{
 });
 test('Explorer branches share colour, child cells have multiple outputs and independent grip ownership',()=>{
  const record={knowledgeExplorer:{mode:'explore',revision:0}},state=initializeExplorerPreview(record,knowledge,0);
- for(const id of state.wings)selectExplorerNode(record,knowledge,{explorerNodeId:id},0);
+ const assemble=()=>{alignExplorerPuzzle(record,knowledge);commitExplorerPuzzle(record,knowledge,0);alignExplorerPuzzle(record,knowledge);commitExplorerPuzzle(record,knowledge,0);};
+ for(const id of knowledge.categories.slice(0,3).map(node=>node.id)){chooseExplorerWing(record,knowledge,id,0);assemble();selectExplorerNode(record,knowledge,{explorerNodeId:id},0);if(state.puzzle)assemble();for(const child of explorerMoleculeIndex(knowledge,record).nodes.get(id).children.slice(0,3)){if(!state.assembled.includes(id+'>'+child)){prepareExplorerConnection(record,knowledge,id,child,0);assemble();}}state.selectedId=id;}
  const field=explorerMoleculeView(record,knowledge,1,2000,true),child=field.nodes.find(node=>node.depth===2),other=field.nodes.find(node=>node.depth===2 && node.id!==child.id),object=state.nodeObjects[child.id];
  assert.ok(object);assert.ok(child.outputs.length>=2);
  for(const node of field.nodes.filter(node=>node.depth>1)){

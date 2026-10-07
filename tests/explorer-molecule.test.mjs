@@ -8,7 +8,7 @@ import {pimInfoContent} from '../app/services/pimInfoPanel.js';
 import {knowledgeExplorer,knowledgeExplorerAction,restoreKnowledgeDiscovery} from '../app/services/knowledgeExplorer.js';
 import {setPimoDeveloperOverride} from '../app/services/pimoSpatialCapabilities.js';
 import {ensureExplorerMolecule,explorerMoleculeIndex,selectExplorerNode,explorerMoleculeAction,explorerMoleculeView,explorerDetailDocument,explorerMoleculeSnapshot,restoreExplorerMolecule,explorerPuzzleSlot,explorerPuzzleFit,alignExplorerPuzzle,commitExplorerPuzzle,prepareExplorerConnection,chooseExplorerWing,createExplorerWing,removeExplorerWing,customizeExplorerOrganism,explorerNodePosition,EXPLORER_RECIPES,EXPLORER_RECIPE,EXPLORER_LIMIT,EXPLORER_BOND_RADIUS} from '../app/services/explorerMoleculeModel.js';
-import {hitExplorerMolecule,hitExplorerConnector,createExplorerMoleculeGeometry} from '../app/services/explorerMoleculeRenderer.js';
+import {hitExplorerMolecule,hitExplorerConnector,hitExplorerFacet,createExplorerMoleculeGeometry} from '../app/services/explorerMoleculeRenderer.js';
 import {bindExplorerMoleculeInteraction} from '../app/services/explorerMoleculeInteraction.js';
 import {knowledgePoseMatrix,localObjectMatrix} from '../app/services/knowledgeObjectModel.js';
 
@@ -18,7 +18,17 @@ function fixture(assembled=true){
     if(assembled){for(const wing of knowledge.categories){assert.ok(chooseExplorerWing(record,knowledge,wing.id));connectPrepared(record);}record.explorerMolecule.selectedId='core';record.explorerMolecule.discovered=[];}
     return record;
 }
-const select=(record,id,time=100)=>selectExplorerNode(record,knowledge,{explorerNodeId:id},time);
+// Geometry/reading fixtures assemble each local branch through the same two
+// manual locks before checking its arrangement. Behaviour tests below exercise
+// the unfinished stages separately.
+const select=(record,id,time=100)=>{
+    const result=selectExplorerNode(record,knowledge,{explorerNodeId:id},time),state=record.explorerMolecule,index=explorerMoleculeIndex(knowledge,record),node=index.nodes.get(id);
+    if(state.puzzle)connectPrepared(record,time);
+    if(state.expanded.includes(id))for(const child of node.children.filter(child=>child!==EXPLORER_RECIPE || state.contributionAdded).slice(0,3)){
+        if(!state.assembled.includes(id+'>'+child)){prepareExplorerConnection(record,knowledge,id,child,time);connectPrepared(record,time);}
+    }
+    state.selectedId=id;return result;
+};
 const view=(record,distance=1,time=10000)=>explorerMoleculeView(record,knowledge,distance,time,true);
 const pose={position:{x:.4,y:1.3,z:-.6},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:0,z:1}};
 function connectPrepared(record,time=200){
@@ -35,7 +45,7 @@ test('rendered molecular bodies are closed solids with volume on every axis',()=
     }
     try{
         for(const solid of Object.values(solids)){solid.computeBoundingBox();const size=solid.boundingBox.getSize(new THREE.Vector3());assert.ok(Math.min(size.x,size.y,size.z)>=1);}
-        assert.ok(volume(solids.node)>3);assert.ok(volume(solids.bond)>2.5);
+        assert.ok(volume(solids.node)>3);assert.ok(volume(solids.bond)>1.5);
         assert.equal(solids.node.userData.faces.filter(face=>face.kind==='information').length,8);
         assert.equal(solids.node.userData.faces.filter(face=>face.kind==='connector').length,6);
         assert.equal(solids.node.attributes.position.count,564,'188 shared-shape triangles with faceted rims, no sphere tessellation');
@@ -58,6 +68,45 @@ test('Explorer begins with one core and a wing library; no structure is preselec
     assert.deepEqual(record.explorerMolecule.wings,[]);assert.deepEqual(Object.keys(record.explorerMolecule.positions),['core']);
     assert.ok(field.index.roots.includes('uses'));assert.ok(field.index.roots.includes('historical-data'));assert.ok(field.index.roots.includes('explorer-wildlife'));
     assert.equal(select(record,'uses'),false);assert.equal(explorerMoleculeAction(record,knowledge,'KnowledgeMoleculeBuild'),false);
+});
+
+test('a dice topic face builds an arm, then its topic, and children remain unbuilt',()=>{
+    const record=fixture(false),state=record.explorerMolecule,initial=view(record);
+    assert.ok(initial.nodes[0].outputs.some(output=>output.id==='uses'));
+    assert.equal(selectExplorerNode(record,knowledge,{explorerNodeId:'core',explorerOutput:'uses'},0),true);
+    assert.equal(state.puzzle.phase,'connector');assert.equal(state.assembled.length,0);
+    assert.equal(view(record).nodes.some(node=>node.id==='uses'),false);
+    assert.equal(view(record,2.2).nodes.some(node=>node.id==='pending-connector'),true,'a step back must not hide the loose arm');
+    assert.equal(commitExplorerPuzzle(record,knowledge),false);
+    alignExplorerPuzzle(record,knowledge);commitExplorerPuzzle(record,knowledge,100);
+    assert.equal(state.puzzle.phase,'piece');assert.equal(state.assembled.length,0);
+    alignExplorerPuzzle(record,knowledge);commitExplorerPuzzle(record,knowledge,200);
+    assert.deepEqual(view(record).nodes.map(node=>node.id),['core','uses']);
+    assert.equal(selectExplorerNode(record,knowledge,{explorerNodeId:'uses'},300),true);
+    assert.equal(state.puzzle.phase,'connector');assert.equal(state.puzzle.parentId,'uses');
+    const child=state.puzzle.childId;
+    assert.equal(view(record).nodes.some(node=>node.id===child),false);
+    connectPrepared(record,400);
+    const field=view(record);assert.ok(field.nodes.some(node=>node.id===child));
+    assert.equal(field.nodes.filter(node=>node.depth===2 && !node.connector && !node.attachment).length,1);
+});
+
+test('the dice face label wins over the faceted body when opening a topic',()=>{
+    const record=fixture(false),field=view(record),node={...field.nodes[0],world:new THREE.Vector3(),worldRadius:.14,worldRotation:new THREE.Quaternion()},normal=new THREE.Vector3(1,1,1).normalize(),center=normal.clone().multiplyScalar(.14*Math.sqrt(3)/2+.002),right=new THREE.Vector3(0,1,0).cross(normal).normalize(),up=normal.clone().cross(right);
+    const ray={origin:normal.clone().multiplyScalar(.3),direction:normal.clone().negate()};
+    const surface={center,right,up,normal,width:.12,height:.07,interactive:true,moleculeNode:{...node,outputTarget:'uses',outputIndex:0}};
+    const hit=hitExplorerMolecule(ray,[{record,knowledge,...field,nodes:[node],surfaces:[surface],pose}]);
+    assert.equal(hit.node.explorerOutput,'uses');
+    const contact=hitExplorerFacet(ray,node);assert.ok(Math.abs(contact.length()-.14*Math.sqrt(3)/2)<1e-6);
+});
+
+test('arm endpoints stay on the rendered facets after wing rotation',()=>{
+    const record=fixture(false);chooseExplorerWing(record,knowledge,'uses');connectPrepared(record);
+    const state=record.explorerMolecule;state.wingObjects.uses.rotation={x:0,y:Math.sin(.35),z:0,w:Math.cos(.35)};
+    selectExplorerNode(record,knowledge,{explorerNodeId:'uses'});
+    const field=view(record),parent=field.nodes.find(node=>node.id==='uses'),slot=explorerPuzzleSlot(record,knowledge),axis=new THREE.Vector3(slot.to.x-slot.from.x,slot.to.y-slot.from.y,slot.to.z-slot.from.z).normalize(),port=new THREE.Vector3(slot.from.x,slot.from.y,slot.from.z);
+    const hit=hitExplorerFacet({origin:port.clone().addScaledVector(axis,.2),direction:axis.clone().negate()},{world:new THREE.Vector3(parent.position.x,parent.position.y,parent.position.z),worldRadius:parent.radius,worldRotation:new THREE.Quaternion(parent.rotation.x,parent.rotation.y,parent.rotation.z,parent.rotation.w)});
+    assert.ok(hit.distanceTo(port)<1e-6);
 });
 
 test('local exploration preserves every existing position, source data and Curiosity state',()=>{
@@ -117,7 +166,7 @@ test('distance aggregation uses hysteresis and restores the same explored positi
 test('large datasets keep detailed geometry bounded and do not drop authored children',()=>{
     const many={title:'Plant',categories:[{id:'uses',label:'Uses',path:'uses',children:Array.from({length:60},(_,i)=>({id:'n'+i,path:'uses.n'+i,label:'Topic '+i,children:[]}))}]};
     const record={knowledgeExplorer:{mode:'explore',revision:0}};ensureExplorerMolecule(record,many);chooseExplorerWing(record,many,'uses');alignExplorerPuzzle(record,many);commitExplorerPuzzle(record,many);alignExplorerPuzzle(record,many);commitExplorerPuzzle(record,many);selectExplorerNode(record,many,{id:'uses'});const seen=new Set();
-    for(let page=0;page<20;page++){const field=explorerMoleculeView(record,many,1,10000,true);assert.ok(field.nodes.length<=EXPLORER_LIMIT);field.nodes.filter(n=>n.id.startsWith('n')).forEach(n=>seen.add(n.id));explorerMoleculeAction(record,many,'KnowledgeMoleculeMore');}
+    for(let page=0;page<20;page++){for(const child of explorerMoleculeIndex(many,record).nodes.get('uses').children.slice(page*3,page*3+3)){if(!record.explorerMolecule.puzzle)prepareExplorerConnection(record,many,'uses',child);alignExplorerPuzzle(record,many);commitExplorerPuzzle(record,many);alignExplorerPuzzle(record,many);commitExplorerPuzzle(record,many);}const field=explorerMoleculeView(record,many,1,10000,true);assert.ok(field.nodes.length<=EXPLORER_LIMIT);field.nodes.filter(n=>n.id.startsWith('n')).forEach(n=>seen.add(n.id));record.explorerMolecule.selectedId='uses';explorerMoleculeAction(record,many,'KnowledgeMoleculeMore');}
     assert.equal(seen.size,60);
 });
 

@@ -3,14 +3,27 @@ import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {createExplorerFacetGeometry} from './explorerFacetGeometry.js';
 import {createSpatialTotemCards,hitTotemSurface} from './spatialTotemCards.js';
 import {knowledgePoseMatrix,localObjectMatrix} from './knowledgeObjectModel.js';
-import {explorerMoleculeView,explorerPuzzleFit,explorerChildFrame,EXPLORER_BOND_RADIUS,EXPLORER_CONNECTOR_COLOUR} from './explorerMoleculeModel.js';
+import {explorerMoleculeView,explorerPuzzleFit,explorerChildFrame,explorerFacetSurfaceDistance,EXPLORER_BOND_RADIUS,EXPLORER_CONNECTOR_COLOUR} from './explorerMoleculeModel.js';
 
 const motion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
 const vec=p=>new THREE.Vector3(p.x,p.y,p.z);
+const facePlanes=[...['x','y','z'].flatMap(axis=>[-1,1].map(sign=>({normal:new THREE.Vector3(axis==='x'?sign:0,axis==='y'?sign:0,axis==='z'?sign:0),limit:1}))),...[-1,1].flatMap(x=>[-1,1].flatMap(y=>[-1,1].map(z=>({normal:new THREE.Vector3(x,y,z).normalize(),limit:Math.sqrt(3)/2}))))];
+export function hitExplorerFacet(ray,node){
+    const inverse=(node.worldRotation || new THREE.Quaternion()).clone().invert(),origin=vec(ray.origin).sub(node.world).applyQuaternion(inverse),direction=vec(ray.direction).normalize().applyQuaternion(inverse);
+    let enter=0,leave=Infinity;
+    for(const {normal,limit} of facePlanes){
+        const gap=limit*node.worldRadius-origin.dot(normal),speed=direction.dot(normal);
+        if(Math.abs(speed)<1e-8){if(gap<0)return null;continue;}
+        const t=gap/speed;if(speed<0)enter=Math.max(enter,t);else leave=Math.min(leave,t);
+        if(enter>leave)return null;
+    }
+    if(leave<0)return null;
+    return vec(ray.origin).addScaledVector(vec(ray.direction).normalize(),enter>0?enter:leave);
+}
 function labelCanvas(card){
     const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;const ctx=localizedCanvasContext(canvas.getContext('2d'));
-    if(card.nameBadge){ctx.fillStyle='rgba(8,24,28,.9)';ctx.beginPath();ctx.roundRect(8,20,496,200,30);ctx.fill();ctx.strokeStyle='#e2f4e9';ctx.lineWidth=4;ctx.stroke();}
-    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffffff';ctx.shadowBlur=0;ctx.font=`750 ${card.attachment?48:64}px Manrope,system-ui`;
+    if(card.nameBadge){ctx.fillStyle='rgba(22,39,35,.35)';ctx.beginPath();ctx.roundRect(8,20,496,200,30);ctx.fill();}
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f0f4eb';ctx.shadowBlur=0;ctx.font=`550 ${card.attachment?48:60}px Manrope,system-ui`;
     const lines=[];let line='';for(const word of String(translateNxrText(card.title)).split(/\s+/)){const next=(line?line+' ':'')+word;if(ctx.measureText(next).width>460&&line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);
     lines.slice(0,3).forEach((text,i)=>{const y=105+(i-(Math.min(3,lines.length)-1)/2)*52;ctx.fillText(text,256,y,470);});
     if(card.status){ctx.font='500 28px Manrope,system-ui';ctx.fillText(card.status,256,230,470);}return canvas;
@@ -19,10 +32,11 @@ function shader(gl,type,source){const s=gl.createShader(type);gl.shaderSource(s,
 // Closed solids, shared by every element. Labels are a separate reading layer.
 export function createExplorerMoleculeGeometry(){
     const node=createExplorerFacetGeometry();
-    return {node,bond:new THREE.CylinderGeometry(1,1,1,6,1,false)};
+    const profile=[[0,-.5],[.78,-.5],[1,-.46],[1,-.40],[.68,-.34],[.68,.34],[1,.40],[1,.46],[.78,.5],[0,.5]].map(([x,y])=>new THREE.Vector2(x,y));
+    return {node,bond:new THREE.LatheGeometry(profile,8)};
 }
-export function hitExplorerConnector(ray,node){
-    const inverse=node.worldRotation.clone().invert(),o=vec(ray.origin).sub(node.world).applyQuaternion(inverse),d=vec(ray.direction).normalize().applyQuaternion(inverse),radius=node.worldRadius,half=node.worldLength/2,candidates=[];
+export function hitExplorerConnector(ray,node,{padding=0}={}){
+    const inverse=node.worldRotation.clone().invert(),o=vec(ray.origin).sub(node.world).applyQuaternion(inverse),d=vec(ray.direction).normalize().applyQuaternion(inverse),radius=node.worldRadius+padding,half=node.worldLength/2,candidates=[];
     const a=d.x*d.x+d.z*d.z,b=2*(o.x*d.x+o.z*d.z),c=o.x*o.x+o.z*o.z-radius*radius,discriminant=b*b-4*a*c;
     if(a>1e-8 && discriminant>=0){for(const t of [(-b-Math.sqrt(discriminant))/(2*a),(-b+Math.sqrt(discriminant))/(2*a)])if(t>=0 && Math.abs(o.y+t*d.y)<=half)candidates.push(t);}
     if(Math.abs(d.y)>1e-8){for(const y of [-half,half]){const t=(y-o.y)/d.y;if(t>=0 && (o.x+t*d.x)**2+(o.z+t*d.z)**2<=radius*radius)candidates.push(t);}}
@@ -34,7 +48,7 @@ export function hitExplorerMolecule(ray,entries,record=null){
     for(const entry of entries){
         if(record&&entry.record!==record || entry.record.knowledgeExplorer?.mode!=='explore' || entry.state&&entry.record.explorerMolecule!==entry.state)continue;
         for(const node of entry.nodes){
-            if(node.progress<.55 || node.pending&&!pieceObject(entry,node))continue;const p=node.connector?hitExplorerConnector(ray,node):r.intersectSphere(new THREE.Sphere(node.world,node.worldRadius),new THREE.Vector3());if(!p)continue;const distance=p.distanceTo(origin);
+            if(node.interactive===false || node.progress<.55 || node.pending&&!pieceObject(entry,node))continue;const p=node.connector?hitExplorerConnector(ray,node,{padding:node.pending?.016:0}):node.attachment?r.intersectSphere(new THREE.Sphere(node.world,node.worldRadius),new THREE.Vector3()):hitExplorerFacet(ray,node);if(!p)continue;const distance=p.distanceTo(origin);
             if(!nearest || distance<nearest.distance)nearest=target(entry,node,p,distance);
         }
         for(const port of entry.outputs || []){
@@ -44,7 +58,7 @@ export function hitExplorerMolecule(ray,entries,record=null){
         for(const surface of entry.surfaces){if(surface.moleculeNode.pending&&!pieceObject(entry,surface.moleculeNode))continue;const hit=hitTotemSurface(ray,[surface]);if(hit&&(!nearest||hit.distance<nearest.distance))nearest={...target(entry,surface.moleculeNode,vec(hit.center),hit.distance),...hit,object:pieceObject(entry,surface.moleculeNode),pose:objectPose(entry,surface.moleculeNode)};}
     }return nearest;
 }
-function pieceObject(entry,node){return node.pending?(node.connector?entry.state.pendingConnector:entry.state.pending):node.depth===1&&entry.state.wingObjects?.[node.domainId] || entry.state.nodeObjects?.[node.id] || entry.state.root;}
+function pieceObject(entry,node){if(node.attachment || node.connector&&!node.pending)return null;return node.pending?(node.connector?entry.state.pendingConnector:entry.state.pending):node.depth===1&&entry.state.wingObjects?.[node.domainId] || entry.state.nodeObjects?.[node.id] || entry.state.root;}
 function objectPose(entry,node){
     if(node.depth>1 && entry.state.nodeObjects?.[node.id]){
         if(!entry.tokenPose && !entry.pose)return entry.pose;
@@ -67,7 +81,7 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
     const attributes=Object.fromEntries(['position','normal'].map(n=>[n,gl.getAttribLocation(program,n)])),uniforms=Object.fromEntries(['model','mvp','normalMatrix','camera','colour','opacity','emphasis','pulse'].map(n=>[n,gl.getUniformLocation(program,n)]));
     const buffers=[];
     function geometry(source){const g=source.index?source.toNonIndexed():source;const result={count:g.attributes.position.count};for(const name of ['position','normal']){const b=gl.createBuffer();buffers.push(b);gl.bindBuffer(gl.ARRAY_BUFFER,b);gl.bufferData(gl.ARRAY_BUFFER,g.attributes[name].array,gl.STATIC_DRAW);result[name]=b;}g.dispose();if(g!==source)source.dispose();return result;}
-    const solids=createExplorerMoleculeGeometry(),sphere=geometry(solids.node),cylinder=geometry(solids.bond),socket=geometry(new THREE.BoxGeometry(1.45,1.45,.18));
+    const solids=createExplorerMoleculeGeometry(),sphere=geometry(solids.node),cylinder=geometry(solids.bond),socket=geometry(new THREE.TorusGeometry(.72,.12,4,8));
     function paint(shape,model,projection,colour,opacity,emphasis=0,pulse=-1){
         for(const name of ['position','normal']){gl.bindBuffer(gl.ARRAY_BUFFER,shape[name]);gl.enableVertexAttribArray(attributes[name]);gl.vertexAttribPointer(attributes[name],3,gl.FLOAT,false,0,0);}
         gl.uniformMatrix4fv(uniforms.model,false,model.elements);gl.uniformMatrix4fv(uniforms.mvp,false,scratchMvp.copy(projection).multiply(model).elements);gl.uniformMatrix3fv(uniforms.normalMatrix,false,scratchNormal.getNormalMatrix(model).elements);gl.uniform3fv(uniforms.colour,colour);gl.uniform1f(uniforms.opacity,opacity);gl.uniform1f(uniforms.emphasis,emphasis);gl.uniform1f(uniforms.pulse,pulse);gl.drawArrays(gl.TRIANGLES,0,shape.count);
@@ -87,22 +101,15 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
             field.state.renderedCount=nodes.filter(n=>!n.attachment&&!n.connector).length;field.state.renderedBonds=field.bonds.length;
             const depth=gl.isEnabled(gl.DEPTH_TEST),cull=gl.isEnabled(gl.CULL_FACE),blend=gl.isEnabled(gl.BLEND),mask=gl.getParameter(gl.DEPTH_WRITEMASK);
             gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(opacity>.99);gl.useProgram(program);gl.uniform3fv(uniforms.camera,camera.toArray());
-            const facePort=(node,toward,preferred=-1)=>{
-                const axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0),new THREE.Vector3(0,0,1),new THREE.Vector3(0,0,-1)].map(axis=>axis.applyQuaternion(node.worldRotation));
-                const desired=toward.clone().sub(node.world).normalize(),axis=preferred>=0&&preferred<4?axes[preferred]:axes.sort((a,b)=>b.dot(desired)-a.dot(desired))[0];
-                return node.world.clone().addScaledVector(axis,node.worldRadius);
-            };
             for(const bond of field.bonds){
                 const a=byId.get(bond.from),b=byId.get(bond.to);if(!a||!b)continue;
-                const childIndex=a.outputs?.findIndex(output=>output.id===b.id) ?? -1;
-                const start=facePort(a,b.world,childIndex),end=facePort(b,a.world),direction=end.clone().sub(start).normalize(),length=start.distanceTo(end);if(length<.005)continue;
+                // The completed arm uses the same endpoints as its assembly
+                // socket, avoiding a change of axis when the topic locks in.
+                const axis=b.world.clone().sub(a.world).normalize();
+                const start=a.world.clone().addScaledVector(axis,explorerFacetSurfaceDistance(axis,a.worldRadius,a.worldRotation)),end=b.world.clone().addScaledVector(axis,-explorerFacetSurfaceDistance(axis,b.worldRadius,b.worldRotation)),direction=end.clone().sub(start).normalize(),length=start.distanceTo(end);if(length<.005)continue;
                 const model=new THREE.Matrix4().compose(start.clone().lerp(end,.5),new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),direction),new THREE.Vector3(EXPLORER_BOND_RADIUS*scale,length,EXPLORER_BOND_RADIUS*scale));
                 const elapsed=time-field.state.births[b.id],pulse=b.contribution&&!motion?.matches&&elapsed>650&&elapsed<1100?(elapsed-650)/450:-1;
                 gl.depthMask(false);paint(cylinder,model,projection,new THREE.Color(EXPLORER_CONNECTOR_COLOUR).toArray(),opacity*b.progress,0,pulse);
-                for(const endpoint of [start,end]){
-                    const joint=new THREE.Matrix4().compose(endpoint,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),direction),new THREE.Vector3().setScalar(EXPLORER_BOND_RADIUS*scale*2));
-                    paint(socket,joint,projection,new THREE.Color('#b38454').toArray(),opacity*b.progress);
-                }
                 gl.depthMask(opacity>.99);
             }
             const hover=hitExplorerMolecule(ray(),[{record,...field,nodes,surfaces:[],pose}],record)?.node?.explorerNodeId;
@@ -113,10 +120,9 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
                 const model=new THREE.Matrix4().compose(node.world,orientation,dimensions);
                 const pressed=record.pimObjectPressId===pieceObject({state:field.state},node)?.id+'|'+node.id?record.pimObjectPressProgress || 0:0;
                 paint(node.connector?cylinder:node.attachment?socket:sphere,model,projection,colour.toArray(),opacity,pressed*.12+(node.attachment&&explorerPuzzleFit(record,knowledge).valid?.13:selected?.055:hover===node.id?.035:0));
-                if(node.connector){for(const side of [-1,1]){const end=node.world.clone().addScaledVector(axis,node.worldLength/2*side),ring=new THREE.Matrix4().compose(end,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),axis),new THREE.Vector3().setScalar(node.worldRadius*1.3));paint(socket,ring,projection,new THREE.Color('#d5d8ae').toArray(),opacity);}}
             }
             const outputs=[];
-            for(const node of nodes.filter(node=>node.depth>=1 && !node.pending && !node.attachment && !node.connector && node.progress>.55)){
+            for(const node of nodes.filter(node=>node.id===field.state.selectedId && node.depth>=1 && !field.state.puzzle && !node.pending && !node.attachment && !node.connector && node.progress>.55)){
                 for(const [index,output] of (node.outputs || []).entries()){
                     const axis=[new THREE.Vector3(1,0,0),new THREE.Vector3(-1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,-1,0)][index].applyQuaternion(node.worldRotation),world=node.world.clone().addScaledVector(axis,node.worldRadius*1.015),radius=node.worldRadius*.27;
                     const model=new THREE.Matrix4().compose(world,new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,0,1),axis),new THREE.Vector3().setScalar(radius));
@@ -125,22 +131,23 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
             }
             gl.depthMask(mask);if(!depth)gl.disable(gl.DEPTH_TEST);if(!cull)gl.disable(gl.CULL_FACE);if(!blend)gl.disable(gl.BLEND);
             labelSurfaces=nodes.filter(n=>n.progress>.55&&(field.lod!=='far'||n.depth<2||field.state.promoted.includes(n.id))&&(n.depth<3||field.lod==='close'||field.state.promoted.includes(n.id))).flatMap(node=>{
-                const toward=camera.clone().sub(node.world).normalize(),title=node.label,status=node.pending?(node.connector?'Align ends · release to lock':'Fit onto connector'):node.attachment?'Matching port':field.state.promoted.includes(node.id)?'Hub · '+node.count+(field.state.sampleCounts[node.id]?' sample entries':' entries'):node.depth>1&&node.count>3?node.count+' topics':'';
+                const toward=camera.clone().sub(node.world).normalize(),title=node.label,status=node.pending?(explorerPuzzleFit(record,knowledge).valid?'Release to attach':node.connector?'Move arm to matching socket':'Fit topic onto arm'):node.attachment?'Matching socket':field.state.promoted.includes(node.id)?'Hub · '+node.count+(field.state.sampleCounts[node.id]?' sample entries':' entries'):node.depth>1&&node.count>3?node.count+' topics':'';
                 let faceNormal=toward,faceDistance=node.worldRadius;
                 if(!node.attachment && !node.connector){
                     const normals=[];for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1])normals.push(new THREE.Vector3(x,y,z).normalize().applyQuaternion(node.worldRotation));
                     faceNormal=normals.sort((a,b)=>b.dot(toward)-a.dot(toward))[0];faceDistance=node.worldRadius*Math.sqrt(3)/2;
                 }
                 let labelRight=up.clone().cross(faceNormal);if(labelRight.lengthSq()<1e-6)labelRight=right.clone();labelRight.normalize();const labelUp=faceNormal.clone().cross(labelRight).normalize();
-                const labelWidth=node.worldRadius*(node.attachment?1.1:1.1),labelHeight=labelWidth*.65;
+                const labelWidth=node.connector?.18:node.worldRadius*1.1,labelHeight=labelWidth*.65;
                 const surface={record,node:{...node,explorerNodeId:node.id,pimKnowledgeFace:node.id!=='core',pimKnowledgeContext:node.id==='core'},moleculeNode:node,center:node.world.clone().addScaledVector(faceNormal,faceDistance+.002),right:labelRight,up:labelUp,normal:faceNormal,width:labelWidth,height:labelHeight,opacity,interactive:opacity>.55,card:{id:node.id,title,status,core:node.id==='core',attachment:node.attachment,knowledgeFace:true,resolution:512,height:256,fadeDuration:0}};
-                if(node.attachment || node.connector || field.lod==='far')return [surface];
+                if(node.attachment || node.connector){surface.center=node.world.clone().addScaledVector(up,node.connector?.075:.05);surface.right=right;surface.up=up;surface.normal=toward;surface.interactive=false;return [surface];}
+                if(field.lod==='far')return [surface];
                 // Fixed semantic faces, not a billboard that changes identity as it turns.
                 const normals=[];for(const x of [-1,1])for(const y of [-1,1])for(const z of [-1,1])normals.push(new THREE.Vector3(x,y,z).normalize().applyQuaternion(node.worldRotation));
                 const faces=normals.slice(0,1+(node.outputs || []).length).flatMap((normal,i)=>{
                     if(normal.dot(toward)<.15)return [];
                     const output=i?(node.outputs || [])[i-1]:null,r=up.clone().cross(normal);if(r.lengthSq()<1e-6)r.copy(right);r.normalize();
-                    return [{...surface,normal,right:r,up:normal.clone().cross(r).normalize(),center:node.world.clone().addScaledVector(normal,node.worldRadius*Math.sqrt(3)/2+.002),moleculeNode:output?{...node,outputTarget:output.id,outputIndex:i-1}:node,card:{...surface.card,id:node.id+':face:'+i,title:output?.label || title,status:output?'Select to build / read':status}}];
+                    return [{...surface,normal,right:r,up:normal.clone().cross(r).normalize(),center:node.world.clone().addScaledVector(normal,node.worldRadius*Math.sqrt(3)/2+.002),moleculeNode:output?{...node,outputTarget:output.id,outputIndex:i-1}:node,card:{...surface.card,id:node.id+':face:'+i,title:output?.label || title,status:output?'Open · attach an arm':status}}];
                 });
                 const name={...surface,center:node.world.clone().addScaledVector(up,node.worldRadius*1.35).addScaledVector(toward,.004),right,up,normal:toward,width:node.worldRadius*2.4,height:node.worldRadius*.8,interactive:false,card:{...surface.card,id:node.id+':name',title,status:'',nameBadge:true}};
                 return [name,...faces];
@@ -154,7 +161,7 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
         hit(ray,record=null){return hitExplorerMolecule(ray,entries,record);},
         near(point){
             if(!point)return null;const p=vec(point);let best=null;
-            for(const entry of entries){if(entry.record.knowledgeExplorer?.mode!=='explore'||entry.record.explorerMolecule!==entry.state)continue;for(const node of entry.nodes){if(node.progress<.55||node.pending&&!pieceObject(entry,node))continue;let signedDistance=p.distanceTo(node.world)-node.worldRadius;if(node.connector){const local=p.clone().sub(node.world).applyQuaternion(node.worldRotation.clone().invert()),half=node.worldLength/2;const radial=Math.hypot(local.x,local.z)-node.worldRadius,axial=Math.abs(local.y)-half;signedDistance=Math.hypot(Math.max(0,radial),Math.max(0,axial))+Math.min(0,Math.max(radial,axial));}const distance=Math.abs(signedDistance);if(distance>.045 || best&&distance>=best.distance)continue;best={...target(entry,node,p,distance),signedDistance};}}return best;
+            for(const entry of entries){if(entry.record.knowledgeExplorer?.mode!=='explore'||entry.record.explorerMolecule!==entry.state)continue;for(const node of entry.nodes){if(node.interactive===false||node.progress<.55||node.pending&&!pieceObject(entry,node))continue;let signedDistance=p.distanceTo(node.world)-node.worldRadius;if(node.connector){const local=p.clone().sub(node.world).applyQuaternion(node.worldRotation.clone().invert()),half=node.worldLength/2;const radial=Math.hypot(local.x,local.z)-node.worldRadius,axial=Math.abs(local.y)-half;signedDistance=Math.hypot(Math.max(0,radial),Math.max(0,axial))+Math.min(0,Math.max(radial,axial));}const distance=Math.abs(signedDistance);if(distance>.045 || best&&distance>=best.distance)continue;best={...target(entry,node,p,distance),signedDistance};}}return best;
         },
         destroy(){labels.destroy();buffers.forEach(b=>gl.deleteBuffer(b));gl.deleteProgram(program);entries=[];}
     };

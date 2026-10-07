@@ -5,8 +5,8 @@ import {PIM_COMPASS_BY_ID} from './pimCompass.js';
 // are read-only inputs; sample content is never saved into a plant profile.
 export const EXPLORER_LIMIT=24, EXPLORER_CHILDREN=3, EXPLORER_TRANSITION_MS=650;
 export const EXPLORER_RECIPES='explorer-recipes', EXPLORER_RECIPE='explorer-community-recipe';
-export const EXPLORER_BOND_RADIUS=.014;
-export const EXPLORER_CONNECTOR_COLOUR='#986439';
+export const EXPLORER_BOND_RADIUS=.012;
+export const EXPLORER_CONNECTOR_COLOUR='#93a79e';
 const indexes=new WeakMap();
 const projections=new WeakMap();
 const directions=['top','upper-right','lower-right','bottom','lower-left','upper-left'];
@@ -88,19 +88,25 @@ export function initializeExplorerPreview(record,knowledge,time=now()){
     const state=ensureExplorerMolecule(record,knowledge);
     if(state.readerPreview || state.wings.length || state.puzzle)return state;
     state.readerPreview=true;
-    // A mode-only reader starts with three useful branches. Personal organisms
-    // and specialised creator assembly remain untouched.
-    const index=explorerMoleculeIndex(knowledge,record);
-    for(const [i,id] of index.roots.slice(0,3).entries()){
-        state.wings.push(id);state.assembled.push('core>'+id);state.positions[id]={...domainPorts[i*2]};state.births[id]=time;
-        state.wingObjects[id]={id:'explorer:wing:'+id,position:{...state.positions[id]},rotation:{x:0,y:0,z:0,w:1},scale:1,radius:.078};
-    }
+    // The dice carries the main topic faces. Wings become physical only after
+    // the visitor fits an arm and its topic; entering a mode never builds them.
     touch(record,time);return state;
 }
 export function explorerNodePosition(state,index,id){
     const p=state.positions[id];if(!p)return p;
     const node=index.nodes.get(id);if(node?.depth>1)return point(v(state.nodeObjects?.[id]?.position || p).applyMatrix4(explorerChildFrame(state,index,id)));
     return state.wingObjects[node?.domainId]?.position || p;
+}
+export function explorerFacetSurfaceDistance(direction,radius,rotation={x:0,y:0,z:0,w:1}){
+    const local=v(direction).normalize().applyQuaternion(new THREE.Quaternion(rotation.x,rotation.y,rotation.z,rotation.w).invert());
+    const x=Math.abs(local.x),y=Math.abs(local.y),z=Math.abs(local.z);
+    return Math.min(radius/Math.max(x,y,z,1e-8),radius*1.5/Math.max(x+y+z,1e-8));
+}
+function nodeRotation(state,node){
+    const wing=state.wingObjects[node.domainId]?.rotation || {x:0,y:0,z:0,w:1};
+    if(node.depth<=1)return node.depth?wing:{x:0,y:0,z:0,w:1};
+    const own=state.nodeObjects?.[node.id]?.rotation || {x:0,y:0,z:0,w:1};
+    return new THREE.Quaternion(wing.x,wing.y,wing.z,wing.w).multiply(new THREE.Quaternion(own.x,own.y,own.z,own.w));
 }
 // Moving a child carries its connected subtree, not unrelated branches.
 export function explorerChildFrame(state,index,id){
@@ -114,6 +120,7 @@ export function explorerChildFrame(state,index,id){
     return matrix.multiply(new THREE.Matrix4().makeTranslation(offset.x,offset.y,offset.z));
 }
 export function explorerOutputs(node,index,state){
+    if(node.id==='core')return index.roots.slice((state?.pages?.core || 0)*7,(state?.pages?.core || 0)*7+7).map(id=>({id,label:index.nodes.get(id)?.label || 'Topic'}));
     const page=state?.pages?.[node.id] || 0,children=childIds(index,node,state || {contributionAdded:true}).slice(page*EXPLORER_CHILDREN,page*EXPLORER_CHILDREN+EXPLORER_CHILDREN).map(id=>({id,label:index.nodes.get(id)?.label || 'Topic'}));
     return [...children,{id:node.id,label:'Read'},{id:node.parentId || 'core',label:'Parent'}].slice(0,4);
 }
@@ -165,7 +172,7 @@ export function explorerNodeCount(index,id,state){
     return n.children.reduce((sum,key)=>sum+(key===EXPLORER_RECIPE&&!state.contributionAdded?0:1+explorerNodeCount(index,key,state)),0);
 }
 export function explorerNodeRadius(node,state){
-    if(node.id==='core')return .10;
+    if(node.id==='core')return .14;
     return (node.depth===1?.078:node.contribution?.045:node.informationType==='category'||node.sample&&!node.contribution?.063:.052)*(state.promoted.includes(node.id)?1.35:1);
 }
 function childIds(index,node,state){return node.children.filter(id=>id!==EXPLORER_RECIPE || state.contributionAdded);}
@@ -200,8 +207,13 @@ export function selectExplorerNode(record,knowledge,target,time=now()){
     if(target.explorerAttachment){return commitExplorerPuzzle(record,knowledge,time);}
     if(id==='core'){state.selectedId='core';touch(record,time);return true;}
     const node=index.nodes.get(id);if(!node || !state.positions[id] || !explorerAttachedWings(state,index).includes(node.domainId) || id===EXPLORER_RECIPE&&!state.contributionAdded)return false;
+    if(!state.assembled.includes(node.parentId+'>'+id))return prepareExplorerConnection(record,knowledge,node.parentId,id,time);
     state.selectedId=id;if(!state.discovered.includes(id))state.discovered.push(id);
-    if(node.children.length && !state.expanded.includes(id)){state.expanded.push(id);reserveChildren(index,node,state,time);}
+    if(node.children.length && !state.expanded.includes(id)){
+        state.expanded.push(id);reserveChildren(index,node,state,time);
+        const child=childIds(index,node,state).find(childId=>!state.assembled.includes(id+'>'+childId));
+        if(child && !state.puzzle)return prepareExplorerConnection(record,knowledge,id,child,time);
+    }
     if(!node.sample && explorerNodeCount(index,id,state)>=12 && node.depth>1 && !state.promoted.includes(id))state.promoted.push(id);
     touch(record,time);return true;
 }
@@ -210,7 +222,7 @@ export function explorerPuzzleSlot(record,knowledge){
     const state=record.explorerMolecule,puzzle=state?.puzzle,index=explorerMoleculeIndex(knowledge,record);if(!puzzle)return null;
     const parent=index.nodes.get(puzzle.parentId),child=index.nodes.get(puzzle.childId);if(!parent?.children.includes(child?.id))return null;
     const a=explorerNodePosition(state,index,parent.id),b=explorerNodePosition(state,index,child.id);if(!a || !b)return null;
-    const direction=v(b).sub(v(a)).normalize(),from=v(a).addScaledVector(direction,explorerNodeRadius(parent,state)*nodeScale(state,parent)),to=v(b).addScaledVector(direction,-explorerNodeRadius(child,state)*nodeScale(state,child));
+    const direction=v(b).sub(v(a)).normalize(),from=v(a).addScaledVector(direction,explorerFacetSurfaceDistance(direction,explorerNodeRadius(parent,state)*nodeScale(state,parent),nodeRotation(state,parent))),to=v(b).addScaledVector(direction,-explorerFacetSurfaceDistance(direction,explorerNodeRadius(child,state)*nodeScale(state,child),nodeRotation(state,child)));
     return {from:point(from),to:point(to),position:point(from.clone().lerp(to,.5)),childPosition:{...b},rotation:new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),direction),length:from.distanceTo(to)};
 }
 export function prepareExplorerConnection(record,knowledge,parentId,childId,time=now()){
@@ -223,7 +235,8 @@ export function prepareExplorerConnection(record,knowledge,parentId,childId,time
     if(!state.expanded.includes(parentId))state.expanded.push(parentId);
     state.puzzle={parentId,childId,phase:'connector'};
     const slot=explorerPuzzleSlot(record,knowledge);
-    state.pendingConnector={id:'explorer:connector',parentId,childId,position:{x:-.16,y:-.08,z:.40},rotation:{x:0,y:0,z:0,w:1},scale:1,radius:EXPLORER_BOND_RADIUS,length:slot.length};
+    const armPosition=v(slot.position).add(new THREE.Vector3(.10,-.10,.18));
+    state.pendingConnector={id:'explorer:connector',parentId,childId,position:point(armPosition),rotation:{x:slot.rotation.x,y:slot.rotation.y,z:slot.rotation.z,w:slot.rotation.w},scale:1,radius:EXPLORER_BOND_RADIUS,length:slot.length};
     state.pending={id:'explorer:piece',parentId,childId,position:{x:.16,y:-.08,z:.40},rotation:{x:0,y:0,z:0,w:1},scale:1,radius:explorerNodeRadius(child,state)*nodeScale(state,child)};
     state.selectedId=parentId;touch(record,time);return true;
 }
@@ -248,7 +261,7 @@ export function magnetExplorerPuzzle(record,knowledge,object){
 }
 export function commitExplorerPuzzle(record,knowledge,time=now()){
     const state=record.explorerMolecule;if(!explorerPuzzleFit(record,knowledge).valid)return false;
-    if(state.puzzle.phase==='connector'){state.puzzle.phase='piece';state.pendingConnector=null;touch(record,time);return true;}
+    if(state.puzzle.phase==='connector'){state.puzzle.phase='piece';state.pendingConnector=null;const slot=explorerPuzzleSlot(record,knowledge);state.pending.position=point(v(slot.childPosition).add(new THREE.Vector3(.08,-.08,.16)));touch(record,time);return true;}
     const {parentId,childId}=state.puzzle,origin={...state.pending.position};
     if(childId===EXPLORER_RECIPE){state.contributionAdded=true;state.attachmentOrigin=origin;}
     const key=parentId+'>'+childId;if(!state.assembled.includes(key))state.assembled.push(key);
@@ -289,7 +302,7 @@ export function explorerMoleculeAction(record,knowledge,action,time=now()){
         if(state.expanded.includes(node.id))state.expanded=state.expanded.filter(id=>id!==node.id);
         else{state.expanded.push(node.id);reserveChildren(index,node,state,time);}
     }else if(action==='KnowledgeMoleculeMore'){
-        if(!node || node.id==='core')return false;state.pages[node.id]=((state.pages[node.id] || 0)+1)%Math.max(1,Math.ceil(childIds(index,node,state).length/EXPLORER_CHILDREN));reserveChildren(index,node,state,time);
+        if(!node)return false;state.pages[node.id]=((state.pages[node.id] || 0)+1)%Math.max(1,Math.ceil(childIds(index,node,state).length/(node.id==='core'?7:EXPLORER_CHILDREN)));if(node.id!=='core')reserveChildren(index,node,state,time);
     }else if(action==='KnowledgeMoleculeBack'){
         if(!node || node.id==='core')return false;state.selectedId=node.parentId;
     }else if(action==='KnowledgeMoleculeMove')state.interaction=state.interaction==='move'?'rotate':'move';
@@ -303,14 +316,14 @@ export function explorerMoleculeView(record,knowledge,distance,time=now(),reduce
     const previous=state.lod || 'close';
     state.lod=distance>(previous==='far'?2.5:2.9)?'far':distance>(previous==='close'?1.9:1.65)?'medium':'close';
     const hubPaths=new Set();for(const id of state.promoted){for(let node=index.nodes.get(id);node;node=index.nodes.get(node.parentId))hubPaths.add(node.id);}
-    const nodes=[{id:'core',label:index.title,depth:0,children:wings,domainId:'core',position:state.positions.core,radius:.10,colour:'#a8b79a',progress:1}],bonds=[];
+    const nodes=[{id:'core',label:index.title,depth:0,children:wings,outputs:explorerOutputs(index.nodes.get('core'),index,state),domainId:'core',position:state.positions.core,radius:explorerNodeRadius(index.nodes.get('core'),state),colour:'#a8b79a',progress:1}],bonds=[];
     const visit=(id,parentId,expand=true)=>{
-        if(nodes.length>=EXPLORER_LIMIT-(state.puzzle?3:0) || !state.positions[id] || id===state.puzzle?.childId)return;
+        if(nodes.length>=EXPLORER_LIMIT-(state.puzzle?3:0) || !state.positions[id] || id===state.puzzle?.childId || !state.assembled.includes(parentId+'>'+id))return;
         const source=index.nodes.get(id);if(!source || state.lod==='far'&&source.depth>1&&!hubPaths.has(id) || state.lod==='medium'&&source.depth>2&&!hubPaths.has(id))return;
         const birth=state.births[id],progress=reducedMotion || !Number.isFinite(birth)?1:Math.min(1,Math.max(0,(time-birth)/EXPLORER_TRANSITION_MS)),ease=progress*progress*(3-2*progress);
         const parent=explorerNodePosition(state,index,parentId),from=id===EXPLORER_RECIPE?state.attachmentOrigin || parent:parent,p=point(v(from).lerp(v(explorerNodePosition(state,index,id)),ease));
         const baseColour=index.nodes.get(source.domainId)?.colour || colours[index.roots.indexOf(source.domainId)%colours.length];
-        const node={...source,outputs:explorerOutputs(source,index,state),position:p,radius:explorerNodeRadius(source,state)*nodeScale(state,source)*(.2+.8*ease),colour:explorerTone(baseColour,source.depth),count:explorerNodeCount(index,id,state),progress:ease};nodes.push(node);bonds.push({id:parentId+'>'+id,from:parentId,to:id,type:source.contribution?'contribution':'contains',progress:ease});
+        const node={...source,outputs:explorerOutputs(source,index,state),position:p,rotation:nodeRotation(state,source),radius:explorerNodeRadius(source,state)*nodeScale(state,source)*(.2+.8*ease),colour:explorerTone(baseColour,source.depth),count:explorerNodeCount(index,id,state),progress:ease};nodes.push(node);bonds.push({id:parentId+'>'+id,from:parentId,to:id,type:source.contribution?'contribution':'contains',progress:ease});
         if(expand && state.expanded.includes(id)){const children=childIds(index,source,state),page=state.pages[id] || 0;for(const child of children.slice(page*EXPLORER_CHILDREN,page*EXPLORER_CHILDREN+EXPLORER_CHILDREN))visit(child,id);}
     };
     // Only wings assembled by this user spend the detail budget.
@@ -318,10 +331,10 @@ export function explorerMoleculeView(record,knowledge,distance,time=now(),reduce
     const activeDomain=index.nodes.get(state.selectedId)?.domainId;
     const domains=[...wings].sort((a,b)=>Number(b===activeDomain)-Number(a===activeDomain));
     for(const id of domains){const root=index.nodes.get(id);if(!state.expanded.includes(id))continue;const page=state.pages[id] || 0;for(const child of childIds(index,root,state).slice(page*EXPLORER_CHILDREN,page*EXPLORER_CHILDREN+EXPLORER_CHILDREN))visit(child,id);}
-    if(state.puzzle && state.lod==='close' && nodes.some(n=>n.id===state.puzzle.parentId)){
+    if(state.puzzle && nodes.some(n=>n.id===state.puzzle.parentId)){
         const puzzle=state.puzzle,slot=explorerPuzzleSlot(record,knowledge),source=index.nodes.get(puzzle.childId),colour=colours[index.rootSlots.get(source.domainId) ?? 0],connector=puzzle.phase==='connector';
         const body=connector?state.pendingConnector:{position:slot.position,rotation:slot.rotation,length:slot.length};
-        nodes.push({...source,id:'pending-connector',label:'Connector',position:body.position,rotation:body.rotation,length:slot.length,radius:EXPLORER_BOND_RADIUS,colour:EXPLORER_CONNECTOR_COLOUR,connector:true,pending:connector,progress:1});
+        nodes.push({...source,id:'pending-connector',label:connector?'Attach arm':'Arm attached',position:body.position,rotation:body.rotation,length:slot.length,radius:EXPLORER_BOND_RADIUS,colour:EXPLORER_CONNECTOR_COLOUR,connector:true,pending:connector,interactive:connector,progress:1});
         if(!connector)nodes.push({...source,id:'pending-piece',label:source.label,position:state.pending.position,radius:state.pending.radius,colour,pending:true,progress:1});
         nodes.push({id:'connection-socket',label:connector?'Connector socket':'Topic socket',depth:4,children:[],position:connector?slot.from:slot.to,rotation:slot.rotation,radius:.022,colour:'#d5d8ae',attachment:true,progress:1});
     }
