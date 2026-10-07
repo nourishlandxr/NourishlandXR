@@ -170,9 +170,21 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         for(let line=0;line<3;line++)mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#907853',-.025,.045-line*.052,.025,.15,.011,.018,group);
         node.visible=true;mergeSolids(group);group.visible=false;return group;
     }):[];
+    const visitorTotemTitles=visitors?model.areas.map(area=>{
+        const item=area.totem,canvas=document.createElement('canvas');canvas.width=512;canvas.height=96;
+        const ctx=localizedCanvasContext(canvas.getContext('2d'));ctx.fillStyle='#f0f3e9';ctx.font='500 38px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(item.id==='map-entry'?'Visitor entrance':item.id==='map-forest'?'Open forest':'Swale entrance',256,48,490);
+        const texture=new THREE.CanvasTexture(canvas),group=new THREE.Group();
+        const titleMaterial=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false});materials.set('visitor-title-'+item.id,titleMaterial);
+        const title=new THREE.Mesh(geometry(new THREE.PlaneGeometry(2,.375)),titleMaterial);
+        title.position.set(item.x+.65,1.5,item.z);title.quaternion.copy(welcomeScreen.quaternion);group.add(title);
+        const lineMaterial=new THREE.LineBasicMaterial({color:'#c4d5c5',transparent:true,opacity:.65});materials.set('visitor-leader-'+item.id,lineMaterial);
+        const line=new THREE.Line(geometry(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(item.x,.65,item.z),new THREE.Vector3(item.x+.65,1.28,item.z)])),lineMaterial);group.add(line);group.visible=false;scene.add(group);
+        return {item,group,texture};
+    }):[];
     function animateVisitors(elapsed,placed,reduced){
         if(!visitors)return;
         const states=visitors.update(elapsed,placed,reduced);
+        visitorTotemTitles.forEach(({item,group})=>{group.visible=states.some(s=>s.focus===item.id && !s.walking && s.scale>.9);});
         pegs.forEach((batch,kind)=>{
             batch.visible=placed.length>0;
             states.forEach((s,i)=>{transform.position.set(s.x,.085+s.bob+(kind?.405:0),s.z);transform.rotation.set(0,s.heading,0);
@@ -198,7 +210,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     }
     function totemLabel(elapsed){
         const placed=placement?.snapshot() || [],current=placement?.current(elapsed),id=current?.id || placed.at(-1)?.id || 'map-entry';
-        return id==='map-entry'?'Totem 1 · Visitor entrance':id==='map-forest'?'Totem 2 · Open forest':'Totem 3 · Swale entrance';
+        return id==='map-entry'?'Visitor entrance':id==='map-forest'?'Open forest':'Swale entrance';
     }
     function update(elapsed,reducedMotion,paint=true){
             const placed=placement?.snapshot() || [];
@@ -324,6 +336,6 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             }
             ctx.restore();
         },
-        dispose(){if(disposed)return;disposed=true;welcomeTexture?.dispose();geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
+        dispose(){if(disposed)return;disposed=true;visitorTotemTitles.forEach(entry=>entry.texture.dispose());welcomeTexture?.dispose();geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
     };
 }

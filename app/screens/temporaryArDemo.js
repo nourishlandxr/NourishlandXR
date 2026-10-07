@@ -13,6 +13,7 @@ import {createLivingMapGripInput,limitLivingMapTilt} from '../services/demoLivin
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
 let demoLivingMapPlacement=null,demoMapIntroPaused=false;
+let demoMapTotemGripped=false,demoMapPlateGripped=false;
 let demoLivingMapXR=null,demoLivingMapOrigin=null,demoLivingMapOrientation={x:0,y:0,z:0,w:1},demoLivingMapGrip=null,demoMapNarrationCount=-1;
 function disposeSpatialLivingMap(){demoLivingMapGrip?.reset();demoLivingMapXR?.destroy();demoLivingMapXR=null;demoLivingMapOrigin=null;demoLivingMapOrientation={x:0,y:0,z:0,w:1};appRoot?.querySelector('[data-spatial-living-map]')?.remove();}
 function demoLivingMapReady(){return !demoMapIntroPaused && livingMapReveal(demoLivingMapElapsed()).ready;}
@@ -38,8 +39,13 @@ function updateSpatialLivingMap(now){
     const surface=appRoot?.querySelector('[data-spatial-living-map]');
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-landscape-revealed',String(reveal.appear>.1));
     const instructions=appRoot?.querySelector('[data-living-map-instructions]');
-    if(instructions)instructions.hidden=placedCount===0;
-    if(instructions){const text=demoLocalizedText(demoLivingMapScene.guidance(elapsed))+' · '+demoLocalizedText('Grip both opposite edges to carry, turn and gently tilt. Release either grip to leave it in place.');if(instructions.textContent!==text)instructions.textContent=text;}
+    if(instructions){
+        instructions.hidden=reveal.appear<=0;
+        if(!instructions.querySelector('[data-map-grip-task]'))instructions.innerHTML='<span data-map-grip-task="totem"></span><span data-map-grip-task="plate"></span>';
+        for(const [id,label,done] of [['totem','Grip a Totem',demoMapTotemGripped],['plate','Grip both plate edges',demoMapPlateGripped]]){
+            const task=instructions.querySelector(`[data-map-grip-task="${id}"]`);task.textContent=demoLocalizedText(label);task.style.cssText=`display:block;text-align:center;margin:16px auto;text-decoration:${done?'line-through':'none'}`;
+        }
+    }
     if(surface){surface.style.opacity=String(reveal.appear);surface.style.pointerEvents=reveal.ready?'auto':'none';surface.setAttribute('aria-hidden',String(!reveal.ready));const place=surface.querySelector('[data-spatial-place]');if(place)place.disabled=!reveal.ready || !demoLivingMapPlacement?.current(elapsed);}
     return {elapsed,reduced,reveal};
 }
@@ -1988,12 +1994,12 @@ function paintWelcomeLayer(now) {
         const width=Math.max(280,Math.round(mapCanvas.clientWidth)),height=Math.round(width*(window.matchMedia('(max-width:620px)').matches?.9:.62));
         if(mapCanvas.width!==width || mapCanvas.height!==height){mapCanvas.width=width;mapCanvas.height=height;}
         const ctx=localizedCanvasContext(mapCanvas.getContext('2d'));ctx.clearRect(0,0,width,height);
-        drawLivingMapPreview(ctx,demoLivingMapScene,demoLivingMapElapsed(now),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:0,y:0,width,height});
+        drawLivingMapPreview(ctx,demoLivingMapScene,demoLivingMapElapsed(now),window.matchMedia('(prefers-reduced-motion: reduce)').matches,{x:0,y:0,width,height,hideGuidance:true});
     }
     const spatialCanvas=appRoot?.querySelector('[data-spatial-landscape]');
     if(spatialCanvas && spatialState?.reveal.appear>0){
         const width=Math.max(280,Math.round(spatialCanvas.clientWidth)),height=Math.round(window.innerWidth<=620?Math.max(130,Math.min(width*.64,window.innerHeight-370)):width*.64);if(spatialCanvas.width!==width || spatialCanvas.height!==height){spatialCanvas.width=width;spatialCanvas.height=height;}
-        const ctx=localizedCanvasContext(spatialCanvas.getContext('2d'));ctx.clearRect(0,0,width,height);demoLivingMapScene.draw(ctx,spatialState.elapsed,spatialState.reduced,{x:0,y:0,width,height});
+        const ctx=localizedCanvasContext(spatialCanvas.getContext('2d'));ctx.clearRect(0,0,width,height);demoLivingMapScene.draw(ctx,spatialState.elapsed,spatialState.reduced,{x:0,y:0,width,height,hideGuidance:true});
     }
     arWelcomeClock.tick(Date.now(),!document.hidden);
     const rainStage=simulatedMode || demoRainIntensity<=0?'':demoRainProgress(arWelcomeClock.elapsed)>=1?'mist':arWelcomeClock.elapsed>=12000?'first-drops':'';
@@ -2618,10 +2624,11 @@ function showDemoLivingMap(){
     limMeshVisible=false;
     placementReady=false;
     demoMapIntroPaused=true;
+    demoMapTotemGripped=false;demoMapPlateGripped=false;
     demoMapNarrationCount=-1;closeDemoKnowledge(true);releaseHeldDemoRecord();
     for(const record of markers){if(resetDemoPlantForMap(record)){knowledgeRenderer?.clear(record);infoPanel?.clearPlant?.(record);}if(record.demoType==='zone'){record.demoExpanded=false;record.totemSelectedCard='';record.totemCardsRefreshed=0;}}
     const step=guidedDemoStep('UTILITY 1.1');
-    showIntroBoard(step.title,'Let’s test adding these elements.','Continue',startDemoLivingMapActivity,{stepLabel:step.id,historyPhase:'intro',dynamicCopy:true,nextGuide:''});
+    showIntroBoard(step.title,'Let’s test adding these elements to the landscape.','Continue',startDemoLivingMapActivity,{stepLabel:step.id,historyPhase:'intro',dynamicCopy:true,nextGuide:''});
     infoPanel?.showLearning({id:'demo-living-map',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);infoPanel?.setMediaCollapsed(true);infoPanel?.minimize();
     infoPanel?.setContextualHint('Grip both opposite edges to carry, turn and gently tilt the landscape. With tracked hands, pinch both edges. Release either grip to leave it in place. Place the Totem beside the frame on the pulsing circle.');
@@ -4103,14 +4110,6 @@ function updateHeldDemoRecordPosition(frame=null) {
     const origin = demoPointerWorldOrigin();
     if (!record) return;
     if(record.demoMapPiece && demoLivingMapOrigin){
-        const pose=frame?.getPose?.(demoGrabInputSource?.gripSpace,referenceSpace)?.transform.matrix;
-        if(pose && record.demoGripOffset){
-            const offset=record.demoGripOffset;
-            record.position={x:pose[12]+pose[0]*offset.x+pose[4]*offset.y+pose[8]*offset.z,y:pose[13]+pose[1]*offset.x+pose[5]*offset.y+pose[9]*offset.z,z:pose[14]+pose[2]*offset.x+pose[6]*offset.y+pose[10]*offset.z};
-            record.groundBaseY=record.position.y-demoTotemHalfHeight(record);
-            return;
-        }
-        if(record.demoGripOffset)return;
         if(!origin || !ray)return;
         const hit=livingMapRayPoint({origin,direction:ray},demoLivingMapOrigin,demoLivingMapOrientation);
         // A miss retains the last valid map contact instead of a far grab depth.
@@ -4197,10 +4196,9 @@ function beginControllerDemoHold(preferredTarget=null,frame=null) {
     if (!target || target.record.demoInteractive === false) return false;
     const origin=demoPointerWorldOrigin();if(!origin || !captureDemoGrabPose(target.record,origin,demoPointerWorldRay()))return false;
     if(target.record.demoMapPiece){
-        const pose=frame?.getPose?.(demoGrabInputSource?.gripSpace,referenceSpace)?.transform.matrix;
-        // The miniature belongs at the gripping hand, not at its old remote
-        // laser distance. Store a local offset so wrist rotation carries it too.
-        target.record.demoGripOffset=pose?{x:0,y:.06,z:-.07}:null;
+        // Keep the miniature at the bounded laser contact on the plate.
+        target.record.demoGripOffset=null;
+        demoMapTotemGripped=true;introBoardTextureDirty=true;
         target.record.demoMapDropValid=true;
     }
     demoGrabPreparingIndex=-1;demoHeldIndex=target.index;pulseDemoHaptics(demoGrabInputSource,true);
@@ -4493,7 +4491,7 @@ function drawDemoKnowledge(view) {
     if(map?.reveal.appear>0 && demoLivingMapOrigin){
         demoLivingMapXR ??= createDemoLivingMapXR(gl,demoLivingMapScene.scene);
         if(demoLivingMapScene.xrFrame!==introFrameToken){demoLivingMapScene.update(map.elapsed,map.reduced);demoLivingMapScene.xrFrame=introFrameToken;}
-        demoLivingMapXR.draw(view,demoLivingMapOrigin,demoLivingMapOrientation,map.reveal.appear,demoLivingMapPlacement?.snapshot().length?demoLivingMapScene.totemLabel(map.elapsed):'');
+        demoLivingMapXR.draw(view,demoLivingMapOrigin,demoLivingMapOrientation,map.reveal.appear);
     }
     for(const [id,note] of demoPlacedNoteViews){if(!markers.includes(note.record) || !demoAreaVisible(note.record) || note.record.demoHiddenForLimo)continue;try{note.renderer.draw(view,viewerMatrix);}catch(error){console.warn('Note widgets closed safely:',error);note.renderer.destroy();note.workspace.destroy();note.root.remove();demoPlacedNoteViews.delete(id);if(note.renderer===demoNoteRenderer){demoNoteRenderer=null;demoKnowledgeWorkspace=null;demoKnowledgeRoot=null;}}}
     if(demoNoteRenderer)return;
@@ -5169,7 +5167,7 @@ function drawIntroNoteContent(ctx) {
         ctx.fillStyle='#dfecc8';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
         ctx.fillText('UTILITY 1.1',700,285,880);
         ctx.fillStyle='#f4f5e7';
-        const headingBottom=drawDemoHeading(ctx,demoMapIntroPaused?'Let’s test adding these elements.':guidedDemoStep('UTILITY 1.1').title);
+        const headingBottom=drawDemoHeading(ctx,demoMapIntroPaused?'Let’s test adding these elements to the landscape.':guidedDemoStep('UTILITY 1.1').title);
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
         const elapsed=demoLivingMapElapsed(),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:headingBottom+85,height:300,hideGuidance:true});
@@ -5178,8 +5176,12 @@ function drawIntroNoteContent(ctx) {
             const copy=demoLocalizedText(livingMapPlacementCopy(demoLivingMapPlacement?.snapshot().length || 0));
             wrappedTextureLines(ctx,copy,850).forEach((line,index)=>ctx.fillText(line,700,headingBottom+115+index*44));
             ctx.font=`500 28px ${DEMO_PRESENTATION_FONT}`;
-            ctx.fillText('Grip a Totem beside the frame. Release it on the pulsing circle.',700,795,850);
-            ctx.fillText('Grip both plate edges to carry, turn and tilt. Release to leave it in place.',700,855,850);
+            const prompts=[['Grip a Totem',demoMapTotemGripped],['Grip both plate edges',demoMapPlateGripped]];
+            prompts.forEach(([label,done],index)=>{
+                const y=headingBottom+265+index*90;
+                ctx.fillText(label,700,y,760);
+                if(done){const width=ctx.measureText(label).width;ctx.strokeStyle='#dce6dc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(700-width/2-6,y);ctx.lineTo(700+width/2+6,y);ctx.stroke();}
+            });
         }
         ctx.restore();return;
     }
@@ -5505,7 +5507,8 @@ function drawIntroSpatial(view) {
         const pointerKind=demoStage==='totem'?'totem':demoStage==='note'?'note':'aim';
         if(introPointerTextureKind!==pointerKind){if(introPointerTexture)gl.deleteTexture(introPointerTexture);introPointerTexture=pointerKind==='totem'?createTotemPlacementTexture():pointerKind==='note'?createNotePlacementTexture():createIntroPointerTexture();introPointerTextureKind=pointerKind;}
         const pointerPosition = demoStage==='totem'?totemPlacementPosition():placementPosition();
-        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.32, demoStage==='totem'?3.2:demoStage==='note'?1.4:.8, 1);
+        const orbPulse=pointerKind==='aim'?1+.05*Math.sin(performance.now()/380):1;
+        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.38*orbPulse, pointerKind==='aim'?.8+.12*Math.sin(performance.now()/380):1);
     }
 }
 
@@ -6119,6 +6122,7 @@ function drawDemoControllerPointer(view) {
 }
 function drawDemoInputPointer(view,pointerSource) {
     if (!tetherRenderer) return;
+    if(demoLivingMapGrip?.owns(pointerSource))return;
     // Android exposes taps as a WebXR `screen` ray. It remains available for
     // hit testing, but the Quest laser/contact sphere must only be rendered
     // for tracked spatial input.
@@ -6207,7 +6211,7 @@ async function startImmersive() {
         setupRenderer();
         demoLivingMapGrip?.destroy();
         demoLivingMapGrip=createLivingMapGripInput({
-            responseMs:30,
+            responseMs:0,
             enabled:()=>introBoardStep==='UTILITY 1.1' && demoLivingMapReady() && Boolean(demoLivingMapOrigin) && demoHeldIndex<0 && !demoKnowledgeIsModal() && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE,
             origin:()=>demoLivingMapOrigin,rotation:()=>demoLivingMapOrientation,onRotate:setDemoLivingMapRotation,onMove:p=>{demoLivingMapOrigin={x:p.x,y:p.y,z:p.z};},
             canUse:(source,contact)=>{if(butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || infoPanel?.getHeldInputSource()===source || demoHeldIndex>=0 && demoGrabInputSource===source || [...demoPlacedNoteViews.values()].some(note=>note.renderer?.heldSource===source))return false;if(!contact)return true;const piece=markers.find(record=>record.demoMapPiece),pieceHit=piece?demoRecordRayHit(piece,contact.ray):null;return [pieceHit,infoPanel?.hit(contact.ray),knowledgeRenderer?.hit(contact.ray),totemCardsRenderer?.hit(contact.ray),demoNoteHit(contact.ray)].filter(Boolean).every(hit=>hit.distance>=contact.distance);},
@@ -6365,7 +6369,7 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
-            runXrFrameStep('landscape two-hand grip',()=>demoLivingMapGrip?.update(frame));
+            runXrFrameStep('landscape two-hand grip',()=>{demoLivingMapGrip?.update(frame);if(demoLivingMapGrip?.active && !demoMapPlateGripped){demoMapPlateGripped=true;introBoardTextureDirty=true;}});
             for(const note of demoPlacedNoteViews.values())if(note.renderer.heldSource){const ray=demoControllerRayForInputEvent({frame,inputSource:note.renderer.heldSource});note.renderer.updateGrab(ray);}
             runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const elapsed=insect.depthUpdatedAt?Math.max(0,Math.min(60,_time-insect.depthUpdatedAt)):16;insect.depthUpdatedAt=_time;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}const axes=insect.heldSource.gamepad?.axes || [];insect.controllerDistance=Math.max(.25,Math.min(2.5,insect.controllerDistance+spatialDepthDelta(axes.length>2?axes[3]:axes[1],elapsed)));insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
             runXrFrameStep('controller skip',pollDemoControllerSkip);

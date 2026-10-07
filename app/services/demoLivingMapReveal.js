@@ -57,7 +57,7 @@ export function drawLivingMapPreview(ctx,scene,elapsed,reduced,rect){
     if(reveal.magic>0){ctx.shadowColor='#d5ffb4';ctx.shadowBlur=24*reveal.magic;}
     // The reading preview already contains its landscape. Growth belongs to
     // the spatial reveal, whose clock starts only after Continue.
-    scene.draw(ctx,elapsed,elapsed===0?true:reduced,rect);ctx.restore();
+    scene.draw(ctx,0,true,rect);ctx.restore();
     if(reveal.magic>0){
         ctx.save();ctx.fillStyle='#f0ffd1';ctx.globalAlpha=reveal.magic*.65;ctx.shadowColor='#d5ffb4';ctx.shadowBlur=10;
         for(let i=0;i<24;i++){const t=(elapsed-4400)/1700,x=rect.x+rect.width*((i*.618)%1),y=rect.y+rect.height*((i*.381)%1)-t*(20+i%7*12);ctx.beginPath();ctx.arc(x+Math.sin(t*3+i)*14,y,.8+i%3*.35,0,Math.PI*2);ctx.fill();}

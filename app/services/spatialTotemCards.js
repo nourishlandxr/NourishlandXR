@@ -180,7 +180,7 @@ export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view,
     for(const surface of surfaces) {
         // Glass backgrounds and outlines live in the text texture. An opaque
         // timber backing would defeat the shared opacity preference.
-        if(surface.card?.control || Number.isFinite(surface.card?.glassOpacity))continue;
+        if(surface.card?.control || surface.card?.freeText || Number.isFinite(surface.card?.glassOpacity))continue;
         const style=surface.card?.boardStyle || surface.boardStyle;
         const header=style==='header' || style==='header-detail' || style==='header-compact';
         const right=surface.right,front={x:-right.z,y:0,z:right.x};

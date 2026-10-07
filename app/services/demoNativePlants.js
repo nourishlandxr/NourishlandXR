@@ -29,7 +29,7 @@ export const DEMO_NATIVE_PLANTS=Object.freeze([
         source:blueQuandongSources[0],sources:blueQuandongSources,
         wildlifeImage:new URL('../assets/pimo-cell-illustrations/blue-quandong-rainforest.jpg',import.meta.url).href,
         seedImage:new URL('../assets/pimo-cell-illustrations/blue-quandong-seed.jpg',import.meta.url).href,
-        image:new URL('../assets/demo-plants/blue-quandong-illustrative.png',import.meta.url).href},
+        image:new URL('../assets/demo-plants/blue-quandong-leaves.jpg',import.meta.url).href},
     {id:'finger-lime',name:'Finger Lime',scientific:'Citrus australasica',family:'Rutaceae',colour:'#b5d88c',
         statement:'A thorny rainforest-understorey citrus with tiny distinctive leaves, finger-shaped fruit and a documented butterfly-host relationship.',
         habitat:'Australian Finger Lime is native to rainforest communities from south-east Queensland to north-east New South Wales, where it grows as an understorey shrub or small tree.',
@@ -98,7 +98,7 @@ export function nativePlantProfile(id){
     const plant=DEMO_NATIVE_PLANTS.find(item=>item.id===id);if(!plant)return null;
     return {common_name:plant.name,scientific_name:plant.scientific,pim:{schemaVersion:1,plantId:plant.id,
         identity:{commonName:plant.name,scientificName:plant.scientific,identityStatement:plant.statement,image:plant.image,
-            imageAlt:`${plant.name} · Colour demo illustration`,imageCaption:'Colour demo illustration',tags:['Australian native','rainforest','food forest']},
+            imageAlt:plant.id==='blue-quandong'?'Blue Quandong · reference photograph of long, toothed leaves':`${plant.name} · Colour demo illustration`,imageCaption:plant.name,tags:['Australian native','rainforest','food forest']},
         sources:plant.sources.map(item=>({...item})),nodes:nativeNodes(plant)}};
 }
 

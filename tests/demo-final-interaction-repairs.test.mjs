@@ -21,10 +21,10 @@ test('connection examples reset LIMO expansion instead of preopening the target 
  assert.match(body,/limExpandedCells=new Set\(\);limExpandedAt=new Map\(\);selectedLimCell=''/);
  assert.doesNotMatch(body,/for\(const id of targetLineage.ancestors\)/);
 });
-test('right grip carries the loose Totem with no ray projection, and tracking loss retains it',()=>{
+test('right grip keeps the loose Totem on the bounded laser contact and retains it on a miss',()=>{
  const piece={demoMapPiece:true,demoInteractive:true,position:{x:.6,y:1.1,z:-1},demoHalfHeight:.095};
  const pose=new Float32Array(16);pose[0]=pose[5]=pose[10]=pose[15]=1;pose[12]=.5;pose[13]=1;pose[14]=-1;
- const ctx=vm.createContext({markers:[piece],simulatedMode:false,demoHeldIndex:-1,demoHoldTimer:null,placementReady:false,demoGrabInputSource:{gripSpace:{}},referenceSpace:{},demoLivingMapOrigin:{x:0,y:1,z:-1},demoInfoTarget:()=>null,demoPointerWorldOrigin:()=>({x:.5,y:1,z:-1}),demoPointerWorldRay:()=>({x:0,y:0,z:-1}),captureDemoGrabPose:()=>true,pulseDemoHaptics(){},setGuide(){},demoTotemHalfHeight:()=>.095,livingMapRayPoint(){throw Error('Grip must not project the laser');},frame:{getPose:()=>({transform:{matrix:pose}})}});
+ const ctx=vm.createContext({markers:[piece],simulatedMode:false,demoHeldIndex:-1,demoHoldTimer:null,placementReady:false,demoGrabInputSource:{gripSpace:{}},referenceSpace:{},demoLivingMapOrigin:{x:0,y:1,z:-1},demoLivingMapOrientation:{x:0,y:0,z:0,w:1},demoInfoTarget:()=>null,demoPointerWorldOrigin:()=>({x:.5,y:1,z:-1}),demoPointerWorldRay:()=>({x:0,y:0,z:-1}),captureDemoGrabPose:()=>true,pulseDemoHaptics(){},setGuide(){},demoTotemHalfHeight:()=>.095,livingMapRayPoint:()=>({x:.8,y:1,z:-.6}),frame:{getPose:()=>({transform:{matrix:pose}})}});
  vm.runInContext(between('function beginControllerDemoHold(', 'function beginHandDemoGrab(')+between('function updateHeldDemoRecordPosition(', 'function captureDemoGrabPose('),ctx);
  assert.equal(vm.runInContext('beginControllerDemoHold({record:markers[0],index:0},frame)',ctx),true);
  assert.equal(ctx.demoHeldIndex,0);
@@ -32,11 +32,11 @@ test('right grip carries the loose Totem with no ray projection, and tracking lo
  ctx.demoKnowledgeWorkspace={};ctx.demoKnowledgeIsModal=()=>false;ctx.runXrFrameStep=(_name,update)=>update();
  const xrUpdate=source.match(/runXrFrameStep\('held element update',[^\n]+/)[0];
  vm.runInContext(xrUpdate,ctx);
- assert.ok(Math.abs(piece.position.x-.8)<1e-6);assert.ok(Math.abs(piece.position.y-1.31)<1e-6);assert.ok(Math.abs(piece.position.z+.67)<1e-6);
+ assert.ok(Math.abs(piece.position.x-.8)<1e-6);assert.ok(Math.abs(piece.position.y-1.095)<1e-6);assert.ok(Math.abs(piece.position.z+.6)<1e-6);
  pose[0]=pose[10]=0;pose[2]=-1;pose[8]=1;
  vm.runInContext('updateHeldDemoRecordPosition(frame)',ctx);
- assert.ok(Math.abs(piece.position.x-.73)<1e-6);assert.ok(Math.abs(piece.position.z+.6)<1e-6,'wrist rotation carries the local grip offset');
- const last={...piece.position};ctx.frame.getPose=()=>null;
+ assert.ok(Math.abs(piece.position.x-.8)<1e-6);assert.ok(Math.abs(piece.position.z+.6)<1e-6,'grip pose does not pull the Totem to the hand');
+ const last={...piece.position};ctx.livingMapRayPoint=()=>null;
  vm.runInContext('updateHeldDemoRecordPosition(frame)',ctx);assert.deepEqual({...piece.position},last);
 });
 test('release projects a nearby Totem onto tilted terrain and rejects off-map or distant drops',()=>{
