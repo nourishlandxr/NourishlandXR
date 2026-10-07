@@ -986,7 +986,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             ctx.fillStyle='rgba(3,12,18,.78)';ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,24);ctx.fill();
             ctx.save();ctx.beginPath();ctx.roundRect(imageX,imageY,imageWidth,imageHeight,24);ctx.clip();
             // Keep the entire photograph inside the rounded viewport, including its corners.
-            const drawMedia=(image,alpha)=>{if(!image || alpha<=0)return;const inset=24,scale=Math.min((imageWidth-inset*2)/image.naturalWidth,(imageHeight-inset*2)/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);ctx.restore();};
+            const drawMedia=(image,alpha)=>{if(!image || alpha<=0)return;const inset=8,scale=Math.min((imageWidth-inset*2)/image.naturalWidth,(imageHeight-inset*2)/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.save();ctx.globalAlpha=alpha;ctx.drawImage(image,imageX+(imageWidth-w)/2,imageY+(imageHeight-h)/2,w,h);ctx.restore();};
             drawMedia(card.previousImage,1-card.imageFade);drawMedia(card.image,card.imageFade);
             ctx.restore();ctx.fillStyle='rgba(4,15,18,.76)';ctx.beginPath();ctx.roundRect(imageX,c.height-76,imageWidth,68,[0,0,24,24]);ctx.fill();
             ctx.textBaseline='top';
@@ -1307,7 +1307,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(explorerCard && !hidden)surfaces.push({...explorerSpatialPose(),width:mainWidth,height:explorerHeight()/1000*mainWidth,card:explorerCard});
             const settingsSurfacePose=settingsPose || spatialMediaDockPose(mediaCard && mediaDockSide==='left'?'top':'left');
             if(settingsOpen && !hidden && settingsCard)surfaces.push({...settingsSurfacePose,width:mediaWidth,height:mainHeight,card:settingsCard});
-            if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface)surfaces.push({...mediaSurface,width:mediaWidth,height:mainHeight,card:mediaCard});}
+            if(!hidden && mediaCard){mediaPose ||= spatialMediaDockPose(mediaDockSide);const mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);if(mediaSurface){const forward=pose.normal,horizontal=Math.hypot(forward.x,forward.z)||1;const normal={x:forward.x/horizontal,y:0,z:forward.z/horizontal};surfaces.push({...mediaSurface,normal,right:{x:normal.z,y:0,z:-normal.x},up:{x:0,y:1,z:0},width:mediaWidth,height:mediaWidth*mediaCard.height/1000,card:mediaCard});}}
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null,touchBlocked=false){
@@ -1369,7 +1369,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
-            const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
@@ -1457,6 +1457,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'main',cardId:'control',startedAt:performance.now()-PANEL_GRAB_HOLD_MS,handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
+            if(type==='selectend' && button?.action?.startsWith('Object:') && !spatialMove){spatialGrabPending=null;act(button.action);finishingMoveSource=event.inputSource;panelGestureSource=null;event.stopImmediatePropagation();return;}
+            if(type==='selectend' && button?.action?.startsWith('Object:') && !spatialMove){spatialGrabPending=null;act(button.action);finishingMoveSource=event.inputSource;panelGestureSource=null;event.stopImmediatePropagation();return;}
             if(type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
             if(type==='selectend')panelGestureSource=null;
         };const visibility=()=>{if(session.visibilityState!=='visible'){sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);

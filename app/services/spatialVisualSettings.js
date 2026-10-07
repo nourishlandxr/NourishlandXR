@@ -1,6 +1,6 @@
 export const TOTEM_MODELS = Object.freeze({carved:Object.freeze({label:'Carved timber'}),botanical:Object.freeze({label:'Botanical column'}),basic:Object.freeze({label:'Elemental'})});
 // Presentation preferences only; project records and anchors stay untouched.
-export const INFO_GLASS = Object.freeze({defaultOpacity:.38,soil:'#32271f',soilEdge:'#514032',soilGrain:'#705840'});
+export const INFO_GLASS = Object.freeze({defaultOpacity:.70,soil:'#32271f',soilEdge:'#514032',soilGrain:'#705840'});
 export const ORB_MODELS = Object.freeze({
     basic:Object.freeze({label:'Basic',latitudeBands:24,longitudeBands:32,roughness:.5,metalness:.03,detail:0}),
     improved:Object.freeze({label:'Improved',latitudeBands:32,longitudeBands:48,roughness:.28,metalness:.08,detail:1}),

@@ -197,7 +197,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             }
             const bornFor=id=>model.interactive && !Number.isFinite(schedule.items[id]?.startAt)?0:demoLivingMapItemProgress(schedule,id,elapsed,reducedMotion);
             const progress=demoLivingMapProgress(elapsed,reducedMotion,schedule);
-            if(model.interactive){progress.camera=1;progress.wide=1;progress.settled=!placement?.current() && elapsed>(placed.at(-1)?.at || 0)+2800;}
+            if(model.interactive){progress.camera=1;progress.wide=1;progress.scenery=1;progress.settled=!placement?.current() && elapsed>(placed.at(-1)?.at || 0)+2800;}
             if(elapsed<lastPaint || lastReduced!==reducedMotion)settledPaint=false;
             if(!settledPaint && (elapsed-lastPaint>=1000/24 || elapsed<lastPaint || lastReduced!==reducedMotion)){
                 const rise=model.concept ? .85+.15*progress.camera : progress.camera, wide=progress.wide;
@@ -258,7 +258,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
             if(model.concept){
                 ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
-                const title=model.interactive?translateNxrText(totemLabel(elapsed)):demoLivingMapStage(elapsed,reducedMotion);
+                const title=model.interactive?translateNxrText(placed.length?totemLabel(elapsed):'Pick up the highlighted Totem'):demoLivingMapStage(elapsed,reducedMotion);
                 const cloudWidth=Math.min(w-12,ctx.measureText(title).width+28);
                 ctx.fillStyle='rgba(19,48,37,.94)';ctx.beginPath();ctx.roundRect(x+(w-cloudWidth)/2,y,cloudWidth,tagHeight,tagHeight/2);ctx.fill();
                 ctx.fillStyle='#f4f2df';ctx.fillText(title,x+w/2,y+tagHeight/2,w-28);

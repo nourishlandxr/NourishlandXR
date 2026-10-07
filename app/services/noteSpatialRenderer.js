@@ -57,6 +57,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
         draw(view,currentViewer=viewer){
             if(!pose && currentViewer)pose=noteAnchorPose(record,currentViewer);
             if(!pose)return;
+            if(currentViewer){Object.assign(pose,noteSurfaceFacing(pose.center,currentViewer));record.demoNotePose={right:{...pose.right},up:{...pose.up}};}
             const main=root.querySelector('.note-anchor');if(!main)return;
             const board=root.querySelector('.note-spatial-board'),expanded=Boolean(board?.classList.contains('is-expanded')),closing=Boolean(board?.classList.contains('is-collapsing'));
             if(expanded && !wasExpanded)openingAt=performance.now();wasExpanded=expanded;

@@ -95,7 +95,7 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText, translateApp, localizedCanvasContext } from '../services/i18n.js';
-import { getSpatialVisualSettings, currentInfoOpacity, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
+import { getSpatialVisualSettings, setSpatialVisualSettings, currentInfoOpacity, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
@@ -1599,7 +1599,7 @@ function showPersistentPimPrompt(record) {
     const firstStep={uses:'PIMO 1.2a',culinary:'PIMO 1.2b','fresh-peas':'PIMO 1.2c'}[record.demoGuidedNodeId] || 'PIMO 1.2';
     const id=first?(record.knowledgeExplorer?.mode==='tag'?'ELEMENTS 1.7':firstStep):'ELEMENTS 1.12';
     const step=guidedDemoStep(id);
-    const button=first?'Continue to panel tools':'Leave something behind';
+    const button=first?'Continue to panel tools':'Continue';
     showIntroBoard(step.title,step.main,button,()=>continueAfterDemoPim(record),{
         tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true
     });
@@ -2054,9 +2054,9 @@ function showArWelcomeShowcase() {
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
         introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
         const continueOpeningCopy=event=>{event?.stopImmediatePropagation?.();suppressSessionSelectUntil=performance.now()+700;if(introBoardStep!=='INTRO 1.2')return;openingTyping=false;clearDemoNarration();const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.disabled=true;button.onclick=null;}clearTimeout(arWelcomeUnlockTimer);arWelcomeIntroPending=false;arWelcomeSettleStage=false;runArWelcomeTutorial(0);};
-        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Start the demo',onContinue:continueOpeningCopy,kind:'welcome'});
+        rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Let’s start',onContinue:continueOpeningCopy,kind:'welcome'});
         const openingButton=appRoot?.querySelector('[data-tryit-intro-continue]');
-        if(openingButton){openingButton.textContent='Start the demo';openingButton.disabled=false;openingButton.onclick=continueOpeningCopy;}
+        if(openingButton){openingButton.textContent='Let’s start';openingButton.disabled=false;openingButton.onclick=continueOpeningCopy;}
         introBoardVisibleBody='';introBoardParagraphFadeTimes=[];openingParagraphs=introBoardBody.split('\n\n');openingParagraphIndex=0;openingTyping=true;
         panel.querySelector('h2').textContent=introBoardTitle;
         panel.querySelector('small').textContent=demoIntroLabel();
@@ -2143,7 +2143,7 @@ function showArWelcomeShowcase() {
         setIntroBoardNextGuide('');
         const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
         if(continueButton){
-            continueButton.textContent=demoLocalizedText('Start the demo');
+            continueButton.textContent=demoLocalizedText('Let’s start');
             continueButton.hidden=false;
             continueButton.disabled=false;
             continueButton.onclick=()=>{
@@ -2512,7 +2512,7 @@ function spawnDemoMapTotem(){
         const piece={...createMinimalMarkerDraft('area_checkpoint',{name:target.name}),id:'demo-map-piece',name:target.name,
             demoType:'zone',demoMapPiece:true,demoInteractive:true,demoHalfHeight:halfHeight,position,groundBaseY:position.y-halfHeight,
             demoMapHome:{...position},demoTotemColor:'#795f41',demoTotemSignsVisible:false,rotationY:demoTotemRotationForPosition(position),
-            appearance:{totemStyle:'carved',totemStyleExplicit:true,notificationColor:'#a5db8d'},demoArriveAt:performance.now(),simulatedAnchor:{x:88,y:45}};
+            appearance:{totemStyle:'botanical',totemStyleExplicit:true,notificationColor:'#a5db8d'},demoArriveAt:performance.now(),simulatedAnchor:{x:88,y:45}};
         markers.push(piece);
     }
     const place=appRoot?.querySelector('[data-demo-map-place]');if(place)place.hidden=!target;
@@ -2899,7 +2899,7 @@ function guideNoteConversion(record) {
     showIntroBoard(
         guidedDemoStep('ELEMENTS 1.17').title,
         DEMO_GUIDED_COPY['ELEMENTS 1.17'],
-        'Organise this area',
+        'Continue',
         () => {
             finishIntroBoard();
             showSpatialGardenSummary();
@@ -3880,8 +3880,8 @@ function pointerDistanceToRecord(record) {
     return Math.hypot(record.position.x - closest.x, record.position.y - closest.y, record.position.z - closest.z);
 }
 
-function demoRecordRayHit(record) {
-    const ray=demoPointerWorldRay(),origin=demoPointerWorldOrigin();
+function demoRecordRayHit(record, inputRay=latestControllerRay) {
+    const ray=inputRay?.direction || demoPointerWorldRay(),origin=inputRay?.origin || demoPointerWorldOrigin();
     if(!origin || !ray || !record?.position)return null;
     if(record.demoType==='note'){
         const matrix=billboardMatrix(record.position,DEMO_NOTE_IMMERSIVE_SCALE.x,DEMO_NOTE_IMMERSIVE_SCALE.y);
@@ -4637,10 +4637,14 @@ const butterflyTriggerSources=new WeakSet();
 function butterflyHeldBy(source){return Boolean(source && (butterflyGestureSources.has(source) || butterflyCompanions.some(insect=>insect.heldSource===source)));}
 function releaseDemoButterfly(insect){
     const perch=infoPanel?.getPerchPose(insect.side),position=insect.handPosition || insect.position;
-    const hits=latestControllerRay?[infoPanel?.hit(latestControllerRay),knowledgeRenderer?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay),demoNoteHit(latestControllerRay)].filter(Boolean):[];
+    const frameHit=introWorldAnchor?welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080):null;
+    const hits=latestControllerRay?[infoPanel?.hit(latestControllerRay),frameHit?{...frameHit,perchFrame:true}:null,knowledgeRenderer?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay),demoNoteHit(latestControllerRay)].filter(Boolean):[];
     const surface=butterflyDropSurface(position,hits);
     const landed=Boolean(surface);
     const rest=landed?surface:position;
+    const support=landed?hits.find(hit=>hit.card?.id==='control' || hit.perchFrame):null;
+    const supportCenter=support?.perchFrame?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):support?infoPanel?.getPosition():null;
+    insect.perchSupport=supportCenter?{frame:Boolean(support.perchFrame),offset:{x:rest.x-supportCenter.x,y:rest.y-supportCenter.y,z:rest.z-supportCenter.z}}:null;
     const anchor=perch || insect.flightAnchor || {right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}};
     insect.heldSource=null;insect.perchMs=landed?4500:0;
     insect.startedAt=arWelcomeClock.elapsed-(landed?0:4500);insect.releasedPerch=landed;
@@ -4755,16 +4759,17 @@ function demoParagraphReadingTime(text){return Math.max(6000,String(text || '').
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
-    // Keep earlier paragraphs visible as new ones fade in; fit the complete
-    // authored passage into the available Living Frame body area.
-    for (let fontSize = ['SPACE 1.1','ELEMENTS 1.5'].includes(introBoardStep)?48:68; fontSize >= 16; fontSize -= 1) {
+    // Every slide uses the Intro 1.2 template size, not its own shrinking rule.
+    const reference=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']).split(/\n\n/);
+    for (let fontSize = 68; fontSize >= 32; fontSize -= 1) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .38);
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
-        const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
-            + Math.max(0, paragraphLines.length - 1) * paragraphGap;
-        if (totalHeight <= maxHeight || fontSize === 16) {
+        const referenceLines=reference.map(paragraph=>wrappedTextureLines(ctx,paragraph,maxWidth));
+        const totalHeight = referenceLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
+            + Math.max(0, referenceLines.length - 1) * paragraphGap;
+        if (totalHeight<=360 || fontSize===32) {
             return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
     }
@@ -4773,8 +4778,9 @@ function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
 
 function introReadingWindow(layout,count,height){
     const end=Math.min(count,layout.paragraphLines.length);
-    const totalHeight=layout.paragraphLines.slice(0,end).reduce((sum,lines)=>sum+lines.length*layout.lineHeight,0)+Math.max(0,end-1)*layout.paragraphGap;
-    return {first:0,end,height:Math.min(height,totalHeight)};
+    let first=end,totalHeight=0;
+    while(first>0){const next=layout.paragraphLines[first-1].length*layout.lineHeight+(first<end?layout.paragraphGap:0);if(first<end && totalHeight+next>height)break;first--;totalHeight+=next;}
+    return {first,end,height:Math.min(height,totalHeight)};
 }
 
 function createSpatialKnowledgeTexture(record) {
@@ -4960,10 +4966,10 @@ function drawIntroNoteContent(ctx) {
     if(openingElapsed!==null){
         if(arWelcomeOpeningActive || openingElapsed<DEMO_WELCOME_OPENING_MS){
             const openingTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
-            let openingTitleSize=96;
+            let openingTitleSize=72;
             ctx.fillStyle='#ffffff';
-            do {ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;if(ctx.measureText(openingTitle).width<=titleWidth)break;openingTitleSize-=2;} while(openingTitleSize>36);
-            ctx.fillText(openingTitle,contentCenter,420);
+            ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;
+            ctx.fillText(openingTitle,contentCenter,420,titleWidth);
             if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){
                 ctx.fillStyle='#fff';ctx.textBaseline='top';
                 const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,360);
@@ -4985,14 +4991,10 @@ function drawIntroNoteContent(ctx) {
     ctx.fillStyle = '#f7fbf4';
     // Keep headings on one line so a wrapped second line cannot collide with
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
-    let titleSize = 96;
+    let titleSize = 72;
     const titleFont = DEMO_PRESENTATION_FONT;
     ctx.font = `700 ${titleSize}px ${titleFont}`;
-    while (titleSize > 36 && ctx.measureText(introBoardTitle).width > titleWidth) {
-        titleSize -= 2;
-        ctx.font = `700 ${titleSize}px ${titleFont}`;
-    }
-    ctx.fillText(introBoardTitle, contentCenter, 420);
+    ctx.fillText(introBoardTitle, contentCenter, 420,titleWidth);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(241,249,237,.25)';
     ctx.lineWidth = 1.5;
@@ -5479,6 +5481,7 @@ function drawSpatialButterfly(view){
             const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
             const pose=demoButterflyPose(elapsed,insect.startedAt,{reducedMotion,perchMs:insect.perchMs,seed:insect.seed});if(!pose)continue;
             if(insect.releasedPerch)pose.opacity=1;
+            if(pose.state==='landed' && insect.perchSupport && insect.flightAnchor){const center=insect.perchSupport.frame && introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):infoPanel?.getPosition();if(center){const offset=insect.perchSupport.offset;insect.flightAnchor.center={x:center.x+offset.x,y:center.y+offset.y+.025,z:center.z+offset.z};}}
             pose.wingPhase=insect.seed*1.9;pose.size=insect.size;
             if(pose.flight>0 && perch)insect.flightAnchor ||= {...perch,center:{...perch.center}};
             const anchor=insect.flightAnchor || perch;if(!anchor)continue;
@@ -5962,7 +5965,7 @@ async function startImmersive() {
             responseMs:30,
             enabled:()=>introBoardStep==='UTILITY 1.1' && demoLivingMapReady() && Boolean(demoLivingMapOrigin) && demoHeldIndex<0 && !demoKnowledgeIsModal() && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE,
             origin:()=>demoLivingMapOrigin,rotation:()=>demoLivingMapOrientation,onRotate:setDemoLivingMapRotation,onMove:p=>{demoLivingMapOrigin={x:p.x,y:p.y,z:p.z};},
-            canUse:(source,contact)=>{if(butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || infoPanel?.getHeldInputSource()===source)return false;if(!contact)return true;return [infoPanel?.hit(contact.ray),knowledgeRenderer?.hit(contact.ray),totemCardsRenderer?.hit(contact.ray),demoNoteHit(contact.ray)].filter(Boolean).every(hit=>hit.distance>=contact.distance);},
+            canUse:(source,contact)=>{if(butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || infoPanel?.getHeldInputSource()===source)return false;if(!contact)return true;const piece=markers.find(record=>record.demoMapPiece),pieceHit=piece?demoRecordRayHit(piece,contact.ray):null;return [pieceHit,infoPanel?.hit(contact.ray),knowledgeRenderer?.hit(contact.ray),totemCardsRenderer?.hit(contact.ray),demoNoteHit(contact.ray)].filter(Boolean).every(hit=>hit.distance>=contact.distance);},
             onGrab:source=>pulseDemoHaptics(source,true)
         });
         demoLivingMapGrip.bind(session,referenceSpace);
@@ -6062,7 +6065,7 @@ async function startImmersive() {
         session.addEventListener('squeezestart',event=>{
             captureDemoInputEventRay(event);
             if(demoNoteOwnsPointer() && demoNoteHit(latestControllerRay)?.noteRenderer.beginGrab(latestControllerRay,event.inputSource)){event.stopImmediatePropagation();return;}
-            if(event.inputSource?.hand || arWelcomeIntroPending || placementReady || demoKnowledgeWorkspace || demoWebModeOpen)return;
+            if(event.inputSource?.hand || arWelcomeIntroPending || placementReady || demoKnowledgeIsModal() || demoWebModeOpen)return;
             captureDemoInputEventRay(event);if(butterflyGripStart(event.inputSource))return;
             const target=demoRecordAtPointer(),panelTarget=resolveDemoCellTarget(),signHit=totemCardsRenderer?.hit(latestControllerRay);
             if(panelTarget?.kind==='panel' && (!target || panelTarget.distance<=target.hit.distance) || signHit && (!target || signHit.distance<=target.hit.distance))return;
@@ -6167,7 +6170,7 @@ export function openTemporaryArDemoWindow(app) {
         app.querySelector('[data-desktop-ar-back]')?.addEventListener('click',()=>window.renderLaunchScreen?.(),{once:true});return;
     }
     prepareArAssets({experience:'demo'}).catch(error=>console.warn('AR preparation:',error));
-    if (shouldSkipArIntroductionPreparation() && arAssetsReady()) return startTemporaryArDemo(app);
+    if (shouldSkipArIntroductionPreparation()) return startTemporaryArDemo(app);
     renderArIntroductionPreparation(app, {
         onContinue: () => startTemporaryArDemo(app),
         onCancel: () => window.renderLaunchScreen?.()
@@ -6177,6 +6180,7 @@ export function openTemporaryArDemoWindow(app) {
 export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null } = {}) {
     // Development fixtures may inspect XR, but public desktop entry is a book.
     if(!livingMapPreviewRecords && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
+    setSpatialVisualSettings({infoOpacity:.70});
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();

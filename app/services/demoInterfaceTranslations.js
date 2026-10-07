@@ -1,6 +1,13 @@
 // Shared presentation catalogue: English / Portuguese (Portugal) / Dutch.
 // Do not put object IDs, action names, source URLs or user data in this table.
 export const DEMO_INTERFACE_TRANSLATIONS = [
+ ['Point at a large parent PIMO cell and press the trigger to open it. Try Uses.','Aponte para uma célula principal grande do PIMO e prima o gatilho para a abrir. Experimente Usos.','Richt op een grote PIMO-hoofdcel en druk op de trigger om deze te openen. Probeer Toepassingen.'],
+ ['Let’s start','Vamos começar','Laten we beginnen'],
+ ['Pick up the highlighted Totem','Pegue no Totem destacado','Pak de gemarkeerde Totem op'],
+ ['NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples.','O NourishlandXR destina-se a visitantes curiosos, professores e alunos, e a pessoas que cuidam da terra e querem partilhar o seu conhecimento.\n\nPara esta demonstração, preparámos alguns exemplos simples.','NourishlandXR is er voor nieuwsgierige bezoekers, leraren en leerlingen, en mensen die voor het land zorgen en hun kennis willen delen.\n\nVoor deze demo hebben we enkele eenvoudige voorbeelden voorbereid.'],
+ ['Let’s start','Vamos começar','Laten we beginnen'],
+ ['Pick up the highlighted Totem','Pegue no Totem destacado','Pak de gemarkeerde Totem op'],
+ ['NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples.','O NourishlandXR destina-se a visitantes curiosos, professores e alunos, e a pessoas que cuidam da terra e querem partilhar o seu conhecimento.\n\nPara esta demonstração, preparámos alguns exemplos simples.','NourishlandXR is er voor nieuwsgierige bezoekers, leraren en leerlingen, en mensen die voor het land zorgen en hun kennis willen delen.\n\nVoor deze demo hebben we enkele eenvoudige voorbeelden voorbereid.'],
  ['+ Note','+ Nota','+ Notitie'],
  ['Glass colour','Cor do vidro','Glaskleur'],
  ['Uses → Vision','Usos → Visão','Toepassingen → Visie'],

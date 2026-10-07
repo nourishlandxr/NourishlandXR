@@ -1,15 +1,13 @@
-import {getSpatialVisualSettings,setSpatialVisualSettings,resolveGraphicsQuality} from './spatialVisualSettings.js';
 import {prepareArAssets,prepareNearFutureArAssets} from './arAssetPreparation.js';
 export function arPreparationControlsMarkup({simpleDesktop=false,rememberPreparation=false,compactSettings=false}={}){
  if(simpleDesktop)return compactSettings?`<div class="ar-preload-controls ar-preload-controls-compact" data-ar-preload><p class="ar-preparation-desktop-note">The desktop introduction uses 2D plant information and learning pathways.</p><progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1"></progress><p role="status" data-ar-preload-status>Preparing the introduction…</p><button type="button" data-ar-preload-retry hidden>Retry preparation</button></div>`:`<section class="panel ar-preload-controls" data-ar-preload><h2>Getting ready</h2><p class="meta">The desktop introduction uses 2D plant information and learning pathways.</p><progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1"></progress><p role="status" data-ar-preload-status>Preparing the introduction…</p><button type="button" data-ar-preload-retry hidden>Retry preparation</button></section>`;
- const choice=getSpatialVisualSettings().graphicsQuality,suggested=resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED');
- const graphicsLabel=`<label class="ar-graphics-choice"><span>Graphics</span><select data-ar-graphics aria-label="Starting graphics quality">${[['auto','Auto · '+suggested],['low','LOW'],['medium','MED'],['high','HIGH']].map(([value,label])=>`<option value="${value}" ${choice===value?'selected':''}>${label}</option>`).join('')}</select></label>`;
+ const graphicsLabel='';
  const remember=rememberPreparation?'<label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>':'';
  if(compactSettings)return `<div class="ar-preload-controls ar-preload-controls-compact" data-ar-preload>
  <div class="ar-preparation-settings-row"><details class="ar-device-support"><summary>Device support</summary><p>Use a compatible Android phone or spatial device. On desktop, we recommend the plain NLXR introduction; the plain desktop introduction needs no camera. iPhone and iPad cannot currently launch this WebXR AR mode.</p><p class="meta">Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p></details>${graphicsLabel}</div>
  ${remember}<progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1"></progress>
  <p role="status" data-ar-preload-status>Preparing Nourishland…</p><button type="button" data-ar-preload-retry hidden>Retry preparation</button></div>`;
- return `<section class="panel ar-preload-controls" data-ar-preload><h2>Graphics</h2>
+ return `<section class="panel ar-preload-controls" data-ar-preload><h2>Getting ready</h2>
  ${graphicsLabel}
  ${remember}
  <progress data-ar-preload-progress aria-label="Preparing Nourishland" value="0" max="1"></progress>
@@ -17,7 +15,6 @@ export function arPreparationControlsMarkup({simpleDesktop=false,rememberPrepara
 }
 export function bindArPreparationControls(root,enterButton,{nearFuture=false,simpleDesktop=false}={}){
  const section=root?.querySelector('[data-ar-preload]');if(!section || !enterButton)return;
- section.querySelector('[data-ar-graphics]')?.addEventListener('change',event=>{setSpatialVisualSettings({graphicsQuality:event.target.value});begin();});
  const bar=section.querySelector('progress'),status=section.querySelector('[data-ar-preload-status]'),retry=section.querySelector('[data-ar-preload-retry]');
  let preparationToken=0;const readyLabel=enterButton.textContent;
  function failedPreparation(){

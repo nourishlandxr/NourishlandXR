@@ -35,7 +35,8 @@ test('AR introduction preparation distinguishes the desktop book and spatial mod
     assert.match(app.innerHTML, /<details class="ar-device-support">/);
     assert.match(app.innerHTML, /XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame/);
     assert.match(app.innerHTML, /not confirmed compatible devices/);
-    assert.match(app.innerHTML, /Don’t show this preparation next time/);
+    assert.match(app.innerHTML, /Preparation is remembered on this browser/);
+    assert.doesNotMatch(app.innerHTML, /data-ar-graphics|data-ar-introduction-remember/);
     assert.match(app.innerHTML, /data-ar-introduction-continue/);
 });
 
@@ -60,6 +61,7 @@ test('homepage AR introduction checks the remembered preference before starting 
     const source = fs.readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
     const entry = source.slice(source.indexOf('export function openTemporaryArDemoWindow'), source.indexOf('export async function startTemporaryArDemo'));
     assert.match(entry, /shouldSkipArIntroductionPreparation\(\)/);
+    assert.doesNotMatch(entry, /shouldSkipArIntroductionPreparation\(\) && arAssetsReady/);
     assert.match(entry, /renderArIntroductionPreparation/);
     assert.ok(entry.indexOf('isDesktopLearningBookTarget()') < entry.indexOf('shouldSkipArIntroductionPreparation()'));
     assert.ok(entry.indexOf('shouldSkipArIntroductionPreparation()') < entry.indexOf('startTemporaryArDemo(app)'));

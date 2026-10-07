@@ -13,9 +13,9 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "INTRO 1.2",
         "act": "Introduce the tool",
         "title": "Try the tools with sample content",
-        "main": "NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples.\n\nNo experience is needed — just take your time and follow your curiosity.",
+        "main": "NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples.",
         "panel": "Hidden. A real garden project is a separate experience after the sample demo.",
-        "hint": "Start the demo.",
+        "hint": "Let’s start.",
         "art": "opening"
     },
     {
@@ -69,7 +69,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "There’s more to discover",
         "main": "There are many ways to get to know a plant. You might wonder how it grows, what it can provide, how it supports other life, or why it suits a particular place.\n\nLet’s follow one of those questions and see where it leads.",
         "panel": "Plant profile in Curiosity; keep only the relevant branch in focus.",
-        "hint": "Select Uses.",
+        "hint": "Point at a large parent PIMO cell and press the trigger to open it. Try Uses.",
         "art": null
     },
     {

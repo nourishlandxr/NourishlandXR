@@ -72,8 +72,8 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel, sim
                 <div><span aria-hidden="true">◎</span><p><strong>Clear space</strong><small>Stay aware of people and obstacles. On a spatial device, stay within your boundary.</small></p></div>
                 <div><span aria-hidden="true">⌾</span><p><strong>${simpleDesktop?'Explore at your pace':'Camera and tracking'}</strong><small>${simpleDesktop?'Use your mouse to select information. You can leave at any time.':'Your browser may request access when you start AR. Hold your phone securely.'}</small></p></div>
             </div>
-            ${arPreparationControlsMarkup({simpleDesktop,rememberPreparation:!simpleDesktop,compactSettings:true})}
-            <div class="ar-preparation-footer">${simpleDesktop?'<label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>':''}
+            ${arPreparationControlsMarkup({simpleDesktop,compactSettings:true})}
+            <div class="ar-preparation-footer"><p class="meta">Preparation is remembered on this browser.</p>
             <p role="status" data-ar-entry-status hidden></p>
             <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary ar-preparation-start" type="button" data-ar-introduction-continue>${simpleDesktop?'Begin introduction':'Start AR'}</button></div></div>
         </section>
@@ -84,7 +84,7 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel, sim
         const button = event.currentTarget;
         button.disabled = true;
         button.setAttribute('aria-busy','true');button.textContent=simpleDesktop?'Starting…':'Starting AR…';
-        const remember = Boolean(app.querySelector('[data-ar-introduction-remember]')?.checked);
+        const remember = true;
         if (remember) skipArIntroductionPreparation();
         try { await onContinue?.({ remember }); }
         catch {const status=app.querySelector('[data-ar-entry-status]');if(status){status.hidden=false;status.textContent='AR could not start. Please try again.';}}

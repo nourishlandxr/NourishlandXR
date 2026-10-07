@@ -21,7 +21,7 @@ test('hanging root samples have exact attached ends and finite smooth intermedia
 });
 test('HIGH preparation accounts for its artwork and does not reuse another quality readiness state',async()=>{
  const previous=getSpatialVisualSettings();try{setSpatialVisualSettings({graphicsQuality:'medium'});const medium=await prepareArAssets({experience:'creator'});setSpatialVisualSettings({graphicsQuality:'high'});const high=await prepareArAssets({experience:'creator'});assert.equal(medium.total,3);assert.equal(high.total,4);assert.equal(high.loaded,4);}finally{setSpatialVisualSettings(previous);}
- const controls=readFileSync(new URL('../app/services/arPreparationControls.js',import.meta.url),'utf8');assert.match(controls,/setSpatialVisualSettings\(.*\);begin\(\)/);assert.match(controls,/token!==preparationToken/);
+ const controls=readFileSync(new URL('../app/services/arPreparationControls.js',import.meta.url),'utf8');assert.doesNotMatch(controls,/data-ar-graphics/);assert.match(controls,/token!==preparationToken/);
  const roots=readFileSync(new URL('../app/services/arWelcomeRoots.js',import.meta.url),'utf8');assert.match(roots,/detail>1 && drawLivingLeafArtwork/);assert.match(roots,/WELCOME_ROOT_REFRESH_MS/);
 });
 
