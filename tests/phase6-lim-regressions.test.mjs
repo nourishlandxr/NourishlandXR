@@ -125,5 +125,5 @@ test('Quest main selection pipeline activates the nearest PIMO or LIMO surface',
     assert.match(selectStart, /captureDemoInputEventRay\(event\);[\s\S]*resolveDemoCellTarget\(\)/);
     assert.doesNotMatch(selectStart, /beginControllerDemoHold\(\)/);
     const gripStart=demoSource.slice(demoSource.indexOf("session.addEventListener('squeezestart',event=>"),demoSource.indexOf("session.addEventListener('squeezeend',event=>"));
-    assert.match(gripStart,/captureDemoInputEventRay\(event\);[\s\S]*beginControllerDemoHold\(\)/);
+    assert.match(gripStart,/captureDemoInputEventRay\(event\)[\s\S]*beginControllerDemoHold\(\{record:piece/);
 });

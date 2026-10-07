@@ -73,6 +73,7 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
     function begin(source,frame){
         if(!enabled() || !canUse(source) || held.has(source))return held.has(source);
         const value=sample(source,frame);if(!value)return false;let contact=value.position;
+        if(!source.hand){const aim=frame?.getPose(source.targetRaySpace,space)?.transform.matrix;if(aim && !canUse(source,{ray:{origin:{x:aim[12],y:aim[13],z:aim[14]},direction:{x:-aim[8],y:-aim[9],z:-aim[10]}},distance:Infinity}))return false;}
         if(!livingMapGripContact(contact,origin(),rotation()) && !source.hand){
             const pose=frame?.getPose(source.targetRaySpace,space);if(!pose)return false;
             const m=pose.transform.matrix,ray=new THREE.Ray(new THREE.Vector3(m[12],m[13],m[14]),new THREE.Vector3(-m[8],-m[9],-m[10]).normalize());

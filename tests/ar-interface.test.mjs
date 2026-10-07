@@ -225,7 +225,7 @@ test('the demo keeps the three simple Totem forms and uses physical plaques and 
     assert.match(arSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     assert.match(demoSource, /drawSpatialTotemButtons\(gl,sphereRenderer/);
     const demoTotemDraw=demoSource.slice(demoSource.indexOf("markers.forEach(record => {\n        if (record.demoType !== 'zone' || !demoAreaVisible(record))"),demoSource.indexOf('const linkedTotems'));
-    assert.match(demoTotemDraw,/bodyHalfWidth=record\.demoMapPiece\?\.04:\.095,bodyHalfDepth=record\.demoMapPiece\?\.036:\.075,bodyHalfHeight=demoTotemHalfHeight\(record\)/);
+    assert.match(demoTotemDraw,/miniScale=record\.demoMapPiece\?bodyHalfHeight\/DEMO_TOTEM_HALF_HEIGHT_METRES:1,bodyHalfWidth=\.095\*miniScale,bodyHalfDepth=\.075\*miniScale/);
     assert.doesNotMatch(demoTotemDraw,/crownRadius|scale:\{x:1,y:\.7,z:\.5\}/);
     assert.match(demoSource,/drawSpatialTotemPlaques\(gl,prismRenderer,sphereRenderer/);
     const plaqueSource=read('app/services/spatialTotemCards.js');
@@ -1210,7 +1210,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialSphere/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'/);
     assert.match(source, /demoHandMode==='outline' && \(pointerSource\?\.hand \|\| latestTrackedHandStates.length>0\)/);
-    assert.match(source, /function beginControllerDemoHold\(\)/);
+    assert.match(source, /function beginControllerDemoHold\(preferredTarget=null\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
     assert.match(source, /event\.frame\?\.getPose\?\.\(sourceSpace, referenceSpace\)/);
     assert.match(source, /controllerRayEnd\(latestControllerRay/);

@@ -1,5 +1,5 @@
 // Demo-only streamed music and lightweight, original touch tones.
-export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.12 });
+export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.38, beeApproachDuration:110 });
 export function createDemoFeedback() {
     let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
     const encounters=new WeakMap();
@@ -63,7 +63,7 @@ export function createDemoFeedback() {
             else if(beeEncounters.some(id=>!(encounters.get(source) || []).includes(id))){
                 // One short pulse per bee encounter, only when a bee comes
                 // within the near-field radius supplied by the XR scene.
-                encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,40);
+                encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration);
             }
             else if(pulsing.has(source))pulse(source,0,1);
         }

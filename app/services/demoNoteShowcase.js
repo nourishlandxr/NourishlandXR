@@ -35,6 +35,10 @@ export function mountDemoNoteShowcase(root,record,{onChange=()=>{},onClose=()=>{
         if(id==='add'){
             if(arm || note.widgets.length>=WIDGET_LIMIT)return;
             arm=createNoteWidget('timer').id;
+        }else if(id.startsWith('delete:')){
+            const widgetId=id.slice(7);if(widgetId===arm)arm=null;
+            record.appearance={...record.appearance,spatial_note:{...note,widgets:note.widgets.filter(widget=>widget.id!==widgetId)}};
+            states.delete(widgetId);record.demoNoteWidgetStates=Object.fromEntries(states);delete record.demoNoteWidgetPositions?.[widgetId];onChange(record);
         }else if(id.startsWith('widget:') && arm){
             const sample=DEMO_NOTE_WIDGETS.find(item=>item.type===id.slice(7));if(!sample)return;
             record.appearance={...record.appearance,spatial_note:{...note,type:'dynamic',widgets:[...note.widgets,createNoteWidget(sample.type,{...sample,id:arm})]}};

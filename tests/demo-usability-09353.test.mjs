@@ -37,7 +37,7 @@ test('dice shadow softens and expands as a dice is lifted',()=>{
 });
 test('each close bee encounter sends one gentle haptic and controller contact is silent',()=>{
  const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...values)=>{pulses.push(values);return Promise.resolve();}}]}},feedback=createDemoFeedback();
- feedback.tick(100,{sources:[source],beeEncounters:['0:1']});assert.deepEqual(pulses[0],[DEMO_FEEDBACK.beeApproachStrength,40]);
+ feedback.tick(100,{sources:[source],beeEncounters:['0:1']});assert.deepEqual(pulses[0],[DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration]);
  feedback.tick(1600,{sources:[source],beeEncounters:['0:1']});assert.equal(pulses.filter(p=>p[0]>0).length,1);
  feedback.tick(1800,{sources:[source],beeEncounters:['1:1']});assert.equal(pulses.filter(p=>p[0]>0).length,2);
  const beforeContact=pulses.filter(([strength])=>strength>0).length;feedback.tick(2900,{sources:[source],beeContactSources:[source]});assert.equal(pulses.filter(([strength])=>strength>0).length,beforeContact);feedback.destroy();

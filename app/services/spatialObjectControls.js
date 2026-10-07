@@ -21,7 +21,7 @@ export function focusSpatialObjectControls(panel,record,{save=async()=>{},edit=(
             {id:'signs',group:'Signage',label:signsVisible?'Hide signage':'Show signage',description:signsVisible?'Hide the direction and information signs attached to this Totem.':'Show the direction and information signs attached to this Totem.'},
             ...(!demo?[{id:'edit',group:'Signage',label:'✎ Edit Totem',description:'Edit the title and information.'}]:[])
         ];
-        panel?.setObjectContext({title:`Controls · ${type==='note'?'Note':'Totem'}`,hint:type==='note'?'Choose a Note experience, add widgets or use the pencil to edit.':'Show / hide signage, change this Totem form or choose its notification light.',actions,onAction:act});
+        panel?.setObjectContext({title:`Controls · ${type==='note'?'Note':'Totem'}`,linkedName:marker.name || marker.label || 'Spatial object',hint:type==='note'?'Choose a Note experience, add widgets or use the pencil to edit.':'Show / hide signage, change this Totem form or choose its notification light.',actions,onAction:act});
     };
     const act=async action=>{
         marker=record.marker || record;

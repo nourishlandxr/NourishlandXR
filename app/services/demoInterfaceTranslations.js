@@ -1,6 +1,11 @@
 // Shared presentation catalogue: English / Portuguese (Portugal) / Dutch.
 // Do not put object IDs, action names, source URLs or user data in this table.
 export const DEMO_INTERFACE_TRANSLATIONS = [
+ ['Let’s test adding these elements.','Vamos experimentar adicionar estes elementos.','Laten we deze elementen toevoegen.'],
+ ['The map will appear in your space. Then pick up the highlighted Totem and place it on the pulsing circle.','O mapa aparecerá no seu espaço. Depois, pegue no Totem destacado e coloque-o no círculo pulsante.','De kaart verschijnt in je ruimte. Pak daarna de gemarkeerde Totem op en plaats deze op de pulserende cirkel.'],
+ ['Pick up the highlighted Totem and place it on the pulsing circle.','Pegue no Totem destacado e coloque-o no círculo pulsante.','Pak de gemarkeerde Totem op en plaats deze op de pulserende cirkel.'],
+ ['▤ Notes','▤ Notas','▤ Notities'],
+ ['Use the Notes button to create a new Note.','Use o botão Notas para criar uma nova Nota.','Gebruik de knop Notities om een nieuwe notitie te maken.'],
  ['Point at a large parent PIMO cell and press the trigger to open it. Try Uses.','Aponte para uma célula principal grande do PIMO e prima o gatilho para a abrir. Experimente Usos.','Richt op een grote PIMO-hoofdcel en druk op de trigger om deze te openen. Probeer Toepassingen.'],
  ['Let’s start','Vamos começar','Laten we beginnen'],
  ['Pick up the highlighted Totem','Pegue no Totem destacado','Pak de gemarkeerde Totem op'],

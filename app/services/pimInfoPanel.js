@@ -158,6 +158,7 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
     buttons.push({action:'Settings',label:'Settings',kind:'menu',x:18,y:216,width:174,height:56});
     menuUtilities.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='close'?'Close demo':item.label,ariaLabel:item.ariaLabel || item.label,title:item.description,description:item.description,kind:'menu',disabled:Boolean(item.disabled),x:18,y:284+index*62,width:174,height:54}));
     buttons.push({action:'Hide',label:'▣ Minimize',ariaLabel:'Minimize control panel. Show panel restores it.',kind:'menu',x:18,y:284+menuUtilities.length*62,width:174,height:54});
+    buttons.push({action:'Notes',label:'▤ Notes',ariaLabel:'Create or select a Note',kind:'menu',x:18,y:height-76,width:174,height:54});
     if(pageCount>1)buttons.push({action:'Previous',label:'Summary',ariaLabel:'Return to the topic summary',kind:'pager',x:650,y:130,width:146,height:42,disabled:page===0},{action:'Next',label:'More info →',ariaLabel:'Read further information in this panel',kind:'pager',x:804,y:130,width:166,height:42,disabled:page>=pageCount-1});
     historyUtilities.filter(item=>item.id!=='forward' || !item.disabled).forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='back'?'‹':'›',ariaLabel:item.label,title:item.description,kind:'history',disabled:Boolean(item.disabled),x:18+index*56,y:284+(menuUtilities.length+1)*62,width:48,height:42}));
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-moduleRows*58-62,width:226,height:48}));
@@ -395,6 +396,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(action.startsWith('Language:')){setNxrLanguage(action.slice(9));render(true);return;}
         if(action.startsWith('OpenSource:')){const link=selection?.sourceLinks?.[Number(action.slice(11))];if(/^https?:\/\//i.test(link?.url || ''))globalThis.open?.(link.url,'_blank','noopener,noreferrer');return;}
         if(guidanceAction===action){guidanceAction='';element.classList.remove('is-panel-guidance');element.querySelectorAll('.is-guidance-target').forEach(button=>button.classList.remove('is-guidance-target'));}
+        if(action==='Notes'){onUtilityAction('notes');return;}
         if(action.startsWith('Object:')){objectContext?.onAction?.(action.slice(7));return;}
         if(action==='Explorer'){explorerClosed=!explorerClosed;render(true);return;}
         if(action.startsWith('KnowledgeMode:')){panelModeChoice=action.split(':')[1];if(!availablePimoModes().includes(panelModeChoice))return;if(!knowledgeRecord){renderExplorer();return;}}
@@ -970,7 +972,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.explorer){
-            ctx.fillStyle='#edf3e4';ctx.font='700 30px Manrope, system-ui';ctx.fillText('Controls',24,12,180);ctx.font='500 24px Manrope, system-ui';ctx.fillStyle='#cfdfd9';ctx.fillText(card.question,230,15,600);
+            ctx.fillStyle='#edf3e4';ctx.font='700 30px Manrope, system-ui';ctx.fillText('Controls',24,12,180);ctx.font='500 20px Manrope, system-ui';ctx.fillStyle='#cfdfd9';ctx.fillText(card.linkedLabel || card.question,230,15,600);
             for(const item of card.controls){
                 if(item.kind==='heading'){ctx.globalAlpha=1;ctx.textAlign='left';ctx.font='650 23px Manrope, system-ui';ctx.fillStyle='#eef8e5';ctx.fillText(item.label,item.x,item.y,item.width);continue;}
                 ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;
@@ -1156,6 +1158,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         return hover;
     }
     function explorerControls(){
+        if(selection?.controlsType==='LIMO' && !objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},{action:'Utility:limo-show',label:'Show cells',x:22,y:62,width:464,height:54},{action:'Utility:limo-hide',label:'Hide cells',x:506,y:62,width:464,height:54}];
         if(objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...spatialControlLayout(objectContext.actions).map(item=>({...item,action:'Object:'+item.id}))];
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:panelModeChoice};
         return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...availablePimoModes().map((id,i)=>({action:'KnowledgeMode:'+id,label:KNOWLEDGE_MODES[id].label,x:22+i*326,y:62,width:304,height:54,kind:'mode',description:KNOWLEDGE_MODES[id].description,selected:state.mode===id}))];
@@ -1166,7 +1169,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         explorerElement.hidden=hidden || detached || confirmation || explorerClosed || Boolean(renderer);element.classList.toggle('has-explorer-companion',!explorerElement.hidden);if(explorerElement.hidden)return;
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:availablePimoModes().includes(panelModeChoice)?panelModeChoice:'curiosity'},main=element.getBoundingClientRect();explorerElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
         explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? main.left)+'px';explorerElement.style.top=(explorerPosition?.y ?? Math.max(8,Math.min(main.bottom+12,window.innerHeight-166)))+'px';
-        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=objectContext?.title || (knowledgeRecord?'Controls · PIMO modes':'Controls');header.append(title);header.title='Grip to move Controls';
+        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=objectContext?.linkedName || identity?.plant || record?.name || selection?.title || '';header.append(linked);
         const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
         const modes=document.createElement('nav');modes.className='nlxr-explorer-modes';modes.setAttribute('aria-label','Knowledge view');
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','Explorer options');
@@ -1255,7 +1258,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             mediaCollapsed=true;mediaTouched=false;
             if(imageSource)mediaCollapsed=false;
             loadPanelImage(imageSource,{delayMs:Number(content?.imageTransitionDelayMs)||0,discardPrevious:Boolean(content?.discardPreviousImage)});
-            tab='Details';page=0;render(true);
+            tab='Details';page=0;if(content?.controlsType)explorerClosed=false;render(true);
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
@@ -1283,6 +1286,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
         setIntroduction(value){introduction=Boolean(value);element.classList.toggle('is-intro-reveal',introduction);},
         focusPlant(nextRecord,document,media=null){
+            explorerClosed=false;
             objectContext=null;
             const previousMedia=record===nextRecord ? identity?.media : null;
             const previousHint=record===nextRecord ? identity?.hint : '';
@@ -1371,6 +1375,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
+            explorerCard.linkedLabel=(objectContext?.linkedName || identity?.plant || record?.name || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,

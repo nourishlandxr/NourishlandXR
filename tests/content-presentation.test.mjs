@@ -210,7 +210,7 @@ test('Totem examples stay generic and use short local signs', () => {
 test('Areas lead into the final learning feature with quiet mapped objects', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const styles = read('app/living-objects.css');
-    assert.match(demo, /'Explore, learn and plan',\s*showDemoLivingMap/);
+    assert.match(demo, /'Continue',\s*showDemoLivingMap/);
     assert.match(demo, /'Continue to Learning Pathways',\s*showLimoLearningModes/);
     assert.match(demo, /guidedDemoStep\('LEARNING 1\.6'\)\.title/);
     assert.match(demo, /'Explore Learning Pathways',\s*showLimoArchetypes/);

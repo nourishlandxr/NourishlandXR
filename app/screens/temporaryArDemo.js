@@ -3,20 +3,20 @@ import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '..
 import {DEMO_GUIDED_COPY,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
 import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress,LIVING_MAP_ORB_SETTLE_MS} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
-import {livingMapReveal,drawLivingMapPreview,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapRotation} from '../services/demoLivingMapReveal.js';
+import {livingMapReveal,drawLivingMapPreview,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapRotation,livingMapTotemRayHit} from '../services/demoLivingMapReveal.js';
 import {createDemoLivingMapXR} from '../services/demoLivingMapXR.js';
 import {livingMapPlacementCopy,resetDemoPlantForMap} from '../services/demoLivingMapPresentation.js';
 import {createLivingMapGripInput,limitLivingMapTilt} from '../services/demoLivingMapGrip.js';
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
-let demoLivingMapPlacement=null;
+let demoLivingMapPlacement=null,demoMapIntroPaused=false;
 let demoLivingMapXR=null,demoLivingMapOrigin=null,demoLivingMapOrientation={x:0,y:0,z:0,w:1},demoLivingMapGrip=null,demoMapNarrationCount=-1;
 function disposeSpatialLivingMap(){demoLivingMapGrip?.reset();demoLivingMapXR?.destroy();demoLivingMapXR=null;demoLivingMapOrigin=null;demoLivingMapOrientation={x:0,y:0,z:0,w:1};appRoot?.querySelector('[data-spatial-living-map]')?.remove();}
-function demoLivingMapReady(){return livingMapReveal(demoLivingMapElapsed()).ready;}
+function demoLivingMapReady(){return !demoMapIntroPaused && livingMapReveal(demoLivingMapElapsed()).ready;}
 function setDemoLivingMapRotation(value){const q=limitLivingMapTilt(value);demoLivingMapOrientation={x:q.x,y:q.y,z:q.z,w:q.w};demoLivingMapScene?.setRotation(q);if(livingMapReveal(demoLivingMapElapsed()).preview>0)introBoardTextureDirty=true;}
 function rotateDemoLivingMap(delta,tilt=0){if(!simulatedMode || !demoLivingMapReady())return;const q=livingMapRotation(delta).multiply(livingMapRotation(demoLivingMapOrientation));if(tilt)q.multiply({x:Math.sin(tilt/2),y:0,z:0,w:Math.cos(tilt/2)});setDemoLivingMapRotation(q);paintWelcomeLayer(performance.now());}
 function updateSpatialLivingMap(now){
-    if(introBoardStep!=='UTILITY 1.1' || !demoLivingMapScene)return null;
+    if(introBoardStep!=='UTILITY 1.1' || !demoLivingMapScene || demoMapIntroPaused)return null;
     const elapsed=demoLivingMapElapsed(now),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches,reveal=livingMapReveal(elapsed,reduced);
     if(reveal.appear>0 && !demoLivingMapOrigin && viewerMatrix){
         const m=viewerMatrix,length=Math.hypot(m[8],m[10]) || 1;
@@ -42,6 +42,7 @@ const DEMO_MAP_RECT=Object.freeze({x:420,y:300,width:560,height:400});
 const demoLivingMapPlayback=createDemoLivingMapPlayback();
 let demoLivingMapWasPlaying=false;
 function demoLivingMapElapsed(now=performance.now()){
+    if(demoMapIntroPaused)return 0;
     if(demoLivingMapPlacement)return Math.max(0,now-demoLivingMapStartedAt);
     return demoLivingMapPreviewClock ? demoLivingMapPreviewClock(now,demoLivingMapStartedAt) : demoLivingMapPlayback.elapsed(now);
 }
@@ -433,7 +434,7 @@ const demoLocalizedText = value => translateNxrText(value);
 const welcomeBoardParagraphs = () => WELCOME_BOARD_PARAGRAPHS.map(demoLocalizedText);
 const demoIsPortuguese = () => currentNxrLanguage() === 'pt-PT';
 const demoIsDutch = () => currentNxrLanguage() === 'nl-NL';
-const demoIntroLabel = () => arWelcomeOpeningActive?'NourishlandXR':introBoardStep || 'Sample demo';
+const demoIntroLabel = () => arWelcomeOpeningActive?'':introBoardStep || 'Sample demo';
 let demoJourneyStage='why';
 
 function setDemoJourneyStage(stageId) {
@@ -744,6 +745,8 @@ function setLimMeshVisible(visible) {
 }
 
 function handleDemoPanelAction(action) {
+    if(action==='notes'){const note=markers.find(record=>record.demoType==='note');if(note)openDemoNoteExperience(note);else createDemoNote();return;}
+    if(action==='limo-show' || action==='limo-hide'){setLimMeshVisible(action==='limo-show');return;}
     demoFeedback?.sound('menu');
     if(action==='close-cancel'){cancelDemoClose();return;}
     if(action==='close-confirm'){void confirmDemoClose();return;}
@@ -942,7 +945,7 @@ function continueAfterDemoPim(record) {
 }
 
 function showDemoPanelIntroduction(record,index=0){
-    const id=index===0?'PANEL 1.1':'PANEL 1.2',step=guidedDemoStep(id);
+    const id='PANEL 1.2',step=guidedDemoStep(id);index=1;
     infoPanel?.setMediaCollapsed(index!==0);
     infoPanel?.setExplorerOpen(index!==0);
     infoPanel?.setSettingsOpen(false);
@@ -1728,7 +1731,7 @@ function activateLimCell(key) {
     // archetypes remain quiet until the visitor chooses to open them.
     if(!limExpandedCells.has(content.id))limExpandedAt.set(content.id,arWelcomeClock.elapsed);
     limExpandedCells.add(content.id);
-    infoPanel?.showLearning({...content,mesh:'lim'});
+    infoPanel?.showLearning({...content,mesh:'lim',controlsType:'LIMO'});infoPanel?.setExplorerOpen(true);
     if(nativeConnectionState && nativeConnectionState.phase!=='connected')nativeConnectionPanelGuide();
     infoPanel?.suspend(false);
     infoPanel?.setCompact(false);
@@ -2053,6 +2056,7 @@ function showArWelcomeShowcase() {
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
         introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
+        introBoardVisibleBody='';introBoardParagraphFadeTimes=[];introTextureUploadedAt=-Infinity;introBoardTextureDirty=true;
         const continueOpeningCopy=event=>{event?.stopImmediatePropagation?.();suppressSessionSelectUntil=performance.now()+700;if(introBoardStep!=='INTRO 1.2')return;openingTyping=false;clearDemoNarration();const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.disabled=true;button.onclick=null;}clearTimeout(arWelcomeUnlockTimer);arWelcomeIntroPending=false;arWelcomeSettleStage=false;runArWelcomeTutorial(0);};
         rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Let’s start',onContinue:continueOpeningCopy,kind:'welcome'});
         const openingButton=appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -2460,7 +2464,7 @@ function createDemoSecondTotem() {
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.secondAreaShown);
     updateSimulatedMarkers();
     connectDemoTotems();
-    showIntroBoard('Follow the direction','The neighbouring Totem is now visible.\n\nFollow its sign to move through the real space. Each Totem welcomes you to its own Area, plants and Notes.','Explore, learn and plan',showDemoLivingMap,{stepLabel:'ELEMENTS 1.21',dynamicCopy:true,nextGuide:'Point at a sign to highlight its destination.'});
+    showIntroBoard('Follow the direction','The neighbouring Totem is now visible.\n\nFollow its sign to move through the real space. Each Totem welcomes you to its own Area, plants and Notes.','Continue',showDemoLivingMap,{stepLabel:'ELEMENTS 1.21',dynamicCopy:true,nextGuide:'Point at a sign to highlight its destination.'});
 }
 
 function connectDemoTotems() {
@@ -2475,17 +2479,20 @@ function connectDemoTotems() {
     updateSimulatedMarkers();
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.areasConnected);
     setGuide('The Areas are linked. Each Totem still keeps its own local plants and Notes.');
-    showSceneContinue('Explore, learn and plan',showDemoLivingMap, 'ELEMENTS 1.21');
+    showSceneContinue('Continue',showDemoLivingMap, 'ELEMENTS 1.21');
 }
 
 function showDemoLivingMap(){
     limMeshVisible=false;
+    placementReady=false;
+    demoMapIntroPaused=true;
     demoMapNarrationCount=-1;closeDemoKnowledge(true);releaseHeldDemoRecord();
     for(const record of markers){if(resetDemoPlantForMap(record)){knowledgeRenderer?.clear(record);infoPanel?.clearPlant?.(record);}if(record.demoType==='zone'){record.demoExpanded=false;record.totemSelectedCard='';record.totemCardsRefreshed=0;}}
     const step=guidedDemoStep('UTILITY 1.1');
-    showIntroBoard(step.title,step.main,
-        'Learn before planting',showDemoBeforePlanting,
-        {stepLabel:step.id,dynamicCopy:true,nextGuide:step.hint});
+    showIntroBoard(step.title,'Let’s test adding these elements.','Continue',()=>{
+        demoMapIntroPaused=false;demoLivingMapStartedAt=performance.now();demoMapNarrationCount=-1;
+        showIntroBoard(step.title,'The map will appear in your space. Then pick up the highlighted Totem and place it on the pulsing circle.','Continue',showDemoBeforePlanting,{stepLabel:step.id,dynamicCopy:true,nextGuide:step.hint});
+    },{stepLabel:step.id,dynamicCopy:true,nextGuide:''});
     infoPanel?.showLearning({id:'demo-living-map',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);infoPanel?.setMediaCollapsed(true);infoPanel?.minimize();
     infoPanel?.setContextualHint('Grip both opposite edges to carry, turn and gently tilt the landscape. With tracked hands, pinch both edges. Release either grip to leave it in place. Place the Totem beside the frame on the pulsing circle.');
@@ -2582,7 +2589,7 @@ function showLinkedTotemsIntroduction() {
     showIntroBoard(
         step.title,
         step.main.split('\n\n'),
-        'Explore, learn and plan',
+        'Continue',
         showDemoLivingMap,
         {stepLabel:'ELEMENTS 1.22'}
     );
@@ -3883,6 +3890,7 @@ function pointerDistanceToRecord(record) {
 function demoRecordRayHit(record, inputRay=latestControllerRay) {
     const ray=inputRay?.direction || demoPointerWorldRay(),origin=inputRay?.origin || demoPointerWorldOrigin();
     if(!origin || !ray || !record?.position)return null;
+    if(record.demoMapPiece)return livingMapTotemRayHit({origin,direction:ray},record.position);
     if(record.demoType==='note'){
         const matrix=billboardMatrix(record.position,DEMO_NOTE_IMMERSIVE_SCALE.x,DEMO_NOTE_IMMERSIVE_SCALE.y);
         const right={x:matrix[0]/DEMO_NOTE_IMMERSIVE_SCALE.x,y:matrix[1]/DEMO_NOTE_IMMERSIVE_SCALE.x,z:matrix[2]/DEMO_NOTE_IMMERSIVE_SCALE.x};
@@ -4020,10 +4028,10 @@ function beginPointerDemoHold(event) {
     return true;
 }
 
-function beginControllerDemoHold() {
+function beginControllerDemoHold(preferredTarget=null) {
     if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
     const profile=demoInfoTarget();
-    const target = demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
+    const target = preferredTarget || demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
     if (!target || target.record.demoInteractive === false) return false;
     const origin=demoPointerWorldOrigin();if(!origin || !captureDemoGrabPose(target.record,origin,demoPointerWorldRay()))return false;
     demoGrabPreparingIndex=-1;demoHeldIndex=target.index;pulseDemoHaptics(demoGrabInputSource,true);
@@ -4056,9 +4064,20 @@ function focusDemoObjectControls(record){
     if(record.demoMapPiece)return false;
     return focusSpatialObjectControls(infoPanel,record,{demo:true,edit:openDemoNoteEditor,open:openDemoNoteExperience,refresh:item=>{refreshDemoRecord(item);item.totemCardsRefreshed=0;updateSimulatedMarkers();}});
 }
+function createDemoNote(source=null){
+    const count=markers.filter(item=>item.demoType==='note').length+1,m=viewerMatrix,p=source?.position || {x:(m?.[12] || 0)-(m?.[8] || 0),y:(m?.[13] || 1.4)-.2,z:(m?.[14] || 0)-(m?.[10] || 1)};
+    const note={...createMinimalMarkerDraft('note',{name:'Garden Note '+count}),id:'demo-extra-note-'+Date.now(),name:'Garden Note '+count,description:'Notice one change in this place.',demoType:'note',demoInteractive:true,demoAreaId:source?.demoAreaId,position:{x:p.x+(source?.6:0),y:p.y,z:p.z},simulatedAnchor:{x:50,y:50},appearance:{spatial_note:{type:'plain',widgets:[]}}};
+    note.demoContent={title:note.name,description:note.description,lines:[note.description]};markers.push(note);refreshDemoRecord(note);updateSimulatedMarkers();openDemoNoteExperience(note);return note;
+}
+function deleteDemoNote(record){
+    const placed=demoPlacedNoteViews.get(String(record.id));if(placed){placed.renderer.destroy();placed.workspace.destroy();placed.root.remove();demoPlacedNoteViews.delete(String(record.id));}
+    if(demoKnowledgeRoot?.dataset.noteRecord===String(record.id)){demoNoteRenderer=null;demoKnowledgeWorkspace=null;demoKnowledgeRoot=null;}
+    const index=markers.indexOf(record);if(index>=0)markers.splice(index,1);updateSimulatedMarkers();infoPanel?.restore();infoPanel?.showLearning({title:'Notes',body:'Use the Notes button to create a new Note.',mesh:'note'});infoPanel?.setObjectContext({title:'Controls · Notes',linkedName:'Notes',actions:[{id:'new-note',label:'+ Note'}],onAction:()=>createDemoNote()});infoPanel?.setExplorerOpen(true);
+}
 function focusDemoNoteControls(record){
     infoPanel?.restore();infoPanel?.showLearning({title:record.name,body:record.description || record.notes,mesh:'note'});
-    infoPanel?.setObjectContext({title:'Controls · Note',hint:'Add a connected widget. Grip any Note card to move it.',actions:[{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'}],onAction:id=>{
+    infoPanel?.setObjectContext({title:'Controls · Note',linkedName:record.name,hint:'Add a connected widget. Grip any Note card to move it.',actions:[{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'},...(record.demoNoteSelectedCard?[{id:'delete-selected',label:'Delete',description:'Delete the held Note card.'}]:[])],onAction:id=>{
+        if(id==='delete-selected'){if(record.demoNoteSelectedCard==='main'){deleteDemoNote(record);return;}const selected=record.demoNoteSelectedCard;delete record.demoNoteSelectedCard;openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.('delete:'+selected);return;}
         if(id==='new-note'){
             const count=markers.filter(item=>item.demoType==='note').length+1,p=record.position || {x:0,y:1,z:-1};
             const note={...createMinimalMarkerDraft('note',{name:'Garden Note '+count}),id:'demo-extra-note-'+count,name:'Garden Note '+count,description:record.description || record.notes || 'Notice one change in this place.',demoType:'note',demoInteractive:true,demoAreaId:record.demoAreaId,position:{x:p.x+.6,y:p.y,z:p.z},simulatedAnchor:{x:Math.min(85,(record.simulatedAnchor?.x || 50)+12),y:record.simulatedAnchor?.y || 50},appearance:{...record.appearance,spatial_note:{type:'plain',widgets:[]}}};
@@ -4087,7 +4106,7 @@ function openDemoNoteExperience(record){
     const root=document.createElement('section');root.dataset.noteRecord=String(record.id);demoKnowledgeRoot=root;appRoot.append(root);
     demoKnowledgeWorkspace=mountDemoNoteShowcase(root,record,{onChange:item=>{item.demoContent={...item.demoContent,title:item.name,description:item.description,lines:[item.description]};refreshDemoRecord(item);updateSimulatedMarkers();focusDemoNoteControls(item);},onClose:()=>closeDemoKnowledge(true)});
     root.classList.add('demo-knowledge-workspace','is-ar-pim-side-note');
-    if(session && gl){root.style.cssText='position:fixed;left:-20000px;pointer-events:none';demoNoteRenderer=createNoteSpatialRenderer(gl,root,record,viewerMatrix,{widgetPlacement:demoNoteWidgetPlacement});demoPlacedNoteViews.set(String(record.id),{record,root,workspace:demoKnowledgeWorkspace,renderer:demoNoteRenderer});}
+    if(session && gl){root.style.cssText='position:fixed;left:-20000px;pointer-events:none';demoNoteRenderer=createNoteSpatialRenderer(gl,root,record,viewerMatrix,{widgetPlacement:demoNoteWidgetPlacement,onHold:id=>{record.demoNoteSelectedCard=id;focusDemoNoteControls(record);}});demoPlacedNoteViews.set(String(record.id),{record,root,workspace:demoKnowledgeWorkspace,renderer:demoNoteRenderer});}
     focusDemoNoteControls(record);
 }
 function openDemoNoteEditor(record,widgetId=''){
@@ -4648,6 +4667,7 @@ function releaseDemoButterfly(insect){
     const anchor=perch || insect.flightAnchor || {right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}};
     insect.heldSource=null;insect.perchMs=landed?4500:0;
     insect.startedAt=arWelcomeClock.elapsed-(landed?0:4500);insect.releasedPerch=landed;
+    insect.releasedFree=!landed;insect.handPosition=null;
     const resumed=landed?null:demoButterflyPose(arWelcomeClock.elapsed,insect.startedAt,{perchMs:0,seed:insect.seed});
     insect.flightAnchor=rest?{...anchor,center:{x:rest.x-(anchor.right.x*(resumed?.x || 0)+anchor.normal.x*(resumed?.z || 0)),y:rest.y+(landed ? .025 : 0)-(resumed?.y || 0),z:rest.z-(anchor.right.z*(resumed?.x || 0)+anchor.normal.z*(resumed?.z || 0))}}:null;insect.lastElapsed=NaN;insect.encounter=null;
 }
@@ -4930,15 +4950,15 @@ function drawIntroNoteContent(ctx) {
     if(introBoardStep==='UTILITY 1.1' && demoLivingMapScene){
         ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
         ctx.fillStyle='#dfecc8';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('UTILITY 1.1',700,130,920);
+        ctx.fillText('UTILITY 1.1',700,245,920);
         ctx.fillStyle='#f4f5e7';ctx.font=`700 48px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText(guidedDemoStep('UTILITY 1.1').title,700,175,920);
+        ctx.fillText(demoMapIntroPaused?'Let’s test adding these elements.':guidedDemoStep('UTILITY 1.1').title,700,300,920);
         ctx.font=`500 28px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('Explore how plants, Totems and Areas connect a living place.',700,225,850);
+        if(!demoMapIntroPaused)ctx.fillText('Pick up the highlighted Totem and place it on the pulsing circle.',700,350,850);
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
         const elapsed=demoLivingMapElapsed(),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,DEMO_MAP_RECT);
-        if(livingMapReveal(elapsed,reduced).preview<.05){
+        drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:410,height:350,hideGuidance:demoMapIntroPaused});
+        if(!demoMapIntroPaused && livingMapReveal(elapsed,reduced).preview<.05){
             ctx.font=`500 34px ${DEMO_PRESENTATION_FONT}`;
             const copy=demoLocalizedText(livingMapPlacementCopy(demoLivingMapPlacement?.snapshot().length || 0));
             wrappedTextureLines(ctx,copy,850).forEach((line,index)=>ctx.fillText(line,700,370+index*44));
@@ -4967,8 +4987,8 @@ function drawIntroNoteContent(ctx) {
         if(arWelcomeOpeningActive || openingElapsed<DEMO_WELCOME_OPENING_MS){
             const openingTitle=demoLocalizedText('Welcome to the NourishlandXR demo');
             let openingTitleSize=72;
-            ctx.fillStyle='#ffffff';
-            ctx.font=`700 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;
+            ctx.fillStyle='#e7ffed';
+            ctx.font=`800 ${openingTitleSize}px ${DEMO_PRESENTATION_FONT}`;
             ctx.fillText(openingTitle,contentCenter,420,titleWidth);
             if(openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){
                 ctx.fillStyle='#fff';ctx.textBaseline='top';
@@ -4993,7 +5013,7 @@ function drawIntroNoteContent(ctx) {
     // the divider/body copy on the compact spatial note (notably Pigeon Pea).
     let titleSize = 72;
     const titleFont = DEMO_PRESENTATION_FONT;
-    ctx.font = `700 ${titleSize}px ${titleFont}`;
+    ctx.font = `800 ${titleSize}px ${titleFont}`;
     ctx.fillText(introBoardTitle, contentCenter, 420,titleWidth);
     if (introBoardVisibleBody) {
     ctx.strokeStyle = 'rgba(241,249,237,.25)';
@@ -5490,7 +5510,7 @@ function drawSpatialButterfly(view){
                 if(insect.encounter?.index!==pose.encounterIndex)insect.encounter={index:pose.encounterIndex,x:viewerMatrix[12]-viewerMatrix[8]*.85+viewerMatrix[0]*(insect.red?-.18:.18),y:viewerMatrix[13]-.10,z:viewerMatrix[14]-viewerMatrix[10]*.85+viewerMatrix[2]*(insect.red?-.18:.18)};
                 position={x:position.x+(insect.encounter.x-position.x)*pose.close,y:position.y+(insect.encounter.y-position.y)*pose.close,z:position.z+(insect.encounter.z-position.z)*pose.close};
             }
-            if(pose.flight>0 && !insect.releasedPerch)position=keepButterflyOutsideFrame(position,insect.side);
+            if(pose.flight>0 && !insect.releasedPerch && !insect.releasedFree)position=keepButterflyOutsideFrame(position,insect.side);
             position=keepInsectAboveFloor(position,calibratedDemoGroundY());
             if(pose.state!=='landed' && insect.position){const dx=position.x-insect.position.x,dy=position.y-insect.position.y,dz=position.z-insect.position.z,horizontal=Math.hypot(dx,dz);if(horizontal>.0001){pose.yaw=Math.atan2(dx,dz);pose.pitch=-Math.atan2(dy,horizontal)*.4;}}
             if(pose.state==='landed')pose.yaw=insect.red?-.85:.85;
@@ -5711,7 +5731,7 @@ function drawMarker(view) {
         const groundBaseY = Number.isFinite(Number(record.groundBaseY))
             ? Number(record.groundBaseY)
             : Number(record.position?.y || 0) - demoTotemHalfHeight(record);
-        const bodyHalfWidth=record.demoMapPiece?.04:.095,bodyHalfDepth=record.demoMapPiece?.036:.075,bodyHalfHeight=demoTotemHalfHeight(record),rotationY=demoTotemRotationY(record);
+        const bodyHalfHeight=demoTotemHalfHeight(record),miniScale=record.demoMapPiece?bodyHalfHeight/DEMO_TOTEM_HALF_HEIGHT_METRES:1,bodyHalfWidth=.095*miniScale,bodyHalfDepth=.075*miniScale,rotationY=demoTotemRotationY(record);
         const style=renderedTotemStyle(record);
         if(style==='organic' || style==='flat-disc'){
             const radius=style==='organic'?.28:.32,light=totemNotificationLight(record),base={...record.position,y:groundBaseY+(style==='organic'?radius:.045)};
@@ -5968,6 +5988,21 @@ async function startImmersive() {
             canUse:(source,contact)=>{if(butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || infoPanel?.getHeldInputSource()===source)return false;if(!contact)return true;const piece=markers.find(record=>record.demoMapPiece),pieceHit=piece?demoRecordRayHit(piece,contact.ray):null;return [pieceHit,infoPanel?.hit(contact.ray),knowledgeRenderer?.hit(contact.ray),totemCardsRenderer?.hit(contact.ray),demoNoteHit(contact.ray)].filter(Boolean).every(hit=>hit.distance>=contact.distance);},
             onGrab:source=>pulseDemoHaptics(source,true)
         });
+        // Reserve the loose Totem before map/panel capture listeners can take
+        // its grip. A visible nearer panel still wins, matching the laser.
+        session.addEventListener('squeezestart',event=>{
+            if(event.inputSource?.hand || introBoardStep!=='UTILITY 1.1' || !demoLivingMapReady() || demoKnowledgeIsModal() || demoWebModeOpen)return;
+            const ray=captureDemoInputEventRay(event),piece=markers.find(record=>record.demoMapPiece),hit=piece && demoRecordRayHit(piece,ray);
+            if(!ray || !hit)return;
+            if([infoPanel?.hit(ray),demoNoteHit(ray)].filter(Boolean).some(surface=>surface.distance<hit.distance))return;
+            demoGrabInputSource=event.inputSource;
+            if(beginControllerDemoHold({record:piece,index:markers.indexOf(piece),hit})){event.stopImmediatePropagation();event.preventDefault();}
+        },{capture:true});
+        session.addEventListener('squeezeend',event=>{
+            if(event.inputSource!==demoGrabInputSource || !markers[demoHeldIndex]?.demoMapPiece)return;
+            captureDemoInputEventRay(event);updateHeldDemoRecordPosition();releaseHeldDemoRecord();
+            suppressSessionSelectUntil=performance.now()+280;event.stopImmediatePropagation();event.preventDefault();
+        },{capture:true});
         demoLivingMapGrip.bind(session,referenceSpace);
         // Finish constructing the immersive UI and its welcome texture before
         // the first XR frame is requested. Desktop fallback is rendered by the
@@ -6035,7 +6070,8 @@ async function startImmersive() {
                 if(limInputSource!==event.inputSource){limInputSuppressSource=null;limInputSource=event.inputSource;limActivation.start(pressedCell.node.key,performance.now(),'xr-hold-fallback');startLimActivationFrame();}
                 return;
             }
-            if(['pim-cell','panel','note'].includes(pressedCell?.kind))return;
+            if(pressedCell?.kind==='note'){demoNoteHit(latestControllerRay)?.noteRenderer.beginSelection(latestControllerRay,event.inputSource);return;}
+            if(['pim-cell','panel'].includes(pressedCell?.kind))return;
             if(demoKnowledgeIsModal()) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;
             if (demoWebModeOpen || performance.now() < suppressSessionSelectUntil) return;
@@ -6045,6 +6081,8 @@ async function startImmersive() {
         session.addEventListener('selectend', event => {
             if(event.inputSource?.hand)return;
             captureDemoInputEventRay(event);
+            let noteHeld=false;for(const view of demoPlacedNoteViews.values())noteHeld=view.renderer.endSelection(event.inputSource) || noteHeld;
+            if(noteHeld){suppressSessionSelectUntil=performance.now()+280;event.stopImmediatePropagation();return;}
             const butterfly=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(butterfly && butterflyTriggerSources.has(event.inputSource)){releaseDemoButterfly(butterfly);suppressSessionSelectUntil=performance.now()+280;return;}
             if(event.inputSource===limInputSource){
                 const heldKey=limActivation.activeKey;

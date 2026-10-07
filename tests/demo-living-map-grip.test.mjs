@@ -2,8 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../app/vendor/three.module.min.js';
 import {createLivingMapTwoGrip,createLivingMapGripInput,limitLivingMapTilt,LIVING_MAP_MAX_TILT} from '../app/services/demoLivingMapGrip.js';
-import {livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted} from '../app/services/demoLivingMapReveal.js';
+import {livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapTotemRayHit} from '../app/services/demoLivingMapReveal.js';
 const origin={x:0,y:1,z:-1},identity=new THREE.Quaternion(),left={},right={};
+test('loose Totem can be grabbed from front, side and above without a facing-plane miss',()=>{
+    for(const offset of [{x:1,y:0,z:0},{x:0,y:1,z:0},{x:0,y:0,z:1}]){
+        const hit=livingMapTotemRayHit({origin:{x:origin.x+offset.x,y:origin.y+offset.y,z:origin.z+offset.z},direction:{x:-offset.x,y:-offset.y,z:-offset.z}},origin);
+        assert.ok(hit);assert.ok(Math.abs(hit.distance-.875)<1e-6);
+    }
+    assert.equal(livingMapTotemRayHit({origin:{x:1,y:1,z:-1},direction:{x:0,y:0,z:-1}},origin),null);
+});
+test('map grip capture yields to a loose Totem even when controller touches the rim',()=>{
+    const session=new EventTarget(),source={targetRaySpace:{},gripSpace:{},gamepad:{buttons:[{},{pressed:true}]}},frame={getPose:()=>({transform:{matrix:new THREE.Matrix4().makeTranslation(.5,1,-1).elements}})};
+    const input=createLivingMapGripInput({enabled:()=>true,origin:()=>origin,rotation:()=>identity,onRotate:()=>{},canUse:(_source,contact)=>!contact});
+    input.bind(session,{});const event=new Event('squeezestart',{cancelable:true});event.inputSource=source;event.frame=frame;session.dispatchEvent(event);
+    assert.equal(event.defaultPrevented,false);assert.equal(input.owns(source),false);input.destroy();
+});
 function samples(q=identity){return [left,right].map((source,i)=>{const p=new THREE.Vector3(i?.5:-.5,0,0).applyQuaternion(q).add(new THREE.Vector3(0,1,-1)),up=new THREE.Vector3(0,1,0).applyQuaternion(q);return {source,handedness:i?'right':'left',position:p,up,pressed:true,tracked:true};});}
 test('one grip cannot rotate; two opposite grips allow a continuous complete turn',()=>{
     const state=createLivingMapTwoGrip();assert.equal(state.update(samples().slice(0,1),origin,identity),null);assert.equal(state.active,false);

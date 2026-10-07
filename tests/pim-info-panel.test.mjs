@@ -102,7 +102,7 @@ test('Control panel keeps navigation separate from experience actions',()=>{
     assert.equal(controlPanelControls().find(b=>b.action==='Help').label,'Help');
     const menu=controlPanelControls({height:760,utilityActions:[{id:'lim-visibility',label:'Hide learning cells'},{id:'close',label:'Close demo'}]});
     const menuActions=menu.filter(button=>button.kind==='menu');
-    assert.deepEqual(menuActions.map(button=>button.action),['Settings','Utility:close','Utility:lim-visibility','Hide']);
+    assert.deepEqual(menuActions.map(button=>button.action),['Settings','Utility:close','Utility:lim-visibility','Hide','Notes']);
     assert.ok(menuActions.find(button=>button.action==='Hide').y>menuActions.find(button=>button.action==='Utility:close').y);
     assert.equal(menu.some(button=>button.kind==='utility' && ['Utility:lim-visibility','Utility:close'].includes(button.action)),false);
     const utilities=controlPanelControls({tab:'Details',height:760,utilityActions:[{id:'continue',label:'Continue'},{id:'recenter',label:'Recenter panel'}]});

@@ -3,6 +3,7 @@ import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage, LIVING_MAP_ORB_SETTLE_MS } from './demoLivingMapModel.js';
 import {livingMapRoutes,sampleLivingMapRoute} from './demoLivingMapRoute.js';
 import {createLivingMapVisitors,LIVING_MAP_VISITOR_COLOURS} from './demoLivingMapVisitors.js';
+import {createTotemSculptureGeometry} from './spatialTotemSculpture.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
@@ -92,7 +93,10 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             const orbMaterial=new THREE.MeshPhongMaterial({color:'#bed8a3',transparent:true,opacity:.24,shininess:65,depthWrite:false});materials.set('orb'+index,orbMaterial);
             orb=new THREE.Mesh(sphere,orbMaterial);orb.position.y=.4;orb.scale.setScalar(.38);group.add(orb);
         } else if(item.type === 'zone') {
-            mesh(cylinder,'#795f41',0,.34,0,.1,.68,.1,group);
+            const data=createTotemSculptureGeometry(24,16,'botanical'),shape=geometry(new THREE.BufferGeometry()),positions=[],normals=[];
+            for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));}
+            shape.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));shape.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));shape.setIndex(new THREE.BufferAttribute(data.indices,1));
+            mesh(shape,'#795f41',0,.34,0,.05,.34,.04,group);
             const glass=new THREE.MeshPhongMaterial({color:'#bfe0d6',transparent:true,opacity:.48,shininess:85,depthWrite:false});materials.set('totem-glass'+index,glass);
             const collar=new THREE.Mesh(cylinder,glass);collar.position.y=.54;collar.scale.set(.16,.25,.16);group.add(collar);
             const tip=new THREE.MeshPhongMaterial({color:'#fff2b7',emissive:'#b7a152',emissiveIntensity:.65,shininess:50});materials.set('totem-tip'+index,tip);
@@ -246,7 +250,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             const {x,y,width:w,height:h}=rect;
             const columns=model.concept?2:w>=700?4:w>=440?3:2;
             const fontSize=w>=700?20:w>=440?14:12,tagHeight=fontSize+10;
-            const cloudHeight=model.concept?tagHeight+18:Math.ceil(cloudItems.length/columns)*(tagHeight+7)+18;
+            const cloudHeight=rect.hideGuidance?0:model.concept?tagHeight+18:Math.ceil(cloudItems.length/columns)*(tagHeight+7)+18;
             const landY=y+cloudHeight,landHeight=Math.max(60,h-cloudHeight);
             const renderHeight=Math.round(width*landHeight/w);
             if(canvas.height!==renderHeight){
@@ -256,7 +260,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             const {placed,bornFor}=update(elapsed,reducedMotion);
             ctx.drawImage(canvas,x,landY,w,landHeight);
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
-            if(model.concept){
+            if(model.concept && !rect.hideGuidance){
                 ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
                 const title=model.interactive?translateNxrText(placed.length?totemLabel(elapsed):'Pick up the highlighted Totem'):demoLivingMapStage(elapsed,reducedMotion);
                 const cloudWidth=Math.min(w-12,ctx.measureText(title).width+28);
