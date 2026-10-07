@@ -58,7 +58,7 @@ test('map placements explain entrance, local information and swales; PIMO reopen
 
 test('held Totem retains its last map contact when the laser misses, and recovers on re-entry',()=>{
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
- const body=source.slice(source.indexOf('function updateHeldDemoRecordPosition()'),source.indexOf('function captureDemoGrabPose('));
+ const body=source.slice(source.indexOf('function updateHeldDemoRecordPosition('),source.indexOf('function captureDemoGrabPose('));
  const record={demoMapPiece:true,position:{x:.15,y:1.0085,z:-1},groundBaseY:.91};let origin={x:2,y:2,z:-1};
  const context=vm.createContext({simulatedMode:false,demoHeldIndex:0,markers:[record],demoPointerWorldRay:()=>({x:0,y:-1,z:0}),demoPointerWorldOrigin:()=>origin,demoLivingMapOrigin:{x:0,y:1,z:-1},demoLivingMapOrientation:{x:0,y:0,z:0,w:1},livingMapRayPoint,demoTotemHalfHeight:()=>.095});
  vm.runInContext(body,context);const last={...record.position};vm.runInContext('updateHeldDemoRecordPosition()',context);

@@ -1264,6 +1264,8 @@
 .nlxr-totem-system.is-totem-faded .tryit-sim-totem-pillar { opacity:.18; filter:saturate(.45); }
 .nlxr-totem-system.is-totem-faded .nlxr-totem-controls button { opacity:1; box-shadow:inset 0 2px 3px rgba(255,247,231,.28),0 0 0 4px rgba(239,214,160,.1),0 0 16px rgba(239,214,160,.24); }
 .nlxr-totem-system.is-narrative-faded .nlxr-totem-controls { opacity:.12; pointer-events:none; transition:opacity .55s ease; }
+.nlxr-totem-system.is-narrative-faded { animation:nlxr-pathway-totem-exit 1.6s ease forwards; pointer-events:none; }
+@keyframes nlxr-pathway-totem-exit { from { opacity:1; } to { opacity:0; } }
 .tryit-sim-marker-note.is-narrative-faded { opacity:.16; filter:saturate(.35); pointer-events:none; transition:opacity .55s ease,filter .55s ease; }
 .tryit-sim-area-link-line.is-narrative-faded,.tryit-sim-area-link-label.is-narrative-faded { opacity:.1; transition:opacity .55s ease; }
 .nlxr-totem-cards > button { border-color:rgba(204,215,224,.52); background:linear-gradient(145deg,rgba(77,88,99,.88),rgba(28,34,40,.94)); color:#f4f6f7; }

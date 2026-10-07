@@ -43,6 +43,12 @@ export function livingMapRayPoint(ray,origin,rotation=0){
 export function livingMapWorldDropAccepted(point,target){
     return Boolean(point && target && Math.hypot(point.x-target.x,point.z-target.z)<.085 && Math.abs(point.y-target.y)<.13);
 }
+export function livingMapHeldContact(point,origin,rotation=0){
+    if(!point || !origin)return null;
+    const normal=new THREE.Vector3(0,1,0).applyQuaternion(livingMapRotation(rotation));
+    const contact=livingMapRayPoint({origin:{x:point.x+normal.x,y:point.y+normal.y,z:point.z+normal.z},direction:{x:-normal.x,y:-normal.y,z:-normal.z}},origin,rotation);
+    return contact && Math.hypot(point.x-contact.x,point.y-contact.y,point.z-contact.z)<.30?contact:null;
+}
 export function drawLivingMapPreview(ctx,scene,elapsed,reduced,rect){
     const reveal=livingMapReveal(elapsed,reduced);
     if(reveal.preview<=0)return;

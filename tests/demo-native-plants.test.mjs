@@ -19,7 +19,12 @@ test('native demo PIMs unfold native food-forest planting into rainforest ecolog
             assert.ok((node.sourceIds||[]).every(id=>document.sources.some(item=>item.id===id)),`${plant.id}/${node.id} has a valid source`);
             assert.ok(!node.parentId||pimNodeById(document,node.parentId),`${plant.id}/${node.id} has a parent`);
         }
-        assert.equal(document.nodes.filter(node=>(node.media||[]).some(media=>media.image)).length,2);
+        assert.ok(document.nodes.filter(node=>(node.media||[]).some(media=>media.image)).length>=8);
+        for(const id of ['food-forest','uses','propagation','scientific-information','historical-data','cultivation'])assert.ok(document.nodes.filter(node=>node.parentId===id).length>=1,`${plant.id}/${id} has authored content`);
+        assert.equal(pimNodeById(document,'wildlife-relationships').parentId,'role-in-nature');
+        assert.equal(pimNodeById(document,'leaf-litter-observation').evidenceStatus,'local_observation');
+        assert.ok(document.nodes.length>=29);
+        for(const node of document.nodes)for(const media of node.media || [])if(media.image)assert.ok(existsSync(new URL(media.image)),`${plant.id}/${node.id} image exists`);
     }
     assert.ok(pimNodeById(resolvePlantPim(nativePlantProfile('blue-quandong')),'cassowary-seed-journey'));
     assert.ok(pimNodeById(resolvePlantPim(nativePlantProfile('finger-lime')),'dainty-swallowtail-link'));

@@ -1210,7 +1210,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialSphere/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'/);
     assert.match(source, /demoHandMode==='outline' && \(pointerSource\?\.hand \|\| latestTrackedHandStates.length>0\)/);
-    assert.match(source, /function beginControllerDemoHold\(preferredTarget=null\)/);
+    assert.match(source, /function beginControllerDemoHold\(preferredTarget=null,frame=null\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
     assert.match(source, /event\.frame\?\.getPose\?\.\(sourceSpace, referenceSpace\)/);
     assert.match(source, /controllerRayEnd\(latestControllerRay/);
@@ -1319,7 +1319,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /PLAY mode will open/);
     assert.doesNotMatch(source, /Adjust its position if needed/);
     assert.match(source, /function beginPointerDemoHold\(event\)/);
-    assert.match(source, /function updateHeldDemoRecordPosition\(\)/);
+    assert.match(source, /function updateHeldDemoRecordPosition\(frame=null\)/);
     assert.match(source, /function releaseHeldDemoRecord\(placeMap=true\)/);
     assert.equal(DEMO_PLANT_ORB_HOLD_DELAY_MS,800);
     assert.match(simulationSource, /export function simulatedAnchorFromPointer\(/);
@@ -1384,7 +1384,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-demo\.has-companion-actions \.tryit-demo-footer \{ display:none !important; \}/);
     assert.match(source, /function demoPanelActions\(\)/);
     assert.match(source, /onUtilityAction:handleDemoPanelAction/);
-    assert.match(source, /id:'lim-visibility',label:limMeshVisible\?'Hide learning cells':'Show learning cells'/);
+    assert.match(source, /id:'lim-visibility',label:'Learning Pathways'/);
     assert.match(source, /if\(action==='recenter'\)\{infoPanel\?\.recenter\(\)/);
     assert.match(source, /id:'back',label:'‹',ariaLabel:'Previous',description:'Previous',disabled:/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);
@@ -1659,7 +1659,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /target\.record\.demoType === 'plant' && target\.record\.demoExpanded\) return false/);
     assert.match(source, /const profile=demoInfoTarget\(\);\s*const target = demoRecordAtPointer\(\) \|\| \(profile\?\.target/);
     assert.doesNotMatch(source, /if \(actionTarget\?\.demoType === 'note'\) return;/);
-    assert.match(source, /session\.addEventListener\('selectstart',[\s\S]*beginControllerDemoHold\(\)/);
+    assert.match(source, /session\.addEventListener\('squeezestart',[\s\S]*beginControllerDemoHold\(null,event.frame\)/);
     assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
     const sessionSelectStart = source.indexOf("session.addEventListener('select'");
     const sessionSelect = source.slice(sessionSelectStart, source.indexOf('const draw =', sessionSelectStart));

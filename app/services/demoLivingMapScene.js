@@ -53,11 +53,15 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     }
     shrub.count = planted; scenery.add(shrub);
     const contextTrees=model.landscape?.trees?.map(({x,z,size})=>[x,z,size]) || [[-4.6,-2.6,1],[-2,-3,.85],[1.8,-2.9,1.2],[4.4,-2.2,.9],[4.8,1.7,.8]];
-    for (const [x, z, size] of contextTrees) {
+    for (const [index, [x, z, size]] of contextTrees.entries()) {
         if (model.items.some(item => Math.hypot(item.x - x, item.z - z) < .8)) continue;
         mesh(cylinder, '#756048', x, size * .55, z, .07, size * 1.1, .07, scenery);
-        mesh(sphere, '#34533c', x, size * 1.25, z, size * .55, size * .65, size * .52, scenery);
-        mesh(sphere, '#567249', x - .22, size * 1.5, z + .1, size * .42, size * .4, size * .4, scenery);
+        // One continuous crown, with varied height, width, lean and colour.
+        // Avoid the repeated satellite ball perched on every tree.
+        const shapes=[[.58,.48,.50],[.39,.76,.42],[.65,.55,.43],[.48,.63,.58]];
+        const [sx,sy,sz]=shapes[index%shapes.length];
+        const crown=mesh(sphere,['#34533c','#4c6841','#3f6347','#567249'][index%4],x,size*(.95+sy*.55),z,size*sx,size*sy,size*sz,scenery);
+        crown.rotation.set(.08*Math.sin(index*2.1),index*.73,.12*Math.cos(index*1.7));
     }
     for (const [x,z,sx,sz] of (model.concept?[]:[[-3.4,1.8,1.5,.65],[2.7,1.9,1.3,.6]])) {
         mesh(geometry(new THREE.BoxGeometry(1,1,1)), '#867254', x, .025, z, sx, .065, sz, scenery);
@@ -270,7 +274,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             const {placed,bornFor}=update(elapsed,reducedMotion);
             ctx.drawImage(canvas,x,landY,w,landHeight);
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
-            if(model.concept && !rect.hideGuidance){
+            if(model.concept && !rect.hideGuidance && (!model.interactive || placed.length)){
                 ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
                 const title=model.interactive?translateNxrText(placed.length?totemLabel(elapsed):'Pick up the highlighted Totem'):demoLivingMapStage(elapsed,reducedMotion);
                 const cloudWidth=Math.min(w-12,ctx.measureText(title).width+28);

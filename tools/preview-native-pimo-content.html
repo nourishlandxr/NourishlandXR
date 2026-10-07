@@ -1,0 +1,25 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Native PIMO content review</title>
+<style>body{margin:0;padding:24px;background:#18392d;color:#f7faf2;font:17px/1.5 system-ui}main{max-width:900px;margin:auto}nav{display:flex;gap:12px;flex-wrap:wrap}button,summary{cursor:pointer}button{padding:12px;background:#345746;color:inherit;border:1px solid #9fbaa1;border-radius:12px}details{padding:12px;border:1px solid #79967a;border-radius:12px;margin:12px 0}details details{margin-left:18px}img{display:block;max-width:100%;max-height:350px;object-fit:contain;margin:12px auto}small{color:#ccdec9}a{color:#b6e6d8}</style>
+<main><h1>Native PIMO content review</h1><output id="version"></output><nav></nav><article></article></main>
+<script type="module">
+import {DEMO_NATIVE_PLANTS,nativePlantProfile} from '../app/services/demoNativePlants.js';
+import {resolvePlantPim} from '../app/services/pimLegacyAdapter.js';
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+document.querySelector('#version').textContent='V'+BUILD_INFO.version;
+function show(id){
+ const profile=nativePlantProfile(id),pim=resolvePlantPim(profile),article=document.querySelector('article');article.replaceChildren();
+ const title=document.createElement('h2');title.textContent=profile.common_name;article.append(title);
+ const intro=document.createElement('p');intro.textContent=pim.identity.identityStatement;article.append(intro);
+ const count=document.createElement('output');count.textContent=`${pim.nodes.length} authored cells · six compass branches`;article.append(count);
+ const render=parent=>pim.nodes.filter(node=>node.parentId===parent).map(node=>{
+  const box=document.createElement('details'),label=document.createElement('summary');label.textContent=node.title;box.append(label);
+  const body=document.createElement('p');body.textContent=node.body || node.preview;box.append(body);
+  const evidence=document.createElement('small');evidence.textContent=node.evidenceStatus==='local_observation'?'Observation activity':'Source-backed context';box.append(evidence);
+  for(const media of node.media || [])if(media.image){const image=document.createElement('img');image.src=media.image;image.alt=media.alt;image.loading='lazy';box.append(image);const caption=document.createElement('small');caption.textContent=media.caption;box.append(caption);}
+  for(const sourceId of node.sourceIds){const source=pim.sources.find(item=>item.id===sourceId);if(source){const link=document.createElement('a');link.href=source.url;link.textContent=source.title;box.append(document.createElement('br'),link);}}
+  box.append(...render(node.id));return box;
+ });article.append(...render(null));
+}
+for(const plant of DEMO_NATIVE_PLANTS){const button=document.createElement('button');button.textContent=plant.name;button.onclick=()=>show(plant.id);document.querySelector('nav').append(button);}
+show(DEMO_NATIVE_PLANTS[0].id);
+</script></html>

@@ -45,16 +45,16 @@ export function pimInfoContent(document, path) {
 export function learningPanelMedia(content) {
     const image=content?.image || content?.sketchImage;
     if(!image)return null;
-    return {image,alt:(content.image ? content.imageAlt : content.sketchImageAlt) || content.title || '',caption:'',plant:false,fit:content.imageFit || 'contain'};
+    return {image,alt:(content.image ? content.imageAlt : content.sketchImageAlt) || content.title || '',caption:content.title || '',plant:false,fit:content.imageFit || 'contain'};
 }
 
 export function pimPanelMedia(document,selection=null,fallback=null,previous=null) {
     const cell=selection?.media;
     const cellImage=cell?.image || cell?.url || cell?.src;
-    if(cellImage)return {image:String(cellImage),alt:String(cell.alt || selection.title || ''),caption:String(cell.caption || '')};
-    if(fallback?.image)return {image:String(fallback.image),alt:String(fallback.alt || ''),caption:String(fallback.caption || '')};
+    if(cellImage)return {image:String(cellImage),alt:String(cell.alt || selection.title || ''),caption:String(selection.title || '')};
+    if(fallback?.image)return {image:String(fallback.image),alt:String(fallback.alt || ''),caption:String(document?.identity?.commonName || '')};
     const identity=document?.identity;
-    if(identity?.image)return {image:String(identity.image),alt:String(identity.imageAlt || identity.commonName || identity.scientificName || 'Plant'),caption:String(identity.imageCaption || '')};
+    if(identity?.image)return {image:String(identity.image),alt:String(identity.imageAlt || identity.commonName || identity.scientificName || 'Plant'),caption:String(identity.commonName || '')};
     return previous;
 }
 
@@ -213,8 +213,8 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,264),
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
-        {...choice('HeroDice','Floor dice','hero-dice','Floor dice',488,56,438),height:50,selected:getSpatialVisualSettings().heroDice!==false},
-        {...choice('LivingFrame','Living Frame','living-frame','Living Frame',488,506,438),height:50,selected:getSpatialVisualSettings().livingFrame!==false},
+        {...choice('HeroDice','Floor dice','hero-dice','',488,56,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().heroDice!==false},
+        {...choice('LivingFrame','Frame animation','living-frame','',488,506,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().livingFrame!==false},
         slider('CellOpacity','cell-opacity','PIMO / LIMO cell glass',cellOpacity,0,1,.01,570),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
@@ -468,7 +468,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         }
         if(action==='Insects')setSpatialVisualSettings({insects:!getSpatialVisualSettings().insects});
         if(action==='HeroDice')setSpatialVisualSettings({heroDice:getSpatialVisualSettings().heroDice===false});
-        if(action==='LivingFrame')setSpatialVisualSettings({livingFrame:getSpatialVisualSettings().livingFrame===false});
+        if(action==='LivingFrame'){setSpatialVisualSettings({livingFrame:getSpatialVisualSettings().livingFrame===false});onGraphicsQuality();}
         if(action==='RainQuality'){
             const values=Object.keys(RAIN_QUALITIES);rainQuality=values[(values.indexOf(rainQuality)+1)%values.length];setSpatialVisualSettings({rainQuality});
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);
@@ -608,6 +608,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
     function updateMediaFigure(figure,preview){
         const stack=figure.querySelector('.nlxr-media-image-stack'),caption=figure.querySelector('figcaption');
         figure.classList.toggle('is-tutorial-art',preview?.fit==='contain');
+        caption.textContent=preview.caption || '';caption.hidden=!preview.caption;
         if(figure.dataset.mediaTarget===preview.image)return;
         figure.dataset.mediaTarget=preview.image;
         const image=document.createElement('img');image.alt=preview.alt || '';image.decoding='async';image.className='is-media-entering';
@@ -1310,7 +1311,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             loadPanelImage(nextMedia?.image || '');
             tab='Details';page=savedContext.mode==='explore'?nextRecord.explorerMolecule?.readingPage || 0:savedContext.readingPage || 0;render(true);
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;objectContext=null;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String(cellMedia?.caption || document.identity?.imageCaption || '')}:previous;record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;objectContext=null;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String((cellMedia?.image || cellMedia?.url || cellMedia?.src) ? next.title : document.identity?.commonName || '')}:previous;record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
@@ -1385,7 +1386,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
-            const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:plantMedia?(identity?.media?.caption || identity?.plant || ''):'',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
             explorerCard.linkedLabel=(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);

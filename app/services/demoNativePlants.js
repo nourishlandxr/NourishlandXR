@@ -1,5 +1,6 @@
 import {resolvePlantPim} from './pimLegacyAdapter.js';
 import {pimToArKnowledge} from './pimModel.js';
+import {nativePlantDepthNodes,NATIVE_PLANT_DEPTH_TRANSLATIONS} from './demoNativePlantDepth.js';
 
 const illustrationCaption='Stylised black-and-white teaching illustration';
 const source=(id,title,url)=>({id,title,url});
@@ -54,7 +55,7 @@ const node=(id,parentId,title,body,{type='fact',evidence='sourced',sources=[],me
 const illustration=(plant,kind,alt)=>({id:`${plant.id}-${kind}-engraving`,image:kind==='seed'?plant.seedImage:plant.wildlifeImage,
     alt,caption:illustrationCaption,kind:'illustration'});
 
-function nativeNodes(plant){
+function baseNativeNodes(plant){
     const src=plant.sources.map(item=>item.id);
     const nodeSource=(...ids)=>ids;
     if(plant.id==='blue-quandong')return [
@@ -84,6 +85,13 @@ function nativeNodes(plant){
         node('lemon-myrtle-features','scientific-information','Scent, leaf and flower structure','Backhousia citriodora belongs to the myrtle family. Its strongly lemon-scented leaves are oval to lance-shaped; the flowers appear in long-stalked clusters, with numerous fluffy stamens. The scientific name points to the sensory feature without replacing careful plant identification.',{sources:nodeSource('anbg-lemon-myrtle')}),
         node('seasonal-forest-calendar','food-forest','Let flowering create a seasonal calendar','Mark first buds, peak flowering, capsule development and leaf flush in dated Notes. Over time, the plant becomes a living calendar for this particular site—and the visitor can compare it with rainfall, temperature and nearby flowering species.',{type:'activity',evidence:'local_observation',sources:nodeSource('anbg-lemon-myrtle')})
     ];
+}
+
+function nativeNodes(plant){
+    const wildlifeIds=new Set(['fruit-eaters','dainty-swallowtail-link','flower-visitor-watch']);
+    const base=baseNativeNodes(plant).map(item=>wildlifeIds.has(item.id)?{...item,parentId:'wildlife-relationships'}:item);
+    const depth=nativePlantDepthNodes(plant).map(item=>item.id==='role-in-nature'?{...item,parentId:plant.id==='finger-lime'?'from-understorey-to-rainforest':'from-food-forest-to-rainforest'}:item);
+    return [...base,...depth];
 }
 
 export function nativePlantProfile(id){
@@ -191,5 +199,6 @@ export const DEMO_NATIVE_PLANT_TRANSLATIONS=Object.freeze([
     ['Scent, leaf and flower structure','Aroma, folha e estrutura da flor','Geur, blad en bloemstructuur'],
     ['Let flowering create a seasonal calendar','Deixe a floração criar um calendário sazonal','Laat de bloei een seizoenskalender maken'],
     ...DEMO_NATIVE_PLANTS.map(plant=>[plant.statement,PROFILE_TRANSLATIONS[plant.id].statement[0],PROFILE_TRANSLATIONS[plant.id].statement[1]]),
-    ...NODE_TEXT_TRANSLATIONS
+    ...NODE_TEXT_TRANSLATIONS,
+    ...NATIVE_PLANT_DEPTH_TRANSLATIONS
 ]);

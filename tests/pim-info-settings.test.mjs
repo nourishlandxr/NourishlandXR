@@ -66,7 +66,8 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Hand tracking');
     assert.equal(desktop.find(item=>item.action==='HeroDice').label,'Floor dice');
     assert.equal(desktop.find(item=>item.action==='HeroDice').selected,true);
-    assert.equal(desktop.find(item=>item.action==='LivingFrame').label,'Living Frame');
+    assert.equal(desktop.find(item=>item.action==='LivingFrame').label,'Frame animation');
+    for(const action of ['LivingFrame','HeroDice'])assert.equal(desktop.find(item=>item.action===action).settingLabel,'','paired buttons need no overlapping row captions');
     assert.equal(desktop.find(item=>item.action==='LivingFrame').selected,true);
     assert.equal(panelSettingsControls({headset:true,handVisualMode:'pointer'}).find(item=>item.action==='HandMode').label,'Pointer');
     for(const items of [desktop,quest,graphics,performance]){

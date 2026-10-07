@@ -161,6 +161,7 @@ test('each archetype keeps its ordered illustration while plant media retains ho
         assert.ok(statSync(new URL(`../app/assets/${file}`, import.meta.url)).size < 500_000);
         assert.equal(learningPanelMedia(content).image, content.image);
         assert.equal(learningPanelMedia(content).alt, content.imageAlt);
+        assert.equal(learningPanelMedia(content).caption, content.title);
     }
     const panel = read('app/services/pimInfoPanel.js');
     assert.match(panel, /selection\?\.mesh==='lim'\s*\? learningPanelMedia\(selection\)/);
@@ -168,8 +169,8 @@ test('each archetype keeps its ordered illustration while plant media retains ho
     assert.match(panel, /showLearning\(content\).*mediaCollapsed=true;mediaTouched=false/s);
     assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);
     assert.doesNotMatch(panel, /LIMO cell sketch|LIMO CELL SKETCH|PLANT MEDIA/);
-    assert.match(panel, /caption:'',plant:false/);
-    assert.match(panel, /caption:plantMedia\?\(identity\?\.media\?\.caption \|\| identity\?\.plant \|\| ''\):''/);
+    assert.match(panel, /caption:content.title \|\| '',plant:false/);
+    assert.match(panel, /caption:preview\?\.caption \|\| ''/);
 });
 
 test('Media introduction restores botanical background and selected Pigeon Pea artwork survives reopening', () => {
@@ -182,11 +183,13 @@ test('Media introduction restores botanical background and selected Pigeon Pea a
         const selection=pimInfoContent(PIGEON_PEA_PIM,path);
         assert.ok(selection?.media?.url || selection?.media?.image || selection?.media?.src,path);
         const media=pimPanelMedia(PIGEON_PEA_PIM,selection,plantPhoto);
+        assert.equal(media.caption,selection.title);
         assert.match(media.image,/pimo-cell-illustrations\/pigeon-pea-/);
         assert.ok(statSync(new URL(media.image)).size > 0);
         assert.notEqual(media.image,plantPhoto.image);
     }
     assert.equal(pimPanelMedia(PIGEON_PEA_PIM).image,plantPhoto.image);
+    assert.equal(pimPanelMedia(PIGEON_PEA_PIM).caption,PIGEON_PEA_PIM.identity.commonName);
     assert.equal(JSON.stringify(PIGEON_PEA_PIM),before);
     const fallback=learningPanelMedia({sketchImage:'child.png',sketchImageAlt:'Child illustration'});
     assert.equal(fallback.image,'child.png');assert.equal(fallback.alt,'Child illustration');

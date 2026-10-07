@@ -543,9 +543,9 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);
  if(options.drawPanel!==false){
  ctx.save();if(options.opening && !reducedMotion)ctx.globalAlpha=.18+.82*smooth(elapsed,0,900);
- drawArWelcomePanel(ctx,{elapsed,reducedMotion,...(options.simpleDesktop?{simple:true}:{})});ctx.restore();
+ drawArWelcomePanel(ctx,{elapsed:options.frameAnimation===false?0:elapsed,reducedMotion:reducedMotion || options.frameAnimation===false,...(options.simpleDesktop?{simple:true}:{})});ctx.restore();
  }
- if(options.drawRoots!==false){
+ if(options.drawRoots!==false && options.frameAnimation!==false){
  let reservedCells=vegetationClearanceCache.get(graphs);
  if(!reservedCells){reservedCells=revealFrames(graphs).flatMap(frame=>frame.nodes).map(node=>({
   x:node.x-WELCOME_PANEL_DRAW_OFFSET.x,y:node.y-WELCOME_PANEL_DRAW_OFFSET.y,
