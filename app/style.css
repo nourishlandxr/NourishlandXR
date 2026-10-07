@@ -11912,8 +11912,40 @@ body:has(.app-surface) {
 .ar-introduction-preparation .ar-preparation-start { flex:1 1 auto;width:auto;max-width:none;font-size:1rem; }
 .ar-introduction-preparation [data-ar-entry-status] { margin:0;font-size:.85rem; }
 @media(max-width:420px) {
- .ar-introduction-preparation .ar-preparation-points { grid-template-columns:1fr; }
  .ar-introduction-preparation .page-header h1 { font-size:1.55rem; }
+}
+
+/* Keep AR preparation in one compact, non-scrolling panel. */
+#app:has(> .ar-introduction-preparation) {height:100dvh;max-height:100dvh;overflow:hidden;padding:8px 12px;display:grid;align-items:center;}
+.ar-introduction-preparation {height:100%;max-height:100%;width:min(100%,680px);gap:0;overflow:hidden;}
+.ar-introduction-preparation .ar-preparation-panel {width:100%;max-height:100%;overflow:hidden;align-content:center;gap:clamp(6px,1.2dvh,10px);padding:clamp(10px,1.8dvh,16px);}
+.ar-introduction-preparation .ar-preparation-panel .page-header {padding:0;border:0;margin:0;gap:2px;}
+.ar-introduction-preparation .ar-preparation-panel .welcome-label {font-size:.72rem;line-height:1.1;}
+.ar-introduction-preparation .ar-preparation-points {grid-template-columns:1fr 1fr;gap:6px;}
+.ar-introduction-preparation .ar-preparation-points > div {min-width:0;grid-template-columns:24px minmax(0,1fr);gap:6px;padding:7px;}
+.ar-introduction-preparation .ar-preparation-points > div > span {width:24px;height:24px;font-size:1rem;}
+.ar-introduction-preparation .ar-preparation-points strong {font-size:.78rem;}
+.ar-introduction-preparation .ar-preparation-points small {font-size:.68rem;line-height:1.28;}
+.ar-introduction-preparation .ar-preparation-settings-row {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center;gap:8px;}
+.ar-introduction-preparation .ar-preparation-settings-row > :is(.ar-device-support,.ar-graphics-choice) {min-width:0;margin:0;padding:0;border:0;}
+.ar-introduction-preparation .ar-device-support summary {display:flex;align-items:center;min-height:40px;padding:6px 10px;border:1px solid rgba(85,141,83,.28);border-radius:12px;background:rgba(238,247,232,.58);font-size:.8rem;}
+.ar-introduction-preparation .ar-device-support p {font-size:.72rem;line-height:1.35;}
+.ar-introduction-preparation .ar-graphics-choice {justify-content:space-between!important;gap:6px!important;font-size:.8rem!important;}
+.ar-introduction-preparation .ar-graphics-choice select {min-width:0;max-width:65%;font-size:.8rem;}
+.ar-introduction-preparation .ar-preload-controls-compact {display:grid;gap:6px;min-width:0;}
+.ar-introduction-preparation .ar-preload-controls-compact > .ar-introduction-remember {width:100%;justify-content:flex-start;margin:0;padding:0;font-size:.74rem;line-height:1.2;}
+.ar-introduction-preparation .ar-preload-controls-compact > .ar-introduction-remember input {flex:none;}
+.ar-introduction-preparation .ar-preload-controls-compact progress {width:100%;margin:0;}
+.ar-introduction-preparation .ar-preload-controls-compact [role="status"],
+.ar-introduction-preparation .ar-preparation-desktop-note {margin:0;font-size:.75rem;line-height:1.25;}
+.ar-introduction-preparation .ar-preparation-footer {position:static;padding:0;background:transparent;border:0;gap:4px;}
+.ar-introduction-preparation .ar-safety-actions {gap:8px;}
+.ar-introduction-preparation .ar-safety-actions button {min-height:44px;padding:7px 12px;}
+@media(max-width:420px) {
+ .ar-introduction-preparation .page-header h1 {font-size:1.45rem;}
+ .ar-introduction-preparation .ar-preparation-panel {padding:9px;gap:6px;}
+ .ar-introduction-preparation .ar-preparation-points > div {padding:6px;gap:5px;}
+ .ar-introduction-preparation .ar-preparation-points small {font-size:.64rem;}
 }
 
 /* A short startup language card; no hidden/clipped content on smaller phones. */

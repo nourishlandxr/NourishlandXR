@@ -65,19 +65,18 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
 export function renderArIntroductionPreparation(app, { onContinue, onCancel, simpleDesktop=false } = {}) {
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
-        <div class="page-header"><p class="welcome-label">Before you begin</p><h1>${simpleDesktop?'Prepare the introduction':'Prepare for AR'}</h1><p class="subtitle">${simpleDesktop?'Explore the sample demo on your screen. No camera is needed.':'Bring the sample demo into the space around you.'}</p></div>
-        ${botanicalTextureMarkup('prep')}
-        <section class="panel ar-safety-card ar-introduction-preparation-card">
+        <section class="panel ar-safety-card ar-introduction-preparation-card ar-preparation-panel">
+            <div class="page-header"><p class="welcome-label">Before you begin</p><h1>${simpleDesktop?'Prepare the introduction':'Prepare for AR'}</h1></div>
+            ${botanicalTextureMarkup('prep')}
             <div class="ar-preparation-points">
                 <div><span aria-hidden="true">◎</span><p><strong>Clear space</strong><small>Stay aware of people and obstacles. On a spatial device, stay within your boundary.</small></p></div>
                 <div><span aria-hidden="true">⌾</span><p><strong>${simpleDesktop?'Explore at your pace':'Camera and tracking'}</strong><small>${simpleDesktop?'Use your mouse to select information. You can leave at any time.':'Your browser may request access when you start AR. Hold your phone securely.'}</small></p></div>
             </div>
-            <details class="ar-device-support"><summary>Device support</summary><p>Use a compatible Android phone or spatial device. On desktop, we recommend the plain NLXR introduction; the plain desktop introduction needs no camera. iPhone and iPad cannot currently launch this WebXR AR mode.</p><p class="meta">Spatial device examples: XREAL Aura, VITURE Luma Ultra, Meta Quest 3 and Steam Frame. Browser and WebXR support varies; these are examples, not confirmed compatible devices.</p></details>
+            ${arPreparationControlsMarkup({simpleDesktop,rememberPreparation:!simpleDesktop,compactSettings:true})}
+            <div class="ar-preparation-footer">${simpleDesktop?'<label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>':''}
+            <p role="status" data-ar-entry-status hidden></p>
+            <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary ar-preparation-start" type="button" data-ar-introduction-continue>${simpleDesktop?'Begin introduction':'Start AR'}</button></div></div>
         </section>
-        ${arPreparationControlsMarkup({simpleDesktop,rememberPreparation:!simpleDesktop})}
-        <div class="ar-preparation-footer">${simpleDesktop?'<label class="ar-preparation-skip-toggle ar-introduction-remember"><input type="checkbox" data-ar-introduction-remember /> <span>Don’t show this preparation next time</span></label>':''}
-        <p role="status" data-ar-entry-status hidden></p>
-        <div class="button-row ar-safety-actions"><button type="button" data-ar-introduction-cancel>Not now</button><button class="primary ar-preparation-start" type="button" data-ar-introduction-continue>${simpleDesktop?'Begin introduction':'Start AR'}</button></div></div>
     </div>`;
     bindBotanicalTexture(app);
     bindArPreparationControls(app,app.querySelector('[data-ar-introduction-continue]'),{nearFuture:!simpleDesktop,simpleDesktop});

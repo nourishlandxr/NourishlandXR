@@ -21,6 +21,14 @@ test('air release ignores distant panels and surface release requires actual pro
     assert.equal(demoButterflyPose(10001,10000,{perchMs:4500}).state,'landed');
 });
 
+test('butterflies periodically settle into a natural pause during flight',()=>{
+    const start=0,first=demoButterflyPose(10000,start,{perchMs:0,seed:0});
+    const later=demoButterflyPose(35000,start,{perchMs:0,seed:0});
+    assert.equal(first.state,'flying');
+    assert.equal(later.state,'landed');
+    assert.equal(later.close,0);
+});
+
 test('butterfly catch target does not shorten the visible laser',()=>{
     const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
     const pointer=source.slice(source.indexOf('function drawDemoControllerPointer'),source.indexOf('async function startImmersive'));

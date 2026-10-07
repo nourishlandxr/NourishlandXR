@@ -76,7 +76,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             const normal={x:pose.right.y*pose.up.z-pose.right.z*pose.up.y,y:pose.right.z*pose.up.x-pose.right.x*pose.up.z,z:pose.right.x*pose.up.y-pose.right.y*pose.up.x};
             for(const surface of layout.slice(1)){
                 const delta={x:surface.center.x-pose.center.x,y:surface.center.y-pose.center.y,z:surface.center.z-pose.center.z},across=delta.x*pose.right.x+delta.y*pose.right.y+delta.z*pose.right.z,vertical=delta.x*pose.up.x+delta.y*pose.up.y+delta.z*pose.up.z;
-                const lateral=Math.abs(across)>=Math.abs(vertical),axis=lateral?pose.right:pose.up,sign=Math.sign(lateral?across:vertical),mainEdge=lateral?.43:.132,widgetEdge=lateral?surface.width/2:surface.height/2;
+                const mainSurface=layout[0],lateral=Math.abs(across)>=Math.abs(vertical),axis=lateral?pose.right:pose.up,sign=Math.sign(lateral?across:vertical),mainEdge=(lateral?mainSurface.width:mainSurface.height)/2,widgetEdge=lateral?surface.width/2:surface.height/2;
                 if(Math.abs(lateral?across:vertical)<mainEdge+widgetEdge+.02)continue;
                 const start={x:pose.center.x+axis.x*sign*mainEdge+normal.x*.012,y:pose.center.y+axis.y*sign*mainEdge+normal.y*.012,z:pose.center.z+axis.z*sign*mainEdge+normal.z*.012};
                 const end={x:surface.center.x-axis.x*sign*widgetEdge+normal.x*.012,y:surface.center.y-axis.y*sign*widgetEdge+normal.y*.012,z:surface.center.z-axis.z*sign*widgetEdge+normal.z*.012};

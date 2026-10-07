@@ -29,6 +29,12 @@ test('Totem drop ray follows tilted plate and rejects a stale horizontal target'
     const start=new THREE.Vector3(target.x,target.y,target.z).addScaledVector(normal,.5),point=livingMapRayPoint({origin:start,direction:normal.negate()},origin,q);
     assert.equal(livingMapWorldDropAccepted(point,target),true);assert.equal(livingMapWorldDropAccepted(point,livingMapWorldPoint({x:4,z:2},origin)),false);
 });
+test('placement rays outside the finite plate do not create distant phantom hits',()=>{
+    const sideRay={origin:{x:1,y:1.5,z:-1},direction:{x:0,y:-1,z:0}};
+    assert.equal(livingMapRayPoint(sideRay,origin),null);
+    const onPlate={origin:{x:.2,y:1.5,z:-1},direction:{x:0,y:-1,z:0}};
+    assert.ok(livingMapRayPoint(onPlate,origin));
+});
 test('XR grip events reserve inputs, require both controller grips and recover from loss',()=>{
     const session=new EventTarget(),space={},a={handedness:'left',gripSpace:{},gamepad:{buttons:[{}, {pressed:false}]}},b={handedness:'right',gripSpace:{},gamepad:{buttons:[{}, {pressed:false}]}};session.inputSources=[a,b];
     let pose=identity.clone(),rotation=identity.clone(),calls=0;

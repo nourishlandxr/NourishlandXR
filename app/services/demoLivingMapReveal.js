@@ -9,6 +9,8 @@ export function livingMapReveal(elapsed,reduced=false){
         magic:reduced?0:Math.sin(Math.PI*smooth((elapsed-4400)/3200))};
 }
 export const LIVING_MAP_WORLD_SCALE=.085;
+export const LIVING_MAP_SURFACE_HALF_WIDTH=6.3*LIVING_MAP_WORLD_SCALE;
+export const LIVING_MAP_SURFACE_HALF_DEPTH=4.2*LIVING_MAP_WORLD_SCALE;
 export function livingMapRotation(value=0){
     return typeof value==='number'?new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),value):new THREE.Quaternion(value.x,value.y,value.z,value.w).normalize();
 }
@@ -23,7 +25,9 @@ export function livingMapRayPoint(ray,origin,rotation=0){
     if(Math.abs(denominator)<.001)return null;
     const distance=new THREE.Vector3(surface.x,surface.y,surface.z).sub(start).dot(normal)/denominator;
     if(distance<0 || distance>4)return null;
-    const point=start.addScaledVector(direction,distance);return {x:point.x,y:point.y,z:point.z};
+    const point=start.addScaledVector(direction,distance),local=point.clone().sub(new THREE.Vector3(origin.x,origin.y-.025,origin.z)).applyQuaternion(livingMapRotation(rotation).invert()).multiplyScalar(1/(LIVING_MAP_WORLD_SCALE*.94));
+    if((local.x/6.3)**2+(local.z/4.2)**2>1)return null;
+    return {x:point.x,y:point.y,z:point.z};
 }
 export function livingMapWorldDropAccepted(point,target){
     return Boolean(point && target && Math.hypot(point.x-target.x,point.z-target.z)<.085 && Math.abs(point.y-target.y)<.13);

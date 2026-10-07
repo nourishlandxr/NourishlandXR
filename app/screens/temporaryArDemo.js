@@ -387,7 +387,6 @@ let introBoardVisibleBody = '';
 let introBoardTextureDirty = true;
 let introBoardParagraphFadeStartedAt=-Infinity;
 let introBoardParagraphFadeTimes=[];
-let introTextPageIndex=0,introTextVisibleCount=0,introTextPageTransition=null;
 let introOpeningCopySkipped=false;
 let introTextureUploadedAt = 0;
 let introFrameToken = 0;
@@ -1361,7 +1360,6 @@ function clearDemoNarration() {
     skipDemoNarration=null;
     introBoardVisibleBody='';
     introBoardParagraphFadeTimes=[];
-    introTextPageIndex=0;introTextVisibleCount=0;introTextPageTransition=null;
     introBoardTextureDirty=true;
     appRoot?.querySelectorAll('[data-tryit-guided-choice] .tryit-board-text-window p').forEach(paragraph=>{paragraph.textContent='';});
 }
@@ -1998,7 +1996,6 @@ function showArWelcomeShowcase() {
     introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
     arWelcomeOpeningDuration=Math.max(arWelcomeOpeningDuration,DEMO_WELCOME_TITLE_HOLD_MS+introBoardBody.split(/\n\n/).reduce((total,text)=>total+demoParagraphReadingTime(text),0)+1100);
     introBoardVisibleBody='';
-    introTextPageIndex=0;introTextVisibleCount=0;introTextPageTransition=null;
     limMeshVisible=false;
     infoPanel?.setLearningModules(null);
     infoPanel?.setCompact(true);
@@ -4755,59 +4752,26 @@ function demoParagraphReadingTime(text){return Math.max(6000,String(text || '').
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
-    // All slides use the accepted Intro 1.2 type size. Longer copy reveals in
-    // a reading window, rather than shrinking the type or clipping a paragraph.
-    const reference=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']).split(/\n\n/);
-    for (let fontSize = 68; fontSize >= 24; fontSize -= 1) {
+    // Keep earlier paragraphs visible as new ones fade in; fit the complete
+    // authored passage into the available Living Frame body area.
+    for (let fontSize = 68; fontSize >= 16; fontSize -= 1) {
         const lineHeight = Math.round(fontSize * 1.22);
-        const paragraphGap = Math.round(fontSize * .5);
+        const paragraphGap = Math.round(fontSize * .38);
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
-        const referenceLines=reference.map(paragraph=>wrappedTextureLines(ctx,paragraph,maxWidth));
-        const totalHeight = referenceLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
-            + Math.max(0, referenceLines.length - 1) * paragraphGap;
-        if (totalHeight <= 352 || fontSize === 24) {
+        const totalHeight = paragraphLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
+            + Math.max(0, paragraphLines.length - 1) * paragraphGap;
+        if (totalHeight <= maxHeight || fontSize === 16) {
             return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
     }
-    return { fontSize: 23, lineHeight: 28, paragraphGap: 12, paragraphLines: [] };
+    return { fontSize: 16, lineHeight: 20, paragraphGap: 6, paragraphLines: [] };
 }
 
 function introReadingWindow(layout,count,height){
-    const visibleEnd=Math.min(count,layout.paragraphLines.length),pages=[];
-    let first=0,end=0,pageHeight=0;
-    for(let index=0;index<visibleEnd;index++){
-        const paragraphHeight=layout.paragraphLines[index].length*layout.lineHeight;
-        const gap=end>first?layout.paragraphGap:0;
-        if(end>first && pageHeight+gap+paragraphHeight>height){pages.push({first,end,height:pageHeight});first=index;end=index;pageHeight=0;}
-        pageHeight+=(end>first?layout.paragraphGap:0)+paragraphHeight;
-        end=index+1;
-    }
-    if(end>first)pages.push({first,end,height:pageHeight});
-    const pageIndex=Math.max(0,pages.length-1);
-    return {...(pages[pageIndex] || {first:0,end:0,height:0}),pageIndex,pages};
-}
-
-function resolveIntroTextPage(targetPage,targetCount,now){
-    const fadeMs=320;
-    if(!introTextPageTransition && targetPage!==introTextPageIndex)
-        introTextPageTransition={from:introTextPageIndex,fromCount:introTextVisibleCount,to:targetPage,toCount:targetCount,phase:'out',startedAt:now};
-    else if(!introTextPageTransition && targetCount!==introTextVisibleCount)
-        introTextPageTransition={from:introTextPageIndex,fromCount:introTextVisibleCount,to:targetPage,toCount:targetCount,phase:'out',startedAt:now};
-    else if(introTextPageTransition && (targetPage!==introTextPageTransition.to || targetCount!==introTextPageTransition.toCount)){
-        introTextPageTransition.to=targetPage;introTextPageTransition.toCount=targetCount;
-    }
-    const transition=introTextPageTransition;
-    if(!transition)return {page:introTextPageIndex,count:introTextVisibleCount,opacity:1,active:false};
-    let progress=Math.min(1,Math.max(0,(now-transition.startedAt)/fadeMs));
-    if(transition.phase==='out' && progress>=1){transition.phase='in';transition.startedAt=now;progress=0;}
-    if(transition.phase==='in' && progress>=1){
-        introTextPageIndex=transition.to;introTextVisibleCount=transition.toCount;introTextPageTransition=null;
-        return {page:introTextPageIndex,count:introTextVisibleCount,opacity:1,active:false};
-    }
-    return transition.phase==='out'
-        ? {page:transition.from,count:transition.fromCount,opacity:1-progress,active:true}
-        : {page:transition.to,count:transition.toCount,opacity:progress,active:true};
+    const end=Math.min(count,layout.paragraphLines.length);
+    const totalHeight=layout.paragraphLines.slice(0,end).reduce((sum,lines)=>sum+lines.length*layout.lineHeight,0)+Math.max(0,end-1)*layout.paragraphGap;
+    return {first:0,end,height:Math.min(height,totalHeight)};
 }
 
 function createSpatialKnowledgeTexture(record) {
@@ -5003,14 +4967,12 @@ function drawIntroNoteContent(ctx) {
                 ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
                 const count=introOpeningCopySkipped || window.matchMedia('(prefers-reduced-motion: reduce)').matches?layout.paragraphLines.length:layout.paragraphLines.filter((lines,index)=>openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS+layout.paragraphLines.slice(0,index).reduce((total,prior)=>total+demoParagraphReadingTime(prior.join(' ')),0)).length;
                 const windowLayout=introReadingWindow(layout,count,360);
-                const pageTransition=resolveIntroTextPage(windowLayout.pageIndex,count,performance.now());
-                const displayPages=introReadingWindow(layout,pageTransition.count,360).pages;
-                const displayWindow=displayPages[pageTransition.page] || {first:0,end:0};let y=515;
+                const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;let y=515;
                 for(const [index,lines] of layout.paragraphLines.entries()){
-                    if(index<displayWindow.first || index>=displayWindow.end)continue;
+                    if(index<windowLayout.first || index>=windowLayout.end)continue;
                     const previous=layout.paragraphLines.slice(0,index).map(lines=>lines.join(' '));
                     const age=introOpeningCopySkipped?Infinity:openingElapsed-DEMO_WELCOME_TITLE_HOLD_MS-previous.reduce((total,text)=>total+demoParagraphReadingTime(text),0);
-                    ctx.save();ctx.globalAlpha=pageTransition.opacity;ctx.beginPath();ctx.rect(contentLeft,y-2,contentWidth,(window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.max(0,Math.min(1,age/1100)))*(lines.length*layout.lineHeight+4));ctx.clip();
+                    ctx.save();ctx.globalAlpha=reducedMotion?1:Math.max(0,Math.min(1,age/1100));
                     for(const line of lines){ctx.fillText(line,contentCenter,y);y+=layout.lineHeight;}ctx.restore();y+=layout.paragraphGap;
                 }
             }
@@ -5061,11 +5023,7 @@ function drawIntroNoteContent(ctx) {
     ctx.font = `600 ${bodyLayout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
     const bodyX = contentCenter;
     const windowLayout=introReadingWindow(bodyLayout,visibleParagraphs.filter(Boolean).length,bodyBottom-bodyTop);
-    const pageTransition=resolveIntroTextPage(windowLayout.pageIndex,visibleParagraphs.filter(Boolean).length,performance.now());
-    const displayPages=introReadingWindow(bodyLayout,pageTransition.count,bodyBottom-bodyTop).pages;
-    const displayWindow=displayPages[pageTransition.page] || {first:0,end:0,height:0};
-    const bodyHeight=displayWindow.height;
-    let paragraphY = bodyTop+Math.max(0,(bodyBottom-bodyTop-bodyHeight)/2);
+    let paragraphY = bodyTop;
     let clipped = false;
     ctx.save();
     ctx.beginPath();
@@ -5073,10 +5031,10 @@ function drawIntroNoteContent(ctx) {
     ctx.clip();
     ctx.textBaseline = 'top';
     outer: for (const [paragraphIndex, completeLines] of bodyLayout.paragraphLines.entries()) {
-        if(paragraphIndex<displayWindow.first || paragraphIndex>=displayWindow.end)continue;
+        if(paragraphIndex<windowLayout.first || paragraphIndex>=windowLayout.end)continue;
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
         ctx.save();
-        const reveal=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/1100));ctx.globalAlpha=pageTransition.opacity;ctx.beginPath();ctx.rect(contentLeft,paragraphY-2,contentWidth,reveal*(completeLines.length*bodyLayout.lineHeight+4));ctx.clip();
+        const reveal=window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/1100));ctx.globalAlpha=reveal;
         for (const [lineIndex, line] of visibleLines.entries()) {
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
             if (lineY > bodyBottom) { clipped = true;ctx.restore();break outer; }
@@ -5228,15 +5186,14 @@ function drawIntroSpatial(view) {
         const rootsNeedRefresh=arWelcomeSharedBoard && introBoardVisible && welcomeRootsNeedRefresh(rootRefreshState) && arWelcomeClock.elapsed-arWelcomeRootsLastRefreshAt>=WELCOME_ROOT_REFRESH_MS;
         const mapAnimating=introBoardStep==='UTILITY 1.1' && livingMapReveal(demoLivingMapElapsed(now),reducedMotion).preview>0;
         const paragraphFadeActive=!reducedMotion && now-introBoardParagraphFadeStartedAt<1100;
-        if(openingCopyRevealActive || mapAnimating || paragraphFadeActive || introTextPageTransition || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
+        if(openingCopyRevealActive || mapAnimating || paragraphFadeActive || (limMeshVisible && limRevealIsAnimating()) || (!reducedMotion && introBoardVisible && now-introTextureUploadedAt>=WELCOME_RIM_MOTION.refreshMs) || rootsNeedRefresh){
             introBoardTextureDirty=true;
             if(rootsNeedRefresh)arWelcomeRootsLastRefreshAt=arWelcomeClock.elapsed;
         }
     }
     const textIsTyping=Boolean(introBoardBody && introBoardVisibleBody.length<introBoardBody.length);
     const paragraphFadeActive=!window.matchMedia('(prefers-reduced-motion: reduce)').matches && now-introBoardParagraphFadeStartedAt<1100;
-    const textPageTransitionActive=Boolean(introTextPageTransition);
-    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive || textPageTransitionActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS;
+    const textureInterval=limActivation?.active || textIsTyping || paragraphFadeActive || openingCopyRevealActive ? DEMO_TEXT_TEXTURE_INTERVAL_MS : arWelcomeShowcaseActive ? 120 : DEMO_LIM_TEXTURE_INTERVAL_MS;
     if ((introBoardVisible || arWelcomeShowcaseActive) && (!introNoteTexture || (introBoardTextureDirty && now - introTextureUploadedAt >= textureInterval && introTextureFrameToken !== introFrameToken))) {
         introNoteTexture = createIntroNoteTexture(introNoteTexture);
         introBoardTextureDirty = false;
@@ -5571,8 +5528,11 @@ function drawSpatialAmbientLife(view){
             : {x:viewerMatrix[12]-viewerMatrix[8]*2.4,y:viewerMatrix[13],z:viewerMatrix[14]-viewerMatrix[10]*2.4};
     }
     const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const interactionMoment=introBoardStep==='UTILITY 1.1' || Boolean(nativeConnectionState && nativeConnectionState.phase!=='connected')
+        || Boolean(demoKnowledgeWorkspace || markers.some(record=>record.demoType==='plant' && record.demoExpanded && !record.demoProfileInteracted))
+        || Boolean(introBoardStep.startsWith('ELEMENTS ') || introBoardStep.startsWith('LEARNING 1.') || introBoardStep.startsWith('PLAY '));
     for(let index=0;index<BEE_COUNT;index++){
-        const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion,encounterSeed:ambientEncounterSeed});
+        const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{attention:'control',encounters:!reducedMotion && !interactionMoment,encounterSeed:ambientEncounterSeed});
         if(!bee)continue;
         // The ambient anchor is established from the current viewer pose above.
         // Referencing the old `base` name here threw on every immersive frame as
@@ -5928,8 +5888,11 @@ function drawDemoInputPointer(view,pointerSource) {
     const hoveredRecordTarget=demoRecordAtPointer();
     const hoveredRecordHit=hoveredRecordTarget?.hit || null;
     const pimSurface=pimTarget?.point ? {point:pimTarget.point,distance:pimTarget.distance} : null;
+    const mapPoint=introBoardStep==='UTILITY 1.1' && demoLivingMapReady() && demoLivingMapOrigin
+        ? livingMapRayPoint(latestControllerRay,demoLivingMapOrigin,demoLivingMapOrientation) : null;
+    const mapSurface=mapPoint ? {point:mapPoint,distance:Math.hypot(mapPoint.x-origin.x,mapPoint.y-origin.y,mapPoint.z-origin.z)} : null;
     // Butterflies can be caught along the ray, but never clamp the laser tip.
-    const surface = [limSurface,controlSurface,greenSurface,placementSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = [limSurface,controlSurface,greenSurface,placementSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.

@@ -8,13 +8,14 @@ import {demoGroundBaseY} from '../app/features/ar-demo/demoGeometry.js';
 import {DEMO_TOTEM_HALF_HEIGHT_METRES} from '../app/features/ar-demo/demoConfig.js';
 import {getSpatialVisualSettings,setSpatialVisualSettings} from '../app/services/spatialVisualSettings.js';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
-test('butterfly perches for a minute and takeoff and repeated approaches are continuous',()=>{
+test('butterfly perches for a minute, pauses naturally, and never approaches the viewer',()=>{
  assert.equal(demoButterflyPose(0,1),null);
  assert.equal(demoButterflyPose(59999,0).state,'landed');assert.equal(demoButterflyPose(60000,0).flight,0);
  assert.equal(demoButterflyPose(64500,0).flight,1);
  assert.equal(demoButterflyPose(180000,0,{reducedMotion:true}).state,'landed');
  for(let time=BUTTERFLY_PERCH_MS;time<240000;time+=100){const a=demoButterflyPose(time,0),b=demoButterflyPose(time+1,0);for(const key of ['x','y','z','close','flight'])assert.ok(Number.isFinite(a[key]) && Math.abs(b[key]-a[key])<.002);}
- assert.ok(demoButterflyPose(132000,0).close>.8);
+ assert.equal(demoButterflyPose(132000,0).close,0);
+ assert.equal(demoButterflyPose(135000,0).state,'landed');
 });
 test('four bees visit gently, with a waist-level pair at spaced intervals',()=>{
  assert.equal(BEE_COUNT,4);const visitors=new Set();

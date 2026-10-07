@@ -16,7 +16,7 @@ export function createDemoLivingMapXR(gl,scene){
     gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
     const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image'].map(k=>[k,gl.getUniformLocation(program,k)]));
     const attributes=['p','n','uv'].map(k=>gl.getAttribLocation(program,k));
-    const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4();
+    const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),painted=new WeakMap();
     function geometry(source){
         if(cache.has(source))return cache.get(source);
         const data=source.index?source.toNonIndexed():source;
@@ -62,6 +62,9 @@ export function createDemoLivingMapXR(gl,scene){
     return {
         draw(view,origin,rotation,opacity,guidance=''){
             if(opacity<=0)return;
+            const key=[...view.projectionMatrix,...view.transform.inverse.matrix,origin.x,origin.y,origin.z,rotation?.x ?? rotation,rotation?.y ?? 0,rotation?.z ?? 0,rotation?.w ?? 0,opacity,guidance].join(':');
+            if(painted.get(view)===key)return;
+            painted.set(view,key);
             root.compose(new THREE.Vector3(origin.x,origin.y-.025*(1-opacity),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(LIVING_MAP_WORLD_SCALE*(.94+.06*opacity)));
             gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
             scene.traverseVisible(node=>{if(!node.isMesh && !node.isLine)return;world.multiplyMatrices(root,node.matrixWorld);drawNode(node,world,opacity,node.isInstancedMesh?batchInstances(node):null);});

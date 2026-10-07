@@ -34,7 +34,7 @@ test('native map draws a planting cluster once per eye and reuses its uploaded m
  const scene=new THREE.Scene(),geometry=new THREE.BoxGeometry(1,1,1),material=new THREE.MeshBasicMaterial({color:'#456b38'}),cluster=new THREE.InstancedMesh(geometry,material,65);
  for(let i=0;i<65;i++)cluster.setMatrixAt(i,new THREE.Matrix4().makeTranslation(i,0,0));scene.add(cluster);scene.updateMatrixWorld();
  const renderer=createDemoLivingMapXR(gl,scene),matrix=new THREE.Matrix4().elements,view={projectionMatrix:matrix,transform:{inverse:{matrix}}};
- try{renderer.draw(view,{x:0,y:1,z:-1},0,1);const uploads=calls.filter(c=>c[0]==='bufferData').length;renderer.draw(view,{x:0,y:1,z:-1},0,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,2);assert.equal(calls.filter(c=>c[0]==='bufferData').length,uploads);assert.equal(calls.find(c=>c[0]==='drawArrays')[3],65*36);}
+ try{renderer.draw(view,{x:0,y:1,z:-1},0,1);const uploads=calls.filter(c=>c[0]==='bufferData').length;renderer.draw(view,{x:0,y:1,z:-1},0,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,1,'repeated view state is skipped');const otherEye={projectionMatrix:new THREE.Matrix4().makeRotationY(.02).elements,transform:{inverse:{matrix:new THREE.Matrix4().elements}}};renderer.draw(otherEye,{x:0,y:1,z:-1},0,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,2,'the other eye receives its own draw');assert.equal(calls.filter(c=>c[0]==='bufferData').length,uploads);assert.equal(calls.find(c=>c[0]==='drawArrays')[3],65*36);}
  finally{renderer.destroy();geometry.dispose();material.dispose();globalThis.document=previous;}
 });
 test('map placements explain entrance, local information and swales; PIMO reopens from its initial view',()=>{
