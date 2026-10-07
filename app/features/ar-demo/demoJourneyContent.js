@@ -22,7 +22,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "SPACE 1.1",
         "act": "Meet the panel",
         "title": "Your Control Panel",
-        "main": "The Control Panel keeps information and useful actions close by as you explore. We’ll introduce more of it naturally along the way.",
+        "main": "First, get familiar with the interface. The panel you see is your Control Panel. It keeps information and useful actions close by as you explore.",
         "panel": "A compact panel with its companion image visible. Media, Controls and Settings are initially closed.",
         "hint": "Continue to the first sample.",
         "art": null
@@ -40,7 +40,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.5",
         "act": "Place a sample",
         "title": "Place the first Plant Orb",
-        "main": "Place the Pigeon Pea Orb in a comfortable spot in front of you. In a real place, its Orb would sit beside the plant.",
+        "main": "Place the first Plant Orb in a comfortable spot in front of you. In a real place, its Orb would sit beside the plant.",
         "panel": "Existing placement controls; media closed.",
         "hint": "Aim at an open space and use the placement control.",
         "art": null

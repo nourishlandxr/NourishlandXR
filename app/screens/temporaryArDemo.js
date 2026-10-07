@@ -4754,7 +4754,7 @@ function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
     const paragraphs = String(text || '').split(/\n\n/);
     // Keep earlier paragraphs visible as new ones fade in; fit the complete
     // authored passage into the available Living Frame body area.
-    for (let fontSize = 68; fontSize >= 16; fontSize -= 1) {
+    for (let fontSize = ['SPACE 1.1','ELEMENTS 1.5'].includes(introBoardStep)?48:68; fontSize >= 16; fontSize -= 1) {
         const lineHeight = Math.round(fontSize * 1.22);
         const paragraphGap = Math.round(fontSize * .38);
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;

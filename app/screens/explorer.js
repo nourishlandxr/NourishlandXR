@@ -101,7 +101,8 @@ export async function renderVisitorLocationIntro(app, encodedProjectId, creatorP
 
 export function renderArPreparation(app, encodedProjectId, returnContext = 'visitor', placementType = '', encodedPlaceId = '', encodedSiteId = '') {
     const projectId = decodeURIComponent(encodedProjectId);
-    const firstTimeSafety = isProjectTutorialEnabled(projectId) && !hasArCameraSafetyAcknowledgement();
+    let preparationAcknowledged=false;try{preparationAcknowledged=localStorage.getItem('nxr-preparation-acknowledged')==='true';}catch{}
+    const firstTimeSafety = isProjectTutorialEnabled(projectId) && !hasArCameraSafetyAcknowledgement() && !preparationAcknowledged;
     const creatorDashboardMode = returnContext === 'creator';
     const arStage = creatorDashboardMode ? getTutorialStage(projectId, 'arMode') : 'understood';
     const backAction = returnContext === 'creator'
@@ -142,17 +143,15 @@ export function renderArPreparation(app, encodedProjectId, returnContext = 'visi
         if (creatorDashboardMode && arStage === 'new') recordTutorialEvent(projectId, 'ar_mode_introduced');
         return;
     }
-    app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div>${creatorGuidance}<section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section>${arPreparationControlsMarkup()}<label class="ar-preparation-skip-toggle"><input type="checkbox" id="arSkipWarning" /> <span>Don't show this message again</span></label><div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="global-ar-action primary" type="button" onclick="window.startArWithSkipCheck('${encodedProjectId}', '${returnContext}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')">START AR MODE</button></div></div>`;
+    if(preparationAcknowledged)return startArWithSkipCheck(app,encodedProjectId,returnContext,placementType,encodedPlaceId,encodedSiteId);
+    app.innerHTML = `<div class="screen ar-preparation-screen"><div class="page-header"><p class="welcome-label">Before you begin</p><h1>Prepare for AR</h1></div>${creatorGuidance}<section class="panel guide"><p>NourishlandXR uses your phone’s camera to connect digital content with the place around you. Stay aware of your surroundings, respect other people and follow all local rules and access requirements.</p><p><strong>When prompted, please allow access to your camera and location so the AR experience can work correctly.</strong></p><p class="meta">Your browser or device will request permission when these features are activated.</p></section>${arPreparationControlsMarkup()}<div class="button-row ar-preparation-actions"><button type="button" onclick="${backAction}">Go Back</button><button class="global-ar-action primary" type="button" onclick="window.startArWithSkipCheck('${encodedProjectId}', '${returnContext}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')">START AR MODE</button></div></div>`;
     bindArPreparationControls(app,app.querySelector('.ar-preparation-actions .global-ar-action'));
     if (creatorDashboardMode && arStage === 'new') recordTutorialEvent(projectId, 'ar_mode_introduced');
 }
 
 export function startArWithSkipCheck(_app, encodedProjectId, returnContext, placementType, encodedPlaceId, encodedSiteId) {
     acknowledgeArCameraSafety();
-    const skip = document.getElementById('arSkipWarning')?.checked;
-    if (skip) {
-        try { localStorage.setItem('nxr-skip-ar-warning', 'true'); } catch {}
-    }
+    try { localStorage.setItem('nxr-skip-ar-warning', 'true'); localStorage.setItem('nxr-preparation-acknowledged', 'true'); } catch {}
     const startAction = returnContext === 'existing-placement'
         ? `window.beginExistingPlacementAr('${encodedProjectId}', '${placementType}', '${encodedPlaceId}', '${encodedSiteId}')`
         : returnContext === 'area-navigation'

@@ -98,7 +98,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
     const drop=phoneAR ? .24 : headset ? .30 : .72;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
         y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
-    return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
+    return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:center.y+(headset?.08:0),z:matrix[14]})};
 }
 
 // Build companion faces from the main panel's local axes. The restrained
@@ -175,7 +175,7 @@ export function panelOpenerControls({mediaCollapsed=true,explorerClosed=true,set
         {action:'ToggleMedia',label:'Image',expanded:!mediaCollapsed},
         {action:'Explorer',label:'Controls',expanded:!explorerClosed},
         {action:'Settings',label:'Settings',expanded:settingsOpen}
-    ].map((item,index)=>({...item,kind:'menu',panelOpener:true,status:item.expanded?'Hide':'Show',
+    ].map((item,index)=>({...item,kind:'menu',panelOpener:true,selected:item.expanded,status:'',
         ariaLabel:`${item.expanded?'Hide':'Show'} ${item.label} panel`,x:18,y:174+index*62,width:174,height:54}));
 }
 export function controlPanelHeight(lines,largeText=false,pathway=false,utilities=0,moduleCount=0){
@@ -1113,8 +1113,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             if(button.selected){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
             if(button.panelOpener){
                 ctx.strokeStyle='#d6ded6';ctx.lineWidth=1.8;ctx.beginPath();ctx.roundRect(button.x+10,button.y+10,14,14,3);ctx.moveTo(button.x+15,button.y+11);ctx.lineTo(button.x+15,button.y+23);ctx.stroke();
-                ctx.textAlign='left';ctx.fillStyle='#f1fffc';ctx.font='650 18px system-ui';ctx.fillText(button.label,button.x+33,button.y+7,button.width-40);
-                ctx.fillStyle='#c7d0c6';ctx.font='550 12px system-ui';ctx.fillText(button.status,button.x+33,button.y+29,button.width-40);return;
+                ctx.textAlign='left';ctx.fillStyle='#f1fffc';ctx.font='550 20px system-ui';ctx.fillText(button.label,button.x+33,button.y+16,button.width-40);return;
             }
             ctx.fillStyle=button.disabled?'#899297':isContinue?'#ffffff':button.primary?'#f3fbf4':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(isContinue?'750 ':button.primary?'680 ':button.kind==='toggle'||button.kind==='handle'?'650 ':'600 ')+(isContinue?'46px':button.primary?'32px':button.kind==='toggle'||button.kind==='handle'?'28px':'25px')+' Manrope, system-ui';ctx.textAlign='center';
             if(isContinue && ctx.measureText(button.label).width>button.width-28){ctx.font='700 34px Manrope, system-ui';const words=button.label.split(/\s+/),split=Math.ceil(words.length/2),lines=[words.slice(0,split).join(' '),words.slice(split).join(' ')];lines.forEach((line,i)=>ctx.fillText(line,button.x+button.width/2,button.y+button.height/2-34+i*36,button.width-28));}
