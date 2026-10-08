@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {handTrackingState} from './xrPointer.js';
-import {LIVING_MAP_WORLD_SCALE} from './demoLivingMapReveal.js';
+import {livingMapHandleContact,livingMapHandleRayHit,livingMapHandleAnchor} from './demoLivingMapHandles.js';
 
 export const LIVING_MAP_MAX_TILT=Math.PI*25/180;
 const vector=p=>new THREE.Vector3(p.x,p.y,p.z);
@@ -15,10 +15,7 @@ export function limitLivingMapTilt(rotation){
     return swing.multiply(twist).normalize();
 }
 export function livingMapGripContact(point,origin,rotation){
-    if(!point || !origin || ![point.x,point.y,point.z,origin.x,origin.y,origin.z].every(Number.isFinite))return null;
-    const local=vector(point).sub(vector(origin)).applyQuaternion(quaternion(rotation).invert());
-    const radius=Math.hypot(local.x/(6.3*LIVING_MAP_WORLD_SCALE),local.z/(4.2*LIVING_MAP_WORLD_SCALE));
-    return Math.abs(local.y)<.17 && radius>=.45 && radius<=1.25 ? local : null;
+    return livingMapHandleContact(point,origin,rotation);
 }
 function pairFrame(a,b,fallbackUp={x:0,y:1,z:0}){
     const x=vector(b.position).sub(vector(a.position));if(x.length()<.2)return null;x.normalize();
@@ -52,7 +49,7 @@ export function createLivingMapTwoGrip(){
                 const a=held[i],b=held[j];
                 if(a.handedness===b.handedness || !['left','right'].includes(a.handedness) || !['left','right'].includes(b.handedness))continue;
                 const ca=livingMapGripContact(a.position,origin,rotation),cb=livingMapGripContact(b.position,origin,rotation);
-                if(!ca || !cb || ca.x*cb.x+ca.z*cb.z>=0)continue;
+                if(!ca || !cb || ca.x*cb.x>=0)continue;
                 const ordered=[a,b].sort((left,right)=>left.handedness==='left'?-1:right.handedness==='left'?1:0);
                 const frame=pairFrame(ordered[0],ordered[1]);if(!frame)continue;
                 pair={a:ordered[0].source,b:ordered[1].source,frame,up:new THREE.Vector3(0,1,0).applyQuaternion(frame),rotation:quaternion(rotation),midpoint:vector(a.position).add(vector(b.position)).multiplyScalar(.5),origin:vector(origin)};position=vector(origin);return null;
@@ -73,12 +70,13 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
     }
     function begin(source,frame){
         if(!enabled() || !canUse(source) || held.has(source))return held.has(source);
-        const value=sample(source,frame);if(!value)return false;let contact=value.position,remote=false;
+        const value=sample(source,frame);if(!value)return false;let contact=value.position,remote=false,anchor=null;
         if(!livingMapGripContact(contact,origin(),rotation()) && !source.hand){
             const pose=frame?.getPose(source.targetRaySpace,space);if(!pose)return false;
             const m=pose.transform.matrix,ray=new THREE.Ray(new THREE.Vector3(m[12],m[13],m[14]),new THREE.Vector3(-m[8],-m[9],-m[10]).normalize());
-            const normal=new THREE.Vector3(0,1,0).applyQuaternion(quaternion(rotation())),plane=new THREE.Plane().setFromNormalAndCoplanarPoint(normal,vector(origin())),hit=ray.intersectPlane(plane,new THREE.Vector3());
-            if(!hit || hit.distanceTo(ray.origin)>3 || !livingMapGripContact(hit,origin(),rotation()) || !canUse(source,{ray:{origin:ray.origin,direction:ray.direction},distance:hit.distanceTo(ray.origin)}))return false;contact=hit;remote=true;
+            const hit=livingMapHandleRayHit(ray,origin(),rotation());
+            if(!hit || !canUse(source,{ray:{origin:ray.origin,direction:ray.direction},distance:hit.distance}))return false;
+            contact=hit.point;anchor=hit.local;remote=true;
         }
         if(!livingMapGripContact(contact,origin(),rotation()))return false;
         if(!source.hand && !remote && source.targetRaySpace){
@@ -88,12 +86,15 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
         const offset=vector(contact).sub(vector(value.position));
         // Translation carries the contact. Wrist rotation must not swing a
         // distant ray-length offset around the controller like a lever.
-        held.set(source,{offset,last:contact});onGrab(source);return true;
+        const local=anchor || livingMapHandleAnchor(livingMapGripContact(contact,origin(),rotation()));
+        held.set(source,{offset,anchor:local,side:Math.sign(local.x)});onGrab(source);return true;
     }
     function release(source){if(!held.has(source))return false;held.delete(source);gesture.reset();suppressed.set(source,performance.now()+400);return true;}
     function reset(){gesture.reset();held.clear();lastUpdate=null;}
     return {
         get active(){return gesture.active;},owns:source=>held.has(source),
+        get heldHandles(){return [...held.values()].map(grip=>grip.side);},
+        contact(source){const grip=held.get(source),center=origin();return grip && center?grip.anchor.clone().applyQuaternion(quaternion(rotation())).add(vector(center)):null;},
         reset,
         bind(value,referenceSpace){abort?.abort();reset();session=value;space=referenceSpace;abort=new AbortController();
             for(const type of ['squeezestart','selectstart','squeezeend','selectend','select'])session.addEventListener(type,event=>{

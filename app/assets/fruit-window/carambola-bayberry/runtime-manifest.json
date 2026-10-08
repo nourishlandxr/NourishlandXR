@@ -1,0 +1,4829 @@
+{
+  "exhibit": "Fruit Discovery Window",
+  "units": "metres",
+  "axes": {
+    "Blender": "Z up, front -Y",
+    "glTF": "Y up, front +Z"
+  },
+  "frame": {
+    "file": "discovery_window_frame.glb",
+    "root": "FRAME_ROOT",
+    "opening_m": [
+      0.6,
+      0.6
+    ],
+    "depth_m": 0.3,
+    "glass": false,
+    "portal_mask": false,
+    "sha256": "35621532ba76def48e69a9ce0c5d664d1334d9636d2b21c0b8acb94a0d033ef0",
+    "exact_previous_review_asset": true
+  },
+  "species": {
+    "carambola": {
+      "prefix": "CS",
+      "scene": "carambola_scene.glb",
+      "ripe": "carambola_ripe.glb",
+      "species_root": "CS_SPECIES_ROOT",
+      "content_root": "CS_SPECIES_CONTENT",
+      "fruit_root": "CS_FRUIT_ROOT",
+      "stages": {
+        "BUD": {
+          "root": "CS_STAGE_BUD",
+          "position": 0
+        },
+        "FLOWER": {
+          "root": "CS_STAGE_FLOWER",
+          "position": 0.25
+        },
+        "FRUIT_SET": {
+          "root": "CS_STAGE_FRUIT_SET",
+          "position": 0.5
+        },
+        "DEVELOPING": {
+          "root": "CS_STAGE_DEVELOPING",
+          "position": 0.75
+        },
+        "RIPE": {
+          "root": "CS_STAGE_RIPE",
+          "position": 1
+        }
+      },
+      "attachment_glTF": {
+        "translation": [
+          0,
+          0.5049999952316284,
+          0.01600000075995922
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "inspection_offset_glTF": [
+        0,
+        -0.02,
+        0.32
+      ],
+      "collision_proxy": "CS_PICK_PROXY",
+      "pivots": [
+        "CS_Cut_Left_Pivot",
+        "CS_Cut_Right_Pivot"
+      ],
+      "pivot_rest_glTF": [
+        [
+          0,
+          -0.0575,
+          0
+        ],
+        [
+          0,
+          -0.0575,
+          0
+        ]
+      ],
+      "supporting_fruits": [
+        "CS_Supporting_Fruit_1",
+        "CS_Supporting_Fruit_2",
+        "CS_Supporting_Fruit_3"
+      ],
+      "fruit_count": 4,
+      "seasonal_flower_root": null,
+      "fruit_center_depth_m": 0.0575,
+      "opening_distance_m": 0.058,
+      "closed_exterior": "CS_CLOSED_EXTERIOR",
+      "cutaway_assembly": "CS_CUTAWAY_ASSEMBLY",
+      "internal_meshes": [],
+      "visibility_rules": [
+        "Addressable stages independently selectable; other stages hidden by runtime.",
+        "PICK_PROXY hidden; raycast only at RIPE.",
+        "Open and Close scale-switch the seamless exterior and solid cut assembly.",
+        "Cutaway is a deliberate educational cross-section, independent of development."
+      ],
+      "clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "picking": "Pointer prototype; tracked XR hand/controller integration pending"
+    },
+    "chinese_bayberry": {
+      "prefix": "CB",
+      "scene": "chinese_bayberry_scene.glb",
+      "ripe": "chinese_bayberry_ripe.glb",
+      "species_root": "CB_SPECIES_ROOT",
+      "content_root": "CB_SPECIES_CONTENT",
+      "fruit_root": "CB_FRUIT_ROOT",
+      "stages": {
+        "BUD": {
+          "root": "CB_STAGE_BUD",
+          "position": 0
+        },
+        "FLOWER": {
+          "root": "CB_STAGE_FLOWER",
+          "position": 0.25
+        },
+        "FRUIT_SET": {
+          "root": "CB_STAGE_FRUIT_SET",
+          "position": 0.5
+        },
+        "DEVELOPING": {
+          "root": "CB_STAGE_DEVELOPING",
+          "position": 0.75
+        },
+        "RIPE": {
+          "root": "CB_STAGE_RIPE",
+          "position": 1
+        }
+      },
+      "attachment_glTF": {
+        "translation": [
+          0,
+          0.44699999690055847,
+          -0.004000000189989805
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "inspection_offset_glTF": [
+        0,
+        -0.02,
+        0.32
+      ],
+      "collision_proxy": "CB_PICK_PROXY",
+      "pivots": [
+        "CB_Cut_Left_Pivot",
+        "CB_Cut_Right_Pivot"
+      ],
+      "pivot_rest_glTF": [
+        [
+          0,
+          -0.014,
+          0
+        ],
+        [
+          0,
+          -0.014,
+          0
+        ]
+      ],
+      "supporting_fruits": [
+        "CB_Supporting_Fruit_1",
+        "CB_Supporting_Fruit_2",
+        "CB_Supporting_Fruit_3",
+        "CB_Supporting_Fruit_Abundant_0_0",
+        "CB_Supporting_Fruit_Abundant_0_1",
+        "CB_Supporting_Fruit_Abundant_0_2",
+        "CB_Supporting_Fruit_Abundant_0_3",
+        "CB_Supporting_Fruit_Abundant_0_4",
+        "CB_Supporting_Fruit_Abundant_1_0",
+        "CB_Supporting_Fruit_Abundant_1_1",
+        "CB_Supporting_Fruit_Abundant_1_2",
+        "CB_Supporting_Fruit_Abundant_1_3",
+        "CB_Supporting_Fruit_Abundant_1_4",
+        "CB_Supporting_Fruit_Abundant_2_0",
+        "CB_Supporting_Fruit_Abundant_2_1",
+        "CB_Supporting_Fruit_Abundant_2_2",
+        "CB_Supporting_Fruit_Abundant_2_3",
+        "CB_Supporting_Fruit_Abundant_2_4",
+        "CB_Supporting_Fruit_Abundant_3_0",
+        "CB_Supporting_Fruit_Abundant_3_1",
+        "CB_Supporting_Fruit_Abundant_3_2",
+        "CB_Supporting_Fruit_Abundant_3_3",
+        "CB_Supporting_Fruit_Abundant_3_4"
+      ],
+      "fruit_count": 24,
+      "seasonal_flower_root": "CB_Seasonal_Female_Flower_Spikes",
+      "fruit_center_depth_m": 0.014,
+      "opening_distance_m": 0.023,
+      "closed_exterior": "CB_CLOSED_EXTERIOR",
+      "cutaway_assembly": "CB_CUTAWAY_ASSEMBLY",
+      "internal_meshes": [],
+      "visibility_rules": [
+        "Addressable stages independently selectable; other stages hidden by runtime.",
+        "PICK_PROXY hidden; raycast only at RIPE.",
+        "Open and Close scale-switch the seamless exterior and solid cut assembly.",
+        "Cutaway is a deliberate educational cross-section, independent of development."
+      ],
+      "clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "picking": "Pointer prototype; tracked XR hand/controller integration pending"
+    }
+  },
+  "shared_window_contract": "Same frame and independent animation API as reviewed mamey and African peach assets.",
+  "assets": {
+    "discovery_window_frame.glb": {
+      "bytes": 73424,
+      "triangles": 1228,
+      "mesh_objects": 6,
+      "clips": [],
+      "canonical_nodes": {
+        "FRAME_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Frame_Rim": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Back": {
+          "translation": [
+            0,
+            0.4000000059604645,
+            -0.15299999713897705
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Base": {
+          "translation": [
+            0,
+            0.08100000023841858,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Left": {
+          "translation": [
+            -0.3190000057220459,
+            0.4000000059604645,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Right": {
+          "translation": [
+            0.3190000057220459,
+            0.4000000059604645,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Top": {
+          "translation": [
+            0,
+            0.718999981880188,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {},
+      "unique_meshes": 6,
+      "stored_triangles": 1228,
+      "mesh_primitives": 6
+    },
+    "carambola_scene.glb": {
+      "bytes": 11979292,
+      "triangles": 71352,
+      "mesh_objects": 29,
+      "clips": [
+        "Development",
+        "Open",
+        "Close",
+        "Pick_Demo",
+        "Return_Demo"
+      ],
+      "canonical_nodes": {
+        "CS_SPECIES_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_FRUIT_ROOT": {
+          "translation": [
+            0,
+            0.5049999952316284,
+            0.01600000075995922
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_STAGE_BUD": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CS_BUD_Persistent_Attachment": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Main_Pink_Bud": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_STAGE_DEVELOPING": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CS_DEVELOPING_Green_Five_Ribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.5699999928474426,
+            0.5699999928474426,
+            0.5699999928474426
+          ]
+        },
+        "CS_DEVELOPING_Persistent_Attachment": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_STAGE_FLOWER": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CS_FLOWER_Persistent_Attachment": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Main_Flower_Stamens_And_Anthers": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Main_Pink_Flower": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0.7071067690849304,
+            0,
+            0,
+            0.7071067690849304
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Main_Pink_Flower_Five_Petals": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "weights": [
+            0
+          ]
+        },
+        "CS_STAGE_FRUIT_SET": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CS_FRUIT_SET_Green_Five_Ribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.10000000149011612,
+            0.10000000149011612,
+            0.10000000149011612
+          ]
+        },
+        "CS_FRUIT_SET_Persistent_Attachment": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Ripe_Pedicel_CS_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Ripe_Whole_Five_Ribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CS_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            -0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_0_Five_Chambers_And_Thin_Seeds": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_Upper_Skin_And_Flesh": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Ripe_Pedicel_CS_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_Right_Pivot": {
+          "translation": [
+            0,
+            -0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_1_Five_Chambers_And_Thin_Seeds": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_Lower_Skin_And_Flesh": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_SPECIES_CONTENT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Compound_Leaf_0_Seven_Leaflets": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Compound_Leaf_1_Seven_Leaflets": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Compound_Leaf_2_Seven_Leaflets": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Compound_Leaf_Midribs_And_Rachises": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Pink_Panicles_Flowers_Buds_And_Pedicels": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Supporting_Fruit_1": {
+          "translation": [
+            -0.18000000715255737,
+            0.41999998688697815,
+            -0.004999999888241291
+          ],
+          "rotation": [
+            0.02227463573217392,
+            -0.04062360152602196,
+            -0.05802210420370102,
+            0.9972396492958069
+          ],
+          "scale": [
+            0.7500000596046448,
+            0.7500000596046448,
+            0.7500000596046448
+          ]
+        },
+        "CS_Support_1_Five_Ribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Support_1_Pedicel": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Supporting_Fruit_2": {
+          "translation": [
+            0.18000000715255737,
+            0.5799999833106995,
+            -0.009999999776482582
+          ],
+          "rotation": [
+            0.016709404066205025,
+            -0.09439937025308609,
+            -0.06231031194329262,
+            0.9934419989585876
+          ],
+          "scale": [
+            0.8999999761581421,
+            0.9000000357627869,
+            0.8999999761581421
+          ]
+        },
+        "CS_Support_2_Five_Ribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Support_2_Pedicel": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Supporting_Fruit_3": {
+          "translation": [
+            -0.09000000357627869,
+            0.4659999907016754,
+            -0.004000000189989805
+          ],
+          "rotation": [
+            -0.007693408522754908,
+            -0.06196901202201843,
+            -0.010375318117439747,
+            0.9979944825172424
+          ],
+          "scale": [
+            0.5200000405311584,
+            0.5199999809265137,
+            0.5199999809265137
+          ]
+        },
+        "CS_Support_3_Five_Ribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Support_3_Pedicel": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Woody_Branch": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "unique_meshes": 29,
+      "stored_triangles": 71352,
+      "mesh_primitives": 41
+    },
+    "carambola_ripe.glb": {
+      "bytes": 5164788,
+      "triangles": 22470,
+      "mesh_objects": 8,
+      "clips": [
+        "Open",
+        "Close"
+      ],
+      "canonical_nodes": {
+        "CS_FRUIT_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Ripe_Pedicel_CS_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Ripe_Whole_Five_Ribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CS_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            -0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_0_Five_Chambers_And_Thin_Seeds": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_Upper_Skin_And_Flesh": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Ripe_Pedicel_CS_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_Right_Pivot": {
+          "translation": [
+            0,
+            -0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_1_Five_Chambers_And_Thin_Seeds": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CS_Cut_Lower_Skin_And_Flesh": {
+          "translation": [
+            0,
+            0.057500001043081284,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Open": 1.5,
+        "Close": 1.5
+      },
+      "unique_meshes": 8,
+      "stored_triangles": 22470,
+      "mesh_primitives": 12
+    },
+    "chinese_bayberry_scene.glb": {
+      "bytes": 13378064,
+      "triangles": 167084,
+      "mesh_objects": 96,
+      "clips": [
+        "Development",
+        "Open",
+        "Close",
+        "Pick_Demo",
+        "Return_Demo"
+      ],
+      "canonical_nodes": {
+        "CB_SPECIES_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_FRUIT_ROOT": {
+          "translation": [
+            0,
+            0.44699999690055847,
+            -0.004000000189989805
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_STAGE_BUD": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CB_Axillary_Inflorescence_Bud": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_BUD_Short_Attachment": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_STAGE_DEVELOPING": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CB_DEVELOPING_Green_Juice_Columns": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.6499999761581421,
+            0.6499999761581421,
+            0.6499999761581421
+          ]
+        },
+        "CB_DEVELOPING_Short_Attachment": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_STAGE_FLOWER": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CB_Female_Spike_Ovaries_Bracteoles_Paired_Stigmas": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_STAGE_FRUIT_SET": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CB_FRUIT_SET_Green_Juice_Columns": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.18000000715255737,
+            0.18000000715255737,
+            0.18000000715255737
+          ]
+        },
+        "CB_FRUIT_SET_Short_Attachment": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Ripe_Pedicel_CB_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Ripe_Whole_Juice_Columns": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CB_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            -0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Upper_Flesh_And_Stone_Cavity": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Upper_Juice_Columns": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Ripe_Pedicel_CB_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Right_Pivot": {
+          "translation": [
+            0,
+            -0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Lower_Flesh_And_Stone_Cavity": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Lower_Juice_Columns": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Stone_Central": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_SPECIES_CONTENT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_0_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_0_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_0_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_0_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_0_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_1_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_1_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_1_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_1_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_1_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_2_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_2_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_2_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_2_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_2_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_3_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_3_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_3_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_3_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Abundant_Pedicel_3_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Alternate_Leathery_Leaf_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Alternate_Leathery_Leaf_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Alternate_Leathery_Leaf_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Alternate_Leathery_Leaf_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Alternate_Leathery_Leaf_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Alternate_Leathery_Leaf_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Alternate_Leathery_Leaf_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Lateral_Shoot_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Lateral_Shoot_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Lateral_Shoot_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Lateral_Shoot_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_0_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_0_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_0_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_0_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_0_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_1_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_1_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_1_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_1_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_1_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_2_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_2_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_2_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_2_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_2_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_3_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_3_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_3_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_3_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Bushy_Leaf_3_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Detailed_Foliage_Midribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Seasonal_Female_Flower_Spikes": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CB_Flower_Spike_0": {
+          "translation": [
+            -0.19139999151229858,
+            0.4050999879837036,
+            -0.02829999476671219
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_1": {
+          "translation": [
+            -0.19231998920440674,
+            0.4248799681663513,
+            -0.03243999928236008
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_10": {
+          "translation": [
+            -0.1478399932384491,
+            0.36825600266456604,
+            -0.02897600084543228
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_11": {
+          "translation": [
+            -0.15887999534606934,
+            0.3528919816017151,
+            -0.03293199837207794
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_12": {
+          "translation": [
+            -0.16991999745368958,
+            0.3375279903411865,
+            -0.0368879996240139
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_13": {
+          "translation": [
+            -0.18095999956130981,
+            0.32216399908065796,
+            -0.04084400087594986
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_14": {
+          "translation": [
+            -0.19200000166893005,
+            0.3068000078201294,
+            -0.04480000212788582
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_15": {
+          "translation": [
+            -0.2030399888753891,
+            0.29143601655960083,
+            -0.04875599592924118
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_16": {
+          "translation": [
+            -0.21407999098300934,
+            0.2760719954967499,
+            -0.05271200090646744
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_17": {
+          "translation": [
+            -0.22511999309062958,
+            0.2607080042362213,
+            -0.0566679984331131
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_18": {
+          "translation": [
+            0.08560000360012054,
+            0.534339964389801,
+            -0.030719999223947525
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_19": {
+          "translation": [
+            0.08927999436855316,
+            0.5509920120239258,
+            -0.03513599932193756
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_2": {
+          "translation": [
+            -0.1932399868965149,
+            0.4446599781513214,
+            -0.03658000007271767
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_20": {
+          "translation": [
+            0.09296000003814697,
+            0.5676440000534058,
+            -0.0395519994199276
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_21": {
+          "translation": [
+            0.09663999825716019,
+            0.5842959880828857,
+            -0.04396799951791763
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_22": {
+          "translation": [
+            0.1003199964761734,
+            0.6009479761123657,
+            -0.04838399961590767
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_23": {
+          "translation": [
+            0.10400000214576721,
+            0.6175999641418457,
+            -0.052799999713897705
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_24": {
+          "translation": [
+            0.10767999291419983,
+            0.6342519521713257,
+            -0.05721599608659744
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_25": {
+          "translation": [
+            0.11135999858379364,
+            0.6509039402008057,
+            -0.06163199245929718
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_26": {
+          "translation": [
+            0.11503999680280685,
+            0.6675559878349304,
+            -0.06604799628257751
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_27": {
+          "translation": [
+            0.1825999915599823,
+            0.5429800152778625,
+            -0.039160002022981644
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_28": {
+          "translation": [
+            0.19088000059127808,
+            0.5298240184783936,
+            -0.04320799931883812
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_29": {
+          "translation": [
+            0.19915999472141266,
+            0.5166680216789246,
+            -0.047256000339984894
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_3": {
+          "translation": [
+            -0.19415999948978424,
+            0.4644399881362915,
+            -0.040720000863075256
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_30": {
+          "translation": [
+            0.20743998885154724,
+            0.5035120248794556,
+            -0.05130399763584137
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_31": {
+          "translation": [
+            0.21571999788284302,
+            0.4903560280799866,
+            -0.05535200238227844
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_32": {
+          "translation": [
+            0.2240000069141388,
+            0.4772000014781952,
+            -0.05939999967813492
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_33": {
+          "translation": [
+            0.23227998614311218,
+            0.4640439748764038,
+            -0.0634479969739914
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_34": {
+          "translation": [
+            0.24055999517440796,
+            0.4508880078792572,
+            -0.06749599426984787
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_35": {
+          "translation": [
+            0.24883998930454254,
+            0.4377319812774658,
+            -0.07154399901628494
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_4": {
+          "translation": [
+            -0.1950800120830536,
+            0.4842199683189392,
+            -0.044860001653432846
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_5": {
+          "translation": [
+            -0.19600000977516174,
+            0.5040000081062317,
+            -0.04899999871850014
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_6": {
+          "translation": [
+            -0.1969200074672699,
+            0.5237799882888794,
+            -0.05313999950885773
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_7": {
+          "translation": [
+            -0.19784000515937805,
+            0.5435599684715271,
+            -0.05727999657392502
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_8": {
+          "translation": [
+            -0.1987600028514862,
+            0.5633400082588196,
+            -0.061420001089572906
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Flower_Spike_9": {
+          "translation": [
+            -0.13679999113082886,
+            0.383620023727417,
+            -0.025019999593496323
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Thirty_Six_Female_Spikes": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_1": {
+          "translation": [
+            -0.18000000715255737,
+            0.3659999966621399,
+            -0.004000000189989805
+          ],
+          "rotation": [
+            0.037826862186193466,
+            -0.0015138820745050907,
+            -0.03996066749095917,
+            0.9984838366508484
+          ],
+          "scale": [
+            0.9200000762939453,
+            0.9200000166893005,
+            0.9200000166893005
+          ]
+        },
+        "CB_Support_1_Juice_Columns": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Support_1_Pedicel": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_2": {
+          "translation": [
+            0.14000000059604645,
+            0.5289999842643738,
+            -0.00800000037997961
+          ],
+          "rotation": [
+            0.03893791884183884,
+            0.08307697623968124,
+            -0.024953259155154228,
+            0.9954693913459778
+          ],
+          "scale": [
+            1.0399999618530273,
+            1.0399999618530273,
+            1.0399999618530273
+          ]
+        },
+        "CB_Support_2_Juice_Columns": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Support_2_Pedicel": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_3": {
+          "translation": [
+            0.23000000417232513,
+            0.5879999995231628,
+            -0.019999999552965164
+          ],
+          "rotation": [
+            0.007834667339920998,
+            0.09089533984661102,
+            0.01599944569170475,
+            0.9957010746002197
+          ],
+          "scale": [
+            0.7699999213218689,
+            0.7699999213218689,
+            0.7700000405311584
+          ]
+        },
+        "CB_Support_3_Juice_Columns": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Support_3_Pedicel": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_0_0": {
+          "translation": [
+            -0.18050000071525574,
+            0.41074997186660767,
+            0.023749999701976776
+          ],
+          "rotation": [
+            0,
+            0,
+            -0.08987855911254883,
+            0.9959527254104614
+          ],
+          "scale": [
+            0.6700000166893005,
+            0.6700000166893005,
+            0.6700000166893005
+          ]
+        },
+        "CB_Support_Abundant_0_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_0_1": {
+          "translation": [
+            -0.2060999870300293,
+            0.43914997577667236,
+            0.01654999703168869
+          ],
+          "rotation": [
+            0.04333809018135071,
+            0.1332080215215683,
+            -0.054949209094047546,
+            0.9886142015457153
+          ],
+          "scale": [
+            0.7599999904632568,
+            0.7600000500679016,
+            0.7599999904632568
+          ]
+        },
+        "CB_Support_Abundant_0_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_0_2": {
+          "translation": [
+            -0.18369999527931213,
+            0.47954997420310974,
+            0.009349998086690903
+          ],
+          "rotation": [
+            0.049906522035598755,
+            -0.11100009828805923,
+            0.04332082346081734,
+            0.9916207194328308
+          ],
+          "scale": [
+            0.8500000238418579,
+            0.8500000834465027,
+            0.8500000238418579
+          ]
+        },
+        "CB_Support_Abundant_0_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_0_3": {
+          "translation": [
+            -0.20930001139640808,
+            0.5079500079154968,
+            0.0021499991416931152
+          ],
+          "rotation": [
+            0.004697910510003567,
+            -0.040979597717523575,
+            0.0892535150051117,
+            0.9951544404029846
+          ],
+          "scale": [
+            0.9399999976158142,
+            0.9399999976158142,
+            0.9399999976158142
+          ]
+        },
+        "CB_Support_Abundant_0_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_0_4": {
+          "translation": [
+            -0.18690000474452972,
+            0.5483499765396118,
+            -0.005050010979175568
+          ],
+          "rotation": [
+            -0.03613165020942688,
+            0.14481221139431,
+            0.06478793174028397,
+            0.986674427986145
+          ],
+          "scale": [
+            1.0299999713897705,
+            1.0299999713897705,
+            1.0299999713897705
+          ]
+        },
+        "CB_Support_Abundant_0_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_1_0": {
+          "translation": [
+            -0.1379999965429306,
+            0.34724998474121094,
+            0.027249999344348907
+          ],
+          "rotation": [
+            0,
+            0,
+            -0.048608049750328064,
+            0.9988179206848145
+          ],
+          "scale": [
+            0.940000057220459,
+            0.940000057220459,
+            0.9399999976158142
+          ]
+        },
+        "CB_Support_Abundant_1_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_1_1": {
+          "translation": [
+            -0.18119998276233673,
+            0.31453001499176025,
+            0.0203699991106987
+          ],
+          "rotation": [
+            0.055047959089279175,
+            0.13757577538490295,
+            0.030192166566848755,
+            0.9884993433952332
+          ],
+          "scale": [
+            1.0299999713897705,
+            1.03000009059906,
+            1.0299999713897705
+          ]
+        },
+        "CB_Support_Abundant_1_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_1_2": {
+          "translation": [
+            -0.17639999091625214,
+            0.29381000995635986,
+            0.013489995151758194
+          ],
+          "rotation": [
+            0.043900348246097565,
+            -0.10783849656581879,
+            0.09442976117134094,
+            0.9886994361877441
+          ],
+          "scale": [
+            0.6700000166893005,
+            0.6700000166893005,
+            0.6700000166893005
+          ]
+        },
+        "CB_Support_Abundant_1_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_1_3": {
+          "translation": [
+            -0.21959999203681946,
+            0.2610900104045868,
+            0.006609998643398285
+          ],
+          "rotation": [
+            0.00598164601251483,
+            -0.04132869094610214,
+            0.059094417840242386,
+            0.9973785281181335
+          ],
+          "scale": [
+            0.7600000500679016,
+            0.7599999904632568,
+            0.7599999904632568
+          ]
+        },
+        "CB_Support_Abundant_1_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_1_4": {
+          "translation": [
+            -0.21480000019073486,
+            0.2403700053691864,
+            -0.0002700015902519226
+          ],
+          "rotation": [
+            -0.04864947125315666,
+            0.14880505204200745,
+            -0.01851068064570427,
+            0.9874956607818604
+          ],
+          "scale": [
+            0.8500000238418579,
+            0.8500000238418579,
+            0.8499999642372131
+          ]
+        },
+        "CB_Support_Abundant_1_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_2_0": {
+          "translation": [
+            0.10199999809265137,
+            0.5362499952316284,
+            0.020999997854232788
+          ],
+          "rotation": [
+            0,
+            0,
+            0.03744446113705635,
+            0.9992986917495728
+          ],
+          "scale": [
+            0.7599999904632568,
+            0.7599999904632568,
+            0.7599999904632568
+          ]
+        },
+        "CB_Support_Abundant_2_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_2_1": {
+          "translation": [
+            0.0843999907374382,
+            0.5592100024223328,
+            0.013319998979568481
+          ],
+          "rotation": [
+            0.06188337132334709,
+            0.13970908522605896,
+            0.08120790123939514,
+            0.9849147796630859
+          ],
+          "scale": [
+            0.8499999642372131,
+            0.8499999642372131,
+            0.8500000238418579
+          ]
+        },
+        "CB_Support_Abundant_2_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_2_2": {
+          "translation": [
+            0.11479999870061874,
+            0.5941699743270874,
+            0.005640000104904175
+          ],
+          "rotation": [
+            0.04743599519133568,
+            -0.10972706973552704,
+            0.0644950419664383,
+            0.9907321333885193
+          ],
+          "scale": [
+            0.9399999380111694,
+            0.9399999976158142,
+            0.9399999976158142
+          ]
+        },
+        "CB_Support_Abundant_2_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_2_3": {
+          "translation": [
+            0.09719999879598618,
+            0.6171300411224365,
+            -0.0020400062203407288
+          ],
+          "rotation": [
+            0.009526445530354977,
+            -0.042100854218006134,
+            -0.025148838758468628,
+            0.9987513422966003
+          ],
+          "scale": [
+            1.0299999713897705,
+            1.0299999713897705,
+            1.0299999713897705
+          ]
+        },
+        "CB_Support_Abundant_2_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_2_4": {
+          "translation": [
+            0.12759999930858612,
+            0.6520899534225464,
+            -0.009719997644424438
+          ],
+          "rotation": [
+            -0.057474371045827866,
+            0.15103068947792053,
+            -0.07858448475599289,
+            0.983722984790802
+          ],
+          "scale": [
+            0.6700000166893005,
+            0.6700000166893005,
+            0.6700000762939453
+          ]
+        },
+        "CB_Support_Abundant_2_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_3_0": {
+          "translation": [
+            0.2044999897480011,
+            0.5092500448226929,
+            0.012999996542930603
+          ],
+          "rotation": [
+            0,
+            0,
+            0.08898147940635681,
+            0.9960333108901978
+          ],
+          "scale": [
+            1.0299999713897705,
+            1.0299999713897705,
+            1.0299999713897705
+          ]
+        },
+        "CB_Support_Abundant_3_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_3_1": {
+          "translation": [
+            0.1949000060558319,
+            0.48037004470825195,
+            0.005959998816251755
+          ],
+          "rotation": [
+            0.05789577588438988,
+            0.13850350677967072,
+            0.051323529332876205,
+            0.9873351454734802
+          ],
+          "scale": [
+            0.6700000166893005,
+            0.6700000166893005,
+            0.6700000166893005
+          ]
+        },
+        "CB_Support_Abundant_3_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_3_2": {
+          "translation": [
+            0.23329998552799225,
+            0.46349000930786133,
+            -0.0010800063610076904
+          ],
+          "rotation": [
+            0.05704943463206291,
+            -0.11445435136556625,
+            -0.019149726256728172,
+            0.9916041493415833
+          ],
+          "scale": [
+            0.7600000500679016,
+            0.7599999904632568,
+            0.7599999904632568
+          ]
+        },
+        "CB_Support_Abundant_3_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_3_3": {
+          "translation": [
+            0.22370000183582306,
+            0.4346100091934204,
+            -0.008120007812976837
+          ],
+          "rotation": [
+            0.012044268660247326,
+            -0.04247234761714935,
+            -0.0858754813671112,
+            0.9953272938728333
+          ],
+          "scale": [
+            0.8500000834465027,
+            0.8500000238418579,
+            0.8500000238418579
+          ]
+        },
+        "CB_Support_Abundant_3_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Supporting_Fruit_Abundant_3_4": {
+          "translation": [
+            0.2620999813079834,
+            0.4177299737930298,
+            -0.015160001814365387
+          ],
+          "rotation": [
+            -0.054804727435112,
+            0.15041106939315796,
+            -0.060288529843091965,
+            0.9852604866027832
+          ],
+          "scale": [
+            0.9399999976158142,
+            0.940000057220459,
+            0.9399999976158142
+          ]
+        },
+        "CB_Support_Abundant_3_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Woody_Fruiting_Shoot": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "unique_meshes": 96,
+      "stored_triangles": 167084,
+      "mesh_primitives": 231
+    },
+    "chinese_bayberry_ripe.glb": {
+      "bytes": 4919156,
+      "triangles": 38780,
+      "mesh_objects": 9,
+      "clips": [
+        "Open",
+        "Close"
+      ],
+      "canonical_nodes": {
+        "CB_FRUIT_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Ripe_Pedicel_CB_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Ripe_Whole_Juice_Columns": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "CB_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            -0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Upper_Flesh_And_Stone_Cavity": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Upper_Juice_Columns": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Ripe_Pedicel_CB_Cut_Left_Pivot": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Right_Pivot": {
+          "translation": [
+            0,
+            -0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Lower_Flesh_And_Stone_Cavity": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Cut_Lower_Juice_Columns": {
+          "translation": [
+            0,
+            0.014000000432133675,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "CB_Stone_Central": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Open": 1.5,
+        "Close": 1.5
+      },
+      "unique_meshes": 9,
+      "stored_triangles": 38780,
+      "mesh_primitives": 21
+    },
+    "Fruit_Discovery_Window.blend": {
+      "bytes": 23229194
+    }
+  },
+  "validation": {
+    "blender_version": "5.2.2 LTS",
+    "glb_export": "passed",
+    "textures": "embedded",
+    "live_XR_grabbing": "unverified",
+    "Quest_performance": "unverified"
+  }
+}

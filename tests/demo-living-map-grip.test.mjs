@@ -16,8 +16,8 @@ test('distant grips carry by hand translation without a wrist lever or behind-pl
         return {transform:{matrix:new THREE.Matrix4().compose(new THREE.Vector3(x,1.5,-.5+shift),q,new THREE.Vector3(1,1,1)).elements}};}};
     const input=createLivingMapGripInput({enabled:()=>true,origin:()=>position,rotation:()=>rotation,onMove:p=>position={...p},onRotate:q=>rotation=q,canUse:(_s,c)=>{if(c){contacts.push(c.distance);return c.distance<1;}return true;}});input.bind(session,{});
     try{input.update(frame);assert.equal(input.active,true);assert.ok(contacts.every(d=>Number.isFinite(d) && d<1));
-        wrist=.2;input.update(frame);assert.ok(Math.abs(position.z-origin.z)<1e-8,'wrist tilt does not carry the tray forward');
-        shift=.25;input.update(frame);assert.ok(Math.abs(position.z-(origin.z+.25))<1e-8,'hands carry the tray naturally');
+        wrist=.2;input.update(frame);assert.ok(Math.abs(position.z-origin.z)<.02,'wrist tilt pivots at the raised handles, without a distant ray-length lever');
+        const tilted={...position};shift=.25;input.update(frame);assert.ok(Math.abs(position.z-(tilted.z+.25))<1e-8,'hands carry the tray naturally');
         sources[0].gamepad.buttons[1].pressed=false;input.update(frame);const stopped={...position};shift=.4;input.update(frame);assert.deepEqual(position,stopped);
     }finally{input.destroy();}
 });
@@ -94,9 +94,9 @@ test('tracked hand pinches also require both opposite rim contacts',()=>{
 });
 
 test('off-centre grips rotate around the held midpoint and retain left/right order',()=>{
-    const state=createLivingMapTwoGrip(),initial=samples();initial.forEach(s=>s.position.z+=.1);
+    const state=createLivingMapTwoGrip(),initial=samples();initial.forEach(s=>s.position.z+=.04);
     state.update([...initial].reverse(),origin,identity);
-    const turn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2),midpoint=new THREE.Vector3(0,1,-.9),translation=new THREE.Vector3(.15,.1,.2);
+    const turn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2),midpoint=new THREE.Vector3(0,1,-.96),translation=new THREE.Vector3(.15,.1,.2);
     const moved=initial.map(s=>({...s,position:s.position.clone().sub(midpoint).applyQuaternion(turn).add(midpoint).add(translation),up:s.up.clone().applyQuaternion(turn)}));
     const result=state.update(moved,origin,identity);assert.ok(result.angleTo(turn)<1e-6);
     const expected=new THREE.Vector3(origin.x,origin.y,origin.z).sub(midpoint).applyQuaternion(turn).add(midpoint).add(translation);

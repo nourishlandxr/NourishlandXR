@@ -1,0 +1,9816 @@
+{
+  "exhibit": "Plant Discovery Window",
+  "units": "metres",
+  "axes": {
+    "Blender": "Z up, front -Y",
+    "glTF": "Y up, front +Z"
+  },
+  "frame": {
+    "file": "discovery_window_frame.glb",
+    "root": "FRAME_ROOT",
+    "opening_m": [
+      0.6,
+      0.6
+    ],
+    "depth_m": 0.3,
+    "glass": false,
+    "portal_mask": false,
+    "sha256": "35621532ba76def48e69a9ce0c5d664d1334d9636d2b21c0b8acb94a0d033ef0",
+    "exact_previous_review_asset": true
+  },
+  "species": {
+    "pigeon_pea_fresh": {
+      "prefix": "PF",
+      "scene": "pigeon_pea_fresh_scene.glb",
+      "ripe": "pigeon_pea_fresh_pod.glb",
+      "species_root": "PF_SPECIES_ROOT",
+      "content_root": "PF_SPECIES_CONTENT",
+      "fruit_root": "PF_FRUIT_ROOT",
+      "stages": {
+        "BUD": {
+          "root": "PF_STAGE_BUD",
+          "position": 0
+        },
+        "FLOWER": {
+          "root": "PF_STAGE_FLOWER",
+          "position": 0.25
+        },
+        "FRUIT_SET": {
+          "root": "PF_STAGE_FRUIT_SET",
+          "position": 0.5
+        },
+        "DEVELOPING": {
+          "root": "PF_STAGE_DEVELOPING",
+          "position": 0.75
+        },
+        "RIPE": {
+          "root": "PF_STAGE_RIPE",
+          "position": 1
+        }
+      },
+      "attachment_glTF": {
+        "translation": [
+          0.00800000037997961,
+          0.4300000071525574,
+          0.029999999329447746
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "inspection_offset_glTF": [
+        0,
+        -0.02,
+        0.32
+      ],
+      "collision_proxy": "PF_PICK_PROXY",
+      "pivots": [
+        "PF_Valve_Left_Pivot",
+        "PF_Valve_Right_Pivot"
+      ],
+      "pivot_rest_glTF": [
+        [
+          0,
+          -0.03,
+          0
+        ],
+        [
+          0,
+          -0.03,
+          0
+        ]
+      ],
+      "supporting_fruits": [
+        "PF_Supporting_Fruit_0",
+        "PF_Supporting_Fruit_1",
+        "PF_Supporting_Fruit_2",
+        "PF_Supporting_Fruit_3",
+        "PF_Supporting_Fruit_4",
+        "PF_Supporting_Fruit_5",
+        "PF_Supporting_Fruit_6",
+        "PF_Supporting_Fruit_7",
+        "PF_Supporting_Fruit_8",
+        "PF_Supporting_Fruit_9",
+        "PF_Supporting_Fruit_10",
+        "PF_Supporting_Fruit_11",
+        "PF_Supporting_Fruit_12",
+        "PF_Supporting_Fruit_13",
+        "PF_Supporting_Fruit_14",
+        "PF_Supporting_Fruit_15",
+        "PF_Supporting_Fruit_16",
+        "PF_Supporting_Fruit_17",
+        "PF_Supporting_Fruit_18"
+      ],
+      "fruit_count": 20,
+      "seasonal_flower_root": null,
+      "fruit_center_depth_m": 0.03,
+      "opening_distance_m": 0.014,
+      "closed_exterior": "PF_CLOSED_EXTERIOR",
+      "cutaway_assembly": "PF_CUTAWAY_ASSEMBLY",
+      "internal_meshes": [],
+      "harvest_mode": "fresh",
+      "pod_count": 20,
+      "seeds_per_main_pod": 4,
+      "visibility_rules": [
+        "Addressable stages independently selectable; other stages hidden by runtime.",
+        "PICK_PROXY hidden; raycast only at RIPE.",
+        "Open and Close scale-switch the seamless exterior and solid cut assembly.",
+        "Cutaway is a deliberate educational cross-section, independent of development."
+      ],
+      "clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "picking": "Pointer prototype; tracked XR hand/controller integration pending"
+    },
+    "pigeon_pea_dry": {
+      "prefix": "PD",
+      "scene": "pigeon_pea_dry_scene.glb",
+      "ripe": "pigeon_pea_dry_pod.glb",
+      "species_root": "PD_SPECIES_ROOT",
+      "content_root": "PD_SPECIES_CONTENT",
+      "fruit_root": "PD_FRUIT_ROOT",
+      "stages": {
+        "BUD": {
+          "root": "PD_STAGE_BUD",
+          "position": 0
+        },
+        "FLOWER": {
+          "root": "PD_STAGE_FLOWER",
+          "position": 0.25
+        },
+        "FRUIT_SET": {
+          "root": "PD_STAGE_FRUIT_SET",
+          "position": 0.5
+        },
+        "DEVELOPING": {
+          "root": "PD_STAGE_DEVELOPING",
+          "position": 0.75
+        },
+        "RIPE": {
+          "root": "PD_STAGE_RIPE",
+          "position": 1
+        }
+      },
+      "attachment_glTF": {
+        "translation": [
+          0.00800000037997961,
+          0.4300000071525574,
+          0.029999999329447746
+        ],
+        "rotation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "scale": [
+          1,
+          1,
+          1
+        ]
+      },
+      "inspection_offset_glTF": [
+        0,
+        -0.02,
+        0.32
+      ],
+      "collision_proxy": "PD_PICK_PROXY",
+      "pivots": [
+        "PD_Valve_Left_Pivot",
+        "PD_Valve_Right_Pivot"
+      ],
+      "pivot_rest_glTF": [
+        [
+          0,
+          -0.03,
+          0
+        ],
+        [
+          0,
+          -0.03,
+          0
+        ]
+      ],
+      "supporting_fruits": [
+        "PD_Supporting_Fruit_0",
+        "PD_Supporting_Fruit_1",
+        "PD_Supporting_Fruit_2",
+        "PD_Supporting_Fruit_3",
+        "PD_Supporting_Fruit_4",
+        "PD_Supporting_Fruit_5",
+        "PD_Supporting_Fruit_6",
+        "PD_Supporting_Fruit_7",
+        "PD_Supporting_Fruit_8",
+        "PD_Supporting_Fruit_9",
+        "PD_Supporting_Fruit_10",
+        "PD_Supporting_Fruit_11",
+        "PD_Supporting_Fruit_12",
+        "PD_Supporting_Fruit_13",
+        "PD_Supporting_Fruit_14",
+        "PD_Supporting_Fruit_15",
+        "PD_Supporting_Fruit_16",
+        "PD_Supporting_Fruit_17",
+        "PD_Supporting_Fruit_18"
+      ],
+      "fruit_count": 20,
+      "seasonal_flower_root": null,
+      "fruit_center_depth_m": 0.03,
+      "opening_distance_m": 0.014,
+      "closed_exterior": "PD_CLOSED_EXTERIOR",
+      "cutaway_assembly": "PD_CUTAWAY_ASSEMBLY",
+      "internal_meshes": [],
+      "harvest_mode": "dry",
+      "pod_count": 20,
+      "seeds_per_main_pod": 4,
+      "visibility_rules": [
+        "Addressable stages independently selectable; other stages hidden by runtime.",
+        "PICK_PROXY hidden; raycast only at RIPE.",
+        "Open and Close scale-switch the seamless exterior and solid cut assembly.",
+        "Cutaway is a deliberate educational cross-section, independent of development."
+      ],
+      "clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "picking": "Pointer prototype; tracked XR hand/controller integration pending"
+    }
+  },
+  "shared_window_contract": "Same frame and independent animation API as reviewed mamey and African peach assets.",
+  "assets": {
+    "discovery_window_frame.glb": {
+      "bytes": 73424,
+      "triangles": 1228,
+      "mesh_objects": 6,
+      "clips": [],
+      "canonical_nodes": {
+        "FRAME_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Frame_Rim": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Back": {
+          "translation": [
+            0,
+            0.4000000059604645,
+            -0.15299999713897705
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Base": {
+          "translation": [
+            0,
+            0.08100000023841858,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Left": {
+          "translation": [
+            -0.3190000057220459,
+            0.4000000059604645,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Right": {
+          "translation": [
+            0.3190000057220459,
+            0.4000000059604645,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "Recess_Top": {
+          "translation": [
+            0,
+            0.718999981880188,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {},
+      "unique_meshes": 6,
+      "stored_triangles": 1228,
+      "mesh_primitives": 6
+    },
+    "pigeon_pea_dal.glb": {
+      "bytes": 1776240,
+      "triangles": 5048,
+      "mesh_objects": 12,
+      "clips": [
+        "Process_To_Dal"
+      ],
+      "canonical_nodes": {
+        "DAL_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_0_Cotyledon_Left": {
+          "translation": [
+            -0.013500000350177288,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_0_Cotyledon_Left_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_0_Cotyledon_Right": {
+          "translation": [
+            -0.013500000350177288,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_0_Cotyledon_Right_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_1_Cotyledon_Left": {
+          "translation": [
+            -0.0044999998062849045,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_1_Cotyledon_Left_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_1_Cotyledon_Right": {
+          "translation": [
+            -0.0044999998062849045,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_1_Cotyledon_Right_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_2_Cotyledon_Left": {
+          "translation": [
+            0.0044999998062849045,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_2_Cotyledon_Left_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_2_Cotyledon_Right": {
+          "translation": [
+            0.0044999998062849045,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_2_Cotyledon_Right_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_3_Cotyledon_Left": {
+          "translation": [
+            0.013500000350177288,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_3_Cotyledon_Left_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_3_Cotyledon_Right": {
+          "translation": [
+            0.013500000350177288,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Seed_3_Cotyledon_Right_Yellow_Split_Surface": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_WHOLE_SEED_COATS": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Dry_Whole_Coat_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Dry_Whole_Coat_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Dry_Whole_Coat_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "DAL_Dry_Whole_Coat_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Process_To_Dal": 3
+      },
+      "unique_meshes": 12,
+      "stored_triangles": 5048,
+      "mesh_primitives": 12
+    },
+    "pigeon_pea_fresh_scene.glb": {
+      "bytes": 14592744,
+      "triangles": 100170,
+      "mesh_objects": 194,
+      "clips": [
+        "Development",
+        "Open",
+        "Close",
+        "Pick_Demo",
+        "Return_Demo"
+      ],
+      "canonical_nodes": {
+        "PF_SPECIES_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_FRUIT_ROOT": {
+          "translation": [
+            0.00800000037997961,
+            0.4300000071525574,
+            0.029999999329447746
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_STAGE_BUD": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PF_Flower_Bud": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_STAGE_DEVELOPING": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PF_DEVELOPING_Green_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.7799999713897705,
+            0.7799999713897705,
+            0.7799999713897705
+          ]
+        },
+        "PF_DEVELOPING_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_STAGE_FLOWER": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PF_Main_Flower": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Nectar_Vein_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Main_Flower_Petals": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "weights": [
+            0
+          ]
+        },
+        "PF_STAGE_FRUIT_SET": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PF_FRUIT_SET_Green_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.15000000596046448,
+            0.15000000596046448,
+            0.15000000596046448
+          ]
+        },
+        "PF_FRUIT_SET_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Closed_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PF_Valve_Left_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Valve_0_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Valve_Right_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Valve_1_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_0_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_1_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_2_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_3_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_RIPE_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_SPECIES_CONTENT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Cluster_Raceme_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Cluster_Raceme_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Cluster_Raceme_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Cluster_Raceme_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Detailed_Foliage_Midribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_0_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_0_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_0_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_10_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_10_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_10_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_11_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_11_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_11_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_12_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_12_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_12_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_13_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_13_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_13_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_1_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_1_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_1_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_2_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_2_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_2_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_3_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_3_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_3_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_4_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_4_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_4_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_5_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_5_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_5_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_6_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_6_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_6_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_7_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_7_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_7_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_8_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_8_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_8_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_9_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_9_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Individual_Leaflet_Stalk_9_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_0_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_0_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_0_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_10_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_10_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_10_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_11_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_11_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_11_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_12_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_12_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_12_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_13_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_13_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_13_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_1_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_1_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_1_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_2_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_2_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_2_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_3_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_3_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_3_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_4_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_4_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_4_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_5_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_5_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_5_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_6_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_6_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_6_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_7_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_7_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_7_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_8_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_8_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_8_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_9_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_9_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Leaflet_9_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_10": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_11": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_12": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_13": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Natural_Petiole_9": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Pod_Raceme": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0": {
+          "translation": [
+            -0.04500000178813934,
+            0.4909999966621399,
+            -0.00800000037997961
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Nectar_Vein_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_0_Petals": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1": {
+          "translation": [
+            0.04699999839067459,
+            0.5120000243186951,
+            -0.023000000044703484
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Nectar_Vein_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Flower_1_Petals": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_0": {
+          "translation": [
+            -0.005499999970197678,
+            0.4309999942779541,
+            0.04399999976158142
+          ],
+          "rotation": [
+            -0.0017989129992201924,
+            0.039948850870132446,
+            -0.04494883492588997,
+            0.9981885552406311
+          ],
+          "scale": [
+            0.8200000524520874,
+            0.8199999332427979,
+            0.8199999928474426
+          ]
+        },
+        "PF_Supporting_Pod_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_1": {
+          "translation": [
+            0.003500000573694706,
+            0.42800000309944153,
+            0.05000000074505806
+          ],
+          "rotation": [
+            0.03315019980072975,
+            0.020835762843489647,
+            -0.023207170888781548,
+            0.9989636540412903
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.85999995470047,
+            0.8600000143051147
+          ]
+        },
+        "PF_Supporting_Pod_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_10": {
+          "translation": [
+            0.13199999928474426,
+            0.5134736895561218,
+            0.005342106334865093
+          ],
+          "rotation": [
+            -0.020986588671803474,
+            -0.033050861209630966,
+            -0.023210085928440094,
+            0.9989637136459351
+          ],
+          "scale": [
+            0.8999999165534973,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PF_Supporting_Pod_10": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_11": {
+          "translation": [
+            0.14100000262260437,
+            0.5104737281799316,
+            -0.000657893717288971
+          ],
+          "rotation": [
+            -0.03998894244432449,
+            0.00017688631487544626,
+            0.000007079158876877045,
+            0.9992001056671143
+          ],
+          "scale": [
+            0.9399999976158142,
+            0.9399999976158142,
+            0.9399999976158142
+          ]
+        },
+        "PF_Supporting_Pod_11": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_12": {
+          "translation": [
+            0.15000000596046448,
+            0.5164737105369568,
+            0.005342106334865093
+          ],
+          "rotation": [
+            -0.020684530958533287,
+            0.03324887156486511,
+            0.023204196244478226,
+            0.9989635944366455
+          ],
+          "scale": [
+            0.8199999928474426,
+            0.8199999332427979,
+            0.8199999928474426
+          ]
+        },
+        "PF_Supporting_Pod_12": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_13": {
+          "translation": [
+            0.15900000929832458,
+            0.5134736895561218,
+            -0.000657893717288971
+          ],
+          "rotation": [
+            0.018410079181194305,
+            0.03700355440378189,
+            0.04433956369757652,
+            0.998161256313324
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.8600000143051147,
+            0.8600000143051147
+          ]
+        },
+        "PF_Supporting_Pod_13": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_14": {
+          "translation": [
+            0.24799999594688416,
+            0.5569401383399963,
+            -0.002994012087583542
+          ],
+          "rotation": [
+            0.039327383041381836,
+            0.0036776375491172075,
+            -0.0451652854681015,
+            0.9981983304023743
+          ],
+          "scale": [
+            0.8999999165534973,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PF_Supporting_Pod_14": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_15": {
+          "translation": [
+            0.25699999928474426,
+            0.5539401173591614,
+            0.0030059879645705223
+          ],
+          "rotation": [
+            0.026673318818211555,
+            -0.030949750915169716,
+            -0.021690096706151962,
+            0.998929500579834
+          ],
+          "scale": [
+            0.940000057220459,
+            0.940000057220459,
+            0.940000057220459
+          ]
+        },
+        "PF_Supporting_Pod_15": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_16": {
+          "translation": [
+            0.26600000262260437,
+            0.5509401559829712,
+            -0.002994012087583542
+          ],
+          "rotation": [
+            -0.011507430113852024,
+            -0.0382944718003273,
+            -0.0004410237306728959,
+            0.999200165271759
+          ],
+          "scale": [
+            0.8199999928474426,
+            0.8199999332427979,
+            0.8199999928474426
+          ]
+        },
+        "PF_Supporting_Pod_16": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_17": {
+          "translation": [
+            0.2750000059604645,
+            0.5569401383399963,
+            0.0030059879645705223
+          ],
+          "rotation": [
+            -0.03868179768323898,
+            -0.011860307306051254,
+            0.02205706015229225,
+            0.998937726020813
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.85999995470047,
+            0.8600000143051147
+          ]
+        },
+        "PF_Supporting_Pod_17": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_18": {
+          "translation": [
+            0.2840000092983246,
+            0.5539401173591614,
+            -0.002994012087583542
+          ],
+          "rotation": [
+            -0.02880660630762577,
+            0.025020312517881393,
+            0.0457412414252758,
+            0.9982243776321411
+          ],
+          "scale": [
+            0.8999999761581421,
+            0.8999999761581421,
+            0.8999999165534973
+          ]
+        },
+        "PF_Supporting_Pod_18": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_2": {
+          "translation": [
+            0.012500000186264515,
+            0.42500001192092896,
+            0.04399999976158142
+          ],
+          "rotation": [
+            0.03635883703827858,
+            -0.01663409359753132,
+            0.0006052805110812187,
+            0.9992002248764038
+          ],
+          "scale": [
+            0.8999999761581421,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PF_Supporting_Pod_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_3": {
+          "translation": [
+            0.0215000007301569,
+            0.4309999942779541,
+            0.05000000074505806
+          ],
+          "rotation": [
+            0.0047482457011938095,
+            -0.03945179656147957,
+            0.022703520953655243,
+            0.9989522695541382
+          ],
+          "scale": [
+            0.9399999976158142,
+            0.9399999976158142,
+            0.9399999976158142
+          ]
+        },
+        "PF_Supporting_Pod_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_4": {
+          "translation": [
+            -0.2120000123977661,
+            0.330197274684906,
+            -0.020680271089076996
+          ],
+          "rotation": [
+            -0.02905101515352726,
+            -0.024743223562836647,
+            -0.0457393079996109,
+            0.9982243180274963
+          ],
+          "scale": [
+            0.8200000524520874,
+            0.8199999928474426,
+            0.8199999332427979
+          ]
+        },
+        "PF_Supporting_Pod_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_5": {
+          "translation": [
+            -0.203000009059906,
+            0.32719728350639343,
+            -0.014680271036922932
+          ],
+          "rotation": [
+            -0.03859046846628189,
+            0.01219771895557642,
+            -0.022045113146305084,
+            0.9989374876022339
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.8600000143051147,
+            0.8600000143051147
+          ]
+        },
+        "PF_Supporting_Pod_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_6": {
+          "translation": [
+            -0.1940000057220459,
+            0.32419729232788086,
+            -0.020680271089076996
+          ],
+          "rotation": [
+            -0.011168146505951881,
+            0.03839497268199921,
+            0.00042914386722259223,
+            0.999200165271759
+          ],
+          "scale": [
+            0.8999999761581421,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PF_Supporting_Pod_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_7": {
+          "translation": [
+            -0.1850000023841858,
+            0.330197274684906,
+            -0.014680271036922932
+          ],
+          "rotation": [
+            0.026935962960124016,
+            0.030724385753273964,
+            0.021688036620616913,
+            0.998929500579834
+          ],
+          "scale": [
+            0.9399999380111694,
+            0.940000057220459,
+            0.9399999976158142
+          ]
+        },
+        "PF_Supporting_Pod_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_8": {
+          "translation": [
+            -0.17599999904632568,
+            0.32719728350639343,
+            -0.020680271089076996
+          ],
+          "rotation": [
+            0.039261672645807266,
+            -0.004029775969684124,
+            0.045178864151239395,
+            0.998198926448822
+          ],
+          "scale": [
+            0.8199999928474426,
+            0.8200000524520874,
+            0.8199999928474426
+          ]
+        },
+        "PF_Supporting_Pod_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Fruit_9": {
+          "translation": [
+            0.12300000339746475,
+            0.5164737105369568,
+            -0.000657893717288971
+          ],
+          "rotation": [
+            0.018095266073942184,
+            -0.037136346101760864,
+            -0.044348813593387604,
+            0.9981616139411926
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.8600000143051147,
+            0.8600000739097595
+          ]
+        },
+        "PF_Supporting_Pod_9": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_10": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_11": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_12": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_13": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_14": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_15": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_16": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_17": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_18": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Supporting_Pedicel_9": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Woody_Branch": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "unique_meshes": 194,
+      "stored_triangles": 100170,
+      "mesh_primitives": 238
+    },
+    "pigeon_pea_fresh_pod.glb": {
+      "bytes": 3433788,
+      "triangles": 14840,
+      "mesh_objects": 13,
+      "clips": [
+        "Open",
+        "Close"
+      ],
+      "canonical_nodes": {
+        "PF_FRUIT_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Closed_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PF_Valve_Left_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Valve_0_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Valve_Right_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Valve_1_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_0_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_1_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_2_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_Whole_Seed_3_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PF_RIPE_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Open": 1.5,
+        "Close": 1.5
+      },
+      "unique_meshes": 13,
+      "stored_triangles": 14840,
+      "mesh_primitives": 15
+    },
+    "pigeon_pea_dry_scene.glb": {
+      "bytes": 16244852,
+      "triangles": 100170,
+      "mesh_objects": 194,
+      "clips": [
+        "Development",
+        "Open",
+        "Close",
+        "Pick_Demo",
+        "Return_Demo"
+      ],
+      "canonical_nodes": {
+        "PD_SPECIES_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_FRUIT_ROOT": {
+          "translation": [
+            0.00800000037997961,
+            0.4300000071525574,
+            0.029999999329447746
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_STAGE_BUD": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PD_Flower_Bud": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_STAGE_DEVELOPING": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PD_DEVELOPING_Green_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_DEVELOPING_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_STAGE_FLOWER": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PD_Main_Flower": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Nectar_Vein_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Main_Flower_Petals": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ],
+          "weights": [
+            0
+          ]
+        },
+        "PD_STAGE_FRUIT_SET": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PD_FRUIT_SET_Green_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.15000000596046448,
+            0.15000000596046448,
+            0.15000000596046448
+          ]
+        },
+        "PD_FRUIT_SET_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Closed_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PD_Valve_Left_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Valve_0_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Valve_Right_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Valve_1_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_0_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_1_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_2_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_3_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_RIPE_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_SPECIES_CONTENT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Cluster_Raceme_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Cluster_Raceme_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Cluster_Raceme_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Cluster_Raceme_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Detailed_Foliage_Midribs": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_0_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_0_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_0_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_10_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_10_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_10_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_11_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_11_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_11_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_12_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_12_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_12_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_13_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_13_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_13_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_1_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_1_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_1_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_2_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_2_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_2_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_3_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_3_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_3_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_4_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_4_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_4_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_5_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_5_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_5_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_6_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_6_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_6_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_7_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_7_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_7_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_8_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_8_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_8_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_9_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_9_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Individual_Leaflet_Stalk_9_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_0_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_0_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_0_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_10_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_10_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_10_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_11_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_11_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_11_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_12_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_12_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_12_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_13_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_13_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_13_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_1_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_1_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_1_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_2_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_2_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_2_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_3_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_3_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_3_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_4_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_4_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_4_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_5_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_5_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_5_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_6_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_6_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_6_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_7_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_7_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_7_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_8_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_8_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_8_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_9_-1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_9_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Leaflet_9_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_10": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_11": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_12": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_13": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Natural_Petiole_9": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Pod_Raceme": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0": {
+          "translation": [
+            -0.04500000178813934,
+            0.4909999966621399,
+            -0.00800000037997961
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Nectar_Vein_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_0_Petals": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1": {
+          "translation": [
+            0.04699999839067459,
+            0.5120000243186951,
+            -0.023000000044703484
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Nectar_Vein_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Flower_1_Petals": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_0": {
+          "translation": [
+            -0.005499999970197678,
+            0.4309999942779541,
+            0.04399999976158142
+          ],
+          "rotation": [
+            -0.0017989129992201924,
+            0.039948850870132446,
+            -0.04494883492588997,
+            0.9981885552406311
+          ],
+          "scale": [
+            0.8200000524520874,
+            0.8199999332427979,
+            0.8199999928474426
+          ]
+        },
+        "PD_Supporting_Pod_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_1": {
+          "translation": [
+            0.003500000573694706,
+            0.42800000309944153,
+            0.05000000074505806
+          ],
+          "rotation": [
+            0.03315019980072975,
+            0.020835762843489647,
+            -0.023207170888781548,
+            0.9989636540412903
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.85999995470047,
+            0.8600000143051147
+          ]
+        },
+        "PD_Supporting_Pod_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_10": {
+          "translation": [
+            0.13199999928474426,
+            0.5134736895561218,
+            0.005342106334865093
+          ],
+          "rotation": [
+            -0.020986588671803474,
+            -0.033050861209630966,
+            -0.023210085928440094,
+            0.9989637136459351
+          ],
+          "scale": [
+            0.8999999165534973,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PD_Supporting_Pod_10": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_11": {
+          "translation": [
+            0.14100000262260437,
+            0.5104737281799316,
+            -0.000657893717288971
+          ],
+          "rotation": [
+            -0.03998894244432449,
+            0.00017688631487544626,
+            0.000007079158876877045,
+            0.9992001056671143
+          ],
+          "scale": [
+            0.9399999976158142,
+            0.9399999976158142,
+            0.9399999976158142
+          ]
+        },
+        "PD_Supporting_Pod_11": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_12": {
+          "translation": [
+            0.15000000596046448,
+            0.5164737105369568,
+            0.005342106334865093
+          ],
+          "rotation": [
+            -0.020684530958533287,
+            0.03324887156486511,
+            0.023204196244478226,
+            0.9989635944366455
+          ],
+          "scale": [
+            0.8199999928474426,
+            0.8199999332427979,
+            0.8199999928474426
+          ]
+        },
+        "PD_Supporting_Pod_12": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_13": {
+          "translation": [
+            0.15900000929832458,
+            0.5134736895561218,
+            -0.000657893717288971
+          ],
+          "rotation": [
+            0.018410079181194305,
+            0.03700355440378189,
+            0.04433956369757652,
+            0.998161256313324
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.8600000143051147,
+            0.8600000143051147
+          ]
+        },
+        "PD_Supporting_Pod_13": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_14": {
+          "translation": [
+            0.24799999594688416,
+            0.5569401383399963,
+            -0.002994012087583542
+          ],
+          "rotation": [
+            0.039327383041381836,
+            0.0036776375491172075,
+            -0.0451652854681015,
+            0.9981983304023743
+          ],
+          "scale": [
+            0.8999999165534973,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PD_Supporting_Pod_14": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_15": {
+          "translation": [
+            0.25699999928474426,
+            0.5539401173591614,
+            0.0030059879645705223
+          ],
+          "rotation": [
+            0.026673318818211555,
+            -0.030949750915169716,
+            -0.021690096706151962,
+            0.998929500579834
+          ],
+          "scale": [
+            0.940000057220459,
+            0.940000057220459,
+            0.940000057220459
+          ]
+        },
+        "PD_Supporting_Pod_15": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_16": {
+          "translation": [
+            0.26600000262260437,
+            0.5509401559829712,
+            -0.002994012087583542
+          ],
+          "rotation": [
+            -0.011507430113852024,
+            -0.0382944718003273,
+            -0.0004410237306728959,
+            0.999200165271759
+          ],
+          "scale": [
+            0.8199999928474426,
+            0.8199999332427979,
+            0.8199999928474426
+          ]
+        },
+        "PD_Supporting_Pod_16": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_17": {
+          "translation": [
+            0.2750000059604645,
+            0.5569401383399963,
+            0.0030059879645705223
+          ],
+          "rotation": [
+            -0.03868179768323898,
+            -0.011860307306051254,
+            0.02205706015229225,
+            0.998937726020813
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.85999995470047,
+            0.8600000143051147
+          ]
+        },
+        "PD_Supporting_Pod_17": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_18": {
+          "translation": [
+            0.2840000092983246,
+            0.5539401173591614,
+            -0.002994012087583542
+          ],
+          "rotation": [
+            -0.02880660630762577,
+            0.025020312517881393,
+            0.0457412414252758,
+            0.9982243776321411
+          ],
+          "scale": [
+            0.8999999761581421,
+            0.8999999761581421,
+            0.8999999165534973
+          ]
+        },
+        "PD_Supporting_Pod_18": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_2": {
+          "translation": [
+            0.012500000186264515,
+            0.42500001192092896,
+            0.04399999976158142
+          ],
+          "rotation": [
+            0.03635883703827858,
+            -0.01663409359753132,
+            0.0006052805110812187,
+            0.9992002248764038
+          ],
+          "scale": [
+            0.8999999761581421,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PD_Supporting_Pod_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_3": {
+          "translation": [
+            0.0215000007301569,
+            0.4309999942779541,
+            0.05000000074505806
+          ],
+          "rotation": [
+            0.0047482457011938095,
+            -0.03945179656147957,
+            0.022703520953655243,
+            0.9989522695541382
+          ],
+          "scale": [
+            0.9399999976158142,
+            0.9399999976158142,
+            0.9399999976158142
+          ]
+        },
+        "PD_Supporting_Pod_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_4": {
+          "translation": [
+            -0.2120000123977661,
+            0.330197274684906,
+            -0.020680271089076996
+          ],
+          "rotation": [
+            -0.02905101515352726,
+            -0.024743223562836647,
+            -0.0457393079996109,
+            0.9982243180274963
+          ],
+          "scale": [
+            0.8200000524520874,
+            0.8199999928474426,
+            0.8199999332427979
+          ]
+        },
+        "PD_Supporting_Pod_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_5": {
+          "translation": [
+            -0.203000009059906,
+            0.32719728350639343,
+            -0.014680271036922932
+          ],
+          "rotation": [
+            -0.03859046846628189,
+            0.01219771895557642,
+            -0.022045113146305084,
+            0.9989374876022339
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.8600000143051147,
+            0.8600000143051147
+          ]
+        },
+        "PD_Supporting_Pod_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_6": {
+          "translation": [
+            -0.1940000057220459,
+            0.32419729232788086,
+            -0.020680271089076996
+          ],
+          "rotation": [
+            -0.011168146505951881,
+            0.03839497268199921,
+            0.00042914386722259223,
+            0.999200165271759
+          ],
+          "scale": [
+            0.8999999761581421,
+            0.8999999761581421,
+            0.8999999761581421
+          ]
+        },
+        "PD_Supporting_Pod_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_7": {
+          "translation": [
+            -0.1850000023841858,
+            0.330197274684906,
+            -0.014680271036922932
+          ],
+          "rotation": [
+            0.026935962960124016,
+            0.030724385753273964,
+            0.021688036620616913,
+            0.998929500579834
+          ],
+          "scale": [
+            0.9399999380111694,
+            0.940000057220459,
+            0.9399999976158142
+          ]
+        },
+        "PD_Supporting_Pod_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_8": {
+          "translation": [
+            -0.17599999904632568,
+            0.32719728350639343,
+            -0.020680271089076996
+          ],
+          "rotation": [
+            0.039261672645807266,
+            -0.004029775969684124,
+            0.045178864151239395,
+            0.998198926448822
+          ],
+          "scale": [
+            0.8199999928474426,
+            0.8200000524520874,
+            0.8199999928474426
+          ]
+        },
+        "PD_Supporting_Pod_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Fruit_9": {
+          "translation": [
+            0.12300000339746475,
+            0.5164737105369568,
+            -0.000657893717288971
+          ],
+          "rotation": [
+            0.018095266073942184,
+            -0.037136346101760864,
+            -0.044348813593387604,
+            0.9981616139411926
+          ],
+          "scale": [
+            0.8600000143051147,
+            0.8600000143051147,
+            0.8600000739097595
+          ]
+        },
+        "PD_Supporting_Pod_9": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_10": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_11": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_12": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_13": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_14": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_15": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_16": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_17": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_18": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_4": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_5": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_6": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_7": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_8": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Supporting_Pedicel_9": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Woody_Branch": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Development": 20,
+        "Open": 1.5,
+        "Close": 1.5,
+        "Pick_Demo": 2,
+        "Return_Demo": 2
+      },
+      "unique_meshes": 194,
+      "stored_triangles": 100170,
+      "mesh_primitives": 238
+    },
+    "pigeon_pea_dry_pod.glb": {
+      "bytes": 5509784,
+      "triangles": 14840,
+      "mesh_objects": 13,
+      "clips": [
+        "Open",
+        "Close"
+      ],
+      "canonical_nodes": {
+        "PD_FRUIT_ROOT": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_PICK_PROXY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_STAGE_RIPE": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_CLOSED_EXTERIOR": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Closed_Pod": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_CUTAWAY_ASSEMBLY": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            0.000009999999747378752,
+            0.000009999999747378752,
+            0.000009999999747378752
+          ]
+        },
+        "PD_Valve_Left_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Valve_0_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Valve_Right_Pivot": {
+          "translation": [
+            0,
+            -0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Valve_1_Skin_Inner_Lining": {
+          "translation": [
+            0,
+            0.029999999329447746,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_0": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_0_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_1": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_1_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_2": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_2_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_3": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_Whole_Seed_3_Hilum": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        },
+        "PD_RIPE_Persistent_Five_Sepal_Calyx": {
+          "translation": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "scale": [
+            1,
+            1,
+            1
+          ]
+        }
+      },
+      "exported_clips": {
+        "Open": 1.5,
+        "Close": 1.5
+      },
+      "unique_meshes": 13,
+      "stored_triangles": 14840,
+      "mesh_primitives": 15
+    },
+    "Fruit_Discovery_Window.blend": {
+      "bytes": 18241706
+    }
+  },
+  "validation": {
+    "blender_version": "5.2.2 LTS",
+    "glb_export": "passed",
+    "textures": "embedded",
+    "live_XR_grabbing": "unverified",
+    "Quest_performance": "unverified"
+  }
+}

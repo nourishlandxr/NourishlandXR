@@ -1,0 +1,691 @@
+{
+  "inspected": "2026-10-09",
+  "source": "app/services/limLearning.js",
+  "counts": {
+    "legacyCells": 93,
+    "publicCells": 97,
+    "publicFaces": 8,
+    "introductionCells": 27,
+    "formalPathways": 1
+  },
+  "publicTree": [
+    {
+      "id": "lim-climate",
+      "title": "Climate and Place",
+      "showcaseBranches": [
+        {
+          "id": "lim-climate-subtropical",
+          "title": "Subtropical",
+          "children": [
+            {
+              "id": "lim-climate-subtropical-temperature",
+              "title": "Temperature"
+            },
+            {
+              "id": "lim-climate-subtropical-rainfall",
+              "title": "Rainfall"
+            }
+          ]
+        },
+        {
+          "id": "lim-climate-cool",
+          "title": "Cool",
+          "children": [
+            {
+              "id": "lim-climate-cool-shelter",
+              "title": "Shelter"
+            }
+          ]
+        },
+        {
+          "id": "lim-climate-dry",
+          "title": "Dry",
+          "children": [
+            {
+              "id": "lim-climate-dry-water-needs",
+              "title": "Water needs"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-food-forest",
+      "title": "Living Landscapes",
+      "showcaseBranches": [
+        {
+          "id": "lim-food-forest-layers",
+          "title": "Layers",
+          "children": [
+            {
+              "id": "lim-food-forest-layers-canopy",
+              "title": "Canopy"
+            },
+            {
+              "id": "lim-food-forest-layers-ground-cover",
+              "title": "Ground cover"
+            }
+          ]
+        },
+        {
+          "id": "lim-food-forest-function",
+          "title": "Function",
+          "children": [
+            {
+              "id": "lim-food-forest-function-yield",
+              "title": "Yield"
+            }
+          ]
+        },
+        {
+          "id": "lim-food-forest-light",
+          "title": "Light",
+          "children": [
+            {
+              "id": "lim-food-forest-light-shade",
+              "title": "Shade"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-plant",
+      "title": "Plants and Life",
+      "showcaseBranches": [
+        {
+          "id": "lim-plant-identity",
+          "title": "Identity",
+          "children": [
+            {
+              "id": "lim-plant-identity-species",
+              "title": "Species"
+            },
+            {
+              "id": "lim-plant-identity-characteristics",
+              "title": "Characteristics"
+            }
+          ]
+        },
+        {
+          "id": "lim-plant-propagation",
+          "title": "Propagation",
+          "children": [
+            {
+              "id": "lim-plant-propagation-seed",
+              "title": "Seed"
+            },
+            {
+              "id": "lim-plant-propagation-cutting",
+              "title": "Cutting"
+            }
+          ]
+        },
+        {
+          "id": "lim-plant-soil",
+          "title": "Soil",
+          "children": [
+            {
+              "id": "lim-plant-soil-moisture",
+              "title": "Moisture"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-pin",
+      "title": "Place and Observation",
+      "showcaseBranches": [
+        {
+          "id": "lim-pin-place",
+          "title": "Place",
+          "children": [
+            {
+              "id": "lim-pin-place-photo",
+              "title": "Photo"
+            }
+          ]
+        },
+        {
+          "id": "lim-pin-observation",
+          "title": "Observation",
+          "children": [
+            {
+              "id": "lim-pin-observation-date",
+              "title": "Date"
+            },
+            {
+              "id": "lim-pin-observation-condition",
+              "title": "Condition"
+            }
+          ]
+        },
+        {
+          "id": "lim-pin-specimen",
+          "title": "Specimen",
+          "children": [
+            {
+              "id": "lim-pin-specimen-genus",
+              "title": "Genus"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-uses-making",
+      "title": "Uses and Making",
+      "showcaseBranches": [
+        {
+          "id": "lim-plant-harvest",
+          "title": "Harvest",
+          "children": [
+            {
+              "id": "lim-plant-harvest-fruit",
+              "title": "Fruit"
+            },
+            {
+              "id": "lim-plant-harvest-flower",
+              "title": "Flower"
+            }
+          ]
+        },
+        {
+          "id": "lim-plant-harvest-season",
+          "title": "Season",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "lim-origins-culture",
+      "title": "Origins and Culture",
+      "showcaseBranches": [
+        {
+          "id": "lim-plant-range",
+          "title": "Range",
+          "children": [
+            {
+              "id": "lim-plant-range-latitude",
+              "title": "Latitude"
+            },
+            {
+              "id": "lim-plant-range-exposure",
+              "title": "Exposure"
+            }
+          ]
+        },
+        {
+          "id": "lim-pin-place-story",
+          "title": "Story",
+          "children": []
+        },
+        {
+          "id": "lim-plant-range-warmth",
+          "title": "Warmth",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "lim-wildlife-relationships",
+      "title": "Wildlife and Relationships",
+      "showcaseBranches": [
+        {
+          "id": "lim-food-forest-ecology",
+          "title": "Ecology",
+          "children": [
+            {
+              "id": "lim-food-forest-ecology-pollinators",
+              "title": "Pollinators"
+            },
+            {
+              "id": "lim-food-forest-ecology-companions",
+              "title": "Companions"
+            }
+          ]
+        },
+        {
+          "id": "lim-food-forest-function-habitat",
+          "title": "Habitat",
+          "children": []
+        },
+        {
+          "id": "lim-food-forest-function-soil-relationships",
+          "title": "Soil relationships",
+          "children": [
+            {
+              "id": "lim-plant-soil-soil-life",
+              "title": "Soil life"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-discovery-pathways",
+      "title": "Discovery and Pathways",
+      "showcaseBranches": [
+        {
+          "id": "lim-pin-note",
+          "title": "Note",
+          "children": [
+            {
+              "id": "lim-pin-note-task",
+              "title": "Task"
+            },
+            {
+              "id": "lim-pin-note-data",
+              "title": "Data"
+            }
+          ]
+        },
+        {
+          "id": "lim-pin-observation-action",
+          "title": "Action",
+          "children": []
+        },
+        {
+          "id": "lim-pin-specimen-method",
+          "title": "Method",
+          "children": []
+        },
+        {
+          "id": "lim-pin-place-learning",
+          "title": "Learning",
+          "children": []
+        }
+      ]
+    }
+  ],
+  "introductionTree": [
+    {
+      "id": "lim-intro-analysis",
+      "title": "Read Nature",
+      "children": [
+        {
+          "id": "lim-intro-analysis-climate",
+          "title": "Climate",
+          "topics": [
+            "Seasons",
+            "Temperature",
+            "Rainfall",
+            "Wind",
+            "Frost and heat",
+            "Microclimates"
+          ]
+        },
+        {
+          "id": "lim-intro-analysis-topography",
+          "title": "Topography",
+          "topics": [
+            "Elevation",
+            "Slope",
+            "Aspect",
+            "Drainage",
+            "Erosion",
+            "High and low points"
+          ]
+        },
+        {
+          "id": "lim-intro-analysis-landscape",
+          "title": "Landscape",
+          "topics": [
+            "Soil",
+            "Water",
+            "Existing vegetation",
+            "Wildlife",
+            "Structures",
+            "Access and movement",
+            "Human use"
+          ]
+        },
+        {
+          "id": "lim-intro-analysis-strategy",
+          "title": "Strategy",
+          "topics": [
+            "Opportunities",
+            "Constraints",
+            "Questions",
+            "Zones",
+            "Priorities",
+            "Baseline observations",
+            "Further investigation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-intro-literacy",
+      "title": "Understand the Land",
+      "children": [
+        {
+          "id": "lim-intro-literacy-plants",
+          "title": "Plants",
+          "topics": [
+            "Identity",
+            "Growth form",
+            "Life cycle",
+            "Needs",
+            "Ecological roles"
+          ]
+        },
+        {
+          "id": "lim-intro-literacy-guilds",
+          "title": "Guilds",
+          "topics": [
+            "Companions",
+            "Support species",
+            "Shared resources",
+            "Competition",
+            "Pollination",
+            "Fertility",
+            "Mutual relationships"
+          ]
+        },
+        {
+          "id": "lim-intro-literacy-grow",
+          "title": "Grow",
+          "topics": [
+            "Propagation",
+            "Establishment",
+            "Watering",
+            "Feeding",
+            "Pruning",
+            "Health",
+            "Pests",
+            "Seasonal care"
+          ]
+        },
+        {
+          "id": "lim-intro-literacy-fruit",
+          "title": "Fruit",
+          "topics": [
+            "Edible parts",
+            "Flowering",
+            "Season",
+            "Ripeness",
+            "Harvest",
+            "Preparation",
+            "Safety",
+            "Storage and sharing"
+          ]
+        },
+        {
+          "id": "lim-intro-literacy-soil-life",
+          "title": "Soil Life",
+          "topics": [
+            "Soil structure",
+            "Organic matter",
+            "Fungi",
+            "Bacteria",
+            "Decomposers",
+            "Nutrient cycling",
+            "Root zone"
+          ]
+        },
+        {
+          "id": "lim-intro-literacy-wildlife",
+          "title": "Wildlife",
+          "topics": [
+            "Habitat",
+            "Pollinators",
+            "Predators",
+            "Seed dispersers",
+            "Nesting",
+            "Seasonal presence",
+            "Conflict"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-intro-food-forest",
+      "title": "Design the Forest",
+      "children": [
+        {
+          "id": "lim-intro-food-function",
+          "title": "Function",
+          "topics": [
+            "Food and yield",
+            "Habitat",
+            "Shade and shelter",
+            "Fertility",
+            "Access",
+            "Multiple functions"
+          ]
+        },
+        {
+          "id": "lim-intro-food-energy",
+          "title": "Energy",
+          "topics": [
+            "Sunlight",
+            "Water flow",
+            "Wind",
+            "Organic matter",
+            "Human work",
+            "Storage and loss"
+          ]
+        },
+        {
+          "id": "lim-intro-food-design",
+          "title": "Design",
+          "topics": [
+            "Layers",
+            "Spacing",
+            "Access",
+            "Edges",
+            "Zones",
+            "Redundancy",
+            "Maintenance"
+          ]
+        },
+        {
+          "id": "lim-intro-food-succession",
+          "title": "Succession",
+          "topics": [
+            "Pioneer species",
+            "Nurse plants",
+            "Canopy closure",
+            "Changing light",
+            "Replacement",
+            "Maturity"
+          ]
+        },
+        {
+          "id": "lim-intro-food-water",
+          "title": "Water",
+          "topics": [
+            "Source",
+            "Capture",
+            "Infiltration",
+            "Storage",
+            "Overflow",
+            "Irrigation",
+            "Drought and flood"
+          ]
+        },
+        {
+          "id": "lim-intro-food-stewardship",
+          "title": "Stewardship",
+          "topics": [
+            "Observation",
+            "Maintenance",
+            "Harvest",
+            "Pruning",
+            "Safety",
+            "Shared roles",
+            "Adaptation"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lim-intro-smart",
+      "title": "Shape the Outcome",
+      "children": [
+        {
+          "id": "lim-intro-vision",
+          "title": "Vision",
+          "topics": [
+            "Purpose",
+            "Future state",
+            "Values",
+            "People",
+            "Place",
+            "Time horizon"
+          ]
+        },
+        {
+          "id": "lim-intro-smart-goals",
+          "title": "Goals",
+          "topics": [
+            "Purpose",
+            "People",
+            "Place",
+            "Timeframe",
+            "Priorities",
+            "Meaning of success"
+          ]
+        },
+        {
+          "id": "lim-intro-smart-outcomes",
+          "title": "Outcomes",
+          "topics": [
+            "Indicators",
+            "Yield",
+            "Resilience",
+            "Habitat",
+            "Learning",
+            "Unintended effects"
+          ]
+        },
+        {
+          "id": "lim-intro-smart-limitations",
+          "title": "Limitations",
+          "topics": [
+            "Missing data",
+            "Seasonal bias",
+            "Access",
+            "Time and budget",
+            "Capacity",
+            "Technology",
+            "Uncertainty"
+          ]
+        },
+        {
+          "id": "lim-intro-smart-challenges",
+          "title": "Challenges",
+          "topics": [
+            "Problem",
+            "Possible causes",
+            "Safe experiments",
+            "Support",
+            "Risks",
+            "Review point"
+          ]
+        },
+        {
+          "id": "lim-intro-smart-decisions",
+          "title": "Decisions",
+          "topics": [
+            "Options",
+            "Trade-offs",
+            "Evidence",
+            "Responsibility",
+            "Reversibility",
+            "Next action"
+          ]
+        },
+        {
+          "id": "lim-intro-smart-feedback",
+          "title": "Feedback",
+          "topics": [
+            "Observe",
+            "Record",
+            "Compare",
+            "Learn",
+            "Adjust",
+            "Return to place"
+          ]
+        }
+      ]
+    }
+  ],
+  "pathways": [
+    {
+      "id": "lim-path-understand-place",
+      "title": "Understand This Place",
+      "steps": [
+        {
+          "id": "lim-pin-place",
+          "title": "Place"
+        },
+        {
+          "id": "lim-climate",
+          "title": "Climate and Place"
+        },
+        {
+          "id": "lim-food-forest",
+          "title": "Living Landscapes"
+        },
+        {
+          "id": "lim-plant",
+          "title": "Plants and Life"
+        },
+        {
+          "id": "lim-wildlife-relationships",
+          "title": "Wildlife and Relationships"
+        },
+        {
+          "id": "lim-pin-observation",
+          "title": "Observation"
+        },
+        {
+          "id": "lim-pin-observation-action",
+          "title": "Action"
+        }
+      ]
+    }
+  ],
+  "publicCellFields": [
+    "id",
+    "title",
+    "content",
+    "parentId",
+    "groupId",
+    "group",
+    "accent",
+    "layoutRole",
+    "tutorialStep",
+    "accessibilityLabel",
+    "path",
+    "legacyGroupId",
+    "legacyGroup",
+    "legacyParentId",
+    "legacyAccent",
+    "legacyTitle",
+    "primaryFaceId",
+    "faceParentId",
+    "relatedFaceIds",
+    "pathwayRefs",
+    "faceMappingStatus"
+  ],
+  "introductionCellFields": [
+    "id",
+    "title",
+    "accent",
+    "content",
+    "lookFor",
+    "question",
+    "next",
+    "parentId",
+    "topics",
+    "relatedIds",
+    "primaryFaceId",
+    "relatedFaceIds",
+    "accessibilityLabel",
+    "layoutRole"
+  ]
+}

@@ -10,6 +10,7 @@ import {livingMapReveal,drawLivingMapPreview,livingMapWorldPoint,livingMapRayPoi
 import {createDemoLivingMapXR} from '../services/demoLivingMapXR.js';
 import {livingMapPlacementCopy,resetDemoPlantForMap} from '../services/demoLivingMapPresentation.js';
 import {createLivingMapGripInput,limitLivingMapTilt} from '../services/demoLivingMapGrip.js';
+import {livingMapHandleRayHit} from '../services/demoLivingMapHandles.js';
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
 let demoLivingMapPlacement=null,demoMapIntroPaused=false;
@@ -42,7 +43,7 @@ function updateSpatialLivingMap(now){
     if(instructions){
         instructions.hidden=reveal.appear<=0;
         if(!instructions.querySelector('[data-map-grip-task]'))instructions.innerHTML='<span data-map-grip-task="totem"></span><span data-map-grip-task="plate"></span>';
-        for(const [id,label,done] of [['totem','Grip a Totem',demoMapTotemGripped],['plate','Grip both plate edges',demoMapPlateGripped]]){
+        for(const [id,label,done] of [['totem','Grip a Totem',demoMapTotemGripped],['plate','Grip both raised edge handles',demoMapPlateGripped]]){
             const task=instructions.querySelector(`[data-map-grip-task="${id}"]`);task.textContent=demoLocalizedText(label);task.style.cssText=`display:block;text-align:center;margin:16px auto;text-decoration:${done?'line-through':'none'}`;
         }
     }
@@ -6122,7 +6123,6 @@ function drawDemoControllerPointer(view) {
 }
 function drawDemoInputPointer(view,pointerSource) {
     if (!tetherRenderer) return;
-    if(demoLivingMapGrip?.owns(pointerSource))return;
     // Android exposes taps as a WebXR `screen` ray. It remains available for
     // hit testing, but the Quest laser/contact sphere must only be rendered
     // for tracked spatial input.
@@ -6133,6 +6133,12 @@ function drawDemoInputPointer(view,pointerSource) {
         y: origin.y + direction.y * XR_LASER_POINTER_CONFIG.startOffset,
         z: origin.z + direction.z * XR_LASER_POINTER_CONFIG.startOffset
     };
+    const heldHandle=demoLivingMapGrip?.contact(pointerSource);
+    if(heldHandle){
+        drawSpatialTether(gl,tetherRenderer,view,start,heldHandle,{segments:4,width:.0025,curve:0,lift:0,color:[.72,.91,.83,.85]});
+        drawSpatialPointerContact(gl,tetherRenderer,view,heldHandle,.014);
+        return;
+    }
     const limSurface=(arWelcomeShowcaseActive && introWorldAnchor && currentLimPointerCell())
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080)
         : null;
@@ -6153,10 +6159,11 @@ function drawDemoInputPointer(view,pointerSource) {
     const mapActive=introBoardStep==='UTILITY 1.1' && demoLivingMapReady() && demoLivingMapOrigin;
     const mapDragging=mapActive && demoHeldIndex>=0 && markers[demoHeldIndex]?.demoMapPiece;
     const mapPoint=mapActive ? livingMapRayPoint(latestControllerRay,demoLivingMapOrigin,demoLivingMapOrientation) : null;
+    const handleSurface=mapActive ? livingMapHandleRayHit(latestControllerRay,demoLivingMapOrigin,demoLivingMapOrientation) : null;
     const mapSurface=mapPoint ? {point:mapPoint,distance:Math.hypot(mapPoint.x-origin.x,mapPoint.y-origin.y,mapPoint.z-origin.z)} : null;
     if(mapDragging && !mapSurface)return;
     // Butterflies can be caught along the ray, but never clamp the laser tip.
-    const surface = mapDragging?mapSurface:[limSurface,controlSurface,greenSurface,placementSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = mapDragging?mapSurface:[limSurface,controlSurface,greenSurface,placementSurface,handleSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.
@@ -6369,7 +6376,7 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
-            runXrFrameStep('landscape two-hand grip',()=>{demoLivingMapGrip?.update(frame);if(demoLivingMapGrip?.active && !demoMapPlateGripped){demoMapPlateGripped=true;introBoardTextureDirty=true;}});
+            runXrFrameStep('landscape two-hand grip',()=>{demoLivingMapGrip?.update(frame);demoLivingMapScene?.setHeldHandles(demoLivingMapGrip?.heldHandles);if(demoLivingMapGrip?.active && !demoMapPlateGripped){demoMapPlateGripped=true;introBoardTextureDirty=true;}});
             for(const note of demoPlacedNoteViews.values())if(note.renderer.heldSource){const ray=demoControllerRayForInputEvent({frame,inputSource:note.renderer.heldSource});note.renderer.updateGrab(ray);}
             runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const elapsed=insect.depthUpdatedAt?Math.max(0,Math.min(60,_time-insect.depthUpdatedAt)):16;insect.depthUpdatedAt=_time;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}const axes=insect.heldSource.gamepad?.axes || [];insect.controllerDistance=Math.max(.25,Math.min(2.5,insect.controllerDistance+spatialDepthDelta(axes.length>2?axes[3]:axes[1],elapsed)));insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
             runXrFrameStep('controller skip',pollDemoControllerSkip);

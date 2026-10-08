@@ -6,6 +6,7 @@ import {createLivingMapVisitors,LIVING_MAP_VISITOR_COLOURS} from './demoLivingMa
 import {createTotemSculptureGeometry} from './spatialTotemSculpture.js';
 import {livingMapGreeneryProgress} from './demoLivingMapReveal.js';
 import {createLivingMapDetailKit} from './demoLivingMapDetail.js';
+import {createLivingMapHandles} from './demoLivingMapHandles.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
@@ -29,9 +30,8 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#66573e', 0, -.23, 0, 6.3, .4, 4.2);
     mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#61714a', 0, -.025, 0, 6.25, .05, 4.15);
     const edge=mesh(geometry(new THREE.TorusGeometry(1,.012,6,64)),'#bac894',0,-.01,0,6.2,4.12,1);edge.rotation.x=-Math.PI/2;
-    if(model.interactive)for(const x of [-6,6]){
-        const rim=mesh(geometry(new THREE.TorusGeometry(.22,.04,6,20)),'#b8d7a4',x,.06,0,1);rim.rotation.x=-Math.PI/2;
-    }
+    const handles=model.interactive?createLivingMapHandles({geometry,mesh}):[];
+    handles.forEach(handle=>scene.add(handle));
     const scenery = new THREE.Group();scene.add(scenery);scenery.visible=false;scenery.name='Living Map shared scenery';
     const soil=new THREE.Group();soil.name='Living Map shared terrain';scene.add(soil);detail.terrain(soil,model);
     for(const [y,r,h,c] of [[-.16,6.29,.035,'#8a7955'],[-.30,6.30,.025,'#514a39']])mesh(geometry(new THREE.CylinderGeometry(1,1,1,64)),c,0,y,0,r,h,4.195,soil);
@@ -132,6 +132,11 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         const mat=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true});materials.set('merged-'+parent.uuid,mat);parent.add(new THREE.Mesh(combined,mat));
     }
     mergeSolids(soil);mergeSolids(scenery);markers.forEach(marker=>mergeSolids(marker.group));
+    handles.forEach(handle=>mergeSolids(handle));
+    const restingHandle=new THREE.MeshLambertMaterial({color:'#bacac4',vertexColors:true});
+    const heldHandle=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true});
+    materials.set('resting-handle',restingHandle);materials.set('held-handle',heldHandle);
+    handles.forEach(handle=>{handle.children[0].material=restingHandle;});
     const visitors=model.interactive?createLivingMapVisitors(model,routes):null;
     const pegs=[];
     if(visitors){
@@ -261,6 +266,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     return {
         canvas,schedule,scene,guidance,totemLabel,routes,visitors,
         update:(elapsed,reduced)=>update(elapsed,reduced,false),
+        setHeldHandles(sides=[]){handles.forEach((handle,index)=>{handle.children[0].material=sides.includes(index?1:-1)?heldHandle:restingHandle;});},
         rotate(delta){rotation.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-delta));settledPaint=false;lastPaint=-Infinity;},
         setRotation(value){if(rotation.angleTo(value)<1e-6)return;rotation.copy(value);settledPaint=false;lastPaint=-Infinity;},
         project(item,rect){
