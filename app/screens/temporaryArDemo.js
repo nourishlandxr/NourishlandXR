@@ -729,6 +729,7 @@ function demoPanelActions() {
     if(arWelcomeShowcaseActive && demoJourneyStage==='apply')actions.push({id:'lim-visibility',label:'Learning Pathways'});
     if(!desktopDemo)actions.push({id:'safety',label:'Safety guidance'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
+    if(introBoardStep==='FDW 1.2')actions.push(...DEMO_FRUIT_EXAMPLES.map(item=>({id:'fruit-example:'+item.id,label:item.label,disabled:markers.some(record=>record.demoFruitExample===item.id)})));
     actions.push({id:'close',label:'Close demo'});
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
     const firstProfile=demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM && markers.some(record=>record.tutorialStage==='plant' && record.demoExpanded && !record.demoProfileInteracted);
@@ -801,6 +802,7 @@ function handleDemoPanelAction(action) {
     if(action==='close'){requestDemoClose();return;}
     if(action==='finish-core'){showDemoClosingMessage();return;}
     if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
+    if(action.startsWith('fruit-example:')){const record=markers.find(item=>item.tutorialStage==='plant' && item.demoPimoLesson==='fdw');if(record)showDemoFruitDiscovery(record,1,action.slice(14));return;}
     if(action==='place-map'){placeDemoMapTotem(true);return;}
     if(action==='rotate-map-left' || action==='rotate-map-right'){rotateDemoLivingMap(action==='rotate-map-left'?-.35:.35);return;}
     if(action==='replay-map' && demoLivingMapPlacement){
@@ -1015,16 +1017,28 @@ function continueAfterDemoPim(record) {
     return true;
 }
 
-function showDemoFruitDiscovery(record,index=0){
-    record.demoPimoLesson='fdw';record.demoExpanded=true;knowledgeExplorerAction(record,'KnowledgeMode:curiosity');refreshDemoRecord(record);
-    infoPanel?.setMediaCollapsed(false);infoPanel?.setExplorerOpen(true);infoPanel?.refreshExplorer({mode:'curiosity'});
-    const identity=demoOrbKnowledge(record).document.identity;
-    infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,{image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea',caption:'Pigeon Pea'});
-    infoPanel?.showFruitWindow({plant:identity.commonName,scientific:identity.scientificName},index===0?null:index===1?'carambola':'mamey_sapote');
-    showIntroBoard(index===0?'Fruit Discovery Window':'Different fruits, the same discovery window',index===0?
-        'Look closely at the plant, its flowers and its fruit.\n\nPoint at an arrowed pod and hold Trigger to carry it. Bring it closer and keep holding to open it. Use Play development in the window controls to follow flower-to-fruit development.':
-        'The same window can reveal the structure and development of other fruits. These are library examples; your Pigeon Pea information stays connected to its original Orb.',
-        'Continue',()=>index<2?showDemoFruitDiscovery(record,index+1):continueAfterDemoPim(record),{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:'FDW 1.'+(index+1),dynamicCopy:true,nextGuide:'Grip both window handles to move it. Trigger holds the highlighted fruit.'});
+const DEMO_FRUIT_EXAMPLES=Object.freeze([
+    {id:'carambola',label:'Star fruit',copy:'Observe the ridges and the star shape of the opened fruit. Compare the flower, developing fruit and ripe fruit.'},
+    {id:'mamey_sapote',label:'Mamey sapote',copy:'Observe the outer skin, flesh and seed of a larger fruit. Carry the highlighted fruit closer and open it to inspect the internal structure.'},
+    {id:'african_peach',label:'African peach',copy:'Observe the rounded fruit and its internal structure. Compare its flower-to-fruit development with the other examples.'},
+    {id:'chinese_bayberry',label:'Chinese bayberry',copy:'Observe the textured surface and the opened fruit. Compare the outer form and internal structure with Star fruit and Mamey sapote.'}
+]);
+function showDemoFruitDiscovery(record,index=0,exampleId='carambola'){
+    const comparing=index>0,example=DEMO_FRUIT_EXAMPLES.find(item=>item.id===exampleId) || DEMO_FRUIT_EXAMPLES[0];
+    record.demoPimoLesson='fdw';record.demoFruitExample=comparing?example.id:null;
+    record.demoExpanded=!comparing;
+    if(comparing)knowledgeRenderer?.clear(record);else knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
+    refreshDemoRecord(record);
+    const document=demoOrbKnowledge(record).document,identity=document.identity;
+    if(comparing)infoPanel?.showLearning({id:'demo-fruit-observation',title:example.label,body:example.copy+'\n\nChoose another fruit below to compare its structure. Continue when you are ready for the next demo step.',mesh:'lim'});
+    else {infoPanel?.refreshExplorer({mode:'curiosity'});infoPanel?.focusPlant(record,document,{image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea',caption:'Pigeon Pea'});}
+    infoPanel?.setMediaCollapsed(false);infoPanel?.setExplorerOpen(true);
+    infoPanel?.showFruitWindow({plant:identity.commonName,scientific:identity.scientificName},comparing?example.id:null,{mediaMode:comparing?'example':'identity'});
+    showIntroBoard(comparing?'Observe different fruits':'Fruit Discovery Window',comparing?
+        'PIMO is now closed so you can concentrate on fruit observation.\n\nChoose Star fruit, Mamey sapote, African peach or Chinese bayberry on the main Control Panel. The Image Panel follows the fruit in the observation box.\n\nCompare the flower, developing fruit and ripe fruit. Carry the highlighted fruit closer and open it to inspect its detail.':
+        'Look closely at the plant, its flowers and its fruit.\n\nPoint at an arrowed pod and hold Trigger to carry it. Bring it closer and keep holding to open it. Use Play development in the window controls to follow flower-to-fruit development.',
+        'Continue',()=>comparing?continueAfterDemoPim(record):showDemoFruitDiscovery(record,1),{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:comparing?'FDW 1.2':'FDW 1.1',dynamicCopy:true,nextGuide:'Choose fruits on the main Control Panel. Trigger holds the highlighted fruit.'});
+    syncDemoPanelActions();
 }
 
 function showDemoPanelIntroduction(record,index=0){

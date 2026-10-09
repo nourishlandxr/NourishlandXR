@@ -1,0 +1,41 @@
+{
+  "stage": 2,
+  "assetBytes": 3038688,
+  "stats": {
+    "ready": true,
+    "dimensions": [
+      1.896417997777462,
+      1.8999118655920029,
+      0.29587433487176895
+    ],
+    "triangles": 50039,
+    "meshes": 76,
+    "minRadius": 0.8319999826721532,
+    "animations": 1,
+    "referenceExported": false,
+    "growthTime": 36,
+    "playing": false,
+    "shootScales": [
+      1,
+      1,
+      1
+    ]
+  },
+  "textures": 4,
+  "animationTracks": 66,
+  "checks": [
+    "embedded texture loading",
+    "no reference or cameras in GLB",
+    "single growth clip",
+    "new shoots reach mature scale",
+    "scrubbing changes rendered foliage",
+    "growth plays",
+    "pause freezes growth",
+    "replay and mature reset work",
+    "detail and side views",
+    "no preview page errors",
+    "built welcome version"
+  ],
+  "welcomeBadge": "V0.9433 · Live",
+  "headsetVerified": false
+}

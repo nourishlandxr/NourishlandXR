@@ -11,11 +11,12 @@ const vector=point=>new THREE.Vector3(point.x,point.y,point.z);
 const visible=node=>{for(let parent=node;parent;parent=parent.parent)if(!parent.visible)return false;return true;};
 const disposeScene=scene=>scene?.traverse(node=>{if(!node.isMesh)return;node.geometry.dispose();for(const material of Array.isArray(node.material)?node.material:[node.material]){for(const value of Object.values(material))if(value?.isTexture)value.dispose();material.dispose();}});
 
-export function createFruitWindowExperience({root=document.body,identity={},onHide=()=>{},onState=()=>{},onMedia=()=>{}}={}){
+export function createFruitWindowExperience({root=document.body,identity={},showLibraryChoices=true,onHide=()=>{},onState=()=>{},onMedia=()=>{}}={}){
     if(!document.querySelector('link[data-fruit-window-style]')){const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./fruitWindow.css',import.meta.url).href;style.dataset.fruitWindowStyle='';document.head.append(style);}
     const element=document.createElement('section');element.className='nlxr-fruit-window';element.setAttribute('aria-label','Fruit Window');
     element.innerHTML=`<header><strong>Fruit Window</strong><button type="button" data-action="hide">Hide Fruit Window</button></header><p class="fruit-window-context"></p><label class="fruit-window-library">Plant example <select aria-label="Fruit Window plant"></select></label><div class="fruit-window-view"><canvas aria-label="Interactive plant model"></canvas><button class="fruit-window-grip left" aria-label="Left window grip">❮</button><button class="fruit-window-grip right" aria-label="Right window grip">❯</button></div><p class="fruit-window-status" role="status"></p><nav aria-label="Fruit Window actions"></nav><p class="fruit-window-help">Point to feel the leaves move. Select the arrowed fruit to pick it. Hold both grips to move the window.</p>`;
     root.append(element);
+    element.querySelector('.fruit-window-library').hidden=!showLibraryChoices;
     const canvas=element.querySelector('canvas'),status=element.querySelector('.fruit-window-status'),context=element.querySelector('.fruit-window-context'),select=element.querySelector('select'),nav=element.querySelector('nav');
     for(const item of FRUIT_WINDOW_LIBRARY){const option=document.createElement('option');option.value=item.id;option.textContent=item.label;select.append(option);}
     const actions=[['play','Play development'],['pause','Pause'],['return','Return fruit']];

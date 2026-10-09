@@ -1,5 +1,6 @@
 .nlxr-fruit-window{position:fixed;z-index:60;left:20px;top:90px;width:min(46vw,610px);max-height:calc(100dvh - 110px);overflow:auto;padding:14px;color:#f5efe0;background:rgba(21,40,34,.97);border:1px solid #7b9e8b;border-radius:18px;box-shadow:0 14px 50px #0008;font:14px/1.4 system-ui,sans-serif;box-sizing:border-box}
 .nlxr-fruit-window[hidden]{display:none!important}
+.nlxr-fruit-window .fruit-window-library[hidden]{display:none!important}
 .nlxr-fruit-window header{display:flex;gap:12px;align-items:center;justify-content:space-between}.nlxr-fruit-window header strong{font-size:20px;color:#f5efe0}.nlxr-fruit-window label{color:#dbe9cb}
 .nlxr-fruit-window button,.nlxr-fruit-window select{color:#f6f3df;background:#2d4f43;border:1px solid #92b69e;border-radius:8px;padding:8px 10px;font:inherit;cursor:pointer}
 .nlxr-fruit-window button:hover,.nlxr-fruit-window button[aria-pressed=true]{background:#466d56}.nlxr-fruit-window button:disabled{opacity:.4;cursor:default}

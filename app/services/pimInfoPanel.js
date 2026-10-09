@@ -307,7 +307,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='pointer'?'pointer':'outline';
     let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaRevision=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
-    let visibleMedia=null,fruitIdentityMedia=null,previewHint='';
+    let visibleMedia=null,fruitIdentityMedia=null,fruitMediaMode='identity',previewHint='';
     const MEDIA_FADE_MS=650;
     let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
@@ -326,7 +326,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(fruitPending)return;
         fruitPending=import('./fruitWindowExperience.js');
         try{const {createFruitWindowExperience}=await fruitPending;if(fruitDestroyed||!fruitVisible)return;
-            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:fruitIdentity||identity||{},onHide:hideFruitWindow,onState:()=>{if(!fruitDestroyed)renderExplorer();}});
+            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:fruitIdentity||identity||{},showLibraryChoices:false,onHide:hideFruitWindow,onState:()=>{if(!fruitDestroyed)renderExplorer();},onMedia:media=>{if(fruitDestroyed || !fruitVisible || fruitMediaMode!=='example')return;fruitIdentityMedia=media;mediaCollapsed=false;loadPanelImage(media.image);render(true);}});
             fruitWindow.dockBeside(element);
             if(fruitExample)fruitWindow.chooseExample(fruitExample);
             if(fruitGl)fruitWindow.attach(fruitGl);if(fruitSession)fruitWindow.bindSession(fruitSession,fruitSpace);
@@ -1208,8 +1208,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(fruitVisible)return [
             {action:'FruitWindow:play',label:'Play development',x:22,y:66,width:464,height:54,disabled:!fruitWindow?.canAction('play')},
             {action:'FruitWindow:pause',label:'Pause',x:506,y:66,width:464,height:54,disabled:!fruitWindow?.canAction('pause')},
-            {action:'FruitWindow:return',label:'Return fruit',x:22,y:132,width:464,height:54,disabled:!fruitWindow?.canAction('return')},
-            {action:'FruitWindow:next',label:'Other fruits',x:506,y:132,width:464,height:54},
+            {action:'FruitWindow:return',label:'Return fruit',x:22,y:132,width:948,height:54,disabled:!fruitWindow?.canAction('return')},
             {action:'FruitWindow:hide',label:'Hide window',x:22,y:198,width:464,height:54},
             {action:'Explorer',label:'Close controls',x:506,y:198,width:464,height:54}
         ];
@@ -1325,7 +1324,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setVisibilityItems(items=[]){const signature=JSON.stringify(items);if(signature===visibilitySignature)return;visibilitySignature=signature;visibilityItems=items.map(item=>({...item}));render(true);},
-        showFruitWindow(nextIdentity=null,example=null){fruitIdentity=nextIdentity || identity;fruitExample=example || fruitWindowSpecies(fruitIdentity || {})?.id || null;return loadFruitWindow();},
+        showFruitWindow(nextIdentity=null,example=null,{mediaMode='identity'}={}){fruitIdentity=nextIdentity || identity;fruitExample=example || fruitWindowSpecies(fruitIdentity || {})?.id || null;if(mediaMode!==fruitMediaMode)fruitIdentityMedia=null;fruitMediaMode=mediaMode;return loadFruitWindow();},
         hideFruitWindow,
         setObjectContext(value){objectContext=value;knowledgeRecord=null;knowledgeDocument=null;panelModeChoice=null;mediaCollapsed=true;loadPanelImage('');render(true);},
         setStageContext(value,{preserveObject=false}={}){stageContext=value;if(!preserveObject){objectContext=null;knowledgeRecord=null;knowledgeDocument=null;}renderExplorer();},
@@ -1338,8 +1337,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             panelShift={from:{...pose.center},to:{x:pose.center.x+pose.right.x*direction*distance,y:pose.center.y,z:pose.center.z+pose.right.z*direction*distance},startedAt:performance.now()};return true;
         },
         guideTool(action='Explorer'){guidanceAction=action;guidanceStartedAt=performance.now();element.classList.toggle('is-panel-guidance',action==='ToggleMedia');render(true);},
-        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext,fruitVisible,fruitIdentity,fruitExample:fruitWindow?.getExample()||fruitExample};},
-        restoreSnapshot(value){if(!value)return;hideFruitWindow();({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});if(value.fruitVisible){fruitIdentity=value.fruitIdentity;fruitExample=value.fruitExample;void loadFruitWindow();}render(true);},
+        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext,fruitVisible,fruitIdentity,fruitMediaMode,fruitIdentityMedia,fruitExample:fruitWindow?.getExample()||fruitExample};},
+        restoreSnapshot(value){if(!value)return;hideFruitWindow();({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);fruitMediaMode=value.fruitMediaMode || 'identity';fruitIdentityMedia=value.fruitIdentityMedia || null;loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});if(value.fruitVisible){fruitIdentity=value.fruitIdentity;fruitExample=value.fruitExample;void loadFruitWindow();}render(true);},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setTaskProgress(value){
             if(!value){taskProgress=null;render();return;}

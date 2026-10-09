@@ -8,7 +8,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
  try{
   const page=await browser.newPage({viewport:{width:1400,height:1000}});
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('http://127.0.0.1:8769/docs/living-frame-blender/preview.html');
+  await page.goto('http://127.0.0.1:8769/docs/living-frame-blender/preview.html?model=plain');
   await page.waitForSelector('body[data-model-ready="true"]',{timeout:20000});
   const stats=await page.evaluate(()=>window.ringReview);
   assert.equal(stats.meshes,1);assert.equal(stats.referenceExported,false);
@@ -40,8 +40,9 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE || 'playwright');
   const welcome=await browser.newPage();
   await welcome.goto('http://127.0.0.1:8769/dist/xr/');
   await welcome.waitForSelector('.welcome-version-badge',{timeout:20000});
-  const badge=await welcome.locator('.welcome-version-badge').textContent();assert.ok(badge.includes('0.9429'));
-  await welcome.screenshot({path:path.join(__dirname,'welcome-0.9429.png')});
+  const version=fs.readFileSync(path.join(__dirname,'../../app/services/buildInfo.js'),'utf8').match(/const VERSION = '([^']+)'/)[1];
+  const badge=await welcome.locator('.welcome-version-badge').textContent();assert.ok(badge.includes(version));
+  await welcome.screenshot({path:path.join(__dirname,`welcome-${version}.png`)});
   fs.writeFileSync(path.join(__dirname,'verification.json'),JSON.stringify({stats,checks:['GLB loads','one ring mesh only','dimensions match','orbit visibly works','zoom visibly works','named views work','reference toggle works','wireframe works','no preview page errors','built welcome version visible'],welcomeBadge:badge,headsetVerified:false},null,2));
   console.log(JSON.stringify({stats,welcomeBadge:badge,previewErrors:errors}));
  }finally{await browser.close();}

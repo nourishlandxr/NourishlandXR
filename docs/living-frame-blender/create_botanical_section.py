@@ -4,6 +4,7 @@ Run in a new window: blender --factory-startup --python create_botanical_section
 All textures and growth are exported into GLB; runtime text stays independent.
 """
 import bpy
+import bmesh
 import math
 import json
 import random
@@ -134,14 +135,14 @@ def leaf(mesh, base, tip, width, curl=.006):
     side=axis.cross(Vector((0,1,0))).normalized()
     if side.length<.01:side=Vector((1,0,0))
     verts=[];uvs=[];faces=[]
-    for i in range(9):
-        t=i/8;centre=base+(tip-base)*t
+    for i in range(7):
+        t=i/6;centre=base+(tip-base)*t
         w=width*(math.sin(math.pi*t)**.8)*.5+.0002
         for j in range(3):
             across=j-1
             point=centre+side*w*across+Vector((0,-curl*math.sin(math.pi*t)*(1-.35*abs(across)),0))
             verts.append(point);uvs.append((j/2,t))
-    for i in range(8):
+    for i in range(6):
         for j in range(2):
             k=i*3+j;faces.append((k,k+1,k+4,k+3))
     mesh.add(verts,faces,uvs)
@@ -179,10 +180,10 @@ def build():
                 a=A0+(A1-A0)*i/n
                 for j in range(rows+1):
                     fraction=j/rows
-                    noise=(math.sin(a*43+j*1.7)+.4*math.cos(a*79-j*3))*.002
+                    noise=(math.sin(a*43+j*1.7)+.4*math.cos(a*79-j*3))*.001
                     radius=r0+(r1-r0)*fraction+noise*math.sin(math.pi*fraction)
                     if j==rows and r1>.92:radius+=.003*math.sin(a*71)
-                    y=(-.102-.004*math.sin(a*37+j*2)) if yside==0 else .093
+                    y=(-.102-.0015*(math.sin(a*37+j*2)+.37*math.sin(a*91-j*1.1))) if yside==0 else .093
                     verts.append(polar(a,radius,y));uvs.append((i/n*5,fraction*.65+yside*.7))
         stride=rows+1;half=(n+1)*stride
         for s in range(2):
@@ -197,12 +198,13 @@ def build():
         for i in [0,n]:
             for j in range(rows):
                 k=i*stride+j;faces.append((k,k+1,k+1+half,k+half))
-        mesh.add(verts,faces,uvs);mesh.object(name,mat,smooth=False)
+        mesh.add(verts,faces,uvs);obj=mesh.object(name,mat,smooth=True)
+        bm=bmesh.new();bm.from_mesh(obj.data);bmesh.ops.recalc_face_normals(bm,faces=list(bm.faces));bm.to_mesh(obj.data);bm.free()
 
     roots=Mesh();grit=Mesh();dead=Mesh()
-    for plant in range(18):
-        angle=A0+.07+(A1-A0-.14)*plant/17
-        for branch in range(3):
+    for plant in range(13):
+        angle=A0+.07+(A1-A0-.14)*plant/12+RNG.uniform(-.026,.026)
+        for branch in range(RNG.randrange(2,5)):
             end_angle=angle+RNG.uniform(-.022,.022)
             points=[]
             for i in range(14):
@@ -226,48 +228,63 @@ def build():
         leaf(dead,base,base+Vector((RNG.uniform(-.012,.012),-.003,RNG.uniform(-.012,.012))),RNG.uniform(.002,.005),.001)
     dead.object('Quiet litter at groundcover base',litter)
 
-    # Eighteen uneven clusters. Most leaves already exist; only three new shoots emerge.
-    for i in range(18):
-        a=A0+.04+(A1-A0-.08)*i/17+RNG.uniform(-.017,.017)
-        anchor=polar(a,RNG.uniform(.918,.925),RNG.uniform(-.075,-.045))
+    # Thirty overlapping clusters spread across the depth of the planting bed.
+    # Most leaves already exist; only three new shoots emerge.
+    for i in range(30):
+        a=A0+.04+(A1-A0-.08)*i/29+RNG.uniform(-.024,.024)
+        anchor=polar(a,RNG.uniform(.918,.925),RNG.uniform(-.100,.034))
         radial=Vector((math.cos(a),0,math.sin(a)));tangent=Vector((-math.sin(a),0,math.cos(a)))
-        leaves=Mesh();stems=Mesh();kind=i%3
+        leaves=Mesh();stems=Mesh();kind=RNG.choices([0,1,2],weights=[4,4,3])[0]
         if kind==0:
             count=14;mat=broadmat
             for j in range(count):
-                rotation=j*2.39996;length=RNG.uniform(.026,.056)
+                rotation=j*2.39996;length=RNG.uniform(.043,.082)
                 base=radial*RNG.uniform(0,.013)+Vector((0,-RNG.uniform(0,.03),0))
                 direction=radial*.55+tangent*math.sin(rotation)*.7+Vector((0,-.75-.2*math.cos(rotation),0))
                 tip=base+direction.normalized()*length
                 tube(stems,[Vector((0,0,0)),base,tip*.92],.00075,4)
-                leaf(leaves,base,tip,RNG.uniform(.012,.024),.007)
+                leaf(leaves,base,tip,RNG.uniform(.020,.035),.010)
         elif kind==1:
             mat=fine
-            for branch in range(5):
+            for branch in range(4):
                 direction=radial*.60+tangent*RNG.uniform(-.8,.8)+Vector((0,-.9,0))
-                reach=RNG.uniform(.048,.095)
+                reach=RNG.uniform(.085,.145)
                 tip=direction.normalized()*reach
                 tube(stems,[Vector((0,0,0)),tip*.5,tip],.00065,4)
                 for k in range(1,7):
                     base=tip*k/7
                     for sign in [-1,1]:
-                        leaf(leaves,base,base+tangent*sign*.014+radial*.008+Vector((0,-.009,0)),.004,.002)
+                        leaf(leaves,base,base+tangent*sign*.021+radial*.012+Vector((0,-.013,0)),.006,.003)
         else:
             mat=silver
-            for j in range(22):
-                angle=j*2.39996;length=RNG.uniform(.019,.036)
+            for j in range(19):
+                angle=j*2.39996;length=RNG.uniform(.033,.060)
                 base=radial*RNG.uniform(0,.013)
-                tip=base+radial*.015+tangent*math.sin(angle)*length+Vector((0,-length*(.6+.4*math.cos(angle)),0))
-                leaf(leaves,base,tip,RNG.uniform(.004,.008),.003)
+                tip=base+radial*.027+tangent*math.sin(angle)*length+Vector((0,-length*(.6+.4*math.cos(angle)),0))
+                leaf(leaves,base,tip,RNG.uniform(.006,.012),.005)
                 tube(stems,[Vector((0,0,0)),base,tip*.80],.0004,4)
         leaf_obj=leaves.object(f'Groundcover {i+1:02d} - '+['oval','creeping','sage'][kind],mat,anchor)
         stem_obj=stems.object(f'Stems {i+1:02d}',stemmat,anchor)
-        for obj in [leaf_obj,stem_obj]:growth(obj,3+i*.8,.66 if kind==0 else .74,12)
+        for obj in [leaf_obj,stem_obj]:growth(obj,3+i*.5,.66 if kind==0 else .74,12)
         # New shoots are deliberate, sparse events; roots share the shoot's anchor.
         if i in [2,9,15]:
-            shoot=Mesh();tip=radial*.052+Vector((0,-.034,0));leaf(shoot,tip*.25,tip,.018,.005)
-            obj=shoot.object(f'New shoot {i:02d}',broadmat,anchor)
-            growth(obj,8+i*.7,.025,10)
+            # Germination reference: stem extension precedes two hinged leaves
+            # opening at different times, instead of scaling a mature plant.
+            shoot=Mesh();tip=radial*.052+Vector((0,-.034,0))
+            tube(shoot,[(0,0,0),(0,0,.018),(.001,0,.038),(0,0,.060)],.0009,5)
+            stem=shoot.object(f'New shoot stem {i:02d}',stemmat,anchor)
+            stem.rotation_mode='QUATERNION';stem.rotation_quaternion=Vector((0,0,1)).rotation_difference(tip.normalized())
+            delay=8+i*.7
+            for second,scale in [(0,.025),(delay,.025),(delay+9,1)]:
+                stem.scale=(1,1,scale);stem.keyframe_insert(data_path='scale',frame=round(second*24)+1)
+            for sign in [-1,1]:
+                blade=Mesh();leaf(blade,(0,0,0),(sign*.030,-.006,.014),.018,.005)
+                obj=blade.object(f'Unfolding leaf {i:02d} {sign}',broadmat,(0,0,.047))
+                obj.parent=stem
+                leaf_delay=delay+2+(1 if sign==1 else 0)
+                growth(obj,leaf_delay,.12,9)
+                for second,angle in [(0,-sign*.72),(leaf_delay,-sign*.72),(leaf_delay+9,sign*.10)]:
+                    obj.rotation_euler.y=angle;obj.keyframe_insert(data_path='rotation_euler',frame=round(second*24)+1)
             feeder=Mesh();target=polar(a,.854,-.113)-anchor
             tube(feeder,[Vector((0,0,0)),target*.4,target*.75,target],.0009,5)
             obj=feeder.object(f'Developing root {i:02d}',rootmat,anchor)
@@ -301,7 +318,10 @@ def build():
     bpy.context.view_layer.objects.active=ring
     bpy.ops.export_scene.gltf(filepath=str(ROOT/'botanical-section.glb'),export_format='GLB',
                               use_selection=True,export_apply=True,export_animations=True,
-                              export_animation_mode='SCENE',export_extras=True,export_cameras=False)
+                              export_animation_mode='SCENE',export_anim_scene_split_object=False,
+                              export_nla_strips_merged_animation_name='Groundcover growth',
+                              export_extras=True,export_cameras=False)
+    scene.frame_set(scene.frame_end)
     scene.render.engine='CYCLES';scene.cycles.samples=24
     scene.cycles.use_denoising=True
     scene.render.resolution_x=1300;scene.render.resolution_y=1000
@@ -333,7 +353,8 @@ def build():
     source=bpy.data.texts.new('create_botanical_section.py');source.write(Path(__file__).read_text())
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/'botanical-section.blend'))
     (ROOT/'botanical-dimensions.json').write_text(json.dumps(dict(stage=2,arc_degrees=[100,205],
-       growth_seconds=GROWTH_SECONDS,texture_count=4,groundcover_clusters=18,new_shoots=3,
+       growth_seconds=GROWTH_SECONDS,texture_count=4,groundcover_clusters=30,new_shoots=3,
+       growth_behaviour='staggered stem extension and paired leaf unfolding; established foliage expands gently',
        base_opening_diameter_m=1.664,protected_reading_radius_m=.8,
        minimum_soil_radius_m=.834,glb_contains_text=False),indent=2))
     for cam,name in [(wide,'botanical-perspective.png'),(close,'botanical-detail.png')]:
