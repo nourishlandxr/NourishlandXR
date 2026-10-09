@@ -117,7 +117,7 @@ test('the first-time journey introduces the Control panel before four practical 
     assert.match(demo,/Why does this matter\?/);
     assert.match(demo,/ctx\.fillStyle = '#ffffff'/);
     assert.doesNotMatch(demo,/body:'On your left: your interactive companion/);
-    assert.match(panel,/const spatialHeight=\(\)=>guided\?Math\.max\(phoneAR\?900:headset\?700:620,height\(\)\):phoneAR\?900:headset\?700:height\(\)/);
+    assert.match(panel,/const spatialHeight=\(\)=>phoneAR\?900:headset\?700:620/);
     assert.match(panel,/guided\?1000:pathwayContext\?4/);
     assert.match(styles,/\.nlxr-info-panel:is\(\.is-demo-panel,\.is-creator-panel\)\.is-intro-reveal/);
     assert.match(styles,/@keyframes nlxr-intro-copy-fade/);
