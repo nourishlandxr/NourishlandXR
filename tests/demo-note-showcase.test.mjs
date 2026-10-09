@@ -55,8 +55,16 @@ test('bees give a soft ambient buzz and a distinct short encounter pulse',()=>{
  const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...args)=>{pulses.push(args);return Promise.resolve();}}]}},fx=createDemoFeedback();
  for(const time of [120,240,360])fx.tick(time,{sources:[source],beeAround:true});
  assert.equal(pulses.length,3);assert.ok(pulses.every(([strength,duration])=>strength>0 && strength<.1 && duration>=120));
- fx.tick(480,{sources:[source],beeEncounters:['bee-1']});assert.deepEqual(pulses.at(-1),[DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration]);
- fx.tick(600,{sources:[source],beeEncounters:['bee-1']});assert.equal(pulses.filter(([strength])=>strength>0).length,1);fx.setHaptics(false);const before=pulses.length;fx.tick(720,{sources:[source],beeEncounters:['bee-2']});assert.equal(pulses.length,before);fx.destroy();
+ const beforeEncounter=pulses.length;
+ fx.tick(480,{sources:[source],beeEncounters:['bee-1']});
+ const encounterPulse=[DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration];
+ assert.deepEqual(pulses.slice(beforeEncounter),[encounterPulse]);
+ fx.tick(600,{sources:[source],beeEncounters:['bee-1']});
+ assert.equal(pulses.slice(beforeEncounter).filter(([strength])=>strength>0).length,1,'the same encounter must not fire again');
+ assert.equal(pulses.filter(([strength,duration])=>strength===encounterPulse[0]&&duration===encounterPulse[1]).length,1);
+ fx.tick(720,{sources:[source],beeEncounters:['bee-2']});assert.deepEqual(pulses.at(-1),encounterPulse);
+ assert.equal(pulses.filter(([strength,duration])=>strength===encounterPulse[0]&&duration===encounterPulse[1]).length,2,'a different bee still triggers its own encounter');
+ fx.setHaptics(false);const before=pulses.length;fx.tick(840,{sources:[source],beeEncounters:['bee-3']});assert.equal(pulses.length,before);fx.destroy();
 });
 test('dice landing emits impact feedback, resting micro-collisions do not',()=>{
  const impacts=[],physics=createHeroDicePhysics({x:0,y:0,z:0},{onImpact:value=>impacts.push(value)});physics.state.position.y=1;
