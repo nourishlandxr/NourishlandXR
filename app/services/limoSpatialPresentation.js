@@ -1,5 +1,5 @@
 // These exact controls are drawn and hit-tested by the native XR panel.
-const cues={question:'?',filter:'FIND',observation:'NOTE',action:'TRY',scenario:'DRAFT',review:'RETURN',navigation:'BACK'};
+const cues={question:'?',filter:'FIND',observation:'NOTE',action:'TRY',scenario:'DRAFT',review:'RETURN',navigation:'BACK',connection:'CONNECT'};
 export function limoSpatialControls(limo){
  return [{action:'Limo:close',label:'Close LIMO',role:'navigation',x:802,y:16,width:176,height:48},...(limo?.actions || []).map((item,index)=>({...item,action:'Limo:'+item.id,kind:'limo',x:24+(index%2)*486,y:156+Math.floor(index/2)*106,width:462,height:94}))];
 }

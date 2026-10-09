@@ -10,7 +10,7 @@ test('the opening uses the existing LIM mesh with seeded parent-first succession
  const first=welcomeOpeningFrames(0,73421),repeat=welcomeOpeningFrames(0,73421),variation=welcomeOpeningFrames(0,73422);
  assert.equal(AR_WELCOME_OPENING_MS,16000);
  assert.equal(AR_WELCOME_REDUCED_OPENING_MS,1600);
- assert.equal(first.reduce((count,frame)=>count+frame.nodes.length,0),36);
+ assert.equal(first.reduce((count,frame)=>count+frame.nodes.length,0),LIMO_CELLS.length);
  assert.deepEqual(first,repeat,'one opening keeps a stable seeded LIM route');
  assert.notDeepEqual(first,variation,'a new seed changes the organic route and timing');
  const nodes=first.flatMap(frame=>frame.nodes),byId=new Map(nodes.map(node=>[node.id,node]));
@@ -44,9 +44,9 @@ test('the main welcome surface is readable from the first XR frame',()=>{
 test('existing LIM cells reveal progressively, settle, then fade before copy begins',()=>{
  const early=welcomeOpeningFrames(3500,73421),middle=welcomeOpeningFrames(8000,73421),full=welcomeOpeningFrames(14000,73421),faded=welcomeOpeningFrames(AR_WELCOME_OPENING_MS,73421);
  const visible=frames=>frames.flatMap(frame=>frame.nodes).filter(node=>node.opacity>0).length;
- assert.ok(visible(early)>0 && visible(early)<36);
- assert.ok(visible(middle)>visible(early) && visible(middle)<36);
- assert.equal(visible(full),36);
+ assert.ok(visible(early)>0 && visible(early)<LIMO_CELLS.length);
+ assert.ok(visible(middle)>visible(early) && visible(middle)<LIMO_CELLS.length);
+ assert.equal(visible(full),LIMO_CELLS.length);
  assert.equal(visible(faded),0);
  const settled=full.flatMap(frame=>frame.nodes);
  assert.ok(settled.every(node=>node.drawX===node.x && node.drawY===node.y));
@@ -55,7 +55,7 @@ test('existing LIM cells reveal progressively, settle, then fade before copy beg
 test('reduced motion composes the complete LIM surface immediately',()=>{
  const opening=welcomeOpeningFrames(0,73421,AR_WELCOME_REDUCED_OPENING_MS,true);
  const nodes=opening.flatMap(frame=>frame.nodes);
- assert.equal(nodes.length,36);
+ assert.equal(nodes.length,LIMO_CELLS.length);
  assert.ok(nodes.every(node=>node.opacity===1 && node.drawX===node.x && node.drawY===node.y));
 });
 
@@ -71,7 +71,7 @@ test('main LIM renderer draws one lightweight connection beneath existing cell l
   bezierCurveTo(){beziers+=1;},lineTo(){lines+=1;}};
  for(const method of ['clearRect','fillRect','translate','rotate','scale','beginPath','moveTo','quadraticCurveTo','closePath','fill','stroke','arc','fillText','roundRect','setLineDash','clip'])ctx[method]=()=>{};
  const frame=drawArWelcomeShowcase(ctx,8000,false,createArWelcomeClusters(),{opening:true,openingSeed:73421,drawRoots:false});
- assert.equal(frame.reduce((count,item)=>count+item.nodes.length,0),36);
+ assert.equal(frame.reduce((count,item)=>count+item.nodes.length,0),LIMO_CELLS.length);
  assert.equal(beziers,0,'opening connections avoid expensive multi-pass curves');
  assert.ok(lines>0,'parent-child relationships retain a simple line');
  assert.match(showcaseSource,/startInset=parent\?\.isAttachment\?0:/);
@@ -212,7 +212,7 @@ test('six roots stay calm and only the selected question family opens',()=>{
 
 test('six practical questions replace the old four archetypes, with bounded stable geometry',()=>{
  const graphs=createArWelcomeClusters(),nodes=welcomeExperienceFrames(0,false,graphs).flatMap(frame=>frame.nodes);
- assert.equal(nodes.length,36);assert.ok(nodes.every(node=>node.opacity===0));
+ assert.equal(nodes.length,LIMO_CELLS.length);assert.ok(nodes.every(node=>node.opacity===0));
  assert.deepEqual(nodes.filter(node=>node.depth===0).map(node=>node.label),LIMO_ROOTS.map(root=>root.title));
  for(const node of nodes)if(node.parent){const parent=nodes.find(item=>item.id===node.parent);assert.ok(parent);assert.ok(node.revealAt>parent.revealAt+1450);}
  for(const [index,node] of nodes.entries())for(const other of nodes.slice(index+1))assert.ok(Math.hypot(node.x-other.x,node.y-other.y)>=node.baseRadius+other.baseRadius+10,node.id+' overlaps '+other.id);
@@ -231,7 +231,7 @@ test('the six roots stay available while one family shows its five branches imme
 test('all six questions are readable when pathway choice appears',()=>{const roots=welcomeExperienceFrames(30000,false).flatMap(frame=>frame.nodes).filter(node=>node.depth===0);assert.equal(roots.length,6);assert.ok(roots.every(node=>node.opacity===1));});
 
 test('the spatial tree has thirty practical branches while legacy learning references remain intact',()=>{
- assert.equal(LIMO_CELLS.length,36);assert.deepEqual(LIMO_BRANCHES.map(branch=>branch.children.length),[5,5,5,5,5,5]);
+ assert.equal(LIMO_CELLS.length,41);assert.deepEqual(LIMO_BRANCHES.map(branch=>branch.children.length),[5,5,5,5,5,5]);
  assert.equal(LIM_INTRO_CELLS.length,27);for(const legacy of LIM_INTRO_CELLS)assert.equal(limLearningContent(legacy.id).id,legacy.id);
  const feedback=limLearningContent('limo-change-repeat');assert.match(feedback.body,/same target and method/);
 });

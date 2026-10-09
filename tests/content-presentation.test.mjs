@@ -22,7 +22,7 @@ test('guided narrative discovers one plant before introducing Areas and Totems',
     assert.match(guide, /SPACE 1.1/);
     assert.match(guide, /SPACE 1.2/);
     assert.match(guide,/SPACE 1.3[\s\S]*guidedDemoStep\('SPACE 1\.3'\)\.title/);
-    assert.match(demo,/Play with the environment[\s\S]*PLAY 1.1/);
+    assert.ok(DEMO_GUIDED_STEPS.findIndex(step=>step.id==='ELEMENTS 1.7') < DEMO_GUIDED_STEPS.findIndex(step=>step.id==='UTILITY 1.1'));
     assert.doesNotMatch(guide,/hold the trigger|Hero Dice/);
     assert.doesNotMatch(guide,/ELEMENTS 1.2/);
     assert.match(area, /This is the Plant Orb/);
@@ -164,7 +164,7 @@ test('each archetype keeps its ordered illustration while plant media retains ho
         assert.equal(learningPanelMedia(content).caption, content.title);
     }
     const panel = read('app/services/pimInfoPanel.js');
-    assert.match(panel, /selection\?\.mesh==='lim'\s*\? learningPanelMedia\(selection\)/);
+    assert.match(panel, /\['lim','fruit'\]\.includes\(selection\?\.mesh\)\s*\? learningPanelMedia\(selection\)/);
     assert.match(panel, /imageSource=learningPanelMedia\(content\)\?\.image/);
     assert.match(panel, /showLearning\(content\).*mediaCollapsed=true;mediaTouched=false/s);
     assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);

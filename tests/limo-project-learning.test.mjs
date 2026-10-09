@@ -9,8 +9,10 @@ const entry=(id,areaId,layer='',status='published',extra={})=>({projectId:'p',si
 const context={projectId:'p',name:'Project',sites:[{id:'s',name:'Site'}],areas:[{id:'a',siteId:'s',name:'Area A'},{id:'b',siteId:'s',name:'Area B'}],warnings:[],entries:[entry('same','a','Canopy'),entry('same','b','Shrub'),entry('unknown','a'),entry('plan','a','Canopy','draft'),entry('template','a','Canopy','published',{is_template:true}),{...entry('foreign','a','Canopy'),projectId:'another'}]};
 function experience(storage=memory(),overrides={}){let last;return {model:createLimoSpatialExperience({storage,panel:{showLearning:value=>{last=value;},setExplorerOpen(){},suspend(){},setCompact(){}},...overrides}),content:()=>last};}
 test('six spatial questions each have five focused, actionable branches and stable legacy routes',()=>{
- assert.equal(LIMO_ROOTS.length,6);assert.equal(LIMO_CELLS.length,36);assert.equal(new Set(LIMO_CELLS.map(item=>item.id)).size,36);
+ assert.equal(LIMO_ROOTS.length,6);assert.equal(LIMO_CELLS.length,41);assert.equal(new Set(LIMO_CELLS.map(item=>item.id)).size,LIMO_CELLS.length);
  for(const root of LIMO_ROOTS){const children=LIMO_CELLS.filter(cell=>cell.parentId===root.id);assert.equal(children.length,5);assert.ok(children.every(cell=>cell.question && cell.next && cell.choices.length===3));}
+ const focused=LIMO_CELLS.filter(cell=>cell.parentId && !LIMO_ROOTS.some(root=>root.id===cell.parentId));assert.equal(focused.length,5);
+ for(const cell of focused){assert.ok(LIMO_CELL_BY_ID[cell.parentId],cell.id+' must have a real parent');assert.ok(cell.question && cell.next && cell.choices.length===3);}
  assert.equal(limoRouteId('lim-intro-vision'),'limo-vision-purpose');
 });
 test('query respects Project and Area, keeps duplicate marker IDs distinct, excludes proposed/template inventory, and retains gaps',()=>{
@@ -57,6 +59,6 @@ test('Project publication is explicit, scoped and draft, while personal saves ne
  await assert.rejects(publishLimoRecord({projectId:'p'}),/specific Area/);
 });
 test('native controls paginate and carry role and shape cues within distinct hit rectangles',async()=>{
- const item=experience();await item.model.open({context});const controls=limoSpatialControls(item.content().limo);assert.equal(controls.length,9);assert.ok(controls.every(button=>button.action.startsWith('Limo:')));
+ const item=experience();await item.model.open({context});const controls=limoSpatialControls(item.content().limo);assert.equal(controls.length,1+item.content().limo.actions.length);assert.ok(controls.every(button=>button.action.startsWith('Limo:')));
  for(const [i,a] of controls.entries())for(const b of controls.slice(i+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
 });

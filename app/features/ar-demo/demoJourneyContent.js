@@ -266,7 +266,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "act": "Learning pathways",
         "title": "An optional learning discovery",
         "main": "Want to see how this can become a learning experience? Open Learning Pathways, or choose Finish without learning example in the Control Panel.",
-        "panel": "Four uniform starting cells grow from the Living Frame. Learning Pathways is the final feature.",
+        "panel": "Six starting questions surround the Living Frame. LIMO is the final feature.",
         "hint": "Open the learning example.",
         "art": "connection"
     },
@@ -274,18 +274,18 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "LEARNING 1.7",
         "act": "Learning pathways",
         "title": "A question to explore",
-        "main": "Explore a starting topic, or follow the Uses example to connect plant information with a learning activity.",
-        "panel": "Selected learning cell information and authored image. No need to find a nested target before starting the guided connection.",
-        "hint": "Try a starting topic, or connect the sample plant.",
+        "main": "Explore a starting question, then connect two related LIMO cells. A new discovery opens between their ideas and can connect again to develop a deeper story.",
+        "panel": "Selected learning question. The connection catalogue contains ten authored combinations.",
+        "hint": "Explore a question, or connect LIMO cells.",
         "art": "pathways"
     },
     {
         "id": "LEARNING 1.8",
         "act": "Learning pathways",
         "title": "Build on what you discovered",
-        "main": "Connect Pigeon Pea Uses to Uses and Making. One plant detail can become the starting point for a question or activity.",
-        "panel": "Uses is the guided default. Other prepared connection examples remain optional.",
-        "hint": "Show the source and target together.",
+        "main": "Connect Sun & shade with Plants & forest layers to reveal Who shades whom? Then connect that discovery with First steps & later roles.",
+        "panel": "Both source cells remain visible. The new discovery and its strings follow the orbit around the Living Frame.",
+        "hint": "Choose a combination, then connect its source cells.",
         "art": null
     },
     {

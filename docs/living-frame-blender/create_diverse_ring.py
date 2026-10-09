@@ -58,7 +58,7 @@ def blade(base,tip,width,kind='oval',curl=.006):
     side=axis.cross(Vector((0,1,0)))
     if side.length<.01:side=Vector((1,0,0))
     side.normalize();verts=[];faces=[];uvs=[]
-    steps=6 if kind in ['lobed','rounded'] else 4
+    steps=4 if kind in ['lobed','rounded'] else 3
     for i in range(steps+1):
         t=i/steps
         profile=math.sin(math.pi*t)**(.40 if kind=='rounded' else 1.35 if kind=='sage' else .8)
@@ -74,7 +74,9 @@ def blade(base,tip,width,kind='oval',curl=.006):
     mesh.add(verts,faces,uvs);return mesh
 
 def add_leaf(group,anchor,base,tip,width,kind='oval',curl=.006):
-    geometry=blade(base,tip,width,kind,curl)
+    # Broad overlapping blades form a low canopy across the soil face; the
+    # supporting stems stay short instead of raising plants to fill gaps.
+    geometry=blade(base,tip,width*1.7,kind,curl)
     anchor,base,tip=map(Vector,[anchor,base,tip]);axis=(tip-base).normalized()
     outward=Vector((anchor.x,0,anchor.z)).normalized()
     folded=(outward*.45+Vector((0,-.65,0))).normalized()
@@ -85,7 +87,12 @@ def add_leaf(group,anchor,base,tip,width,kind='oval',curl=.006):
         middle.append(safe(base+folded*along*.65+(rel-axis*along)*.08))
     group.add(geometry,early,middle)
 
-def add_stem(group,anchor,points,width=.001,sides=4):
+def add_stem(group,anchor,points,width=.001,sides=3):
+    if len(points)==3:
+        start,middle,end=map(Vector,points)
+        axis=end-start
+        if axis.length>.0001 and (middle-start).cross(axis.normalized()).length<.0004:
+            points=[start,end]
     geometry=b.Mesh();b.tube(geometry,points,width,sides)
     early=[safe(Vector(anchor)+(Vector(p)-Vector(anchor))*.015) for p in geometry.vertices]
     group.add(geometry,early,geometry.vertices)
@@ -100,6 +107,20 @@ def add_growing_path(group,points,width,sides=4,seed_anchor=None):
     group.add(final,early,middle.vertices)
 
 def planting(mats):
+    # A thin organic surface accumulates into the final darker layer. Move the
+    # shared brown/black boundary together so growth never leaves a soil gap.
+    for name,old0,old1,early0,early1 in [('Brown soil section',.834,.891,.834,.912),('Dark topsoil section',.891,.924,.912,.924)]:
+        obj=bpy.data.objects.get(name)
+        final=[vertex.co.copy() for vertex in obj.data.vertices]
+        for vertex in obj.data.vertices:
+            p=vertex.co;radius=math.hypot(p.x,p.z)
+            mapped=early0+(radius-old0)*(early1-early0)/(old1-old0)
+            p.x*=mapped/radius;p.z*=mapped/radius
+        obj.shape_key_add(name='Thin organic soil basis')
+        key=obj.shape_key_add(name='Organic layer accumulation')
+        for vertex,p in zip(key.data,final):vertex.co=p
+        for second,value in [(0,0),(20,0),(34,.38),(48,1),(60,1)]:
+            key.value=value;key.keyframe_insert(data_path='value',frame=second*24+1)
     # Materials express different leaf surfaces, rather than one recoloured shape.
     # Quiet greens and barely visible veins, without the original bright gradient.
     u,v=np.meshgrid(np.linspace(0,1,256),np.linspace(0,1,256))
@@ -115,20 +136,23 @@ def planting(mats):
     groups={(kind,wave):StagedMesh() for kind in range(6) for wave in range(4)}
     stems=[StagedMesh() for _ in range(4)]
     counts=[0]*6
-    # Uneven neighbourhoods alternate busy and quiet areas; species and timing
-    # are sampled independently. The seed makes each authored variation repeatable.
-    cluster_angles=[]
-    centres=[.18,.75,1.40,2.06,2.65,3.18,5.98]
-    for i in range(90):
-        a=(rng.choice(centres)+rng.gauss(0,.18))%math.tau
-        if math.radians(210)<a<math.radians(330):a=(3.30 if a<math.pi*1.5 else 5.98)+rng.uniform(-.07,.07)
-        if i<4:a=rng.choice([math.radians(214),math.radians(326)])+rng.uniform(-.02,.02)
+    # Three overlapping planting rows cover the full face width. Stratified
+    # placement prevents accidental bare patches while local jitter keeps it organic.
+    # Reserve the lower arc for roots, with only four small edge accents.
+    cluster_angles=[];plant_records=[]
+    for i in range(184):
+        accent=i>=180
+        row=i//60 if not accent else 2
+        a=(math.radians(-30)+(i%60+.5)*math.radians(240)/60+rng.uniform(-.014,.014))%math.tau
+        if accent:a=rng.choice([math.radians(214),math.radians(326)])+rng.uniform(-.02,.02)
         cluster_angles.append(a)
         kind=rng.choices(range(6),weights=[4,3,3,2,3,3])[0];counts[kind]+=1
         wave=rng.randrange(4)
-        anchor=b.polar(a,rng.uniform(.916,.934),rng.uniform(-.126,-.045))
+        anchor=b.polar(a,[.849,.880,.915][row]+rng.uniform(-.002,.002),rng.uniform(-.124,-.111))
+        plant_records.append((anchor.copy(),a,wave))
         radial=Vector((math.cos(a),0,math.sin(a)));tangent=Vector((-math.sin(a),0,math.cos(a)))
-        scale=rng.uniform(.65,1.18)*(.55 if i<4 else 1);leaf_group=groups[kind,wave];stem_group=stems[wave]
+        if row==1 and i%3==0:radial*=-1
+        scale=rng.uniform(1.18,1.58)*(.42 if accent else 1);leaf_group=groups[kind,wave];stem_group=stems[wave]
         if kind==0:
             # Low lateral runners with small opposite leaves.
             for branch in range(rng.randrange(3,6)):
@@ -144,6 +168,7 @@ def planting(mats):
                 theta=j*2.39996+rng.uniform(-.24,.24)
                 base=anchor+tangent*math.sin(theta)*.020*scale
                 tip=base+radial*rng.uniform(.007,.018)*scale+tangent*math.cos(theta)*.024*scale+Vector((0,-.016*scale,0))
+                add_stem(stem_group,anchor,[anchor,base,tip*.45+base*.55],.00055,3)
                 add_leaf(leaf_group,anchor,base,tip,rng.uniform(.010,.020)*scale,'rounded',.006)
         elif kind==2:
             for j in range(rng.randrange(3,5)):
@@ -156,6 +181,7 @@ def planting(mats):
             for j in range(rng.randrange(15,24)):
                 base=anchor+tangent*rng.uniform(-.045,.045)*scale+radial*rng.uniform(0,.013)
                 end=base+radial*.009+tangent*rng.uniform(-.012,.012)+Vector((0,-.012,0))
+                add_stem(stem_group,anchor,[anchor,(anchor+base)*.5,base],.00045,3)
                 add_leaf(leaf_group,anchor,base,end,rng.uniform(.005,.010)*scale,'rounded',.002)
         elif kind==4:
             for branch in range(rng.randrange(3,5)):
@@ -177,11 +203,12 @@ def planting(mats):
     for wave,group in enumerate(stems):group.object(f'Branching shoots wave {wave}',mats['stem'],wave*5,15,wave*5+5,10)
 
     # Larger foreground leaves restore the size hierarchy of the original rim.
-    # Small grass blades, medium groundcover and these broad leaves coexist.
+    # Small creeping foliage and occasional broader sideways leaves coexist.
     hero_groups=[StagedMesh() for _ in range(3)]
     hero_stems=StagedMesh()
     for index,a in enumerate([.34,1.24,2.58,3.10,6.02]):
-        anchor=b.polar(a,.931,-.145)
+        anchor=b.polar(a,rng.uniform(.874,.914),-.145)
+        plant_records.append((anchor.copy(),a,min(3,1+index%3)))
         radial=Vector((math.cos(a),0,math.sin(a)));tangent=Vector((-math.sin(a),0,math.cos(a)))
         for j in range(rng.randrange(4,7)):
             base=anchor+radial*rng.uniform(.003,.012)
@@ -192,40 +219,78 @@ def planting(mats):
     hero_stems.object('Large leaf supporting stems',mats['stem'],5,19,12,12)
 
     # Root architecture varies between tap roots, spreading fans and fibrous mats.
-    root_groups=[StagedMesh() for _ in range(3)]
+    root_groups={(architecture,wave):StagedMesh() for architecture in range(3) for wave in range(4)}
     root_fingerprints=[]
-    for index in range(18):
-        a=rng.choice(cluster_angles)+rng.uniform(-.09,.09)
-        start=b.polar(a,rng.uniform(.906,.926),-.111)
-        architecture=index%3
-        branches=rng.randrange(2,4) if architecture==0 else rng.randrange(4,7) if architecture==1 else rng.randrange(8,13)
+    root_origins=[];root_depths=[]
+    for index,(plant_anchor,a,wave) in enumerate(plant_records):
+        start=plant_anchor.copy();root_origins.append([start.x,start.z,-start.y])
+        architecture=rng.choices([0,1,2],weights=[2,3,4])[0]
+        branches=rng.randrange(2,4) if architecture==0 else rng.randrange(3,6) if architecture==1 else rng.randrange(5,9)
         span=rng.uniform(.012,.035) if architecture==0 else rng.uniform(.09,.16) if architecture==1 else rng.uniform(.035,.075)
         root_fingerprints.append([round(a,4),architecture,branches,round(span,4)])
+        group=root_groups[architecture,wave]
+        deep=rng.random()<.42;depth_y=rng.uniform(.025,.075) if deep else rng.uniform(-.113,-.105)
+        root_depths.append(round(depth_y-start.y,4))
         for branch in range(branches):
             delta=rng.uniform(-span,span)
             depth=rng.uniform(.062,.075) if architecture==0 else rng.uniform(.025,.046) if architecture==1 else rng.uniform(.035,.066)
             frequency=rng.uniform(3,9);phase=rng.uniform(0,math.tau)
-            points=[]
-            for k in range(10):
-                t=k/9
+            points=[start]
+            root_steps=4 if architecture==2 else 5
+            for k in range(1,root_steps+1):
+                t=k/root_steps
                 angle=a+delta*t+.007*math.sin(t*frequency+phase)*math.sin(math.pi*t)
-                points.append(b.polar(angle,max(.845,.918-depth*t),-.111-.004*math.sin(t*4+phase)))
+                y=start.y+(depth_y-start.y)*t-.0015*math.sin(t*4+phase)
+                points.append(b.polar(angle,max(.845,math.hypot(start.x,start.z)-depth*t),y))
             width=rng.uniform(.0012,.0020) if architecture==0 else rng.uniform(.0008,.0013) if architecture==1 else rng.uniform(.00035,.00065)
-            add_growing_path(root_groups[index%3],points,width)
-            for fork in range(rng.randrange(2,5) if architecture==2 else rng.randrange(1,3)):
-                node=rng.randrange(3,8);base=points[node];direction=rng.choice([-1,1])
-                twigs=[base]+[b.polar(a+delta*node/9+direction*span*.18*t,max(.845,math.hypot(base.x,base.z)-.012*t),base.y-.001) for t in [.3,.65,1]]
-                add_growing_path(root_groups[index%3],twigs,.00045,3,seed_anchor=start)
-    for index,group in enumerate(root_groups):group.object(f'Unique roots - architecture {index}',mats['root'],index*3,14,index*3+12,14)
+            add_growing_path(group,points,width,4 if architecture==0 else 3)
+            for fork in range(rng.randrange(1,3)):
+                node=rng.randrange(2,root_steps);base=points[node];direction=rng.choice([-1,1])
+                twigs=[base]+[b.polar(a+delta*node/root_steps+direction*span*.24*t,max(.845,math.hypot(base.x,base.z)-rng.uniform(.006,.013)*t),base.y-.001) for t in [.5,1]]
+                add_growing_path(group,twigs,.00036,3,seed_anchor=start)
+    for (architecture,wave),group in root_groups.items():
+        delay=max(0,wave*5-2)+rng.uniform(0,2)
+        group.object(f'Plant attached roots architecture {architecture} wave {wave}',mats['root'],delay,rng.uniform(9,14),delay+8,rng.uniform(10,15))
+
+    # Small muted earthworms appear gradually; slow peristalsis is visible only
+    # up close. The soil-accumulation keys follow their introduction.
+    worm_mat=b.material('Quiet brown earthworms',(.22,.10,.075),.81)
+    for index,a in enumerate([.59,2.37,5.98]):
+        anchor=b.polar(a,.895,-.115);length=rng.uniform(.038,.052)
+        worm=b.Mesh();vertices=[];faces=[];uvs=[];steps=24;sides=8
+        for i in range(steps+1):
+            t=i/steps;radius=.00035+.00125*(math.sin(math.pi*(.03+t*.94))**.45)
+            radius*=1+.035*math.cos(i*math.pi)
+            for j in range(sides):
+                phi=j*math.tau/sides
+                vertices.append(Vector(((t-.5)*length,math.cos(phi)*radius,math.sin(t*5)*.002+math.sin(phi)*radius)))
+                uvs.append((j/sides,t))
+        for i in range(steps):
+            for j in range(sides):faces.append((i*sides+j,i*sides+(j+1)%sides,(i+1)*sides+(j+1)%sides,(i+1)*sides+j))
+        faces.extend([tuple(reversed(range(sides))),tuple(steps*sides+j for j in range(sides))])
+        worm.add(vertices,faces,uvs)
+        obj=worm.object(f'Slow earthworm {index}',worm_mat,anchor)
+        obj.rotation_euler.y=-a-math.pi/2
+        obj.shape_key_add(name='Rest body');crawl=obj.shape_key_add(name='Slow peristalsis')
+        for vertex in crawl.data:
+            t=(vertex.co.x/length)+.5
+            vertex.co.x+=.0012*math.sin(t*math.tau)
+            vertex.co.z+=.001*math.sin(t*math.tau+1)
+        start=12+index*5
+        for second,scale in [(0,.012),(start,.012),(start+7,1),(60,1)]:
+            obj.scale=(scale,)*3;obj.keyframe_insert(data_path='scale',frame=second*24+1)
+        for second in range(0,61,5):
+            crawl.value=0 if second<start else .5-.5*math.cos((second-start)*math.tau/18)
+            crawl.keyframe_insert(data_path='value',frame=second*24+1)
 
     # Fig-like aerial roots belong beneath the lower arc, as in the original.
     # Different lengths, depths, bends and forks give a hanging spatial silhouette.
     aerial=[StagedMesh() for _ in range(3)];aerial_lengths=[]
     aerial_mat=b.material('Warm hanging aerial roots',(.34,.245,.135),.86)
     for index in range(11):
-        a=math.radians(222+index*8.8)+rng.uniform(-.025,.025)
+        a=math.radians(rng.choice([223,240,255,276,293,315]))+rng.uniform(-.045,.045)
         start=b.polar(a,rng.uniform(.932,.955),rng.uniform(-.147,-.025))
-        length=rng.uniform(.18,.40);drift=rng.uniform(-.045,.045);bend=rng.uniform(-.018,.018)
+        length=rng.uniform(.16,.40);drift=rng.uniform(-.085,.085);bend=rng.uniform(-.030,.030)
         aerial_lengths.append(round(length,3))
         points=[safe(start+Vector((drift*t+bend*math.sin(t*math.pi),-.014*math.sin(t*3+index)*t,-length*t))) for t in [j/22 for j in range(23)]]
         add_growing_path(aerial[index%3],points,rng.uniform(.0021,.0042),6)
@@ -273,14 +338,14 @@ def planting(mats):
     petal_mats=[b.material('Ivory daisy petals',(.98,.87,.61),.55),b.material('Lavender blossom petals',(.64,.31,.83),.51),b.material('Coral pink flower petals',(.96,.40,.49),.51)]
     pollen=b.material('Bright golden pollen',(.98,.57,.055),.69)
     flowers={(colour,wave):StagedMesh() for colour in range(3) for wave in range(4)}
-    flower_stems=StagedMesh();calyx=StagedMesh();centres=StagedMesh()
+    flower_stems=StagedMesh();early_stems=StagedMesh();calyx=StagedMesh();centres=StagedMesh();early_centres=StagedMesh()
     bloom_starts=[];early_heads=[]
     for index in range(27):
         a=(rng.choice(centres_for_flowers())+rng.uniform(-.13,.13))%math.tau
         anchor=b.polar(a,.922,-.120);radial=Vector((math.cos(a),0,math.sin(a)))
         head=anchor+radial*rng.uniform(.024,.043)+Vector((0,-rng.uniform(.025,.040),0))
-        add_stem(flower_stems,anchor,[anchor,anchor+(head-anchor)*.6,head],.0015,5)
         colour=index%3;wave=3 if index in [0,7,14,21] else rng.randrange(3)
+        add_stem(early_stems if wave==3 else flower_stems,anchor,[anchor,anchor+(head-anchor)*.6,head],.0015,5)
         if wave==3:early_heads.append([head.x,head.z,-head.y])
         size=rng.uniform(.010,.017);petals=8 if colour==0 else 5 if colour==1 else 6
         group=flowers[colour,wave]
@@ -300,13 +365,15 @@ def planting(mats):
         disc=b.Mesh();radius=.006 if colour==0 else .004
         verts=[head+Vector((math.cos(j*math.tau/10)*radius,-.004,math.sin(j*math.tau/10)*radius)) for j in range(10)]
         disc.add(verts,[tuple(range(10))])
-        centres.add(disc,[anchor+(Vector(p)-anchor)*.008 for p in verts],[head+(Vector(p)-head)*.05 for p in verts])
+        (early_centres if wave==3 else centres).add(disc,[anchor+(Vector(p)-anchor)*.008 for p in verts],[head+(Vector(p)-head)*.05 for p in verts])
     for (colour,wave),group in flowers.items():
         start=24+rng.uniform(0,2) if wave==3 else 42+wave*3+rng.uniform(0,1);bloom_starts.append(round(start,2))
         group.object(f'Blooming flowers colour {colour} wave {wave}',petal_mats[colour],8 if wave==3 else 14+wave*3,14 if wave==3 else 20,start,8 if wave==3 else 9)
     flower_stems.object('Flower stalks before the bloom',mats['stem'],13,22,19,12)
+    early_stems.object('Four early flower stalks',mats['stem'],8,14,12,10)
     calyx.object('Green flower buds and calyx',ivy,16,23,21,14)
     centres.object('Flower centres revealed at the finish',pollen,18,21,44,12)
+    early_centres.object('Four early flower centres',pollen,9,13,24,8)
 
     grit=b.Mesh();litter=b.Mesh()
     for i in range(190):
@@ -317,10 +384,12 @@ def planting(mats):
         a=rng.uniform(0,math.tau);p=b.polar(a,rng.uniform(.894,.925),-.113)
         b.leaf(litter,p,p+Vector((rng.uniform(-.011,.011),-.002,rng.uniform(-.011,.011))),.004,.001)
     litter.object('Natural litter between plants',mats['litter'])
-    return dict(seed=seed,plant_clusters=95,shoot_count=95,plant_habits=HABITS,habit_counts=counts,
+    return dict(seed=seed,plant_clusters=len(plant_records),shoot_count=len(plant_records),plant_habits=HABITS,habit_counts=counts,
+                planting_rows_m=[.849,.880,.915],covered_arc_degrees=[-30,210],groundcover_columns_per_row=60,
                 large_leaf_clusters=5,leaf_size_range_m=[.005,.078],reserved_lower_arc_degrees=[210,330],lower_arc_small_accents=4,
                 aerial_roots=11,aerial_root_lengths_m=aerial_lengths,
-                root_architectures=3,root_systems=18,root_fingerprints=root_fingerprints,
+                root_architectures=3,root_systems=len(plant_records),root_fingerprints=root_fingerprints,
+                plant_root_origins_gltf=root_origins,root_depths_m=root_depths,worms=3,topsoil_build_seconds=[20,48],
                 vines=9,vine_lengths_m=lengths,flowers=27,early_flowers=4,late_flowers=23,early_flower_heads_gltf=early_heads,bloom_starts_seconds=bloom_starts,
                 sequence='soil and roots, staggered shoots, distinct foliage, winding vines, buds, flowers opening at the finish',
                 growth_method='individual-anchor morph extension and unfolding, with independently staggered groups')

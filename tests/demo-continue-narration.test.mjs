@@ -9,7 +9,7 @@ const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.met
 const clear=source.slice(source.indexOf('function clearDemoNarration('),source.indexOf('function showIntroBoard('));
 function context(){
     const paragraphs=[{textContent:'Old paragraph'}],cancelled=[],button={};let advances=0;
-    const ctx=vm.createContext({boardTypingTimer:11,boardTypingWatchdogTimer:12,arWelcomeUnlockTimer:13,demoNarrationRevision:0,narrationRevision:0,skipDemoNarration:()=>{},introBoardVisibleBody:'Old paragraph',introBoardParagraphFadeTimes:[1],introBoardTextureDirty:false,appRoot:{querySelectorAll:()=>paragraphs,querySelector:()=>button},continueButton:button,clearTimeout:id=>cancelled.push(id),performance:{now:()=>100},onContinue:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},beginOpeningCopy:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},runArWelcomeTutorial:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},suppressSessionSelectUntil:0,typing:true,openingTyping:true,introBoardStep:'INTRO 1.2',arWelcomeIntroPending:true,arWelcomeSettleStage:true});
+    const ctx=vm.createContext({boardTypingTimer:11,boardTypingWatchdogTimer:12,arWelcomeUnlockTimer:13,demoNarrationRevision:0,narrationRevision:0,skipDemoNarration:()=>{},introBoardVisibleBody:'Old paragraph',introBoardParagraphFadeTimes:[1],introBoardTextureDirty:false,appRoot:{querySelectorAll:()=>paragraphs,querySelector:()=>button},waitingButton:button,continueButton:button,clearTimeout:id=>cancelled.push(id),performance:{now:()=>100},onContinue:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},beginOpeningCopy:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},runArWelcomeTutorial:()=>{assert.equal(ctx.introBoardVisibleBody,'');advances++;},suppressSessionSelectUntil:0,typing:true,openingTyping:false,introBoardStep:'INTRO 1.2',arWelcomeIntroPending:true,arWelcomeSettleStage:true});
     vm.runInContext(clear,ctx);return {ctx,paragraphs,cancelled,button,advances:()=>advances};
 }
 function cleared(h){assert.equal(h.advances(),1);assert.equal(h.paragraphs[0].textContent,'');assert.equal(h.ctx.skipDemoNarration,null);assert.ok(h.cancelled.includes(11));assert.ok(h.cancelled.includes(12));}
@@ -25,4 +25,10 @@ test('opening Continue advances immediately instead of repainting INTRO 1.1',()=
 test('Start the demo advances during INTRO 1.2 and discards old callbacks',()=>{
     const h=context(),handler=source.match(/const continueOpeningCopy=(event=>\{[^\n]*\});/)[1];
     vm.runInContext(`(${handler})()`,h.ctx);cleared(h);assert.equal(h.ctx.openingTyping,false);assert.ok(h.cancelled.includes(13));assert.equal(h.button.disabled,true);
+});
+
+test('opening Continue waits for narration, then advances once it is ready',()=>{
+    const h=context(),handler=source.match(/const continueOpeningCopy=(event=>\{[^\n]*\});/)[1];
+    h.ctx.openingTyping=true;vm.runInContext(`(${handler})()`,h.ctx);assert.equal(h.advances(),0);
+    h.ctx.openingTyping=false;vm.runInContext(`(${handler})()`,h.ctx);cleared(h);
 });

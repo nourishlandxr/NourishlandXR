@@ -31,7 +31,7 @@ test('mode-only Explorer starts with topic faces on one dice and preserves exist
  const before=state.revision;initializeExplorerPreview(record,knowledge,3000);assert.equal(state.revision,before);
  const renderer=read('app/services/knowledgeSpatialRenderer.js');assert.ok(renderer.indexOf("mode==='explore'")<renderer.indexOf('recordSurfaces=knowledgeSurfaces'));
  const panel=read('app/services/pimInfoPanel.js'),controls=panel.slice(panel.indexOf('function explorerControls'),panel.indexOf('const explorerHeight'));
- assert.doesNotMatch(controls,/pimToArKnowledge|CellOpacity|KnowledgeSave|KnowledgeMolecule/);assert.match(panel,/cellOpacity:meshCellOpacity/);
+ assert.doesNotMatch(controls,/pimToArKnowledge|KnowledgeSave|KnowledgeMolecule/);assert.match(panel,/cellOpacity:meshCellOpacity/);
 });
 test('dice shadow softens and expands as a dice is lifted',()=>{
  const ground=diceShadowAppearance({y:.19},0),high=diceShadowAppearance({y:1.19},0);assert.ok(high.radius>ground.radius);assert.ok(high.opacity<ground.opacity);assert.ok(ground.opacity<=.4);

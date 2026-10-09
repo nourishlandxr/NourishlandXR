@@ -1,4 +1,6 @@
-import {LIMO_ROOTS,LIMO_CELL_BY_ID,LIMO_LAYERS,limoLearningContent,limoRouteId,limoEntryKey,limoEntryState,limoIsPlant,limoLayer,queryLimoContext} from './limoProjectLearning.js';
+import {LIMO_ROOTS,LIMO_CELL_BY_ID,LIMO_LAYERS,limoRootFor,limoRouteId,limoEntryKey,limoEntryState,limoIsPlant,limoLayer,queryLimoContext} from './limoProjectLearning.js';
+import {createLimoConnections} from './limoConnections.js';
+import {LIMO_CONNECTION_RULE_BY_ID,limoConnectionIllustration,connectionRuleFor} from './limoConnectionRules.js';
 
 const clean=value=>String(value ?? '').trim();
 const stamp=()=>new Date().toISOString();
@@ -6,10 +8,12 @@ const due=days=>new Date(Date.now()+days*86400000).toISOString();
 const journalKey=projectId=>`nlxr.limo.journal.v1:${encodeURIComponent(projectId)}`;
 const progressKey=projectId=>`nlxr.limo.workspace.v1:${encodeURIComponent(projectId)}`;
 function read(storage,key,fallback){try{return JSON.parse(storage?.getItem(key) || 'null') || fallback;}catch{return fallback;}}
-export function createLimoSpatialExperience({panel,loadContext,publishRecord=null,onInspect=()=>{},onFocus=()=>{},onSelect=()=>{},onClose=()=>{},storage=globalThis.localStorage}={}){
- let context=null,request=0,closed=false,error='',notice='',pending=false;
+export function createLimoSpatialExperience({panel,loadContext,publishRecord=null,onInspect=()=>{},onFocus=()=>{},onSelect=()=>{},onChange=()=>{},onClose=()=>{},storage=globalThis.localStorage}={}){
+ let context=null,request=0,closed=false,error='',notice='',pending=false,graphCache=null;
  let state={cellId:'',view:'home',siteId:'',areaId:'',layer:'All layers',targetKey:'',page:0,draft:null,recordId:'',paused:false},records=[];
- const activeCell=()=>LIMO_CELL_BY_ID[state.cellId];
+ const connections=createLimoConnections({storage});
+ const activeCell=()=>connections.cell(state.cellId);
+ const children=cell=>Object.values(LIMO_CELL_BY_ID).filter(item=>item.parentId===cell?.id);
  const scope=()=>({siteId:state.siteId,areaId:state.areaId});
  const area=()=>context?.areas.find(item=>item.siteId===state.siteId && item.id===state.areaId);
  const target=()=>context?.entries.find(entry=>limoEntryKey(entry)===state.targetKey);
@@ -23,7 +27,7 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
  function remember(){try{store();}catch(e){error=e.message;}}
  const action=(id,label,role='action',extra={})=>({id,label,role,...extra});
  function content(){
-  const cell=activeCell(),root=cell?LIMO_CELL_BY_ID[cell.parentId] || cell:null,query=queryLimoContext(context,scope(),cell?.lens || 'plants',state.layer);
+  const cell=activeCell(),root=cell?limoRootFor(cell,id=>connections.cell(id)):null,query=queryLimoContext(context,scope(),cell?.lens || 'plants',state.layer);
   const where=area()?.name || (state.siteId?context?.sites.find(site=>site.id===state.siteId)?.name:'Whole Project') || 'Whole Project';
   let title=cell?.title || 'Learn from this place',body='',actions=[],role=cell?.role || 'question';
   const back=()=>action('back','‹ Back','navigation');
@@ -31,19 +35,39 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
   if(!context){body=error || 'Loading the Project and its Areas…';actions=[action('reload','Retry Project','action',{disabled:pending})];}
   else if(state.view==='home'){
    title='Learn from this place';role='question';
-   body='LIMO connects the plants and Notes in this place into a bigger story. Read the land, discover its living layers, explore relationships, imagine possibilities, try a small action and return to see what changed. Choose the question that interests you; each branch opens five focused investigations.';
+   body='Read the land, discover its life and connect ideas around the Living Frame. Two related cells reveal a new investigation. A discovery can then connect with another idea to develop a deeper story about this place.';
    actions=LIMO_ROOTS.map(item=>action('cell:'+item.id,item.title,'question',{accent:item.accent,cue:item.cue}));
    if(state.paused)actions.unshift(action('resume','Resume saved question','review'));
-   actions.push(...contextActions,...(loadContext?[action('refresh','Refresh Project records','filter')]:[]));
+   actions.push(action('connections','Explore 10 combinations','connection'),action('discoveries','Saved discoveries · '+connections.cells().length,'connection'),action('tools','Area and notebook','filter'));
+  }else if(state.view==='tools'){
+   title='Investigate this place';body='Attach discoveries to real records, keep a dated observation and return to check what changed.';
+   actions=[back(),action('results','Find Project records','filter'),action('observe','Record an observation','observation'),action('trial','Draft a small trial','action'),...(root?.slug==='vision' || cell?.ruleId==='care-plan' || cell?.ruleId==='adjust-plan'?[action('compare','Compare two plans','scenario')]:[]),...contextActions,...(cell?.derived?[action('remove-discovery','Remove discovery and its descendants','navigation')]:[]),...(loadContext?[action('refresh','Refresh Project records','filter')]:[]),action('pause','Pause this question','review')];
+  }else if(state.view==='connections'){
+   title='Connect ideas around the Living Frame';role='connection';
+   body='Choose an investigation. Its two source cells stay visible while you connect them. The last four combinations build on discoveries you have already made.';
+   actions=[back(),...connections.rules.slice(state.page*4,state.page*4+4).map((rule,index)=>{const sources=connections.recipeSources(rule),ready=sources.length===2;return action('recipe:'+rule.id,`${state.page*4+index+1}. ${rule.title}`,'connection',{disabled:!ready,description:ready?sources.map(item=>item.title).join(' + '):'First create: '+rule.sources.filter(id=>id.startsWith('@')).map(id=>LIMO_CONNECTION_RULE_BY_ID[id.slice(1)].title).join(' + ')});}),...pagination(connections.rules.length,4),action('discoveries','Open saved discoveries','connection')];
+  }else if(state.view==='discoveries'){
+   title='Discoveries in this place';role='connection';body='These connections belong to '+where+'. Reopen one to see its parents, linked records and further combinations.';
+   const items=connections.cells();actions=[back(),...items.slice(state.page*4,state.page*4+4).map(item=>action('cell:'+item.id,item.title,'connection',{accent:item.accent})),...pagination(items.length,4),action('connections','Explore combinations','connection'),...contextActions];
+  }else if(state.view==='connect' || state.view==='connect-preview'){
+   const source=connections.cell(connections.snapshot().sourceId),rule=LIMO_CONNECTION_RULE_BY_ID[state.previewRuleId],candidates=connections.compatible(source?.id);
+   title=state.view==='connect-preview' && rule?rule.title:'Choose a cell to connect';role='connection';
+   body=rule?`${rule.question}\n\n${rule.explanation}\n\nConnect the two highlighted source cells to reveal this discovery.`:`Source · ${source?.title || 'Choose a source'}\n\nCompatible cells are highlighted around the Living Frame. Choose one to reveal a new investigation. Your source stays visible when you open another branch.`;
+   actions=[action('connect-cancel','Cancel connection','navigation'),...candidates.map(item=>{const candidateRule=connectionRuleFor([source,item]);return action('connect-target:'+item.id,item.title,'connection',{description:'Reveals '+candidateRule.title,disabled:pending,accent:item.accent});})];
+  }else if(state.view==='target-links'){
+   title='Attach plants, patches and Notes';role='connection';body='Keep multiple targets attached to this discovery. Choose the same records for a repeat observation or trial comparison.';
+   const items=queryLimoContext(context,scope(),'all').results;
+   actions=[back(),...items.slice(state.page*5,state.page*5+5).map(entry=>action('attach-target:'+limoEntryKey(entry),`${entry.marker.name || entry.marker.id} · ${entry.areaName}`,'filter',{selected:cell?.targetKeys?.includes(limoEntryKey(entry))})),...pagination(items.length,5)];
   }else if(state.view==='scope'){
    title='Choose the place';body='Keep observations and plans tied to a named Area. Whole Project results cover all loaded Sites; any loading gaps remain visible.';
    const items=[{id:'',siteId:'',name:'Whole Project'},...context.areas];
    actions=[back(),...items.slice(state.page*6,state.page*6+6).map((item,index)=>action('area:'+(state.page*6+index),item.name+(item.siteName?' · '+item.siteName:''),'filter',{selected:item.id===state.areaId&&item.siteId===state.siteId})),...pagination(items.length)];
   }else if(state.view==='branch'){
-   body=root.content;actions=[back(),...Object.values(LIMO_CELL_BY_ID).filter(item=>item.parentId===cell.id).map(item=>action('cell:'+item.id,item.title,item.role,{accent:item.accent})),...contextActions];
+   body=root.content;actions=[back(),...children(cell).map(item=>action('cell:'+item.id,item.title,item.role,{accent:item.accent})),action('connections','Explore combinations','connection'),action('tools','Area and notebook','filter')];
   }else if(state.view==='question'){
-   body=`${cell.question}\n\nLOOK HERE\n${cell.next}\n\nEVIDENCE\n${query.recordedCount} recorded plants · ${query.unknownCount} without a layer. ${query.proposedCount} proposed plants and ${query.templateCount} templates are separate from recorded inventory.\nLocal conditions, wildlife and relationships need dated observations.`;
-   actions=[back(),action('results','Find Project records','filter'),action('observe','Record an observation','observation'),action('trial','Draft a small trial','action'),...(root.slug==='vision'?[action('compare','Compare two plans','scenario')]:[]),...contextActions,action('pause','Pause this question','review')];
+   const parentTitles=cell.sourceIds?.map(id=>connections.cell(id)?.title || 'Source unavailable'),attached=cell.targetKeys?.map(id=>context.entries.find(entry=>limoEntryKey(entry)===id)?.marker.name || 'Record unavailable');
+   body=cell.derived?`${cell.question}\n\nWHY THESE CONNECT\n${cell.explanation}\n\nEXPLORE AN EXAMPLE\n${cell.example}\n\nLOOK HERE\n${cell.lookFor}\n\nTRY NEXT\n${cell.next}\n\nPARENTS\n${parentTitles.join(' + ')}\n\nLOCAL TARGETS\n${attached.length?attached.join(' · '):'No targets attached yet. This is an investigation, not a local finding.'}`:`${cell.question}\n\nLOOK HERE\n${cell.next}\n\nLocal conditions, wildlife and relationships need dated observations.`;
+   actions=[back(),...children(cell).map(item=>action('cell:'+item.id,item.title,item.role,{accent:item.accent})),...(cell.derived?[...cell.sourceIds.map(id=>action('cell:'+id,'Parent · '+connections.cell(id)?.title,'connection')),action('target-links','Attach local records','filter')]:[]),action('connect','Connect this cell','connection',{disabled:!connections.compatible(cell.id).length}),action('connections','Explore combinations','connection'),action('tools','Observe, compare or try','observation')];
   }else if(state.view==='results'){
    title='Records · '+(cell?.title || 'This place');role='filter';
    if(cell?.lens==='journal'){return journalContent(query,where,root);}
@@ -81,7 +105,8 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
   if(context?.warnings?.length)body+='\n\nLOAD GAPS\n'+context.warnings.slice(0,3).join('\n');
   if(error)body=`${error}\n\n${body}`;
   if(notice)body=`${notice}\n\n${body}`;
-  return {id:cell?.id || 'limo-project',title,breadcrumb:`LIMO · ${context?.name || 'Project'} · ${where}`,body,accent:root?.accent || '#a9ce8c',mesh:'lim',controlsType:'LIMO',image:'',limo:{role,cue:state.view==='home'?'LIMO':root?.cue || 'LIMO',scope:where,project:context?.name || 'Project',summary:context?(state.view==='home'?'Observe → understand → imagine → try → return':cell?.question || root?.content || 'Explore this place through a useful question'):'Loading Project',coverage:context?.warnings?.length?`Partial coverage · ${context.warnings.length} loading gaps`:context?.illustrative?'Illustrative example · personal device notebook':'Project records · local conditions need observation',actions,onAction:handle}};
+  const imageRule=state.view==='connect-preview'?state.previewRuleId:state.view==='question' && cell?.derived?cell.ruleId:'';
+  return {id:cell?.id || 'limo-project',title,breadcrumb:`LIMO · ${context?.name || 'Project'} · ${where}`,body,accent:root?.accent || '#a9ce8c',mesh:'lim',controlsType:'LIMO',image:limoConnectionIllustration(imageRule),imageAlt:imageRule?'Learning diagram · '+LIMO_CONNECTION_RULE_BY_ID[imageRule].title:'',limo:{role,cue:state.view==='home'?'LIMO':root?.cue || 'LIMO',scope:where,project:context?.name || 'Project',summary:context?(state.view==='home'?'Observe → connect → explore → try → return':state.view==='connections'?'Two related cells reveal a new investigation':state.view==='discoveries'?'Reopen a discovery or follow its parents':cell?.question || root?.content || 'Explore this place through a useful question'):'Loading Project',coverage:context?.warnings?.length?`Partial coverage · ${context.warnings.length} loading gaps`:context?.illustrative?'Illustrative example · personal device notebook':'Project records · local conditions need observation',actions,onAction:handle}};
  }
  function pagination(count,size=6){return count>size?[action('prev','‹ Previous','navigation',{disabled:state.page===0}),action('next','Next ›','navigation',{disabled:(state.page+1)*size>=count})]:[];}
  function recordBody(record){return [`${record.kind.toUpperCase()} · ${record.state.toUpperCase()}`,`Question · ${record.question}`,`Place · ${record.areaName || 'Whole Project'}${record.targetName?' / '+record.targetName:''}`,`Recorded · ${record.createdAt.slice(0,10)}`,record.observedAt && `Return observation · ${record.observedAt.slice(0,10)}`,`Answer · ${record.answer || 'Not assessed'}`,record.plan && `Plan · ${record.plan}`,record.care && `Care · ${record.care}`,`Return · ${record.reviewAt.slice(0,10)}`,record.history?.length && `Earlier visits · ${record.history.map(item=>`${item.at.slice(0,10)}: ${item.answer}`).join(' / ')}`].filter(Boolean).join('\n\n');}
@@ -89,21 +114,24 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
   const items=scopedRecords();
   return {id:'limo-change',title:'Your field notebook',breadcrumb:`LIMO · ${context.name} · ${where}`,body:`${items.length} personal records on this device. Opening a question is separate from recording, trying and returning. Shared Project Notes are saved only with the explicit save action.\n\n${items.length?'Select a dated record to revisit its question and target.':'Start with one observation or a small draft trial.'}`,accent:root?.accent || '#8ebdda',mesh:'lim',controlsType:'LIMO',limo:{role:'review',scope:where,project:context.name,cue:'REVIEW',summary:`${items.filter(item=>item.state==='reviewed').length} revisited · ${items.filter(item=>item.state==='tried').length} tried`,coverage:context.illustrative?'Illustrative example':'Personal notebook · this device',actions:[action('back','‹ Back','navigation'),...items.slice(state.page*5,state.page*5+5).map(item=>action('journal-record:'+item.id,`${item.title} · ${item.state} · ${item.createdAt.slice(0,10)}`,'review')),...pagination(items.length,5),action('home','Choose another question','question')],onAction:handle}};
  }
- function render(){if(closed)return;panel?.showLearning(content());panel?.setExplorerOpen(true);panel?.suspend(false);panel?.setCompact(false);}
+ function render(){if(closed)return;graphCache=buildGraph();panel?.showLearning(content());panel?.setExplorerOpen(true);panel?.suspend(false);panel?.setCompact(false);onChange(graphCache);}
  function select(id){
-  const cell=LIMO_CELL_BY_ID[limoRouteId(id)];if(!cell)return false;closed=false;
-  state.cellId=cell.id;state.view=cell.parentId?'question':'branch';state.page=0;state.paused=false;error='';notice='';onSelect(cell);remember();render();return true;
+  const cell=connections.cell(limoRouteId(id));if(!cell)return false;closed=false;
+  if(connections.snapshot().sourceId && connections.compatible(connections.snapshot().sourceId).some(item=>item.id===cell.id)){void handle('connect-target:'+cell.id);return true;}
+  state.cellId=cell.id;state.view=cell.parentId || cell.derived?'question':'branch';state.page=0;state.paused=false;error='';notice='';onSelect(cell);remember();render();return true;
  }
  async function open({projectId,siteId='',areaId='',context:given,cellId=''}={}){
-  const owner=++request;closed=false;pending=true;context=null;error='';render();
+  const owner=++request;closed=false;pending=true;context=null;graphCache=null;error='';connections.cancel();render();
   try{
    const loaded=given || await loadContext(projectId);if(owner!==request || closed)return;
    context=loaded;records=read(storage,journalKey(context.projectId),[]).filter(record=>record.projectId===context.projectId);
    const saved=read(storage,progressKey(context.projectId),{});
    state={cellId:'',view:'home',siteId:'',areaId:'',layer:'All layers',targetKey:'',page:0,draft:null,recordId:'',paused:false,...saved,siteId,areaId,page:0};
    if(saved.siteId!==siteId || saved.areaId!==areaId){state.targetKey='';state.view='home';state.draft=null;}
-   if(!LIMO_CELL_BY_ID[state.cellId]){state.cellId='';state.view='home';}
    if(!context.areas.some(item=>item.id===areaId&&item.siteId===siteId)){state.areaId='';state.siteId='';}
+   connections.setScope({projectId:context.projectId,...scope()});
+   if(!connections.cell(state.cellId)){state.cellId='';state.view='home';}
+   if(['connect','connect-preview'].includes(state.view))state.view=state.cellId?'question':'home';
    pending=false;if(cellId)select(cellId);else render();
   }catch(e){if(owner===request){pending=false;error=e.message;render();}}
  }
@@ -114,12 +142,29 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
    if(id==='reload'){return open({projectId:context?.projectId || lastProjectId});}
    if(id==='refresh' && context && loadContext){return open({projectId:context.projectId,siteId:state.siteId,areaId:state.areaId});}
    if(id.startsWith('cell:')){select(id.slice(5));return;}
-   if(id==='home'){state.view='home';state.page=0;}
-   else if(id==='resume'){state.paused=false;state.view=activeCell()?.parentId?'question':'branch';}
+   if(id==='connections'){connections.cancel();state.view='connections';state.page=0;}
+   else if(id==='discoveries'){connections.cancel();state.view='discoveries';state.page=0;}
+   else if(id==='connect'){connections.begin(state.cellId);state.previewRuleId='';state.view='connect';state.page=0;}
+   else if(id==='connect-cancel'){connections.cancel();state.view=activeCell()?.derived || activeCell()?.parentId?'question':'home';}
+   else if(id.startsWith('recipe:')){
+    const rule=LIMO_CONNECTION_RULE_BY_ID[id.slice(7)],sources=rule && connections.recipeSources(rule);if(sources?.length!==2)return;
+    connections.cancel();select(sources[0].id);connections.begin(sources[0].id);state.previewRuleId=rule.id;state.view='connect-preview';
+   }else if(id.startsWith('connect-target:')){
+    const source=connections.snapshot().sourceId;if(!source)return;
+    pending=true;render();const discovery=await connections.connect(source,id.slice(15));pending=false;select(discovery.id);notice='Discovery saved in this place. Both parent cells remain connected.';
+   }else if(id==='remove-discovery'){
+    connections.remove(state.cellId);state.cellId='';state.view='discoveries';state.page=0;notice='Discovery and dependent connections removed. Your notebook records are retained.';
+   }else if(id==='target-links'){state.view='target-links';state.page=0;}
+   else if(id==='tools'){state.view='tools';state.page=0;}
+   else if(id.startsWith('attach-target:')){
+    const targetKey=id.slice(14);if(!queryLimoContext(context,scope(),'all').results.some(entry=>limoEntryKey(entry)===targetKey))return;connections.attach(state.cellId,targetKey);
+   }
+   else if(id==='home'){connections.cancel();state.view='home';state.page=0;}
+   else if(id==='resume'){state.paused=false;state.view=activeCell()?.parentId || activeCell()?.derived?'question':'branch';}
    else if(id==='pause'){state.paused=true;state.view='home';}
    else if(id==='close'){close();return;}
    else if(id==='scope'){state.view='scope';state.page=0;}
-   else if(id.startsWith('area:')){const selected=[{id:'',siteId:''},...context.areas][Number(id.slice(5))];if(!selected)return;state.areaId=selected.id;state.siteId=selected.siteId;state.targetKey='';state.view=activeCell()?activeCell().parentId?'question':'branch':'home';state.page=0;}
+   else if(id.startsWith('area:')){const selected=[{id:'',siteId:''},...context.areas][Number(id.slice(5))];if(!selected)return;state.areaId=selected.id;state.siteId=selected.siteId;state.targetKey='';connections.setScope({projectId:context.projectId,...scope()});if(!activeCell())state.cellId='';state.view=activeCell()?activeCell().parentId || activeCell().derived?'question':'branch':'home';state.page=0;}
    else if(id==='results'){state.view='results';state.page=0;}
    else if(id==='layer'){state.view='layer';state.page=0;}
    else if(id.startsWith('set-layer:')){state.layer=id.slice(10);state.view='results';state.page=0;}
@@ -127,8 +172,8 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
    else if(id==='inspect'){const entry=target();if(entry){await onInspect(entry);return;}}
    else if(id==='focus'){const entry=target();if(entry){await onFocus(entry);return;}}
    else if(['observe','trial','compare'].includes(id)){
-    if(!activeCell()?.parentId)select('limo-action-record');
-    const entry=target(),place=area();state.draft={id:globalThis.crypto?.randomUUID?.() || `limo-${Date.now()}-${Math.random().toString(16).slice(2)}`,projectId:context.projectId,siteId:entry?.siteId || state.siteId,areaId:entry?.areaId || state.areaId,areaName:entry?.areaName || place?.name || 'Whole Project',cellId:state.cellId,title:activeCell().title,question:activeCell().question,kind:id==='trial'?'trial':id==='compare'?'scenario':'observation',state:id==='observe'?'recorded':'draft',targetKey:entry?limoEntryKey(entry):'',targetName:entry?.marker.name || '',createdAt:stamp(),reviewAt:due(7),history:[]};state.view='answer';
+    if(!activeCell()?.parentId && !activeCell()?.derived)select('limo-action-record');
+    const entry=target(),place=area();state.draft={id:globalThis.crypto?.randomUUID?.() || `limo-${Date.now()}-${Math.random().toString(16).slice(2)}`,projectId:context.projectId,siteId:entry?.siteId || state.siteId,areaId:entry?.areaId || state.areaId,areaName:entry?.areaName || place?.name || 'Whole Project',cellId:state.cellId,title:activeCell().title,question:activeCell().question,kind:id==='trial'?'trial':id==='compare'?'scenario':'observation',state:id==='observe'?'recorded':'draft',targetKey:entry?limoEntryKey(entry):'',targetKeys:activeCell().targetKeys || [],targetName:entry?.marker.name || '',createdAt:stamp(),reviewAt:due(7),history:[]};state.view='answer';
    }else if(id==='review'){
     const record=records.find(item=>item.id===state.recordId);if(!record)return;
     state.cellId=record.cellId;state.targetKey=record.targetKey;state.draft={...record,history:[...(record.history || []),{at:record.observedAt || record.createdAt,answer:record.answer || 'Not assessed'}],observedAt:stamp(),state:'reviewed'};state.view='answer';
@@ -165,12 +210,12 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
    else if(id==='back'){
     const view=state.view;
     if(view==='branch'){state.view='home';}
-    else if(view==='question'){select(activeCell().parentId);return;}
+    else if(view==='question'){if(activeCell()?.derived)state.view='discoveries';else{select(activeCell().parentId);return;}}
     else if(view==='target'||view==='layer'){state.view='results';}
     else if(view==='saved'){state.view='journal';}
     else if(view==='draft'){state.view='review-date';}
     else if(view==='review-date'){state.view='answer';}
-    else{state.view=activeCell()?.parentId?'question':activeCell()?'branch':'home';}
+    else{state.view=activeCell()?.parentId || activeCell()?.derived?'question':activeCell()?'branch':'home';}
     state.page=0;
    }
    remember();render();
@@ -178,6 +223,15 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
  }
  let lastProjectId='';
  const start=options=>{lastProjectId=options.projectId || options.context?.projectId || '';return open(options);};
- function close(){closed=true;request++;remember();onClose();}
- return {open:start,show(){closed=false;render();},select,handle,close,content,snapshot:()=>({context,state:JSON.parse(JSON.stringify(state)),records:JSON.parse(JSON.stringify(records))})};
+ function buildGraph(){
+  if(!context || closed)return {cells:[],pinnedIds:[],revision:0};
+  const value=connections.snapshot(),pinned=new Set([value.sourceId,...value.compatibleIds]);
+  const focus=connections.cell(state.cellId);if(focus?.derived)pinned.add(focus.id);
+  function lineage(id){const item=connections.cell(id);if(!item)return;if(item.parentId && !pinned.has(item.parentId)){pinned.add(item.parentId);lineage(item.parentId);}for(const parent of item.sourceIds || [])if(!pinned.has(parent)){pinned.add(parent);lineage(parent);}}
+  for(const id of [...pinned])lineage(id);
+  return {...value,selectedId:state.cellId,pinnedIds:[...pinned].filter(Boolean)};
+ }
+ function graph(){return graphCache || buildGraph();}
+ function close(){closed=true;request++;connections.cancel();graphCache=null;remember();onClose();}
+ return {open:start,show(){closed=false;render();},select,handle,close,content,graph,cell:connections.cell,snapshot:()=>({context,state:JSON.parse(JSON.stringify(state)),records:JSON.parse(JSON.stringify(records)),connections:connections.snapshot()})};
 }

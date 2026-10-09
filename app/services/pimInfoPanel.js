@@ -588,6 +588,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function makeButton(item){
         const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.infoAction=item.action;button.disabled=Boolean(item.disabled);
         button.dataset.controlKind=item.kind || 'action';button.classList.toggle('is-primary-action',Boolean(item.primary) || ['Next','PathNext'].includes(item.action));
+        if(item.kind==='limo'){button.dataset.limoRole=item.role || 'action';if(item.selected!==undefined)button.setAttribute('aria-pressed',String(item.selected));if(item.description){const detail=document.createElement('small');detail.textContent=item.description;button.append(detail);}}
         if(item.kind==='visibility'){button.setAttribute('aria-pressed',String(item.selected));button.style.border='2px solid '+(item.selected?'#85e5ae':'#ee8f8b');button.style.background='rgba(16,35,31,.28)';button.title=item.description || ((item.selected?'Hide ':'Show ')+item.label);}
         button.setAttribute('aria-label',item.action==='Restore'?'Restore Control panel':item.ariaLabel || item.label);
         button.title=controlDescription(item);
@@ -1224,7 +1225,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             {action:'PimoScale',label:'Size',x:276,y:410,width:694,height:48,kind:'slider',value:knowledgeRecord?.pimoScale || 1,min:.65,max:1.6,step:.05},
             ];
     }
-    const explorerHeight=()=>Math.max(180,...explorerControls().map(item=>item.y+item.height+18));
+    const explorerHeight=()=>selection?.limo?700:Math.max(180,...explorerControls().map(item=>item.y+item.height+18));
 
     function renderExplorer(){
         explorerElement.classList.toggle('is-fruit-controls',fruitVisible && fruitControlsActive);

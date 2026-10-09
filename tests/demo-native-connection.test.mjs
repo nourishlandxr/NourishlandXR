@@ -51,7 +51,7 @@ test('harvest uses connect to authored Vision with resolvable learning content',
 
 test('demo Control Panel offers each example and explains the selected connection',()=>{
     const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
-    assert.match(source,/actions:DEMO_NATIVE_CONNECTION_EXAMPLES\.map\(example=>\(\{id:`Connection:\$\{example\.id\}`,label:example\.label\}\)\)/);
+    assert.match(source,/DEMO_NATIVE_CONNECTION_EXAMPLES[\s\S]*map\(example=>\(\{id:`Connection:\$\{example\.id\}`,label:example\.label\}\)\)/);
     assert.match(source,/action\.startsWith\('Connection:'\)/);
     assert.match(source,/startNativeConnectionExperience\(action\.slice\('Connection:'\.length\)\)/);
     assert.match(source,/const connectionText=`\$\{state\.explanation\}\\n\\nIn a real project: \$\{state\.fieldQuestion\}`/);

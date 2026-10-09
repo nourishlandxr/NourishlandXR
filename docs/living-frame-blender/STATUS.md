@@ -1,88 +1,102 @@
-# Living Frame outer ring — stage 4 diverse growth and bloom
+# Living Frame outer ring — stage 4 dense, low groundcover
 
-## Current review: original-frame richness and a visible growth sequence
+## Current review: wider coverage, attached roots and late flowering
 
-The previous rim was too static and repetitive, and its flower accents were too
-small. This revision creates a separate `diverse-ring` draft and preserves all
-earlier model files. It does not integrate into the live application or alter its
-text loading, navigation, timing or reveal. Other shared-checkout edits are preserved.
+Updated the isolated Blender/GLB study in response to the latest direction:
+prostrate, crawling and spreading groundcover with restrained dark greens.
+The broad upper and side face now has three overlapping planting rows, rather
+than plants confined to the outer edge. The lower arc (210–330 degrees) remains
+mostly reserved for roots, with four tiny edge accents. No tall or yellow
+spiky plants are generated. LIMO follows this introduction; the central reading
+space is preserved. Actual LIMO layout is not implemented or tested here.
 
-- `create_diverse_ring.py`: repeatable generation in a NEW visible Blender window.
-  Uses `create_botanical_section.py` for shared mesh, soil, texture and export helpers.
-  Optional variation: Blender arguments `-- --seed 94039` (change the seed number).
-- `diverse-ring.blend`: editable meshes, shape keys, 60-second timeline and packed textures.
-- `diverse-ring.glb`: runtime candidate with one synchronized morph-animation clip.
-- `diverse-ring-dimensions.json`: growth habits, counts, seed, root and vine details.
-- `diverse-ring-perspective.png`, `diverse-ring-detail.png`: mature Blender renders.
-- `diverse-preview-soil.png`, `diverse-preview-growth.png`, `diverse-preview-root-growth.png`,
-  `diverse-preview-buds.png`, `diverse-preview-flower-detail.png`, `diverse-preview-bloom.png`:
-  browser milestone evidence.
-- `verify-full-ring.mjs --diverse`, `diverse-ring-verification.json`: actual exported
-  geometry, morph weights, growth staggering and flowering checks.
-- `diverse-browser-review.json`: directly observed preview controls and release badge.
+There are 184 smaller clusters across six generic growth habits and five broader
+leaf accents: 189 planting pockets in total. Sixty staggered positions per row
+cover the planted 240-degree arc. Rows start at radii 0.849, 0.880 and 0.915 m;
+local jitter, varied size, leaf shapes and four growth waves prevent a uniform
+pattern. Sideways runners overlap neighbouring pockets and some spread inward.
+Seed 94039 is repeatable; a new seed produces a different authored arrangement.
+Small curved leaf surfaces and faint veins replace the earlier fluorescent atlas.
+This is generic groundcover, not a species-identification model.
 
-The existing preview URL with `?model=full` now loads this revision. New visits
-start at the early state and play through growth; reduced-motion visits show the
-flowering finish. Stage buttons jump to Soil, Leaf growth, Vines & roots and Flowers
-open. Blooming finish, scrub, pause/resume, orbit/zoom and a new Root detail view
-support close inspection. `?model=previous` preserves the earlier full ring;
-`?model=botanical` and `?model=plain` preserve the earlier section and plain form.
+Every planting pocket has its own root system starting at the actual stem origin.
+Three architectures vary between tap-root forms, sideways fans and fine fibrous
+networks, with different branch counts, curves, shallow/deep placement and growth
+waves. Eleven hanging aerial roots beneath the lower arc have clustered origins,
+varied lengths (roughly 16–40 cm), bends, front/back depth and secondary forks.
+Nine vines crawl around the rim; two short side trails avoid covering the bottom.
 
-There are **64 smaller planting clusters across six habits**, plus **six larger
-foreground leaf clusters**. Oval branched shrubs, blue-green rosettes, pinnate
-fronds, arching grass, lobed groundcover and silver herbs have different structures
-and leaf sizes. Planting positions, sizes, branching and growth waves are seeded
-independently. Seeded randomness makes generation repeatable; a different seed
-produces a different authored layout, rather than random motion on every frame.
+Three small muted worms appear gradually at 12–29 seconds, with slow peristalsis.
+The organic soil boundary begins changing at 20 seconds and completes at 48:
+the dark organic layer thickens from about 12 to 33 mm as the brown/dark boundary
+moves continuously. This compressed sequence suggests soil activity; it is not
+an ecological timescale simulation. Four flowers open early (roughly 24–34 s),
+and 23 open mostly at the finish (roughly 42–58 s). A tiny optional bee visits the
+early flowers from 29 s, following the rim rather than crossing the reading space.
+The preview reuses app/assets/bee.glb, by etro313 under CC BY 4.0; attribution is
+visible in the preview. The bee remains separate from the exported ring GLB.
 
-**18 root systems** vary between longer tap-root structures, spreading fans and
-fine fibrous mats. **11 aerial roots** hang under the lower arc with varied
-lengths, front/back placement, bends and forks. Their placement is informed by the
-original `app/services/arWelcomeRoots.js` lower-arc aerial-root section (around
-line 547). **Nine climbing/trailing vines** have longer curved paths, paired lobed
-leaves and coiled tendrils. Branchlets and tendrils start from their parent anchor.
+## Files and review controls
 
-**27 flowers** form closed buds before opening, with ivory daisy, lavender pointed
-and coral rounded petal shapes. The flower-opening groups start at approximately
-42–49 seconds and finish before 60 seconds. Flowers are not static from the start.
-The 60-second sequence is compressed for review, not a botanical timescale.
+- create_diverse_ring.py: repeatable generation/export script; optional -- --seed N.
+- create_botanical_section.py: shared mesh, soil, texture and export helpers.
+- diverse-ring.blend: editable meshes, shape keys, packed textures and 60 s timeline.
+- diverse-ring.glb: runtime candidate, one synchronized growth clip.
+- diverse-ring-dimensions.json: seed, planting rows, root origins and growth details.
+- diverse-ring-perspective.png and diverse-ring-detail.png: mature Blender renders.
+- diverse-preview-soil.png, diverse-preview-growth.png,
+  diverse-preview-early-flowers.png, diverse-preview-root-cutaway.png,
+  diverse-preview-root-growth.png and diverse-preview-bloom.png: browser evidence.
+- verify-full-ring.mjs --diverse and diverse-ring-verification.json: export checks.
+- diverse-browser-review.json and welcome-0.9443.png: observed controls and badge.
 
-Growth uses two additive shape keys per group: extension and opening. Each plant
-grows from its own anchor within a batch. This retains clear text space and avoids
-scaling the complete ring toward a shared origin. There are 53 animated groups;
-the six foliage habits have different maturity at the same time. Species-specific
-anatomy and lifelike motion are not claimed by this generic procedural study.
+The existing preview with ?model=full loads this draft. New visits start at the
+early growth state and play; reduced-motion visits show the finish. Controls
+include Soil, Leaf growth, Early flowers & soil, Vines & roots, Flowers open,
+replay, scrub, pause, orbit and zoom. Front, side, perspective, close-detail and
+root-detail views support inspection. Inspect roots through soil temporarily
+makes the soil transparent. Previous, botanical and plain previews are preserved.
 
-Latest asset: **77,198 triangles, 57 meshes/primitives, four embedded textures,
-one clip, 53 animation channels and 6,457,644 bytes**. Mature measured envelope:
-**2.138 m × 2.304 m × 0.365 m** including foliage, vines and aerial roots.
-The original 1.664 m central opening and 0.800 m protected reading radius remain.
-The minimum vertex radius is 0.832 m at all 21 sampled times (every three seconds).
-Verification includes sparse morph accessors and actual deformed vertex positions.
+## Verification and current limits
 
-Export checks passed for early foliage state, staggered growth, flower petals
-closed at 38 seconds and fully open at 60, vine/aerial-root tracks, texture and
-reference exclusion, geometry budgets and centre clearance through the sequence.
-Visible browser review checks the early state, intermediate foliage, roots, closed
-buds and open flowers. The generator saved and rendered in a fresh visible Blender
-window; earlier windows were preserved. Save manual edits to a separate name before
-regenerating, which overwrites only this draft's outputs and creates a `.blend1` backup.
+The latest asset has 151,644 triangles, 78 meshes/primitives, four embedded
+textures, 75 morph groups, 78 animation channels, one clip and 11,945,148 bytes.
+The mature envelope is 2.002 m wide × 2.257 m high × 0.283 m deep. The scaffold
+retains its 1.664 m opening and 0.180 m depth. The protected reading radius is
+0.800 m; the minimum exported vertex radius stays 0.832 m at all 21 sampled times.
+Reference text and cameras are excluded from the GLB.
 
-Version advanced from the observed shared **0.9439** to **0.9440** for this revision.
-The frontend build and local welcome badge were verified; `welcome-0.9440.png`
-records the badge. No commit, push or deployment was performed by this task.
+Export verification checks actual sparse morph geometry, different simultaneous
+maturity, early/late flower weights, worm emergence, topsoil accumulation and
+vine/aerial-root tracks. All 189 root origins meet actual exported root geometry
+within 1.95 mm and supporting stem geometry within 1.60 mm. Browser review checked
+soil at 0 s, growth at 20 s, early activity/cutaway at 34 s, hanging roots at 38 s
+and the flowering finish at 60 s. The optional bee loaded; no warning/error logs
+were observed during the final preview check. Small worms need close inspection;
+a dedicated worm close-up has not been recorded.
 
-**Review limitations and next step:** this is a richer procedural draft, not a
-finished replacement for the original immersive frame. Reference photographs of
-hanging root structures, large-leaf contrast and layered planting viewed from the
-side will help the next art pass. Soil still needs a more natural surface and leaf
-anatomy needs refinement. Native WebXR integration must support morph playback (or
-use a baked mature variant), preserve independent text and retain the original
-frame as fallback. Quest/device performance is unverified. No landscape, portal,
-text pause, creatures or live timing changes were introduced.
+For denser coverage, the draft ceiling increased from 125k to 160k triangles.
+Tiny leaves and root tubes were simplified before adding the second planting
+pass. This is a review ceiling, not a performance certification. WebXR morph
+support, draw-call reduction, loading and Quest performance remain to be tested
+at integration. The thick outer side/back remains a base study for later art
+refinement; natural soil and leaf anatomy also need a further art pass.
+
+Generation ran in fresh visible Blender windows and earlier windows were
+preserved. Save manual edits under a separate name before regenerating: the
+script overwrites this draft's outputs and Blender creates a .blend1 backup.
+Live frame geometry, text loading, navigation, timing and reveal were not changed
+by this task. Shared uncommitted application changes were preserved.
+
+The final local frontend build used version 0.9443 and the welcome screen visibly
+showed V0.9443. The badge's Live label is a build channel, not proof of deployment.
+No commit, push, deployment or headset verification was performed by this task.
+
+Next: review density, leaf scale, root variation and subtle growth here. Then
+refine the approved study and plan desktop/WebXR integration, keeping text
+independent and the existing ring available as fallback.
 
 ---
-
 # Earlier stage 3 record
 
 ## Current handoff: complete planted rim

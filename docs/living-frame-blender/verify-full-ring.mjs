@@ -1,4 +1,4 @@
-// Validate the exported asset, including animated geometry clearance at seven times.
+// Validate exported geometry, growth sequencing and reading clearance.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
@@ -7,6 +7,7 @@ import {Matrix4,Vector3,Quaternion} from '../../app/assets/fruit-window/vendor/t
 const root=path.dirname(fileURLToPath(import.meta.url));
 const diverse=process.argv.includes('--diverse');
 const name=diverse?'diverse-ring':'full-ring';
+const metadata=diverse?JSON.parse(fs.readFileSync(path.join(root,name+'-dimensions.json'))):null;
 const bytes=fs.readFileSync(path.join(root,name+'.glb'));
 assert.equal(bytes.toString('ascii',0,4),'glTF');
 const jsonLength=bytes.readUInt32LE(12),asset=JSON.parse(bytes.toString('utf8',20,20+jsonLength));
@@ -66,11 +67,16 @@ for(const node of asset.nodes){if(node.mesh===undefined)continue;
  }
 }
 assert.ok(primitives<=(diverse?80:35),'Geometry must be batched into a limited number of growth groups');
-assert.ok(triangles<125000,'Keep this review draft below its provisional geometry budget');
+// The dense three-row study increases planting from 95 to 189 pockets. Its
+// review ceiling is 160k after simplifying tiny leaf and root tubes; this is
+// a draft geometry ceiling, not a headset performance certification.
+assert.ok(triangles<(diverse?160000:125000),'Keep this review draft below its provisional geometry budget');
+let rootAttachmentEvidence=null;
 function geometryAt(time){
  const local=asset.nodes.map(n=>({translation:n.translation||[0,0,0],rotation:n.rotation||[0,0,0,1],scale:n.scale||[1,1,1],weights:n.weights||(n.mesh===undefined?[]:asset.meshes[n.mesh].weights)||[]}));
  for(const t of tracks)local[t.node][t.path]=sample(t,time);
  let minRadius=Infinity,min=[Infinity,Infinity,Infinity],max=[-Infinity,-Infinity,-Infinity];
+ const rootPoints=[],stemPoints=[];
  function visit(index,parent){
   const n=asset.nodes[index],s=local[index];
   const matrix=new Matrix4().multiplyMatrices(parent,n.matrix?new Matrix4().fromArray(n.matrix):new Matrix4().compose(new Vector3(...s.translation),new Quaternion(...s.rotation),new Vector3(...s.scale)));
@@ -80,6 +86,10 @@ function geometryAt(time){
    const p=positions[vertex].slice();
    for(let target=0;target<targets.length;target++)for(let axis=0;axis<3;axis++)p[axis]+=targets[target][vertex][axis]*(s.weights[target]||0);
    const point=new Vector3(...p).applyMatrix4(matrix),v=point.toArray();
+   if(diverse&&time===60){
+    if(n.name.startsWith('Plant attached roots'))rootPoints.push(v);
+    if(n.name.startsWith('Branching shoots')||n.name==='Large leaf supporting stems')stemPoints.push(v);
+   }
    minRadius=Math.min(minRadius,Math.hypot(point.x,point.y));
    for(let i=0;i<3;i++){min[i]=Math.min(min[i],v[i]);max[i]=Math.max(max[i],v[i]);}
   }}
@@ -87,17 +97,37 @@ function geometryAt(time){
  }
  for(const index of asset.scenes[asset.scene||0].nodes)visit(index,new Matrix4());
  assert.ok(minRadius>.8,`Reading clearance breached at ${time} seconds`);
+ if(diverse&&time===60){
+  const nearest=(origin,points)=>Math.min(...points.map(p=>Math.hypot(...p.map((v,i)=>v-origin[i]))));
+  const roots=metadata.plant_root_origins_gltf.map(p=>nearest(p,rootPoints));
+  const stems=metadata.plant_root_origins_gltf.map(p=>nearest(p,stemPoints));
+  assert.ok(roots.every(d=>d<.003),'Each plant origin must touch actual exported root geometry');
+  assert.ok(stems.every(d=>d<.003),'Each root origin must touch actual exported supporting stem geometry');
+  rootAttachmentEvidence={originsChecked:roots.length,maxRootDistanceM:Math.max(...roots),maxStemDistanceM:Math.max(...stems)};
+ }
  return {time,minRadius,dimensionsM:max.map((value,i)=>value-min[i])};
 }
 const geometrySamples=(diverse?Array.from({length:21},(_,i)=>i*3):[0,6,12,18,24,30,36]).map(geometryAt);
 const bloomTracks=tracks.filter(t=>asset.nodes[t.node].name.startsWith('Blooming flowers')&&t.path==='weights');
 if(diverse){
- assert.equal(bloomTracks.length,9);
- for(const t of bloomTracks){assert.equal(sample(t,38)[1],0,'Petals must remain closed before the finale');assert.ok(sample(t,60)[1]>.99,'All flowers must finish opening');}
+ assert.equal(bloomTracks.length,12);
+ for(const t of bloomTracks){
+  if(t.node!==undefined&&asset.nodes[t.node].name.endsWith('wave 3'))assert.ok(sample(t,38)[1]>.99,'The few early blooms must open ahead of the finale');
+  else assert.equal(sample(t,38)[1],0,'Most flowers must remain closed before the finale');
+  assert.ok(sample(t,60)[1]>.99,'All flowers must finish opening');
+ }
  assert.ok(bloomTracks.some(t=>sample(t,46)[1]>.05));
  assert.ok(tracks.filter(t=>asset.nodes[t.node].name.startsWith('Winding and cascading vines')).length===3);
  assert.equal(tracks.filter(t=>asset.nodes[t.node].name.startsWith('Hanging aerial roots')).length,3);
- assert.equal(tracks.filter(t=>asset.nodes[t.node].name.startsWith('Unique roots')).length,3);
+ assert.equal(tracks.filter(t=>asset.nodes[t.node].name.startsWith('Plant attached roots')).length,12);
+ assert.equal(metadata.root_systems,metadata.plant_clusters);
+ assert.equal(metadata.plant_root_origins_gltf.length,metadata.plant_clusters);
+ assert.ok(metadata.root_depths_m.some(v=>v>.12)&&metadata.root_depths_m.some(v=>v<.025),'Root depths must include shallow and deep systems');
+ assert.ok(metadata.early_flowers<metadata.late_flowers/4,'Keep early flowers a small minority');
+ const worms=tracks.filter(t=>asset.nodes[t.node].name.startsWith('Slow earthworm')&&t.path==='scale');
+ assert.equal(worms.length,3);for(const t of worms){assert.ok(Math.max(...sample(t,0))<.02);assert.ok(Math.min(...sample(t,32))>.99);}
+ const soil=tracks.filter(t=>['Brown soil section','Dark topsoil section'].includes(asset.nodes[t.node].name)&&t.path==='weights');
+ assert.equal(soil.length,2);for(const t of soil){assert.equal(sample(t,18)[0],0);assert.ok(sample(t,48)[0]>.99);}
  const foliage=tracks.filter(t=>asset.nodes[t.node].name.startsWith('Groundcover growth'));
  assert.ok(foliage.length>=20);
  assert.ok(foliage.every(t=>sample(t,0).every(v=>v===0)),'All foliage must begin in its seedling state');
@@ -105,6 +135,6 @@ if(diverse){
 }
 const report={stage:diverse?4:3,assetBytes:bytes.length,meshes:asset.meshes.length,primitives,triangles,
  textures:4,animations:1,channels:tracks.length,...(diverse?{morphGrowthGroups:tracks.filter(t=>t.path==='weights').length}:{leafHinges:hinges.length,newShoots:stems.length}),
- bloomGroups:bloomTracks.length,geometrySamples,checks:diverse?['four embedded textures','reference and cameras excluded','single growth clip','different foliage maturity at the same time','flowers closed before finale and open at finish','winding vines and aerial root tracks','reading clearance including morph geometry at 21 times','provisional geometry budget']:['four embedded textures','reference and cameras excluded','single growth clip','six hinge rotations','three extending stems','batched geometry budget','reading clearance at seven animation times'],headsetVerified:false};
+ bloomGroups:bloomTracks.length,...(diverse?{plantClusters:metadata.plant_clusters,attachedRootSystems:metadata.root_systems,rootAttachmentEvidence,earlyFlowers:metadata.early_flowers,lateFlowers:metadata.late_flowers,worms:metadata.worms}:{}),geometrySamples,checks:diverse?['four embedded textures','reference and cameras excluded','single growth clip','different foliage maturity at the same time','few early flowers and mostly late blooms','exported roots meet each planting origin and stem','shallow and deep root depths','worms emerge before the organic layer completes','soil accumulation morphs','winding vines and aerial root tracks','reading clearance including morph geometry at 21 times','provisional geometry budget']:['four embedded textures','reference and cameras excluded','single growth clip','six hinge rotations','three extending stems','batched geometry budget','reading clearance at seven animation times'],headsetVerified:false};
 fs.writeFileSync(path.join(root,name+'-verification.json'),JSON.stringify(report,null,2));
 console.log(JSON.stringify(report));

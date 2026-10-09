@@ -7,7 +7,7 @@ import {createLivingMapTwoGrip} from '../app/services/demoLivingMapGrip.js';
 import {noteSurfaceFacing,noteCardButtonLayout} from '../app/services/noteSpatialRenderer.js';
 import {createDemoLivingMapXR} from '../app/services/demoLivingMapXR.js';
 import {livingMapPlacementCopy,resetDemoPlantForMap} from '../app/services/demoLivingMapPresentation.js';
-import {livingMapRayPoint} from '../app/services/demoLivingMapReveal.js';
+import {livingMapRayPoint,livingMapHeldContact} from '../app/services/demoLivingMapReveal.js';
 test('map progress narration keeps the real Continue callback usable, but changing slides invalidates it',()=>{
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
  const clear=source.slice(source.indexOf('function clearDemoNarration('),source.indexOf('function showIntroBoard('));
@@ -56,13 +56,13 @@ test('map placements explain entrance, local information and swales; PIMO reopen
  assert.equal(resetDemoPlantForMap(record),true);assert.equal(record.demoExpanded,false);assert.deepEqual(record.demoExpandedNodeIds,[]);assert.equal(record.demoSelectedNodeId,'');assert.equal(record.knowledgeExplorer,undefined);assert.equal(record.id,'plant-1');assert.equal(record.name,'Pigeon Pea');
 });
 
-test('held Totem retains its last map contact when the laser misses, and recovers on re-entry',()=>{
+test('held Totem follows its captured ray depth and validates its contact before placement',()=>{
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
  const body=source.slice(source.indexOf('function updateHeldDemoRecordPosition('),source.indexOf('function captureDemoGrabPose('));
- const record={demoMapPiece:true,position:{x:.15,y:1.0085,z:-1},groundBaseY:.91};let origin={x:2,y:2,z:-1};
- const context=vm.createContext({simulatedMode:false,demoHeldIndex:0,markers:[record],demoPointerWorldRay:()=>({x:0,y:-1,z:0}),demoPointerWorldOrigin:()=>origin,demoLivingMapOrigin:{x:0,y:1,z:-1},demoLivingMapOrientation:{x:0,y:0,z:0,w:1},livingMapRayPoint,demoTotemHalfHeight:()=>.095});
- vm.runInContext(body,context);const last={...record.position};vm.runInContext('updateHeldDemoRecordPosition()',context);
- assert.deepEqual(record.position,last);assert.equal(record.demoMapDropValid,false,'miss cannot place at a stale contact');
+ const record={demoMapPiece:true,demoGrabDepth:.95,position:{x:.15,y:1.0085,z:-1},groundBaseY:.91};let origin={x:2,y:2,z:-1};
+ const context=vm.createContext({simulatedMode:false,demoHeldIndex:0,markers:[record],demoPointerWorldRay:()=>({x:0,y:-1,z:0}),demoPointerWorldOrigin:()=>origin,demoLivingMapOrigin:{x:0,y:1,z:-1},demoLivingMapOrientation:{x:0,y:0,z:0,w:1},livingMapRayPoint,livingMapHeldContact,demoTotemHalfHeight:()=>.095});
+ vm.runInContext(body,context);vm.runInContext('updateHeldDemoRecordPosition()',context);
+ assert.equal(record.position.x,2);assert.equal(record.position.y,1.05);assert.equal(record.demoMapDropValid,false,'off-map carry cannot place at a stale contact');
  origin={x:.2,y:2,z:-1};vm.runInContext('updateHeldDemoRecordPosition()',context);
- assert.equal(record.demoMapDropValid,true);assert.ok(Math.abs(record.position.x-.2)<1e-8);assert.ok(Math.abs(record.groundBaseY-1.0085)<1e-8);assert.ok(Math.abs(record.position.y-1.1035)<1e-8,'Totem rests on the plate instead of sinking into it');
+ assert.equal(record.demoMapDropValid,true);assert.ok(Math.abs(record.position.x-.2)<1e-8);assert.ok(Math.abs(record.position.y-1.05)<1e-8);assert.ok(Math.abs(record.groundBaseY-.955)<1e-8);
 });

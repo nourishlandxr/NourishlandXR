@@ -30,7 +30,7 @@ export function canonicalMeshContext(input={mode:'general'}){
     if(input.mode!=='contextual')throw new Error(`Unsupported mesh context mode: ${input.mode}.`);
     const projectId=String(input.scope?.projectId || '').trim(),areaId=String(input.scope?.areaId || '').trim();
     if(!projectId || !areaId)throw new Error('Contextual mesh context requires projectId and areaId.');
-    return deepFreeze({mode:'contextual',scope:{projectId,areaId},material:{
+    return deepFreeze({mode:'contextual',scope:{projectId,areaId,...(input.scope?.siteId?{siteId:String(input.scope.siteId)}:{})},material:{
         goalIds:[...new Set(input.material?.goalIds || [])].map(String).sort(),
         observationRefs:[...new Set(input.material?.observationRefs || [])].map(String).sort()
     }});
@@ -68,7 +68,8 @@ export function createMeshRelationshipService({repository,resolver,generator,now
             sources:sourceKeys.map(key=>unique.get(key)),origin:'user_composed',status:'active',createdAt:now()}));
         const contextSelector=canonicalMeshContext(context),contextFingerprint=await meshHash(stable(contextSelector));
         const variantId=`mesh-var-${(await meshHash(`${relationship.id}:${contextFingerprint}`)).slice(0,24)}`;
-        const inputFingerprint=await meshHash(stable(sources.map(source=>({key:source.key,fingerprint:source.fingerprint}))));
+        const fingerprintSources=sources.map(source=>({key:source.key,fingerprint:source.fingerprint}));
+        const inputFingerprint=await meshHash(stable(generator.version?{sources:fingerprintSources,generatorVersion:generator.version}:fingerprintSources));
         let variant=repository.getVariantFor(relationship.id,contextFingerprint);
         if(variant?.currentDerivedNodeId && variant.inputFingerprint===inputFingerprint){
             const cached=repository.getDerivedNode(variant.currentDerivedNodeId);
@@ -81,7 +82,8 @@ export function createMeshRelationshipService({repository,resolver,generator,now
             const sourceRefs=relationship.sources.map(ref=>canonicalMeshRef(ref));
             const derivedNode=repository.putDerivedNode(deepFreeze({schemaVersion:1,id:derivedId,lineageId:variant.id,revision:1,relationshipId:relationship.id,variantId:variant.id,
                 title:generated.title,summary:generated.summary,insights:[],observations:[],relatedRefs:sourceRefs,state:'current',
-                provenance:{generator:'stage3-placeholder',generatedAt:now(),sourceRefs,sourceKeys,contextSelector,depth}}));
+                ...(generated.ruleId?{ruleId:generated.ruleId,ruleVersion:generated.ruleVersion,learning:generated.learning}:{}),
+                provenance:{generator:generated.generator || 'stage3-placeholder',generatedAt:now(),sourceRefs,sourceKeys,contextSelector,depth}}));
             variant=deepFreeze({...variant,inputFingerprint,currentDerivedNodeId:derivedNode.id,status:'ready'});
             repository.putVariant(variant);
             return {relationship,variant,derivedNode,derivedRef:derivedMeshRef(derivedNode.id),cached:false};

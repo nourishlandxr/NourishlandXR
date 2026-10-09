@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createNoteWidget,interactNoteWidget,renderNoteWidget,timerActionDate,saveNoteWidgetState,loadNoteWidgetState} from '../app/services/noteWidgets.js';
-import {DEMO_NOTE_WIDGETS} from '../app/services/demoNoteShowcase.js';
+import {DEMO_NOTE_WIDGETS,DEMO_NOTE_PHOTOS} from '../app/services/demoNoteShowcase.js';
 const now=new Date(2026,9,7,10).getTime(),shift=(at,days)=>{const date=new Date(at);date.setDate(date.getDate()+days);return date.getTime();};
 test('action timer plans harvest ten days out or scion readiness in two weeks',()=>{
     const widget=createNoteWidget('timer');assert.equal(timerActionDate(widget,{},now),shift(now,10));
@@ -28,8 +28,8 @@ test('date spinner stays at today when stepping backwards; custom defaults suppo
 test('demo keeps compact widget types and provides observation examples plus an actual reference photo',()=>{
     assert.deepEqual(DEMO_NOTE_WIDGETS.map(w=>w.type),['timer','checklist','thick-box','image']);
     assert.equal(DEMO_NOTE_WIDGETS[1].content,'Flowering\nChecked for pests\nFruit collected');
-    const sample=DEMO_NOTE_WIDGETS[3];assert.match(sample.configuration.url,/pigeon-pea-cajanus-cajan\.png$/);
-    const photo=createNoteWidget('image',{...sample,configuration:{...sample.configuration,url:'assets/pigeon-pea-cajanus-cajan.png'}});assert.match(renderNoteWidget(photo),/<img /);assert.match(renderNoteWidget(photo),/example reference photo/);
+    const sample={...DEMO_NOTE_WIDGETS[3],configuration:{url:DEMO_NOTE_PHOTOS[0].image,caption:DEMO_NOTE_PHOTOS[0].label}};assert.match(sample.configuration.url,/limo-cell-art/);
+    const photo=createNoteWidget('image',{...sample,configuration:{...sample.configuration,url:'assets/pigeon-pea-cajanus-cajan.png'}});assert.match(renderNoteWidget(photo),/<img /);assert.match(renderNoteWidget(photo),/Eye/);
     const html=renderNoteWidget(createNoteWidget('timer',DEMO_NOTE_WIDGETS[0]),{},now);
     assert.equal((html.match(/data-widget-action/g)||[]).length,7); // Fits existing eight-action card.
 });

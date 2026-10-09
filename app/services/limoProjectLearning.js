@@ -53,7 +53,17 @@ const topics = {
  ]
 };
 export const LIMO_ROOTS = Object.freeze(roots.map(([slug,title,cue,accent,content])=>Object.freeze({id:`limo-${slug}`,slug,title,displayLabel:title,cue,accent,content,parentId:null,role:'question'})));
-export const LIMO_CELLS = Object.freeze(LIMO_ROOTS.flatMap(root=>[root,...topics[root.slug].map(([slug,title,question,choices,next,lens])=>Object.freeze({id:`${root.id}-${slug}`,parentId:root.id,title,displayLabel:title,accent:root.accent,cue:root.cue,content:question,question,choices:Object.freeze(choices),next,lens,role:root.slug==='vision'?'scenario':root.slug==='action'?'action':root.slug==='change'?'review':'observation'}))]));
+const focusedTopics = [
+ ['limo-place-soil-conditions','limo-place-soil','Soil conditions','What can you observe about this soil today?',['Surface moist','Surface dry','Condition uncertain'],'Compare the same patch after rain. Record moisture, cover and visible structure separately.','notes'],
+ ['limo-life-flowering','limo-life-seasonal','Flowers & flowering','What is happening around these flowers?',['Flowers opening','Visitor present','Flowering ending'],'Watch the same flowers for a short, recorded period. Note behaviour and date without assuming pollination.','plants'],
+ ['limo-life-ripening','limo-life-seasonal','Fruit & ripening','What differences can you observe between these fruits?',['Size or colour differs','Texture differs','Stage uncertain'],'Compare photographs and the fruit observation box. A visual stage alone does not establish suitability for use.','plants'],
+ ['limo-vision-care-capacity','limo-vision-purpose','Care capacity','What care can people commit to here?',['Weekly check possible','Monthly check possible','Capacity unconfirmed'],'Name the intended carer, task and frequency before proposing a planting.','plants'],
+ ['limo-relationships-habitat','limo-relationships-pollination','Habitat & shelter','What habitat features can you observe nearby?',['Flowers available','Cover available','Features unrecorded'],'Map existing flowers and shelter before suggesting a change. Keep visitor observations linked to their dates.','notes']
+];
+export const LIMO_CELLS = Object.freeze([
+ ...LIMO_ROOTS.flatMap(root=>[root,...topics[root.slug].map(([slug,title,question,choices,next,lens])=>Object.freeze({id:`${root.id}-${slug}`,parentId:root.id,title,displayLabel:title,accent:root.accent,cue:root.cue,content:question,question,choices:Object.freeze(choices),next,lens,role:root.slug==='vision'?'scenario':root.slug==='action'?'action':root.slug==='change'?'review':'observation'}))]),
+ ...focusedTopics.map(([id,parentId,title,question,choices,next,lens])=>Object.freeze({id,parentId,title,displayLabel:title,question,content:question,choices:Object.freeze(choices),next,lens,role:id.includes('-vision-')?'scenario':'observation',accent:LIMO_ROOTS.find(root=>id.startsWith(root.id+'-')).accent,cue:'LOOK CLOSER'}))
+]);
 export const LIMO_CELL_BY_ID = Object.freeze(Object.fromEntries(LIMO_CELLS.map(cell=>[cell.id,cell])));
 export const LIMO_BRANCHES = Object.freeze(LIMO_ROOTS.map(root=>Object.freeze({...root,children:Object.freeze(LIMO_CELLS.filter(cell=>cell.parentId===root.id))})));
 export const LIMO_LEGACY_ROUTES = Object.freeze({
@@ -65,9 +75,12 @@ export const LIMO_LEGACY_ROUTES = Object.freeze({
  'lim-food-forest':'limo-relationships-guilds','lim-plant-propagation':'limo-action-planting','lim-plant':'limo-life-layers','lim-climate':'limo-place-climate','lim-pin':'limo-action-record'
 });
 export const limoRouteId = id => LIMO_LEGACY_ROUTES[id] || id;
+export function limoRootFor(cell,lookup=id=>LIMO_CELL_BY_ID[id]){
+ const seen=new Set();while(cell?.parentId && !seen.has(cell.id)){seen.add(cell.id);cell=lookup(cell.parentId) || cell;}return cell;
+}
 export function limoLearningContent(id){
  const cell=LIMO_CELL_BY_ID[limoRouteId(id)];if(!cell)return null;
- const root=LIMO_CELL_BY_ID[cell.parentId] || cell;
+ const root=limoRootFor(cell);
  return {...cell,breadcrumb:`LIMO · ${root.title}${cell.parentId?' · '+cell.title:''}`,body:[cell.question || cell.content,cell.next && `Try next · ${cell.next}`].filter(Boolean).join('\n\n'),image:'',sketchImage:'',accessibilityLabel:`${cell.title} · ${cell.role}`,primaryFaceId:root.id};
 }
 export const LIMO_LAYERS = Object.freeze(['All layers','Emergent','Canopy','Understory','Shrub','Herbaceous','Groundcover','Root / rhizosphere','Climber / vine','Aquatic','Unclassified']);

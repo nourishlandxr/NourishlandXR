@@ -26,13 +26,13 @@ test('four bees visit gently, with a waist-level pair at spaced intervals',()=>{
 });
 test('numeric settings have clampable stepped sliders and no percentage cycle buttons',()=>{
  const rows=panelSettingsControls({headset:true}),sliders=rows.filter(item=>item.kind==='slider');
- assert.deepEqual(sliders.map(item=>item.action),['InfoOpacity','TextSize','SpatialScale','FloorOffset','CellOpacity']);
+ assert.deepEqual(sliders.map(item=>item.action),['InfoOpacity','TextSize','SpatialScale','FloorOffset']);
  for(const slider of sliders){assert.equal(panelSliderValue(slider,-10000),slider.min);assert.equal(panelSliderValue(slider,10000),slider.max);assert.ok(!slider.label?.includes('%'));}
  const opacity=sliders.find(item=>item.action==='InfoOpacity');assert.equal(panelSliderValue(opacity,opacity.x+18+(opacity.width-36)*.8),.8);
  const source=read('app/services/pimInfoPanel.js');assert.match(source,/sliderGrab.surface/);assert.match(source,/finishingSliderSource===event.inputSource/);assert.doesNotMatch(source,/if\(settingsOpen\)\{mediaCollapsed/);assert.doesNotMatch(source,/mediaDetached \|\| !settingsOpen/);
 });
-test('eye height fallback is configurable and demo body is exactly two metres',()=>{
- const saved=getSpatialVisualSettings();try{const viewer=new Float32Array(16);viewer[13]=1;setSpatialVisualSettings({eyeHeight:1,floorOffset:-.2});assert.equal(demoGroundBaseY(null,viewer),0);assert.equal(demoGroundBaseY(null,viewer,.1),.1);assert.equal(DEMO_TOTEM_HALF_HEIGHT_METRES*2,2);setSpatialVisualSettings({eyeHeight:20,floorOffset:-10});assert.equal(getSpatialVisualSettings().eyeHeight,2.2);assert.equal(getSpatialVisualSettings().floorOffset,-1.5);}finally{setSpatialVisualSettings(saved);}
+test('eye height fallback is configurable and demo body is three metres',()=>{
+ const saved=getSpatialVisualSettings();try{const viewer=new Float32Array(16);viewer[13]=1;setSpatialVisualSettings({eyeHeight:1,floorOffset:-.2});assert.equal(demoGroundBaseY(null,viewer),0);assert.equal(demoGroundBaseY(null,viewer,.1),.1);assert.equal(DEMO_TOTEM_HALF_HEIGHT_METRES*2,3);setSpatialVisualSettings({eyeHeight:20,floorOffset:-10});assert.equal(getSpatialVisualSettings().eyeHeight,2.2);assert.equal(getSpatialVisualSettings().floorOffset,-1.5);}finally{setSpatialVisualSettings(saved);}
  const demo=read('app/screens/temporaryArDemo.js');assert.match(demo,/referenceSpaceHasFloor \? 0/);assert.match(demo,/onFloorOffset:updateDemoFloor/);assert.doesNotMatch(demo,/center\.y-AR_PHONE_COMFORT\.boardScale\[1\]/);
 });
 test('butterfly preserves original mesh and attribution, with three skinned meshes and two clips',()=>{

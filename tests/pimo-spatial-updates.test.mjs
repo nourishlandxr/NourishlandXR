@@ -58,8 +58,14 @@ test('floor toy bounces, settles and stays within reach at each Quest refresh ra
   assert.ok(bounced);assert.equal(p.state.velocity.y,0);assert.ok(Math.abs(p.state.position.y-HERO_TOY_RADIUS)<1e-8);
  }
 });
-test('the Totem glass tip has a calm idle light and a stronger notification pulse',()=>{
- const idle=totemNotificationLight({},100).strength;assert.ok(idle>0 && idle<.3);const r={signBeaconStartedAt:0};assert.equal(totemNotificationLight(r,300).colour,TOTEM_NOTIFICATION_COLOUR);assert.ok(totemNotificationLight(r,300).strength>idle);assert.ok(totemNotificationLight(r,13000).strength<.3);const customised=totemNotificationLight({appearance:{notificationColor:'#eaa8b9'}},100);assert.deepEqual(customised.colour,[234/255,168/255,185/255]);
+test('Totem notification cycles stay bounded, accelerate on selection and respect reduced motion',()=>{
+ const bright=totemNotificationLight({},100),dim=totemNotificationLight({},800);assert.equal(bright.strength,1);assert.equal(dim.strength,.02);
+ assert.equal(totemNotificationLight({signNotificationSelected:true},400).strength,.02);
+ assert.equal(totemNotificationLight({demoArriveAt:0},300).strength,.02);
+ for(let t=0;t<15000;t+=37){const light=totemNotificationLight({},t);assert.ok(light.strength>=0 && light.strength<=1);assert.ok(light.colour.every(c=>c>=0 && c<=1));}
+ const previous=globalThis.matchMedia;globalThis.matchMedia=()=>({matches:true});try{
+  const record={appearance:{notificationColor:'#eaa8b9'}},first=totemNotificationLight(record,100);assert.deepEqual(first.colour,[234/255,168/255,185/255]);assert.deepEqual(totemNotificationLight(record,9000),first);
+ }finally{if(previous===undefined)delete globalThis.matchMedia;else globalThis.matchMedia=previous;}
 });
 test('reused XRFrame wrappers refresh hands, share one frame sample and clear missing poses',()=>{
  const names=[...new Set(XR_HAND_JOINT_CONNECTIONS.flat())],source={hand:new Map(names.map(n=>[n,n])),handedness:'right'},space={};let x=0,lost=false;

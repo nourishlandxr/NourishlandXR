@@ -129,10 +129,10 @@ test('simulated AR helpers keep anchors bounded and presentation deterministic',
 
 test('preview markup renders plants, links and Web Mode without runtime ownership', () => {
     const pigeon = { name: 'Pigeon Pea', demoType: 'plant', demoOrbColor: 'pigeonPea', demoExpanded: false, demoInteractive: true };
-    assert.equal(demoContentFor({ demoType: 'note' }).title, 'Sample message');
+    assert.equal(demoContentFor({ demoType: 'note' }).title, 'Leave a discovery for someone else');
     assert.deepEqual(demoContentFor({ demoType: 'note' }).lines, [
-        'Two sample plant profiles are available here.',
-        'Select either Orb to explore.'
+        'A Note gives this place a voice.',
+        'Leave an observation, a question or a reminder for the next visitor.'
     ]);
     assert.ok(demoPlantMedia(pigeon).image.endsWith('/assets/pigeon-pea-cajanus-cajan.png'));
     assert.equal(demoPlantMedia({ ...pigeon, demoAmbientNeighbour: true }), null);

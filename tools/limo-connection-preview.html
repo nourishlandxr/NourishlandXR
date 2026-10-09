@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LIMO · Connection preview</title>
+<style>
+:root{font-family:system-ui,sans-serif;color:#f4f0df;background:#0d1d1b;color-scheme:dark}*{box-sizing:border-box}body{margin:0}header{padding:16px 24px;border-bottom:1px solid #385248;display:flex;justify-content:space-between;gap:20px;align-items:center}header h1{margin:0;font-size:23px}header p{margin:4px 0;color:#c4d5c9;font-size:14px}a{color:#ead59d}main{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(330px,1fr);gap:20px;padding:20px;max-width:1700px;margin:auto}.stage{position:sticky;top:20px;align-self:start;aspect-ratio:2500/2100;background:radial-gradient(ellipse,#263a30,#111e1b);border:1px solid #45604f;border-radius:24px;overflow:hidden}.stage canvas{width:100%;height:100%;display:block}.cells{position:absolute;inset:0}.cells button{position:absolute;transform:translate(-50%,-50%);border-radius:50%;background:transparent;color:transparent;border:0;cursor:pointer}.cells button:focus-visible{outline:3px solid #f0d78e;outline-offset:3px}.cells button.compatible{outline:2px solid #e5c981;outline-offset:2px}.panel{border:1px solid #476250;background:#132a24;border-radius:22px;padding:22px}.panel h2{font-size:25px;line-height:1.25;margin:0 0 10px}.scope{color:#c6d7c9;font-size:13px;margin:0 0 16px}.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}.actions button{min-height:64px;padding:12px;text-align:left;font:650 15px system-ui;border-radius:12px;border:1px solid #68806b;background:#244034;color:#f4f0df;box-shadow:0 3px 0 #071510;cursor:pointer}.actions button.connection{border-color:#d1c298;background:linear-gradient(145deg,#3c4c35,#213a2e)}.actions button:disabled{opacity:.4;cursor:default}.actions button[aria-pressed=true]{outline:2px solid #e4d392}.actions small{display:block;font-weight:400;color:#c7d6c9;margin-top:6px;line-height:1.35}.reading{white-space:pre-line;font-size:16px;line-height:1.6;color:#d4e1d4}.diagram{width:100%;border-radius:16px;margin-top:16px}.hint{color:#d9c691;font-size:13px}.error{padding:12px;background:#522d28;border:1px solid #bd8972;border-radius:12px}@media(max-width:800px){main{grid-template-columns:1fr;padding:12px}.stage{position:relative;top:0}.panel{padding:16px}header{padding:14px}}
+</style>
+<header><div><h1>LIMO · Connection preview</h1><p>Sample garden · connect ideas and develop a discovery.</p></div><div><span id="version"></span> · <a href="../app/">Welcome</a></div></header>
+<main><section class="stage" aria-label="Living Frame learning cells"><canvas width="2500" height="2100" aria-label="LIMO connections around the Living Frame"></canvas><div class="cells"></div></section><aside class="panel" aria-live="polite"><h2></h2><p class="scope"></p><p class="hint">Select a cell to explore. Connect related cells to reveal a discovery.</p><nav class="actions" aria-label="LIMO controls"></nav><div class="reading"></div><img class="diagram" hidden alt=""></aside></main>
+<script type="module">
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+import {createLimoSpatialExperience} from '../app/services/limoSpatialExperience.js';
+import {createLimActivationController} from '../app/services/limActivation.js';
+import {drawArWelcomeShowcase,createArWelcomeClusters} from '../app/services/arWelcomeShowcase.js';
+import {limoConnectionIsAnimating} from '../app/services/limoConnectionLayout.js';
+const canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d'),cellLayer=document.querySelector('.cells'),actions=document.querySelector('.actions'),reading=document.querySelector('.reading'),diagram=document.querySelector('.diagram');
+document.querySelector('#version').textContent='V'+BUILD_INFO.version;
+const context={projectId:'nlxr-limo-connection-preview',name:'Sample garden',sites:[{id:'sample-site',name:'Sample Site'}],areas:[{id:'garden',siteId:'sample-site',name:'Garden'},{id:'comparison',siteId:'sample-site',name:'Comparison Area'}],warnings:[],illustrative:true,entries:[
+ {id:'pigeon-pea',name:'Pigeon Pea',type:'plant',description:'Sample plant for a light and neighbour observation.'},
+ {id:'african-peach',name:'African Peach',type:'plant',description:'Sample neighbour. Local conditions remain unassessed.'},
+ {id:'covered-patch',name:'Covered patch',type:'note',description:'Sample patch Note for a water comparison.'},
+ {id:'comparison-patch',name:'Comparison patch',type:'note',description:'Sample comparison Note; no trial result has been recorded.'}
+].map(marker=>({projectId:'nlxr-limo-connection-preview',siteId:'sample-site',areaId:'garden',areaName:'Garden',marker,profile:{}}))};
+const clusters=createArWelcomeClusters(),expanded=new Set(),expandedAt={},buttons=new Map();let model,frames=[],selectedKey='',dirty=true,lastPaint=0;
+const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');motionPreference.addEventListener('change',()=>{dirty=true;});
+function paint(time=performance.now()){
+ const graph=model?.graph();
+ frames=drawArWelcomeShowcase(ctx,64000,motionPreference.matches,clusters,{drawRoots:false,frameAnimation:false,drawPanel:true,drawContent:context=>{
+  const current=model?.content();context.save();context.textAlign='center';context.fillStyle='#d9c99a';context.font='750 35px system-ui';context.fillText('LIMO · CONNECTED LEARNING',700,340,800);context.fillStyle='#f4f0df';context.font='750 45px system-ui';
+  const title=current?.title || 'Learn from this place',words=title.split(' '),lines=[];let line='';for(const word of words){const next=line?line+' '+word:word;if(context.measureText(next).width>760 && line){lines.push(line);line=word;}else line=next;}if(line)lines.push(line);lines.slice(0,3).forEach((text,index)=>context.fillText(text,700,450+index*58,780));
+  context.font='500 26px system-ui';context.fillStyle='#bdd1c0';context.fillText('Choose · connect · explore · return',700,670,780);context.restore();
+ },selectedKey,holdKey:activation.activeKey,holdProgress:activation.progress,progression:{expandedLimIds:[...expanded],expandedAt,connectionGraph:graph}});
+ for(const button of buttons.values())button.hidden=true;
+ for(const node of frames.flatMap(frame=>frame.nodes)){
+  let button=buttons.get(node.key);if(!button){button=document.createElement('button');button.type='button';button.dataset.cell=node.key;button.addEventListener('pointerdown',event=>{event.preventDefault();activation.start(node.key,performance.now(),'pointer');});button.addEventListener('pointerup',()=>activation.end(node.key));button.addEventListener('pointerleave',()=>activation.cancel());button.addEventListener('click',event=>{if(!activation.consumeSyntheticClick(node.key) && event.detail===0)activation.activateNow(node.key);});button.addEventListener('keydown',event=>{if(['Enter',' '].includes(event.key)){event.preventDefault();activation.activateNow(node.key);}});buttons.set(node.key,button);cellLayer.append(button);}
+  button.hidden=node.opacity<=.5;button.style.left=node.x/25+'%';button.style.top=node.y/21+'%';button.style.width=node.radius*2/25+'%';button.style.height=node.radius*2/21+'%';button.textContent=node.label;button.setAttribute('aria-label',(graph?.compatibleIds.includes(node.limId)?'Connect with ':'Explore ')+node.label);button.classList.toggle('compatible',graph?.compatibleIds.includes(node.limId));
+ }
+ dirty=false;lastPaint=time;
+}
+const activation=createLimActivationController({onProgress:()=>{dirty=true;},onComplete:key=>{const node=frames.flatMap(frame=>frame.nodes).find(node=>node.key===key);if(node)model.select(node.limId);}});
+model=createLimoSpatialExperience({storage:localStorage,onSelect:cell=>{
+ expanded.clear();let cursor=cell;while(cursor){expanded.add(cursor.id);expandedAt[cursor.id]=0;cursor=cursor.parentId?model.cell(cursor.parentId):null;}selectedKey=frames.flatMap(frame=>frame.nodes).find(node=>node.limId===cell.id)?.key || '';dirty=true;
+},onChange:graph=>{selectedKey=graph.cells.some(cell=>cell.id===graph.selectedId)?'discovery:'+graph.selectedId:frames.flatMap(frame=>frame.nodes).find(node=>node.limId===graph.selectedId)?.key || '';dirty=true;},onInspect:entry=>{reading.textContent=entry.marker.description;},onClose:()=>{void model.open({context,siteId:'sample-site',areaId:'garden'});},panel:{showLearning(content){
+ document.querySelector('.panel h2').textContent=content.title;document.querySelector('.scope').textContent=content.limo.project+' · '+content.limo.scope+' · '+content.limo.coverage;reading.textContent=content.body;
+ actions.replaceChildren(...content.limo.actions.map(item=>{const button=document.createElement('button');button.type='button';button.textContent=item.label;button.disabled=Boolean(item.disabled);button.classList.toggle('connection',item.role==='connection');if(item.selected!==undefined)button.setAttribute('aria-pressed',String(item.selected));if(item.description){const detail=document.createElement('small');detail.textContent=item.description;button.append(detail);}button.addEventListener('click',()=>{void model.handle(item.id);});return button;}));
+ diagram.hidden=!content.image;if(content.image){diagram.src=content.image;diagram.alt=content.imageAlt;}
+},setExplorerOpen(){},suspend(){},setCompact(){}}});
+await model.open({context,siteId:'sample-site',areaId:'garden'});await model.handle('connections');paint();
+function tick(time){if(activation.active){activation.tick(activation.activeKey,time);dirty=true;}const recent=limoConnectionIsAnimating(model.graph(),Date.now(),motionPreference.matches);if((dirty || recent) && time-lastPaint>50)paint(time);requestAnimationFrame(tick);}requestAnimationFrame(tick);
+window.addEventListener('error',event=>{const error=document.createElement('p');error.className='error';error.textContent=event.message;document.querySelector('.panel').append(error);});
+</script>
+</html>

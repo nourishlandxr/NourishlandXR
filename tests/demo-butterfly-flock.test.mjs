@@ -19,7 +19,7 @@ test('six new colours join the original two 30% smaller, with distinct panel per
  for(const v of BUTTERFLY_VARIANTS)assert.equal(demoButterflyPose(2000,0,{perchMs:v.perchMs,seed:v.seed}).flight,0);
 });
 test('flight speeds increase without user close approaches; resting remains calm',()=>{
- assert.equal(BUTTERFLY_MOVEMENT_SPEED,1.55);assert.equal(BUTTERFLY_FLIGHT_SPEED,10.8);
+ assert.equal(BUTTERFLY_MOVEMENT_SPEED,1.55);assert.equal(BUTTERFLY_FLIGHT_SPEED,4.2);
  for(const v of BUTTERFLY_VARIANTS)for(let t=0;t<180000;t+=777){const pose=demoButterflyPose(t,0,{seed:v.seed,perchMs:v.perchMs});assert.equal(pose.close,0);assert.ok(Number.isFinite(pose.x+pose.y+pose.z));}
  assert.equal(demoButterflyPose(120000,0,{reducedMotion:true}).flight,0);
 });
@@ -35,15 +35,15 @@ test('paired interactions are brief, continuous, bounded and limited to nearby c
  assert.equal(butterflySocialPoint(p,{x:2,y:1,z:0},social),p);
  assert.ok(butterflySocialPoint(p,{x:.2,y:1,z:0},social).x>0);
 });
-test('eight flying butterflies and both eyes reuse one animation pose; perched work is bounded to three phases',()=>{
+test('eight flying butterflies and both eyes reuse three animation phases; perched work is bounded to three phases',()=>{
  const flight=new Set(),rest=new Set();
  for(let eye=0;eye<2;eye++)for(const v of BUTTERFLY_VARIANTS){
   flight.add(butterflyPoseCacheKey({flight:1,wingPhase:v.seed*1.9}).key);
   rest.add(butterflyPoseCacheKey({flight:0,wingPhase:v.seed*1.9}).key);
  }
- assert.equal(flight.size,1);assert.equal(rest.size,3);
+ assert.equal(flight.size,3);assert.equal(rest.size,3);
 });
-test('native flock uploads one flying mesh across all colours and eyes and releases every resource',()=>{
+test('native flock uploads three shared flying phases across all colours and eyes and releases every resource',()=>{
  const text=readFileSync(new URL('../app/services/demoButterflyModel.js',import.meta.url),'utf8');
  const fn=text.slice(text.indexOf('function butterflyXRRenderer('),text.indexOf('export function mountDemoButterflyModel('));
  const calls=[],gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:(_p,name)=>name},{get(target,key){return key in target?target[key]:key.startsWith('create')?()=>({}):key===key.toUpperCase()?key:(...args)=>calls.push([key,...args]);}});
@@ -53,8 +53,8 @@ test('native flock uploads one flying mesh across all colours and eyes and relea
  const scope=vm.createContext({THREE,gl,model:{meshes:[mesh],bitmap:{},nodes:Array.from({length:62},()=>({getWorldPosition:p=>p.set(0,-.2,0)}))},butterflyPoseCacheKey,BUTTERFLY_RENDER_BUDGETS,currentGraphicsQuality:()=> 'high',animateButterfly:()=>animations++});
  const renderer=vm.runInContext(fn+';butterflyXRRenderer(gl,model);',scope),view={projectionMatrix:new THREE.Matrix4().elements,transform:{inverse:{matrix:new THREE.Matrix4().elements}}};
  for(let eye=0;eye<2;eye++)for(const v of BUTTERFLY_VARIANTS)renderer.draw(view,{x:0,y:0,z:-1},1000,{flight:1,wingPhase:v.seed*1.9,opacity:1,yaw:v.seed,size:v.size},v);
- assert.equal(animations,1);assert.equal(calls.filter(c=>c[0]==='bufferData').length,1);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,16);
+ assert.equal(animations,3);assert.equal(calls.filter(c=>c[0]==='bufferData').length,3);assert.equal(calls.filter(c=>c[0]==='drawArrays').length,16);
  for(let eye=0;eye<2;eye++)for(const v of BUTTERFLY_VARIANTS)renderer.draw(view,{x:0,y:0,z:-1},1010,{flight:0,wingPhase:v.seed*1.9,opacity:1},v);
- assert.equal(animations,4,'rest adds only three cached phases');
- renderer.destroy();assert.equal(calls.filter(c=>c[0]==='deleteBuffer').length,4);assert.equal(calls.filter(c=>c[0]==='deleteTexture').length,1);assert.equal(calls.filter(c=>c[0]==='deleteProgram').length,1);geo.dispose();
+ assert.equal(animations,6,'rest adds only three cached phases');
+ renderer.destroy();assert.equal(calls.filter(c=>c[0]==='deleteBuffer').length,6);assert.equal(calls.filter(c=>c[0]==='deleteTexture').length,1);assert.equal(calls.filter(c=>c[0]==='deleteProgram').length,1);geo.dispose();
 });

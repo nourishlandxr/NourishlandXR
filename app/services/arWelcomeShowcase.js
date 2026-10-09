@@ -1,4 +1,5 @@
 import {LIMO_BRANCHES,LIMO_CELLS} from './limoProjectLearning.js';
+import {limoDiscoveryLayout,drawLimoConnectionStrings} from './limoConnectionLayout.js';
 import {currentInfoOpacity} from './spatialVisualSettings.js';
 import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {drawArWelcomePanel,welcomeBoundary,WELCOME_SHAPE} from './arWelcomePanel.js';
@@ -156,6 +157,7 @@ function attachedRoot(angle) {
   attachment:{x:edge.x+WELCOME_PANEL_DRAW_OFFSET.x,y:edge.y+WELCOME_PANEL_DRAW_OFFSET.y}};
 }
 const settledLayouts=new WeakMap();
+const discoveryLayouts=new WeakMap();
 function settleWelcomeLayout(frames) {
  const placed=frames.flatMap(frame=>frame.nodes.filter(node=>node.depth===0));
  const byId=new Map(frames.flatMap(frame=>frame.nodes.map(node=>[`${frame.corner}:${node.id}`,node])));
@@ -202,10 +204,11 @@ function revealFrames(graphs) {
  const frames=LIMO_BRANCHES.map((branch,corner)=>{
   const root=attachedRoot(angles[corner]);
   const nodes=[{...root,id:branch.id,parent:null,limId:branch.id,label:branch.title,cue:branch.cue,role:'question',depth:0,accent:branch.accent,accessibilityLabel:branch.title+' project question',baseRadius:92,radius:92,revealAt:400+corner*170}];
-  branch.children.forEach((child,index)=>{
+  function addChildren(parent,depth){LIMO_CELLS.filter(child=>child.parentId===parent.id).forEach((child,index)=>{
    const forward=210+Math.floor(index/3)*170,side=(index%3-1)*190;
-   nodes.push({id:child.id,parent:branch.id,limId:child.id,label:child.title,cue:child.role==='scenario'?'DRAFT':child.role==='action'?'TRY':child.role==='review'?'RETURN':'NOTICE',role:child.role,depth:1,accent:branch.accent,accessibilityLabel:child.title+' '+child.role+' cell',x:root.x+Math.cos(root.growthAngle)*forward-Math.sin(root.growthAngle)*side,y:root.y+Math.sin(root.growthAngle)*forward+Math.cos(root.growthAngle)*side,baseRadius:70,radius:70,revealAt:2200+corner*170+index*280});
-  });
+   const node={id:child.id,parent:parent.id,limId:child.id,label:child.title,cue:child.role==='scenario'?'DRAFT':child.role==='action'?'TRY':child.role==='review'?'RETURN':'NOTICE',role:child.role,depth,accent:branch.accent,accessibilityLabel:child.title+' '+child.role+' cell',x:parent.x+Math.cos(root.growthAngle)*forward-Math.sin(root.growthAngle)*side,y:parent.y+Math.sin(root.growthAngle)*forward+Math.cos(root.growthAngle)*side,baseRadius:70,radius:70,revealAt:Math.max(parent.revealAt+1600,2200+corner*170+index*280+(depth-1)*1600)};
+   nodes.push(node);addChildren(node,depth+1);
+  });}addChildren(nodes[0],1);
   return {corner,phase:0,cycle:0,nodes};
  });
  settleWelcomeLayout(frames);settledLayouts.set(graphs,frames);
@@ -215,7 +218,8 @@ function revealFrames(graphs) {
 // Keep developed cells in place. Dismissal uses stable corner/node identities,
 // so hidden branches stay hidden while the rest of the demo continues.
 export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WELCOME_GRAPHS,hidden=new Set(),progression={}) {
- return revealFrames(graphs).map(frame=>{
+ const connectionGraph=progression.connectionGraph,pinned=new Set(connectionGraph?.pinnedIds || []);
+ const frames=revealFrames(graphs).map(frame=>{
   const corner=frame.corner,totalTime=Number.isFinite(elapsed)?Math.max(0,elapsed):0;
   const cellsActivatedAt=Number.isFinite(progression?.cellsActivatedAt)?progression.cellsActivatedAt:0;
   const time=Math.max(0,totalTime-cellsActivatedAt);
@@ -239,7 +243,8 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
     const parentId=parent?.limId || node.parent;
     const parentExpanded=expanded.has(node.parent)||expanded.has(parentId);
     const activeRoot=[...expanded].reverse().find(id=>LIMO_BRANCHES.some(branch=>branch.id===id));
-    if(!parentExpanded || (activeRoot && frame.nodes[0].limId!==activeRoot)){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
+    if(pinned.has(node.limId)){node.progress=1;node.opacity=1;node.emphasis=0;node.state='settled';}
+    else if(!parentExpanded || (activeRoot && frame.nodes[0].limId!==activeRoot)){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
     else if(Number.isFinite(expandedAt[parentId])){
      const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent);
      const siblingIndex=Math.max(0,siblings.indexOf(node));
@@ -266,6 +271,17 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
   }
   return frame;
  });
+ if(connectionGraph?.cells?.length){
+  const active=new Set(connectionGraph.cells.map(cell=>cell.id));
+  let layout=discoveryLayouts.get(connectionGraph);
+  if(!layout){layout=limoDiscoveryLayout(connectionGraph.layoutCells || connectionGraph.cells,frames.flatMap(frame=>frame.nodes));discoveryLayouts.set(connectionGraph,layout);}
+  const nodes=layout.filter(node=>active.has(node.id)).map(node=>{
+   const progress=reducedMotion?1:Math.min(1,Math.max(0,(Date.now()-Date.parse(node.createdAt))/450));
+   return {...node,progress,opacity:progress,state:progress<1?'revealing':'settled'};
+  });
+  frames.push({corner:6,phase:0,cycle:0,nodes});
+ }
+ return frames;
 }
 
 export function welcomeCellAtPoint(frames,x,y) {
@@ -544,6 +560,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  const cellOpacity=Math.max(0,Math.min(1,Number(options.cellOpacity ?? currentInfoOpacity())));
  ctx.save();
  const allNodes=frames.flatMap(frame=>frame.nodes);
+ drawLimoConnectionStrings(ctx,frames,options.progression?.connectionGraph,elapsed,reducedMotion);
  const selectedNode=allNodes.find(node=>node.key===options.selectedKey);
  const relationship=welcomeRelationshipFor(selectedNode?.limId);
  const linkedNodes=relationship?relationship.ids.map(id=>allNodes.find(node=>node.limId===id && node.opacity>.55)).filter(Boolean):[];
@@ -601,7 +618,8 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  }
  for(const node of frame.nodes){
   const pathway=options.pathwayKey===node.key,current=pathway && node.opacity<.72?{...node,opacity:.72,scale:Math.max(.94,node.scale)}:node;
-  const linked=linkedKeys.has(node.key),linkedCurrent=linked?{...current,accent:relationship.accent}:current;
+  const connectionGraph=options.progression?.connectionGraph,connectionRelated=node.limId===connectionGraph?.sourceId || connectionGraph?.compatibleIds?.includes(node.limId);
+  const linked=linkedKeys.has(node.key),linkedCurrent=connectionRelated?{...current,accent:'#f2d990'}:linked?{...current,accent:relationship.accent}:current;
   if(linkedCurrent.opacity)drawGlassCell(ctx,linkedCurrent,hue,elapsed,reducedMotion,options.drawCellLabels!==false,{backgroundOpacity:cellOpacity,selected:options.selectedKey===node.key,hovered:options.hoverKey===node.key,pathway,holdProgress:options.holdKey===node.key?options.holdProgress:0,connected:options.connectedKey===node.key});
  }
  }

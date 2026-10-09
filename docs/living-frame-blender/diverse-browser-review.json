@@ -1,0 +1,16 @@
+{
+  "preview": "http://127.0.0.1:8769/docs/living-frame-blender/preview.html?model=full",
+  "modelReady": true,
+  "autoplayInitialSecondsObserved": 0.2,
+  "trianglesObserved": 151644,
+  "meshesObserved": 78,
+  "milestonesObservedSeconds": [0,20,34,38,60],
+  "viewsObserved": ["front","close detail","root detail"],
+  "soilCutawayCheckedAndRestored": true,
+  "beeReady": true,
+  "finalWarningOrErrorLogs": [],
+  "localWelcomeVersion": "0.9443",
+  "frontendBuildSucceeded": true,
+  "deployedByThisTask": false,
+  "headsetVerified": false
+}
