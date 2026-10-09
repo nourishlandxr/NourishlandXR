@@ -1,3 +1,6 @@
+import {createLimoSpatialExperience} from '../services/limoSpatialExperience.js';
+import {loadLimoProjectContext,publishLimoRecord} from '../services/limoProjectContext.js';
+import {limoIsPlant} from '../services/limoProjectLearning.js';
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,rememberKnowledgeSelection,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
@@ -172,6 +175,24 @@ let sphereRenderer = null;
 let rainRenderer=null;
 let totemCardsRenderer = null;
 let infoPanel = null;
+let creatorLimo=null,creatorLimoReturn=null;
+async function openCreatorLimo(command='open',record=null){
+ if(!infoPanel || !activeProjectId)return;
+ creatorLimoReturn=infoPanel.snapshot();
+ if(creatorLimo?.snapshot().context?.projectId===activeProjectId){creatorLimo.show();return;}
+ creatorLimo ||= createLimoSpatialExperience({panel:infoPanel,loadContext:loadLimoProjectContext,publishRecord:publishLimoRecord,
+  onInspect:async entry=>{
+   const live=sessionMarkers.find(item=>item.siteId===entry.siteId && item.areaId===entry.areaId && item.marker.id===entry.marker.id);
+   const item=live || {id:entry.marker.id,marker:normalizeSpatialMarker(entry.marker),siteId:entry.siteId,areaId:entry.areaId,areaName:entry.areaName,plantProfile:entry.profile};
+   item.plantProfile=entry.profile;
+   if(limoIsPlant(entry)){const document=creatorKnowledgeDocument(item);if(live && entry.areaId===activeAreaId && entry.siteId===activeSiteId){live.profileExpanded=true;live.infoVisible=true;invalidateSpatialPimTexture(live);renderSessionMarkers();}infoPanel.select(item,document,document.nodes?.find(node=>!node.parentId)?.id || 'core');infoPanel.setExplorerOpen(true);}
+   else infoPanel.showLearning({id:entry.marker.id,title:entry.marker.name || 'Project Note',body:entry.marker.description || 'No Note text recorded.',breadcrumb:entry.areaName,mesh:'note',limo:{cue:'NOTE',role:'observation',scope:entry.areaName,project:activeProjectName,summary:'Project record',coverage:'Authored Project Note',actions:[{id:'home',label:'Return to LIMO',role:'navigation'}],onAction:()=>creatorLimo.handle('home')}});
+  },
+  onFocus:async entry=>{if(entry.siteId!==activeSiteId){infoPanel.showLearning({title:entry.areaName,body:'This Area belongs to another Site. Inspect its records here; switch Sites through the Project workspace to enter its spatial session.',mesh:'lim'});return;}await transitionToLinkedArea(entry.areaId);creatorLimo.select(creatorLimo.snapshot().state.cellId || 'limo-life');},
+  onClose:()=>{if(creatorLimoReturn)infoPanel.restoreSnapshot(creatorLimoReturn);}
+ });
+ await creatorLimo.open({projectId:activeProjectId,siteId:record?.siteId || activeSiteId,areaId:record?.areaId || activeAreaId});
+}
 let creatorPanelControlsCleanup=()=>{},creatorPanelActionSignature='';
 let pimHold = null;
 const handPimHold = createPimHold({activate:activateSpatialPimTarget,progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}});
@@ -1674,6 +1695,7 @@ function creatorPanelActions() {
         {id:'cancel-place',label:'Cancel placement'},
         {id:'inspect',label:interactionMode==='select'?'Inspecting':'Inspect'},
         {id:'knowledge',label:'Plant knowledge'},
+        {id:'limo',label:'Learn in this Project'},
         {id:'workspace',label:'Project workspace'},
         {id:'exit',label:'Exit AR'}
     ];
@@ -1683,12 +1705,14 @@ function creatorPanelActions() {
         {id:'totem',label:'Totem tools'},
         {id:'inspect',label:interactionMode==='select'?'Inspecting':'Inspect'},
         {id:'knowledge',label:'Plant knowledge'},
+        {id:'limo',label:'Learn in this Project'},
         {id:'workspace',label:'Project workspace'}
     ];
     const recenter=overlayRoot.querySelector('[data-ar-recenter-area]');
     if(recenter && !recenter.hidden)actions.push({id:'recenter-area',label:'Recenter Area',disabled:recenter.disabled});
     actions.push({id:'exit',label:'Exit AR'});
-    return actions.slice(0,8);
+    // Keep Exit and Recenter reachable; the belt also has a Project workspace entry.
+    return actions.length>8?actions.filter(item=>item.id!=='workspace'):actions;
 }
 
 function syncCreatorPanelActions() {
@@ -1701,6 +1725,7 @@ function syncCreatorPanelActions() {
 }
 
 function handleCreatorPanelAction(action) {
+    if(action==='limo'){void openCreatorLimo();return;}
     const selectors={plant:'[data-ar-add-plant]',note:'[data-ar-add-note]',totem:'[data-ar-add-special]',inspect:'[data-ar-select-mode]',knowledge:'[data-ar-knowledge-open]',workspace:'[data-ar-web-return]',place:'[data-ar-confirm-place]','cancel-place':'[data-ar-cancel-place]','recenter-area':'[data-ar-recenter-area]',exit:'[data-ar-exit-session]'};
     overlayRoot?.querySelector(selectors[action])?.click();
 }
@@ -5869,6 +5894,7 @@ function createOverlay() {
 }
 
 function createCreatorInfoPanel(){
+    creatorLimo?.close();creatorLimo=null;creatorLimoReturn=null;
     infoPanel?.destroy();creatorPanelActionSignature='';
     creatorCellOpacity=getSpatialVisualSettings().cellOpacity;creatorHandMode=getSpatialVisualSettings().handMode;
     infoPanel=createPimInfoPanel({root:overlayRoot,headset:questHeadsetSession,phoneAR:Boolean(session && !questHeadsetSession),simpleDesktop:!session,rainEnabled:true,onGraphicsQuality:()=>renderSessionMarkers(),
@@ -5878,12 +5904,13 @@ function createCreatorInfoPanel(){
         onFloorOffset:()=>renderSessionMarkers(),onTotemModel:()=>renderSessionMarkers(),
         onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
         onCellOpacity:value=>{creatorCellOpacity=value;for(const record of sessionMarkers.filter(item=>item.profileExpanded))refreshCreatorPimProfile(record);},
-        onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);invalidateSpatialPimTexture(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.pimSelectedNodeId)showCreatorInfo(record,record.pimSelectedNodeId);refreshCreatorPimProfile(record);},onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onUtilityAction:handleCreatorPanelAction});
+        onExplorerAction:(record,action)=>{knowledgeRenderer?.clear(record);invalidateSpatialPimTexture(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.pimSelectedNodeId)showCreatorInfo(record,record.pimSelectedNodeId);refreshCreatorPimProfile(record);},onEdit:(record,path)=>openCreatorKnowledge(record,{path,edit:true}),onLimoAction:openCreatorLimo,onUtilityAction:handleCreatorPanelAction});
     overlayRoot?.style.setProperty('--creator-info-opacity',String(getSpatialVisualSettings().infoOpacity));
     infoPanel.element.classList.add('is-creator-panel');creatorPerformance.publish();syncCreatorPanelActions();
 }
 
 function cleanup() {
+    creatorLimo?.close();creatorLimo=null;creatorLimoReturn=null;
     sessionMarkers.forEach(preserveKnowledgeContext);
     disposeKnowledgeDesktopViews(overlayRoot);
     closeCreatorKnowledge({force:true});

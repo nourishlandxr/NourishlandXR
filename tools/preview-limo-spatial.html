@@ -1,0 +1,51 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>LIMO · Spatial review</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+body{margin:0;background:#0b1b18;color:#f4f0df;font:16px system-ui}main{max-width:1400px;margin:auto;padding:24px}h1{margin:8px 0;font-weight:600}p{color:#bdcfc2}button{background:#213c33;color:#fff;border:1px solid #6c8876;border-radius:9px;padding:12px;cursor:pointer}button:hover{border-color:#e3bd7f}nav{display:flex;gap:8px;flex-wrap:wrap}#stereo{width:100%;aspect-ratio:2.15;border:1px solid #516a5d;border-radius:16px;margin-top:20px}#tree{width:100%;max-height:720px;object-fit:contain;cursor:pointer}#ui{display:none}#status{min-height:24px}details{margin:20px 0}summary{cursor:pointer}
+</style></head><body><main><p>NLXR / NATIVE SPATIAL REVIEW · ILLUSTRATIVE PROJECT</p><h1>LIMO · Learn from this place</h1><p>The two-eye view below uses the app’s native XR panels and controller event path. The sample records are illustrative.</p><nav><button id="reset">Six questions</button><button id="test">Test controller field loop</button><button id="layers">Plants & forest layers</button><button id="vision">Compare two plans</button></nav><p id="status" role="status">Loading spatial panels…</p><canvas id="stereo" width="1720" height="800"></canvas><nav id="commands" aria-label="Aim native XR controls"></nav><details><summary>Spatial question tree · select a cell</summary><canvas id="tree" width="2500" height="2100"></canvas></details></main><div id="ui"></div><script type="module">
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createPimInfoPanel} from '../app/services/pimInfoPanel.js';
+import {createLimoSpatialExperience} from '../app/services/limoSpatialExperience.js';
+import {limoSpatialControls} from '../app/services/limoSpatialPresentation.js';
+import {drawArWelcomeShowcase,welcomeCellAtPoint} from '../app/services/arWelcomeShowcase.js';
+import {resolvePlantPim} from '../app/services/pimLegacyAdapter.js';
+import {PIGEON_PEA_PIM} from '../app/services/pigeonPeaPim.js';
+const canvas=document.querySelector('#stereo'),gl=canvas.getContext('webgl2',{antialias:true}),status=document.querySelector('#status');
+const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0),projection=new THREE.PerspectiveCamera(62,canvas.width/2/canvas.height,.01,20);
+const eyes=[-.032,.032].map(offset=>{const camera=projection.clone();camera.position.set(offset,1.35,.38);camera.lookAt(offset,.8,-1.2);camera.updateMatrixWorld();return {projectionMatrix:camera.projectionMatrix.elements,transform:{inverse:{matrix:camera.matrixWorldInverse.elements}}};});
+const panel=createPimInfoPanel({root:document.querySelector('#ui'),headset:true,onLimoAction:()=>experience.show()});panel.attach(gl);
+const session=new EventTarget(),space={},source={handedness:'right',targetRaySpace:{}};session.inputSources=[source];let ray=null;
+const frame={getPose(){const matrix=new THREE.Matrix4().makeTranslation(ray?.origin.x || 0,ray?.origin.y || 0,ray?.origin.z || 0);return {transform:{matrix:matrix.elements}};}};
+panel.bindSession(session,space);
+panel.update(viewer.elements,performance.now());const initialPanel=panel.getPosition();for(const [index,view] of eyes.entries()){const camera=projection.clone();camera.position.set(index===0?-.032:.032,1.6,.15);camera.lookAt(initialPanel.x,initialPanel.y-.38,initialPanel.z);camera.updateMatrixWorld();view.transform.inverse.matrix=camera.matrixWorldInverse.elements;}
+const entries=[['pigeon-a','Pigeon Pea','orchard','Shrub'],['mamey','Mamey Sapote','orchard','Canopy'],['pea-b','Pigeon Pea','nursery','Shrub'],['unclassified','Unclassified specimen','orchard','']].map(([id,name,areaId,layer])=>({projectId:'spatial-limo-review',siteId:'site',areaId,areaName:areaId==='orchard'?'Young orchard':'Nursery',marker:{id,name,type:'plant',status:'published'},profile:{layer}}));
+const context={projectId:'spatial-limo-review',name:'Learning garden · example',sites:[{id:'site',name:'Example Site'}],areas:[{id:'orchard',siteId:'site',name:'Young orchard'},{id:'nursery',siteId:'site',name:'Nursery'}],entries,warnings:[],illustrative:true};
+let selectedRoot='',treeFrames=[];
+const experience=createLimoSpatialExperience({panel,onInspect:entry=>{const document=entry.marker.id.startsWith('pigeon') || entry.marker.id==='pea-b'?PIGEON_PEA_PIM:resolvePlantPim(entry.profile,{id:entry.marker.id,plantId:entry.marker.id,commonName:entry.marker.name});panel.select({name:entry.marker.name,id:entry.marker.id},document,'food-forest');status.textContent='Opened canonical sample PIMO for '+entry.marker.name;},onSelect:cell=>{selectedRoot=cell.parentId || cell.id;paintTree();},onClose:()=>{status.textContent='LIMO closed. Use Six questions to reopen.';}});
+await experience.open({context});
+function paintTree(){const tree=document.querySelector('#tree');treeFrames=drawArWelcomeShowcase(tree.getContext('2d'),64000,true,undefined,{drawRoots:false,drawContent:ctx=>{ctx.textAlign='center';ctx.fillStyle='#f4f0df';ctx.font='700 48px system-ui';ctx.fillText('LEARN FROM THIS PLACE',700,430);ctx.font='28px system-ui';ctx.fillText('Choose a question · inspect · try · return',700,510);ctx.fillText('Illustrative Project / two Areas',700,565);},progression:{expandedLimIds:selectedRoot?[selectedRoot]:[],expandedAt:selectedRoot?{[selectedRoot]:0}:{}}});}
+paintTree();document.querySelector('#tree').onclick=event=>{const bounds=event.currentTarget.getBoundingClientRect(),node=welcomeCellAtPoint(treeFrames,(event.clientX-bounds.left)*2500/bounds.width,(event.clientY-bounds.top)*2100/bounds.height);if(node)experience.select(node.limId);};
+function explorerSurface(){const position=panel.getPosition();if(!position)return null;for(let y=position.y-.2;y>position.y-1.8;y-=.025){const candidate=panel.hit({origin:{x:position.x,y,z:position.z+1},direction:{x:0,y:0,z:-1}});if(candidate?.card?.explorer)return candidate;}return null;}
+async function nativeClick(id){
+ const surface=explorerSurface();if(!surface)throw Error('Native control surface unavailable');const button=surface.card.controls.find(item=>item.action==='Limo:'+id);if(!button)throw Error('Native action unavailable: '+id);
+ const localX=((button.x+button.width/2)/1000-.5)*surface.width,localY=(.5-(button.y+button.height/2)/surface.card.height)*surface.height;
+ const point={};for(const axis of ['x','y','z'])point[axis]=surface.center[axis]+surface.right[axis]*localX+surface.up[axis]*localY;
+ ray={origin:{x:point.x,y:point.y,z:point.z+1},direction:{x:0,y:0,z:-1}};
+ const hit=panel.hit(ray);if(hit?.card?.id!=='explorer')throw Error('Controller hit missed LIMO');
+ for(const type of ['selectstart','selectend','select']){const event=new Event(type);event.inputSource=source;event.frame=frame;session.dispatchEvent(event);}
+ await new Promise(resolve=>setTimeout(resolve,60));
+}
+let signature='';function commands(){const content=experience.content(),items=panel.snapshot().selection?.limo?content.limo.actions:[{id:'open',label:'Return to LIMO'}],next=JSON.stringify(items.map(item=>[item.id,item.label,item.disabled]));if(next===signature)return;signature=next;const root=document.querySelector('#commands');root.replaceChildren(...items.map(item=>{const button=document.createElement('button');button.textContent=item.label;button.disabled=item.disabled;button.onclick=()=>nativeClick(item.id).catch(error=>status.textContent=error.message);return button;}));status.dataset.view=experience.snapshot().state.view;status.dataset.title=content.title;}
+function draw(time){panel.update(viewer.elements,time,ray,frame);gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(.06,.12,.10,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);for(let index=0;index<2;index++){gl.viewport(index*canvas.width/2,0,canvas.width/2,canvas.height);panel.draw(eyes[index]);}status.dataset.glError=String(gl.getError());commands();requestAnimationFrame(draw);}requestAnimationFrame(draw);
+document.querySelector('#reset').onclick=()=>{selectedRoot='';experience.handle('home');paintTree();};document.querySelector('#layers').onclick=()=>experience.select('limo-life-layers');document.querySelector('#vision').onclick=()=>experience.select('limo-vision-options');
+document.querySelector('#test').onclick=async()=>{try{
+ await experience.handle('home');await nativeClick('cell:limo-life');if(experience.snapshot().state.cellId!=='limo-life')throw Error('Root selection failed');
+ await nativeClick('cell:limo-life-layers');await nativeClick('results');
+ await nativeClick('record:spatial-limo-review/site/orchard/pigeon-a');if(experience.snapshot().state.targetKey!=='spatial-limo-review/site/orchard/pigeon-a')throw Error('Wrong canonical target');
+ await nativeClick('inspect');if(panel.snapshot().selection?.id!=='food-forest')throw Error('Canonical PIMO did not open');await nativeClick('open');
+ await nativeClick('observe');await nativeClick('answer:0');await nativeClick('due:7');await nativeClick('save');
+ const saved=experience.snapshot().records[0];if(saved.targetName!=='Pigeon Pea'||saved.state!=='recorded')throw Error('Observation not saved');
+ await nativeClick('review');await nativeClick('answer:1');await nativeClick('due:30');await nativeClick('save');
+ if(experience.snapshot().records[0].state!=='reviewed')throw Error('Return observation failed');
+ status.dataset.controllerTest='pass';status.textContent='PASS · controller selected roots and branches, found the exact plant, saved and revisited a dated observation.';
+ }catch(error){status.dataset.controllerTest='fail';status.textContent='FAIL · '+error.message;}};
+status.textContent='Native spatial panels ready. Choose a question or test the controller field loop.';
+</script></body></html>

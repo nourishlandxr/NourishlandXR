@@ -1,3 +1,4 @@
+import {LIMO_CELL_BY_ID,limoRouteId} from '../app/services/limoProjectLearning.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { PIGEON_PEA_PIM } from '../app/services/pigeonPeaPim.js';
@@ -15,9 +16,9 @@ import { readFileSync } from 'node:fs';
 test('guided connection names and IDs come from authored PIMO and LIMO cells', () => {
     const spec = demoNativeConnectionSpec(PIGEON_PEA_PIM, LIM_CELL_BY_ID);
     assert.equal(spec.sourceTitle, 'Food Forest');
-    assert.equal(spec.targetTitle, 'Living Landscapes');
+    assert.equal(spec.targetTitle, 'Guilds & neighbours');
     assert.equal(PIGEON_PEA_PIM.nodes.find(node => node.id === spec.sourceId)?.path || spec.sourceId, spec.sourcePath);
-    assert.equal(LIM_CELL_BY_ID[spec.targetId]?.title, spec.targetTitle);
+    assert.equal(LIMO_CELL_BY_ID[spec.targetId]?.title, spec.targetTitle);
 });
 
 test('three selectable examples use authored cells and disclose the real-place question',()=>{
@@ -26,10 +27,10 @@ test('three selectable examples use authored cells and disclose the real-place q
         const spec=demoNativeConnectionSpec(PIGEON_PEA_PIM,LIM_CELL_BY_ID,example.id);
         assert.equal(spec.exampleId,example.id);
         assert.equal(spec.sourceId,example.sourceId);
-        assert.equal(spec.targetId,example.targetId);
+        assert.equal(spec.targetId,limoRouteId(example.targetId));
         assert.ok(spec.explanation && spec.fieldQuestion);
         assert.equal(PIGEON_PEA_PIM.nodes.find(node=>node.id===spec.sourceId)?.title,spec.sourceTitle);
-        assert.equal((LIM_CELL_BY_ID[spec.targetId] || LIM_INTRO_CELL_BY_ID[spec.targetId])?.title,spec.targetTitle);
+        assert.equal((LIMO_CELL_BY_ID[spec.targetId] || LIM_INTRO_CELL_BY_ID[spec.targetId])?.title,spec.targetTitle);
         const lineage=demoNativeTargetLineage(welcomeExperienceFrames(64000,false),spec.targetId);
         assert.ok(lineage?.key && lineage.ancestors.length);
         const frames=welcomeExperienceFrames(64000,false,undefined,undefined,{cellsActivatedAt:0,expandedLimIds:lineage.ancestors,expandedAt:Object.fromEntries(lineage.ancestors.map(id=>[id,0]))});
@@ -41,11 +42,11 @@ test('three selectable examples use authored cells and disclose the real-place q
 
 test('harvest uses connect to authored Vision with resolvable learning content',()=>{
     const spec=demoNativeConnectionSpec(PIGEON_PEA_PIM,LIM_CELL_BY_ID,'uses');
-    assert.equal(spec.targetId,'lim-intro-vision');
+    assert.equal(spec.targetId,'limo-vision-purpose');
     const resolver=createMeshSourceResolver();
     const target=resolver.resolve(limMeshRef(spec.targetId));
-    assert.equal(target.title,'Vision');
-    assert.match(target.content,/future a project/);
+    assert.equal(target.title,'People, purpose & care');
+    assert.match(target.content,/prioritise/);
 });
 
 test('demo Control Panel offers each example and explains the selected connection',()=>{
@@ -105,5 +106,5 @@ test('the authored cells resolve to one stable relationship without altering eit
     assert.equal(first.relationship.id, second.relationship.id);
     assert.equal(repository.listRelationships().length, 1);
     assert.equal(PIGEON_PEA_PIM.nodes.find(node => node.id === spec.sourceId)?.title, spec.sourceTitle);
-    assert.equal(LIM_CELL_BY_ID[spec.targetId]?.title, spec.targetTitle);
+    assert.equal(LIMO_CELL_BY_ID[spec.targetId]?.title, spec.targetTitle);
 });

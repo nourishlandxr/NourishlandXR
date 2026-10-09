@@ -34,7 +34,7 @@ test('LIM hit targets use cell coordinates while the welcome panel keeps its own
     assert.equal(welcomeCellAtPoint(welcomeExperienceFrames(64000, true), node.x, node.y).key, node.key);
 });
 
-test('Quest rays select all four LIMO roots and child cells outside the central welcome note', () => {
+test('Quest rays select all six LIMO roots and child cells outside the central welcome note', () => {
     const scaleX = 10;
     const scaleY = 21;
     const surface = demoBillboardSurfaceSize(scaleX, scaleY);
@@ -49,14 +49,14 @@ test('Quest rays select all four LIMO roots and child cells outside the central 
     const pathwayRoots = welcomeExperienceFrames(64000, false)
         .flatMap(frame => frame.nodes)
         .filter(node => node.depth === 0 && node.id !== 'vision');
-    assert.equal(pathwayRoots.length, 4);
+    assert.equal(pathwayRoots.length, 6);
     const expandedFrames=welcomeExperienceFrames(64000,false,undefined,undefined,{
         cellsActivatedAt:0,
         expandedLimIds:pathwayRoots.map(node=>node.limId),
         expandedAt:Object.fromEntries(pathwayRoots.map(node=>[node.limId,0]))
     });
-    const pathwayChildren=expandedFrames.flatMap(frame=>frame.nodes.filter(node=>node.depth===1).slice(0,1));
-    assert.equal(pathwayChildren.length,4);
+    const pathwayChildren=expandedFrames.flatMap(frame=>frame.nodes.filter(node=>node.depth===1 && node.opacity>.5));
+    assert.equal(pathwayChildren.length,5);
     for (const { x: pixelX, y: pixelY, key } of [...pathwayRoots,...pathwayChildren]) {
         const local = demoBillboardTextureLocalPoint(pixelX, pixelY, 2500, 2100);
         const ray={

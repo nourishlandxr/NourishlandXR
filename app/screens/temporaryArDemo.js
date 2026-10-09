@@ -1,3 +1,5 @@
+import {createLimoSpatialExperience} from '../services/limoSpatialExperience.js';
+import {LIMO_CELL_BY_ID,limoRouteId} from '../services/limoProjectLearning.js';
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {createDemoParagraphSequence} from '../services/demoParagraphSequence.js';
 import {DEMO_NATIVE_PLANTS,NATIVE_PLANT_CHOOSER_COPY,chooseDemoNativePlant} from '../services/demoNativePlants.js';
@@ -210,6 +212,21 @@ let sphereRenderer = null;
 let rainRenderer=null;
 let totemCardsRenderer = null;
 let infoPanel = null;
+let demoLimo=null,demoLimoReturn=null;
+function demoLimoContext(){
+ const zones=markers.filter(item=>item.demoType==='zone');
+ const areas=zones.map(item=>({id:item.id,siteId:'example-site',siteName:'Illustrative Site',name:item.demoZoneName || item.name || 'Example Area'}));
+ if(!areas.length)areas.push({id:'example-area',siteId:'example-site',name:'Example Area'});
+ return {projectId:'nlxr-spatial-example',name:'Nourishland example',sites:[{id:'example-site',name:'Illustrative Site'}],areas,warnings:[],illustrative:true,
+  entries:markers.filter(item=>['plant','note'].includes(item.demoType)).map(item=>{const place=areas.find(area=>area.id===item.demoAreaId) || areas[item.demoAmbientNeighbour?Math.min(1,areas.length-1):0];return {projectId:'nlxr-spatial-example',siteId:'example-site',areaId:place.id,areaName:place.name,sourceRecord:item,marker:{id:item.id,name:item.name,type:item.demoType,status:'published',description:item.demoType==='note'?'Illustrative Project Note':'Authored demonstration plant; not a field inventory.'},profile:item.demoKnowledgeProfile || {}};})};
+}
+function ensureDemoLimo(){
+ if(demoLimo)return demoLimo;
+ demoLimo=createLimoSpatialExperience({panel:infoPanel,onInspect:entry=>{if(entry.marker.type==='plant')showDemoInfo(entry.sourceRecord,demoOrbKnowledge(entry.sourceRecord).document.nodes.find(node=>!node.parentId)?.id || 'food-forest');else openDemoNoteExperience(entry.sourceRecord);},onFocus:entry=>{setGuide('Find '+entry.areaName+' on the Living Map. This is an illustrative Area.');demoLimo.select(demoLimo.snapshot().state.cellId || 'limo-life');},onSelect:cell=>{limExpandedCells.clear();const root=cell.parentId || cell.id;limExpandedCells.add(root);limExpandedAt.set(root,arWelcomeClock.elapsed-5000);const node=welcomeFrames().flatMap(frame=>frame.nodes).find(item=>item.limId===cell.id);if(node)selectedLimCell=node.key;introBoardTextureDirty=true;},onClose:()=>{selectedLimCell='';introBoardTextureDirty=true;if(demoLimoReturn)infoPanel.restoreSnapshot(demoLimoReturn);else{infoPanel.showLearning({title:'Choose a Project question',body:'Select one of the six LIMO roots to continue learning from this place.',mesh:'lim',editable:false});infoPanel.setExplorerOpen(false);}}});
+ return demoLimo;
+}
+async function openDemoLimo(){demoLimoReturn=infoPanel.snapshot();if(demoLimo?.snapshot().context)demoLimo.show();else await ensureDemoLimo().open({context:demoLimoContext()});}
+
 let pimHold = null;
 let lastSpatialPimActivationAt = -Infinity;
 let demoPimHover={record:null,path:''};
@@ -602,7 +619,7 @@ function clearSessionState() {
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
     totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;heroDiceToy?.destroy();heroDiceToy=null;
-    pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
+    demoLimo?.close();demoLimo=null;demoLimoReturn=null;pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
     handOutlineRenderer?.destroy();handOutlineRenderer=null;
     nearHandInteraction?.destroy();nearHandInteraction=null;
@@ -754,7 +771,7 @@ function syncDemoPanelActions() {
 function setLimMeshVisible(visible) {
     if(visible && !limMeshVisible){limMeshActivatedAt=arWelcomeClock.elapsed;limExpandedCells=new Set();limExpandedAt=new Map();selectedLimCell='';}
     limMeshVisible=Boolean(visible);
-    if(limMeshVisible)infoPanel?.showLearning({id:'lim-archetype-invitation',title:'Connected learning',body:'This view turns information into useful questions. Read what is here, understand relationships, connect knowledge to purpose, then choose an action and learn from the result.',accent:'#dfff9b',mesh:'lim',editable:false});
+    if(limMeshVisible)void openDemoLimo();
     introBoardTextureDirty=true;
     paintWelcomeLayer(performance.now());
     syncDemoPanelActions();
@@ -1012,9 +1029,10 @@ const LIM_APPLICATION_LENSES = Object.freeze([
 ]);
 
 function prepareLimPitchCell(cellId) {
+    cellId=limoRouteId(cellId);
     limMeshVisible=true;
     limMeshActivatedAt=arWelcomeClock.elapsed-AR_WELCOME_SETTLED_MS;
-    const cell=LIM_INTRO_CELL_BY_ID[cellId];
+    const cell=LIMO_CELL_BY_ID[cellId] || LIM_INTRO_CELL_BY_ID[cellId];
     if(cell?.parentId){
         limExpandedCells.add(cell.parentId);
         limExpandedAt.set(cell.parentId,arWelcomeClock.elapsed-5000);
@@ -1725,7 +1743,7 @@ const welcomeSequenceCanContinue=()=>introOpeningCopySkipped || arWelcomeClock.e
 
 let selectedLimCell='',arWelcomeSettleStage=false,arWelcomeSettleStartedAt=NaN;
 function limNodeByKey(key) { return welcomeFrames().flatMap(frame=>frame.nodes).find(node=>node.key===key) || null; }
-const understandPlacePathway=()=>LIM_PATHWAYS.find(pathway=>pathway.id==='lim-path-understand-place');
+const understandPlacePathway=()=>({...LIM_PATHWAYS.find(pathway=>pathway.id==='lim-path-understand-place'),version:2,description:'An optional field question route. Branch or pause at any time.',orderedCellIds:['limo-place-sun','limo-place-climate','limo-relationships-guilds','limo-life-layers','limo-life-wildlife','limo-action-record','limo-change-repeat']});
 const currentPathwayCellId=()=>understandPlacePathway()?.orderedCellIds[limPathwayState.currentStepIndex] || '';
 const currentPathwayNode=()=>welcomeFrames().flatMap(frame=>frame.nodes).find(node=>(node.limId || node.label)===currentPathwayCellId()) || null;
 function persistLimPathway(){saveLimPathwayState(window.localStorage,limPathwayState);}
@@ -1802,7 +1820,7 @@ function paintLearningModuleBoard(){
     setIntroBoardNextGuide(step?`Select ${limLearningContent(step.cellId).title} to continue. To finish, open Tools in the Control panel and choose End learning.` :'Open Tools in the Control panel and choose End learning to return to the demo.');
     infoPanel?.setLearningModules(board,{open:true});
     selectedLimCell='';
-    if(step){const node=welcomeFrames().flatMap(frame=>frame.nodes).find(item=>item.limId===step.cellId);if(node)selectedLimCell=node.key;}
+    if(step){const node=welcomeFrames().flatMap(frame=>frame.nodes).find(item=>item.limId===limoRouteId(step.cellId));if(node)selectedLimCell=node.key;}
     paintWelcomeLayer(performance.now());
 }
 function endLearningModule(){
@@ -1843,14 +1861,15 @@ function activateLimCell(key,{toggle=true}={}) {
     // archetypes remain quiet until the visitor chooses to open them.
     if(!limExpandedCells.has(content.id))limExpandedAt.set(content.id,arWelcomeClock.elapsed);
     limExpandedCells.add(content.id);
-    infoPanel?.showLearning({...content,mesh:'lim',controlsType:'LIMO'});infoPanel?.setExplorerOpen(true);
+    if(LIMO_CELL_BY_ID[content.id]){const experience=ensureDemoLimo();if(!experience.snapshot().context)void experience.open({context:demoLimoContext(),cellId:content.id});else experience.select(content.id);}
+    else{infoPanel?.showLearning({...content,mesh:'lim',controlsType:'LIMO'});infoPanel?.setExplorerOpen(true);}
     if(nativeConnectionState && nativeConnectionState.phase!=='connected')nativeConnectionPanelGuide();
     infoPanel?.suspend(false);
     infoPanel?.setCompact(false);
     if(content.sketchImage || content.image)infoPanel?.setMediaCollapsed(false);
     if(learningModule){
         const step=learningModule.steps[learningModuleStep];
-        if(step?.cellId===content.id){learningModuleStep+=1;paintLearningModuleBoard();}
+        if(limoRouteId(step?.cellId)===content.id){learningModuleStep+=1;paintLearningModuleBoard();}
         else infoPanel?.setLearningModules(learningModuleBoard());
         introBoardTextureDirty=true;suppressSessionSelectUntil=performance.now()+700;return true;
     }
@@ -4536,7 +4555,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onUtilityAction:handleDemoPanelAction});
+    demoLimo?.close();demoLimo=null;demoLimoReturn=null;infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onLimoAction:openDemoLimo,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
@@ -5160,6 +5179,15 @@ function introVisibleCopy(){
     return introBoardVisibleBody;
 }
 function drawIntroNoteContent(ctx) {
+    if(demoLimo && !arWelcomeIntroPending && !arWelcomeOpeningActive && selectedLimCell && !learningModule && !nativeConnectionState && introBoardStep!=='UTILITY 1.1'){
+        const content=demoLimo.content();
+        ctx.save();ctx.globalAlpha=1;ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillStyle=content.accent;ctx.font='700 24px system-ui';ctx.fillText('LIMO / '+content.limo.cue,700,345,880);
+        ctx.fillStyle='#f4f0df';ctx.font='700 48px system-ui';ctx.fillText(content.title,700,425,880);
+        ctx.font='500 25px system-ui';ctx.fillText(content.limo.project+' · '+content.limo.scope,700,495,880);
+        ctx.fillStyle='#c3d8c1';ctx.fillText(content.limo.summary,700,545,880);
+        ctx.font='500 22px system-ui';ctx.fillText('Inspect a record · notice · try · return',700,625,880);ctx.restore();return;
+    }
     // The glass/rim fades in first. Text appears once at its final white value.
     if(arWelcomeOpeningActive && !introOpeningCopySkipped && arWelcomeClock.elapsed<900)return;
     ctx.globalAlpha=1;

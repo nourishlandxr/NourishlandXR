@@ -1,3 +1,4 @@
+import {limoLearningContent,LIMO_CELL_BY_ID} from './limoProjectLearning.js';
 // Learning Information Mesh (LIM) content for the introductory demo.
 // LIM is separate from the Plant Information Mesh (PIM), which remains the
 // source of plant knowledge and saved plant profiles.
@@ -499,6 +500,8 @@ export const LIM_INTRO_BRANCHES = Object.freeze(LIM_INTRO_ROOT_IDS.map(id=>{
 const cellByLabel = new Map(LIM_ALL_CELLS.map(cell => [cell.title, cell]));
 const LEGACY_LABEL_IDS = Object.freeze({Climate:'lim-climate','Food forest':'lim-food-forest',Plant:'lim-plant',Pin:'lim-pin'});
 export function limLearningContent(labelOrId) {
+    const projectLearning=LIMO_CELL_BY_ID[labelOrId]?limoLearningContent(labelOrId):null;
+    if(projectLearning)return projectLearning;
     const cell = LIM_INTRO_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[labelOrId] || LIM_CELL_BY_ID[LEGACY_LABEL_IDS[labelOrId]] || cellByLabel.get(labelOrId);
     const illustration = LIM_ARCHETYPE_MEDIA[cell?.id];
     const label = cell?.title || String(labelOrId ?? 'Learning');
@@ -523,4 +526,4 @@ export function limLearningContent(labelOrId) {
         sketchImage: sketch?.src || '', sketchImageAlt: sketch?.alt || ''
     };
 }
-export function limCellById(id) { return LIM_CELL_BY_ID[id] || null; }
+export function limCellById(id) { return LIMO_CELL_BY_ID[id] || LIM_CELL_BY_ID[id] || LIM_INTRO_CELL_BY_ID[id] || null; }

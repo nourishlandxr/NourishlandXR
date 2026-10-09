@@ -1,3 +1,4 @@
+import {LIMO_CELL_BY_ID} from './limoProjectLearning.js';
 import { LIM_CELL_BY_ID, LIM_INTRO_CELL_BY_ID } from './limLearning.js';
 import { pimAncestors, pimKnowledgeScope, pimNodeById } from './pimModel.js';
 
@@ -56,7 +57,7 @@ export function createMeshSourceResolver({repository}={}){
     function resolve(input){
         const ref=canonicalMeshRef(input),key=meshRefKey(ref);
         if(ref.kind==='lim'){
-            const node=LIM_CELL_BY_ID[ref.nodeId] || LIM_INTRO_CELL_BY_ID[ref.nodeId];
+            const node=LIMO_CELL_BY_ID[ref.nodeId] || LIM_CELL_BY_ID[ref.nodeId] || LIM_INTRO_CELL_BY_ID[ref.nodeId];
             if(!node)throw new Error(`Unresolved LIM reference: ${key}.`);
             return freeze({ref,key,title:node.title,content:node.content || '',scope:'learning',fingerprint:`${key}:${node.content || ''}`,provenance:freeze({system:'lim',nodeId:node.id})});
         }

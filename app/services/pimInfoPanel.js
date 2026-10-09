@@ -1,3 +1,4 @@
+import {limoSpatialControls,drawLimoSpatialControls,drawLimoSpatialReading} from './limoSpatialPresentation.js';
 import {pimToArKnowledge} from './pimModel.js';
 import {spatialControlLayout} from './spatialControlLayout.js';
 import {currentNxrLanguage,setNxrLanguage,translateNxrText as t,translateApp,localizedCanvasContext} from './i18n.js';
@@ -294,7 +295,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
     let rayFilter=()=>true;
     let graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality;
@@ -413,6 +414,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         if(action.startsWith('OpenSource:')){const link=selection?.sourceLinks?.[Number(action.slice(11))];if(/^https?:\/\//i.test(link?.url || ''))globalThis.open?.(link.url,'_blank','noopener,noreferrer');return;}
         if(guidanceAction===action){guidanceAction='';element.classList.remove('is-panel-guidance');element.querySelectorAll('.is-guidance-target').forEach(button=>button.classList.remove('is-guidance-target'));}
         if(action==='Notes'){onUtilityAction('notes');return;}
+        if(action.startsWith('Limo:')){const command=action.slice(5);if(command==='open')onLimoAction(command,knowledgeRecord || record);else selection?.limo?.onAction?.(command);return;}
         if(action.startsWith('Object:')){objectContext?.onAction?.(action.slice(7));return;}
         if(action.startsWith('FruitWindow:')){const command=action.slice(12);if(command==='load')loadFruitWindow();else if(command==='hide')hideFruitWindow();else if(command==='next')fruitWindow?.nextExample();else fruitWindow?.action(command);renderExplorer();return;}
         if(action==='Explorer'){explorerClosed=!explorerClosed;render(true);return;}
@@ -989,6 +991,7 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         ctx.lineWidth=card.grabState==='held'?8:card.grabState?5:4;
         ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
+        if(card.explorer && card.limo){drawLimoSpatialControls(ctx,card);return c;}
         if(card.explorer){
             ctx.fillStyle='#edf3e4';ctx.font='700 30px Manrope, system-ui';ctx.fillText('Controls',24,12,180);ctx.font='500 20px Manrope, system-ui';ctx.fillStyle='#cfdfd9';ctx.fillText(card.linkedLabel || card.question,230,15,600);
             for(const item of card.controls){
@@ -1037,7 +1040,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             }
             return c;
         }
-        if(card.headset && !card.hidden){
+        if(card.limo && !card.hidden){drawLimoSpatialReading(ctx,card);}
+        else if(card.headset && !card.hidden){
             const rail=card.railCollapsed?54:164,media=0;
             const left=rail+22,right=1000-media-22,width=right-left;
             const headerBottom=card.progress?164:88;
@@ -1176,16 +1180,18 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         return hover;
     }
     function explorerControls(){
+        if(selection?.limo && !objectContext)return limoSpatialControls(selection.limo);
         if(selection?.controlsType==='LIMO' && !objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},{action:'Utility:limo-show',label:'Show cells',x:22,y:62,width:464,height:54},{action:'Utility:limo-hide',label:'Hide cells',x:506,y:62,width:464,height:54}];
         if(objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...spatialControlLayout(objectContext.actions).map(item=>({...item,action:'Object:'+item.id}))];
         if(!knowledgeRecord && stageContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...spatialControlLayout(stageContext.actions || []).map(item=>({...item,action:'Utility:'+item.id}))];
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:panelModeChoice};
-        return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...visiblePimoModes().map((id,i)=>({action:'KnowledgeMode:'+id,label:KNOWLEDGE_MODES[id].label,x:22+i*326,y:62,width:304,height:54,kind:'mode',description:KNOWLEDGE_MODES[id].description,selected:state.mode===id})),
-            {action:'FruitWindow:load',label:fruitVisible?'Fruit Window loaded':'Load Fruit Window',x:22,y:138,width:464,height:54,disabled:fruitVisible},
-            {action:'FruitWindow:hide',label:'Hide Fruit Window',x:506,y:138,width:464,height:54,disabled:!fruitVisible},
+        return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...visiblePimoModes().map((id,i)=>({action:'KnowledgeMode:'+id,label:KNOWLEDGE_MODES[id].label,x:22+i*326,y:128,width:304,height:54,kind:'mode',description:KNOWLEDGE_MODES[id].description,selected:state.mode===id})),
+            {action:'Limo:open',label:'Learn in this Project · LIMO',x:22,y:66,width:948,height:54},
+            {action:'FruitWindow:load',label:fruitVisible?'Fruit Window loaded':'Load Fruit Window',x:22,y:204,width:464,height:54,disabled:fruitVisible},
+            {action:'FruitWindow:hide',label:'Hide Fruit Window',x:506,y:204,width:464,height:54,disabled:!fruitVisible},
             ...(fruitVisible&&renderer?[
-                {action:'FruitWindow:next',label:'Example: '+(fruitWindow?.getLabel()||'Loading…'),x:22,y:204,width:948,height:54},
-                ...[['play','Grow'],['RIPE','Harvest'],['pick','Pick'],['return','Return'],['open','Open'],['close','Close']].map(([command,label],i)=>({action:'FruitWindow:'+command,label,disabled:!fruitWindow?.canAction(command),x:22+(i%3)*326,y:270+Math.floor(i/3)*66,width:304,height:54}))
+                {action:'FruitWindow:next',label:'Example: '+(fruitWindow?.getLabel()||'Loading…'),x:22,y:270,width:948,height:54},
+                ...[['play','Grow'],['RIPE','Harvest'],['pick','Pick'],['return','Return'],['open','Open'],['close','Close']].map(([command,label],i)=>({action:'FruitWindow:'+command,label,disabled:!fruitWindow?.canAction(command),x:22+(i%3)*326,y:336+Math.floor(i/3)*66,width:304,height:54}))
             ]:[])];
     }
     const explorerHeight=()=>Math.max(180,...explorerControls().map(item=>item.y+item.height+18));
@@ -1194,8 +1200,8 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
         explorerElement.hidden=hidden || detached || confirmation || explorerClosed || Boolean(renderer);element.classList.toggle('has-explorer-companion',!explorerElement.hidden);if(explorerElement.hidden)return;
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:availablePimoModes().includes(panelModeChoice)?panelModeChoice:'curiosity'},main=element.getBoundingClientRect();explorerElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
         explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? main.left)+'px';explorerElement.style.top=(explorerPosition?.y ?? Math.max(8,Math.min(main.bottom+12,window.innerHeight-166)))+'px';
-        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
-        const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
+        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
+        const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=selection?.limo?.coverage || objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
         const modes=document.createElement('nav');modes.className='nlxr-explorer-modes';modes.setAttribute('aria-label','Knowledge view');
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','PIMO controls');
         for(const item of explorerControls()){
@@ -1406,13 +1412,13 @@ export function createPimInfoPanel({ root, headset = false, phoneAR = false, sim
             fruitWindow?.draw(view);
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
-            const card={id:'control',infoOpacity,headset,hidden,panelGuidance:guidanceAction==='ToggleMedia',tab,height:hidden?1000:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',guidancePhase:guidanceAction?Math.floor(lastTime/180):0,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(readingTrail()):'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:'',metadata:metadata()};
+            const card={id:'control',limo:selection?.limo,infoOpacity,headset,hidden,panelGuidance:guidanceAction==='ToggleMedia',tab,height:hidden?1000:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',guidancePhase:guidanceAction?Math.floor(lastTime/180):0,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(readingTrail()):'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,languageOpen,performanceMessage:performanceStatus(),infoOpacity,height:840,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
-            const explorerCard={id:'explorer',explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
+            const explorerCard={id:'explorer',limo:selection?.limo,explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
             explorerCard.linkedLabel=(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();

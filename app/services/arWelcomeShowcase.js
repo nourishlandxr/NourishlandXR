@@ -1,3 +1,4 @@
+import {LIMO_BRANCHES,LIMO_CELLS} from './limoProjectLearning.js';
 import {currentInfoOpacity} from './spatialVisualSettings.js';
 import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {drawArWelcomePanel,welcomeBoundary,WELCOME_SHAPE} from './arWelcomePanel.js';
@@ -23,7 +24,7 @@ export const createArWelcomeClusters = () => AR_WELCOME_GRAPHS.map((graph,index)
 // First cross-branch prototype. These two foundations describe one practical
 // relationship: guild design gives plant functions a place in the system.
 export const LIM_RELATION_PROTOTYPES = Object.freeze([
- Object.freeze({ids:Object.freeze(['lim-intro-literacy-guilds','lim-intro-food-function']),accent:'#9fbd78',label:'Guilds connect plant relationships with useful forest functions'})
+ Object.freeze({ids:Object.freeze(['limo-relationships-guilds','limo-relationships-techniques']),accent:'#9fbd78',label:'Guilds connect plant relationships with useful forest functions'})
 ]);
 export function welcomeRelationshipFor(limId){return LIM_RELATION_PROTOTYPES.find(item=>item.ids.includes(limId)) || null;}
 const smooth = (value,start,duration) => {const t=Math.min(1,Math.max(0,(value-start)/duration));return t*t*(3-2*t);};
@@ -197,77 +198,18 @@ function settleWelcomeLayout(frames) {
 function revealFrames(graphs) {
  const cached=settledLayouts.get(graphs);
  if(cached)return cached.map(frame=>({...frame,nodes:frame.nodes.map(node=>({...node}))}));
- const legacy=graphs.map((_,corner)=>welcomeNetworkFrame(corner*AR_WELCOME_CORNER_MS+12000,false,graphs));
- const archetypeConfig=[
-  {id:'analysis',limId:'lim-intro-analysis',quadrant:0,at:800,legacy:[0,3],legacyParents:['lim-intro-analysis-climate','lim-intro-analysis-landscape']},
-  {id:'literacy',limId:'lim-intro-literacy',quadrant:1,at:1400,legacy:[2,4,5],legacyParents:['lim-intro-literacy-plants','lim-intro-literacy-fruit','lim-intro-literacy-guilds']},
-  {id:'food-forest',limId:'lim-intro-food-forest',quadrant:2,at:2000,legacy:[1,6],legacyParents:['lim-intro-food-design','lim-intro-food-function']},
-  {id:'smart',limId:'lim-intro-smart',quadrant:3,at:2600,legacy:[7],legacyParents:['lim-intro-smart-goals']}
- ];
- const archetypes=archetypeConfig.map(config=>{
-  const branch=LIM_INTRO_BRANCHES.find(item=>item.id===config.limId);
-  return {...config,label:branch?.displayLabel||branch?.title||config.id,accent:branch?.accent||'#dcef95',children:(branch?.children||[]).map(child=>[child.title,child.id])};
- });
- // These are forward/side distances in the root's own direction of growth.
- // Their slight unevenness keeps the branch cellular and connected without
- // arranging every family into the same mechanical honeycomb.
- const foundationOffsets=[[0,0],[158,-7],[294,73],[302,-91],[151,-154],[438,18],[292,238],[304,-244]];
- const foundationPoint=(quadrant,slot,root)=>{
-  const [forward,side]=foundationOffsets[slot]||foundationOffsets.at(-1);
-  const angle=root.growthAngle;
-  const drift=((quadrant*11+slot*7)%13)-6;
-  return {x:root.x+Math.cos(angle)*(forward+drift)-Math.sin(angle)*(side-drift*.45),
-   y:root.y+Math.sin(angle)*(forward+drift)+Math.cos(angle)*(side-drift*.45)};
- };
- const reservedSlots=[[2,1],[1,1],[3,1],[2,0],[2,2],[1,0],[3,0],[1,2],[3,2],[0,1],[4,1],[0,0],[4,0],[0,2],[4,2],[2,3],[1,3],[3,3],[0,3],[4,3],
-  [5,0],[5,1],[5,2],[5,3],[6,0],[6,1],[6,2],[6,3]];
- const reservedPoint=(quadrant,slot)=>{
-  const [column,row]=reservedSlots[slot]||reservedSlots.at(-1),topY=160+row*159+(column%2)*79;
-  const leftX=220+column*138;
-  const offsets=[[65,-28],[22,15],[48,12],[65,-18]];
-  const [shiftX,shiftY]=offsets[quadrant],seed=(quadrant*37+slot*19)%17-8;
-  return {x:(quadrant===1||quadrant===2?2500-leftX:leftX)+shiftX+seed,
-   y:(quadrant>=2?2150-topY:topY)+shiftY+((quadrant*11+slot*13)%17-8)};
- };
- const frames=archetypes.map((archetype,corner)=>{
-  const nodes=[];
-  const rootPoint=attachedRoot([3.92,5.48,.73,2.43][archetype.quadrant]);
-  nodes.push({id:archetype.id,parent:null,label:archetype.label,depth:0,limId:archetype.limId,accent:archetype.accent,accessibilityLabel:`${archetype.label} archetype learning cell`,...rootPoint,baseRadius:LIM_CELL_SHAPE.archetypeRadius,radius:LIM_CELL_SHAPE.archetypeRadius,revealAt:archetype.at});
-  archetype.children.forEach(([label,limId],index)=>{
-   const position=foundationPoint(archetype.quadrant,index+1,rootPoint);
-   nodes.push({id:limId,parent:archetype.id,label,depth:1,limId,accent:childCellAccent(archetype.accent),accessibilityLabel:`${label} foundational learning cell`,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:archetype.at+1800+index*700});
-  });
-  let slot=5;
-  const nextReservedPosition=()=>{
-   while(slot<reservedSlots.length){
-    const candidate=reservedPoint(archetype.quadrant,slot++);
-    if(nodes.every(node=>Math.hypot(node.x-candidate.x,node.y-candidate.y)>=node.baseRadius+LIM_CELL_SHAPE.childRadius+10))return candidate;
-   }
-   return reservedPoint(archetype.quadrant,slot++);
-  };
-  archetype.legacy.forEach((legacyCorner,legacyIndex)=>{
-   const source=legacy[legacyCorner],foundationParent=archetype.legacyParents[legacyIndex];
-   // Keep the established four-cell showcase sample for each LIM face. The
-   // complete LIM stays available through limLearningContent; presenting all
-   // authored records at once would crowd the spatial board and create the
-   // overlaps this fixed lattice is intended to prevent.
-   const sourceCells=source.nodes;
-   const idMap=new Map(sourceCells.map(cell=>[cell.id,`legacy-${legacyCorner}-${cell.id}`]));
-   const foundation=nodes.find(node=>node.id===foundationParent);
-   const faceAt=Math.max(archetype.at+6500+(legacyIndex*2100),foundation.revealAt+1700);
-   sourceCells.forEach((cell,nodeIndex)=>{
-    const position=nextReservedPosition(),id=idMap.get(cell.id);
-    const parent=cell.parent===null?foundationParent:(idMap.get(cell.parent)||foundationParent);
-    const parentNode=nodes.find(item=>item.id===parent);
-    nodes.push({id,parent,label:cell.label,depth:cell.parent===null?2:3,limId:cell.limId,accent:childCellAccent(cell.accent||archetype.accent),accessibilityLabel:cell.accessibilityLabel,...position,baseRadius:LIM_CELL_SHAPE.childRadius,radius:LIM_CELL_SHAPE.childRadius,revealAt:Math.max(faceAt+nodeIndex*560,(parentNode?.revealAt||0)+1700)});
-   });
+ const angles=[3.65,4.71,5.78,.51,1.57,2.63];
+ const frames=LIMO_BRANCHES.map((branch,corner)=>{
+  const root=attachedRoot(angles[corner]);
+  const nodes=[{...root,id:branch.id,parent:null,limId:branch.id,label:branch.title,cue:branch.cue,role:'question',depth:0,accent:branch.accent,accessibilityLabel:branch.title+' project question',baseRadius:92,radius:92,revealAt:400+corner*170}];
+  branch.children.forEach((child,index)=>{
+   const forward=210+Math.floor(index/3)*170,side=(index%3-1)*190;
+   nodes.push({id:child.id,parent:branch.id,limId:child.id,label:child.title,cue:child.role==='scenario'?'DRAFT':child.role==='action'?'TRY':child.role==='review'?'RETURN':'NOTICE',role:child.role,depth:1,accent:branch.accent,accessibilityLabel:child.title+' '+child.role+' cell',x:root.x+Math.cos(root.growthAngle)*forward-Math.sin(root.growthAngle)*side,y:root.y+Math.sin(root.growthAngle)*forward+Math.cos(root.growthAngle)*side,baseRadius:70,radius:70,revealAt:2200+corner*170+index*280});
   });
   return {corner,phase:0,cycle:0,nodes};
  });
- const layout=frames;
- settleWelcomeLayout(layout);
- settledLayouts.set(graphs,layout);
- return layout.map(frame=>({...frame,nodes:frame.nodes.map(node=>({...node}))}));
+ settleWelcomeLayout(frames);settledLayouts.set(graphs,frames);
+ return frames.map(frame=>({...frame,nodes:frame.nodes.map(node=>({...node}))}));
 }
 
 // Keep developed cells in place. Dismissal uses stable corner/node identities,
@@ -289,14 +231,15 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
    node.radius=node.baseRadius*node.scale;
    node.emphasis=reducedMotion?0:(1-smooth(time,node.revealAt+1800,1800))*node.progress;
    node.state=node.progress===0?'hidden':node.progress<1?'revealing':'settled';
-   // Every branch is an invitation, not ambient clutter. The four archetypes
+   // Every branch is an invitation, not ambient clutter. The six project questions
    // are the stable roots. Selecting one blooms its immediate children in a
    // short, staggered sequence; Vision belongs to Shape the Outcome.
    if(!progression?.opening && node.depth>=1){
     const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
     const parentId=parent?.limId || node.parent;
     const parentExpanded=expanded.has(node.parent)||expanded.has(parentId);
-    if(!parentExpanded){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
+    const activeRoot=[...expanded].reverse().find(id=>LIMO_BRANCHES.some(branch=>branch.id===id));
+    if(!parentExpanded || (activeRoot && frame.nodes[0].limId!==activeRoot)){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
     else if(Number.isFinite(expandedAt[parentId])){
      const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent);
      const siblingIndex=Math.max(0,siblings.indexOf(node));
@@ -335,11 +278,16 @@ export function welcomeCellAtPoint(frames,x,y) {
 
 // Labels share the face transform, so their centre cannot drift off the cell.
 export function fitWelcomeCellLabel(ctx,label,radius,depth) {
- const lines=translateNxrText(label).split(' '), maxWidth=radius*1.48;
- let font=32;
- do {ctx.font=`620 ${font}px system-ui`;if(lines.every(line=>ctx.measureText(line).width<=maxWidth))break;font--;}
- while(font>16);
- return {lines,font,lineHeight:font*1.12,maxWidth};
+ const words=translateNxrText(label).split(' '),maxWidth=radius*1.48;
+ let font=depth===0?30:25,lines=[];
+ do {
+  ctx.font='650 '+font+'px system-ui';lines=[];let line='';
+  for(const word of words){const candidate=line?line+' '+word:word;if(line&&ctx.measureText(candidate).width>maxWidth){lines.push(line);line=word;}else line=candidate;}
+  if(line)lines.push(line);
+  if(lines.length<=(depth===0?2:3)&&lines.every(item=>ctx.measureText(item).width<=maxWidth))break;
+  font--;
+ }while(font>18);
+ return {lines,font,lineHeight:font*1.13,maxWidth};
 }
 
 function accentRgba(value,hue,alpha=.7){
@@ -427,7 +375,8 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  ctx.fillStyle='rgba(255,255,245,.98)';
  ctx.shadowColor='rgba(6,28,15,.8)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
  if(drawLabel){
-  const label=fitWelcomeCellLabel(ctx,node.label,r,node.depth);
+  const label=fitWelcomeCellLabel(ctx,node.label,r*.94,node.depth);
+  if(node.cue){ctx.shadowBlur=0;ctx.fillStyle=accent || '#a9ce8c';ctx.font='750 14px system-ui';ctx.fillText(node.cue,0,-r*.70);ctx.fillStyle='#f5f0df';}
   label.lines.forEach((line,i)=>ctx.fillText(line,0,(i-(label.lines.length-1)/2)*label.lineHeight));
  }
  ctx.restore();
