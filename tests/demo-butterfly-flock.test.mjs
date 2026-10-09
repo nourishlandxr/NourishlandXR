@@ -8,9 +8,10 @@ import vm from 'node:vm';
 import * as THREE from '../app/vendor/three.module.min.js';
 import {BUTTERFLY_RENDER_BUDGETS} from '../app/services/demoButterflyModel.js';
 
-test('six new colours join the original two at half size, with distinct panel perches',()=>{
+test('six new colours join the original two 30% smaller, with distinct panel perches',()=>{
  assert.deepEqual(BUTTERFLY_VARIANTS.map(v=>v.id),['blue','red','yellow','green','white','transparent','purple','orange']);
- assert.equal(BUTTERFLY_VARIANTS[0].size,.13/2);assert.equal(BUTTERFLY_VARIANTS[1].size,.11/2);
+ assert.equal(BUTTERFLY_VARIANTS[0].size,.13/2*.7);assert.equal(BUTTERFLY_VARIANTS[1].size,.11/2*.7);
+ assert.ok(BUTTERFLY_VARIANTS.some(v=>v.surface==='image'));
  const perch={center:{x:0,y:1,z:-1},right:{x:1,y:0,z:0}};
  const points=BUTTERFLY_VARIANTS.map(v=>butterflyPanelPerch({...perch,center:{...perch.center,x:v.side==='left'?-.3:.3}},v).center.x);
  assert.equal(new Set(points).size,8);assert.ok(points.every(x=>Math.abs(x)<=.3));
