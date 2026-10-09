@@ -18,7 +18,7 @@ export class FruitDiscoveryAsset {
   this.growthMixer.stopAllAction();this.cutMixer.stopAllAction();
   if(this.picked){this.parent.attach(this.fruit);this.picked=false;}
   this.motion=null;
-  for(const [o,p,q,s,w] of this.rest){o.position.copy(p);o.quaternion.copy(q);o.scale.copy(s);if(w)o.morphTargetInfluences.splice(0,w.length,...w)}
+  for(const [o,p,q,s,w] of this.rest){if(o===this.object)continue;o.position.copy(p);o.quaternion.copy(q);o.scale.copy(s);if(w)o.morphTargetInfluences.splice(0,w.length,...w)}
   this.playing=false;this.opening=this.targetOpening=0;
   for(const s of Object.values(this.stages))if(s){s.visible=false;s.scale.setScalar(1)}
   if(this.proxy)this.proxy.visible=false;

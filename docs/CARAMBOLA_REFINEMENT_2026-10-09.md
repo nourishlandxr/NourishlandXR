@@ -1,6 +1,6 @@
 # Carambola Fruit Window refinement
 
-Version 0.9412. Blender 5.2.2 LTS; photographic references supplied by the user.
+Version 0.9413. Blender 5.2.2 LTS; photographic references supplied by the user.
 
 The fruit now has broader, rounded five-wing geometry with uneven shoulders, fine freckles, wax variation, green fin margins and subtle edge wear. Two fruiting branches carry four fruits each. Fourteen compound leaves contain 108 separate curved leaflets, with petioles, fine veins and distinct underside material. Ripe and developing fruits vary in scale and orientation.
 
@@ -15,3 +15,5 @@ Run tools/blender/refine_carambola.py in Blender with --source pointing to the p
 The editable source and runtime exports are backed up under C:/FILES/Projects/banyula 2026/Plants images/3d/Carambola - Refined - 2026-10-09. Earlier source files remain in their existing folders. The new source includes the original other species and frame; only the carambola GLBs are updated in the app.
 
 Review tools/preview-carambola-refinement.html for the actual native stereo renderer, Grow/Pick/Open/Return, hover and two-grip checks. Physical Quest performance and headset visual review remain pending. The geometry is more natural but still an authored CG asset, not a photogrammetry scan.
+
+The stage-reset check also repaired a pre-existing placement reset: changing stages preserves the Fruit Window layout wrapper while restoring only the botanical rig. A regression test covers translated, rotated and scaled window placement.
