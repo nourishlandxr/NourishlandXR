@@ -347,7 +347,7 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
     assert.doesNotMatch(fieldGuideSource, /field-guide-add-plant/);
     assert.match(fieldGuideSource, /<strong>Map<\/strong>/);
-    assert.match(fieldGuideSource, /aria-current="page"><span aria-hidden="true">☰<\/span> Content/);
+    assert.match(fieldGuideSource, /aria-current="page"><span aria-hidden="true">☰<\/span> Knowledge/);
 });
 
 test('Content workspace keeps a compact mobile grid and expands into desktop columns', () => {

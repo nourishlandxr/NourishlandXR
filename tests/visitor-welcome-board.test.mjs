@@ -44,8 +44,8 @@ test('place welcome board introduces the place and teases its Areas and Plants',
     assert.match(markup, /Welcome to/);
     assert.match(markup, /Regeneration Creek/);
     assert.match(markup, /Current state <strong>Ready to explore/);
-    assert.match(markup, /Scan NL-004 to start/);
-    assert.match(markup, /connects the AR experience to Creek Bank/);
+    assert.match(markup, /Find NL-004 at the place/);
+    assert.match(markup, /data-scan-visitor-marker/);
     assert.match(markup, /A glimpse of this place/);
     assert.match(markup, /Pigeon Pea/);
     assert.match(markup, /River Oak/);
