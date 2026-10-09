@@ -4,7 +4,7 @@ import {localizedCanvasContext,translateNxrText} from './i18n.js';
 
 // Upload the actual miniature meshes to the session's context: each eye sees
 // its own perspective, depth and occlusion, including the land's solid sides.
-export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE}={}){
+export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false}={}){
     const resources=[],cache=new Map(),textures=new Map(),textureVersions=new Map(),instanceGeometry=new Map(),instanceBuffers=new WeakMap();
     // This renderer shares the XR context with every panel and object. Keep
     // its attribute pointers in a private VAO so deleting map buffers cannot
@@ -23,14 +23,20 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
     const cloudTexture=new THREE.CanvasTexture(cloudCanvas),cloudGeometry=new THREE.PlaneGeometry(1,1),cloudMaterial=new THREE.MeshBasicMaterial({map:cloudTexture,transparent:true});
     const cloud=new THREE.Mesh(cloudGeometry,cloudMaterial);let lastGuidance='';
     const compile=(type,source)=>{const shader=gl.createShader(type);resources.push(['Shader',shader]);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(shader));return shader;};
+    // Fruit Window opts into material detail; the map retains its established shader.
+    const detailed=surfaceDetail && Boolean(gl.createVertexArray || gl.getExtension?.('OES_standard_derivatives'));
+    const surfaceShader=(source,fragment=false)=>gl.createVertexArray?
+        '#version 300 es\n'+source.replace(/\battribute\b/g,'in').replace(/\bvarying\b/g,fragment?'in':'out').replace(/\btexture2D\b/g,'texture').replace(/\bgl_FragColor\b/g,'surfaceOutput').replace('precision highp float;','precision highp float;\nout vec4 surfaceOutput;'):
+        (fragment?'#extension GL_OES_standard_derivatives : enable\n':'')+source;
     const program=gl.createProgram();resources.push(['Program',program]);
-    gl.attachShader(program,compile(gl.VERTEX_SHADER,`attribute vec3 p,n,c,ic;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;uniform mat4 projection,view,model;uniform float instanced;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}vec3 normal=normalize(mat3(model)*norm);light=.68+.32*max(0.,dot(normal,normalize(vec3(-.3,.8,.5))));v=uv;tint=pow(max(c*(instanced>.5?ic:vec3(1.)),vec3(0.)),vec3(.4545));gl_Position=projection*view*model*point;}`));
-    gl.attachShader(program,compile(gl.FRAGMENT_SHADER,`precision mediump float;uniform vec3 colour;uniform float alpha,textured;uniform sampler2D image;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 c=vec4(colour*tint,1.);if(textured>.5)c*=texture2D(image,v);if(c.a*alpha<.01)discard;gl_FragColor=vec4(c.rgb*light,c.a*alpha);}`));
+    gl.attachShader(program,compile(gl.VERTEX_SHADER,detailed?surfaceShader(FRUIT_SURFACE_VERTEX):`attribute vec3 p,n,c,ic;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;uniform mat4 projection,view,model;uniform float instanced;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}vec3 normal=normalize(mat3(model)*norm);light=.68+.32*max(0.,dot(normal,normalize(vec3(-.3,.8,.5))));v=uv;tint=pow(max(c*(instanced>.5?ic:vec3(1.)),vec3(0.)),vec3(.4545));gl_Position=projection*view*model*point;}`));
+    gl.attachShader(program,compile(gl.FRAGMENT_SHADER,detailed?surfaceShader(FRUIT_SURFACE_FRAGMENT,true):`precision mediump float;uniform vec3 colour;uniform float alpha,textured;uniform sampler2D image;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 c=vec4(colour*tint,1.);if(textured>.5)c*=texture2D(image,v);if(c.a*alpha<.01)discard;gl_FragColor=vec4(c.rgb*light,c.a*alpha);}`));
     gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
-    const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image','instanced'].map(k=>[k,gl.getUniformLocation(program,k)]));
+    const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image','instanced','normalView','normalImage','normalMapped','normalScale','roughImage','roughMapped','roughness','unlit'].map(k=>[k,gl.getUniformLocation(program,k)]));
     const attributes=['p','n','uv','c'].map(k=>gl.getAttribLocation(program,k));
     const matrixAttributes=['i0','i1','i2','i3'].map(k=>gl.getAttribLocation(program,k));
     const instanceColourAttribute=gl.getAttribLocation(program,'ic');
+    const surfaceMatrix=new THREE.Matrix4(),surfaceNormal=new THREE.Matrix3(),eyeMatrix=new THREE.Matrix4();
     const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),materialColours=new WeakMap(),renderNodes=[];
     scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});let prepareIndex=0;
     function geometry(source){
@@ -63,6 +69,14 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         else {result.geometry.attributes.position.needsUpdate=true;result.geometry.attributes.normal.needsUpdate=true;}
         result.version=node.instanceMatrix.version;return result;
     }
+    function bindSurfaceMap(map,unit,uniform){
+        if(!map)return;
+        let texture=textures.get(map);gl.activeTexture(gl.TEXTURE0+unit);
+        if(!texture){texture=gl.createTexture();resources.push(['Texture',texture]);textures.set(map,texture);gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
+        gl.bindTexture(gl.TEXTURE_2D,texture);
+        if(textureVersions.get(map)!==map.version){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,map.flipY);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,map.image);textureVersions.set(map,map.version);}
+        gl.uniform1i(uniform,unit);
+    }
     function drawNode(node,matrix,opacity,batch=null){
         const material=node.material;if(Array.isArray(material))return;
         const entry=geometry(batch?.geometry || node.geometry);
@@ -82,14 +96,22 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             if(buffers.colourVersion!==colourVersion){gl.bufferData(gl.ARRAY_BUFFER,node.instanceColor?.array || new Float32Array(node.instanceMatrix.count*3).fill(1),gl.STATIC_DRAW);buffers.colourVersion=colourVersion;}
             gl.enableVertexAttribArray(instanceColourAttribute);gl.vertexAttribPointer(instanceColourAttribute,3,gl.FLOAT,false,0,0);instancing.divisor(instanceColourAttribute,1);
         }
-        let c=materialColours.get(material);if(!c){const colour=material.color.clone().convertLinearToSRGB();c=[colour.r,colour.g,colour.b];materialColours.set(material,c);}gl.uniform3f(uniforms.colour,c[0],c[1],c[2]);gl.uniform1f(uniforms.alpha,opacity*material.opacity);
+        let c=materialColours.get(material);if(!c){const colour=material.color.clone();if(!detailed)colour.convertLinearToSRGB();c=[colour.r,colour.g,colour.b];materialColours.set(material,c);}gl.uniform3f(uniforms.colour,c[0],c[1],c[2]);gl.uniform1f(uniforms.alpha,opacity*material.opacity);
         gl.uniformMatrix4fv(uniforms.model,false,matrix.elements);
         gl.uniform1f(uniforms.textured,material.map?1:0);
         if(material.map){
             let texture=textures.get(material.map);
             if(!texture){texture=gl.createTexture();resources.push(['Texture',texture]);textures.set(material.map,texture);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
-            if(textureVersions.get(material.map)!==material.map.version){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,material.map.image);textureVersions.set(material.map,material.map.version);}
+            if(textureVersions.get(material.map)!==material.map.version){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,detailed?material.map.flipY:true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,material.map.image);textureVersions.set(material.map,material.map.version);}
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.image,0);
+        }
+        if(detailed){
+            surfaceMatrix.multiplyMatrices(eyeMatrix,matrix);surfaceNormal.getNormalMatrix(surfaceMatrix);
+            gl.uniformMatrix3fv(uniforms.normalView,false,surfaceNormal.elements);
+            gl.uniform1f(uniforms.normalMapped,material.normalMap?1:0);gl.uniform2f(uniforms.normalScale,material.normalScale?.x ?? 1,material.normalScale?.y ?? 1);
+            gl.uniform1f(uniforms.roughMapped,material.roughnessMap?1:0);gl.uniform1f(uniforms.roughness,material.roughness ?? .7);gl.uniform1f(uniforms.unlit,material.isMeshBasicMaterial?1:0);
+            bindSurfaceMap(material.normalMap,1,uniforms.normalImage);bindSurfaceMap(material.roughnessMap,2,uniforms.roughImage);
+            gl.activeTexture(gl.TEXTURE0);
         }
         const transparent=material.transparent || opacity<.999;
         if(transparent){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);
@@ -107,6 +129,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             geometry(batch?.geometry || node.geometry);return prepareIndex>=renderNodes.length;
         },
         draw(view,origin,rotation,opacity,guidance=''){
+            if(detailed)eyeMatrix.fromArray(view.transform.inverse.matrix);
             if(opacity<=0)return;
             const previousBuffer=gl.getParameter(gl.ARRAY_BUFFER_BINDING),restoreAttributes=saveAttributes();
             try{
@@ -126,3 +149,24 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         destroy(){if(vao)vaoApi.remove(vao);for(const [kind,value] of resources)gl['delete'+kind](value);for(const [node,batch] of instanceGeometry){batch.geometry.dispose();if(batch.source!==node.geometry)batch.source.dispose();}instanceGeometry.clear();cache.clear();textures.clear();textureVersions.clear();cloudGeometry.dispose();cloudMaterial.dispose();cloudTexture.dispose();}
     };
 }
+
+// Portable WebGL material shading for the Fruit Window's baked glTF maps.
+const FRUIT_SURFACE_VERTEX=`attribute vec3 p,n,c,ic;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;
+uniform mat4 projection,view,model;uniform mat3 normalView;uniform float instanced;
+varying vec3 pointView,normalV,tint;varying vec2 v;
+void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}
+vec4 pv=view*model*point;pointView=pv.xyz;normalV=normalize(normalView*norm);v=uv;tint=c*(instanced>.5?ic:vec3(1.));gl_Position=projection*pv;}`;
+const FRUIT_SURFACE_FRAGMENT=`precision highp float;
+uniform vec3 colour;uniform vec2 normalScale;uniform float alpha,textured,normalMapped,roughMapped,roughness,unlit;
+uniform sampler2D image,normalImage,roughImage;varying vec3 pointView,normalV,tint;varying vec2 v;
+void main(){vec4 texel=vec4(1.);if(textured>.5)texel=texture2D(image,v);if(texel.a*alpha<.01)discard;
+vec3 albedo=colour*tint*pow(max(texel.rgb,vec3(0.)),vec3(2.2));vec3 N=normalize(normalV)*(gl_FrontFacing?1.:-1.);
+if(normalMapped>.5){vec3 q0=dFdx(pointView),q1=dFdy(pointView);vec2 st0=dFdx(v),st1=dFdy(v);
+vec3 q1p=cross(q1,N),q0p=cross(N,q0);vec3 T=q1p*st0.x+q0p*st1.x,B=q1p*st0.y+q0p*st1.y;
+float inv=inversesqrt(max(max(dot(T,T),dot(B,B)),.0000001));vec3 bump=texture2D(normalImage,v).xyz*2.-1.;bump.xy*=normalScale;N=normalize(mat3(T*inv,B*inv,N)*bump);}
+float r=roughness;if(roughMapped>.5)r*=texture2D(roughImage,v).g;r=clamp(r,.18,1.);
+vec3 L=normalize(vec3(-.45,.72,.55)),V=normalize(-pointView),H=normalize(L+V);
+float diffuse=max(dot(N,L),0.),fill=max(dot(N,normalize(vec3(.6,.1,.7))),0.);
+float shininess=mix(150.,8.,r*r);float spec=pow(max(dot(N,H),0.),shininess)*(.055+.13*(1.-r))*diffuse;
+vec3 lit=albedo*(.44+.58*diffuse+.14*fill)+vec3(spec);if(unlit>.5)lit=albedo;
+gl_FragColor=vec4(pow(max(lit,vec3(0.)),vec3(1./2.2)),texel.a*alpha);}`;

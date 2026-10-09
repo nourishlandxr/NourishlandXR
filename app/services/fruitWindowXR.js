@@ -22,7 +22,7 @@ export function createFruitWindowXR(gl,source){
         }
         data.dispose();
     });
-    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1});
+    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true});
     return {
         update(){
             source.updateMatrixWorld(true);
