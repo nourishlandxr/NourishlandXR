@@ -1,0 +1,27 @@
+{
+  "stats": {
+    "ready": true,
+    "dimensions": [
+      1.8240000009536743,
+      1.8240000009536743,
+      0.18000000715255737
+    ],
+    "triangles": 5120,
+    "meshes": 1,
+    "referenceExported": false
+  },
+  "checks": [
+    "GLB loads",
+    "one ring mesh only",
+    "dimensions match",
+    "orbit visibly works",
+    "zoom visibly works",
+    "named views work",
+    "reference toggle works",
+    "wireframe works",
+    "no preview page errors",
+    "built welcome version visible"
+  ],
+  "welcomeBadge": "V0.9429 · Live",
+  "headsetVerified": false
+}

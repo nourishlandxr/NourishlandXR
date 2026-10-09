@@ -5,7 +5,7 @@ export function drawLivingFrameButton(ctx, labelText, aimed=false,disabled=false
     ctx.clearRect(0,0,2048,1024);
     ctx.save();ctx.scale(2048/900,1024/360);
     ctx.shadowBlur=0;ctx.shadowColor='transparent';
-    const opacity=Math.max(0,Math.min(1,backgroundOpacity));
+    const opacity=Math.max(0,Math.min(1,backgroundOpacity))*.45;
     const glass=ctx.createLinearGradient(0,24,0,336);glass.addColorStop(0,`rgba(${aimed?'30,56,55':'15,29,34'},${opacity})`);glass.addColorStop(.46,`rgba(9,23,29,${opacity})`);glass.addColorStop(1,`rgba(6,17,23,${opacity})`);ctx.fillStyle=glass;
     ctx.beginPath();ctx.roundRect(24,24,852,312,40);ctx.fill();
     if(aimed && !disabled){ctx.shadowColor='#b9ffe1';ctx.shadowBlur=20;}

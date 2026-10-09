@@ -20,7 +20,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
     for(const item of FRUIT_WINDOW_LIBRARY){const option=document.createElement('option');option.value=item.id;option.textContent=item.label;select.append(option);}
     const actions=[['play','Play development'],['pause','Pause'],['return','Return fruit']];
     for(const [action,label] of actions){const button=document.createElement('button');button.type='button';button.dataset.action=action;button.textContent=label;nav.append(button);}
-    const scene=new THREE.Scene();
+    const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
     scene.add(new THREE.HemisphereLight(0xfff4d7,0x304435,2.8));const light=new THREE.DirectionalLight(0xffffff,3.2);light.position.set(-1,2,3);scene.add(light);
     const content=new THREE.Group();scene.add(content);
     const plantMount=new THREE.Group();content.add(plantMount);
@@ -37,7 +37,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
     const loader=new GLTFLoader(),raycaster=new THREE.Raycaster(),grips=new FruitWindowGripPair(),fruitHold=new FruitWindowTriggerHold();
     const anchor={position:new THREE.Vector3(.75,1.3,-1.3),quaternion:new THREE.Quaternion()};
     const handleMaterial=new THREE.MeshStandardMaterial({color:0x80c5b0,roughness:.45});
-    const handles=['left','right'].map((side,i)=>{const mesh=new THREE.Mesh(new THREE.TorusGeometry(.025,.0035,8,20),handleMaterial.clone());mesh.name='Window_'+side+'_grip';mesh.position.set(i?.325:-.325,0,.025);mesh.userData.gripSide=side;content.add(mesh);return mesh;});
+    const handles=['left','right'].map((side,i)=>{const mesh=new THREE.Mesh(new THREE.TorusGeometry(.025,.0035,8,20),handleMaterial.clone());mesh.name='Window_'+side+'_grip';mesh.position.set(i?.345:-.345,0,.18);mesh.userData.gripSide=side;content.add(mesh);return mesh;});
     const beams=handles.map(()=>{const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.0012,.0012,1,5),new THREE.MeshBasicMaterial({color:0xffd88b}));mesh.visible=false;content.add(mesh);return mesh;});
     const arrow=new THREE.Group();arrow.name='Pickable_fruit_arrow';
     const arrowMaterial=new THREE.MeshStandardMaterial({color:0xffdfa1,emissive:0x44330a,roughness:.55});
@@ -75,7 +75,13 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
         if(!asset.selectFruit(fruit))return false;return asset.pick(content,{hold:true});
     }
     function localRay(ray){const inverse=anchor.quaternion.clone().invert();return {origin:vector(ray.origin).sub(anchor.position).applyQuaternion(inverse),direction:vector(ray.direction).applyQuaternion(inverse).normalize()};}
-    function cast(ray){content.updateMatrixWorld(true);raycaster.set(ray.origin,ray.direction);return raycaster.intersectObjects(content.children,true).filter(hit=>visible(hit.object));}
+    function cast(ray){
+        content.updateMatrixWorld(true);raycaster.set(ray.origin,ray.direction);
+        const hits=raycaster.intersectObjects(content.children,true).filter(hit=>visible(hit.object));
+        // The opaque enclosure also blocks picking through its back or sides.
+        const wall=hits.findIndex(hit=>hit.object.parent===frame);
+        return wall<0?hits:hits.slice(0,wall+1);
+    }
     function handleAt(ray){const local=localRay(ray);return handles.find(handle=>new THREE.Ray(local.origin,local.direction).intersectSphere(new THREE.Sphere(handle.position,.065),new THREE.Vector3()));}
     function restoreXR(){xr?.destroy();xr=null;if(xrGl&&!destroyed&&asset){xr=createFruitWindowXR(xrGl,content);xr.update();}}
     async function choose(id){
@@ -93,7 +99,19 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
             const bounds=new THREE.Box3().setFromObject(asset.object),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),scale=Math.min(1,.55/Math.max(size.x,size.y),.25/Math.max(.001,size.z));
             plantMount.scale.setScalar(scale);plantMount.position.set(-center.x*scale,-center.y*scale,-center.z*scale);content.updateMatrixWorld(true);
             asset.object.traverse(node=>{if(node.isMesh&&/leaf|leaflet/i.test(node.name)&&!/(stalk|vein|petiole)/i.test(node.name))leaves.push(node);});
-            if(!frame){frame=new THREE.Group();for(const [x,y,w,h] of [[0,.31,.62,.003],[0,-.31,.62,.003],[-.31,0,.003,.62],[.31,0,.003,.62]]){const edge=new THREE.Mesh(new THREE.BoxGeometry(w,h,.003),new THREE.MeshBasicMaterial({color:0xa4c9b5,transparent:true,opacity:.55}));edge.position.set(x,y,0);frame.add(edge);}content.add(frame);}
+            if(!frame){
+                frame=new THREE.Group();frame.name='Fruit_observation_box';
+                const back=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.008),new THREE.MeshBasicMaterial({color:0xffffff}));back.position.z=-.174;frame.add(back);
+                const wallMaterial=new THREE.MeshStandardMaterial({color:0xf2f4f1,roughness:.85});
+                for(const [x,y,w,h] of [[0,.325,.66,.012],[0,-.325,.66,.012],[-.325,0,.012,.65],[.325,0,.012,.65]]){
+                    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,.34),wallMaterial);wall.position.set(x,y,0);frame.add(wall);
+                }
+                const rimMaterial=new THREE.MeshStandardMaterial({color:0xb5cbbf,roughness:.6});
+                for(const [x,y,w,h] of [[0,.325,.66,.009],[0,-.325,.66,.009],[-.325,0,.009,.65],[.325,0,.009,.65]]){
+                    const rim=new THREE.Mesh(new THREE.BoxGeometry(w,h,.012),rimMaterial);rim.position.set(x,y,.174);frame.add(rim);
+                }
+                content.add(frame);
+            }
             if(xrGl)renderer.setSize(768,768,false);
             renderer.render(scene,camera);
             onMedia({image:canvas.toDataURL('image/png'),caption:item.label,imageAlt:item.label+' in the Fruit Discovery Window'});
@@ -145,6 +163,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
         raf=0;if(destroyed||!shown)return;if(!xrGl){advance(time);orbit.update();renderer.render(scene,camera);}raf=requestAnimationFrame(tick);
     }
     const api={element,anchor,grips,
+        dockBeside(panel){const box=panel?.getBoundingClientRect();if(!box)return;const width=Math.min(440,innerWidth*.38);element.style.width=width+'px';element.style.left=Math.max(8,Math.min(innerWidth-width-8,box.right+16))+'px';element.style.top=Math.max(8,Math.min(innerHeight-element.offsetHeight-8,box.top))+'px';},
         show(next=identityValue){shown=true;element.hidden=Boolean(xrGl);updateIdentity(next);if(!asset&&!loading&&activeSpecies)choose(activeSpecies.id);lastTime=performance.now();if(!xrGl&&!raf)raf=requestAnimationFrame(tick);onState();},
         hide(){shown=false;element.hidden=true;asset?.pause();grips.reset();fruitHold.reset();selections.clear();pointers.clear();pointerSnapshot=null;hover=null;hoverAmount=0;restoreHover();if(raf)cancelAnimationFrame(raf);raf=0;onState();},
         action,
@@ -159,7 +178,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
         },
         hit(ray){
             if(!shown||!xrGl||!ray?.origin||!ray.direction)return null;
-            const local=localRay(ray),meshHit=cast(local).find(hit=>botanicalHit(hit));
+            const local=localRay(ray),meshHit=cast(local)[0];
             const point=meshHit?.point.clone() || new THREE.Ray(local.origin,local.direction).intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),0),new THREE.Vector3());
             if(!point || !meshHit && (Math.abs(point.x)>.35 || Math.abs(point.y)>.36))return null;
             point.applyQuaternion(anchor.quaternion).add(anchor.position);
@@ -170,7 +189,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
         bindSession(next,referenceSpace){grips.reset();fruitHold.reset();session=next;space=referenceSpace;placed=false;},
         updateSpatial(pose,time,inputRay,xrFrame){
             if(!shown||!xrGl)return;
-            if(!placed&&pose){anchor.position.copy(vector(pose.center)).addScaledVector(vector(pose.right),.75);anchor.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(vector(pose.right),vector(pose.up),vector(pose.normal)));placed=true;}
+            if(!placed&&pose){anchor.position.copy(vector(pose.center)).addScaledVector(vector(pose.right),(pose.width || .84)/2+.345+.05);anchor.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(vector(pose.right),vector(pose.up),vector(pose.normal)));placed=true;}
             if(xrFrame&&session){const points=new Map();for(const source of grips.holds.keys()){let grip=null;try{grip=xrFrame.getPose(source.gripSpace||source.targetRaySpace,space)?.transform.position;}catch{}if(Array.from(session.inputSources||[]).includes(source)&&source.gamepad?.buttons?.[1]?.pressed!==false&&grip)points.set(source,grip);}grips.update(points,anchor);
                 for(let i=0;i<handles.length;i++){const handle=handles[i],hold=[...grips.holds.values()].find(hold=>hold.side===handle.userData.gripSide);handle.material.color.setHex(hold?0xffd88b:0x80c5b0);beams[i].visible=Boolean(hold);if(hold){const start=hold.point.clone().sub(anchor.position).applyQuaternion(anchor.quaternion.clone().invert()),direction=handle.position.clone().sub(start);beams[i].position.copy(start).add(handle.position).multiplyScalar(.5);beams[i].scale.set(1,direction.length(),1);beams[i].quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());}}
             }

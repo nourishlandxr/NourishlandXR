@@ -1016,9 +1016,10 @@ function continueAfterDemoPim(record) {
 }
 
 function showDemoFruitDiscovery(record,index=0){
-    record.demoPimoLesson='fdw';record.demoExpanded=false;knowledgeRenderer?.clear(record);refreshDemoRecord(record);
-    infoPanel?.setMediaCollapsed(false);infoPanel?.setExplorerOpen(true);
+    record.demoPimoLesson='fdw';record.demoExpanded=true;knowledgeExplorerAction(record,'KnowledgeMode:curiosity');refreshDemoRecord(record);
+    infoPanel?.setMediaCollapsed(false);infoPanel?.setExplorerOpen(true);infoPanel?.refreshExplorer({mode:'curiosity'});
     const identity=demoOrbKnowledge(record).document.identity;
+    infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,{image:PIGEON_PEA_CONTROL_IMAGE,alt:'Pigeon Pea',caption:'Pigeon Pea'});
     infoPanel?.showFruitWindow({plant:identity.commonName,scientific:identity.scientificName},index===0?null:index===1?'carambola':'mamey_sapote');
     showIntroBoard(index===0?'Fruit Discovery Window':'Different fruits, the same discovery window',index===0?
         'Look closely at the plant, its flowers and its fruit.\n\nPoint at an arrowed pod and hold Trigger to carry it. Bring it closer and keep holding to open it. Use Play development in the window controls to follow flower-to-fruit development.':
@@ -2433,7 +2434,7 @@ function runArWelcomeTutorial(index=0) {
         demoOrientationStep=-1;syncDemoPanelActions();finishIntroBoard();clearTimeout(aimRevealTimer);armDemoPlacement('plant',{explained:true});
     },{tutorialStep:DEMO_TUTORIAL_STEPS.WELCOME,stepLabel:step.code,nextGuide:step.nextGuide,dynamicCopy:index===2,keepPanel:index===2,deferContinueUntilCopyReady:index===0});
     if(index===0){showDemoTutorialMedia('companion');infoPanel?.setContextualHint('Grip moves panels and objects. Trigger interacts with buttons and cells.');}
-    else if(index===2)showDemoTutorialMedia('orb',{image:PIGEON_PEA_CONTROL_IMAGE,imageAlt:'Pigeon Pea sample plant',body:''});
+    else if(index===2)infoPanel?.setMediaCollapsed(true);
     else if(step?.art)showDemoTutorialMedia(step.art);
     else if(index!==2)infoPanel?.setMediaCollapsed(true);
 }
@@ -2484,6 +2485,7 @@ function guidePlantConversion(record) {
     // The sample plant is interactive while the large instruction board is
     // still visible, so the suggested grab can be tried immediately.
     completeConversion();
+    if(!moringa)showDemoTutorialMedia('orb',{image:PIGEON_PEA_CONTROL_IMAGE,imageAlt:'Pigeon Pea sample plant',body:''});
 }
 
 function showDemoNativePlantChooser(orb){
@@ -5045,20 +5047,20 @@ function wrappedTextureLines(ctx, text, maxWidth) {
 }
 
 function demoParagraphReadingTime(text){return Math.max(6000,String(text || '').trim().split(/\s+/).length*350+1800);}
-function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight) {
+function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight, opening=false) {
     text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
     // Every slide uses the Intro 1.2 template size, not its own shrinking rule.
     const reference=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']).split(/\n\n/);
     for (let fontSize = 68; fontSize >= 32; fontSize -= 1) {
         const lineHeight = Math.round(fontSize * 1.22);
-        const paragraphGap = Math.round(fontSize * .38);
+        const paragraphGap = Math.round(fontSize * (opening ? .85 : .38));
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
-        const referenceLines=reference.map(paragraph=>wrappedTextureLines(ctx,paragraph,maxWidth));
+        const referenceLines=opening?paragraphLines:reference.map(paragraph=>wrappedTextureLines(ctx,paragraph,maxWidth));
         const totalHeight = referenceLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
             + Math.max(0, referenceLines.length - 1) * paragraphGap;
-        if (totalHeight<=360 || fontSize===32) {
+        if (totalHeight<=(opening?maxHeight:360) || fontSize===32) {
             return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
     }
@@ -5287,10 +5289,14 @@ function drawIntroNoteContent(ctx) {
         if(arWelcomeOpeningActive || openingElapsed<DEMO_WELCOME_OPENING_MS){
             const openingTitle=demoLocalizedText(guidedDemoStep('INTRO 1.1').title);
             ctx.fillStyle='#e7ffed';
-            const headingBottom=drawDemoHeading(ctx,openingTitle,contentCenter,355,titleWidth),bodyTop=headingBottom+120,bodyHeight=900-bodyTop;
+            let openingTitleSize=DEMO_HEADING_SIZE;
+            ctx.font=`500 ${openingTitleSize}px ${DEMO_HEADING_FONT}`;
+            while(openingTitleSize>42 && ctx.measureText(openingTitle).width>contentWidth){openingTitleSize--;ctx.font=`500 ${openingTitleSize}px ${DEMO_HEADING_FONT}`;}
+            ctx.fillText(openingTitle,contentCenter,365,contentWidth);
+            const bodyTop=465,bodyHeight=900-bodyTop;
             if(introOpeningCopySkipped || openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS){
                 ctx.fillStyle='#fff';ctx.textBaseline='top';
-                const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,bodyHeight);
+                const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,bodyHeight,true);
                 ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
                 const count=introOpeningCopySkipped || window.matchMedia('(prefers-reduced-motion: reduce)').matches?layout.paragraphLines.length:layout.paragraphLines.filter((lines,index)=>openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS+layout.paragraphLines.slice(0,index).reduce((total,prior)=>total+demoParagraphReadingTime(prior.join(' ')),0)).length;
                 const windowLayout=introReadingWindow(layout,count,bodyHeight);
@@ -5406,20 +5412,15 @@ function createIntroPointerTexture(texture = null) {
     glow.addColorStop(1, 'rgba(154,211,122,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, 256, 256);
-    ctx.strokeStyle = 'rgba(246,255,231,.98)';
-    ctx.lineWidth = 7;
-    ctx.beginPath();
-    ctx.arc(128, 128, 72, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(220,239,149,.88)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(128, 128, 96, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = '#dcef95';
-    ctx.beginPath();
-    ctx.arc(128, 128, 8, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.strokeStyle='rgba(246,255,231,.94)';ctx.lineWidth=5;ctx.lineCap='round';
+    // Open corners frame a sprout rather than a flattened target disc.
+    for(const [x,y,sx,sy] of [[44,44,1,1],[212,44,-1,1],[44,212,1,-1],[212,212,-1,-1]]){
+        ctx.beginPath();ctx.moveTo(x+sx*24,y);ctx.lineTo(x,y);ctx.lineTo(x,y+sy*24);ctx.stroke();
+    }
+    ctx.beginPath();ctx.moveTo(128,188);ctx.quadraticCurveTo(122,146,134,110);ctx.stroke();
+    ctx.fillStyle='rgba(220,239,149,.92)';
+    ctx.beginPath();ctx.moveTo(128,146);ctx.bezierCurveTo(84,146,76,110,80,92);ctx.bezierCurveTo(116,92,140,112,128,146);ctx.fill();
+    ctx.beginPath();ctx.moveTo(130,124);ctx.bezierCurveTo(128,82,157,66,180,68);ctx.bezierCurveTo(184,100,160,125,130,124);ctx.fill();
     return canvasTexture(label, texture);
 }
 
@@ -5591,7 +5592,7 @@ function drawIntroSpatial(view) {
         if(introPointerTextureKind!==pointerKind){if(introPointerTexture)gl.deleteTexture(introPointerTexture);introPointerTexture=pointerKind==='totem'?createTotemPlacementTexture():pointerKind==='note'?createNotePlacementTexture():createIntroPointerTexture();introPointerTextureKind=pointerKind;}
         const pointerPosition = demoStage==='totem'?totemPlacementPosition():placementPosition();
         const orbPulse=pointerKind==='aim'?1+.05*Math.sin(performance.now()/380):1;
-        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.38*orbPulse, pointerKind==='aim'?.8+.12*Math.sin(performance.now()/380):1);
+        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.95*orbPulse, pointerKind==='aim'?.8+.12*Math.sin(performance.now()/380):1);
     }
 }
 
@@ -5799,7 +5800,11 @@ function drawSpatialButterfly(view){
         if(!Number.isFinite(insect.startedAt))insect.startedAt=elapsed;
         if(insect.lastElapsed!==elapsed){
             const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-            const pose=demoButterflyPose(elapsed,insect.startedAt,{reducedMotion,perchMs:insect.perchMs,seed:insect.seed});if(!pose)continue;
+            const quietPerch=(arWelcomeIntroPending || demoOrientationStep>=0 || !markers.some(record=>record.demoType==='plant')) && !insect.releasedPerch && !insect.releasedFree && !insect.heldSource;
+            if(quietPerch)insect.quietUntil=elapsed;
+            const perchMs=insect.perchMs+Math.max(0,(insect.quietUntil ?? insect.startedAt)-insect.startedAt);
+            const pose=demoButterflyPose(elapsed,insect.startedAt,{reducedMotion,perchMs,seed:insect.seed});if(!pose)continue;
+            if(quietPerch){pose.x=0;pose.y=0;pose.z=0;pose.yaw=insect.seed*2.399;}
             if(insect.releasedPerch)pose.opacity=1;
             if(pose.state==='landed' && insect.perchSupport && insect.flightAnchor){const center=insect.perchSupport.frame && introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):infoPanel?.getPosition();if(center){const offset=insect.perchSupport.offset;insect.flightAnchor.center={x:center.x+offset.x,y:center.y+offset.y+.025,z:center.z+offset.z};}}
             pose.wingPhase=insect.seed*1.9;pose.size=insect.size;

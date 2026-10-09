@@ -1,0 +1,15 @@
+{
+  "stage": 2,
+  "arc_degrees": [
+    100,
+    205
+  ],
+  "growth_seconds": 36,
+  "texture_count": 4,
+  "groundcover_clusters": 18,
+  "new_shoots": 3,
+  "base_opening_diameter_m": 1.664,
+  "protected_reading_radius_m": 0.8,
+  "minimum_soil_radius_m": 0.834,
+  "glb_contains_text": false
+}

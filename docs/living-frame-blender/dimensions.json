@@ -1,0 +1,15 @@
+{
+  "inner_radius_m": 0.832,
+  "outer_radius_m": 0.912,
+  "depth_m": 0.18,
+  "face_width_m": 0.08000000000000007,
+  "protected_reading_radius_m": 0.8,
+  "source_pixel_to_m": 0.0016,
+  "gltf_axes": "X right, Y up, Z towards viewer",
+  "source_scene_origin_canvas_px": [
+    1250,
+    1060
+  ],
+  "text_reference_exported": false,
+  "blender": "5.2.2 LTS"
+}

@@ -41,7 +41,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "act": "Place a sample",
         "title": "Begin with one small discovery",
         "main": "A connected place can begin with one plant and one question.\n\nOur sample is Pigeon Pea, a shrub grown for food and its useful roles in a garden. It is one small part of a much larger living story.\n\nPlace its Plant Orb to begin. We will add another plant, a message and connected Areas to show how the experience can grow.",
-        "panel": "Show the Pigeon Pea companion image before placement. This is a prepared sample, not a real garden project.",
+        "panel": "Keep the image panel closed. Reveal the prepared Pigeon Pea image after placement at ELEMENTS 1.6.",
         "hint": "Place the sample when you are ready.",
         "art": null
     },

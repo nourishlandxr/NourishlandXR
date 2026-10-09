@@ -2243,6 +2243,19 @@ body[data-project-theme] .creator-ar-context-toolbar button {
  font-family:Manrope,"Trebuchet MS",system-ui,sans-serif;font-weight:700;
 }
 
+/* Keep the action surface close to its label on desktop and phone. */
+.tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
+.tryit-demo .tryit-context-trigger[data-context-mode="continue"],
+.nlxr-info-panel.is-demo-panel .nlxr-control-utilities .is-primary-action {
+ width:fit-content!important; min-width:0!important; max-width:100%;
+ justify-self:center; align-self:center; padding-inline:24px!important; flex:0 0 auto;
+}
+.tryit-demo .tryit-place.creator-ar-placement-guide:not([data-placement-kind="totem"]):not([data-placement-kind="note"]) .creator-ar-breathing-target {
+ border:0!important;border-radius:0!important;box-shadow:none;
+ background:center / contain no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cpath d='M68 44H44V68M188 44H212V68M44 188V212H68M212 188V212H188M128 188Q122 146 134 110' fill='none' stroke='%23f6ffe7' stroke-width='5' stroke-linecap='round'/%3E%3Cpath d='M128 146C84 146 76 110 80 92C116 92 140 112 128 146M130 124C128 82 157 66 180 68C184 100 160 125 130 124' fill='%23dcef95'/%3E%3C/svg%3E")!important;
+}
+.tryit-demo .tryit-place.creator-ar-placement-guide:not([data-placement-kind="totem"]):not([data-placement-kind="note"]) .creator-ar-placement-pointer {opacity:0;}
+
 /* Quest testing: welcoming glass action, with a quieter warm label. */
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"] {color:#e1dfd2!important;border-color:rgba(220,218,202,.72);font-size:clamp(1.9rem,3vw,2.25rem);font-weight:500;}
