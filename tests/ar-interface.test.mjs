@@ -334,9 +334,9 @@ test('Physical Marker prototype is feature-flagged and exposes saved and unsaved
     const server = read('tools/persistence-server.mjs');
     const printCenter = read('app/screens/printCenter.js');
     assert.match(dashboard, /physicalAnchors: false/);
-    assert.match(dashboard, /Physical Marker prototype/);
+    assert.match(dashboard, /Physical Marker <small>\(optional\)<\/small>/);
     assert.match(dashboard, /Test in AR/);
-    assert.match(dashboard, /Scan Physical Marker/);
+    assert.match(dashboard, /Scan ArUco tag/);
     assert.match(dashboard, /Remove association/);
     assert.match(scanner, /dictionaryName: 'ARUCO'/);
     assert.match(scanner, /TRACKING_GRACE_MS = 300/);
@@ -344,7 +344,7 @@ test('Physical Marker prototype is feature-flagged and exposes saved and unsaved
     assert.match(scanner, /js-aruco2@2\.0\.0/);
     assert.ok(scanner.indexOf('getUserMedia') < scanner.indexOf('new window.AR.Detector'));
     assert.match(dashboard, /physicalAnchorControlPresent \? physicalAnchor : existing\?\.marker\.physicalAnchor/);
-    assert.match(dashboard, /Physical marker link/);
+    assert.match(dashboard, /ArUco tag link/);
     assert.match(dashboard, /physicalAnchorFromPlantProfileForm/);
     assert.match(scanner, /resolvePhysicalAnchorEntry/);
     assert.match(server, /type !== 'area_checkpoint' && type !== 'plant'/);

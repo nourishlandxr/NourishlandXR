@@ -341,7 +341,7 @@ test('Create and Manage opens saved projects while Content belongs to the projec
     assert.match(fieldGuideSource, /Live · \$\{physicalMarkerLabel\(plant\.physicalAnchor\.markerId\)\}/);
     assert.match(fieldGuideSource, /physicalAnchor\?\.enabled/);
     assert.match(dashboardSource, /virtual_tag_enabled/);
-    assert.match(dashboardSource, /Physical marker link/);
+    assert.match(dashboardSource, /ArUco tag link/);
     assert.match(dashboardSource, /PRINT PLANT LIVE TAG/);
     assert.doesNotMatch(fieldGuideSource, /Add an unassigned Plant to Home/);
     assert.doesNotMatch(fieldGuideSource, /Create a separate real-world zone/);
@@ -645,7 +645,7 @@ test('new location asks only for core details and supported templates', () => {
     assert.match(dashboard, /areaFilterFieldset\('type'/);
     assert.match(dashboard, /plantProfile\?\.photo/);
     assert.match(dashboard, /isAreaTotemMarker\(entry\.marker, entry\.place\?\.name\)/);
-    assert.match(dashboard, /plantPhysicalMarkerHelp/);
+    assert.match(dashboard, /When the Plant Live Tag is enabled, assign an ArUco marker here/);
     assert.match(dashboard, /plantLiveTagHelp/);
 });
 
