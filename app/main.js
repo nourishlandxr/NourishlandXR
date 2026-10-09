@@ -970,7 +970,12 @@ window.openExperienceSettings=(fromHistory=false,returnState=history.state)=>{
     if(back){back.removeAttribute('onclick');back.textContent='Back to your experience';back.addEventListener('click',()=>history.back());}
 };
 // Existing entry points remain callable; visitor destinations share one history-aware journey.
-window.openVisitor = (view='places',project='',selection='',fromHistory=false) => {
+let creatorPreviewProjectId = '';
+window.openCreatorExplorerPreview = projectId => {
+    creatorPreviewProjectId = projectId;
+    return window.openVisitor('place', projectId);
+};
+window.openVisitor = async (view='places',project='',selection='',fromHistory=false) => {
     const args=[view,project,selection];
     setExperienceRole('visitor');
     rememberCurrentView('visitor-v2',args);
@@ -981,7 +986,19 @@ window.openVisitor = (view='places',project='',selection='',fromHistory=false) =
     const entry={nourishlandView:'visitor-v2',viewArgs:args};
     if(!fromHistory && JSON.stringify(history.state?.viewArgs)!==JSON.stringify(args)) history.pushState(entry,'',url);
     else history.replaceState(entry,'',url);
-    return renderVisitorExperience(app,view,project,selection);
+    if (view === 'places' || (creatorPreviewProjectId && project !== creatorPreviewProjectId)) creatorPreviewProjectId = '';
+    await renderVisitorExperience(app,view,project,selection);
+    if (creatorPreviewProjectId && project === creatorPreviewProjectId && app.querySelector('.v2-screen')) {
+        const banner = document.createElement('div');
+        banner.className = 'creator-explorer-preview-banner';
+        banner.innerHTML = '<strong>Visitor preview</strong><span>Showing published content only</span><button type="button">Back to Creator</button>';
+        banner.querySelector('button').addEventListener('click', () => {
+            const id = creatorPreviewProjectId;
+            creatorPreviewProjectId = '';
+            window.renderProjectDashboard(encodeURIComponent(id));
+        });
+        app.querySelector('.v2-screen').prepend(banner);
+    }
 };
 const legacyFieldGuide=window.renderFieldGuide;
 const legacyWelcome=window.renderVisitorLocationIntro;

@@ -7,6 +7,7 @@ import { botanicalTextureMarkup, bindBotanicalTexture } from '../services/botani
 import { detectWebXRSessionSupport } from '../services/webxrSession.js';
 import { startArNote } from '../services/arNote.js';
 import { physicalMarkerLabel, physicalMarkerSvg } from '../services/physicalAnchor.js';
+import { startVisitorMarkerScanner } from './physicalAnchorScanner.js';
 
 let generation = 0;
 let reader = null;
@@ -32,8 +33,28 @@ const hasPublishedAreaAnchor = marker => {
     const family = marker?.physicalAnchor?.markerFamily;
     return marker?.physicalAnchor?.enabled === true
         && (!family || family === 'aruco-original-5x5')
-        && Number.isInteger(markerId) && markerId >= 1 && markerId <= 10;
+        && Number.isInteger(markerId) && markerId >= 1 && markerId <= 9;
 };
+
+export function publishedMarkerTargets(guide) {
+    const targets = [];
+    for (const group of guide.siteGroups || []) for (const area of group.placeGroups || []) {
+        for (const totem of area.totems || []) if (hasPublishedAreaAnchor(totem)) targets.push({
+            markerId: Number(totem.physicalAnchor.markerId), type: 'area', name: area.place?.name || 'Area',
+            siteId: group.site?.id, placeId: area.place?.id
+        });
+        for (const plant of area.plants || []) if (hasPublishedAreaAnchor(plant)) targets.push({
+            markerId: Number(plant.physicalAnchor.markerId), type: 'plant', name: plant.commonName || 'Plant',
+            specimen: specimenKey({ ...plant, siteId: group.site?.id, placeId: area.place?.id })
+        });
+    }
+    return targets;
+}
+
+export function resolvePublishedMarker(guide, markerId) {
+    const matches = publishedMarkerTargets(guide).filter(target => target.markerId === Number(markerId));
+    return matches.length === 1 ? matches[0] : null;
+}
 
 export function visitorPlaceWelcomeModel({ project = {}, plants = [], siteGroups = [] } = {}) {
     const areas = siteGroups.flatMap(siteGroup => (siteGroup.placeGroups || []).map(placeGroup => ({
@@ -51,6 +72,7 @@ export function visitorPlaceWelcomeModel({ project = {}, plants = [], siteGroups
     return {
         project,
         introduction: project.description || `Welcome to ${project.name || 'this place'}. Explore its plants, Areas and the relationships growing between them.`,
+        author: project.creatorUsername || project.author || '',
         status: visitorProjectState(project),
         areaCount: areas.length,
         plantCount: plants.length,
@@ -69,14 +91,16 @@ export function visitorPlaceWelcomeModel({ project = {}, plants = [], siteGroups
 export function visitorPlaceWelcomeMarkup(guide) {
     const model = visitorPlaceWelcomeModel(guide);
     const { project, status, entrance } = model;
+    const hasMarkerTargets = publishedMarkerTargets(guide).length > 0;
+    const markerCodeEntry = hasMarkerTargets ? `<form class="v2-marker-code-entry" data-visitor-marker-form><label for="visitorMarkerCode">Or enter the printed NL code</label><div><input id="visitorMarkerCode" name="markerCode" inputmode="text" placeholder="NL-001" required /><button class="v2-secondary" type="submit">Open guide</button></div><p role="status" data-visitor-code-status></p></form>` : '';
     const cover = safeImage(project.coverImage)
         ? `<img class="v2-place-welcome-cover" src="${html(safeImage(project.coverImage))}" alt="${html(project.name)}" />`
         : '';
     const markerPanel = entrance?.markerSvg
-        ? `<aside class="v2-place-entry-marker" aria-labelledby="placeEntryMarkerTitle"><div class="v2-place-entry-code">${entrance.markerSvg}</div><div><p class="v2-eyebrow">Start in ${html(entrance.name)}</p><h2 id="placeEntryMarkerTitle">Scan ${html(entrance.markerLabel)} to start</h2><p>Find this ArUco marker at the place. Scanning it connects the AR experience to ${html(entrance.name)}.</p><small>${html(entrance.siteName || project.name)} · Area entrance</small><button class="v2-primary" type="button" data-visitor-view="ar">Prepare AR</button></div></aside>`
-        : `<aside class="v2-place-entry-marker is-pending" aria-labelledby="placeEntryMarkerTitle"><div class="v2-place-entry-placeholder" aria-hidden="true"><span>⌖</span></div><div><p class="v2-eyebrow">Suggested beginning</p><h2 id="placeEntryMarkerTitle">${html(entrance?.name || 'Explore this place')}</h2><p>${entrance ? `This Area is the suggested starting point. Its physical ArUco entrance marker has not been published yet.` : 'An Area entrance is still being prepared for this place.'}</p><button class="v2-secondary" type="button" data-visitor-view="plants">Browse without a marker</button></div></aside>`;
+        ? `<aside class="v2-place-entry-marker" aria-labelledby="placeEntryMarkerTitle"><div class="v2-place-entry-code">${entrance.markerSvg}</div><div><p class="v2-eyebrow">Start in ${html(entrance.name)}</p><h2 id="placeEntryMarkerTitle">Find ${html(entrance.markerLabel)} at the place</h2><p>Scan a printed NL marker to open its published Area or Plant guide.</p><small>${html(entrance.siteName || project.name)} · Area entrance</small><div class="v2-actions"><button class="v2-primary" type="button" data-scan-visitor-marker>Scan a marker</button><button class="v2-secondary" type="button" data-visitor-view="plants">Browse the guide</button></div><p role="status" data-visitor-marker-status></p>${markerCodeEntry}</div></aside>`
+        : `<aside class="v2-place-entry-marker is-pending" aria-labelledby="placeEntryMarkerTitle"><div class="v2-place-entry-placeholder" aria-hidden="true"><span>⌖</span></div><div><p class="v2-eyebrow">Suggested beginning</p><h2 id="placeEntryMarkerTitle">${html(entrance?.name || 'Explore this place')}</h2><p>${hasMarkerTargets ? 'Scan any published NL marker at the place to open its guide.' : entrance ? 'This Area is the suggested starting point. Its physical ArUco entrance marker has not been published yet.' : 'An Area entrance is still being prepared for this place.'}</p><div class="v2-actions">${hasMarkerTargets ? '<button class="v2-primary" type="button" data-scan-visitor-marker>Scan a marker</button>' : ''}<button class="v2-secondary" type="button" data-visitor-view="plants">Browse the guide</button></div><p role="status" data-visitor-marker-status></p>${markerCodeEntry}</div></aside>`;
     const areaTeasers = model.areas.map(area => `<button type="button" class="v2-place-area-teaser" data-area-filter="${html(JSON.stringify([area.siteId,area.placeId]))}"><span>${html(area.name)}</span><small>${area.count} ${area.count === 1 ? 'plant' : 'plants'}</small></button>`).join('');
-    return `<section class="v2-place-welcome-board"><div class="v2-place-welcome-intro"><p class="v2-eyebrow">Welcome to</p><h1>${html(project.name)}</h1><p class="v2-lead">${html(model.introduction)}</p><p class="v2-place-state is-${html(status.state)}"><span aria-hidden="true"></span>Current state <strong>${html(status.label)}</strong></p>${cover}</div>${markerPanel}</section><section class="v2-place-teaser" aria-labelledby="placeTeaserTitle"><header><div><p class="v2-eyebrow">A glimpse of this place</p><h2 id="placeTeaserTitle">What you may discover</h2><p>Begin with an Area, meet a few plants and follow their connected knowledge.</p></div><dl><div><dt>Areas</dt><dd>${model.areaCount}</dd></div><div><dt>Plants</dt><dd>${model.plantCount}</dd></div><div><dt>AR entrances</dt><dd>${model.anchoredAreaCount}</dd></div></dl></header>${areaTeasers ? `<div class="v2-place-area-list" aria-label="Areas in this place">${areaTeasers}</div>` : ''}<div class="v2-grid">${model.featuredPlants.map(card).join('') || '<p class="v2-notice">Plant knowledge is still being prepared for this place.</p>'}</div><div class="v2-actions"><button class="v2-secondary" type="button" data-visitor-view="plants">Browse all plants</button><button class="v2-secondary" type="button" data-visitor-view="map">See the Areas</button></div></section>`;
+    return `<section class="v2-place-welcome-board"><div class="v2-place-welcome-intro"><p class="v2-eyebrow">Welcome to</p><h1>${html(project.name)}</h1>${model.author ? `<p class="v2-place-author">A project by ${html(model.author)}</p>` : ''}<p class="v2-lead">${html(model.introduction)}</p><p class="v2-place-state is-${html(status.state)}"><span aria-hidden="true"></span>Current state <strong>${html(status.label)}</strong></p>${cover}</div>${markerPanel}</section><section class="v2-place-teaser" aria-labelledby="placeTeaserTitle"><header><div><p class="v2-eyebrow">A glimpse of this place</p><h2 id="placeTeaserTitle">What you may discover</h2><p>Begin with an Area, meet a few plants and follow their connected knowledge.</p></div><dl><div><dt>Areas</dt><dd>${model.areaCount}</dd></div><div><dt>Plants</dt><dd>${model.plantCount}</dd></div><div><dt>AR entrances</dt><dd>${model.anchoredAreaCount}</dd></div></dl></header>${areaTeasers ? `<div class="v2-place-area-list" aria-label="Areas in this place">${areaTeasers}</div>` : ''}<div class="v2-grid">${model.featuredPlants.map(card).join('') || '<p class="v2-notice">Plant knowledge is still being prepared for this place.</p>'}</div><div class="v2-actions"><button class="v2-secondary" type="button" data-visitor-view="plants">Browse all plants</button><button class="v2-secondary" type="button" data-visitor-view="map">See the Areas</button></div></section>`;
 }
 
 function bind(root, projectId) {
@@ -94,7 +118,7 @@ export function clearVisitorCache() { activeGuide = null; }
 async function guideFor(projectId) {
     if (activeGuide?.project.id === projectId) return activeGuide;
     const guide = await loadGuide(projectId);
-    if (['hidden','under_construction'].includes(guide.project.projectStatus)) throw new Error('This place is not open to visitors yet.');
+    if (['hidden','under_construction'].includes(guide.project.projectStatus) || visitorProjectState(guide.project).state === 'under_construction') throw new Error('This place is not open to visitors yet.');
     activeGuide = guide;
     return guide;
 }
@@ -107,7 +131,7 @@ export async function renderVisitorExperience(app, view='places', projectId='', 
     app.innerHTML = opening(); bindProductHeader(app);
     try {
         if (view === 'places') {
-            const projects = (await loadProjects(true)).filter(p=>!['plant-library','Banyula'].includes(p.id) && p.projectStatus !== 'hidden');
+            const projects = (await loadProjects(true)).filter(p=>!['plant-library','Banyula'].includes(p.id) && p.projectStatus !== 'hidden' && visitorProjectState(p).state !== 'under_construction');
             if (request !== generation) return;
             app.innerHTML = `<div class="screen v2-screen v2-place-picker">${productHeader()}<p class="v2-eyebrow">Step into a living place</p><h1>Where will you explore?</h1><p class="v2-lead">Find food forests, gardens and the knowledge growing within them.</p>${botanicalTextureMarkup('places')}<div class="v2-search"><label>Find a place<input type="search" data-place-search placeholder="Name or location" /></label></div><p class="v2-result-count" role="status" data-place-count>${projects.length} published places</p><div class="v2-grid" data-place-grid>${projects.map(p=>`<button class="v2-card" data-place="${html(p.id)}" data-search="${html([p.name,p.address].join(' ').toLowerCase())}"><span class="v2-eyebrow">${p.projectStatus === 'under_construction' ? 'Growing · not open yet' : 'Explore'}</span><strong>${html(p.name)}</strong><small>${html(p.description || 'Discover plants and stories in this place.')}</small><small>${html(p.address || '')}</small></button>`).join('')}</div><div class="v2-empty" data-no-places ${projects.length ? 'hidden' : ''}><h2>No places to show yet</h2><p>Published places will appear here when their creators are ready to share them.</p><button class="v2-secondary" data-v2-home>Return home</button></div></div>`;
             bindBotanicalTexture(app);
@@ -129,6 +153,32 @@ export async function renderVisitorExperience(app, view='places', projectId='', 
         const places = siteGroups.flatMap(g=>g.placeGroups.map(p=>({...p.place,siteId:g.site.id,count:p.plants.length})));
         if (view === 'place') {
             app.innerHTML=`<div class="screen v2-screen v2-place-entry">${header(project,'place')}${visitorPlaceWelcomeMarkup(guide)}</div>`;
+            const openMarker = markerId => {
+                const target = resolvePublishedMarker(guide, markerId);
+                if (!target) return `${physicalMarkerLabel(markerId)} is unassigned or linked more than once in this published project.`;
+                if (target.type === 'plant') route('plant', projectId, target.specimen);
+                else {
+                    guideState.set(projectId, { ...guideState.get(projectId), area: JSON.stringify([target.siteId, target.placeId]) });
+                    route('plants', projectId);
+                }
+                return true;
+            };
+            app.querySelector('[data-visitor-marker-form]')?.addEventListener('submit', event => {
+                event.preventDefault();
+                const input = event.currentTarget.elements.markerCode;
+                const status = app.querySelector('[data-visitor-code-status]');
+                const code = String(input.value).trim().toUpperCase();
+                if (!/^(?:NL-)?00[1-9]$/.test(code)) { if (status) status.textContent = 'Enter a printed code from NL-001 to NL-009.'; return; }
+                const markerId = Number(code.replace(/^NL-/, ''));
+                const result = openMarker(markerId);
+                if (result !== true && status) status.textContent = result;
+            });
+            app.querySelector('[data-scan-visitor-marker]')?.addEventListener('click', async () => {
+                const status = app.querySelector('[data-visitor-marker-status]');
+                try {
+                    await startVisitorMarkerScanner(openMarker);
+                } catch (error) { if (status?.isConnected) status.textContent = `Camera scan could not start: ${error.message}`; }
+            });
         } else if (view === 'plants') {
             const state=guideState.get(projectId) || {query:'',area:'',layer:'',limit:36};
             app.innerHTML=`<div class="screen v2-screen">${header(project,'plants')}<p class="v2-eyebrow">${html(project.name)} · Field guide</p><h1>Meet the plants.</h1><p class="v2-lead">Find a name, a forest layer, or a use. Open a plant to follow its knowledge.</p><form class="v2-search" role="search"><label>Search plants in this place<input type="search" name="query" value="${html(state.query)}" placeholder="Common name, scientific name or use" /></label><label>Where<select name="area"><option value="">Everywhere</option>${places.map(p=>`<option value="${html(JSON.stringify([p.siteId,p.id]))}" ${state.area===JSON.stringify([p.siteId,p.id])?'selected':''}>${html(p.name)}</option>`).join('')}</select></label><label>Forest layer<select name="layer"><option value="">All layers</option>${[...new Set(plants.map(p=>p.layer).filter(Boolean))].sort().map(l=>`<option ${l===state.layer?'selected':''}>${html(l)}</option>`).join('')}</select></label></form><p class="v2-result-count" role="status" aria-live="polite" data-result-count></p><div class="v2-grid" data-plant-results></div><div class="v2-actions"><button class="v2-secondary" data-more-plants>Show more plants</button></div><div class="v2-empty" data-empty hidden><h2>No plants match yet</h2><p>Try a shorter name or widen your filters.</p><button class="v2-secondary" data-clear-filter>Clear filters</button></div></div>`;

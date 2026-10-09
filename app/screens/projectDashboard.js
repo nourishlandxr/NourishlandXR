@@ -1209,7 +1209,7 @@ export async function openQuickAccessChoice(app, encodedProjectId, type) {
 export function openCreatorVisitorPreview(encodedProjectId) {
     const projectId = decodeURIComponent(encodedProjectId);
     recordTutorialEvent(projectId, 'visitor_preview_opened');
-    window.renderVisitorLocationIntro(encoded(projectId), true);
+    window.openCreatorExplorerPreview(projectId);
 }
 
 export async function renderPlatformHome(app) {
@@ -1934,6 +1934,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
                 <div class="area-dashboard-title-row"><div><p class="welcome-label">Area dashboard</p><h1>${escapeHtml(context.area.name)}</h1></div><button class="global-ar-action area-go-ar-compact" type="button" aria-label="Open ${escapeHtml(context.area.name)} in AR" onclick="window.startArMode('${encoded(context.project.id)}', '${encoded(context.area.id)}', '${encoded(checkpoint?.marker.id || '')}', '', '', 'dashboard', '${encoded(context.site.id)}')">${dashboardIcon('ar')}<span>Open in AR</span></button></div>
                 ${projectBreadcrumbMarkup(context.project, context.area)}
             </header>
+            <nav class="creator-context-nav" aria-label="Creator workspace"><button type="button" onclick="window.renderProjectDashboard('${encoded(context.project.id)}')">Overview</button><button type="button" onclick="window.renderFieldGuide('${encoded(context.project.id)}',true)">Knowledge</button><button type="button" onclick="window.openCreatorVisitorPreview('${encoded(context.project.id)}')">Preview in Explorer</button></nav>
             ${options.saveNotice ? `<p class="area-save-notice" role="status">${escapeHtml(options.saveNotice)}</p>` : ''}
             <section class="area-profile-summary area-encyclopedia-card">
                 <div class="area-profile-hero">
@@ -3005,7 +3006,7 @@ export async function openProjectEntry(app, encodedProjectId, encodedMarkerId, r
     const pimPreviewAction = `window.startPlantEditorPreview('${encoded(project.id)}','${encoded(site.id)}','${encoded(entry.place.id)}','${encoded(entry.marker.id)}')`;
     const pimScreen = `<section class="plant-pim-workspace" aria-label="Plant Information Mesh workspace"><header class="plant-pim-workspace-header"><div><p class="welcome-label">PLANT EDITOR <span aria-hidden="true">·</span> ${escapeHtml(entryContextName)}</p><h2>Plant Information Mesh</h2><p>Explore, edit and connect the same plant knowledge used by Web Mode and AR.</p></div><div class="plant-pim-workspace-actions"><button type="button" class="plant-pim-preview-action" onclick="${pimPreviewAction}">Preview in AR</button>${pimBackButton}${returnToAr ? returnArAction : ''}</div></header><div class="plant-pim-workspace-mount" data-plant-pim-web-mount></div></section>`;
     const entryWorkspace = pimWorkspace ? pimScreen : profileScreen;
-    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}${pimWorkspace ? ' is-pim-workspace' : ''}">${entryHeader}${arHandoff}${entryWorkspace}${plant && pimWorkspace ? '' : plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
+    app.innerHTML = `<div class="screen project-entry-editor${entry.marker.type === 'note' ? ' note-record-editor' : ''}${returnToAr ? ' is-ar-web-handoff' : ''}${quickArPlantEdit ? ' plant-ar-quick-edit' : ''}${pimWorkspace ? ' is-pim-workspace' : ''}">${entryHeader}<nav class="creator-context-nav" aria-label="Creator workspace"><button type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Overview</button><button type="button" onclick="window.renderFieldGuide('${encoded(project.id)}',true)">Knowledge</button><button type="button" onclick="window.openCreatorVisitorPreview('${encoded(project.id)}')">Preview in Explorer</button></nav>${arHandoff}${entryWorkspace}${plant && pimWorkspace ? '' : plant ? '' : `<nav class="bottom-navigation">${returnToAr ? '' : returnArAction}<button class="ghost" type="button" onclick="${webReturnAction}">${returnToAr ? `Stay in Web Mode · ${escapeHtml(entryContextName)}` : webReturnLabel}</button></nav>`}</div>`;
     if (quickArPlantEdit) {
         const quickSaveButton = app.querySelector('.project-entry-editor button.primary');
         const quickReturnButton = app.querySelector('.project-entry-back-button') || app.querySelector('.project-entry-editor .bottom-navigation .ghost');

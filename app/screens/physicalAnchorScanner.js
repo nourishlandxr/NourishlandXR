@@ -64,6 +64,69 @@ async function loadDetector() {
     if (!window.AR?.Detector || !window.POS?.Posit) throw new Error('Marker detector is unavailable.');
 }
 
+// Visitor scanning only identifies a published record. It does not establish
+// physical placement or use creator-only marker assignments.
+export async function startVisitorMarkerScanner(onMarker) {
+    if (activeScanner) throw new Error('Close the creator scanner before opening the visitor scanner.');
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera scanning is unavailable on this device.');
+    await loadDetector();
+    const dialog = document.createElement('section');
+    dialog.className = 'physical-anchor-scanner visitor-marker-scanner';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    dialog.setAttribute('aria-label', 'Scan a Nourishland ArUco marker');
+    dialog.innerHTML = `<video playsinline muted autoplay></video><canvas hidden></canvas><div class="physical-anchor-scan-guide" aria-hidden="true"><span></span></div><header><p>SCAN ARUCO · NL-001–NL-009</p><strong role="status">Opening camera…</strong><p>Point the camera at the complete printed black square.</p></header><footer><button type="button">Close scanner</button></footer>`;
+    document.body.append(dialog);
+    const video = dialog.querySelector('video');
+    const canvas = dialog.querySelector('canvas');
+    const status = dialog.querySelector('[role="status"]');
+    let stream;
+    let frame = 0;
+    let stopped = false;
+    let previousId = 0;
+    let repeatCount = 0;
+    const stop = () => {
+        stopped = true;
+        cancelAnimationFrame(frame);
+        stream?.getTracks().forEach(track => track.stop());
+        dialog.remove();
+    };
+    dialog.querySelector('button').addEventListener('click', stop);
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+        if (stopped) { stream.getTracks().forEach(track => track.stop()); return; }
+        video.srcObject = stream;
+        await video.play();
+        canvas.width = 640;
+        canvas.height = Math.max(240, Math.round(640 * video.videoHeight / video.videoWidth) || 480);
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        const detector = new window.AR.Detector();
+        let last = 0;
+        const tick = time => {
+            if (stopped) return;
+            frame = requestAnimationFrame(tick);
+            if (time - last < DETECTION_INTERVAL_MS || video.readyState < 2) return;
+            last = time;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const detection = detector.detect(context.getImageData(0, 0, canvas.width, canvas.height))
+                .find(item => Number.isInteger(item.id) && item.id >= 1 && item.id <= 9);
+            if (!detection) { previousId = 0; repeatCount = 0; return; }
+            repeatCount = detection.id === previousId ? repeatCount + 1 : 1;
+            previousId = detection.id;
+            if (repeatCount < 2) return;
+            repeatCount = 0;
+            const result = onMarker(detection.id);
+            if (result === true) stop();
+            else status.textContent = typeof result === 'string' ? result : `${physicalMarkerLabel(detection.id)} is not linked to published content in this project.`;
+        };
+        status.textContent = 'Find a printed NL marker';
+        frame = requestAnimationFrame(tick);
+    } catch (error) {
+        stop();
+        throw error;
+    }
+}
+
 async function loadProjectAssignments(projectId) {
     const sites = await loadProjectSites(projectId);
     const site = sites.find(item => item.id === 'main_food_forest') || sites[0];
