@@ -67,6 +67,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
     function hitFruit(hit){for(let node=hit?.object;node;node=node.parent)if(asset?.pickableRigs.has(node))return node;return asset?.mainFruit;}
     function localSourcePose(transform){return {position:vector(transform.position).sub(anchor.position).applyQuaternion(anchor.quaternion.clone().invert()),quaternion:anchor.quaternion.clone().invert().multiply(new THREE.Quaternion(transform.orientation.x,transform.orientation.y,transform.orientation.z,transform.orientation.w))};}
     function pickHit(hit){
+        if(fruitHold.source!==null)return false;
         if(!asset?.canPick)return false;const fruit=hitFruit(hit);
         if(asset.picked && fruit===asset.fruit)return !asset.motion;
         if(!asset.selectFruit(fruit))return false;return asset.pick(content,{hold:true});
@@ -190,6 +191,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
                 let transform;try{transform=event.frame?.getPose(source.targetRaySpace,space)?.transform;}catch{}if(!transform)return false;
                 const m=transform.matrix,hits=cast(localRay({origin:{x:m[12],y:m[13],z:m[14]},direction:{x:-m[8],y:-m[9],z:-m[10]}}));
                 const hit=hits.find(hit=>botanicalHit(hit));
+                if(fruitHold.source!==null && ['play','fruit'].includes(botanicalHit(hit))){selections.add(source);return true;}
                 if(botanicalHit(hit)==='play'){action('play');selections.add(source);return true;}
                 if(botanicalHit(hit)==='fruit'&&pickHit(hit)){fruitHold.begin(source,asset.fruit,localSourcePose(transform),performance.now());selections.add(source);syncButtons();return true;}
             }

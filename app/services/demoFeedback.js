@@ -52,7 +52,7 @@ export function createDemoFeedback() {
             oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();};
         });
     }
-    function tick(time,{sources=[],heldSource=null,beeEncounters=[]}={}) {
+    function tick(time,{sources=[],heldSource=null,beeEncounters=[],beeAround=false}={}) {
         if(destroyed || time-lastTick<120)return;
         lastTick=time;
         for(const previous of pulsing)if(!sources.includes(previous))pulse(previous,0,1);
@@ -65,6 +65,7 @@ export function createDemoFeedback() {
                 // within the near-field radius supplied by the XR scene.
                 encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration);
             }
+            else if(beeAround)pulse(source,.055,150);
             else if(pulsing.has(source))pulse(source,0,1);
         }
     }

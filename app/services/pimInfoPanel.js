@@ -237,7 +237,7 @@ export function drawPanelSettingSlider(ctx,item,aimed=false){
 // The headset uses the same actions as the screen panel, but lays them out in
 // three independently collapsible regions. These rectangles also drive ray hits.
 export function spatialPanelControls({hidden=false,height=800,railCollapsed=false,mediaCollapsed=true,items=[]}={}){
-    if(hidden)return [{action:'Restore',label:'Show',ariaLabel:'Show control panel · Grip to move',x:50,y:50,width:900,height:900}];
+    if(hidden)return [{action:'Restore',label:'Show',ariaLabel:'Show control panel · Grip to move',...items.find(item=>item.action==='Restore'),x:50,y:50,width:900,height:900}];
     const rail=164,media=0;
     const left=rail+22,width=1000-rail-44;
     const button=(item,x,y,w,h)=>({...item,description:item.description || controlDescription(item),x,y,width:w,height:h});
@@ -413,7 +413,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         }
         if(!hidden && !confirmation)items.push(...(selection?.sourceLinks || []).slice(0,2).map((link,index)=>({action:'OpenSource:'+index,label:index?'Reference ↗':'Source ↗',description:link.label,kind:'reference',x:238+index*174,y:130,width:166,height:42})));
         const visible=confirmation?items.filter(item=>item.kind==='utility'):items;
-        if(hidden && visibilityItems.length)for(const item of visible)if(item.action==='Restore'){item.label='CONTROL PANEL';item.kind='visibility';item.selected=false;}
+        if(hidden && visibilityItems.length)for(const item of visible)if(item.action==='Restore'){item.label='CONTROL PANEL';item.ariaLabel='CONTROL PANEL · Grip to move';item.kind='visibility';item.selected=false;}
         return isDesktopDemo()?visible.filter(item=>item.action!=='Recenter'):visible;
     };
     // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
@@ -427,7 +427,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         if(action==='Notes'){onUtilityAction('notes');return;}
         if(action.startsWith('Limo:')){const command=action.slice(5);if(command==='open')onLimoAction(command,knowledgeRecord || record);else selection?.limo?.onAction?.(command);return;}
         if(action.startsWith('Object:')){objectContext?.onAction?.(action.slice(7));return;}
-        if(action.startsWith('FruitWindow:')){const command=action.slice(12);if(command==='load')loadFruitWindow();else if(command==='hide')hideFruitWindow();else if(command==='next')fruitWindow?.nextExample();else fruitWindow?.action(command);renderExplorer();return;}
+        if(action.startsWith('FruitWindow:')){const command=action.slice(12);if(command==='load')api.showFruitWindow(identity);else if(command==='hide')hideFruitWindow();else if(command==='next')fruitWindow?.nextExample();else fruitWindow?.action(command);renderExplorer();return;}
         if(action==='Explorer'){explorerClosed=!explorerClosed;render(true);return;}
         if(action.startsWith('KnowledgeMode:')){panelModeChoice=action.split(':')[1];if(!visiblePimoModes().includes(panelModeChoice))return;if(!knowledgeRecord){renderExplorer();return;}}
         if(action.startsWith('Knowledge')){
@@ -997,7 +997,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         if(c.width!==1000)c.width=1000;
         const h=card.hidden?1000:card.height;if(c.height!==h)c.height=h;
         const ctx=localizedCanvasContext(c.getContext('2d'));ctx.clearRect(0,0,c.width,c.height);ctx.textAlign='left';ctx.globalAlpha=1;
-        if(card.hidden){ctx.fillStyle='rgba(19,38,34,.25)';ctx.beginPath();ctx.arc(500,500,440,0,Math.PI*2);ctx.fill();ctx.strokeStyle=card.grabState?'#eaffdf':'rgba(237,255,245,.66)';ctx.lineWidth=8;ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='600 200px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('Show',500,440,720);ctx.font='500 116px system-ui';ctx.fillText('Panel',500,630,720);return c;}
+        if(card.hidden){const footerRestore=card.controls?.some(item=>item.action==='Restore' && item.kind==='visibility');ctx.fillStyle='rgba(19,38,34,.25)';ctx.beginPath();ctx.arc(500,500,440,0,Math.PI*2);ctx.fill();ctx.strokeStyle=card.grabState?'#eaffdf':footerRestore?'#ee8f8b':'rgba(237,255,245,.66)';ctx.lineWidth=8;ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='600 140px Manrope, system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(footerRestore?'CONTROL':'Show',500,420,720);ctx.font='600 140px Manrope, system-ui';ctx.fillText(footerRestore?'PANEL':'Panel',500,590,720);return c;}
             const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,`rgba(15,29,34,${card.infoOpacity ?? .38})`);gradient.addColorStop(1,`rgba(6,17,23,${card.infoOpacity ?? .38})`);
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();
         ctx.strokeStyle=card.grabState==='held'?'#dfff9b':card.grabState==='ready'?'#bceeff':card.grabState==='hover'?'#a6e7fa':card.guided?'#93d9f2':'rgba(166,204,229,.72)';
@@ -1213,7 +1213,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:availablePimoModes().includes(panelModeChoice)?panelModeChoice:'curiosity'},main=element.getBoundingClientRect();explorerElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
         explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? main.left)+'px';explorerElement.style.top=(explorerPosition?.y ?? Math.max(8,Math.min(main.bottom+12,window.innerHeight-166)))+'px';
         explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=fruitVisible?'Controls · FDW':selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=fruitVisible?fruitWindow?.getLabel()||'Fruit Discovery Window':objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
-        const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=selection?.limo?.coverage || objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
+        const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=fruitVisible?'Hold Trigger to carry fruit. Bring it close and keep holding to open it.':selection?.limo?.coverage || objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
         const modes=document.createElement('nav');modes.className='nlxr-explorer-modes';modes.setAttribute('aria-label','Knowledge view');
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','PIMO controls');
         for(const item of explorerControls()){
@@ -1433,7 +1433,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
-            const explorerCard={id:'explorer',limo:selection?.limo,explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
+            const explorerCard={id:'explorer',limo:fruitVisible?null:selection?.limo,explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
             if(fruitVisible)explorerCard.question='Hold Trigger to carry fruit. Bring it close and keep holding to open it.';
             explorerCard.linkedLabel=fruitVisible?(fruitWindow?.getLabel()||'Fruit Discovery Window')+' · FDW':(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);

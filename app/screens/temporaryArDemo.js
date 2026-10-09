@@ -785,12 +785,13 @@ function setLimMeshVisible(visible) {
 function handleDemoPanelAction(action) {
     if(action.startsWith('visibility:')){
         const type=action.slice(11);
+        if(type==='note' && !markers.some(record=>record.demoType==='note')){demoHiddenElements.delete('note');createDemoNote();syncDemoPanelActions();return;}
         if(demoHiddenElements.has(type))demoHiddenElements.delete(type);else demoHiddenElements.add(type);
         if(type==='plant' && demoHiddenElements.has(type))infoPanel?.hideFruitWindow();
         if(type==='note')for(const view of [...demoPlacedNoteDomViews.values(),...demoPlacedNoteViews.values()])view.root.hidden=demoHiddenElements.has(type);
         updateSimulatedMarkers();syncDemoPanelActions();return;
     }
-    if(action==='notes'){const note=markers.find(record=>record.demoType==='note');if(note)openDemoNoteExperience(note);else createDemoNote();return;}
+    if(action==='notes'){demoHiddenElements.delete('note');const note=markers.find(record=>record.demoType==='note');if(note)openDemoNoteExperience(note);else createDemoNote();syncDemoPanelActions();return;}
     if(action==='limo-show' || action==='limo-hide'){setLimMeshVisible(action==='limo-show');return;}
     demoFeedback?.sound('menu');
     if(action==='close-cancel'){cancelDemoClose();return;}
@@ -4300,6 +4301,7 @@ function collapseDemoNotes(){
     if(demoKnowledgeRoot?.classList.contains('demo-note-showcase'))demoKnowledgeWorkspace?.action('collapse');
 }
 function createDemoNote(source=null){
+    demoHiddenElements.delete('note');
     const count=markers.filter(item=>item.demoType==='note').length+1,m=viewerMatrix,p=source?.position || {x:(m?.[12] || 0)-(m?.[8] || 0),y:(m?.[13] || 1.4)-.2,z:(m?.[14] || 0)-(m?.[10] || 1)};
     const note={...createMinimalMarkerDraft('note',{name:'Garden Note '+count}),id:'demo-extra-note-'+Date.now(),name:'Garden Note '+count,description:'Notice one change in this place.',demoType:'note',demoInteractive:true,demoAreaId:source?.demoAreaId,position:{x:p.x+(source?.6:0),y:p.y,z:p.z},simulatedAnchor:{x:50,y:50},appearance:{spatial_note:{type:'plain',widgets:[]}}};
     note.demoContent={title:note.name,description:note.description,lines:[note.description]};markers.push(note);refreshDemoRecord(note);updateSimulatedMarkers();openDemoNoteExperience(note);return note;
@@ -4307,7 +4309,7 @@ function createDemoNote(source=null){
 function deleteDemoNote(record){
     const placed=demoPlacedNoteViews.get(String(record.id)) || demoPlacedNoteDomViews.get(String(record.id));if(placed){placed.renderer?.destroy();placed.workspace.destroy();placed.root.remove();demoPlacedNoteViews.delete(String(record.id));demoPlacedNoteDomViews.delete(String(record.id));}
     if(demoKnowledgeRoot?.dataset.noteRecord===String(record.id)){demoNoteRenderer=null;demoKnowledgeWorkspace=null;demoKnowledgeRoot=null;}
-    const index=markers.indexOf(record);if(index>=0)markers.splice(index,1);updateSimulatedMarkers();infoPanel?.restore();infoPanel?.showLearning({title:'Notes',body:'Use the Notes button to create a new Note.',mesh:'note'});infoPanel?.setObjectContext({title:'Controls · Notes',linkedName:'Notes',actions:[{id:'new-note',label:'+ Note'}],onAction:()=>createDemoNote()});infoPanel?.setExplorerOpen(true);
+    const index=markers.indexOf(record);if(index>=0)markers.splice(index,1);if(!markers.some(item=>item.demoType==='note'))demoHiddenElements.add('note');updateSimulatedMarkers();syncDemoPanelActions();infoPanel?.restore();infoPanel?.showLearning({title:'Notes',body:'Use the Notes button to create a new Note.',mesh:'note'});infoPanel?.setObjectContext({title:'Controls · Notes',linkedName:'Notes',actions:[{id:'new-note',label:'+ Note'}],onAction:()=>createDemoNote()});infoPanel?.setExplorerOpen(true);
 }
 function focusDemoNoteControls(record){
     if(record.demoNativeChooserFor){infoPanel?.restore();infoPanel?.showLearning({title:'Choose a plant',body:NATIVE_PLANT_CHOOSER_COPY,mesh:'note'});infoPanel?.setObjectContext({title:'Controls · Plant Orb',linkedName:'Choose a plant',hint:'Choose a rainforest plant for your second Orb.',actions:DEMO_NATIVE_PLANTS.map(plant=>({id:plant.id,label:plant.name})),onAction:id=>selectDemoNativePlant(record,id)});infoPanel?.setExplorerOpen(true);return true;}
@@ -6476,7 +6478,8 @@ async function startImmersive() {
                 demoFeedbackLastTick=_time;
                 const sources=[...session.inputSources];
                 const beeEncounters=getSpatialVisualSettings().insects?ambientBeeFlowerVisits.filter(visitor=>visitor?.encounterId && visitor.flightPosition && viewerMatrix && Math.hypot(visitor.flightPosition.x-viewerMatrix[12],visitor.flightPosition.y-viewerMatrix[13],visitor.flightPosition.z-viewerMatrix[14])<.95).map(visitor=>visitor.encounterId):[];
-                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeEncounters});
+                const beeAround=getSpatialVisualSettings().insects && ambientBeeFlowerVisits.some(visitor=>visitor?.flightPosition && viewerMatrix && Math.hypot(visitor.flightPosition.x-viewerMatrix[12],visitor.flightPosition.y-viewerMatrix[13],visitor.flightPosition.z-viewerMatrix[14])<1.8);
+                demoFeedback?.tick(_time,{sources,heldSource:demoHeldIndex>=0?demoGrabInputSource:infoPanel?.getHeldInputSource?.(),beeEncounters,beeAround});
             });
             let layer=null;
             try { layer=frame.session.renderState.baseLayer; }
