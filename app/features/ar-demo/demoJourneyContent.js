@@ -58,9 +58,9 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.7",
         "act": "Open a profile",
         "title": "The compact Tag view",
-        "main": "Tag shows the essentials. Use Controls to return to Curiosity when you want the information cells, or continue the demo.",
+        "main": "Tag gives you the plant’s identity at a glance. Continue to unfold Curiosity and discover the connected information cells.",
         "panel": "Optional compact view, not a required lesson.",
-        "hint": "Curiosity is the standard view.",
+        "hint": "Continue to Curiosity.",
         "art": null
     },
     {
@@ -111,10 +111,10 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "PANEL 1.2",
         "act": "Meet the panel tools",
-        "title": "Different ways to see information",
-        "main": "Sometimes you want a quick answer. Other times, you might want to explore a plant more deeply.\n\nTag gives you the essentials at a glance, while Curiosity lets you follow different branches of knowledge.",
-        "panel": "Show the available view choices in Controls without opening Settings. Explain Tag, Curiosity and optional Explorer there. Continuing closes Controls and restores Curiosity.",
-        "hint": "Review the panels, then continue. Changing views is optional.",
+        "title": "Keep the space clear",
+        "main": "You have explored Tag, Curiosity and the Fruit Discovery Window. Your Orbs are now tucked away to make room for the next step.\n\nThe Control Panel footer brings elements back when you want them. Green outlines mean visible; red outlines mean hidden. Notes and Totems join this row as you meet them.\n\nControls opens the options for the object you select. Fruit Discovery Window has its own simple controls.",
+        "panel": "Demonstrate the growing visibility footer and the contextual Controls sub-panel after the automatic PIMO and FDW showcase. Keep all plant profiles closed.",
+        "hint": "Select ORB to show your Orbs again. CONTROL PANEL collapses the panel to its small restore button.",
         "art": null
     },
     {

@@ -15,6 +15,22 @@ export function fruitWindowSpecies(identity={}){
 export function fruitWindowModes(modes,concept=false){return modes.filter(mode=>mode!=='explore'||concept);}
 export function fruitWindowCanPick(asset){return Boolean(asset?.canPick&&!asset.picked&&!asset.motion);}
 
+// Preserve the exact pickup offset. There is no preset inspection destination.
+export class FruitWindowTriggerHold {
+    source=null;
+    begin(source,fruit,pose,time=0){
+        if(this.source!==null || source==null || !fruit || !pose?.position || !pose.quaternion)return false;
+        this.source=source;this.fruit=fruit;this.startedAt=time;
+        this.offset=fruit.position.clone().sub(pose.position).applyQuaternion(pose.quaternion.clone().invert());
+        this.rotation=pose.quaternion.clone().invert().multiply(fruit.quaternion);return true;
+    }
+    update(source,pose){if(source!==this.source || !pose?.position || !pose.quaternion)return false;this.fruit.position.copy(this.offset).applyQuaternion(pose.quaternion).add(pose.position);this.fruit.quaternion.copy(pose.quaternion).multiply(this.rotation);return true;}
+    moveDistance(delta){if(this.source===null)return;const length=this.offset.length();if(length>.001)this.offset.multiplyScalar(THREE.MathUtils.clamp(length+delta,.10,1.5)/length);}
+    release(source){if(source!==this.source)return false;this.source=null;this.fruit=null;return true;}
+    reset(){this.source=null;this.fruit=null;}
+    owns(source){return source!=null && source===this.source;}
+}
+
 // A rigid pair: controller translation and the axis between grips control the
 // object. Wrist aim and the distance between hands never scale the window.
 export class FruitWindowGripPair{

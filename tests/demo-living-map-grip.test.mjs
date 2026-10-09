@@ -24,7 +24,7 @@ test('distant grips carry by hand translation without a wrist lever or behind-pl
 test('loose Totem can be grabbed from front, side and above without a facing-plane miss',()=>{
     for(const offset of [{x:1,y:0,z:0},{x:0,y:1,z:0},{x:0,y:0,z:1}]){
         const hit=livingMapTotemRayHit({origin:{x:origin.x+offset.x,y:origin.y+offset.y,z:origin.z+offset.z},direction:{x:-offset.x,y:-offset.y,z:-offset.z}},origin);
-        assert.ok(hit);assert.ok(Math.abs(hit.distance-(offset.y? .885:.965))<1e-6);
+        assert.ok(hit);assert.ok(Math.abs(hit.distance-(offset.y? .87:.965))<1e-6);
     }
     assert.equal(livingMapTotemRayHit({origin:{x:1,y:1,z:-1},direction:{x:0,y:0,z:-1}},origin),null);
 });

@@ -91,11 +91,11 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             const data=createTotemSculptureGeometry(24,16,'botanical'),shape=geometry(new THREE.BufferGeometry()),positions=[],normals=[];
             for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));}
             shape.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));shape.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));shape.setIndex(new THREE.BufferAttribute(data.indices,1));
-            mesh(shape,'#795f41',0,.34,0,.05,.34,.04,group);
+            mesh(shape,'#795f41',0,1.25,0,.095,1.25,.075,group);
             const glass=new THREE.MeshPhongMaterial({color:'#bfe0d6',transparent:true,opacity:.48,shininess:85,depthWrite:false});materials.set('totem-glass'+index,glass);
-            const collar=new THREE.Mesh(cylinder,glass);collar.position.y=.54;collar.scale.set(.16,.25,.16);group.add(collar);
+            const collar=new THREE.Mesh(cylinder,glass);collar.position.y=2.34;collar.scale.set(.073,.16,.073);group.add(collar);
             const tip=new THREE.MeshPhongMaterial({color:'#fff2b7',emissive:'#b7a152',emissiveIntensity:.65,shininess:50});materials.set('totem-tip'+index,tip);
-            const beacon=new THREE.Mesh(sphere,tip);beacon.position.y=.72;beacon.scale.set(.15,.14,.15);group.add(beacon);
+            const beacon=new THREE.Mesh(cylinder,tip);beacon.position.y=2.50;beacon.scale.set(.064,.04,.064);group.add(beacon);
         } else {
             const note=mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#d5bd84',0,.24,0,.16,.2,.055,group);note.rotation.y=.35;
         }

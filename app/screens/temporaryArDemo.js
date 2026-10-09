@@ -14,6 +14,8 @@ import {livingMapPlacementCopy,resetDemoPlantForMap} from '../services/demoLivin
 import {createLivingMapGripInput,limitLivingMapTilt} from '../services/demoLivingMapGrip.js';
 import {livingMapHandleRayHit} from '../services/demoLivingMapHandles.js';
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
+import {demoVisibilityFooter} from '../services/demoVisibilityFooter.js';
+let demoSeenElements=new Set(),demoHiddenElements=new Set();
 let demoLivingMapScene=null,demoLivingMapStartedAt=0,demoLivingMapPreviewClock=null;
 let demoLivingMapPlacement=null,demoMapIntroPaused=false;
 let demoMapTotemGripped=false,demoMapPlateGripped=false;
@@ -37,7 +39,7 @@ function updateSpatialLivingMap(now){
         introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));
         introBoardParagraphFadeStartedAt=now;introBoardParagraphFadeTimes=[now];introBoardTextureDirty=true;
         const text=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
-        if(text){text.innerHTML='<p class="is-revealed"></p>';text.querySelector('p').textContent=introBoardVisibleBody;}
+        if(text){text.innerHTML='<p class="is-revealed"></p>';const paragraph=text.querySelector('p');paragraph.textContent=introBoardVisibleBody;paragraph.style.cssText='opacity:0;transition:opacity 1.2s ease';requestAnimationFrame(()=>{if(paragraph.isConnected)paragraph.style.opacity='1';});}
     }
     const surface=appRoot?.querySelector('[data-spatial-living-map]');
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-landscape-revealed',String(reveal.appear>.1));
@@ -516,6 +518,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    demoSeenElements.clear();demoHiddenElements.clear();infoPanel?.hideFruitWindow();
     // Placed Notes survive slide changes, never a new demo visit.
     if(demoNoteRenderer){demoNoteRenderer=null;demoKnowledgeWorkspace=null;demoKnowledgeRoot=null;}
     disposeDemoPlacedNotes();
@@ -740,6 +743,8 @@ function syncDemoPanelActions() {
     if(mapPlay){const label=demoLivingMapPlayback.playing(performance.now())?'Pause living map':'Play living map';if(mapPlay.textContent!==label)mapPlay.textContent=label;}
     if(!infoPanel)return;
     const actions=demoPanelActions(),signature=JSON.stringify(actions);
+    for(const record of markers)if(!record.demoMapPiece)demoSeenElements.add(record.demoType);
+    infoPanel.setVisibilityItems(demoVisibilityFooter(demoSeenElements,demoHiddenElements));
     // Exit confirmation stays in the panel beside Keep demo open; the stage
     // is inert while confirming, so an external action can become unreachable.
     const primary=demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE?actions.find(item=>item.id==='continue'):null;
@@ -778,6 +783,13 @@ function setLimMeshVisible(visible) {
 }
 
 function handleDemoPanelAction(action) {
+    if(action.startsWith('visibility:')){
+        const type=action.slice(11);
+        if(demoHiddenElements.has(type))demoHiddenElements.delete(type);else demoHiddenElements.add(type);
+        if(type==='plant' && demoHiddenElements.has(type))infoPanel?.hideFruitWindow();
+        if(type==='note')for(const view of [...demoPlacedNoteDomViews.values(),...demoPlacedNoteViews.values()])view.root.hidden=demoHiddenElements.has(type);
+        updateSimulatedMarkers();syncDemoPanelActions();return;
+    }
     if(action==='notes'){const note=markers.find(record=>record.demoType==='note');if(note)openDemoNoteExperience(note);else createDemoNote();return;}
     if(action==='limo-show' || action==='limo-hide'){setLimMeshVisible(action==='limo-show');return;}
     demoFeedback?.sound('menu');
@@ -982,6 +994,11 @@ function inviteVirtualTag(record) {
 
 function continueAfterDemoPim(record) {
     if (!record || record.demoProfileInteracted) return false;
+    if(record.tutorialStage==='plant' && record.demoPimoLesson!=='fdw'){showDemoFruitDiscovery(record);return true;}
+    infoPanel?.hideFruitWindow();
+    for(const plant of markers.filter(item=>item.demoType==='plant')){plant.demoExpanded=false;knowledgeRenderer?.clear(plant);}
+    demoHiddenElements.add('plant');updateSimulatedMarkers();
+    infoPanel?.clearPlant(record);
     infoPanel?.setTaskProgress(null);
     record.demoPimoLesson='done';
     knowledgeExplorerAction(record,'KnowledgeMode:curiosity');
@@ -993,6 +1010,17 @@ function continueAfterDemoPim(record) {
     if(record.tutorialStage==='plant')showDemoPanelIntroduction(record);
     else showDemoAction('note');
     return true;
+}
+
+function showDemoFruitDiscovery(record,index=0){
+    record.demoPimoLesson='fdw';record.demoExpanded=false;knowledgeRenderer?.clear(record);refreshDemoRecord(record);
+    infoPanel?.setMediaCollapsed(true);infoPanel?.setExplorerOpen(false);
+    const identity=demoOrbKnowledge(record).document.identity;
+    infoPanel?.showFruitWindow({plant:identity.commonName,scientific:identity.scientificName},index===0?null:index===1?'carambola':'mamey_sapote');
+    showIntroBoard(index===0?'Fruit Discovery Window':'Different fruits, the same discovery window',index===0?
+        'Look closely at the plant, its flowers and its fruit.\n\nPoint at an arrowed pod and hold Trigger to carry it. Bring it closer and keep holding to open it. The play icon beside its name follows flower-to-fruit development.':
+        'The same window can reveal the structure and development of other fruits. These are library examples; your Pigeon Pea information stays connected to its original Orb.',
+        'Continue',()=>index<2?showDemoFruitDiscovery(record,index+1):continueAfterDemoPim(record),{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:'FDW 1.'+(index+1),dynamicCopy:true,nextGuide:'Grip both window handles to move it. Trigger holds the highlighted fruit.'});
 }
 
 function showDemoPanelIntroduction(record,index=0){
@@ -1139,7 +1167,7 @@ function demoTotemCards(record) {
         ...(note ? [{id:`note-${note.id}`,eyebrow:'',title:pointedTitle('Note',directionFor(note)),summary:'',body:note.description || note.notes || (demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
     ].slice(0,5);
 }
-function demoAreaVisible(record) { return (introBoardStep!=='UTILITY 1.1' || Boolean(record.demoMapPiece)) && !record?.demoHiddenForLimo && demoAreaRecordVisible(record,markers); }
+function demoAreaVisible(record) { return !demoHiddenElements.has(record?.demoType) && (introBoardStep!=='UTILITY 1.1' || Boolean(record.demoMapPiece)) && !record?.demoHiddenForLimo && demoAreaRecordVisible(record,markers); }
 
 function clearHiddenDemoAreaState(area) {
     const owned=markers.filter(record=>record.demoAreaId===area?.id);
@@ -1628,6 +1656,7 @@ function syncDemoStageControls(options={}){
 
 function rememberDemoSlide(slide){
     if(demoSlideHistoryReplay)return;
+    slide={...slide,visibility:{seen:[...demoSeenElements],hidden:[...demoHiddenElements]}};
     const code=String(slide?.stepLabel || '').trim();
     if(!code)return;
     const previous=demoSlideHistory[demoSlideHistoryIndex];
@@ -1643,6 +1672,7 @@ function rememberDemoSlide(slide){
 function captureCurrentDemoSlide(){
     const entry=demoSlideHistory[demoSlideHistoryIndex];if(!entry)return;
     entry.scene=captureDemoScene(markers);entry.panel=infoPanel?.snapshot();
+    entry.visibility={seen:[...demoSeenElements],hidden:[...demoHiddenElements]};
     if(entry.stepLabel==='UTILITY 1.1' && demoLivingMapPlacement)entry.map={paused:entry.options?.historyPhase==='intro',elapsed:demoLivingMapElapsed(),placements:demoLivingMapPlacement.snapshot(),origin:demoLivingMapOrigin?{...demoLivingMapOrigin}:null,orientation:{...demoLivingMapOrientation}};
 }
 
@@ -1672,6 +1702,7 @@ function showDemoSlideFromHistory(index){
         demoMapIntroPaused=slide.map?.paused ?? slide.options?.historyPhase==='intro';demoLivingMapStartedAt=performance.now()-(slide.map?.elapsed || 0);demoMapNarrationCount=-1;
     }
     const currentRecords=markers;if(slide.scene)markers=restoreDemoScene(slide.scene,{preserveNotes:true});
+    demoSeenElements=new Set(slide.visibility?.seen || markers.map(record=>record.demoType));demoHiddenElements=new Set(slide.visibility?.hidden || []);
     for(const record of currentRecords)if(!markers.includes(record))knowledgeRenderer?.clear(record);
     if(slide.state){const state=slide.state;({demoStage,placementReady,demoJourneyStage,demoOrientationStep,demoTutorialStep,limMeshVisible,arWelcomeIntroPending,arWelcomeSettleStage,arWelcomeSettleStartedAt,arWelcomeOpeningActive,arWelcomeRootMilestone,arWelcomeRootMilestoneStartedAt,selectedLimCell,nativeConnectionState}=state);limExpandedCells=new Set(state.limExpandedCells);limHiddenCells=new Set(state.limHiddenCells);limExpandedAt=new Map(state.limExpandedAt);}
     demoSlideHistoryIndex=index;
@@ -1716,11 +1747,16 @@ function finishIntroBoard() {
 function showPersistentPimPrompt(record) {
     if(record?.demoProfileInteracted){setGuide(`${record.name || 'Plant'} information remains available.`);return;}
     const first=record?.tutorialStage==='plant';
+    if(first && record.demoPimoLesson==='fdw')return;
     const firstStep={uses:'PIMO 1.2a',culinary:'PIMO 1.2b','fresh-peas':'PIMO 1.2c'}[record.demoGuidedNodeId] || 'PIMO 1.2';
     const id=first?(record.knowledgeExplorer?.mode==='tag'?'ELEMENTS 1.7':firstStep):'ELEMENTS 1.12';
     const step=guidedDemoStep(id);
-    const button=first?'Continue to panel tools':'Continue';
-    showIntroBoard(record.demoNativeChoice?'Your rainforest plant':step.title,record.demoNativeChoice?'Your chosen plant now has its own PIMO. Explore its information, or continue to add a sample Note.':step.main,button,()=>continueAfterDemoPim(record),{
+    const tag=first && record.knowledgeExplorer?.mode==='tag';
+    const button='Continue';
+    showIntroBoard(record.demoNativeChoice?'Your rainforest plant':step.title,tag?'Tag gives you a compact identity for this plant. Continue to unfold its Curiosity cells.':record.demoNativeChoice?'Your chosen plant now has its own PIMO. Explore its information, or continue to add a sample Note.':step.main,button,()=>{
+        if(tag){record.demoPimoLesson='curiosity';knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);refreshDemoPimProfile(record);showPersistentPimPrompt(record);}
+        else continueAfterDemoPim(record);
+    },{
         tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true
     });
 }
@@ -2395,6 +2431,7 @@ function runArWelcomeTutorial(index=0) {
 }
 
 function guidePlantConversion(record) {
+    demoHiddenElements.delete('plant');
     if(record.tutorialStage==='plant2'){
         record.name='Plant Orb';record.demoNativeChoicePending=true;record.demoInteractive=true;record.demoPlacementHighlight=false;
         appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden','');
@@ -2682,7 +2719,7 @@ function spawnDemoMapTotem(){
     clearDemoMapPiece();const target=demoLivingMapReady()?demoLivingMapPlacement?.current(demoLivingMapElapsed()):null;
     if(target && introBoardStep==='UTILITY 1.1'){
         const m=viewerMatrix,right=m?{x:m[0],z:m[2]}:{x:1,z:0},base=demoLivingMapOrigin || demoMapWorldPoint(1100,650);
-        const position={x:base.x+right.x*.67,y:base.y+.14,z:base.z+right.z*.67+.12},halfHeight=.095;
+        const position={x:base.x+right.x*.67,y:base.y+.18,z:base.z+right.z*.67+.12},halfHeight=.13;
         const piece={...createMinimalMarkerDraft('area_checkpoint',{name:target.name}),id:'demo-map-piece',name:target.name,
             demoType:'zone',demoMapPiece:true,demoInteractive:true,demoHalfHeight:halfHeight,position,groundBaseY:position.y-halfHeight,
             demoMapHome:{...position},demoTotemColor:'#795f41',demoTotemSignsVisible:false,rotationY:demoTotemRotationForPosition(position),
@@ -2704,7 +2741,8 @@ function placeDemoMapTotem(alternative=false){
             if(near){piece.position={...contact,y:contact.y+demoTotemHalfHeight(piece)};piece.groundBaseY=contact.y;}
         }
         const destination=demoLivingMapOrigin?livingMapWorldPoint(target,demoLivingMapOrigin,demoLivingMapOrientation):null;
-        if(piece?.demoMapDropValid===false || !livingMapWorldDropAccepted(piece?.position,destination)) {
+        const foot=piece?.position?{...piece.position,y:piece.position.y-demoTotemHalfHeight(piece)}:null;
+        if(piece?.demoMapDropValid===false || !livingMapWorldDropAccepted(foot,destination)) {
             if(piece){piece.position={...piece.demoMapHome};piece.groundBaseY=piece.position.y-demoTotemHalfHeight(piece);}
             setGuide('Move the Totem to the pulsing circle and release.');return false;
         }
@@ -3423,7 +3461,7 @@ function toggleDemoPlantProfile(record) {
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     const opening=!record.demoExpanded;knowledgeExplorer(record);
     record.demoPlacementHighlight=false;
-    if(opening && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='curiosity';knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});}
+    if(opening && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='tag';knowledgeExplorerAction(record,'KnowledgeMode:tag');infoPanel?.refreshExplorer({mode:'tag'});}
     record.demoExpanded = opening;
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
@@ -4130,6 +4168,10 @@ function updateHeldDemoRecordPosition(frame=null) {
     const origin = demoPointerWorldOrigin();
     if (!record) return;
     if(record.demoMapPiece && demoLivingMapOrigin){
+        if(record.demoGripOffset && frame && demoGrabInputSource?.gripSpace){
+            let grip=null;try{grip=frame.getPose(demoGrabInputSource.gripSpace,referenceSpace)?.transform.position;}catch{}
+            if(grip){const offset=record.demoGripOffset;record.position={x:grip.x+offset.x,y:grip.y+offset.y,z:grip.z+offset.z};record.groundBaseY=record.position.y-demoTotemHalfHeight(record);record.demoMapDropValid=Boolean(livingMapHeldContact(record.position,demoLivingMapOrigin,demoLivingMapOrientation));return;}
+        }
         if(!origin || !ray)return;
         const hit=livingMapRayPoint({origin,direction:ray},demoLivingMapOrigin,demoLivingMapOrientation);
         // A miss retains the last valid map contact instead of a far grab depth.
@@ -4210,7 +4252,8 @@ function beginPointerDemoHold(event) {
 }
 
 function beginControllerDemoHold(preferredTarget=null,frame=null) {
-    if (placementReady || demoHeldIndex >= 0 || demoHoldTimer) return false;
+    if (placementReady || demoHeldIndex >= 0 || demoHoldTimer && !preferredTarget?.record?.demoMapPiece) return false;
+    if(preferredTarget?.record?.demoMapPiece){clearTimeout(demoHoldTimer);demoHoldTimer=null;}
     const profile=demoInfoTarget();
     const target = preferredTarget || demoRecordAtPointer() || (profile?.target ? {record:profile.record,index:markers.indexOf(profile.record),hit:profile.target} : null);
     if (!target || target.record.demoInteractive === false) return false;
@@ -6261,9 +6304,12 @@ async function startImmersive() {
             const near=piece && gripPose && Math.hypot(gripPose[12]-piece.position.x,gripPose[13]-piece.position.y,gripPose[14]-piece.position.z)<.22;
         const hit=piece && (near?{distance:0,point:piece.position}:livingMapTotemRayHit(ray,piece.position,.20));
             if(!ray || !hit)return;
-            if([infoPanel?.hit(ray),demoNoteHit(ray)].filter(Boolean).some(surface=>surface.distance<hit.distance))return;
+            if(!near && [infoPanel?.hit(ray),demoNoteHit(ray)].filter(Boolean).some(surface=>surface.distance<hit.distance))return;
             demoGrabInputSource=event.inputSource;
-            if(beginControllerDemoHold({record:piece,index:markers.indexOf(piece),hit},event.frame)){event.stopImmediatePropagation();event.preventDefault();}
+            if(beginControllerDemoHold({record:piece,index:markers.indexOf(piece),hit},event.frame)){
+                if(near)piece.demoGripOffset={x:piece.position.x-gripPose[12],y:piece.position.y-gripPose[13],z:piece.position.z-gripPose[14]};
+                event.stopImmediatePropagation();event.preventDefault();
+            }
         },{capture:true});
         session.addEventListener('squeezeend',event=>{
             if(event.inputSource!==demoGrabInputSource || !markers[demoHeldIndex]?.demoMapPiece)return;

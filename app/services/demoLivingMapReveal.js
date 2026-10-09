@@ -19,7 +19,7 @@ export function livingMapTotemRayHit(ray,center,radius=null){
     if(direction.lengthSq()<1e-8)return null;
     direction.normalize();
     const cast=new THREE.Ray(start,direction);
-    const point=radius===null?cast.intersectBox(new THREE.Box3(new THREE.Vector3(center.x-.035,center.y-.095,center.z-.035),new THREE.Vector3(center.x+.035,center.y+.115,center.z+.035)),new THREE.Vector3()):cast.intersectSphere(new THREE.Sphere(new THREE.Vector3(center.x,center.y,center.z),radius),new THREE.Vector3());
+    const point=radius===null?cast.intersectBox(new THREE.Box3(new THREE.Vector3(center.x-.035,center.y-.13,center.z-.035),new THREE.Vector3(center.x+.035,center.y+.13,center.z+.035)),new THREE.Vector3()):cast.intersectSphere(new THREE.Sphere(new THREE.Vector3(center.x,center.y,center.z),radius),new THREE.Vector3());
     return point?{distance:point.distanceTo(start),point:{x:point.x,y:point.y,z:point.z},radius}:null;
 }
 export function livingMapRotation(value=0){

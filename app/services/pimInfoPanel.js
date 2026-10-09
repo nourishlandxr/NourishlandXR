@@ -242,6 +242,8 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const left=rail+22,width=1000-rail-44;
     const button=(item,x,y,w,h)=>({...item,description:item.description || controlDescription(item),x,y,width:w,height:h});
     const result=[];
+    const visibility=items.filter(item=>item.kind==='visibility');
+    if(visibility.length){visibility.forEach((item,index)=>result.push(button(item,18+index*244,height-64,232,48)));height-=64;}
     const menu=items.filter(item=>['tab','menu'].includes(item.kind)),openers=menu.filter(item=>item.panelOpener),otherMenu=menu.filter(item=>!item.panelOpener);
     openers.forEach((item,index)=>result.push(button(item,16,150+index*56,rail-28,46)));
     const menuStart=150+openers.length*56+(openers.length?26:0);
@@ -309,17 +311,19 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
     let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
     let renderer=null,pose=null,heading=null,lastTime=0,detached=false,guided=false,introduction=false,pathwayContext=null,moduleContext=null,utilityActions=[],headerProgress=null,taskProgress=null,hoveredPanelId='',hoveredDescription='',hoveredAction='';
-    let fruitWindow=null,fruitVisible=false,fruitPending=null,fruitDestroyed=false,fruitGl=null,fruitSession=null,fruitSpace=null;
+    let fruitWindow=null,fruitVisible=false,fruitPending=null,fruitDestroyed=false,fruitGl=null,fruitSession=null,fruitSpace=null,fruitIdentity=null,fruitExample=null;
+    let visibilityItems=[],visibilitySignature='';
     const visiblePimoModes=()=>availablePimoModes().filter(mode=>mode!=='explore'||isPimoDeveloperOverride()&&new URLSearchParams(globalThis.location?.search||'').get('explorerConcept')==='1');
     const hideFruitWindow=()=>{fruitVisible=false;fruitWindow?.hide();renderExplorer();};
     async function loadFruitWindow(){
         fruitVisible=true;
-        if(fruitWindow){fruitWindow.show(identity||{});renderExplorer();return;}
+        if(fruitWindow){fruitWindow.show(fruitIdentity||identity||{});if(fruitExample)fruitWindow.chooseExample(fruitExample);renderExplorer();return;}
         renderExplorer();
         if(fruitPending)return;
         fruitPending=import('./fruitWindowExperience.js');
         try{const {createFruitWindowExperience}=await fruitPending;if(fruitDestroyed||!fruitVisible)return;
-            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:identity||{},onHide:hideFruitWindow,onState:()=>{if(!fruitDestroyed)renderExplorer();}});
+            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:fruitIdentity||identity||{},onHide:hideFruitWindow,onState:()=>{if(!fruitDestroyed)renderExplorer();}});
+            if(fruitExample)fruitWindow.chooseExample(fruitExample);
             if(fruitGl)fruitWindow.attach(fruitGl);if(fruitSession)fruitWindow.bindSession(fruitSession,fruitSpace);
             if(!fruitVisible)fruitWindow.hide();
         }catch(error){fruitVisible=false;contextHint='Fruit Window could not load. Please try again.';console.error('[Fruit Window] Could not start',error);}
@@ -388,7 +392,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         if(delayMs>0){mediaTransitionTimer=setTimeout(()=>{mediaTransitionTimer=0;mediaPreviewBlocked=false;beginLoad();render(true);},delayMs);return;}
         beginLoad();
     }
-    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0)+(guided?Math.max(0,(pages()[0]?.length || 0)-7)*(largeText?46:38)+80:0);
+    const height=()=>controlPanelHeight(pages()[page]?.length || 0,largeText,Boolean(pathwayContext),utilityActions,tab==='Help'?(moduleContext?.actions?.length||0):0)+(guided?Math.max(0,(pages()[0]?.length || 0)-7)*(largeText?46:38)+80:0)+(visibilityItems.length?64:0);
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const mainUtilities=()=>utilityActions.filter(item=>!['safety','recenter'].includes(item.id));
     const panelOpeners=()=>panelOpenerControls({mediaCollapsed,explorerClosed,settingsOpen});
@@ -401,8 +405,15 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             items.filter(item=>item.kind==='history').forEach(item=>item.y=384+menu.length*62);
             items=[...panelOpeners(),...items];
         }
+        if(!hidden && !confirmation && visibilityItems.length){
+            items=items.filter(item=>item.action!=='Hide' && item.action!=='Notes');
+            // Reserve a footer row independently from reading/navigation controls.
+            for(const item of items)if(['utility','module','pathway'].includes(item.kind))item.y-=64;
+            items.push(...visibilityItems.map((item,index)=>({action:item.id==='control'?'Hide':'Utility:visibility:'+item.id,label:item.label,kind:'visibility',selected:item.id==='control'?!hidden:item.selected,x:18+index*244,y:height()-64,width:232,height:48})));
+        }
         if(!hidden && !confirmation)items.push(...(selection?.sourceLinks || []).slice(0,2).map((link,index)=>({action:'OpenSource:'+index,label:index?'Reference ↗':'Source ↗',description:link.label,kind:'reference',x:238+index*174,y:130,width:166,height:42})));
         const visible=confirmation?items.filter(item=>item.kind==='utility'):items;
+        if(hidden && visibilityItems.length)for(const item of visible)if(item.action==='Restore'){item.label='CONTROL PANEL';item.kind='visibility';item.selected=false;}
         return isDesktopDemo()?visible.filter(item=>item.action!=='Recenter'):visible;
     };
     // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
@@ -567,6 +578,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
     function makeButton(item){
         const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.infoAction=item.action;button.disabled=Boolean(item.disabled);
         button.dataset.controlKind=item.kind || 'action';button.classList.toggle('is-primary-action',Boolean(item.primary) || ['Next','PathNext'].includes(item.action));
+        if(item.kind==='visibility'){button.setAttribute('aria-pressed',String(item.selected));button.style.border='2px solid '+(item.selected?'#85e5ae':'#ee8f8b');button.style.background='rgba(16,35,31,.28)';button.title=item.label+' · '+(item.selected?'visible':'hidden');}
         button.setAttribute('aria-label',item.action==='Restore'?'Restore Control panel':item.ariaLabel || item.label);
         button.title=controlDescription(item);
         if(item.panelOpener){
@@ -920,7 +932,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             const brand=document.createElement('span');brand.className='nlxr-panel-brand';brand.setAttribute('aria-label','Control panel');brand.innerHTML='CONTROL<br>PANEL';header.append(brand);
             const plant=document.createElement('h2');plant.textContent=identity?.plant || selection?.plant || '';plant.hidden=!plant.textContent;
             const scientific=document.createElement('p');scientific.className='nlxr-control-identity';scientific.textContent=identity?.scientific || (identity?'Selected plant':'');scientific.hidden=!scientific.textContent;
-            const hideControl=optionalPanelControl(controls(),'Hide');
+            const hideControl=visibilityItems.length?null:optionalPanelControl(controls(),'Hide');
             if(hideControl){const hideButton=makeButton(hideControl);hideButton.classList.add('is-panel-hide');header.append(hideButton);}
             header.classList.add('is-move-handle');header.title='Hold to move the Control panel';
             header.append(plant,scientific);element.append(header);syncHeaderProgress(header);
@@ -952,6 +964,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
                 element.append(createMediaWing());
             }
             const tools=document.createElement('footer');tools.className='nlxr-tools-dock';tools.setAttribute('aria-label','Control panel tools');
+            const visibility=document.createElement('nav');visibility.className='nlxr-visibility-footer';visibility.setAttribute('aria-label','Scene visibility');visibility.style.cssText='display:flex;gap:8px;flex-wrap:wrap';controls().filter(item=>item.kind==='visibility').forEach(item=>visibility.append(makeButton(item)));if(visibility.childElementCount)tools.append(visibility);
             if(!confirmation){const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));tools.append(pager);}
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Reading controls');controls().filter(item=>!item.kind && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));if(nav.childElementCount)tools.append(nav);
             if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)tools.append(utilities);}
@@ -1132,6 +1145,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             else {face.addColorStop(0,'rgba(225,242,239,.12)');face.addColorStop(.5,'rgba(169,202,207,.08)');face.addColorStop(1,'rgba(19,42,46,.10)');}
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
             if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=button.action==='Utility:close-confirm'?'rgba(255,180,177,.82)':button.panelOpener?'rgba(230,233,222,.48)':isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=3;ctx.stroke();}
+            if(button.kind==='visibility'){ctx.strokeStyle=button.selected?'#85e5ae':'#ee8f8b';ctx.lineWidth=aimed?5:3;ctx.stroke();}
             if(card.hoverAction===button.action && !button.disabled){ctx.fillStyle='rgba(219,237,216,.22)';ctx.fill();ctx.strokeStyle='rgba(245,247,222,.96)';ctx.lineWidth=4;ctx.stroke();}
             if(button.action===guidanceAction){ctx.strokeStyle=`rgba(211,245,205,${.45+.4*(.5+.5*Math.sin((lastTime-guidanceStartedAt)/450))})`;ctx.lineWidth=5;ctx.stroke();}
             if(button.selected){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
@@ -1180,6 +1194,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         return hover;
     }
     function explorerControls(){
+        if(fruitVisible)return [{action:'Explorer',label:'Close controls',x:22,y:70,width:464,height:54},{action:'FruitWindow:next',label:'Other fruits',x:506,y:70,width:464,height:54}];
         if(selection?.limo && !objectContext)return limoSpatialControls(selection.limo);
         if(selection?.controlsType==='LIMO' && !objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},{action:'Utility:limo-show',label:'Show cells',x:22,y:62,width:464,height:54},{action:'Utility:limo-hide',label:'Hide cells',x:506,y:62,width:464,height:54}];
         if(objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...spatialControlLayout(objectContext.actions).map(item=>({...item,action:'Object:'+item.id}))];
@@ -1189,10 +1204,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             {action:'Limo:open',label:'Learn in this Project · LIMO',x:22,y:66,width:948,height:54},
             {action:'FruitWindow:load',label:fruitVisible?'Fruit Window loaded':'Load Fruit Window',x:22,y:204,width:464,height:54,disabled:fruitVisible},
             {action:'FruitWindow:hide',label:'Hide Fruit Window',x:506,y:204,width:464,height:54,disabled:!fruitVisible},
-            ...(fruitVisible&&renderer?[
-                {action:'FruitWindow:next',label:'Example: '+(fruitWindow?.getLabel()||'Loading…'),x:22,y:270,width:948,height:54},
-                ...[['play','Grow'],['RIPE','Harvest'],['pick','Pick'],['return','Return'],['open','Open'],['close','Close']].map(([command,label],i)=>({action:'FruitWindow:'+command,label,disabled:!fruitWindow?.canAction(command),x:22+(i%3)*326,y:336+Math.floor(i/3)*66,width:304,height:54}))
-            ]:[])];
+            ];
     }
     const explorerHeight=()=>Math.max(180,...explorerControls().map(item=>item.y+item.height+18));
 
@@ -1200,7 +1212,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         explorerElement.hidden=hidden || detached || confirmation || explorerClosed || Boolean(renderer);element.classList.toggle('has-explorer-companion',!explorerElement.hidden);if(explorerElement.hidden)return;
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:availablePimoModes().includes(panelModeChoice)?panelModeChoice:'curiosity'},main=element.getBoundingClientRect();explorerElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
         explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? main.left)+'px';explorerElement.style.top=(explorerPosition?.y ?? Math.max(8,Math.min(main.bottom+12,window.innerHeight-166)))+'px';
-        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
+        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=fruitVisible?'Controls · FDW':selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=fruitVisible?fruitWindow?.getLabel()||'Fruit Discovery Window':objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
         const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=selection?.limo?.coverage || objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
         const modes=document.createElement('nav');modes.className='nlxr-explorer-modes';modes.setAttribute('aria-label','Knowledge view');
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','PIMO controls');
@@ -1293,6 +1305,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         },
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
+        setVisibilityItems(items=[]){const signature=JSON.stringify(items);if(signature===visibilitySignature)return;visibilitySignature=signature;visibilityItems=items.map(item=>({...item}));render(true);},
+        showFruitWindow(nextIdentity=null,example=null){fruitIdentity=nextIdentity;fruitExample=example;return loadFruitWindow();},
+        hideFruitWindow,
         setObjectContext(value){objectContext=value;knowledgeRecord=null;knowledgeDocument=null;panelModeChoice=null;mediaCollapsed=true;loadPanelImage('');render(true);},
         setStageContext(value,{preserveObject=false}={}){stageContext=value;if(!preserveObject){objectContext=null;knowledgeRecord=null;knowledgeDocument=null;}renderExplorer();},
         makeRoomFor(point){
@@ -1304,8 +1319,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             panelShift={from:{...pose.center},to:{x:pose.center.x+pose.right.x*direction*distance,y:pose.center.y,z:pose.center.z+pose.right.z*direction*distance},startedAt:performance.now()};return true;
         },
         guideTool(action='Explorer'){guidanceAction=action;guidanceStartedAt=performance.now();element.classList.toggle('is-panel-guidance',action==='ToggleMedia');render(true);},
-        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext};},
-        restoreSnapshot(value){if(!value)return;({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});render(true);},
+        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext,fruitVisible,fruitIdentity,fruitExample:fruitWindow?.getExample()||fruitExample};},
+        restoreSnapshot(value){if(!value)return;hideFruitWindow();({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});if(value.fruitVisible){fruitIdentity=value.fruitIdentity;fruitExample=value.fruitExample;void loadFruitWindow();}render(true);},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setTaskProgress(value){
             if(!value){taskProgress=null;render();return;}
@@ -1419,7 +1434,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',limo:selection?.limo,explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
-            explorerCard.linkedLabel=(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
+            if(fruitVisible)explorerCard.question='Hold Trigger to carry fruit. Bring it close and keep holding to open it.';
+            explorerCard.linkedLabel=fruitVisible?(fruitWindow?.getLabel()||'Fruit Discovery Window')+' · FDW':(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
