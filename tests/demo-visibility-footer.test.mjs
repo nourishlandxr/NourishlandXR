@@ -12,3 +12,7 @@ test('Footer grows with introduced elements and uses state rather than open/clos
     assert.equal(buttons.length,4);assert.ok(buttons.every(item=>item.y===736));
 });
 test('Welcome badge renders the current build version',()=>{const app={innerHTML:''};renderLaunchScreen(app);assert.ok(app.innerHTML.includes('>'+`V${BUILD_INFO.version}`+' · '));});
+test('minimized XR panel preserves footer identity and hidden state',()=>{
+ const [button]=spatialPanelControls({hidden:true,items:[{action:'Restore',label:'CONTROL PANEL',kind:'visibility',selected:false}]});
+ assert.equal(button.label,'CONTROL PANEL');assert.equal(button.kind,'visibility');assert.equal(button.selected,false);
+});

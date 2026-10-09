@@ -994,3 +994,9 @@ window.renderFieldGuide=(id,creator=false)=>creator?legacyFieldGuide(id,true):wi
 window.renderBrowseContent=(id,creator=false)=>creator?legacyBrowse(id,true):window.openVisitor('plants',decodeMainValue(id));
 if(!history.state?.nourishlandView) replaceViewHistory('welcome');
 bootstrap();
+
+// Creator camera entry is independent of immersive AR capability.
+window.scanCreatorArUco = async projectId => {
+    try { const { startPhysicalAnchorScanner } = await import('./screens/physicalAnchorScanner.js'); await startPhysicalAnchorScanner(decodeURIComponent(projectId)); }
+    catch (error) { window.alert(error.message); }
+};

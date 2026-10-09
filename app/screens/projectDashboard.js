@@ -824,7 +824,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const bubbles = Array.isArray(board.information_bubbles) ? board.information_bubbles : [];
         const startingBubbles = bubbles.length ? bubbles : [''];
         const bubbleFields = startingBubbles.map((text, index) => `<div class="field totem-text-box"><label for="areaCheckpointBubble${index}">Text box ${index + 1}</label><textarea id="areaCheckpointBubble${index}" data-totem-information-box rows="2" placeholder="${index === 0 ? 'What does this Totem help people understand?' : 'Add another useful idea, story or instruction.'}">${escapeHtml(text)}</textarea></div>`).join('');
-        const physicalAnchorEnabled = readPlatformSettings().physicalAnchors === true;
+        const physicalAnchorEnabled = true;
         let savedPhysicalAnchor = null;
         try {
             savedPhysicalAnchor = normalizePhysicalAnchor(existing?.marker.physicalAnchor);
@@ -833,7 +833,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         }
         const physicalValues = savedPhysicalAnchor || PHYSICAL_ANCHOR_DEFAULTS;
         const assignments = physicalAnchorAssignments(context.entries, existing?.marker.id || '');
-        const physicalMarkerOptions = PHYSICAL_ANCHOR_IDS.map(markerId => {
+        const physicalMarkerOptions = PHYSICAL_ANCHOR_IDS.filter(markerId => markerId <= 9 || markerId === Number(physicalValues.markerId)).map(markerId => {
             const assignment = assignments.get(markerId);
             const status = assignment
                 ? assignment.isCurrent
@@ -844,10 +844,10 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         }).join('');
         const selectedAssignment = assignments.get(Number(physicalValues.markerId));
         const physicalMarkerCard = physicalAnchorEnabled ? `<details class="totem-physical-anchor-card" ${savedPhysicalAnchor ? 'open' : ''}>
-            <summary><span><strong>Physical Marker <small>(optional)</small></strong><small>Paper-anchored Totem prototype</small></span><b aria-hidden="true">⌗</b></summary>
+            <summary><span><strong>Physical Marker <small>(optional)</small></strong><small>ArUco tag · NL-001–NL-009</small></span><b aria-hidden="true">⌗</b></summary>
             <div class="totem-physical-anchor-body">
-                <p>Associate a printable physical marker with this totem location. In AR mode, scanning the marker anchors the totem to this real-world point.</p>
-                <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Use physical marker</strong><small>Off by default. Existing AR remains unchanged.</small></span><input id="areaPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>
+                <p>Associate a printable physical marker with this totem location. Scan the assigned tag to preview the linked Totem in the camera.</p>
+                <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Use physical marker</strong><small>Choose the printed tag installed beside this Totem.</small></span><input id="areaPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>
                 <div class="totem-physical-anchor-layout" data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
                     <div class="totem-physical-marker-preview" data-physical-marker-preview>${physicalMarkerSvg(physicalValues.markerId)}</div>
                     <div class="totem-physical-marker-controls">
@@ -857,7 +857,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
                         <label for="areaPhysicalMarkerSize">Marker size <small>Black square only, excluding white margin</small><span class="input-with-unit"><input id="areaPhysicalMarkerSize" type="number" min="1" step="1" value="${physicalValues.markerSizeMm}" /><b>mm</b></span></label>
                     </div>
                 </div>
-                <div class="totem-physical-transform-grid" data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
+                <details data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}><summary>Advanced alignment · position, rotation and scale</summary><div class="totem-physical-transform-grid">
                     <fieldset><legend>Totem position relative to marker</legend>
                         <label>X · horizontal<input id="areaPhysicalOffsetX" type="number" step="0.01" value="${physicalValues.offsetMeters.x}" /></label>
                         <label>Y · above plane<input id="areaPhysicalOffsetY" type="number" step="0.01" value="${physicalValues.offsetMeters.y}" /></label>
@@ -870,9 +870,9 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
                     </fieldset>
                     <label class="physical-marker-scale">Scale<input id="areaPhysicalScale" type="number" min="0.01" step="0.05" value="${physicalValues.scale}" /></label>
                 </div>
-                <div class="button-row physical-marker-actions" data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
+                </details><div class="button-row physical-marker-actions" data-physical-anchor-fields ${savedPhysicalAnchor ? '' : 'hidden'}>
                     <button type="button" data-test-physical-marker>Test in AR</button>
-                    <button type="button" data-scan-physical-marker ${savedPhysicalAnchor ? '' : 'disabled'}>Scan Physical Marker</button>
+                    <button type="button" data-scan-physical-marker ${savedPhysicalAnchor ? '' : 'disabled'}>Scan ArUco tag</button>
                     ${savedPhysicalAnchor ? '<button class="danger" type="button" data-remove-physical-marker>Remove association</button>' : ''}
                 </div>
                 <p class="meta" data-physical-anchor-status>${savedPhysicalAnchor ? '' : 'Test in AR uses these current values without saving them.'}</p>
@@ -1675,7 +1675,7 @@ export async function renderVisitorWelcomeEditor(app, encodedProjectId) {
     try {
         const { project, startingPoint } = await projectContent(projectId);
         const marker = startingPoint?.marker || {};
-        app.innerHTML = `<div class="screen visitor-welcome-editor"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">Creator</p><h1>Edit Visitor Welcome</h1><p class="subtitle">This is the introduction visitors see after choosing ${escapeHtml(project.name)}.</p></div><form class="panel" onsubmit="window.saveVisitorWelcome(event, '${encoded(project.id)}')"><div class="field"><label for="visitorWelcomeDescription">Location introduction</label><textarea id="visitorWelcomeDescription" rows="5" placeholder="Introduce the landscape and what visitors can discover.">${escapeHtml(project.description || '')}</textarea></div><div class="field"><label for="visitorWelcomeCover">Optional cover image</label><input id="visitorWelcomeCover" type="url" value="${escapeHtml(project.coverImage || '')}" placeholder="https://…" /></div><div class="field"><label for="visitorWelcomeHeading">Welcome-area heading</label><input id="visitorWelcomeHeading" value="${escapeHtml(marker.name || 'Welcome')}" required /></div><div class="field"><label for="visitorWelcomeText">Welcome message</label><textarea id="visitorWelcomeText" rows="5" placeholder="Welcome visitors and explain how to begin.">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="visitorWelcomeDirections">Arrival instructions</label><textarea id="visitorWelcomeDirections" rows="4" placeholder="Describe how to find the Trail Entrance.">${escapeHtml(marker.directions || '')}</textarea></div><div class="field"><label for="visitorWelcomeVisibility">Visitor visibility</label><select id="visitorWelcomeVisibility"><option value="public" ${marker.visibility === 'public' || !startingPoint ? 'selected' : ''}>Published — visible to visitors</option><option value="draft" ${startingPoint && marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft — creator only</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p class="meta">Precise GPS, facing direction and QR references remain available under Manage Trail Entrance.</p><p id="visitorWelcomeError" class="meta"></p><div class="button-row"><button type="button" onclick="window.editProjectStartingPoint('${encoded(project.id)}')">Manage Trail Entrance</button><button class="primary" type="submit">Save Visitor Welcome</button></div></form></div>`;
+        app.innerHTML = `<div class="screen visitor-welcome-editor"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button><p class="welcome-label">Creator</p><h1>Edit Visitor Welcome</h1><p class="subtitle">This is the introduction visitors see after choosing ${escapeHtml(project.name)}.</p></div><form class="panel" onsubmit="window.saveVisitorWelcome(event, '${encoded(project.id)}')"><div class="field"><label for="visitorWelcomeDescription">Location introduction</label><textarea id="visitorWelcomeDescription" rows="5" placeholder="Introduce the landscape and what visitors can discover.">${escapeHtml(project.description || '')}</textarea></div><div class="field"><label for="visitorWelcomeCover">Optional cover image</label><input id="visitorWelcomeCover" type="url" value="${escapeHtml(project.coverImage || '')}" placeholder="https://…" /></div><div class="field"><label for="visitorWelcomeHeading">Welcome-area heading</label><input id="visitorWelcomeHeading" value="${escapeHtml(marker.name || 'Welcome')}" required /></div><div class="field"><label for="visitorWelcomeText">Welcome message</label><textarea id="visitorWelcomeText" rows="5" placeholder="Welcome visitors and explain how to begin.">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="visitorWelcomeDirections">Arrival instructions</label><textarea id="visitorWelcomeDirections" rows="4" placeholder="Describe how to find the Trail Entrance.">${escapeHtml(marker.directions || '')}</textarea></div><div class="field"><label for="visitorWelcomeVisibility">Visitor visibility</label><select id="visitorWelcomeVisibility"><option value="public" ${marker.visibility === 'public' || !startingPoint ? 'selected' : ''}>Published — visible to visitors</option><option value="draft" ${startingPoint && marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft — creator only</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div><p class="meta">Manage the welcome information under Manage Trail Entrance. Assign printed ArUco tags in the Plant or Totem editor.</p><p id="visitorWelcomeError" class="meta"></p><div class="button-row"><button type="button" onclick="window.editProjectStartingPoint('${encoded(project.id)}')">Manage Trail Entrance</button><button class="primary" type="submit">Save Visitor Welcome</button></div></form></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Visitor Welcome unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -1892,10 +1892,7 @@ export async function renderProjectAreaDashboard(app, encodedProjectId, encodedA
             </div>
         </div>`;
         const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : null;
-        const advancedAreaActions = context.project.expertMode === true ? `<div class="area-dashboard-actions">
-                <button class="primary" type="button" onclick="window.navigateToProjectArea('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>Navigate to it in AR</strong><span>${anchor ? 'Open AR navigation to this Area.' : 'Assign a GPS location first, then open AR navigation.'}</span></button>
-                <button type="button" onclick="window.renderProjectAreaLocationForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')"><strong>${anchor ? 'Update GPS location' : 'Assign GPS location'}</strong><span>Tag the physical position of this Area.</span></button>
-            </div>` : '';
+        const advancedAreaActions = `<div class="area-dashboard-actions"><button type="button" onclick="window.scanCreatorArUco('${encoded(context.project.id)}')"><strong>Scan ArUco tag</strong><span>Open the camera for NL-001–NL-009.</span></button><button type="button" onclick="window.renderAreaCheckpointForm('${encoded(context.project.id)}','${encoded(context.area.id)}')"><strong>Assign Area tag</strong><span>Link a printed tag to this Area’s Totem.</span></button></div>`;
         const plantCount = canonicalAreaEntries.filter(entry => entry.marker.type === 'plant').length;
         const totemCount = checkpoint ? 1 : 0;
         const areaTutorialConfirmation = options.areaTutorialCompleted && isProjectTutorialEnabled(context.project.id)
@@ -2043,67 +2040,11 @@ export async function saveAreaInformation(event, encodedProjectId, encodedAreaId
 }
 
 export async function navigateToProjectArea(app, encodedProjectId, encodedAreaId) {
-    const projectId = decodeURIComponent(encodedProjectId);
-    const areaId = decodeURIComponent(encodedAreaId);
-    try {
-        const context = await projectAreaContext(projectId, areaId);
-        if (!hasGpsCoordinates(context.area.anchor)) return renderAreaLocationPrompt(app, context);
-        window.renderArPreparation(encoded(context.project.id), 'area-navigation', '', encoded(context.area.id), encoded(context.site.id));
-    } catch (error) {
-        window.alert(`Area navigation is unavailable: ${error.message}`);
-    }
-}
-
-function renderAreaLocationPrompt(app, context) {
-    app.innerHTML = `<div class="screen area-location-prompt">
-        <div class="page-header">
-            <button class="ghost" type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Back to Area</button>
-            <p class="welcome-label">GPS location needed</p>
-            <h1>Assign a location to ${escapeHtml(context.area.name)}?</h1>
-            <p class="subtitle">AR navigation needs a physical destination.</p>
-        </div>
-        <section class="panel guide">
-            <h2>Next step</h2>
-            <p>Choose <strong>Assign Location</strong>, then stand in the Area and capture your current GPS position. You can also enter coordinates manually.</p>
-        </section>
-        <div class="button-row">
-            <button type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Not now</button>
-            <button class="primary" type="button" onclick="window.renderProjectAreaLocationForm('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Assign Location</button>
-        </div>
-    </div>`;
+    return renderProjectAreaLocationForm(app, encodedProjectId, encodedAreaId);
 }
 
 export async function renderProjectAreaLocationForm(app, encodedProjectId, encodedAreaId) {
-    const projectId = decodeURIComponent(encodedProjectId);
-    const areaId = decodeURIComponent(encodedAreaId);
-    try {
-        const context = await projectAreaContext(projectId, areaId);
-        const anchor = hasGpsCoordinates(context.area.anchor) ? context.area.anchor : {};
-        app.innerHTML = `<div class="screen area-location-form">
-            <div class="page-header">
-                <button class="ghost" type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Back to Area</button>
-                <p class="welcome-label">GPS tagging</p>
-                <h1>Assign ${escapeHtml(context.area.name)}’s location</h1>
-                <p class="subtitle">Save one physical destination for Area navigation.</p>
-            </div>
-            <section class="panel guide">
-                <h2>For the best result</h2>
-                <ol><li>Stand at a recognisable point inside the Area.</li><li>Choose <strong>Use Current GPS</strong> and allow location access.</li><li>Check the accuracy, then save.</li></ol>
-            </section>
-            <form class="panel" onsubmit="window.saveProjectAreaLocation(event, '${encoded(context.project.id)}', '${encoded(context.area.id)}')">
-                <button type="button" onclick="window.captureProjectAreaLocation()">Use Current GPS</button>
-                <div class="coordinate-grid">
-                    <div class="field"><label for="projectAreaLatitude">Latitude</label><input id="projectAreaLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" required /></div>
-                    <div class="field"><label for="projectAreaLongitude">Longitude</label><input id="projectAreaLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" required /></div>
-                </div>
-                <div class="field"><label for="projectAreaAccuracy">Location accuracy (metres)</label><input id="projectAreaAccuracy" type="number" inputmode="decimal" step="any" min="0" value="${escapeHtml(anchor.accuracy ?? '')}" required /></div>
-                <p id="projectAreaLocationStatus" class="meta">${hasGpsCoordinates(anchor) ? 'A saved GPS location is shown. Capture again to update it.' : 'Location not captured yet.'}</p>
-                <div class="button-row"><button type="button" onclick="window.renderProjectAreaDashboard('${encoded(context.project.id)}', '${encoded(context.area.id)}')">Cancel</button><button class="primary" type="submit">Save Area Location</button></div>
-            </form>
-        </div>`;
-    } catch (error) {
-        app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Return to Dashboard</button><h1>GPS tagging unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
-    }
+    return renderAreaCheckpointForm(app, encodedProjectId, encodedAreaId);
 }
 
 export function captureProjectAreaLocation() {
@@ -2304,7 +2245,7 @@ export async function renderProjectSettings(app, encodedProjectId) {
             </div>
         </details>
         <section class="panel expert-mode-setting" aria-labelledby="expertModeTitle">
-            <div class="section-heading-row"><div><h2 id="expertModeTitle">Experience level</h2><p>Keep the everyday experience calm, or reveal advanced controls when you need them.</p></div><span class="tutorial-status">${expertMode ? 'Expert' : 'Friendly'}</span></div>
+            <div class="section-heading-row"><div><h2 id="expertModeTitle">Experience level</h2><p>Use Simple for everyday creation. Advanced adds precision and project settings.</p></div><span class="tutorial-status">${expertMode ? 'Expert' : 'Friendly'}</span></div>
             <label class="tutorial-mode-toggle"><span><strong>Show advanced controls</strong><small>Show themes, technical guidance, diagnostics and other precision tools.</small></span><input type="checkbox" ${expertMode ? 'checked' : ''} onchange="window.updateProjectExpertMode('${encoded(project.id)}', this.checked)" /></label>
         </section>
         <details class="panel project-theme-setting settings-collapsible" aria-labelledby="projectThemeTitle" ${expertMode ? '' : 'hidden'}>
@@ -2373,7 +2314,7 @@ export async function renderProjectSettings(app, encodedProjectId) {
             </summary>
             <div class="settings-collapsible-body tutorial-settings">
                 <label class="tutorial-mode-toggle"><span><strong>AR debug logging</strong><small>Write AR launch stages to the browser console for technical testing.</small></span><input type="checkbox" ${settings.developerDiagnostics ? 'checked' : ''} onchange="window.savePlatformSetting('developerDiagnostics', this.checked)" /></label>
-                <label class="tutorial-mode-toggle"><span><strong>Physical Marker prototype</strong><small>Enable experimental printed ArUco anchors in Totem Alignment.</small></span><input type="checkbox" ${settings.physicalAnchors ? 'checked' : ''} onchange="window.savePlatformSetting('physicalAnchors', this.checked)" /></label>
+                <p class="meta">ArUco scanning is available from the project dashboard. Assign NL-001–NL-009 in a Plant or Totem editor.</p>
                 <div class="tutorial-settings-actions"><button type="button" onclick="window.copyArDiagnostics()">Copy Diagnostics</button></div>
                 <p id="developerDiagnosticsStatus" class="meta">Diagnostics remain hidden from the camera view.</p>
             </div>
@@ -2593,6 +2534,7 @@ export async function renderBrowseContent(app, encodedProjectId, creator = false
 }
 
 export async function renderLocationMap(app, encodedProjectId, creator = true, returnContext = '') {
+    if (creator && returnContext !== 'print-center') return returnToDashboardMap(decodeURIComponent(encodedProjectId));
     const projectId = decodeURIComponent(encodedProjectId);
     try {
         const { project, site, places, entries } = await projectContent(projectId);
@@ -2614,7 +2556,7 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
         const areaOverlays = visiblePlaces.map(place => {
             const count = visibleEntries.filter(entry => entry.place.id === place.id).length;
             const point = mapLayout.areaPoints.get(place.id) || { x: 50, y: 50, positioned: false };
-            const content = `<strong>${escapeHtml(place.name)}</strong><span>${count} item${count === 1 ? '' : 's'} · ${point.planLinked ? 'plan linked' : point.positioned ? 'GPS mapped' : 'map layout'}</span>`;
+            const content = `<strong>${escapeHtml(place.name)}</strong><span>${count} item${count === 1 ? '' : 's'} · ${point.planLinked ? 'plan linked' : point.positioned ? 'placed on plan' : 'map layout'}</span>`;
             return creator
                 ? `<button class="site-map-area${point.planLinked ? ' is-plan-linked' : ''}" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.renderProjectAreaDashboard('${encoded(project.id)}', '${encoded(place.id)}')" aria-label="Open ${escapeHtml(place.name)}">${content}</button>`
                 : `<div class="site-map-area" style="--map-x:${point.x}%;--map-y:${point.y}%">${content}</div>`;
@@ -2645,7 +2587,7 @@ export async function renderLocationMap(app, encodedProjectId, creator = true, r
             ? `<header class="nlxr-db-v2-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${escapeHtml(project.name)}</h1></div></div></header><nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" onclick="window.renderProjectDashboard('${encoded(project.id)}')"><span aria-hidden="true">✦</span> Overview</button><button type="button" class="is-active" aria-current="page"><span aria-hidden="true">▧</span> Map</button><button type="button" onclick="window.renderFieldGuide('${encoded(project.id)}',true)"><span aria-hidden="true">☰</span> Content</button></nav><div class="page-header location-map-workspace-heading"><p class="welcome-label">Map workspace</p><h2>Site Map</h2><p class="subtitle">${escapeHtml(site?.name || 'Location')}</p></div>`
             : `<div class="page-header"><button class="ghost" onclick="${backAction}">Back</button><h1>Site Map</h1><p class="subtitle">${escapeHtml(project.name)} · ${escapeHtml(site?.name || 'Location')}</p>${mapPrintAction}</div>`;
         const gisExportPreview = `<section class="gis-export-preview" aria-labelledby="gisExportTitle"><div class="gis-export-preview-heading"><div><p class="welcome-label">Coming soon</p><h2 id="gisExportTitle">GIS Export</h2></div><span class="gis-export-badge">Preview</span></div><p>Prepare future spatial records for GeoPackage, GeoJSON, CSV with X/Y/Z, KML, GPX or DXF.</p><button type="button" disabled aria-disabled="true">GIS Export — Coming soon</button></section>`;
-        app.innerHTML = `<div class="screen location-map-screen${creator && returnContext !== 'print-center' ? ' app-surface app-surface-dashboard nlxr-db-v2' : ''}">${dashboardMapHeader}${mapEditor}<section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section>${gisExportPreview}<section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" data-site-map-canvas onclick="window.placeLinkedAreaOnSiteMap(event)" aria-label="${escapeHtml(project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${mapTotemDiagram}${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
+        app.innerHTML = `<div class="screen location-map-screen${creator && returnContext !== 'print-center' ? ' app-surface app-surface-dashboard nlxr-db-v2' : ''}">${dashboardMapHeader}${mapEditor}<section class="site-map-introduction"><div><p class="welcome-label">Landscape overview</p><h2>Areas, paths and placed content</h2><p>This map shows the site as a whole. Area positions organise the plan. Scan assigned ArUco tags to preview linked objects in the camera.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section>${gisExportPreview}<section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" data-site-map-canvas onclick="window.placeLinkedAreaOnSiteMap(event)" aria-label="${escapeHtml(project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapLayout.hasMapBounds ? 'Area positions are shown on this plan.' : 'Plan positions help organise Areas; scan a tag to check its linked object.'}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'Site plan' : 'Area layout mode'}</span></section>${mapTotemDiagram}${visiblePlaces.length ? '' : '<div class="panel"><p>No visible Areas have been added yet. Create an Area to begin your site map.</p></div>'}</div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Map unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -2773,7 +2715,7 @@ export async function renderStartingPoints(app, encodedProjectId) {
         const { project, entries } = await projectContent(projectId);
         const startingPoints = entries.filter(entry => entry.marker.type === 'intro_checkpoint');
         const entranceRows = startingPoints.map(({ marker }) => `<button class="latest-entry-row" type="button" onclick="window.openProjectStartingPoint('${encoded(project.id)}')"><span class="latest-entry-icon" aria-hidden="true">⌖</span><span class="latest-entry-copy"><strong>${escapeHtml(marker.name)}</strong><span>Trail Entrance · ${escapeHtml(marker.visibility || 'draft')}</span></span></button>`).join('');
-        app.innerHTML = `<div class="screen home-and-entrances"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Content</button><p class="welcome-label">Physical-world preparation</p><h1>Visitor Entrances</h1><p class="subtitle">Add a guided beginning only when visitors need one.</p></div><section class="panel guide"><h2>Home is already available</h2><p>Home automatically holds anything that has not been assigned to an Area. A Visitor Entrance is optional and becomes a real-world gateway when it receives a GPS or QR anchor.</p></section><div class="latest-entry-list">${entranceRows || '<p class="project-empty-state">No Visitor Entrance has been added.</p>'}</div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderStartingPointForm('${encoded(project.id)}', '', 'trail-entrance')"><strong>${startingPoints.length ? 'Manage Visitor Entrance' : 'Create a Visitor Entrance'}</strong><span>Add GPS or a physical QR code to connect Explorer visitors to this place.</span></button></div></div>`;
+        app.innerHTML = `<div class="screen home-and-entrances"><div class="page-header"><button class="ghost" onclick="window.renderFieldGuide('${encoded(project.id)}', true)">Back to Content</button><p class="welcome-label">Physical-world preparation</p><h1>Visitor Entrances</h1><p class="subtitle">Add a guided beginning only when visitors need one.</p></div><section class="panel guide"><h2>Home is already available</h2><p>Home automatically holds anything that has not been assigned to an Area. A Visitor Entrance is optional and becomes a real-world gateway when it receives a printed reference tag.</p></section><div class="latest-entry-list">${entranceRows || '<p class="project-empty-state">No Visitor Entrance has been added.</p>'}</div><div class="content-type-list"><button class="content-type-row" type="button" onclick="window.renderStartingPointForm('${encoded(project.id)}', '', 'trail-entrance')"><strong>${startingPoints.length ? 'Manage Visitor Entrance' : 'Create a Visitor Entrance'}</strong><span>Use a printed tag assigned to a Plant or Totem to connect the physical place.</span></button></div></div>`;
     } catch (error) {
         app.innerHTML = `<div class="screen"><div class="page-header"><button class="ghost" onclick="window.renderProjectDashboard('${encoded(projectId)}')">Back</button><h1>Visitor Entrances unavailable</h1></div><div class="panel"><p>${escapeHtml(error.message)}</p></div></div>`;
     }
@@ -2814,7 +2756,7 @@ export async function renderStartingPointForm(app, encodedProjectId, encodedPref
         const areaField = startingPoint
             ? `<input id="projectStartingArea" type="hidden" value="${escapeHtml(startingPoint.place.id)}" /><p class="starting-point-home">Trail begins in ${escapeHtml(startingPoint.place.name)}</p>`
             : `<div class="field"><label for="projectStartingArea">Entrance Area</label><select id="projectStartingArea" required><option value="">Choose an Area</option>${areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.name)}</option>`).join('')}</select></div>`;
-        const advancedFields = expertMode ? `<details class="starting-point-advanced"><summary>Advanced Trail Entrance options</summary><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="setup-choice-grid"><button type="button" onclick="window.captureStartingPointLocation()"><strong>Use current GPS</strong><span>Capture this phone’s position.</span></button><button type="button" onclick="window.focusStartingPointMapFields()"><strong>Enter coordinates</strong><span>Use a mapped position.</span></button></div><div class="coordinate-grid"><div class="field"><label for="projectStartingLatitude">Latitude</label><input id="projectStartingLatitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.latitude ?? '')}" /></div><div class="field"><label for="projectStartingLongitude">Longitude</label><input id="projectStartingLongitude" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.longitude ?? '')}" /></div></div><div class="coordinate-grid"><div class="field"><label for="projectStartingAccuracy">Accuracy (metres)</label><input id="projectStartingAccuracy" type="number" inputmode="decimal" step="any" value="${escapeHtml(anchor.accuracy ?? '')}" /></div><div class="field"><label for="projectStartingFacing">Visitor facing direction</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" /></div></div><div class="field"><label for="projectStartingPhoto">Reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div></details>` : '';
+        const advancedFields = expertMode ? `<details class="starting-point-advanced"><summary>Advanced Trail Entrance options</summary><div class="field"><label for="projectStartingDirections">Arrival instructions</label><textarea id="projectStartingDirections" rows="3">${escapeHtml(marker.directions || '')}</textarea></div><div class="field"><label for="projectStartingFacing">Visitor facing direction</label><input id="projectStartingFacing" value="${escapeHtml(marker.facing_direction || '')}" /></div></div><div class="field"><label for="projectStartingPhoto">Reference photo</label><input id="projectStartingPhoto" type="url" value="${escapeHtml(marker.reference_photo || '')}" /></div><div class="field"><label for="projectStartingVisibility">Visibility</label><select id="projectStartingVisibility"><option value="draft" ${marker.visibility !== 'public' && marker.visibility !== 'hidden' ? 'selected' : ''}>Draft</option><option value="public" ${marker.visibility === 'public' ? 'selected' : ''}>Public</option><option value="hidden" ${marker.visibility === 'hidden' ? 'selected' : ''}>Hidden</option></select></div></details>` : '';
         const spatialAction = startingPoint ? `<button type="button" onclick="window.startExistingMarkerPlacement('${encoded(project.id)}', '${encoded(site.id)}', '${encoded(startingPoint.place.id)}', '${encoded(marker.id)}', 'intro_checkpoint')">Place gateway in AR</button>` : '';
         app.innerHTML = `<div class="screen starting-point-form"><div class="page-header"><button class="ghost" onclick="${returnAction}">Back</button><p class="welcome-label">Optional · Guided journey</p><h1>Your Trail Entrance</h1><p class="subtitle">A clear beginning for visitors to ${escapeHtml(project.name)}.</p></div>${startingGuidance}<form class="panel simple-starting-point" onsubmit="window.saveProjectStartingPoint(event, '${encoded(project.id)}', '${encoded(flow || 'trail-entrance')}')">${areaField}<div class="field"><label for="projectStartingName">What should visitors call this entrance?</label><input id="projectStartingName" value="${escapeHtml(marker.name || 'Trail Entrance')}" required /></div><div class="field"><label for="projectStartingDescription">What should they know or feel when they arrive?</label><textarea id="projectStartingDescription" rows="4" placeholder="A short, warm welcome is enough.">${escapeHtml(marker.description || '')}</textarea></div><div class="field"><label for="projectStartingQr">Physical QR or location code <span class="meta">(optional)</span></label><input id="projectStartingQr" value="${escapeHtml(anchor.qr_code || marker.qr_reference || '')}" placeholder="Scan or enter the code installed at this entrance" /></div><p class="meta">A physical code lets a future visit lock this spatial entrance back onto the same real-world point.</p>${advancedFields}<p id="projectStartingLocationStatus" class="meta">${anchor.latitude && anchor.longitude ? 'Its precise position is saved.' : 'Spatial placement is optional and can happen later.'}</p><p id="projectStartingError" class="meta"></p><div class="button-row">${spatialAction}<button class="primary" type="submit">Save Trail Entrance</button></div></form></div>`;
         if (!startingPoint && preferredAreaId && areas.some(area => area.id === preferredAreaId)) {
@@ -2885,9 +2827,6 @@ export async function openProjectStartingPoint(app, encodedProjectId) {
 }
 
 function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
-    if (readPlatformSettings().physicalAnchors !== true) {
-        return '<p class="meta plant-physical-anchor-unavailable"><button type="button" class="plant-profile-info-bubble" data-info-trigger data-info-source="plantPhysicalMarkerHelp" aria-expanded="false" aria-controls="plantPhysicalMarkerHelp" aria-label="About physical marker links" onclick="window.toggleInfoOverlay(this)">i</button><span id="plantPhysicalMarkerHelp" data-info-title="Physical marker link" hidden>Enable the Physical Marker prototype in Settings to connect a printed ArUco marker to this Plant Live Tag.</span></p>';
-    }
     let savedPhysicalAnchor = null;
     try {
         savedPhysicalAnchor = normalizePhysicalAnchor(entry.marker.physicalAnchor);
@@ -2896,7 +2835,7 @@ function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
     }
     const physicalValues = savedPhysicalAnchor || PHYSICAL_ANCHOR_DEFAULTS;
     const assignments = physicalAnchorAssignments(entries, entry.marker.id);
-    const physicalMarkerOptions = PHYSICAL_ANCHOR_IDS.map(markerId => {
+    const physicalMarkerOptions = PHYSICAL_ANCHOR_IDS.filter(markerId => markerId <= 9 || markerId === Number(physicalValues.markerId)).map(markerId => {
         const assignment = assignments.get(markerId);
         const status = assignment
             ? assignment.isCurrent
@@ -2907,7 +2846,7 @@ function plantPhysicalAnchorCardMarkup(entry, profile, entries) {
     }).join('');
     const selectedAssignment = assignments.get(Number(physicalValues.markerId));
     return `<details class="plant-physical-anchor-card" ${savedPhysicalAnchor ? 'open' : ''}>
-        <summary><span><strong>Physical marker link</strong><small>Optional printed marker for this Plant Live Tag</small></span><b aria-hidden="true">⌗</b></summary>
+        <summary><span><strong>ArUco tag link</strong><small>Optional printed marker for this Plant Live Tag</small></span><b aria-hidden="true">⌗</b></summary>
         <div class="plant-physical-anchor-body">
             <p>When the Plant Live Tag is enabled, assign an ArUco marker here. Scanning it will show this Plant profile as a live tag.</p>
             <label class="tutorial-mode-toggle physical-anchor-toggle"><span><strong>Link ArUco marker</strong><small>Requires Plant Live Tag to be enabled.</small></span><input id="projectEntryPhysicalAnchorEnabled" type="checkbox" ${savedPhysicalAnchor ? 'checked' : ''} /></label>

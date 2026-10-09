@@ -1,0 +1,36 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Butterfly flock · native rendering</title>
+<style>body{margin:0;background:#1b2c25;color:#e6eee5;font:16px system-ui}main{max-width:1150px;margin:auto;padding:20px}canvas{width:100%;background:#20352b;border-radius:18px}button{padding:12px;margin:10px 4px;border:1px solid #9ebdac;border-radius:12px;background:#345447;color:inherit}output{display:block;margin:12px}.colours{display:flex;justify-content:space-around;font-size:13px}</style>
+<main><h1>Eight small butterflies · native flock</h1><p>Half-size butterflies begin on the control-panel edge. Flight speeds up wingbeats and motion. This preview uses the production native model and colour shader in one WebGL context.</p><canvas width="1100" height="500"></canvas><div class="colours"></div><output>Loading…</output><button id="perch">Perch on panel</button><button id="fly">Fly together</button><button id="natural">Natural staggered flight</button><button id="remove">Remove purple</button></main>
+<script type="module">
+import * as THREE from '../app/vendor/three.module.min.js';
+import {mountDemoButterflyModel} from '../app/services/demoButterflyModel.js';
+import {BUTTERFLY_VARIANTS,butterflySocialOffset,butterflySocialPoint} from '../app/services/demoButterflyFlock.js';
+import {demoButterflyPose} from '../app/services/demoButterflyPose.js';
+const canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl',{alpha:false,antialias:true}),output=document.querySelector('output');
+let mode='perch',start=performance.now(),uploads=0,allocations=0,error=0;
+const data=gl.bufferData.bind(gl),sub=gl.bufferSubData.bind(gl),image=gl.texImage2D.bind(gl);
+gl.bufferData=(...args)=>{uploads++;return data(...args);};gl.bufferSubData=(...args)=>{uploads++;return sub(...args);};gl.texImage2D=(...args)=>{allocations++;return image(...args);};
+const butterflies=BUTTERFLY_VARIANTS.map(v=>({...v,model:mountDemoButterflyModel(document.createElement('canvas'),{gl,colour:v.colour,wingOpacity:v.wingOpacity}),position:null}));
+document.querySelector('.colours').innerHTML=butterflies.map(v=>`<span>${v.id}</span>`).join('');
+const camera=new THREE.PerspectiveCamera(38,1100/500,.05,10);camera.position.set(0,.35,1.45);camera.lookAt(0,0,0);camera.updateMatrixWorld();
+const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};
+for(const id of ['perch','fly','natural'])document.querySelector('#'+id).onclick=()=>{mode=id;start=performance.now();};
+document.querySelector('#remove').onclick=()=>{const b=butterflies.find(v=>v.id==='purple');b.model?.destroy();b.model=null;};
+function draw(now){
+ const elapsed=Math.max(0,now-start),before=uploads;gl.viewport(0,0,1100,500);gl.clearColor(.08,.14,.11,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ const poses=butterflies.map((v,i)=>{
+  const age=mode==='fly'?elapsed+10000:mode==='perch'?elapsed%10000:elapsed;
+  const pose=demoButterflyPose(age,0,{perchMs:mode==='fly'?0:mode==='perch'?60000:v.perchMs,seed:v.seed});pose.size=v.size;pose.wingPhase=v.seed*1.9;
+  const social=butterflySocialOffset(elapsed+31000,v.seed,{enabled:pose.flight>.99});
+  const base={x:(i-3.5)*.145+pose.x*.17,y:pose.y*.3,z:pose.z*.25};
+  const position=butterflySocialPoint(base,butterflies[v.seed^2]?.position,social);position.x+=social.x;position.y+=social.y;position.z+=social.z;v.position=position;
+  return {pose,position};
+ });
+ // Repeat the same frame for eye two: animation uploads must not double.
+ for(let eye=0;eye<2;eye++)for(const [i,v] of butterflies.entries())v.model?.drawXR(view,poses[i].position,elapsed+10000,poses[i].pose);
+ error ||= gl.getError();output.textContent=`${butterflies.filter(v=>v.model?.ready).length}/8 ready · ${mode} · GL error ${error} · mesh updates this frame ${uploads-before} · shared image allocations ${allocations}`;
+ requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);addEventListener('pagehide',()=>butterflies.forEach(v=>v.model?.destroy()));
+</script></html>

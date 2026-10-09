@@ -217,14 +217,16 @@ test('specific topics open a non-destructive detail surface with evidence and sa
     assert.equal(state.openNodeIds.includes('propagation'), true);
 });
 
-test('adding a child cell starts with a compact template or custom choice', () => {
+test('simple topic creation opens fields immediately and keeps optional templates', () => {
     const document = referenceDocument();
     const markup = plantInformationWebMarkup(document, createPlantInformationWebState(document, { editorMode: 'add', editorParentId: 'uses' }), { editable: true, showSearch: false });
     assert.match(markup, /Add new cell/);
     assert.match(markup, /data-pim-template-id="food"/);
     assert.match(markup, /data-pim-template-id="custom"/);
-    assert.match(markup, /Choose a template above/);
-    assert.match(markup, /is-awaiting-template/);
+    assert.match(markup, /Use a suggested topic/);
+    assert.doesNotMatch(markup, /is-awaiting-template/);
+    assert.match(markup, /name="title"/);
+    assert.match(markup, /name="body"/);
 });
 
 test('editing adds a structured child without mutating or deleting legacy document content', () => {
@@ -266,7 +268,7 @@ test('editing and import review controls appear only for editable Creator profil
         }]
     };
     const creator = plantInformationWebMarkup(document, initial, { editable: true, importReview: staging });
-    assert.match(creator, /Structured PIM editor/);
+    assert.match(creator, /Plant knowledge editor/);
     for (const field of ['parentId', 'primaryCategory', 'knowledgeMode', 'informationType', 'title', 'preview', 'body', 'tags', 'region', 'climateContext', 'sourceIds', 'authorOrganisation', 'attribution', 'publicationDate', 'retrievalDate', 'evidenceStatus', 'safetyNote', 'media', 'displayOrder', 'status']) {
         assert.match(creator, new RegExp(`name="${field}"`));
     }
@@ -278,19 +280,20 @@ test('editing and import review controls appear only for editable Creator profil
     assert.match(creator, /data-pim-import-decision="modify"/);
 
     const visitor = plantInformationWebMarkup(document, initial, { editable: false, importReview: staging });
-    assert.doesNotMatch(visitor, /Structured PIM editor|Add information|Staged plant data|Edit information/);
+    assert.doesNotMatch(visitor, /Plant knowledge editor|Add information|Staged plant data|Edit information/);
 });
 
-test('editable PIM opens in basic diagram mode with cell actions behind a clear Advanced toggle', () => {
+test('editable PIM opens in simple category mode and preserves Advanced tools', () => {
     const document = referenceDocument();
     const state = createPlantInformationWebState(document, {}, { defaultViewMode: 'compass' });
     const basic = plantInformationWebMarkup(document, { ...state, highlightedNodeId: 'uses' }, { editable: true, showSearch: true });
     assert.match(basic, /class="pim-web[^\"]*is-basic-mode/);
-    assert.match(basic, /BASIC MODE · Cell diagram/);
+    assert.match(basic, /SIMPLE · Plant knowledge/);
     assert.match(basic, /data-pim-advanced-toggle/);
     assert.match(basic, /data-pim-add-parent-id="uses"/);
     assert.match(basic, /data-pim-edit-node-id="uses"/);
-    assert.match(basic, /data-pim-archive-node-id="uses"/);
+    assert.match(basic, /data-pim-outline-branch="culinary"/);
+    assert.doesNotMatch(basic, /pim-honeycomb-viewport|data-pim-archive-node-id/);
     assert.doesNotMatch(basic, /data-pim-search-form|v2-review-path|Staged plant data/);
 
     const advanced = plantInformationWebMarkup(document, { ...state, advancedOpen: true, highlightedNodeId: 'uses' }, { editable: true, showSearch: true, importReview: { items: [] } });

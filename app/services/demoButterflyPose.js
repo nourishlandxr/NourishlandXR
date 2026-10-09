@@ -5,6 +5,7 @@ export const BUTTERFLY_PERCH_MS=60000;
 export const BUTTERFLY_TAKEOFF_MS=4500;
 export const BUTTERFLY_FLIGHT_CYCLE_SECONDS=36;
 export const BUTTERFLY_LAND_SECONDS=5.5;
+export const BUTTERFLY_MOVEMENT_SPEED=1.55;
 export function butterflyDropSurface(position,hits,tolerance=.12){
     if(!position)return null;
     return hits.map(hit=>hit?.point || hit?.position).filter(point=>point && Math.hypot(point.x-position.x,point.y-position.y,point.z-position.z)<=tolerance)
@@ -19,9 +20,9 @@ export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs
     // captured on takeoff, so head movement never drags the insect around.
     const flightPeriod=BUTTERFLY_FLIGHT_CYCLE_SECONDS+seed*4,cycle=flightPeriod+BUTTERFLY_LAND_SECONDS,window=Math.floor((time+BUTTERFLY_LAND_SECONDS)/cycle),local=(time+BUTTERFLY_LAND_SECONDS)-window*cycle,landStart=flightPeriod;
     const landing=smooth((local-landStart)/1.4);
-    const flightTime=window*flightPeriod+Math.min(local,landStart);
+    const flightTime=(window*flightPeriod+Math.min(local,landStart))*BUTTERFLY_MOVEMENT_SPEED;
     const flightPoint=butterflyFlightPoint(flightTime,seed),flightHeading=butterflyFlightHeading(flightTime,seed);
-    const perchPoint=butterflyFlightPoint(window*flightPeriod+landStart,seed);
+    const perchPoint=butterflyFlightPoint((window*flightPeriod+landStart)*BUTTERFLY_MOVEMENT_SPEED,seed);
     const landed=local>=landStart+1.4;
     const point={x:flightPoint.x+(perchPoint.x-flightPoint.x)*landing,y:flightPoint.y+(perchPoint.y-flightPoint.y)*landing,z:flightPoint.z+(perchPoint.z-flightPoint.z)*landing};
     const heading=landed?{yaw:insectHeading(perchPoint,seed),pitch:0,bank:0}:flightHeading;

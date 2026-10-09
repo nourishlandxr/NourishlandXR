@@ -30,10 +30,6 @@ function platformSettings() {
     }
 }
 
-function physicalAnchorPrototypeEnabled() {
-    return platformSettings().physicalAnchors === true;
-}
-
 function debugLog(message) {
     if (platformSettings().developerDiagnostics === true) console.info(`[PhysicalAnchor] ${message}`);
 }
@@ -81,7 +77,7 @@ async function loadProjectAssignments(projectId) {
 }
 
 function scannerMarkup() {
-    return `<section class="physical-anchor-scanner" data-physical-anchor-scanner aria-label="Totem Marker scanner">
+    return `<section class="physical-anchor-scanner" data-physical-anchor-scanner role="dialog" aria-modal="true" aria-label="ArUco tag scanner">
         <video data-physical-anchor-video playsinline muted autoplay></video>
         <canvas data-physical-anchor-canvas hidden></canvas>
         <div class="physical-anchor-scan-guide" aria-hidden="true"><span></span></div>
@@ -89,9 +85,9 @@ function scannerMarkup() {
             <span class="physical-anchor-totem-pillar"></span>
             <strong data-physical-anchor-totem-name></strong>
         </div>
-        <header><p>TOTEM MARKER · PROTOTYPE</p><strong data-physical-anchor-status>No marker detected</strong></header>
+        <header><p>SCAN ARUCO · NL-001–NL-009</p><strong data-physical-anchor-status>Opening camera…</strong><p>Point the camera at the full black square of a printed tag.</p></header>
         <footer>
-            <button type="button" data-copy-physical-anchor-diagnostics>Copy diagnostics</button>
+            <details><summary>Advanced</summary><button type="button" data-copy-physical-anchor-diagnostics>Copy diagnostics</button></details>
             <button type="button" data-stop-physical-anchor>Exit scanner</button>
         </footer>
     </section>`;
@@ -196,7 +192,10 @@ function detectionFrame(scanner, now) {
         updateStatus(scanner, 'Marker detection failed.', 'error', error.message);
         return;
     }
-    const resolve = markerId => resolvePhysicalAnchorEntry(scanner.assignments, markerId);
+    const resolve = markerId => {
+        const matching = scanner.assignments.filter(entry => entry.marker.physicalAnchor?.enabled && Number(entry.marker.physicalAnchor.markerId) === markerId);
+        return matching.length === 1 ? resolvePhysicalAnchorEntry(matching, markerId) : null;
+    };
     const decision = scanner.tracking.update(detections, now, resolve);
     if (decision.state === 'tracked') {
         const association = decision.association;
@@ -212,7 +211,7 @@ function detectionFrame(scanner, now) {
             debugLog(`marker-detected id=${decision.detection.id}`);
             debugLog(`association-found totem=${association.marker.id}`);
         }
-        if (decision.loadModel) {
+        if (decision.loadModel || scanner.totem.querySelector('[data-physical-anchor-totem-name]').textContent !== association.marker.name) {
             scanner.totem.querySelector('[data-physical-anchor-totem-name]').textContent = association.marker.name;
             debugLog('model-ready');
         }
@@ -231,9 +230,11 @@ function detectionFrame(scanner, now) {
         return;
     }
     if (detections.length) {
-        updateStatus(scanner, `${detectedMarkerLabel(detections[0].id)} detected but not assigned`, 'unassigned');
+        const duplicates = scanner.assignments.filter(entry => entry.marker.physicalAnchor?.enabled && Number(entry.marker.physicalAnchor.markerId) === detections[0].id);
+        if (duplicates.length > 1) { updateStatus(scanner, `${detectedMarkerLabel(detections[0].id)} has multiple assignments. Review the linked records.`, 'ambiguous'); return; }
+        updateStatus(scanner, `${detectedMarkerLabel(detections[0].id)} detected — assign this tag in a Plant or Totem editor`, 'unassigned');
     } else {
-        updateStatus(scanner, 'No marker detected', 'searching');
+        updateStatus(scanner, 'Point the camera at NL-001–NL-009', 'searching');
     }
 }
 
@@ -253,12 +254,13 @@ export async function stopPhysicalAnchorScanner() {
     scanner.stream?.getTracks().forEach(track => track.stop());
     scanner.video.srcObject = null;
     scanner.tracking.reset();
+    document.removeEventListener('keydown', scanner.onKeyDown);
     scanner.root.remove();
+    scanner.previousFocus?.focus?.();
     debugLog('camera-stopped');
 }
 
 export async function startPhysicalAnchorScanner(projectId, previewAssociation = null) {
-    if (!physicalAnchorPrototypeEnabled()) throw new Error('Physical Marker prototype is disabled in Settings.');
     if (activeScanner) return false;
     if (isArModeActive()) throw new Error('Exit the current AR session before scanning a Physical Marker.');
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('Unsupported browser: camera access is unavailable.');
@@ -290,9 +292,13 @@ export async function startPhysicalAnchorScanner(projectId, previewAssociation =
         smoothedOverlay: null,
         state: 'starting',
         lastError: '',
+        previousFocus: document.activeElement,
         stopped: false
     };
     activeScanner = scanner;
+    scanner.onKeyDown = event => { if (event.key === 'Escape') void stopPhysicalAnchorScanner(); };
+    document.addEventListener('keydown', scanner.onKeyDown);
+    scannerRoot.querySelector('[data-stop-physical-anchor]').focus();
     scannerRoot.querySelector('[data-stop-physical-anchor]').addEventListener('click', () => void stopPhysicalAnchorScanner());
     scannerRoot.querySelector('[data-copy-physical-anchor-diagnostics]').addEventListener('click', async () => {
         try {

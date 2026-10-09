@@ -48,12 +48,12 @@ function layoutPoints(areas, siteMap, livingMap) {
     const manualPoints = siteMap?.areaPoints || livingMap?.nodes || {};
     return automatic.map((point, index) => {
         const saved = manualPoints?.[areas[index].id];
-        const x = Number(saved?.x ?? saved?.normalizedX);
-        const y = Number(saved?.y ?? saved?.normalizedY);
+        const x = saved?.x !== undefined ? Number(saved.x) : Number(saved?.normalizedX) * 100;
+        const y = saved?.y !== undefined ? Number(saved.y) : Number(saved?.normalizedY) * 100;
         if (!Number.isFinite(x) || !Number.isFinite(y)) return point;
         return {
-            x: clamp(x > 1 ? x : x * 100, SAFE_BOUNDS.left, SAFE_BOUNDS.right),
-            y: clamp(y > 1 ? y : y * 100, SAFE_BOUNDS.top, SAFE_BOUNDS.bottom),
+            x: clamp(x, 0, 100),
+            y: clamp(y, 0, 100),
             positionSource: saved?.positionSource || saved?.source || (siteMap?.image ? 'image' : 'manual'),
             locked: saved?.locked === true
         };
@@ -163,6 +163,7 @@ export async function loadProjectDashboardV2Model(projectId) {
         totems: placements.filter(entry => isTotem(entry.marker, entry.place?.name)),
         currentAreaId: homeArea?.id || mapAreas[0]?.id || '',
         totalPlants,
+        tagLinkedPlants: plantEntries.filter(entry => entry.marker.physicalAnchor?.enabled === true).length,
         placedPlants: placedPlants.length,
         mappedPercentage,
         spatialReadiness: {

@@ -540,11 +540,11 @@ function editorMarkup(document, state, options) {
     const category = editing || parent || { id: 'custom', title: 'Custom main cell', knowledgeMode: 'agency', color: '#4e7d62' };
     const title = editing ? `Edit ${editing.title}` : topLevel ? 'Add a custom main cell' : `Add information to ${parent.title}`;
     const provenance = asList(seed.provenance)[0] || {};
-    const editorReady = state.editorMode === 'edit' || Boolean(state.editorSeed?.templateId);
+    const editorReady = !state.advancedOpen || state.editorMode === 'edit' || Boolean(state.editorSeed?.templateId);
     return `<aside class="pim-web-editor${editorReady ? '' : ' is-awaiting-template'}" role="dialog" aria-modal="true" aria-labelledby="pim-web-editor-title">
         <form data-pim-editor-form data-pim-editor-mode="${attribute(state.editorMode)}" data-pim-editor-node-id="${attribute(editing?.id || '')}" data-pim-editor-parent-id="${attribute(parent?.id || '')}">
-            <header><div><span>Structured PIM editor</span><h2 id="pim-web-editor-title">${escapeHtml(title)}</h2></div><button type="button" data-pim-cancel-editor aria-label="Close information editor">×</button></header>
-            ${informationTemplateMarkup(parent, state, document)}
+            <header><div><span>Plant knowledge editor</span><h2 id="pim-web-editor-title">${escapeHtml(title)}</h2></div><button type="button" data-pim-cancel-editor aria-label="Close information editor">×</button></header>
+            ${state.advancedOpen ? informationTemplateMarkup(parent, state, document) : `<details class="pim-simple-templates"><summary>Use a suggested topic (optional)</summary>${informationTemplateMarkup(parent, state, document)}</details>`}
             ${editorReady ? '' : '<p class="pim-web-editor-empty">Choose a template above, or choose <strong>Custom</strong>, to open the fields for one new information cell.</p>'}
             <div class="pim-web-editor-context" aria-label="Information location"><span>Plant <strong>${escapeHtml(document.identity?.commonName || document.plantId)}</strong></span><span>Parent <strong>${escapeHtml(parent?.title || (topLevel ? 'Mesh root' : editing?.parentId || ''))}</strong></span><span>Category <strong>${escapeHtml(category.title)}</strong></span></div>
             <input type="hidden" name="plantId" value="${inputValue(document.plantId)}" readonly />
@@ -553,16 +553,16 @@ function editorMarkup(document, state, options) {
             <input type="hidden" name="knowledgeMode" value="${inputValue(category.knowledgeMode)}" readonly />
             <div class="pim-web-editor-fields pim-web-editor-fields--essential">
                 ${countryOfOriginMarkup(parent, state, seed)}
-                ${selectMarkup('informationType', 'Information type', INFORMATION_TYPES, seed.informationType || 'fact', true)}
-                ${selectMarkup('knowledgeScope', 'Knowledge applies to', [['unspecified','Scope not yet reviewed'],['species','The species generally'],['specimen','A local specimen']], PimModel.pimKnowledgeScope(seed), true)}
-                <label>Specimen or site reference<input name="specimenId" value="${inputValue(seed.specimenId)}" placeholder="For local knowledge: plant tag or location" /></label>
-                <label>Observed on<input name="observedAt" type="date" value="${inputValue(seed.observedAt)}" /></label>
                 <label>Title<input name="title" value="${inputValue(seed.title)}" required maxlength="120" autofocus /></label>
-                <label>Short preview<input name="preview" value="${inputValue(seed.preview)}" required maxlength="80" placeholder="Two to five useful words" /></label>
+                <label>Short preview (optional)<input name="preview" value="${inputValue(seed.preview)}" maxlength="80" placeholder="Two to five useful words" /></label>
                 <label class="pim-web-editor-wide">Information<textarea name="body" rows="5"${state.editorSeed?.templateId === 'country-of-origin' ? '' : ' required'} placeholder="Add the useful detail that belongs in this one information block.">${escapeHtml(seed.body || '')}</textarea></label>
             </div>
             <details class="pim-web-editor-advanced"><summary>More fields <span>Sources, evidence and display settings</span></summary>
                 <div class="pim-web-editor-fields pim-web-editor-fields--advanced">
+                ${selectMarkup('informationType', 'Information type', INFORMATION_TYPES, seed.informationType || 'fact', true)}
+                ${selectMarkup('knowledgeScope', 'Knowledge applies to', [['unspecified','Scope not yet reviewed'],['species','The species generally'],['specimen','A local specimen']], PimModel.pimKnowledgeScope(seed), true)}
+                <label>Specimen or site reference<input name="specimenId" value="${inputValue(seed.specimenId)}" placeholder="For local knowledge: plant tag or location" /></label>
+                <label>Observed on<input name="observedAt" type="date" value="${inputValue(seed.observedAt)}" /></label>
                     <label>Tags<input name="tags" value="${inputValue(seed.tags)}" placeholder="soil, nitrogen, classroom" /></label>
                     <label>Region or environmental context<input name="region" value="${inputValue(seed.region)}" /></label>
                     <label>Climate context<input name="climateContext" value="${inputValue(seed.climateContext)}" /></label>
@@ -642,6 +642,13 @@ function honeycombMarkup(document, state, options) {
         ${customRootsMarkup(document,state,options)}</section>`;
 }
 
+function simpleKnowledgeMarkup(document, state) {
+    const roots = childrenOf(document, '');
+    const selected = nodeById(document, state.highlightedNodeId) || roots[0];
+    const topics = selected ? childrenOf(document, selected.id) : [];
+    return `<section class="pim-simple-workspace" aria-label="Simple plant knowledge editor"><p class="pim-simple-intro">Choose a category, then add a topic. These are the same topics used by your PIMO in AR.</p><nav class="pim-simple-categories" aria-label="Knowledge categories">${roots.map(node => `<button type="button" data-pim-outline-branch="${attribute(node.id)}" aria-pressed="${selected?.id === node.id}"><strong>${escapeHtml(node.title)}</strong><small>${childrenOf(document,node.id).length} topics</small></button>`).join('')}</nav>${selected ? `<section class="pim-simple-topics"><header><div><small>${escapeHtml(plantInformationWebPath(document, selected.id))}</small><h3>${escapeHtml(selected.title)}</h3></div><button type="button" data-pim-add-parent-id="${attribute(selected.id)}">Add topic</button></header>${selected.parentId ? `<button type="button" data-pim-outline-branch="${attribute(selected.parentId)}">Back to parent topic</button>` : ''}<div class="pim-simple-selected"><p>${escapeHtml(selected.preview || 'Add useful knowledge, one topic at a time.')}</p><button type="button" data-pim-edit-node-id="${attribute(selected.id)}">Edit introduction</button></div>${topics.length ? topics.map(node => `<article><div><strong>${escapeHtml(node.title)}</strong><p>${escapeHtml(node.preview || node.body || '')}</p><small>${escapeHtml(titleCase(node.status || 'draft'))} · ${escapeHtml(scopeLabel(node))}</small></div><div><button type="button" data-pim-edit-node-id="${attribute(node.id)}">Edit</button><button type="button" data-pim-outline-branch="${attribute(node.id)}">Open topic${childrenOf(document,node.id).length ? ' ('+childrenOf(document,node.id).length+')' : ''}</button></div></article>`).join('') : '<p class="pim-web-empty-state">No topics here yet. Choose Add topic to begin.</p>'}</section>` : ''}</section>`;
+}
+
 export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const current = normalizedState(state);
     const source = PimModel.pimReadingDocument(document, { editable: options.editable === true, scope: current.knowledgeScope });
@@ -653,17 +660,17 @@ export function plantInformationWebMarkup(document, state = {}, options = {}) {
     const listIdentity = showIdentity ? identityMarkup(source, current, 'list', renderOptions) : '';
     const standaloneDirections = basicMode ? '' : directionsInfoMarkup(source);
     const compassView = renderState.viewMode === 'compass'
-        ? `${basicMode ? '' : visualIdentity}${basicMode ? '' : knowledgeToolbar(source,current,renderOptions)}${honeycombMarkup(source,renderState,{ ...renderOptions, basicMode })}`
+        ? `${basicMode ? simpleKnowledgeMarkup(source,current) : visualIdentity + knowledgeToolbar(source,current,renderOptions) + honeycombMarkup(source,renderState,renderOptions)}`
         : '';
     const listView = renderState.viewMode === 'list'
         ? `${showIdentity ? `<div class="pim-web-list-identity">${listIdentity}</div>` : ''}${knowledgeToolbar(source, current, renderOptions)}${accessibleListMarkup(source, current, renderOptions)}`
         : '';
     const advancedToggle = renderOptions.editable
-        ? `<button type="button" class="pim-web-advanced-toggle" data-pim-advanced-toggle aria-expanded="${current.advancedOpen}"><strong>${current.advancedOpen ? 'Basic mode' : 'Advanced'}</strong><span>${current.advancedOpen ? 'Return to cell editing' : 'Search, sources and review'}</span></button>`
+        ? `<button type="button" class="pim-web-advanced-toggle" data-pim-advanced-toggle aria-expanded="${current.advancedOpen}"><strong>${current.advancedOpen ? 'Simple' : 'Advanced'}</strong><span>${current.advancedOpen ? 'Category and topic editor' : 'Diagram, sources and review'}</span></button>`
         : '';
     const viewSwitch = !renderOptions.editable || current.advancedOpen
         ? `<div class="pim-web-view-switch" role="group" aria-label="Plant information view"><button type="button" data-pim-view="list" aria-pressed="${current.viewMode === 'list'}">Outline</button><button type="button" data-pim-view="compass" aria-pressed="${current.viewMode === 'compass'}">Diagram</button></div>`
-        : '<span class="pim-web-mode-label">BASIC MODE · Cell diagram</span>';
+        : '<span class="pim-web-mode-label">SIMPLE · Plant knowledge</span>';
     const advancedTools = renderOptions.editable && !current.advancedOpen ? '' : (renderOptions.editable ? '<button type="button" class="pim-web-add-main" data-pim-add-top-level>Add main cell</button>' : '');
     const reviewPath = renderOptions.editable && !basicMode ? `<aside class="v2-review-path"><strong>Grow this plant’s knowledge</strong><p>Bring in source material → review suggestions → save a draft → publish when ready. Local observations belong to a specimen and stay separate from species knowledge.</p><button type="button" data-pim-add-observation>Add a local observation</button></aside>` : '';
     return `<article class="pim-web${current.centerOpen ? ' is-open' : ' is-collapsed'}${basicMode ? ' is-basic-mode' : ''}" data-pim-web data-pim-plant-id="${attribute(source.plantId)}" data-pim-schema-version="${attribute(source.schemaVersion || '')}">
@@ -718,7 +725,7 @@ function editorPayload(form, document) {
         specimenId: String(values.specimenId || '').trim(),
         observedAt: values.observedAt || '',
         title,
-        preview: String(values.preview || '').trim(),
+        preview: String(values.preview || body.slice(0, 80) || title).trim(),
         body,
         ...(countryOfOrigin ? { countryOfOrigin } : {}),
         tags: split(values.tags),

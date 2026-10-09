@@ -49,7 +49,9 @@ test('Project Dashboard keeps conceptual mapping honest and relationship-driven'
     assert.match(screenSource, /Print and Export/);
     assert.match(screenSource, /Close Project/);
     assert.doesNotMatch(screenSource, /Conceptual layout|Spatial Readiness|SPATIAL ORGANISATION|Spatial Organization/);
-    assert.doesNotMatch(screenSource, /Add Area/);
+    assert.match(screenSource, /Add Area/);
+    assert.match(screenSource, /data-creator-scan/);
+    assert.doesNotMatch(screenSource, /currentMapMarkup|GPS|data-map-editor/);
     assert.match(screenSource, /Project Map/);
     assert.match(screenSource, /data-v2-mode="content"/);
     assert.match(screenSource, /class="nlxr-db-v2-ar-button" data-v2-open-ar/);

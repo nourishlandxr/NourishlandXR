@@ -2,7 +2,8 @@ import { dashboardIcon } from '../services/workspaceIcons.js';
 import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from '../services/desktopLearningBookTarget.js';
 import { loadProjectDashboardV2Model } from '../services/projectDashboardV2Model.js';
 import { renderFieldGuide } from './fieldGuide.js';
-import { buildSiteMapLayout } from './projectDashboard.js';
+import { startPhysicalAnchorScanner } from './physicalAnchorScanner.js';
+import { PHYSICAL_ANCHOR_IDS, physicalMarkerLabel } from '../services/physicalAnchor.js';
 
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
 const encoded = value => encodeURIComponent(String(value ?? ''));
@@ -10,63 +11,26 @@ const markerIcon = type => dashboardIcon(({ plant: 'plant', note: 'note', area_c
 const areaIcon = area => dashboardIcon(area.current ? 'home' : 'area');
 
 function conceptualMapMarkup(model) {
-    const areas = model.areas || [];
+    const areas = (model.areas || []).filter(area => !area.current);
     const lines = (model.connections || []).map(connection => {
         const from = areas.find(area => area.id === connection.from)?.point;
         const to = areas.find(area => area.id === connection.to)?.point;
         return from && to ? `<line x1="${from.x.toFixed(2)}" y1="${from.y.toFixed(2)}" x2="${to.x.toFixed(2)}" y2="${to.y.toFixed(2)}" />` : '';
     }).join('');
-    const nodes = areas.map((area, index) => `<button class="nlxr-db-v2-map-node${area.current ? ' is-current' : ''}${index % 2 ? ' is-alt' : ''}" type="button" data-map-layer="areas" data-living-area="${encoded(area.id)}" style="--map-x:${area.point.x.toFixed(2)}%;--map-y:${area.point.y.toFixed(2)}%;" aria-label="Inspect ${escapeHtml(area.label)}"><span aria-hidden="true">${areaIcon(area)}</span><strong>${escapeHtml(area.label)}</strong><small data-map-layer="plants">${area.plantCount} plant${area.plantCount === 1 ? '' : 's'}</small>${area.totemCount ? `<em data-map-layer="totems">${area.totemCount} Totem${area.totemCount === 1 ? '' : 's'}</em>` : ''}</button>`).join('');
+    const nodes = areas.map((area, index) => `<button class="nlxr-db-v2-map-node${area.current ? ' is-current' : ''}${index % 2 ? ' is-alt' : ''}" type="button" data-map-layer="areas" data-living-area="${escapeHtml(area.id)}" style="--map-x:${area.point.x.toFixed(2)}%;--map-y:${area.point.y.toFixed(2)}%;" aria-label="Inspect ${escapeHtml(area.label)}"><span aria-hidden="true">${areaIcon(area)}</span><strong>${escapeHtml(area.label)}</strong><small data-map-layer="plants">${area.plantCount} plant${area.plantCount === 1 ? '' : 's'}</small>${area.totemCount ? `<em data-map-layer="totems">${area.totemCount} Totem${area.totemCount === 1 ? '' : 's'}</em>` : ''}</button>`).join('');
     const mapImage = model.siteMap?.image || model.livingMap?.background?.assetUrl;
     return `<section class="nlxr-db-v2-living-map" aria-labelledby="nlxrDbV2ConceptualMapTitle">
-        <div class="nlxr-db-v2-map-section-heading"><div><p class="nlxr-db-v2-eyebrow">AREA MAP</p><h3 id="nlxrDbV2ConceptualMapTitle">Project layout</h3><p>Organise Areas and confirmed connections in the project view. This layout is conceptual and does not claim GPS accuracy.</p></div></div>
+        <div class="nlxr-db-v2-map-section-heading"><div><p class="nlxr-db-v2-eyebrow">AREA MAP</p><h3 id="nlxrDbV2ConceptualMapTitle">Project layout</h3><p>Organise Areas and confirmed connections in the project view. Positions organise your site plan; scan an assigned ArUco tag to see its linked object in the camera.</p></div></div>
         <div class="nlxr-db-v2-map-canvas" data-site-map-canvas aria-label="Project Area layout">
             ${mapImage ? `<img class="nlxr-db-v2-map-image" src="${escapeHtml(mapImage)}" alt="" aria-hidden="true" />` : ''}
             <div class="nlxr-db-v2-map-grid" aria-hidden="true"></div>
             <svg class="nlxr-db-v2-map-lines" data-map-layer="connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><defs><filter id="nlxrV2Glow"><feGaussianBlur stdDeviation="1.4" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs><g filter="url(#nlxrV2Glow)">${lines}</g></svg>
             ${nodes || '<p class="nlxr-db-v2-map-empty">Add an Area to begin the project map.</p>'}
-            <div class="nlxr-db-v2-map-compass" aria-hidden="true">N<br><span>↑</span></div>
+            
         </div>
         <footer class="nlxr-db-v2-map-footer"><span><i aria-hidden="true">✦</i> ${areas.length} area${areas.length === 1 ? '' : 's'} · ${model.totalPlants} plant cluster${model.totalPlants === 1 ? '' : 's'}</span></footer>
         <p class="nlxr-db-v2-map-legend"><span><i class="is-area" aria-hidden="true"></i> Areas</span><span><i class="is-plant" aria-hidden="true"></i> Plant clusters</span><span><i class="is-link" aria-hidden="true"></i> Confirmed links</span><span><i class="is-totem" aria-hidden="true"></i> Totems</span></p>
     </section>`;
-}
-
-function currentMapMarkup(model) {
-    const projectId = encoded(model.project.id);
-    const visiblePlaces = (model.areas || []).filter(area => !area.current);
-    const mapEntries = (model.entries || []).filter(entry => visiblePlaces.some(place => place.id === entry.place?.id));
-    const projectIdentity = `${model.project.id} ${model.project.name}`.trim();
-    const usesHillyardsPlan = model.project.id === 'Hillyards' || /test loaded data/i.test(projectIdentity);
-    const siteMap = model.siteMap || {};
-    const mapLayout = buildSiteMapLayout(visiblePlaces, mapEntries, usesHillyardsPlan, siteMap.areaPoints || {});
-    const mapBackground = siteMap.image
-        ? `<img src="${escapeHtml(siteMap.image)}" alt="${escapeHtml(model.project.name)} uploaded site plan" />`
-        : model.livingMap?.background?.assetUrl
-            ? `<img src="${escapeHtml(model.livingMap.background.assetUrl)}" alt="${escapeHtml(model.project.name)} site plan" />`
-            : usesHillyardsPlan
-                ? '<img src="./assets/terrace-marking.png" alt="Terrace site plan showing paths and growing plots" />'
-                : '<div class="site-map-generic-surface" aria-hidden="true"></div>';
-    const areaOverlays = visiblePlaces.map(place => {
-        const count = mapEntries.filter(entry => entry.place.id === place.id).length;
-        const point = mapLayout.areaPoints.get(place.id) || { x: 50, y: 50, positioned: false };
-        const content = `<strong>${escapeHtml(place.label || place.name)}</strong><span>${count} item${count === 1 ? '' : 's'} · ${point.planLinked ? 'plan linked' : point.positioned ? 'GPS mapped' : 'map layout'}</span>`;
-        return `<button class="site-map-area${point.planLinked ? ' is-plan-linked' : ''}" data-map-layer="areas" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.renderProjectAreaDashboard('${projectId}', '${encoded(place.id)}')" aria-label="Open ${escapeHtml(place.label || place.name)}">${content}</button>`;
-    }).join('');
-    const mapEntryKey = entry => `${entry.place?.id}:${entry.marker?.id}`;
-    const markerPins = mapEntries.map(entry => {
-        const point = mapLayout.markerPoints.get(mapEntryKey(entry));
-        if (!point) return '';
-        const markerType = entry.marker?.semantic_type === 'area_checkpoint' ? 'area_checkpoint' : entry.marker?.type;
-        const markerLayer = markerType === 'plant' ? 'plants' : markerType === 'area_checkpoint' ? 'totems' : 'areas';
-        const label = `${entry.marker?.name || 'Untitled record'} · ${markerType || 'Content'}`;
-        const pinClass = `site-map-pin site-map-pin-${escapeHtml(markerType || 'content')}`;
-        return `<button class="${pinClass}" data-map-layer="${markerLayer}" style="--map-x:${point.x}%;--map-y:${point.y}%" type="button" onclick="window.openProjectEntry('${projectId}', '${encoded(entry.marker?.id)}')" aria-label="Open ${escapeHtml(label)}"><span class="sr-only">${escapeHtml(label)}</span></button>`;
-    }).join('');
-    const mapTotemLinks = visiblePlaces.flatMap(place => (Array.isArray(place.totem_links) ? place.totem_links : []).map(link => ({ from: place, to: visiblePlaces.find(candidate => candidate.id === link.target_area_id), ...link }))).filter(link => link.to);
-    const mapTotemDiagram = mapTotemLinks.length ? `<section class="site-map-totem-links" data-map-layer="connections"><h2>Totem links</h2>${mapTotemLinks.map(link => `<span>${escapeHtml(link.from.label || link.from.name)} → ${escapeHtml(link.to.label || link.to.name)}${link.steps ? ` · ${escapeHtml(link.steps)} steps` : ''}${link.distance_m ? ` · ${escapeHtml(link.distance_m)} m` : ''}</span>`).join('')}</section>` : '';
-    const mapStatus = mapLayout.hasMapBounds ? 'GPS positions are shown relative to one another.' : 'Map layout is temporary until Areas receive GPS positions.';
-    return `<section class="nlxr-db-v2-current-map" aria-labelledby="nlxrDbV2CurrentMapTitle"><section class="site-map-introduction"><div><p class="welcome-label">Current map</p><h2 id="nlxrDbV2CurrentMapTitle">Areas, paths and placed content</h2><p>This is the saved site map. GPS anchors appear in their real relative positions; content placed only in AR stays within its Area until GPS is added.</p></div><div class="site-map-legend" aria-label="Map legend"><span><i class="is-area"></i>Area</span><span><i class="is-plant"></i>Plant</span><span><i class="is-note"></i>Note / checkpoint</span></div></section><section class="site-map-canvas${usesHillyardsPlan ? ' has-terrace-plan' : ' has-generic-surface'}" data-site-map-canvas aria-label="${escapeHtml(model.project.name)} site map">${mapBackground}<div class="site-map-image-wash" aria-hidden="true"></div>${areaOverlays}${markerPins}<p class="site-map-scale-note">${mapStatus}</p></section><section class="site-map-summary"><strong>${visiblePlaces.length} Area${visiblePlaces.length === 1 ? '' : 's'}</strong><span>${mapEntries.length} mapped item${mapEntries.length === 1 ? '' : 's'}</span><span>${mapLayout.hasMapBounds ? 'GPS relative layout' : 'Area layout mode'}</span></section>${mapTotemDiagram}</section>`;
 }
 
 function activityMarkup(model) {
@@ -83,27 +47,40 @@ function projectStatusMarkup(model) {
         <header class="nlxr-db-v2-status-heading"><h2 id="nlxrDbV2StatusTitle">Project Status</h2></header>
         <div class="nlxr-db-v2-status-main" role="group" aria-label="Project statistics">
             ${statusItem('Plants', model.totalPlants, 'plants')}
-            ${statusItem('Placed', model.placedPlants, 'placed')}
+            ${statusItem('Tag linked', model.tagLinkedPlants, 'placed')}
             ${statusItem('Areas', model.areas.length, 'areas')}
-            ${statusItem('Mapped', `${model.mappedPercentage}%`, 'mapped', 'is-percentage')}
+            ${statusItem('Needs a tag', model.totalPlants - model.tagLinkedPlants, 'mapped')}
         </div>
     </section>`;
 }
 
 function toolsMarkup(model) {
     const projectId = encoded(model.project.id);
-    return `<section class="nlxr-db-v2-card nlxr-db-v2-tools-card" aria-labelledby="nlxrDbV2ToolsTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">${dashboardIcon('grid')}</span><h2 id="nlxrDbV2ToolsTitle">Project tools</h2></div></header><div class="nlxr-db-v2-tools-grid"><button type="button" onclick="window.renderPrintCenter('${projectId}')"><span aria-hidden="true">${dashboardIcon('print')}</span><strong>Print and Export</strong></button><button type="button" onclick="window.renderProjectGuide('${projectId}')"><span aria-hidden="true">${dashboardIcon('help')}</span><strong>Project Guide</strong></button><button type="button" data-v2-publish><span aria-hidden="true">${dashboardIcon('upload')}</span><strong>Publish</strong></button><button type="button" onclick="window.renderProjectSettings('${projectId}')"><span aria-hidden="true">${dashboardIcon('settings')}</span><strong>Project Settings</strong></button></div></section>`;
+    return `<section class="nlxr-db-v2-card nlxr-db-v2-tools-card" aria-labelledby="nlxrDbV2ToolsTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">${dashboardIcon('grid')}</span><h2 id="nlxrDbV2ToolsTitle">Project tools</h2></div></header><div class="nlxr-db-v2-tools-grid"><button type="button" onclick="window.renderPrintCenter('${projectId}')"><span aria-hidden="true">${dashboardIcon('print')}</span><strong>Print and Export</strong></button><button type="button" onclick="window.renderProjectGuide('${projectId}')"><span aria-hidden="true">${dashboardIcon('help')}</span><strong>Project Guide</strong></button><button type="button" data-v2-publish><span aria-hidden="true">${dashboardIcon('upload')}</span><strong>Publication settings</strong></button><button type="button" onclick="window.renderProjectSettings('${projectId}')"><span aria-hidden="true">${dashboardIcon('settings')}</span><strong>Project Settings</strong></button></div></section>`;
 }
 
 function areaSummaryMarkup(model) {
     const projectId = encoded(model.project.id);
-    const rows = (model.areas || []).map(area => `<button type="button" class="nlxr-db-v2-area-row${area.current ? ' is-current' : ''}" onclick="window.renderProjectAreaDashboard('${projectId}','${encoded(area.id)}')"><span class="nlxr-db-v2-area-icon" aria-hidden="true">${areaIcon(area)}</span><span><strong>${escapeHtml(area.label)}</strong><small>${area.plantCount} plant${area.plantCount === 1 ? '' : 's'} · ${area.entryCount} entr${area.entryCount === 1 ? 'y' : 'ies'}${area.placedTotemCount ? ` · ${area.placedTotemCount} Totem${area.placedTotemCount === 1 ? '' : 's'}` : ''}</small></span><span class="nlxr-db-v2-area-state">${area.current ? 'Current' : 'Open'} <b aria-hidden="true">›</b></span></button>`).join('');
-    return `<section class="nlxr-db-v2-card nlxr-db-v2-areas-card" aria-labelledby="nlxrDbV2AreasTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">${dashboardIcon('area')}</span><h2 id="nlxrDbV2AreasTitle">Areas</h2></div><span class="nlxr-db-v2-readiness-state">${model.areas.length}</span></header>${rows || '<p class="nlxr-db-v2-empty">No areas have been added yet.</p>'}</section>`;
+    const rows = (model.areas || []).map(area => `<button type="button" class="nlxr-db-v2-area-row${area.current ? ' is-current' : ''}" onclick="window.renderProjectAreaDashboard('${projectId}','${encoded(area.id)}')"><span class="nlxr-db-v2-area-icon" aria-hidden="true">${areaIcon(area)}</span><span><strong>${escapeHtml(area.label)}</strong><small>${area.plantCount} plant${area.plantCount === 1 ? '' : 's'} · ${area.entryCount} entr${area.entryCount === 1 ? 'y' : 'ies'}${area.placedTotemCount ? ` · ${area.placedTotemCount} Totem${area.placedTotemCount === 1 ? '' : 's'}` : ''}</small></span><span class="nlxr-db-v2-area-state">${area.current ? 'Unassigned' : 'Open'} <b aria-hidden="true">›</b></span></button>`).join('');
+    return `<section class="nlxr-db-v2-card nlxr-db-v2-areas-card" aria-labelledby="nlxrDbV2AreasTitle"><header class="nlxr-db-v2-card-heading"><div><span class="nlxr-db-v2-section-icon" aria-hidden="true">${dashboardIcon('area')}</span><h2 id="nlxrDbV2AreasTitle">Areas</h2></div><button type="button" onclick="window.renderProjectAreaForm('${projectId}','dashboard')">Add Area</button></header>${rows || '<p class="nlxr-db-v2-empty">No areas have been added yet.</p>'}</section>`;
+}
+
+function creatorActionsMarkup(model) {
+    const projectId = encoded(model.project.id);
+    return `<section class="creator-primary-actions" aria-label="Creator actions"><button type="button" data-creator-scan><strong>Scan ArUco tag</strong><small>Open camera · NL-001–NL-009</small></button><button type="button" onclick="window.renderLocationFieldMarker('${projectId}', 'plant', 'without-ar', true)"><strong>Add Plant</strong><small>Name it, then build its knowledge</small></button><button type="button" onclick="window.renderProjectAreaForm('${projectId}', 'dashboard')"><strong>Add Area</strong><small>Organise a place and its Totem</small></button></section>`;
+}
+
+function tagAssignmentsMarkup(model) {
+    const projectId = encoded(model.project.id);
+    return `<details class="creator-tag-register"><summary>Your printed tags · NL-001–NL-009</summary><p>Assign a tag in a Plant or Totem editor, set its printed black-square size, then scan it. A saved link is not a placement verification.</p><div class="creator-tag-grid">${PHYSICAL_ANCHOR_IDS.filter(id => id <= 9).map(id => {
+        const entries = model.entries.filter(entry => entry.marker.physicalAnchor?.enabled && Number(entry.marker.physicalAnchor.markerId) === id);
+        return `<article><strong>${physicalMarkerLabel(id)}</strong><span>${entries.length > 1 ? 'Multiple assignments — review' : entries.length ? escapeHtml(entries[0].marker.name) : 'Available'}</span>${entries.map(entry => `<button type="button" onclick="window.openProjectEntry('${projectId}','${encoded(entry.marker.id)}')">Open linked record</button>`).join('')}</article>`;
+    }).join('')}</div></details>`;
 }
 
 function overviewMarkup(model) {
     return `${projectStatusMarkup(model)}
-        ${areaSummaryMarkup(model)}
+        ${areaSummaryMarkup(model)}${tagAssignmentsMarkup(model)}
         <div class="nlxr-db-v2-lower-grid">${activityMarkup(model)}${toolsMarkup(model)}</div>`;
 }
 
@@ -115,20 +92,18 @@ function mapControlsMarkup(model) {
         return `<button type="button" class="nlxr-db-v2-map-area-link" data-map-link-area="${encoded(area.id)}" data-map-link-area-name="${encoded(area.label)}"><span class="nlxr-db-v2-map-area-link-icon" aria-hidden="true">${dashboardIcon('pin')}</span><span><strong>${escapeHtml(area.label)}</strong><small>${hasSavedPoint ? 'Position saved · choose to update' : 'Choose a point on the map'}</small></span><b aria-hidden="true">+</b></button>`;
     }).join('');
     return `<section class="nlxr-db-v2-map-controls" aria-labelledby="nlxrDbV2MapControlsTitle">
-        <header class="nlxr-db-v2-map-controls-heading"><div><p class="nlxr-db-v2-eyebrow">MAP TOOLS</p><h3 id="nlxrDbV2MapControlsTitle">Map options</h3><p>Keep the map photo and Area positions together, then use the detailed workspace for the full map view.</p></div><span class="nlxr-db-v2-map-photo-state">${hasMapPhoto ? 'Map image added' : 'No map image yet'}</span></header>
+        <header class="nlxr-db-v2-map-controls-heading"><div><p class="nlxr-db-v2-eyebrow">MAP TOOLS</p><h3 id="nlxrDbV2MapControlsTitle">Map options</h3><p>Choose an Area, then click its position on the map. The background and Areas stay together.</p></div><span class="nlxr-db-v2-map-photo-state">${hasMapPhoto ? 'Map image added' : 'No map image yet'}</span></header>
         <div class="nlxr-db-v2-map-actions">
             <label class="nlxr-db-v2-map-action nlxr-db-v2-map-photo-upload"><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">${dashboardIcon('ar')}</span><span><strong>Upload map photo</strong><small>Use a plan, aerial photo or hand-drawn layout.</small></span><input type="file" accept="image/*" data-map-photo-upload /></label>
             ${model.siteMap?.image ? `<button type="button" class="nlxr-db-v2-map-action" data-map-photo-remove><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">${dashboardIcon('close')}</span><span><strong>Remove uploaded photo</strong><small>Keep the Area records and positions.</small></span></button>` : ''}
-            <button type="button" class="nlxr-db-v2-map-action" data-map-editor><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">${dashboardIcon('arrow')}</span><span><strong>Open detailed map workspace</strong><small>See placed content, Totem links and spatial export.</small></span></button>
         </div>
         <div class="nlxr-db-v2-map-area-links-section"><div><strong>Place Areas on the map</strong><small>Choose an Area, then click its position in the map above.</small></div><div class="nlxr-db-v2-map-area-links">${areaLinks || '<p class="nlxr-db-v2-map-controls-empty">Create an Area before linking it to the map.</p>'}</div></div>
-        <div class="nlxr-db-v2-map-export"><span class="nlxr-db-v2-map-action-icon" aria-hidden="true">⌘</span><span><strong>GIS export</strong><small>GeoPackage, GeoJSON, CSV with X/Y/Z, KML, GPX or DXF.</small></span><span class="nlxr-db-v2-map-export-badge">Coming soon</span></div>
-        <p class="nlxr-db-v2-map-status-text" data-v2-map-status role="status">${hasMapPhoto ? 'Choose an Area above to update its position on the map.' : 'Upload a map photo when you are ready, or place Areas on the conceptual map first.'}</p>
+        <p class="nlxr-db-v2-map-status-text" data-v2-map-status role="status">${hasMapPhoto ? 'Choose an Area above to update its position on the map.' : 'Upload a site plan, or organise your Areas on the blank canvas.'}</p>
     </section>`;
 }
 
 function mapWorkspaceMarkup(model) {
-    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2><p>Organise the project first, then review its saved site map below.</p></header>${conceptualMapMarkup(model)}${currentMapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layer filters"><span>Layers</span><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></div>${mapControlsMarkup(model)}</section>`;
+    return `<section class="nlxr-db-v2-map-workspace" aria-labelledby="nlxrDbV2ProjectMapTitle"><header class="nlxr-db-v2-map-workspace-heading"><h2 id="nlxrDbV2ProjectMapTitle">Project Map</h2><p>One site plan for your Areas, plant counts and confirmed connections.</p></header>${conceptualMapMarkup(model)}<div class="nlxr-db-v2-map-toolbar" role="toolbar" aria-label="Map layer filters"><span>Layers</span><div><button type="button" data-map-layer-toggle="areas" aria-pressed="true">Areas</button><button type="button" data-map-layer-toggle="plants" aria-pressed="true">Plant clusters</button><button type="button" data-map-layer-toggle="connections" aria-pressed="true">Connections</button><button type="button" data-map-layer-toggle="totems" aria-pressed="true">Totems</button></div></div>${mapControlsMarkup(model)}</section>`;
 }
 
 function previewModeMarkup(model, mode) {
@@ -164,6 +139,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             <header class="nlxr-db-v2-header workspace-art-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div><p class="workspace-header-summary">A workspace for your living landscape.</p>${offlineStatus}</div></header>
             <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">${dashboardIcon('plant')}</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">${dashboardIcon('area')}</span> Map</button><button type="button" data-v2-mode="content"><span aria-hidden="true">${dashboardIcon('webhub')}</span> Knowledge</button></nav>
             ${isDesktopLearningBookTarget()?`<p class="workspace-ar-notice">${DESKTOP_AR_EXPLANATION}</p>`:`<div class="nlxr-db-v2-ar-strip" aria-label="AR access"><button type="button" class="nlxr-db-v2-ar-button" data-v2-open-ar><span class="nlxr-db-v2-ar-icon" aria-hidden="true">${dashboardIcon('ar')}</span><span class="nlxr-db-v2-ar-copy"><strong>Open AR mode</strong><small>Create and position plants, notes and area markers.</small></span><span class="nlxr-db-v2-ar-meta"><b>AR</b><i aria-hidden="true">→</i></span></button></div>`}
+            ${creatorActionsMarkup(model)}
             ${model.loadWarnings?.length ? `<aside class="v2-notice" role="status">Some area content could not be read: ${model.loadWarnings.map(item=>escapeHtml(item.name)).join(', ')}. Totals include available records only. <button type="button" onclick="window.renderProjectDashboard('${projectKey}')">Retry</button></aside>` : ''}
             <main class="nlxr-db-v2-mode-panel">${previewModeMarkup(model, 'overview')}</main>
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>
@@ -171,6 +147,10 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             <footer class="nlxr-db-v2-close-project"><button type="button" data-v2-close-project>Close Project</button></footer>
         </div>`;
 
+        app.querySelector('[data-creator-scan]').addEventListener('click', async () => {
+            try { await startPhysicalAnchorScanner(model.project.id); }
+            catch (error) { const status = app.querySelector('#nlxrDbV2Notice'); status.hidden = false; status.textContent = error.message; }
+        });
         const panel = app.querySelector('.nlxr-db-v2-mode-panel');
         const notice = message => {
             const target = app.querySelector('#nlxrDbV2Notice');
@@ -179,7 +159,6 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             target.hidden = false;
         };
         app.querySelector('[data-v2-open-ar]')?.addEventListener('click', () => window.openProjectArMode(projectKey));
-        app.querySelector('[data-v2-publish]')?.addEventListener('click',()=>window.renderProjectSettings(projectKey));
         let modeGeneration = 0;
         const modeKey = `nlxr.dashboard-mode.${model.project.id}`;
         const showMode = async mode => {
@@ -204,6 +183,11 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             }
         };
         const bindPanel = () => {
+            panel.querySelector('[data-v2-publish]')?.addEventListener('click', () => window.renderProjectSettings(projectKey));
+            const mapImage = panel.querySelector('.nlxr-db-v2-map-image');
+            const fitImage = () => { if (mapImage?.naturalWidth) { const canvas = mapImage.closest('[data-site-map-canvas]'); canvas.style.aspectRatio = `${mapImage.naturalWidth} / ${mapImage.naturalHeight}`; canvas.style.minHeight = '0'; } };
+            mapImage?.addEventListener('load', fitImage);
+            fitImage();
             panel.querySelectorAll('[data-living-area]').forEach(button => button.addEventListener('click', () => {
                 const area = model.areas.find(candidate => candidate.id === button.dataset.livingArea);
                 const sheet = app.querySelector('#nlxrLivingMapSheet');
@@ -211,7 +195,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
                 sheet.innerHTML = `<div><div><p class="nlxr-db-v2-eyebrow">AREA</p><h2>${escapeHtml(area.label)}</h2><p>${area.plantCount} plant${area.plantCount === 1 ? '' : 's'} · ${area.entryCount} entr${area.entryCount === 1 ? 'y' : 'ies'}</p></div><button type="button" aria-label="Close area details" data-close-map-sheet>×</button></div><p>${area.totemCount ? `${area.placedTotemCount} Totem${area.placedTotemCount === 1 ? '' : 's'} confirmed.` : 'No Totem is configured for this Area.'}</p><div><button type="button" onclick="window.renderProjectAreaDashboard('${projectKey}','${encoded(area.id)}')">Open Area</button><button type="button" onclick="window.openProjectArMode('${projectKey}','${encoded(area.id)}')">Open in AR</button><button type="button" data-v2-notice="position">Edit position</button></div>`;
                 sheet.hidden = false;
                 sheet.querySelector('[data-close-map-sheet]')?.addEventListener('click', () => { sheet.hidden = true; });
-                sheet.querySelectorAll('[data-v2-notice]').forEach(control => control.addEventListener('click', () => notice('Manual position editing is available from Edit layout.')));
+                sheet.querySelector('[data-v2-notice]')?.addEventListener('click', () => { sheet.hidden = true; window.beginSiteMapAreaLink(projectKey, encoded(area.id), encoded(area.label), 'dashboard-v2'); });
             }));
             panel.querySelectorAll('[data-v2-health-review]').forEach(control => control.addEventListener('click', () => window.renderLocationMap(projectKey, true, 'dashboard')));
             panel.querySelector('[data-v2-guide]')?.addEventListener('click', () => window.renderProjectGuide(projectKey));
@@ -249,11 +233,12 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
                 if (action === 'plants') return showMode('content');
                 if (action === 'areas') return panel.querySelector('.nlxr-db-v2-areas-card')?.scrollIntoView({ block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
                 if (action === 'placed') {
-                    showMode('map');
-                    notice('Placed Plants are shown in the Plant clusters layer.');
+                    const tags = panel.querySelector('.creator-tag-register');
+                    if (tags) { tags.open = true; tags.scrollIntoView({ block: 'center' }); } else showMode('overview');
+                    notice('Tag links are listed under Your printed tags in Overview. Scan a tag to check its linked object.');
                     return;
                 }
-                return window.renderLocationMap(projectKey, true, 'dashboard');
+                return showMode('content');
             }));
         };
         app.querySelectorAll('[data-v2-mode]').forEach(button => button.addEventListener('click', () => {

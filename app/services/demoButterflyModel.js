@@ -5,7 +5,23 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 // the original, unchanged GLB. Geometry/materials are shared by all phases.
 const URL=new globalThis.URL('../assets/animated_butterfly.glb',import.meta.url);
 export const BUTTERFLY_RENDER_BUDGETS=Object.freeze({low:{pixels:192,interval:50},medium:{pixels:256,interval:42},high:{pixels:384,interval:33}});
-export const BUTTERFLY_FLIGHT_SPEED=7.2;
+export const BUTTERFLY_FLIGHT_SPEED=10.8;
+const nativeFlocks=new WeakMap();
+export function butterflyPoseCacheKey(pose){
+    const flight=Math.round(Math.max(0,Math.min(1,pose.flight || 0))*8)/8;
+    return {key:flight===1?'flight':`${flight}:${Math.round((pose.wingPhase || 0)/1.9)%3}`,flight,
+        wingPhase:flight===1?0:Math.round((pose.wingPhase || 0)/1.9)%3*1.9};
+}
+function animateButterfly(model,elapsed,pose){
+    model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);
+    model.mixer.setTime(elapsed/1000);
+    const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    for(const [i,index] of model.hinges.entries()){
+        const flying=model.nodes[index].quaternion.clone(),rest=model.closed[i].clone().slerp(model.open[i],1-butterflyRestingFold(elapsed,pose.wingPhase || 0,reduced));
+        model.nodes[index].quaternion.copy(rest).slerp(flying,pose.flight);
+    }
+    model.wrapper.rotation.set(0,0,0);model.wrapper.updateMatrixWorld(true);
+}
 export function butterflyRestingFold(elapsed,phase=0,reduced=false){
     if(reduced)return .96;
     // One occasional opening per window, with different pauses and durations
@@ -79,37 +95,55 @@ function buildButterfly({gltf,bitmap},red=false){
 }
 // Bake the small animated mesh at the existing quality cadence. The same
 // vertices are reused by both eyes; no offscreen sprite or extra XR context.
-function butterflyXRRenderer(gl,model,red=false){
+function butterflyXRRenderer(gl,model){
     const compile=(type,source)=>{const s=gl.createShader(type);gl.shaderSource(s,source);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s;};
-    const vertex=compile(gl.VERTEX_SHADER,'attribute vec3 p,n;attribute vec2 uv;uniform mat4 projection,view;uniform vec3 origin;uniform float scale,foot;varying vec2 v;varying float light;void main(){vec3 local=p;local.y-=foot;v=uv;light=.58+.42*abs(dot(normalize(n),normalize(vec3(-.3,.65,.7))));gl_Position=projection*view*vec4(origin+local*scale,1.);}');
-    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D wing;uniform vec3 colour;uniform float mapped,opacity,red;varying vec2 v;varying float light;void main(){vec4 c=mix(vec4(colour,1.),texture2D(wing,v),mapped);if(red>.5 && mapped>.5 && c.b>c.r*1.15 && c.b>c.g*.82)c.rgb=vec3(c.b*1.12,c.r*.55,c.g*.22);if(c.a<.02)discard;gl_FragColor=vec4(c.rgb*light,c.a*opacity);}');
+    const vertex=compile(gl.VERTEX_SHADER,'attribute vec3 p,n;attribute vec2 uv;uniform mat4 projection,view;uniform vec3 origin;uniform float scale,foot,yaw,pitch,bank;varying vec2 v;varying float light;void main(){vec3 local=p;local.y-=foot;float cp=cos(pitch),sp=sin(pitch),cb=cos(bank),sb=sin(bank),cy=cos(yaw),sy=sin(yaw);local=vec3(local.x,cp*local.y-sp*local.z,sp*local.y+cp*local.z);local=vec3(cb*local.x-sb*local.y,sb*local.x+cb*local.y,local.z);local=vec3(cy*local.x+sy*local.z,local.y,-sy*local.x+cy*local.z);v=uv;light=.58+.42*abs(dot(normalize(n),normalize(vec3(-.3,.65,.7))));gl_Position=projection*view*vec4(origin+local*scale,1.);}');
+    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;uniform sampler2D wing;uniform vec3 colour,tint;uniform float mapped,opacity,red,tinted,wingOpacity;varying vec2 v;varying float light;void main(){vec4 c=mix(vec4(colour,1.),texture2D(wing,v),mapped);if(red>.5 && mapped>.5 && c.b>c.r*1.15 && c.b>c.g*.82)c.rgb=vec3(c.b*1.12,c.r*.55,c.g*.22);if(tinted>.5 && mapped>.5 && c.b>c.r*1.15 && c.b>c.g*.82)c.rgb=tint*max(c.b,.35);if(mapped>.5)c.a*=wingOpacity;if(c.a<.02)discard;gl_FragColor=vec4(c.rgb*light,c.a*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
-    const buffer=gl.createBuffer(),texture=gl.createTexture(),attributes=['p','n','uv'].map(name=>gl.getAttribLocation(program,name)),uniforms=Object.fromEntries(['projection','view','origin','scale','foot','wing','colour','mapped','opacity','red'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const texture=gl.createTexture(),slots=new Map(),attributes=['p','n','uv'].map(name=>gl.getAttribLocation(program,name)),uniforms=Object.fromEntries(['projection','view','origin','scale','foot','wing','colour','mapped','opacity','red','tint','tinted','wingOpacity','yaw','pitch','bank'].map(name=>[name,gl.getUniformLocation(program,name)]));
     gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,model.bitmap);gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
     const parts=model.meshes.map(mesh=>({mesh,positions:new Float32Array(mesh.geometry.attributes.position.count*3),vertices:new Float32Array(mesh.geometry.index.count*8),start:0}));
-    const packed=new Float32Array(parts.reduce((sum,part)=>sum+part.vertices.length,0));let lastPaint=-Infinity,foot=0;
+    const packed=new Float32Array(parts.reduce((sum,part)=>sum+part.vertices.length,0));
     const point=new THREE.Vector3(),a=new THREE.Vector3(),b=new THREE.Vector3(),c=new THREE.Vector3(),normal=new THREE.Vector3(),ab=new THREE.Vector3(),ac=new THREE.Vector3(),ids=new Uint32Array(3);
     function update(elapsed,pose){
-        if(elapsed>=lastPaint && elapsed-lastPaint<BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval)return;
-        model.wrapper.updateMatrixWorld(true);foot=Math.min(...[26,31,36,41,46,51].map(index=>model.nodes[index].getWorldPosition(point).y));let offset=0;
+        const key=butterflyPoseCacheKey(pose);let slot=slots.get(key.key);
+        if(slot)slots.delete(key.key);
+        else if(slots.size>=12){const [oldKey,value]=slots.entries().next().value;slots.delete(oldKey);slot=value;slot.at=-Infinity;}
+        else slot={buffer:gl.createBuffer(),at:-Infinity,foot:0};
+        slots.set(key.key,slot);
+        const interval=key.flight===0?180:BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval;
+        if(elapsed>=slot.at && elapsed-slot.at<interval)return slot;
+        animateButterfly(model,elapsed,key);
+        const foot=Math.min(...[26,31,36,41,46,51].map(index=>model.nodes[index].getWorldPosition(point).y));let offset=0;
         for(const part of parts){const {mesh,positions,vertices}=part,g=mesh.geometry;mesh.skeleton.update();
             for(let i=0;i<g.attributes.position.count;i++){point.fromBufferAttribute(g.attributes.position,i);mesh.applyBoneTransform(i,point);point.applyMatrix4(mesh.matrixWorld);positions[i*3]=point.x;positions[i*3+1]=point.y;positions[i*3+2]=point.z;}
             for(let i=0;i<g.index.count;i+=3){ids[0]=g.index.getX(i);ids[1]=g.index.getX(i+1);ids[2]=g.index.getX(i+2);a.fromArray(positions,ids[0]*3);b.fromArray(positions,ids[1]*3);c.fromArray(positions,ids[2]*3);normal.crossVectors(ab.subVectors(b,a),ac.subVectors(c,a)).normalize();
                 for(let j=0;j<3;j++){const id=ids[j],k=(i+j)*8;vertices[k]=positions[id*3];vertices[k+1]=positions[id*3+1];vertices[k+2]=positions[id*3+2];vertices[k+3]=normal.x;vertices[k+4]=normal.y;vertices[k+5]=normal.z;vertices[k+6]=g.attributes.uv?.getX(id)||0;vertices[k+7]=g.attributes.uv?.getY(id)||0;}
             }part.start=offset/8;packed.set(vertices,offset);offset+=vertices.length;
         }
-        foot*=1-pose.flight;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,packed,gl.DYNAMIC_DRAW);lastPaint=elapsed;
+        slot.foot=foot*(1-key.flight);gl.bindBuffer(gl.ARRAY_BUFFER,slot.buffer);if(slot.at===-Infinity)gl.bufferData(gl.ARRAY_BUFFER,packed,gl.DYNAMIC_DRAW);else gl.bufferSubData(gl.ARRAY_BUFFER,0,packed);slot.at=elapsed;return slot;
     }
-    return {draw(view,origin,elapsed,pose){update(elapsed,pose);gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);attributes.forEach((location,i)=>{gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,i===2?2:3,gl.FLOAT,false,32,[0,12,24][i]);});gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.scale,pose.size || .13);gl.uniform1f(uniforms.red,red?1:0);gl.uniform1f(uniforms.foot,foot);gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.wing,0);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);if(pose.close>.02)gl.disable(gl.DEPTH_TEST);else gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
-        for(const part of parts){gl.uniform1f(uniforms.mapped,part.mesh.material.map?1:0);gl.uniform3f(uniforms.colour,part.mesh.material.color.r,part.mesh.material.color.g,part.mesh.material.color.b);gl.drawArrays(gl.TRIANGLES,part.start,part.vertices.length/8);}gl.depthMask(true);gl.enable(gl.DEPTH_TEST);},destroy(){gl.deleteBuffer(buffer);gl.deleteTexture(texture);gl.deleteProgram(program);}};
+    return {draw(view,origin,elapsed,pose,variant={}){const slot=update(elapsed,pose);gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,slot.buffer);attributes.forEach((location,i)=>{gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,i===2?2:3,gl.FLOAT,false,32,[0,12,24][i]);});gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);gl.uniform3f(uniforms.origin,origin.x,origin.y,origin.z);gl.uniform1f(uniforms.scale,pose.size || .065);gl.uniform1f(uniforms.red,variant.red && !variant.colour?1:0);gl.uniform3fv(uniforms.tint,variant.tint || [1,1,1]);gl.uniform1f(uniforms.tinted,variant.colour?1:0);gl.uniform1f(uniforms.wingOpacity,variant.wingOpacity ?? 1);gl.uniform1f(uniforms.yaw,pose.state==='landed'?.85:pose.yaw || 0);gl.uniform1f(uniforms.pitch,(pose.pitch || 0)*pose.flight);gl.uniform1f(uniforms.bank,pose.bank || 0);gl.uniform1f(uniforms.foot,slot.foot);gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.wing,0);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);gl.enable(gl.DEPTH_TEST);gl.depthMask(false);
+        for(const part of parts){gl.uniform1f(uniforms.mapped,part.mesh.material.map?1:0);gl.uniform3f(uniforms.colour,part.mesh.material.color.r,part.mesh.material.color.g,part.mesh.material.color.b);gl.drawArrays(gl.TRIANGLES,part.start,part.vertices.length/8);}gl.depthMask(true);gl.enable(gl.DEPTH_TEST);},destroy(){slots.forEach(slot=>gl.deleteBuffer(slot.buffer));slots.clear();gl.deleteTexture(texture);gl.deleteProgram(program);}};
 }
-export function mountDemoButterflyModel(canvas,{gl=null,red=false}={}){
+export function mountDemoButterflyModel(canvas,{gl=null,red=false,colour=null,wingOpacity=1}={}){
     if(!canvas)return null;
     const renderer=gl?null:new THREE.WebGLRenderer({canvas,alpha:true,antialias:true,preserveDrawingBuffer:true,powerPreference:'low-power'});renderer?.setPixelRatio(1);if(renderer)renderer.outputColorSpace=THREE.SRGBColorSpace;
     const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(38,1,.1,15);camera.position.set(0,.08,2.7);camera.lookAt(0,0,0);
     scene.add(new THREE.HemisphereLight(0xfff3dc,0x405a56,2));const sun=new THREE.DirectionalLight(0xffedcc,2.1);sun.position.set(-2,3,4);scene.add(sun);
-    let model=null,xr=null,disposed=false,lastElapsed=NaN,lastPaint=-Infinity;
-    prepareDemoButterflyModel().then(value=>{if(disposed)return;model=buildButterfly(value,red);scene.add(model.wrapper);if(gl)xr=butterflyXRRenderer(gl,model,red);canvas.dataset.modelReady='true';}).catch(error=>{if(!disposed){canvas.dataset.modelReady='error';console.warn('Butterfly model:',error);}});
+    let model=null,xr=null,flock=null,disposed=false,lastElapsed=NaN,lastPaint=-Infinity;
+    const tint=colour?new THREE.Color(colour).convertLinearToSRGB().toArray():[1,1,1],variant={red,colour,wingOpacity,tint};
+    prepareDemoButterflyModel().then(value=>{
+        if(disposed)return;
+        if(gl){
+            flock=nativeFlocks.get(gl);
+            if(!flock){const shared=buildButterfly(value);flock={model:shared,xr:butterflyXRRenderer(gl,shared),references:0};nativeFlocks.set(gl,flock);}
+            flock.references++;model=flock.model;xr=flock.xr;
+        }else{model=buildButterfly(value,red);scene.add(model.wrapper);
+            if(colour)for(const material of model.materials){material.onBeforeCompile=shader=>{shader.uniforms.butterflyTint={value:new THREE.Color(colour)};shader.uniforms.butterflyWingOpacity={value:wingOpacity};shader.fragmentShader='uniform vec3 butterflyTint;uniform float butterflyWingOpacity;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>','#include <map_fragment>\n#ifdef USE_MAP\nif(diffuseColor.b>diffuseColor.r*1.15 && diffuseColor.b>diffuseColor.g*.82)diffuseColor.rgb=butterflyTint*max(diffuseColor.b,.35);diffuseColor.a*=butterflyWingOpacity;\n#endif');};material.customProgramCacheKey=()=> 'tinted-butterfly';}
+        }
+        canvas.dataset.modelReady='true';
+    }).catch(error=>{if(!disposed){canvas.dataset.modelReady='error';console.warn('Butterfly model:',error);}});
     function updatePose(elapsed,pose){
         if(elapsed===lastElapsed)return;const delta=Number.isFinite(lastElapsed)?Math.min(.15,Math.max(0,(elapsed-lastElapsed)/1000)):0;lastElapsed=elapsed;
         model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);model.mixer.update(delta);
@@ -126,6 +160,6 @@ export function mountDemoButterflyModel(canvas,{gl=null,red=false}={}){
             renderer.setSize(budget.pixels,budget.pixels,false);
             updatePose(elapsed,pose);
             renderer.render(scene,camera);lastPaint=elapsed;return canvas;
-        },drawXR(view,origin,elapsed,pose){if(!model || !xr || !pose)return;updatePose(elapsed,pose);xr.draw(view,origin,elapsed,pose);},destroy(){disposed=true;xr?.destroy();if(model){model.mixer.stopAllAction();model.mixer.uncacheRoot(model.wrapper.children[0].children[0]);model.geometries.forEach(geometry=>geometry.dispose());model.materials.forEach(material=>material.dispose());model.texture.dispose();}renderer?.dispose();renderer?.forceContextLoss();}
+        },drawXR(view,origin,elapsed,pose){if(!model || !xr || !pose)return;xr.draw(view,origin,elapsed,pose,variant);},destroy(){if(disposed)return;disposed=true;const release=!flock || --flock.references===0;if(release){xr?.destroy();if(flock)nativeFlocks.delete(gl);if(model){model.mixer.stopAllAction();model.mixer.uncacheRoot(model.wrapper.children[0].children[0]);model.geometries.forEach(geometry=>geometry.dispose());model.materials.forEach(material=>material.dispose());model.texture.dispose();}}renderer?.dispose();renderer?.forceContextLoss();}
     };
 }

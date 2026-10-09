@@ -13,6 +13,7 @@ import {ORB_MODELS,TOTEM_MODELS,RAIN_QUALITIES,resolveGraphicsQuality,currentTot
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 import { handTrackingState } from './xrPointer.js';
+import {fruitWindowSpecies} from './fruitWindowInteraction.js';
 import { createHandPokeTracker,handIndexCanPoke } from './handPoke.js';
 
 export const INFO_HELP = `Aim at an object to highlight it. Press a plant cell once to read or expand its information here. Select a Plant Orb to explore information connected to that plant.
@@ -1306,7 +1307,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setVisibilityItems(items=[]){const signature=JSON.stringify(items);if(signature===visibilitySignature)return;visibilitySignature=signature;visibilityItems=items.map(item=>({...item}));render(true);},
-        showFruitWindow(nextIdentity=null,example=null){fruitIdentity=nextIdentity;fruitExample=example;return loadFruitWindow();},
+        showFruitWindow(nextIdentity=null,example=null){fruitIdentity=nextIdentity || identity;fruitExample=example || fruitWindowSpecies(fruitIdentity || {})?.id || null;return loadFruitWindow();},
         hideFruitWindow,
         setObjectContext(value){objectContext=value;knowledgeRecord=null;knowledgeDocument=null;panelModeChoice=null;mediaCollapsed=true;loadPanelImage('');render(true);},
         setStageContext(value,{preserveObject=false}={}){stageContext=value;if(!preserveObject){objectContext=null;knowledgeRecord=null;knowledgeDocument=null;}renderExplorer();},

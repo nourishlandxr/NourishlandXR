@@ -4,7 +4,7 @@ import {OrbitControls} from '../assets/fruit-window/vendor/OrbitControls.js';
 import {FruitDiscoveryAsset} from '../assets/fruit-window/discovery-runtime.js';
 import {FRUIT_WINDOW_LIBRARY,fruitWindowSpecies,fruitWindowCanPick,FruitWindowGripPair,FruitWindowTriggerHold} from './fruitWindowInteraction.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
-import {localizedCanvasContext} from './i18n.js';
+import {localizedCanvasContext,translateNxrText as t,translateApp} from './i18n.js';
 
 const assets=new URL('../assets/fruit-window/',import.meta.url);
 const vector=point=>new THREE.Vector3(point.x,point.y,point.z);
@@ -46,12 +46,13 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
     const pointers=new Map(),selections=new Set();let pointerSnapshot=null,loading=false,lastControlState='',hoverSampleAt=-Infinity;
     const fruitBox=new THREE.Box3(),fruitCenter=new THREE.Vector3();
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    function announce(message){status.textContent=message;element.dataset.status=message;onState();}
+    let statusCopy=null;
+    function announce(message){statusCopy=message;status.textContent=message();element.dataset.status=status.textContent;translateApp(element);onState();}
     function labelWindow(label){const ctx=localizedCanvasContext(nameCanvas.getContext('2d'));ctx.clearRect(0,0,768,112);ctx.fillStyle='rgba(18,40,31,.92)';ctx.beginPath();ctx.roundRect(2,2,764,108,25);ctx.fill();ctx.strokeStyle='#a4c9b5';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#fff9e7';ctx.font='600 46px Manrope, system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,384,56,720);nameTexture.needsUpdate=true;}
     function describeContext(){
         const match=fruitWindowSpecies(identityValue),plant=identityValue.plant||identityValue.commonName||'this PIMO';
         const same=match&&(match.id===activeSpecies?.id||match.id.startsWith('pigeon_pea_')&&activeSpecies?.id.startsWith('pigeon_pea_'));
-        context.textContent=same?'Visual example for '+plant:match?'Library example: '+(activeSpecies?.label||'choose a plant')+'. PIMO information remains '+plant+'.':'No matching model for '+plant+'. Library example: '+(activeSpecies?.label||'choose a plant')+'.';
+        context.textContent=same?t('Visual example for')+' '+t(plant):match?t('Library example')+': '+t(activeSpecies?.label||'choose a plant')+'. '+t('PIMO information remains')+' '+t(plant)+'.':t('No matching model for')+' '+t(plant)+'. '+t('Library example')+': '+t(activeSpecies?.label||'choose a plant')+'.';
     }
     function syncButtons(){
         element.dataset.stage=asset?.mode||'loading';element.dataset.picked=String(Boolean(asset?.picked));element.dataset.arrow=String(arrow.visible);element.dataset.hover=hover?.kind||'';element.dataset.hoverAmount=String(hoverAmount);element.dataset.grips=String(grips.holds.size);
@@ -79,7 +80,7 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
     async function choose(id){
         const item=FRUIT_WINDOW_LIBRARY.find(item=>item.id===id);if(!item)return;
         const version=++loadVersion;loading=true;activeSpecies=item;select.value=id;describeContext();labelWindow(item.label);hover=null;hoverAmount=0;hoverNodes=[];grips.reset();fruitHold.reset();selections.clear();restoreHover();arrow.visible=false;
-        xr?.destroy();xr=null;if(asset){plantMount.remove(asset.object);asset.dispose();asset=null;}leaves=[];syncButtons();announce('Loading '+item.label+'…');
+        xr?.destroy();xr=null;if(asset){plantMount.remove(asset.object);asset.dispose();asset=null;}leaves=[];syncButtons();announce(()=>t('Loading')+' '+t(item.label)+'…');
         let gltf=null;
         try{
             const response=await fetch(new URL(item.folder+'/runtime-manifest.json',assets));if(!response.ok)throw Error('Model information unavailable');const manifest=await response.json(),config=manifest.species[id];
@@ -92,8 +93,8 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
             plantMount.scale.setScalar(scale);plantMount.position.set(-center.x*scale,-center.y*scale,-center.z*scale);content.updateMatrixWorld(true);
             asset.object.traverse(node=>{if(node.isMesh&&/leaf|leaflet/i.test(node.name)&&!/(stalk|vein|petiole)/i.test(node.name))leaves.push(node);});
             if(!frame){const loaded=await loader.loadAsync(new URL('discovery_window_frame.glb',assets).href);if(destroyed||version!==loadVersion){disposeScene(loaded.scene);return;}frame=loaded.scene;frame.position.y=-.4;content.add(frame);}
-            restoreXR();syncButtons();announce(item.label+' ready. The arrow marks the fruit you can pick.');onState();
-        }catch(error){if(!destroyed&&version===loadVersion){announce('Unable to load '+item.label+'. Try loading it again.');console.error('[Fruit Window]',error);}}
+            restoreXR();syncButtons();announce(()=>t(item.label)+'. '+t('Ready. The arrow marks the fruit you can pick.'));onState();
+        }catch(error){if(!destroyed&&version===loadVersion){announce(()=>t('Unable to load')+' '+t(item.label)+'. '+t('Try loading it again.'));console.error('[Fruit Window]',error);}}
         finally{if(version===loadVersion)loading=false;}
     }
     function updateIdentity(next){
@@ -202,7 +203,9 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
         resetGrips(){grips.reset();fruitHold.reset();selections.clear();},
         owns(source){return grips.owns(source)||fruitHold.owns(source)||selections.has(source);},
         rebase(matrix){anchor.position.applyMatrix4(new THREE.Matrix4().fromArray(matrix));anchor.quaternion.premultiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix)));grips.reset();},
-        destroy(){if(destroyed)return;destroyed=true;loadVersion++;api.hide();resize.disconnect();xr?.destroy();orbit.dispose();asset?.dispose();disposeScene(frame);for(const handle of [...handles,...beams,nameplate,playButton]){handle.geometry.dispose();handle.material.dispose();}nameTexture.dispose();playTexture.dispose();arrowTip.geometry.dispose();arrowStem.geometry.dispose();arrowMaterial.dispose();handleMaterial.dispose();renderer.dispose();element.remove();}
+        destroy(){if(destroyed)return;destroyed=true;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);loadVersion++;api.hide();resize.disconnect();xr?.destroy();orbit.dispose();asset?.dispose();disposeScene(frame);for(const handle of [...handles,...beams,nameplate,playButton]){handle.geometry.dispose();handle.material.dispose();}nameTexture.dispose();playTexture.dispose();arrowTip.geometry.dispose();arrowStem.geometry.dispose();arrowMaterial.dispose();handleMaterial.dispose();renderer.dispose();element.remove();}
     };
+    function languageChanged(){translateApp(element);describeContext();labelWindow(activeSpecies?.label||'Plant example');if(statusCopy){status.textContent=statusCopy();element.dataset.status=status.textContent;}onState();}
+    globalThis.addEventListener?.('nxr-languagechange',languageChanged);translateApp(element);
     api.show(identity);return api;
 }

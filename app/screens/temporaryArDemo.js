@@ -80,6 +80,7 @@ import {createDemoFeedback,DEMO_FEEDBACK} from '../services/demoFeedback.js';
 let demoFeedback=null,demoFeedbackInputSource=null,demoFeedbackLastTick=-Infinity;
 import {BEE_COUNT} from '../services/demoAmbientLife.js';
 import {demoButterflyPose,butterflyDropSurface} from '../services/demoButterflyPose.js';
+import {BUTTERFLY_VARIANTS,butterflyPanelPerch,butterflySocialOffset,butterflySocialPoint} from '../services/demoButterflyFlock.js';
 import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,totemNotificationLight} from '../services/totemSignSelection.js';
@@ -4603,10 +4604,10 @@ function renderInterface(simulated) {
     demoLimo?.close();demoLimo=null;demoLimoReturn=null;infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,inputOccupied:source=>demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onLimoAction:openDemoLimo,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
-    if(!simulated)for(const variant of [{red:false,side:'right',seed:0,perchMs:INSECT_VISUALS.bluePerchMs,size:INSECT_VISUALS.blueSize},{red:true,side:'left',seed:1,perchMs:INSECT_VISUALS.redPerchMs,size:INSECT_VISUALS.redSize}]){
+    if(!simulated)for(const variant of BUTTERFLY_VARIANTS){
         const insect={...variant,model:null,startedAt:NaN,flightAnchor:null,encounter:null,lastElapsed:NaN,position:null,pose:null,canvas:document.createElement('canvas')};
-        insect.canvas.className='tryit-butterfly-model';insect.canvas.dataset.butterflyVariant=variant.red?'red':'blue';insect.canvas.setAttribute('aria-hidden','true');insect.canvas.style.visibility='hidden';appRoot.querySelector('.tryit-stage')?.append(insect.canvas);butterflyCompanions.push(insect);
-        import('../services/demoButterflyModel.js').then(({mountDemoButterflyModel})=>{if(insect.canvas.isConnected)insect.model=mountDemoButterflyModel(insect.canvas,{gl:simulated?null:gl,red:insect.red});}).catch(error=>console.warn('Butterfly unavailable:',error));
+        insect.canvas.className='tryit-butterfly-model';insect.canvas.dataset.butterflyVariant=variant.id;insect.canvas.setAttribute('aria-hidden','true');insect.canvas.style.visibility='hidden';appRoot.querySelector('.tryit-stage')?.append(insect.canvas);butterflyCompanions.push(insect);
+        import('../services/demoButterflyModel.js').then(({mountDemoButterflyModel})=>{if(insect.canvas.isConnected)insect.model=mountDemoButterflyModel(insect.canvas,{gl:simulated?null:gl,red:insect.red,colour:insect.colour,wingOpacity:insect.wingOpacity});}).catch(error=>console.warn('Butterfly unavailable:',error));
     }
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
     if(simulated)infoPanel.setCompact(true);
@@ -5785,7 +5786,7 @@ function keepButterflyOutsideFrame(position,side){
 function drawSpatialButterfly(view){
     if(!getSpatialVisualSettings().insects || !program || !buffer || !viewerMatrix)return;
     for(const insect of butterflyCompanions){
-        if(!insect.model?.ready)continue;const perch=infoPanel?.getPerchPose(insect.side);if(!perch && !insect.flightAnchor)continue;
+        if(!insect.model?.ready)continue;const perch=butterflyPanelPerch(infoPanel?.getPerchPose(insect.side),insect);if(!perch && !insect.flightAnchor)continue;
         const elapsed=arWelcomeClock.elapsed;
         if(!Number.isFinite(insect.startedAt))insect.startedAt=elapsed;
         if(insect.lastElapsed!==elapsed){
@@ -5797,6 +5798,10 @@ function drawSpatialButterfly(view){
             if(pose.flight>0 && perch)insect.flightAnchor ||= {...perch,center:{...perch.center}};
             const anchor=insect.flightAnchor || perch;if(!anchor)continue;
             let position={x:anchor.center.x+anchor.right.x*pose.x+anchor.normal.x*pose.z,y:anchor.center.y+pose.y,z:anchor.center.z+anchor.right.z*pose.x+anchor.normal.z*pose.z};
+            const social=butterflySocialOffset(elapsed,insect.seed,{enabled:pose.flight>.99 && !insect.heldSource && !insect.releasedPerch && !insect.releasedFree,reduced:reducedMotion});
+            const partner=butterflyCompanions.find(other=>other.seed===(insect.seed^2) && other.pose?.flight>.99 && !other.heldSource && !other.releasedPerch && !other.releasedFree);
+            position=butterflySocialPoint(position,partner?.position,social);
+            position={x:position.x+anchor.right.x*social.x+anchor.normal.x*social.z,y:position.y+social.y,z:position.z+anchor.right.z*social.x+anchor.normal.z*social.z};
             if(pose.close>0){
                 if(insect.encounter?.index!==pose.encounterIndex)insect.encounter={index:pose.encounterIndex,x:viewerMatrix[12]-viewerMatrix[8]*.85+viewerMatrix[0]*(insect.red?-.18:.18),y:viewerMatrix[13]-.10,z:viewerMatrix[14]-viewerMatrix[10]*.85+viewerMatrix[2]*(insect.red?-.18:.18)};
                 position={x:position.x+(insect.encounter.x-position.x)*pose.close,y:position.y+(insect.encounter.y-position.y)*pose.close,z:position.z+(insect.encounter.z-position.z)*pose.close};
