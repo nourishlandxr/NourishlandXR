@@ -8,3 +8,8 @@
 .nlxr-fruit-window .fruit-window-grip{position:absolute;top:40%;height:70px;width:32px;padding:0;touch-action:none;background:#274c40cc;border:2px solid #a7d5bd}.fruit-window-grip.left{left:7px}.fruit-window-grip.right{right:7px}.nlxr-fruit-window .fruit-window-grip.held{background:#e3c36b;color:#1a392c;box-shadow:0 0 16px #e3c36b}
 .fruit-window-status{min-height:20px;margin:9px 0;color:#d5e4be}.nlxr-fruit-window nav{display:flex;gap:7px;flex-wrap:wrap}.fruit-window-help{margin-bottom:0;color:#c3d2c2;font-size:12px}
 @media(max-width:700px){.nlxr-fruit-window{left:8px!important;top:40dvh!important;width:calc(100vw - 16px);max-height:59dvh;padding:10px}.fruit-window-view{height:250px}.nlxr-fruit-window header strong{font-size:17px}.nlxr-fruit-window button,.nlxr-fruit-window select{font-size:12px;padding:7px}.fruit-window-context{font-size:12px}}
+
+.nlxr-fruit-window{padding:8px;border-color:rgba(164,201,181,.32);border-radius:8px;background:rgba(12,25,24,.3);box-shadow:none}
+.nlxr-fruit-window .fruit-window-view{border-radius:3px;background:transparent;border:1px solid rgba(164,201,181,.3)}
+.nlxr-fruit-window nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.nlxr-fruit-window header strong{font-size:16px}.nlxr-fruit-window .fruit-window-context{font-size:12px}

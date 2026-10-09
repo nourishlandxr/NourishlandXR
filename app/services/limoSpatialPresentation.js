@@ -19,9 +19,9 @@ export function drawLimoSpatialControls(ctx,card){
   ctx.globalAlpha=button.disabled?.4:1;
   ctx.fillStyle=aimed?'#294842':button.primary?'#244638':'#152d2b';ctx.strokeStyle=aimed?'#f4eed9':button.selected?accent:'#566e64';ctx.lineWidth=aimed?4:2;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,button.role==='scenario'?5:16);ctx.fill();ctx.stroke();
   if(button.role==='scenario'){ctx.setLineDash([6,5]);ctx.strokeStyle=accent;ctx.stroke();ctx.setLineDash([]);}
-  if(button.height<80){ctx.fillStyle='#f4f0df';ctx.font='650 20px system-ui';ctx.fillText(button.label,button.x+12,button.y+12,button.width-24);continue;}
-  ctx.fillStyle=accent;ctx.font='750 15px system-ui';ctx.fillText(button.cue || cues[button.role] || 'OPEN',button.x+16,button.y+8,button.width-32);
-  ctx.fillStyle='#f4f0df';ctx.font='650 26px system-ui';
+  if(button.height<80){ctx.fillStyle='#f4f0df';ctx.font='650 24px system-ui';ctx.fillText(button.label,button.x+12,button.y+12,button.width-24);continue;}
+  ctx.fillStyle=accent;ctx.font='750 18px system-ui';ctx.fillText(button.cue || cues[button.role] || 'OPEN',button.x+16,button.y+8,button.width-32);
+  ctx.fillStyle='#f4f0df';ctx.font='650 29px system-ui';
   const lines=wrap(ctx,button.label,button.width-32);lines.slice(0,2).forEach((line,index)=>ctx.fillText(line,button.x+16,button.y+31+index*27));
  }
  ctx.globalAlpha=1;
@@ -32,13 +32,14 @@ export function drawLimoSpatialReading(ctx,card){
  ctx.fillStyle=card.accent || '#a9ce8c';ctx.fillRect(left+10,26,4,68);
  ctx.fillStyle='#d2dccd';ctx.font='650 19px system-ui';ctx.fillText('LIMO / '+(cues[card.limo.role] || 'QUESTION'),left+30,25,width-50);
  ctx.font='500 19px system-ui';ctx.fillText(card.limo.project+' · '+card.limo.scope,left+30,53,width-50);
- ctx.fillStyle='#f4f0df';ctx.font='700 31px system-ui';ctx.fillText(card.title,left+10,100,width-20);
- ctx.fillStyle='#b9cfbb';ctx.font='500 20px system-ui';ctx.fillText(card.limo.summary,left+10,147,width-20);
+ ctx.fillStyle='#f4f0df';ctx.font='700 38px system-ui';const titles=wrap(ctx,card.title,width-20);titles.slice(0,2).forEach((line,index)=>ctx.fillText(line,left+10,96+index*44,width-20));
+ const summaryY=100+Math.min(2,titles.length)*44;ctx.fillStyle='#b9cfbb';ctx.font='500 26px system-ui';const summaries=wrap(ctx,card.limo.summary,width-20);summaries.slice(0,2).forEach((line,index)=>ctx.fillText(line,left+10,summaryY+index*32,width-20));
  ctx.strokeStyle='rgba(208,228,203,.27)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left+10,183);ctx.lineTo(left+width-10,183);ctx.stroke();
  const bottom=Math.min(...card.controls.filter(item=>item.kind==='utility').map(item=>item.y),card.height-70);
- ctx.save();ctx.beginPath();ctx.rect(left+10,207,width-20,Math.max(20,bottom-220));ctx.clip();
- ctx.font=(card.largeText?'600 31':'500 27')+'px system-ui';ctx.fillStyle='#f4f0df';let y=209;
- for(const line of card.lines){ctx.fillText(line,left+10,y,width-20);y+=card.largeText?37:33;}
+ const bodyY=Math.max(207,summaryY+Math.min(2,summaries.length)*32+22);
+ ctx.save();ctx.beginPath();ctx.rect(left+10,bodyY,width-20,Math.max(20,bottom-bodyY-12));ctx.clip();
+ ctx.font=(card.largeText?'600 36':'500 32')+'px system-ui';ctx.fillStyle='#f4f0df';let y=bodyY;
+ for(const line of card.lines){for(const wrapped of wrap(ctx,line,width-20)){ctx.fillText(wrapped,left+10,y);y+=card.largeText?44:40;}}
  ctx.restore();
  ctx.fillStyle='#b8cbbb';ctx.font='500 17px system-ui';ctx.fillText(card.limo.coverage,left+10,card.height-30,width-20);
 }

@@ -11,32 +11,33 @@ const vector=point=>new THREE.Vector3(point.x,point.y,point.z);
 const visible=node=>{for(let parent=node;parent;parent=parent.parent)if(!parent.visible)return false;return true;};
 const disposeScene=scene=>scene?.traverse(node=>{if(!node.isMesh)return;node.geometry.dispose();for(const material of Array.isArray(node.material)?node.material:[node.material]){for(const value of Object.values(material))if(value?.isTexture)value.dispose();material.dispose();}});
 
-export function createFruitWindowExperience({root=document.body,identity={},onHide=()=>{},onState=()=>{}}={}){
+export function createFruitWindowExperience({root=document.body,identity={},onHide=()=>{},onState=()=>{},onMedia=()=>{}}={}){
     if(!document.querySelector('link[data-fruit-window-style]')){const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./fruitWindow.css',import.meta.url).href;style.dataset.fruitWindowStyle='';document.head.append(style);}
     const element=document.createElement('section');element.className='nlxr-fruit-window';element.setAttribute('aria-label','Fruit Window');
     element.innerHTML=`<header><strong>Fruit Window</strong><button type="button" data-action="hide">Hide Fruit Window</button></header><p class="fruit-window-context"></p><label class="fruit-window-library">Plant example <select aria-label="Fruit Window plant"></select></label><div class="fruit-window-view"><canvas aria-label="Interactive plant model"></canvas><button class="fruit-window-grip left" aria-label="Left window grip">❮</button><button class="fruit-window-grip right" aria-label="Right window grip">❯</button></div><p class="fruit-window-status" role="status"></p><nav aria-label="Fruit Window actions"></nav><p class="fruit-window-help">Point to feel the leaves move. Select the arrowed fruit to pick it. Hold both grips to move the window.</p>`;
     root.append(element);
     const canvas=element.querySelector('canvas'),status=element.querySelector('.fruit-window-status'),context=element.querySelector('.fruit-window-context'),select=element.querySelector('select'),nav=element.querySelector('nav');
     for(const item of FRUIT_WINDOW_LIBRARY){const option=document.createElement('option');option.value=item.id;option.textContent=item.label;select.append(option);}
-    const actions=[['play','▶'],['return','Return fruit']];
+    const actions=[['play','Play development'],['pause','Pause'],['return','Return fruit']];
     for(const [action,label] of actions){const button=document.createElement('button');button.type='button';button.dataset.action=action;button.textContent=label;nav.append(button);}
-    const scene=new THREE.Scene();scene.background=new THREE.Color('#172b26');
+    const scene=new THREE.Scene();
     scene.add(new THREE.HemisphereLight(0xfff4d7,0x304435,2.8));const light=new THREE.DirectionalLight(0xffffff,3.2);light.position.set(-1,2,3);scene.add(light);
     const content=new THREE.Group();scene.add(content);
     const plantMount=new THREE.Group();content.add(plantMount);
     const nameCanvas=document.createElement('canvas');nameCanvas.width=768;nameCanvas.height=112;
     const nameTexture=new THREE.CanvasTexture(nameCanvas),nameMaterial=new THREE.MeshBasicMaterial({map:nameTexture,transparent:true,depthWrite:false});
-    const nameplate=new THREE.Mesh(new THREE.PlaneGeometry(.48,.07),nameMaterial);nameplate.position.set(-.04,-.36,.165);content.add(nameplate);
+    const nameplate=new THREE.Mesh(new THREE.PlaneGeometry(.48,.035),nameMaterial);nameplate.position.set(0,-.335,.035);content.add(nameplate);
     const playCanvas=document.createElement('canvas');playCanvas.width=128;playCanvas.height=128;const pc=playCanvas.getContext('2d');pc.fillStyle='rgba(25,51,40,.9)';pc.beginPath();pc.roundRect(2,2,124,124,28);pc.fill();pc.strokeStyle='#bbebc7';pc.lineWidth=4;pc.stroke();pc.fillStyle='#f8ffed';pc.beginPath();pc.moveTo(48,32);pc.lineTo(94,64);pc.lineTo(48,96);pc.closePath();pc.fill();
     const playTexture=new THREE.CanvasTexture(playCanvas),playMaterial=new THREE.MeshBasicMaterial({map:playTexture,transparent:true,depthWrite:false});
     const playButton=new THREE.Mesh(new THREE.PlaneGeometry(.07,.07),playMaterial);playButton.position.set(.26,-.36,.166);playButton.name='Flower_development_play';content.add(playButton);
-    const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:false});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
+    playButton.visible=false;
+    const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
     const camera=new THREE.PerspectiveCamera(36,1,.01,20);camera.position.set(.05,.08,1.65);
     const orbit=new OrbitControls(camera,canvas);orbit.target.set(0,0,0);orbit.enableDamping=true;orbit.minDistance=.65;orbit.maxDistance=2.4;orbit.enablePan=false;
     const loader=new GLTFLoader(),raycaster=new THREE.Raycaster(),grips=new FruitWindowGripPair(),fruitHold=new FruitWindowTriggerHold();
     const anchor={position:new THREE.Vector3(.75,1.3,-1.3),quaternion:new THREE.Quaternion()};
     const handleMaterial=new THREE.MeshStandardMaterial({color:0x80c5b0,roughness:.45});
-    const handles=['left','right'].map((side,i)=>{const mesh=new THREE.Mesh(new THREE.TorusGeometry(.04,.009,8,20),handleMaterial.clone());mesh.name='Window_'+side+'_grip';mesh.position.set(i?.345:-.345,0,.055);mesh.userData.gripSide=side;content.add(mesh);return mesh;});
+    const handles=['left','right'].map((side,i)=>{const mesh=new THREE.Mesh(new THREE.TorusGeometry(.025,.0035,8,20),handleMaterial.clone());mesh.name='Window_'+side+'_grip';mesh.position.set(i?.325:-.325,0,.025);mesh.userData.gripSide=side;content.add(mesh);return mesh;});
     const beams=handles.map(()=>{const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.0012,.0012,1,5),new THREE.MeshBasicMaterial({color:0xffd88b}));mesh.visible=false;content.add(mesh);return mesh;});
     const arrow=new THREE.Group();arrow.name='Pickable_fruit_arrow';
     const arrowMaterial=new THREE.MeshStandardMaterial({color:0xffdfa1,emissive:0x44330a,roughness:.55});
@@ -92,7 +93,10 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
             const bounds=new THREE.Box3().setFromObject(asset.object),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),scale=Math.min(1,.55/Math.max(size.x,size.y),.25/Math.max(.001,size.z));
             plantMount.scale.setScalar(scale);plantMount.position.set(-center.x*scale,-center.y*scale,-center.z*scale);content.updateMatrixWorld(true);
             asset.object.traverse(node=>{if(node.isMesh&&/leaf|leaflet/i.test(node.name)&&!/(stalk|vein|petiole)/i.test(node.name))leaves.push(node);});
-            if(!frame){const loaded=await loader.loadAsync(new URL('discovery_window_frame.glb',assets).href);if(destroyed||version!==loadVersion){disposeScene(loaded.scene);return;}frame=loaded.scene;frame.position.y=-.4;content.add(frame);}
+            if(!frame){frame=new THREE.Group();for(const [x,y,w,h] of [[0,.31,.62,.003],[0,-.31,.62,.003],[-.31,0,.003,.62],[.31,0,.003,.62]]){const edge=new THREE.Mesh(new THREE.BoxGeometry(w,h,.003),new THREE.MeshBasicMaterial({color:0xa4c9b5,transparent:true,opacity:.55}));edge.position.set(x,y,0);frame.add(edge);}content.add(frame);}
+            if(xrGl)renderer.setSize(768,768,false);
+            renderer.render(scene,camera);
+            onMedia({image:canvas.toDataURL('image/png'),caption:item.label,imageAlt:item.label+' in the Fruit Discovery Window'});
             restoreXR();syncButtons();announce(()=>t(item.label)+'. '+t('Ready. The arrow marks the fruit you can pick.'));onState();
         }catch(error){if(!destroyed&&version===loadVersion){announce(()=>t('Unable to load')+' '+t(item.label)+'. '+t('Try loading it again.'));console.error('[Fruit Window]',error);}}
         finally{if(version===loadVersion)loading=false;}
@@ -148,9 +152,18 @@ export function createFruitWindowExperience({root=document.body,identity={},onHi
         nextExample(){const index=FRUIT_WINDOW_LIBRARY.findIndex(item=>item.id===activeSpecies?.id);choose(FRUIT_WINDOW_LIBRARY[(index+1)%FRUIT_WINDOW_LIBRARY.length].id);},
         getLabel(){return activeSpecies?.label||'Plant example';},
         getExample(){return activeSpecies?.id||null;},
+        refreshMedia(){if(!asset)return;renderer.render(scene,camera);onMedia({image:canvas.toDataURL('image/png'),caption:activeSpecies.label,imageAlt:activeSpecies.label+' in the Fruit Discovery Window'});},
         getInteractionTargets(){
             content.updateMatrixWorld(true);const worldCenter=node=>new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3()).applyQuaternion(anchor.quaternion).add(anchor.position);
             return {leaf:leaves.find(visible)?worldCenter(leaves.find(visible)):null,fruit:asset&&visible(asset.fruit)?worldCenter(asset.fruit):null};
+        },
+        hit(ray){
+            if(!shown||!xrGl||!ray?.origin||!ray.direction)return null;
+            const local=localRay(ray),meshHit=cast(local).find(hit=>botanicalHit(hit));
+            const point=meshHit?.point.clone() || new THREE.Ray(local.origin,local.direction).intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),0),new THREE.Vector3());
+            if(!point || !meshHit && (Math.abs(point.x)>.35 || Math.abs(point.y)>.36))return null;
+            point.applyQuaternion(anchor.quaternion).add(anchor.position);
+            return {kind:'fruit-window',card:{id:'fruit-window'},point:{x:point.x,y:point.y,z:point.z},distance:point.distanceTo(vector(ray.origin))};
         },
         canAction(name){return Boolean(asset)&&(!['pick','open','close'].includes(name)||asset.canPick)&&(name!=='pick'||!asset.picked)&&(name!=='return'||asset.picked);},
         attach(gl){if(gl===xrGl)return;xrGl=gl;element.hidden=Boolean(gl)||!shown;if(gl&&raf){cancelAnimationFrame(raf);raf=0;}restoreXR();if(!gl&&shown&&!raf)raf=requestAnimationFrame(tick);},

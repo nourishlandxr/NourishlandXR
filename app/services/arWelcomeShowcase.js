@@ -279,7 +279,7 @@ export function welcomeCellAtPoint(frames,x,y) {
 // Labels share the face transform, so their centre cannot drift off the cell.
 export function fitWelcomeCellLabel(ctx,label,radius,depth) {
  const words=translateNxrText(label).split(' '),maxWidth=radius*1.48;
- let font=depth===0?30:25,lines=[];
+ let font=depth===0?36:30,lines=[];
  do {
   ctx.font='650 '+font+'px system-ui';lines=[];let line='';
   for(const word of words){const candidate=line?line+' '+word:word;if(line&&ctx.measureText(candidate).width>maxWidth){lines.push(line);line=word;}else line=candidate;}
@@ -376,7 +376,8 @@ function drawGlassCell(ctx,node,hue,elapsed,reducedMotion,drawLabel=true,visual=
  ctx.shadowColor='rgba(6,28,15,.8)';ctx.shadowBlur=4;ctx.shadowOffsetY=1;
  if(drawLabel){
   const label=fitWelcomeCellLabel(ctx,node.label,r*.94,node.depth);
-  if(node.cue){ctx.shadowBlur=0;ctx.fillStyle=accent || '#a9ce8c';ctx.font='750 14px system-ui';ctx.fillText(node.cue,0,-r*.70);ctx.fillStyle='#f5f0df';}
+  if(node.cue){ctx.shadowBlur=0;ctx.fillStyle=accent || '#a9ce8c';ctx.font='750 18px system-ui';ctx.fillText(node.cue,0,-r*.70);ctx.fillStyle='#f5f0df';}
+  ctx.font='650 '+label.font+'px system-ui';
   label.lines.forEach((line,i)=>ctx.fillText(line,0,(i-(label.lines.length-1)/2)*label.lineHeight));
  }
  ctx.restore();

@@ -1,7 +1,9 @@
 // Presentation-only catalog: [exact English source, Portuguese (Portugal), Dutch].
 // Placeholder rows describe interpolated narration for the main i18n integrator.
 // No identifiers, handlers, source content or persistence data are translated here.
+import {DEMO_OPENING_TRANSLATIONS} from './demoOpeningTranslations.js';
 const narration = [
+    ...DEMO_OPENING_TRANSLATIONS,
     // demoJourneyContent.js: every title, main, panel, hint and act.
     ['Introduce the tool', 'Apresentar a ferramenta', 'De tool voorstellen'],
     ['Knowledge connected to place', 'Conhecimento ligado ao lugar', 'Kennis verbonden met een plek'],

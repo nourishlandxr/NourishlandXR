@@ -3,8 +3,8 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "INTRO 1.1",
         "act": "Introduce the tool",
-        "title": "Knowledge connected to place",
-        "main": "NourishlandXR brings information, knowledge and observations into the places they belong.\n\nA plant can share its story.\n\nSomething noticed today can be left for someone to discover later. Information can connect what you see with what you want to understand.",
+        "title": "Take a moment to look around",
+        "main": "A leaf catching the light. An insect moving between flowers. The shade beneath a tree.\n\nSmall things can invite us to pause and look closer.\n\nWhat catches your attention? What would you like to understand?",
         "panel": "Hidden.",
         "hint": "See how it works.",
         "art": "opening"
@@ -12,8 +12,8 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "INTRO 1.2",
         "act": "Introduce the tool",
-        "title": "Try the tools with sample content",
-        "main": "NourishlandXR is for curious visitors, teachers and learners, and people who care for land and want to share their knowledge.\n\nFor this demo, we’ve prepared a few simple examples.",
+        "title": "Look closer with NourishlandXR",
+        "main": "Technology shapes where we place our attention. What if it helped us notice more of the living world?\n\nNourishlandXR is a tool for exploring and learning through real places. Augmented reality brings digital information into your surroundings.\n\nFollow a question, share an observation, or explore a planting possibility — then look back at the place with another layer of understanding.",
         "panel": "Hidden. A real garden project is a separate experience after the sample demo.",
         "hint": "Let’s start.",
         "art": "opening"
@@ -21,8 +21,8 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "SPACE 1.1",
         "act": "Meet the panel",
-        "title": "Your Control Panel",
-        "main": "First, get familiar with the interface. The panel you see is your Control Panel. It keeps information and useful actions close by as you explore.",
+        "title": "Get comfortable in this space",
+        "main": "This demo uses prepared examples in the space around you. The Living Frame guides you through them.\n\nYour Control Panel keeps selected information and useful tools close by.\n\nTake your time. Continue when you are ready, and use Back to revisit a step.",
         "panel": "A compact panel with its companion image visible. Media, Controls and Settings are initially closed.",
         "hint": "Continue to the first sample.",
         "art": null
@@ -30,11 +30,20 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "SPACE 1.2",
         "act": "Place a sample",
-        "title": "Something catches your attention",
-        "main": "Imagine you come across a tree or plant and wonder — what is it? Is it edible? How does it grow? What role could it play here?\n\nYou can add that plant and place a Plant Orb beside it, creating a starting point for its information, observations and discoveries.\n\nYou can choose from plants already available, or create your own.",
+        "title": "Imagine a place to learn",
+        "main": "A garden can become an outdoor classroom. A walk can reveal connections between plants, wildlife and the people who care for a place.\n\nPlant Orbs open plant information. Notes hold observations and messages. Areas and Totems help people find their way.\n\nLearning Pathways connect discoveries with questions and activities. Together, these tools let a place grow with shared knowledge.",
         "panel": "Keep the companion image available without repeating the main message.",
-        "hint": "Place the sample marker in front of you.",
+        "hint": "Begin with one small discovery.",
         "art": "curiosity"
+    },
+    {
+        "id": "SPACE 1.3",
+        "act": "Place a sample",
+        "title": "Begin with one small discovery",
+        "main": "A connected place can begin with one plant and one question.\n\nOur sample is Pigeon Pea, a shrub grown for food and its useful roles in a garden. It is one small part of a much larger living story.\n\nPlace its Plant Orb to begin. We will add another plant, a message and connected Areas to show how the experience can grow.",
+        "panel": "Show the Pigeon Pea companion image before placement. This is a prepared sample, not a real garden project.",
+        "hint": "Place the sample when you are ready.",
+        "art": null
     },
     {
         "id": "ELEMENTS 1.5",

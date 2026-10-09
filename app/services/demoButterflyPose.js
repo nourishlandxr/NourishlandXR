@@ -15,7 +15,7 @@ export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs
     if(!Number.isFinite(startedAt) || elapsed<startedAt)return null;
     const age=elapsed-startedAt,time=Math.max(0,age-perchMs)/1000;
     const perchWiggle=(!reducedMotion && age<perchMs)?(elapsed/1000+seed*2.17):0;
-    const resting={x:Math.sin(perchWiggle*1.7+seed)*.012,y:Math.sin(perchWiggle*2.3+seed*.7)*.008,z:Math.cos(perchWiggle*1.3+seed)*.01,yaw:seed*2.399+Math.sin(perchWiggle*.8+seed)*.22};
+    const resting={x:Math.sin(perchWiggle*1.7+seed)*.006,y:0,z:0,yaw:seed*2.399+Math.sin(perchWiggle*.8+seed)*.22};
     if(reducedMotion || age<perchMs)return {state:'landed',flight:0,...resting,bank:0,pitch:0,close:0,opacity:smooth(age/1600)};
     const takeoff=smooth((age-perchMs)/BUTTERFLY_TAKEOFF_MS);
     // Gentle uneven loops with a few spaced approaches. The world origin is

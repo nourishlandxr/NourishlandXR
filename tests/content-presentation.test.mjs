@@ -21,7 +21,7 @@ test('guided narrative discovers one plant before introducing Areas and Totems',
     const closing = demo.slice(demo.indexOf('function showDemoClosingMessage'), demo.indexOf('function pairedDemoTotemPosition'));
     assert.match(guide, /SPACE 1.1/);
     assert.match(guide, /SPACE 1.2/);
-    assert.match(guide,/SPACE 1.3[\s\S]*Settle into this space/);
+    assert.match(guide,/SPACE 1.3[\s\S]*guidedDemoStep\('SPACE 1\.3'\)\.title/);
     assert.match(demo,/Play with the environment[\s\S]*PLAY 1.1/);
     assert.doesNotMatch(guide,/hold the trigger|Hero Dice/);
     assert.doesNotMatch(guide,/ELEMENTS 1.2/);

@@ -2500,4 +2500,10 @@ body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],butt
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-info-body {padding:14px 16px;border:1px solid rgba(211,241,231,.55);border-radius:16px;background:rgba(4,18,23,.38);color:#fff;font-family:Manrope,system-ui;font-weight:600;}
 .nlxr-info-panel .nlxr-reading-surface {padding:14px 16px;border:1px solid rgba(211,241,231,.55);border-radius:16px;background:rgba(4,18,23,.38);}
 .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel) .nlxr-reading-surface .nlxr-info-body {padding:0;margin:0;border:0;background:none;}
+
+/* Quiet visibility shortcuts retain generous pointer targets. */
+.nlxr-info-panel button[data-control-kind="visibility"]{border-width:1px!important;border-color:rgba(193,215,204,.22)!important;background:transparent!important;font-size:10px!important;letter-spacing:.05em;box-shadow:none;padding:6px 8px;opacity:.78}
+.nlxr-info-panel button[data-control-kind="visibility"]:hover{opacity:1;border-color:rgba(193,215,204,.65)!important}
+.nlxr-explorer-companion.is-fruit-controls .nlxr-explorer-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.nlxr-explorer-companion.is-fruit-controls header{display:grid;gap:6px}.nlxr-explorer-companion.is-fruit-controls button{margin:0;min-width:0}
 .nlxr-info-panel .nlxr-reading-surface .nlxr-info-hint {margin:12px 0 0;padding:10px 0 0;border-top:1px solid rgba(211,241,231,.25);}
