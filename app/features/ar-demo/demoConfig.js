@@ -27,7 +27,7 @@ export const DEMO_PIM_IMMERSIVE_SCALE = Object.freeze({
 // Creator Mode's medium Note is 1.88 m x .69 m on the shared quad. The demo
 // keeps the same real-world proportions at 88% so it reads as a nearby Note.
 export const DEMO_NOTE_IMMERSIVE_SCALE = Object.freeze({ x: 2.15, y: 1.65 });
-export const DEMO_TOTEM_HALF_HEIGHT_METRES = 1;
+export const DEMO_TOTEM_HALF_HEIGHT_METRES = 1.5;
 export const DEMO_STABLE_EYE_HEIGHT_METRES = 1.55;
 export const DEMO_PRESENTATION_FONT = '"Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif';
 // Chez is used when the licensed face is installed. Fraunces is the bundled

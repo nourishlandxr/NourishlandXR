@@ -79,7 +79,7 @@ export const INTRO_KNOWLEDGE_KEYWORDS = Object.freeze(Object.keys(BIOMAP_CATEGOR
 
 export const DEMO_CONTENT = Object.freeze({
     plant: { title: 'Plant · Pigeon Pea', accent: '#b7e895', lines: ['CLIMATE  Tropical · subtropical', 'USES  Food · soil · biomass', 'RELATIONSHIPS  Pollinators · intercropping'] },
-    note: { title: 'Sample message', accent: '#f0cf70', lines: ['Two sample plant profiles are available here.', 'Select either Orb to explore.'] },
+    note: { title: 'Leave a discovery for someone else', accent: '#f0cf70', lines: ['A Note gives this place a voice.', 'Leave an observation, a question or a reminder for the next visitor.'] },
     zone: { title: 'Welcome to this area', accent: '#785a43', bubbles: ['NOTES · nearby', 'PLANT ORBS · around this Totem', 'NEIGHBOUR TOTEM · right'] },
     zoneTwo: { title: 'Welcome to this area', accent: '#438f99', bubbles: ['NOTES · nearby', 'PLANT ORBS · around this Totem', 'NEIGHBOUR TOTEM · left'] }
 });

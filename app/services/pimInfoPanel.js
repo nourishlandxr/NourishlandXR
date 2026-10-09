@@ -13,7 +13,7 @@ import {ORB_MODELS,TOTEM_MODELS,RAIN_QUALITIES,resolveGraphicsQuality,currentTot
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 import { handTrackingState } from './xrPointer.js';
-import {fruitWindowSpecies} from './fruitWindowInteraction.js';
+import {fruitWindowSpecies,FRUIT_WINDOW_LIBRARY} from './fruitWindowInteraction.js';
 import { createHandPokeTracker,handIndexCanPoke } from './handPoke.js';
 
 export const INFO_HELP = `Aim at an object to highlight it. Press a plant cell once to read or expand its information here. Select a Plant Orb to explore information connected to that plant.
@@ -165,7 +165,7 @@ export function controlPanelControls({hidden=false,tab='Details',selected=false,
     historyUtilities.filter(item=>item.id!=='forward' || !item.disabled).forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.id==='back'?'‹':'›',ariaLabel:item.label,title:item.description,kind:'history',disabled:Boolean(item.disabled),x:18+index*56,y:284+(menuUtilities.length+1)*62,width:48,height:42}));
     pathwayActions.slice(0,3).forEach((item,index)=>buttons.push({action:item.action,label:item.label,kind:'pathway',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238+index*244,y:actionY-moduleRows*58-62,width:226,height:48}));
     if(tab==='Help')moduleActions.forEach((item,index)=>buttons.push({action:'Module:'+item.id,label:item.label,kind:'module',primary:Boolean(item.primary),disabled:Boolean(item.disabled),x:238,y:actionY-moduleRows*58+index*58,width:732,height:48}));
-    secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:secondaryStart+Math.floor(index/2)*62,width:index%2?362:350,height:54}));
+    secondary.forEach((item,index)=>buttons.push({action:'Utility:'+item.id,label:item.label,kind:item.id.startsWith('fruit-example:')?'fruit-choice':'utility',disabled:Boolean(item.disabled),x:index%2?608:238,y:secondaryStart+Math.floor(index/2)*62,width:index%2?362:350,height:54}));
     if(primary){const primaryWidth=primary.id==='continue'?Math.min(732,Math.max(260,String(primary.label || 'Continue').length*24+72)):732;buttons.push({action:'Utility:'+primary.id,label:primary.label,kind:'utility',primary:true,disabled:Boolean(primary.disabled),x:238+(732-primaryWidth)/2,y:primaryY,width:primaryWidth,height:68});}
     return buttons;
 }
@@ -206,7 +206,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         choice('GraphicsQuality',graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),'graphics','Graphics quality',202),
         ...(rainEnabled?[choice('RainQuality',RAIN_QUALITIES[rainQuality]?.label || 'Off','rain','Rain quality',290)]:[]),
         choice('Insects',insects?'On':'Off','insects','Insects',358),
-        choice('OrbModel',`Orb · ${ORB_MODELS[orbModel]?.label || 'Improved'}`,'models','Object styles',446,56,420),
+
         ...(performanceSettings?[...rateControls,choice('ShowFps',performanceSettings.showFps?'On':'Off','fps','FPS / CPU readout',620,540,404)]:[]),
         choice('SettingsHelp','Help','help','',746,56,888),close];
     return [
@@ -217,7 +217,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
         {...choice('HeroDice','Floor dice','hero-dice','',488,56,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().heroDice!==false},
         {...choice('LivingFrame','Frame animation','living-frame','',488,506,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().livingFrame!==false},
-        slider('CellOpacity','cell-opacity','PIMO / LIMO cell glass',cellOpacity,0,1,.01,570),
+
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
 }
@@ -244,13 +244,13 @@ export function spatialPanelControls({hidden=false,height=800,railCollapsed=fals
     const button=(item,x,y,w,h)=>({...item,description:item.description || controlDescription(item),x,y,width:w,height:h});
     const result=[];
     const visibility=items.filter(item=>item.kind==='visibility');
-    if(visibility.length){visibility.forEach((item,index)=>result.push(button(item,18+index*244,height-64,232,48)));height-=64;}
+    if(visibility.length){const slot=964/visibility.length;visibility.forEach((item,index)=>result.push(button(item,18+index*slot,height-48,slot-8,34)));height-=64;}
     const menu=items.filter(item=>['tab','menu'].includes(item.kind)),openers=menu.filter(item=>item.panelOpener),otherMenu=menu.filter(item=>!item.panelOpener);
     openers.forEach((item,index)=>result.push(button(item,16,150+index*56,rail-28,46)));
     const menuStart=150+openers.length*56+(openers.length?26:0);
     otherMenu.forEach((item,index)=>result.push(button(item,16,menuStart+index*50,rail-28,40)));
     const primary=items.find(item=>item.kind==='utility' && (item.primary || item.action==='Utility:continue'));
-    const secondary=items.filter(item=>item.kind==='utility' && item!==primary);
+    const secondary=items.filter(item=>['utility','fruit-choice'].includes(item.kind) && item!==primary);
     const pager=items.filter(item=>item.kind==='pager');
     const history=items.filter(item=>item.kind==='history');
     const module=items.filter(item=>item.kind==='module'),pathway=items.filter(item=>item.kind==='pathway');
@@ -307,7 +307,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const HEAVY_RAIN_INTENSITY=1.65;
     let selection=null,record=null,identity=null,page=0,hidden=false,tab='Details',largeText=getSpatialVisualSettings().largeText,settingsOpen=false,spatialScale=getSpatialVisualSettings().spatialScale,ambientRain=Math.max(0,Math.min(HEAVY_RAIN_INTENSITY,Number(rainIntensity)||0)),ambientRainStyle=rainStyle==='v1'?'v1':'v2',meshCellOpacity=Math.max(0,Math.min(1,Number(cellOpacity) || 0)),contextHint='',handVisualMode=handMode==='pointer'?'pointer':'outline';
     let mediaImage=null,mediaImageSource='',mediaPreviousImage=null,mediaFadeStartedAt=0,mediaLoadToken=0,mediaRevision=0,mediaTransitionTimer=0,mediaPreviewBlocked=false,mediaTouched=false,mediaDetached=false,mediaDockSide='top',mediaFloating=null,mediaPosition=null,mediaPointerDrag=null,ignoreMediaClickUntil=0;
-    let visibleMedia=null,fruitIdentityMedia=null,fruitMediaMode='identity',previewHint='';
+    let visibleMedia=null,fruitIdentityMedia=null,fruitMediaMode='identity',fruitControlsActive=false,previewHint='';
     const MEDIA_FADE_MS=650;
     let rotatingPanelHints=Array.isArray(panelHints)?panelHints.map(String).filter(Boolean):[],panelHintIndex=0,panelHintTimer=0;
     let railCollapsed=headset?false:(globalThis.matchMedia?.('(max-width:600px)').matches || false),mediaCollapsed=headset||railCollapsed;
@@ -318,17 +318,18 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const hideFruitWindow=()=>{fruitVisible=false;fruitWindow?.hide();fruitIdentityMedia=null;loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '');render(true);renderExplorer();};
     async function loadFruitWindow(){
         fruitVisible=true;
+        fruitControlsActive=true;
         fruitIdentityMedia ||= identity?.media?.image?{...identity.media}:learningPanelMedia(selection);
         loadPanelImage(fruitIdentityMedia?.image || '');
         mediaCollapsed=false;explorerClosed=false;
-        if(fruitWindow){fruitWindow.show(fruitIdentity||identity||{});if(fruitExample)fruitWindow.chooseExample(fruitExample);else fruitWindow.refreshMedia();render(true);renderExplorer();return;}
+        if(fruitWindow){fruitWindow.show(fruitIdentity||identity||{});if(fruitExample && fruitWindow.getExample()!==fruitExample)fruitWindow.chooseExample(fruitExample);render(true);renderExplorer();return;}
         renderExplorer();
         if(fruitPending)return;
         fruitPending=import('./fruitWindowExperience.js');
         try{const {createFruitWindowExperience}=await fruitPending;if(fruitDestroyed||!fruitVisible)return;
-            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:fruitIdentity||identity||{},showLibraryChoices:false,onHide:hideFruitWindow,onState:()=>{if(!fruitDestroyed)renderExplorer();},onMedia:media=>{if(fruitDestroyed || !fruitVisible || fruitMediaMode!=='example')return;fruitIdentityMedia=media;mediaCollapsed=false;loadPanelImage(media.image);render(true);}});
+            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:fruitIdentity||identity||{},showLibraryChoices:false,onHide:hideFruitWindow,onState:()=>{if(!fruitDestroyed)renderExplorer();}});
             fruitWindow.dockBeside(element);
-            if(fruitExample)fruitWindow.chooseExample(fruitExample);
+            if(fruitExample && fruitWindow.getExample()!==fruitExample)fruitWindow.chooseExample(fruitExample);
             if(fruitGl)fruitWindow.attach(fruitGl);if(fruitSession)fruitWindow.bindSession(fruitSession,fruitSpace);
             if(!fruitVisible)fruitWindow.hide();
         }catch(error){fruitVisible=false;contextHint='Fruit Window could not load. Please try again.';console.error('[Fruit Window] Could not start',error);}
@@ -350,7 +351,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const text=()=>{
         if(confirmation)return confirmation.body;
         if(tab==='Help')return [moduleContext?.body,INFO_HELP].filter(Boolean).join('\n\n');
-        const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety,!selection.sourceLinks?.length && selection.sources.length && 'Sources: '+selection.sources.join('; ')].filter(Boolean).join('\n\n')
+        const reading=selection?[selection.body,selection.safety && 'Safety: '+selection.safety].filter(Boolean).join('\n\n')
             :identity?knowledgeRecord?.knowledgeExplorer?.mode==='explore'?knowledgeRecord.explorerMolecule?.puzzle?.phase==='connector'?'Build this branch: grip the loose arm, move it to the matching socket and release to attach.':knowledgeRecord.explorerMolecule?.puzzle?.phase==='piece'?'Arm attached. Grip the topic, fit it onto the free end and release to build the branch.':'Your dice holds the plant name and main topic faces. Open a face to reveal a loose arm, then attach the arm and its topic to build your own structure. '+(knowledgeRecord.explorerMolecule?.purpose || ''):'Curiosity reveals six perspectives on this plant.'
                 :'Information about what you select will appear here.';
         // Keep authored paragraphs; give a long unbroken reading body breathing room.
@@ -378,7 +379,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const hasPimPathHeading=()=>false;
     const selectionMetadata=()=>selection && tab==='Details'?[selection.scope==='specimen'?'Local observation':selection.scope==='species'?'Species knowledge':'',selection.status==='draft'?'Draft':'',selection.evidence==='needs_review'?'Awaiting review':''].filter(Boolean).join(' · '):'';
     const metadata=()=>selectionMetadata();
-    const previewMedia=()=>fruitVisible && fruitIdentityMedia?.image ? fruitIdentityMedia : mediaPreviewBlocked ? null : selection?.mesh==='lim'
+    const previewMedia=()=>fruitVisible && fruitIdentityMedia?.image ? fruitIdentityMedia : mediaPreviewBlocked ? null : ['lim','fruit'].includes(selection?.mesh)
         ? learningPanelMedia(selection)
         : identity?.media?.image ? {...identity.media,caption:identity.media.caption || identity.plant,plant:true} : null;
     const showPlantPreview=()=>Boolean(previewMedia()?.image);
@@ -402,6 +403,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const contentKind=()=>selection?.mesh==='lim' || (!selection && !identity) ? 'lim' : 'pim';
     const mainUtilities=()=>utilityActions.filter(item=>!['safety','recenter'].includes(item.id));
     const panelOpeners=()=>panelOpenerControls({mediaCollapsed,explorerClosed,settingsOpen});
+    const sceneVisibility=()=>[...visibilityItems,...(fruitWindow?[{id:'fruit-box',label:'Fruit',selected:fruitVisible,description:(fruitVisible?'Hide':'Show')+' fruit observation box'}]:[])];
     const controls=()=>{
         let items=controlPanelControls({hidden,tab,selected:confirmation?false:Boolean(selection && selection.editable!==false),page,pageCount:pages().length,height:height(),largeText,contentKind:contentKind(),pathwayActions:confirmation?[]:pathwayContext?.actions || [],moduleActions:confirmation?[]:moduleContext?.actions || [],utilityActions:mainUtilities()});
         if(!hidden && !confirmation){
@@ -415,9 +417,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             items=items.filter(item=>item.action!=='Hide' && item.action!=='Notes');
             // Reserve a footer row independently from reading/navigation controls.
             for(const item of items)if(['utility','module','pathway'].includes(item.kind))item.y-=64;
-            items.push(...visibilityItems.map((item,index)=>({...item,action:item.id==='control'?'Hide':'Utility:visibility:'+item.id,label:item.label,kind:'visibility',selected:item.id==='control'?!hidden:item.selected,x:18+index*244,y:height()-64,width:232,height:48})));
+            items.push(...sceneVisibility().map((item,index)=>({...item,action:item.id==='control'?'Hide':item.id==='fruit-box'?'FruitWindow:toggle':'Utility:visibility:'+item.id,label:item.label,kind:'visibility',selected:item.id==='control'?!hidden:item.selected,x:18+index*(964/sceneVisibility().length),y:height()-48,width:964/sceneVisibility().length-8,height:34})));
         }
-        if(!hidden && !confirmation)items.push(...(selection?.sourceLinks || []).slice(0,2).map((link,index)=>({action:'OpenSource:'+index,label:index?'Reference ↗':'Source ↗',description:link.label,kind:'reference',x:238+index*174,y:130,width:166,height:42})));
+
         const visible=confirmation?items.filter(item=>item.kind==='utility'):items;
         if(hidden && visibilityItems.length)for(const item of visible)if(item.action==='Restore'){item.label='CONTROL PANEL';item.ariaLabel='CONTROL PANEL · Grip to move';item.kind='visibility';item.selected=false;}
         return isDesktopDemo()?visible.filter(item=>item.action!=='Recenter'):visible;
@@ -429,12 +431,12 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function act(action){
         if(action==='LanguageMenu'){languageOpen=!languageOpen;graphicsOpen=false;soundOpen=false;render(true);return;}
         if(action.startsWith('Language:')){setNxrLanguage(action.slice(9));render(true);return;}
-        if(action.startsWith('OpenSource:')){const link=selection?.sourceLinks?.[Number(action.slice(11))];if(/^https?:\/\//i.test(link?.url || ''))globalThis.open?.(link.url,'_blank','noopener,noreferrer');return;}
+        if(action.startsWith('OpenSource:'))return;
         if(guidanceAction===action){guidanceAction='';element.classList.remove('is-panel-guidance');element.querySelectorAll('.is-guidance-target').forEach(button=>button.classList.remove('is-guidance-target'));}
         if(action==='Notes'){onUtilityAction('notes');return;}
         if(action.startsWith('Limo:')){const command=action.slice(5);if(command==='open'){if(limoAvailable())onLimoAction(command,knowledgeRecord || record);}else selection?.limo?.onAction?.(command);return;}
         if(action.startsWith('Object:')){objectContext?.onAction?.(action.slice(7));return;}
-        if(action.startsWith('FruitWindow:')){const command=action.slice(12);if(command==='load')api.showFruitWindow(identity);else if(command==='hide')hideFruitWindow();else if(command==='next')fruitWindow?.nextExample();else fruitWindow?.action(command);renderExplorer();return;}
+        if(action.startsWith('FruitWindow:')){const command=action.slice(12);if(command==='toggle'){if(fruitVisible)hideFruitWindow();else void loadFruitWindow();render(true);}else if(command==='load')api.showFruitWindow(identity);else if(command==='hide')hideFruitWindow();else if(command==='next')fruitWindow?.nextExample();else fruitWindow?.action(command);renderExplorer();return;}
         if(action==='Explorer'){explorerClosed=!explorerClosed;render(true);return;}
         if(action.startsWith('KnowledgeMode:')){panelModeChoice=action.split(':')[1];if(!visiblePimoModes().includes(panelModeChoice))return;if(!knowledgeRecord){renderExplorer();return;}}
         if(action.startsWith('Knowledge')){
@@ -523,6 +525,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='MusicVolume' || action==='FxVolume')demoSound?.setVolume(action==='MusicVolume'?'music':'fx',value);
         if(action==='InfoOpacity'){value=Math.round(value*20)/20;if(value===infoOpacity)return;infoOpacity=value;setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);}
         if(action==='CellOpacity'){value=Math.round(value*20)/20;if(value===meshCellOpacity)return;meshCellOpacity=value;setSpatialVisualSettings({cellOpacity:value});onCellOpacity(value);}
+        if(action==='PimoScale' && knowledgeRecord){knowledgeRecord.pimoScale=value;onExplorerAction(knowledgeRecord,'PimoScale:'+value);renderExplorer();}
         if(action==='SpatialScale'){spatialScale=value;setSpatialVisualSettings({spatialScale});}
         if(action==='TextSize'){largeText=value>=.5;page=0;setSpatialVisualSettings({largeText});updateReading();}
         if(action==='FloorOffset'){floorOffset=value;setSpatialVisualSettings({floorOffset});onFloorOffset(value);}
@@ -585,7 +588,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function makeButton(item){
         const button=document.createElement('button');button.type='button';button.textContent=item.label;button.dataset.infoAction=item.action;button.disabled=Boolean(item.disabled);
         button.dataset.controlKind=item.kind || 'action';button.classList.toggle('is-primary-action',Boolean(item.primary) || ['Next','PathNext'].includes(item.action));
-        if(item.kind==='visibility'){button.setAttribute('aria-pressed',String(item.selected));button.style.border='2px solid '+(item.selected?'#85e5ae':'#ee8f8b');button.style.background='rgba(16,35,31,.28)';button.title=item.label+' · '+(item.selected?'visible':'hidden');}
+        if(item.kind==='visibility'){button.setAttribute('aria-pressed',String(item.selected));button.style.border='2px solid '+(item.selected?'#85e5ae':'#ee8f8b');button.style.background='rgba(16,35,31,.28)';button.title=item.description || ((item.selected?'Hide ':'Show ')+item.label);}
         button.setAttribute('aria-label',item.action==='Restore'?'Restore Control panel':item.ariaLabel || item.label);
         button.title=controlDescription(item);
         if(item.panelOpener){
@@ -823,13 +826,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         element.addEventListener('pointerdown',start);
         return ()=>{clear();element.removeEventListener('pointerdown',start);};
     }
-    function syncReferenceLinks(content){
-        content.querySelector('.nlxr-reference-links')?.remove();
-        if(tab!=='Details' || !selection?.sourceLinks?.length)return;
-        const links=document.createElement('nav');links.className='nlxr-reference-links';links.setAttribute('aria-label','Information sources');
-        for(const link of selection.sourceLinks){if(!/^https?:\/\//i.test(link.url))continue;const anchor=document.createElement('a');anchor.href=link.url;anchor.textContent=link.label+' ↗';anchor.target='_blank';anchor.rel='noopener noreferrer';links.append(anchor);}
-        if(links.childElementCount)content.append(links);
-    }
+    function syncReferenceLinks(content){content.querySelector('.nlxr-reference-links')?.remove();}
     function updateReading(){
         if(detached)return;
         const content=element.querySelector('[role="tabpanel"]');
@@ -918,7 +915,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 let utilities=tools.querySelector('.nlxr-control-utilities');
                 if(utilityActions.length){
                     if(!utilities){utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');tools.append(utilities);}
-                    utilities.replaceChildren(...controls().filter(item=>item.kind==='utility').map(makeButton));
+                    utilities.replaceChildren(...controls().filter(item=>['utility','fruit-choice'].includes(item.kind)).map(makeButton));
                 }else utilities?.remove();
             }
             if(focused)element.querySelector('[data-info-action="'+focused+'"]')?.focus({preventScroll:true});
@@ -1019,9 +1016,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             for(const item of card.controls){
                 if(item.kind==='heading'){ctx.globalAlpha=1;ctx.textAlign='left';ctx.font='650 23px Manrope, system-ui';ctx.fillStyle='#eef8e5';ctx.fillText(item.label,item.x,item.y,item.width);continue;}
                 ctx.globalAlpha=item.disabled ? .4 : 1;const aimed=card.hoverAction===item.action;
-                ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,14);ctx.fill();ctx.stroke();
+                ctx.fillStyle=item.selected?'rgba(145,183,135,.26)':aimed?'rgba(173,209,217,.22)':'rgba(24,48,42,.12)';ctx.strokeStyle=item.selected?'#dceabd':aimed?'#c9edf1':'rgba(166,204,229,.6)';ctx.lineWidth=item.selected?4:2;ctx.beginPath();ctx.roundRect(item.x,item.y,item.width,item.height,7);ctx.fill();ctx.stroke();
                 if(item.kind==='swatch'){ctx.fillStyle=item.color;ctx.beginPath();ctx.roundRect(item.x+item.width/2-17,item.y+10,34,34,8);ctx.fill();}
-                else if(item.kind==='slider'){ctx.textAlign='left';ctx.font='500 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText(item.action==='CellOpacity'?'Cell glass · '+Math.round(item.value*100)+'%':'Structure scale · '+item.value.toFixed(2)+'×',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}
+                else if(item.kind==='slider'){ctx.textAlign='left';ctx.font='600 22px Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.fillText(item.action==='CellOpacity'?'Opacity · '+Math.round(item.value*100)+'%':'Size · '+item.value.toFixed(2)+'×',22,item.y+12,224);drawPanelSettingSlider(ctx,item,aimed);}
                 else {ctx.font=(item.kind==='mode'?'650 31px':'650 27px')+' Manrope, system-ui';ctx.fillStyle='#edf3e4';ctx.textAlign='center';ctx.fillText(item.label,item.x+item.width/2,item.y+12,item.width-16);}
             }
             ctx.globalAlpha=1;ctx.font='500 18px Manrope, system-ui';ctx.fillStyle='#d5ded7';ctx.textAlign='center';for(const item of card.controls.filter(control=>control.kind==='mode'))infoPages(item.description,31,2)[0].forEach((line,index)=>ctx.fillText(line,item.x+item.width/2,item.y+item.height+8+index*22,item.width-16));ctx.textAlign='left';return c;
@@ -1139,30 +1136,33 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             ctx.fillStyle='#d6ded4';ctx.font='650 16px system-ui';ctx.textAlign='left';ctx.fillText('PANELS',first.x+8,groupTop+2,first.width-16);
         }
         card.controls.forEach(button=>{
-            const radius=button.kind==='tab'?13:15;
+            const radius=button.kind==='visibility'?5:button.kind==='fruit-choice'?7:button.kind==='tab'?8:9;
             const aimed=card.hoverAction===button.action && !button.disabled;
             const isContinue=button.action==='Utility:continue';
-            if(button.kind!=='tab' && button.kind!=='handle' && !button.disabled && !isContinue){ctx.fillStyle='rgba(4,9,12,.34)';ctx.beginPath();ctx.roundRect(button.x,button.y+5,button.width,button.height,radius);ctx.fill();}
+            if(button.kind!=='visibility' && button.kind!=='tab' && button.kind!=='handle' && !button.disabled && !isContinue){ctx.fillStyle='rgba(4,9,12,.34)';ctx.beginPath();ctx.roundRect(button.x,button.y+5,button.width,button.height,radius);ctx.fill();}
             const face=ctx.createLinearGradient(button.x,button.y,button.x,button.y+button.height);
             if(isContinue){face.addColorStop(0,button.disabled?'rgba(100,112,112,.12)':'rgba(55,96,81,.88)');face.addColorStop(1,button.disabled?'rgba(100,112,112,.06)':'rgba(11,32,28,.94)');}
             else if(button.panelOpener){face.addColorStop(0,button.expanded?'rgba(239,239,223,.16)':'rgba(237,239,229,.11)');face.addColorStop(1,'rgba(34,39,37,.08)');}
             else if(button.action==='Utility:close-confirm'){face.addColorStop(0,'rgba(192,53,51,.38)');face.addColorStop(1,'rgba(92,24,30,.24)');}
+            else if(button.kind==='fruit-choice'){face.addColorStop(0,'rgba(110,159,104,.75)');face.addColorStop(1,'rgba(38,77,55,.9)');}
             else if(button.primary){face.addColorStop(0,'rgba(79,128,115,.18)');face.addColorStop(1,'rgba(29,69,68,.26)');}
+            else if(button.kind==='visibility'){face.addColorStop(0,'rgba(24,45,38,.20)');face.addColorStop(1,'rgba(24,45,38,.20)');}
             else if(button.selected){face.addColorStop(0,'rgba(140,205,235,.5)');face.addColorStop(1,'rgba(56,112,150,.4)');}
             else if(button.disabled){face.addColorStop(0,'rgba(211,220,225,.05)');face.addColorStop(1,'rgba(211,220,225,.025)');}
             else if(button.action==='Utility:close'){face.addColorStop(0,'rgba(224,199,191,.14)');face.addColorStop(1,'rgba(45,34,33,.08)');}
             else if(button.kind==='toggle'||button.kind==='handle'){face.addColorStop(0,'rgba(174,232,252,.4)');face.addColorStop(1,'rgba(61,137,177,.2)');}
             else {face.addColorStop(0,'rgba(225,242,239,.12)');face.addColorStop(.5,'rgba(169,202,207,.08)');face.addColorStop(1,'rgba(19,42,46,.10)');}
             ctx.fillStyle=face;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,radius);ctx.fill();
-            if(button.kind!=='tab' && !button.disabled){ctx.strokeStyle=button.action==='Utility:close-confirm'?'rgba(255,180,177,.82)':button.panelOpener?'rgba(230,233,222,.48)':isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=3;ctx.stroke();}
+            if(button.kind!=='visibility' && button.kind!=='tab' && !button.disabled){ctx.strokeStyle=button.action==='Utility:close-confirm'?'rgba(255,180,177,.82)':button.panelOpener?'rgba(230,233,222,.48)':isContinue?'rgba(220,218,202,.72)':button.primary?'rgba(200,233,216,.82)':'rgba(232,244,240,.48)';ctx.lineWidth=3;ctx.stroke();}
             if(button.kind==='visibility'){ctx.strokeStyle=aimed?'rgba(213,235,220,.7)':'rgba(193,215,204,.22)';ctx.lineWidth=aimed?2:1;ctx.stroke();}
             if(aimed){ctx.fillStyle='rgba(219,237,216,.22)';ctx.fill();ctx.strokeStyle='rgba(245,247,222,.96)';ctx.lineWidth=4;ctx.stroke();}
             if(button.action===guidanceAction){ctx.strokeStyle=`rgba(211,245,205,${.45+.4*(.5+.5*Math.sin((lastTime-guidanceStartedAt)/450))})`;ctx.lineWidth=5;ctx.stroke();}
-            if(button.selected){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
+            if(button.selected && button.kind!=='visibility'){ctx.fillStyle='#9adcf4';ctx.fillRect(button.x,button.y+9,4,button.height-18);}
             if(button.panelOpener){
                 ctx.strokeStyle='#d6ded6';ctx.lineWidth=1.8;ctx.beginPath();ctx.roundRect(button.x+10,button.y+10,14,14,3);ctx.moveTo(button.x+15,button.y+11);ctx.lineTo(button.x+15,button.y+23);ctx.stroke();
                 ctx.textAlign='left';ctx.fillStyle='#f1fffc';ctx.font='550 20px system-ui';ctx.fillText(button.label,button.x+33,button.y+16,button.width-40);return;
             }
+            if(button.kind==='visibility'){ctx.fillStyle=button.selected?'#85d6a5':'#c18783';ctx.beginPath();ctx.arc(button.x+12,button.y+button.height/2,3,0,Math.PI*2);ctx.fill();}
             ctx.fillStyle=button.disabled?'#899297':isContinue?'#ffffff':button.primary?'#f3fbf4':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(isContinue?'750 ':button.primary?'680 ':button.kind==='toggle'||button.kind==='handle'?'650 ':'600 ')+(isContinue?'46px':button.primary?'32px':button.kind==='toggle'||button.kind==='handle'?'28px':'25px')+' Manrope, system-ui';ctx.textAlign='center';
             if(isContinue && ctx.measureText(button.label).width>button.width-28){ctx.font='700 34px Manrope, system-ui';const words=button.label.split(/\s+/),split=Math.ceil(words.length/2),lines=[words.slice(0,split).join(' '),words.slice(split).join(' ')];lines.forEach((line,i)=>ctx.fillText(line,button.x+button.width/2,button.y+button.height/2-34+i*36,button.width-28));}
             else ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-(isContinue?44:button.primary?34:button.kind==='toggle'||button.kind==='handle'?30:28))/2,button.width-16);
@@ -1205,12 +1205,12 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         return hover;
     }
     function explorerControls(){
-        if(fruitVisible)return [
+        if(fruitVisible && fruitControlsActive)return [
             {action:'FruitWindow:play',label:'Play development',x:22,y:66,width:464,height:54,disabled:!fruitWindow?.canAction('play')},
             {action:'FruitWindow:pause',label:'Pause',x:506,y:66,width:464,height:54,disabled:!fruitWindow?.canAction('pause')},
             {action:'FruitWindow:return',label:'Return fruit',x:22,y:132,width:948,height:54,disabled:!fruitWindow?.canAction('return')},
-            {action:'FruitWindow:hide',label:'Hide window',x:22,y:198,width:464,height:54},
-            {action:'Explorer',label:'Close controls',x:506,y:198,width:464,height:54}
+
+            {action:'Explorer',label:'Done',x:852,y:8,width:124,height:38}
         ];
         if(selection?.limo && !objectContext)return limoSpatialControls(selection.limo);
         if(selection?.controlsType==='LIMO' && !objectContext)return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},{action:'Utility:limo-show',label:'Show cells',x:22,y:62,width:464,height:54},{action:'Utility:limo-hide',label:'Hide cells',x:506,y:62,width:464,height:54}];
@@ -1219,19 +1219,20 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:panelModeChoice};
         return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...visiblePimoModes().map((id,i)=>({action:'KnowledgeMode:'+id,label:KNOWLEDGE_MODES[id].label,x:22+i*326,y:128,width:304,height:54,kind:'mode',description:KNOWLEDGE_MODES[id].description,selected:state.mode===id})),
             ...(limoAvailable()?[{action:'Limo:open',label:'Learn in this Project · LIMO',x:22,y:66,width:948,height:54}]:[]),
-            {action:'FruitWindow:load',label:fruitVisible?'Fruit Window loaded':'Load Fruit Window',x:22,y:252,width:464,height:54,disabled:fruitVisible},
-            {action:'FruitWindow:hide',label:'Hide Fruit Window',x:506,y:252,width:464,height:54,disabled:!fruitVisible},
+            {action:'OrbModel',label:'Orb model · '+(ORB_MODELS[orbModel]?.label || 'Improved'),x:22,y:268,width:948,height:54},
+            {action:'CellOpacity',label:'Opacity',x:276,y:344,width:694,height:48,kind:'slider',value:meshCellOpacity,min:0,max:1,step:.05},
+            {action:'PimoScale',label:'Size',x:276,y:410,width:694,height:48,kind:'slider',value:knowledgeRecord?.pimoScale || 1,min:.65,max:1.6,step:.05},
             ];
     }
     const explorerHeight=()=>Math.max(180,...explorerControls().map(item=>item.y+item.height+18));
 
     function renderExplorer(){
-        explorerElement.classList.toggle('is-fruit-controls',fruitVisible);
+        explorerElement.classList.toggle('is-fruit-controls',fruitVisible && fruitControlsActive);
         explorerElement.hidden=hidden || detached || confirmation || explorerClosed || Boolean(renderer);element.classList.toggle('has-explorer-companion',!explorerElement.hidden);if(explorerElement.hidden)return;
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:availablePimoModes().includes(panelModeChoice)?panelModeChoice:'curiosity'},main=element.getBoundingClientRect();explorerElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
         explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? main.left)+'px';explorerElement.style.top=(explorerPosition?.y ?? Math.max(8,Math.min(main.bottom+12,window.innerHeight-166)))+'px';
-        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=fruitVisible?'Controls · FDW':selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=fruitVisible?fruitWindow?.getLabel()||'Fruit Discovery Window':objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
-        const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=fruitVisible?'Hold Trigger to carry fruit. Bring it close and keep holding to open it.':selection?.limo?.coverage || objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
+        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=fruitVisible && fruitControlsActive?'Controls · FDW':selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=fruitVisible && fruitControlsActive?fruitWindow?.getLabel()||'Fruit Discovery Window':objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
+        const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=fruitVisible && fruitControlsActive?'Hold fruit with both pointers; pull apart to open it.':selection?.limo?.coverage || objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
         const modes=document.createElement('nav');modes.className='nlxr-explorer-modes';modes.setAttribute('aria-label','Knowledge view');
         const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','PIMO controls');
         for(const item of explorerControls()){
@@ -1324,7 +1325,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setVisibilityItems(items=[]){const signature=JSON.stringify(items);if(signature===visibilitySignature)return;visibilitySignature=signature;visibilityItems=items.map(item=>({...item}));render(true);},
-        showFruitWindow(nextIdentity=null,example=null,{mediaMode='identity'}={}){fruitIdentity=nextIdentity || identity;fruitExample=example || fruitWindowSpecies(fruitIdentity || {})?.id || null;if(mediaMode!==fruitMediaMode)fruitIdentityMedia=null;fruitMediaMode=mediaMode;return loadFruitWindow();},
+        showFruitWindow(nextIdentity=null,example=null,{mediaMode='identity'}={}){fruitIdentity=nextIdentity || identity;fruitExample=example || fruitWindowSpecies(fruitIdentity || {})?.id || null;const item=FRUIT_WINDOW_LIBRARY.find(entry=>entry.id===fruitExample);if(mediaMode==='observation' && item?.image){fruitIdentity={plant:item.label,scientific:item.scientific};fruitIdentityMedia={image:item.image,alt:item.label,caption:item.label};}else if(mediaMode!==fruitMediaMode)fruitIdentityMedia=null;fruitMediaMode=mediaMode;return loadFruitWindow();},
         hideFruitWindow,
         setObjectContext(value){objectContext=value;knowledgeRecord=null;knowledgeDocument=null;panelModeChoice=null;mediaCollapsed=true;loadPanelImage('');render(true);},
         setStageContext(value,{preserveObject=false}={}){stageContext=value;if(!preserveObject){objectContext=null;knowledgeRecord=null;knowledgeDocument=null;}renderExplorer();},
@@ -1337,8 +1338,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             panelShift={from:{...pose.center},to:{x:pose.center.x+pose.right.x*direction*distance,y:pose.center.y,z:pose.center.z+pose.right.z*direction*distance},startedAt:performance.now()};return true;
         },
         guideTool(action='Explorer'){guidanceAction=action;guidanceStartedAt=performance.now();element.classList.toggle('is-panel-guidance',action==='ToggleMedia');render(true);},
-        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext,fruitVisible,fruitIdentity,fruitMediaMode,fruitIdentityMedia,fruitExample:fruitWindow?.getExample()||fruitExample};},
-        restoreSnapshot(value){if(!value)return;hideFruitWindow();({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);fruitMediaMode=value.fruitMediaMode || 'identity';fruitIdentityMedia=value.fruitIdentityMedia || null;loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});if(value.fruitVisible){fruitIdentity=value.fruitIdentity;fruitExample=value.fruitExample;void loadFruitWindow();}render(true);},
+        snapshot(){return {selection:selection?{...selection}:null,record,identity:identity?{...identity}:null,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext,fruitVisible,fruitIdentity,fruitControlsActive,fruitMediaMode,fruitIdentityMedia,fruitExample:fruitWindow?.getExample()||fruitExample};},
+        restoreSnapshot(value){if(!value)return;hideFruitWindow();({selection,record,identity,knowledgeRecord,knowledgeDocument,objectContext,stageContext,contextHint,page,hidden,tab,settingsOpen,mediaCollapsed,explorerClosed,panelModeChoice,headerProgress,pathwayContext,moduleContext}=value);fruitMediaMode=value.fruitMediaMode || 'identity';fruitIdentityMedia=value.fruitIdentityMedia || null;loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '',{discardPrevious:true});if(value.fruitVisible){fruitIdentity=value.fruitIdentity;fruitExample=value.fruitExample;void loadFruitWindow().then(()=>{fruitControlsActive=value.fruitControlsActive!==false;render(true);});}render(true);},
         setHeaderProgress(value){headerProgress=value?.steps?.length?{label:String(value.label || 'Progress'),activeId:String(value.activeId || value.steps[0].id),steps:value.steps.map(step=>({id:String(step.id),label:String(step.label)}))}:null;render();},
         setTaskProgress(value){
             if(!value){taskProgress=null;render();return;}
@@ -1360,6 +1361,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         setGuided(value){guided=Boolean(value);element.classList.toggle('is-guided',guided);},
         setIntroduction(value){introduction=Boolean(value);element.classList.toggle('is-intro-reveal',introduction);},
         focusPlant(nextRecord,document,media=null){
+            fruitControlsActive=false;
             if(!visiblePimoModes().includes(knowledgeExplorer(nextRecord).mode))knowledgeExplorerAction(nextRecord,'KnowledgeMode:curiosity');
             explorerClosed=false;
             objectContext=null;
@@ -1373,9 +1375,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=selectedContent;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};
             mediaCollapsed=!nextMedia?.image;mediaTouched=false;
             loadPanelImage(nextMedia?.image || '');
-            tab='Details';page=savedContext.mode==='explore'?nextRecord.explorerMolecule?.readingPage || 0:savedContext.readingPage || 0;if(fruitVisible)fruitWindow?.show(identity);render(true);
+            tab='Details';page=savedContext.mode==='explore'?nextRecord.explorerMolecule?.readingPage || 0:savedContext.readingPage || 0;render(true);
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;objectContext=null;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String((cellMedia?.image || cellMedia?.url || cellMedia?.src) ? next.title : document.identity?.commonName || '')}:previous;record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;fruitControlsActive=false;objectContext=null;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String((cellMedia?.image || cellMedia?.url || cellMedia?.src) ? next.title : document.identity?.commonName || '')}:previous;record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){fruitGl=gl;fruitWindow?.attach(gl);renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{
@@ -1453,8 +1455,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',limo:fruitVisible?null:selection?.limo,explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
-            if(fruitVisible)explorerCard.question='Hold Trigger to carry fruit. Bring it close and keep holding to open it.';
-            explorerCard.linkedLabel=fruitVisible?(fruitWindow?.getLabel()||'Fruit Discovery Window')+' · FDW':(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
+            if(fruitVisible && fruitControlsActive)explorerCard.question='Hold Trigger to carry fruit. Bring it close and keep holding to open it.';
+            explorerCard.linkedLabel=fruitVisible && fruitControlsActive?(fruitWindow?.getLabel()||'Fruit Discovery Window')+' · FDW':(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
         },hit,
@@ -1466,7 +1468,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             renderExplorer();
         },
         getHeldInputSource(){return spatialMove?.source || null;},
-        activate(ray){if(fruitWindow?.activate(ray))return true;const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
+        getFruitPerchPose(side='right'){return fruitVisible && fruitControlsActive?fruitWindow?.getPerchPose(side):null;},
+        getFruitGripContact(source){return fruitWindow?.gripContact(source) || null;},
+        activate(ray){if(fruitWindow?.activate(ray)){fruitControlsActive=true;explorerClosed=false;renderExplorer();return true;}const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
         isHandInteracting(source){return Boolean(source && handContacts.get(source));},
         hitPoint(point){return !pose || !renderer || detached?null:renderer.hitPoint(point,{front:.045,back:.025});},
         activateHand(ray,source,state){
@@ -1495,7 +1499,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             return {...pose,center:{x:pose.center.x+pose.right.x*across+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*across+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*across+pose.up.z*mainHeight/2}};
         },
         bindSession(session,referenceSpace){removeXrControls();fruitSession=session;fruitSpace=referenceSpace;fruitWindow?.bindSession(session,referenceSpace);handReferenceSpace=referenceSpace;const handle=event=>{
-            if((fruitWindow?.owns(event.inputSource)||!inputOccupied(event.inputSource))&&fruitWindow?.handleEvent(event)){event.stopImmediatePropagation();return;}
+            if((fruitWindow?.owns(event.inputSource)||!inputOccupied(event.inputSource))&&fruitWindow?.handleEvent(event)){if(event.type==='selectstart'){fruitControlsActive=true;explorerClosed=false;renderExplorer();}event.stopImmediatePropagation();return;}
             const grip=event.type.startsWith('squeeze'),type=grip?(event.type==='squeezestart'?'selectstart':'selectend'):event.type;
             if(grip && event.inputSource?.hand)return;
             if(inputOccupied(event.inputSource))return;

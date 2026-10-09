@@ -13,7 +13,7 @@ export class FruitDiscoveryAsset {
   this.internal=(config.internal_meshes||[]).map(n=>this.fruit.getObjectByName(n)).filter(Boolean);
   this.backgroundFlowers=config.seasonal_flower_root?this.object.getObjectByName(config.seasonal_flower_root):null;this.supporting=(config.supporting_fruits||[]).map(n=>this.object.getObjectByName(n)).filter(Boolean);
   this.mainFruit=this.fruit;this.mainParent=this.parent;
-  this.pickableRigs=new Map();this.extraMaterials=new Set();
+  this.pickableRigs=new Map();this.extraMaterials=new Set();this.detachedParts=[];this.partAttachments=[];
   if(/^P[FD]$/.test(config.prefix))this.preparePigeonPeaPods();
   this.rememberRig(this.fruit).mixer=this.cutMixer;
   // Capture the botanical variations too: playing/replaying never straightens
@@ -89,6 +89,7 @@ export class FruitDiscoveryAsset {
   this.cutMixer=rig.mixer ||= new THREE.AnimationMixer(fruit);this.opening=this.targetOpening=0;this.syncCutVisibility();return true;
  }
  restore() {
+  this.restoreParts();
   this.growthMixer.stopAllAction();this.cutMixer.stopAllAction();
   if(this.picked){this.parent.attach(this.fruit);this.picked=false;}
   if(this.fruit!==this.mainFruit)this.selectFruit(this.mainFruit);
@@ -131,6 +132,7 @@ export class FruitDiscoveryAsset {
  dragTo(worldPosition){if(this.picked&&!this.motion)this.fruit.position.copy(worldPosition);}
  returnFruit() {
   if(!this.picked)return;
+  this.restoreParts();
   this.pause();this.close();this.parent.updateMatrixWorld(true);const end=this.fruit.parent.worldToLocal(this.parent.localToWorld(this.attachment.clone()));this.motion={from:this.fruit.position.clone(),to:end,elapsed:0,duration:1.5,returning:true};
  }
  setCutaway(progress) {
@@ -139,6 +141,15 @@ export class FruitDiscoveryAsset {
   const a=this.cutMixer.clipAction(this.clips.Open);a.enabled=true;a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;a.play();a.paused=true;a.time=this.opening*this.clips.Open.duration;this.cutMixer.update(0);this.fruit.updateMatrixWorld(true);
   this.syncCutVisibility();
  }
+ splitFruit(host){
+  if(this.detachedParts.length)return this.detachedParts;
+  const halves=(this.config.pivots || []).map(name=>this.fruit.getObjectByName(name)).filter(Boolean);if(halves.length!==2)return [];
+  this.setCutaway(1);this.fruit.updateMatrixWorld(true);
+  const seeds=[];this.fruit.traverse(node=>{if(!node.isMesh || !/seed|stone|peas/i.test(node.name) || /chambers|cavity|flesh/i.test(node.name))return;seeds.push(node);});
+  this.partAttachments=halves.concat(seeds).map(node=>({node,parent:node.parent}));for(const half of halves)host.attach(half);this.detachedParts=[...halves];
+  if(seeds.length){const group=new THREE.Group();group.name='Separated_seeds';host.add(group);for(const seed of seeds)group.attach(seed);this.detachedParts.push(group);}return this.detachedParts;
+ }
+ restoreParts(){for(const {node,parent} of this.partAttachments)parent.attach(node);for(const part of this.detachedParts)if(part.name==='Separated_seeds')part.removeFromParent();this.partAttachments=[];this.detachedParts=[];}
  syncCutVisibility(){const open=this.opening>1e-6;if(this.closed)this.closed.visible=!open;if(this.cut)this.cut.visible=open;for(const mesh of this.internal)mesh.visible=open;}
  open(){if(this.canPick)this.targetOpening=1;}
  close(){this.targetOpening=0;}
@@ -148,5 +159,5 @@ export class FruitDiscoveryAsset {
   if(Math.abs(this.opening-this.targetOpening)>1e-5){const target=this.targetOpening;this.setCutaway(this.opening+Math.sign(target-this.opening)*Math.min(Math.abs(target-this.opening),delta/1.5));this.targetOpening=target;}
   if(this.motion){const m=this.motion;m.elapsed+=delta;const t=Math.min(1,m.elapsed/m.duration),smooth=t*t*(3-2*t);this.fruit.position.lerpVectors(m.from,m.to,smooth);if(t>=1){this.motion=null;if(m.returning){this.parent.attach(this.fruit);this.fruit.position.copy(this.attachment);this.fruit.quaternion.copy(this.attachmentQuaternion);this.picked=false;this.setCutaway(0);}}}
  }
- dispose(){if(this.picked)this.parent.attach(this.fruit);this.growthMixer.stopAllAction();this.growthMixer.uncacheRoot(this.object);for(const [fruit,rig] of this.pickableRigs){rig.mixer?.stopAllAction();rig.mixer?.uncacheRoot(fruit);}const geometries=new Set(),materials=new Set(this.extraMaterials),textures=new Set();this.object.traverse(o=>{if(o.isMesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});for(const geometry of geometries)geometry.dispose();for(const material of materials){for(const v of Object.values(material))if(v?.isTexture)textures.add(v);material.dispose();}for(const texture of textures)texture.dispose();this.pickableRigs.clear();}
+ dispose(){this.restoreParts();if(this.picked)this.parent.attach(this.fruit);this.growthMixer.stopAllAction();this.growthMixer.uncacheRoot(this.object);for(const [fruit,rig] of this.pickableRigs){rig.mixer?.stopAllAction();rig.mixer?.uncacheRoot(fruit);}const geometries=new Set(),materials=new Set(this.extraMaterials),textures=new Set();this.object.traverse(o=>{if(o.isMesh){geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);}});for(const geometry of geometries)geometry.dispose();for(const material of materials){for(const v of Object.values(material))if(v?.isTexture)textures.add(v);material.dispose();}for(const texture of textures)texture.dispose();this.pickableRigs.clear();}
 }

@@ -1,0 +1,17 @@
+{
+  "stage": 3,
+  "arc_degrees": [
+    0,
+    360
+  ],
+  "growth_seconds": 36,
+  "texture_count": 4,
+  "groundcover_clusters": 79,
+  "new_shoots": 3,
+  "static_geometry_batched": true,
+  "growth_behaviour": "staggered stem extension and paired leaf unfolding; established foliage expands gently",
+  "base_opening_diameter_m": 1.664,
+  "protected_reading_radius_m": 0.8,
+  "minimum_soil_radius_m": 0.834,
+  "glb_contains_text": false
+}

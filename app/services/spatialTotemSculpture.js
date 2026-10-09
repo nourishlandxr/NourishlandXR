@@ -49,7 +49,7 @@ export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='
     return { vertices:new Float32Array(vertices), indices:new Uint16Array(indices) };
 }
 
-function materialCanvas(scale=1) {
+export function createTotemMaterialCanvas(scale=1) {
     const canvas=document.createElement('canvas');canvas.width=512*scale;canvas.height=1024*scale;
     const ctx=canvas.getContext('2d');ctx.scale(scale,scale);
     ctx.fillStyle='#a68b6a';ctx.fillRect(0,0,512,1024);
@@ -177,7 +177,7 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     if(!renderer.textures[quality]){
         const texture=gl.createTexture();gl.bindTexture(gl.TEXTURE_2D,texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);
-        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,materialCanvas(GRAPHICS_PRESETS[quality].textureScale));
+        gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,createTotemMaterialCanvas(GRAPHICS_PRESETS[quality].textureScale));
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.REPEAT);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);gl.generateMipmap(gl.TEXTURE_2D);
         const anisotropy=gl.getExtension('EXT_texture_filter_anisotropic');

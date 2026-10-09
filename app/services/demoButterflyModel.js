@@ -5,20 +5,27 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 // the original, unchanged GLB. Geometry/materials are shared by all phases.
 const URL=new globalThis.URL('../assets/animated_butterfly.glb',import.meta.url);
 export const BUTTERFLY_RENDER_BUDGETS=Object.freeze({low:{pixels:192,interval:50},medium:{pixels:256,interval:42},high:{pixels:384,interval:33}});
-export const BUTTERFLY_FLIGHT_SPEED=10.8;
+export const BUTTERFLY_FLIGHT_SPEED=4.2;
 const nativeFlocks=new WeakMap();
 export function butterflyPoseCacheKey(pose){
     const flight=Math.round(Math.max(0,Math.min(1,pose.flight || 0))*8)/8;
-    return {key:flight===1?'flight':`${flight}:${Math.round((pose.wingPhase || 0)/1.9)%3}`,flight,
-        wingPhase:flight===1?0:Math.round((pose.wingPhase || 0)/1.9)%3*1.9};
+    const phase=Math.round((pose.wingPhase || 0)/1.9)%3;
+    return {key:`${flight}:${phase}`,flight,wingPhase:phase*1.9};
+}
+function butterflyWingOpening(elapsed,pose,reduced){
+    const phase=pose.wingPhase || 0,time=elapsed/1000;
+    const cycle=((time*3.6+.22*Math.sin(time*.7+phase)+phase)%1+1)%1;
+    const stroke=cycle<.40?cycle/.40:1-(cycle-.40)/.60;
+    const smooth=stroke*stroke*(3-2*stroke),flightOpening=.12+.84*smooth;
+    const resting=1-butterflyRestingFold(elapsed,phase,reduced);
+    return resting+(flightOpening-resting)*Math.max(0,Math.min(1,pose.flight || 0));
 }
 function animateButterfly(model,elapsed,pose){
     model.idle.setEffectiveWeight(1-pose.flight);model.flying.setEffectiveWeight(pose.flight);
     model.mixer.setTime(elapsed/1000);
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     for(const [i,index] of model.hinges.entries()){
-        const flying=model.nodes[index].quaternion.clone(),rest=model.closed[i].clone().slerp(model.open[i],1-butterflyRestingFold(elapsed,pose.wingPhase || 0,reduced));
-        model.nodes[index].quaternion.copy(rest).slerp(flying,pose.flight);
+        model.nodes[index].quaternion.copy(model.closed[i]).slerp(model.open[i],butterflyWingOpening(elapsed,pose,reduced));
     }
     model.wrapper.rotation.set(0,0,0);model.wrapper.updateMatrixWorld(true);
 }
@@ -150,7 +157,7 @@ export function mountDemoButterflyModel(canvas,{gl=null,red=false,colour=null,wi
         // Keep the feet still while the resting wings occasionally open.
         // The flight clip runs faster independently of this resting movement.
         const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-        for(const [i,index] of model.hinges.entries()){const flying=model.nodes[index].quaternion.clone(),rest=model.closed[i].clone().slerp(model.open[i],1-butterflyRestingFold(elapsed,pose.wingPhase || 0,reduced));model.nodes[index].quaternion.copy(rest).slerp(flying,pose.flight);}
+        for(const [i,index] of model.hinges.entries())model.nodes[index].quaternion.copy(model.closed[i]).slerp(model.open[i],butterflyWingOpening(elapsed,pose,reduced));
         model.wrapper.rotation.set((pose.pitch || 0)*pose.flight,pose.yaw || 0,pose.bank);model.wrapper.updateMatrixWorld(true);
     }
     return {get ready(){return Boolean(model);},get interval(){return BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval;},

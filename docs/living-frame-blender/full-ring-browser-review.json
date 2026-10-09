@@ -1,0 +1,26 @@
+{
+  "stage": 3,
+  "method": "Direct interaction with the user's existing in-app browser preview",
+  "previewUrl": "http://127.0.0.1:8769/docs/living-frame-blender/preview.html?model=full",
+  "visibleTriangles": 89428,
+  "visibleMeshes": 29,
+  "visibleTotalDepthCm": 34.5,
+  "checks": [
+    "Actual full-ring GLB loads",
+    "Front, side and close-detail views render",
+    "Orbit drag and zoom change the visible view",
+    "Growth scrubber Home reaches 0.0 seconds",
+    "Watch growth advances the visible timeline",
+    "Pause freezes the visible timeline at 7.6 seconds",
+    "Fully grown resets the timeline to 36.0 seconds",
+    "Earlier planted section loads with 50219 triangles and 82 meshes",
+    "Original plain ring loads with 5120 triangles and one mesh",
+    "Final full-ring preview left open at mature state",
+    "Built welcome screen visibly displays V0.9437"
+  ],
+  "welcomeVersion": "0.9437",
+  "thisTaskVersionIncrement": "0.9436",
+  "concurrentVersionIncrementObserved": true,
+  "deployed": false,
+  "headsetVerified": false
+}

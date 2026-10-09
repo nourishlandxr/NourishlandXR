@@ -14,31 +14,32 @@ const disposeScene=scene=>scene?.traverse(node=>{if(!node.isMesh)return;node.geo
 export function createFruitWindowExperience({root=document.body,identity={},showLibraryChoices=true,onHide=()=>{},onState=()=>{},onMedia=()=>{}}={}){
     if(!document.querySelector('link[data-fruit-window-style]')){const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./fruitWindow.css',import.meta.url).href;style.dataset.fruitWindowStyle='';document.head.append(style);}
     const element=document.createElement('section');element.className='nlxr-fruit-window';element.setAttribute('aria-label','Fruit Window');
-    element.innerHTML=`<header><strong>Fruit Window</strong><button type="button" data-action="hide">Hide Fruit Window</button></header><p class="fruit-window-context"></p><label class="fruit-window-library">Plant example <select aria-label="Fruit Window plant"></select></label><div class="fruit-window-view"><canvas aria-label="Interactive plant model"></canvas><button class="fruit-window-grip left" aria-label="Left window grip">❮</button><button class="fruit-window-grip right" aria-label="Right window grip">❯</button></div><p class="fruit-window-status" role="status"></p><nav aria-label="Fruit Window actions"></nav><p class="fruit-window-help">Point to feel the leaves move. Select the arrowed fruit to pick it. Hold both grips to move the window.</p>`;
+    element.innerHTML=`<header><strong>Fruit Window</strong><button type="button" data-action="hide">Hide Fruit Window</button></header><p class="fruit-window-context"></p><label class="fruit-window-library">Plant example <select aria-label="Fruit Window plant"></select></label><div class="fruit-window-view"><canvas aria-label="Interactive plant model"></canvas><button class="fruit-window-grip left" aria-label="Left window grip">❮</button><button class="fruit-window-grip right" aria-label="Right window grip">❯</button></div><p class="fruit-window-status" role="status"></p><nav aria-label="Fruit Window actions"></nav><p class="fruit-window-help">Point to feel the leaves move. Select the arrowed fruit to pick it. Hold both grips to move the window. Hold fruit with both pointers and pull apart to open it.</p>`;
     root.append(element);
     element.querySelector('.fruit-window-library').hidden=!showLibraryChoices;
     const canvas=element.querySelector('canvas'),status=element.querySelector('.fruit-window-status'),context=element.querySelector('.fruit-window-context'),select=element.querySelector('select'),nav=element.querySelector('nav');
     for(const item of FRUIT_WINDOW_LIBRARY){const option=document.createElement('option');option.value=item.id;option.textContent=item.label;select.append(option);}
     const actions=[['play','Play development'],['pause','Pause'],['return','Return fruit']];
     for(const [action,label] of actions){const button=document.createElement('button');button.type='button';button.dataset.action=action;button.textContent=label;nav.append(button);}
-    const scene=new THREE.Scene();scene.background=new THREE.Color(0xffffff);
-    scene.add(new THREE.HemisphereLight(0xfff4d7,0x304435,2.8));const light=new THREE.DirectionalLight(0xffffff,3.2);light.position.set(-1,2,3);scene.add(light);
+    const scene=new THREE.Scene();scene.background=new THREE.Color(0xdce3d8);
+    scene.add(new THREE.HemisphereLight(0xfff4d7,0x304435,1.7));const light=new THREE.DirectionalLight(0xffffff,1.8);light.position.set(-1,2,3);scene.add(light);
     const content=new THREE.Group();scene.add(content);
     const plantMount=new THREE.Group();content.add(plantMount);
+    const branchSupports=new THREE.Group();content.add(branchSupports);
     const nameCanvas=document.createElement('canvas');nameCanvas.width=768;nameCanvas.height=112;
     const nameTexture=new THREE.CanvasTexture(nameCanvas),nameMaterial=new THREE.MeshBasicMaterial({map:nameTexture,transparent:true,depthWrite:false});
-    const nameplate=new THREE.Mesh(new THREE.PlaneGeometry(.48,.035),nameMaterial);nameplate.position.set(0,-.335,.035);content.add(nameplate);
+    const nameplate=new THREE.Mesh(new THREE.PlaneGeometry(.48,.045),nameMaterial);nameplate.position.set(0,.278,.117);content.add(nameplate);
     const playCanvas=document.createElement('canvas');playCanvas.width=128;playCanvas.height=128;const pc=playCanvas.getContext('2d');pc.fillStyle='rgba(25,51,40,.9)';pc.beginPath();pc.roundRect(2,2,124,124,28);pc.fill();pc.strokeStyle='#bbebc7';pc.lineWidth=4;pc.stroke();pc.fillStyle='#f8ffed';pc.beginPath();pc.moveTo(48,32);pc.lineTo(94,64);pc.lineTo(48,96);pc.closePath();pc.fill();
     const playTexture=new THREE.CanvasTexture(playCanvas),playMaterial=new THREE.MeshBasicMaterial({map:playTexture,transparent:true,depthWrite:false});
     const playButton=new THREE.Mesh(new THREE.PlaneGeometry(.07,.07),playMaterial);playButton.position.set(.26,-.36,.166);playButton.name='Flower_development_play';content.add(playButton);
-    playButton.visible=false;
+    playButton.visible=true;
     const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
     const camera=new THREE.PerspectiveCamera(36,1,.01,20);camera.position.set(.05,.08,1.65);
     const orbit=new OrbitControls(camera,canvas);orbit.target.set(0,0,0);orbit.enableDamping=true;orbit.minDistance=.65;orbit.maxDistance=2.4;orbit.enablePan=false;
     const loader=new GLTFLoader(),raycaster=new THREE.Raycaster(),grips=new FruitWindowGripPair(),fruitHold=new FruitWindowTriggerHold();
     const anchor={position:new THREE.Vector3(.75,1.3,-1.3),quaternion:new THREE.Quaternion()};
     const handleMaterial=new THREE.MeshStandardMaterial({color:0x80c5b0,roughness:.45});
-    const handles=['left','right'].map((side,i)=>{const mesh=new THREE.Mesh(new THREE.TorusGeometry(.025,.0035,8,20),handleMaterial.clone());mesh.name='Window_'+side+'_grip';mesh.position.set(i?.345:-.345,0,.18);mesh.userData.gripSide=side;content.add(mesh);return mesh;});
+    const handles=['left','right'].map((side,i)=>{const mesh=new THREE.Mesh(new THREE.TorusGeometry(.025,.0035,8,20),handleMaterial.clone());mesh.name='Window_'+side+'_grip';mesh.position.set(i?.345:-.345,0,.12);mesh.userData.gripSide=side;content.add(mesh);return mesh;});
     const beams=handles.map(()=>{const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.0012,.0012,1,5),new THREE.MeshBasicMaterial({color:0xffd88b}));mesh.visible=false;content.add(mesh);return mesh;});
     const arrow=new THREE.Group();arrow.name='Pickable_fruit_arrow';
     const arrowMaterial=new THREE.MeshStandardMaterial({color:0xffdfa1,emissive:0x44330a,roughness:.55});
@@ -46,6 +47,17 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     const arrowStem=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,.018,6),arrowMaterial);arrowStem.position.y=.018;arrow.add(arrowStem);content.add(arrow);arrow.visible=false;
     let asset=null,frame=null,xr=null,xrGl=null,session=null,space=null,shown=true,destroyed=false,loadVersion=0,placed=false,lastTime=0,raf=0,activeSpecies=null,hover=null,leaves=[],hoverOffsets=[],identityValue=identity,identityKey='',hoverAmount=0,hoverNodes=[];
     const pointers=new Map(),selections=new Set();let pointerSnapshot=null,loading=false,lastControlState='',hoverSampleAt=-Infinity;
+    let dockPose=null,magnetized=true;
+    function finishBoxGrip(){if(!grips.holds.size && dockPose && anchor.position.distanceTo(dockPose.position)<.22){anchor.position.copy(dockPose.position);anchor.quaternion.copy(dockPose.quaternion);magnetized=true;}}
+    function joinBranchToWalls(){
+        disposeScene(branchSupports);branchSupports.clear();let wood=null,best=0;
+        asset.object.traverse(node=>{if(!node.isMesh || !/woody|branch|trunk|stem/i.test(node.name) || /leaf|stalk|vein|petiole|fruit/i.test(node.name))return;const box=new THREE.Box3().setFromObject(node),score=box.getSize(new THREE.Vector3()).lengthSq();if(score>best){wood=node;best=score;}});
+        if(!wood)return;
+        const box=new THREE.Box3().setFromObject(wood),size=box.getSize(new THREE.Vector3()),axis=size.x>size.y?'x':'y',attribute=wood.geometry.attributes.position;
+        let low=null,high=null;
+        for(let i=0;i<attribute.count;i++){const point=content.worldToLocal(new THREE.Vector3().fromBufferAttribute(attribute,i).applyMatrix4(wood.matrixWorld));if(!low || point[axis]<low[axis])low=point;if(!high || point[axis]>high[axis])high=point;}
+        for(const [point,side] of [[low,-1],[high,1]]){if(!point)continue;const end=point.clone();end[axis]=side*.319;const direction=end.clone().sub(point),length=direction.length();if(length<.001)continue;const original=Array.isArray(wood.material)?wood.material[0]:wood.material;const support=new THREE.Mesh(new THREE.CylinderGeometry(.004,.005,length,8),original.clone());support.name='Observation_branch_support';support.position.copy(point).add(end).multiplyScalar(.5);support.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());branchSupports.add(support);}
+    }
     const fruitBox=new THREE.Box3(),fruitCenter=new THREE.Vector3();
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let statusCopy=null;
@@ -64,14 +76,16 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     function restoreHover(){for(const [node,q] of hoverOffsets)node.quaternion.copy(q);hoverOffsets=[];}
     function botanicalHit(intersection){
         if(!intersection||!visible(intersection.object))return null;
-        for(let node=intersection.object;node;node=node.parent){if(node===playButton)return 'play';if(asset?.pickableRigs.has(node)||node===arrow)return 'fruit';if(/leaf|leaflet/i.test(node.name))return 'leaf';}
+        for(let node=intersection.object;node;node=node.parent){if(node===playButton)return 'play';if(asset?.pickableRigs.has(node)||asset?.detachedParts.includes(node)||node===arrow)return 'fruit';if(/leaf|leaflet/i.test(node.name))return 'leaf';}
         return null;
     }
-    function hitFruit(hit){for(let node=hit?.object;node;node=node.parent)if(asset?.pickableRigs.has(node))return node;return asset?.mainFruit;}
+    function hitFruit(hit){for(let node=hit?.object;node;node=node.parent)if(asset?.pickableRigs.has(node)||asset?.detachedParts.includes(node))return node;return asset?.mainFruit;}
     function localSourcePose(transform){return {position:vector(transform.position).sub(anchor.position).applyQuaternion(anchor.quaternion.clone().invert()),quaternion:anchor.quaternion.clone().invert().multiply(new THREE.Quaternion(transform.orientation.x,transform.orientation.y,transform.orientation.z,transform.orientation.w))};}
     function pickHit(hit){
-        if(fruitHold.source!==null)return false;
+        if(fruitHold.holds.size>=2)return false;
         if(!asset?.canPick)return false;const fruit=hitFruit(hit);
+        if(asset.detachedParts.includes(fruit))return true;
+        if(fruitHold.source!==null && fruit!==asset.fruit)return false;
         if(asset.picked && fruit===asset.fruit)return !asset.motion;
         if(!asset.selectFruit(fruit))return false;return asset.pick(content,{hold:true});
     }
@@ -87,7 +101,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     function restoreXR(){xr?.destroy();xr=null;if(xrGl&&!destroyed&&asset){xr=createFruitWindowXR(xrGl,content);xr.update();}}
     async function choose(id){
         const item=FRUIT_WINDOW_LIBRARY.find(item=>item.id===id);if(!item)return;
-        const version=++loadVersion;loading=true;activeSpecies=item;select.value=id;describeContext();labelWindow(item.label);hover=null;hoverAmount=0;hoverNodes=[];grips.reset();fruitHold.reset();selections.clear();restoreHover();arrow.visible=false;
+        const version=++loadVersion;loading=true;activeSpecies=item;select.value=id;describeContext();labelWindow(item.label+' · FDW');hover=null;hoverAmount=0;hoverNodes=[];grips.reset();fruitHold.reset();selections.clear();restoreHover();arrow.visible=false;
         xr?.destroy();xr=null;if(asset){plantMount.remove(asset.object);asset.dispose();asset=null;}leaves=[];syncButtons();announce(()=>t('Loading')+' '+t(item.label)+'…');
         let gltf=null;
         try{
@@ -97,19 +111,20 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             asset=new FruitDiscoveryAsset(gltf,config);plantMount.position.set(0,0,0);plantMount.scale.setScalar(1);plantMount.add(asset.object);content.updateMatrixWorld(true);
             // Fit the complete branch inside the square, once, independently
             // of the animation mixer so Harvest cannot undo the placement.
-            const bounds=new THREE.Box3().setFromObject(asset.object),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),scale=Math.min(1,.55/Math.max(size.x,size.y),.25/Math.max(.001,size.z));
+            const bounds=new THREE.Box3().setFromObject(asset.object),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),scale=Math.min(1,.48/Math.max(size.x,size.y),.17/Math.max(.001,size.z));
             plantMount.scale.setScalar(scale);plantMount.position.set(-center.x*scale,-center.y*scale,-center.z*scale);content.updateMatrixWorld(true);
+            joinBranchToWalls();
             asset.object.traverse(node=>{if(node.isMesh&&/leaf|leaflet/i.test(node.name)&&!/(stalk|vein|petiole)/i.test(node.name))leaves.push(node);});
             if(!frame){
                 frame=new THREE.Group();frame.name='Fruit_observation_box';
-                const back=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.008),new THREE.MeshBasicMaterial({color:0xffffff}));back.position.z=-.174;frame.add(back);
-                const wallMaterial=new THREE.MeshStandardMaterial({color:0xf2f4f1,roughness:.85});
+                const back=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.008),new THREE.MeshBasicMaterial({color:0xcdd7c9}));back.position.z=-.114;frame.add(back);
+                const wallMaterial=new THREE.MeshStandardMaterial({color:0xd8dfd3,roughness:.85});
                 for(const [x,y,w,h] of [[0,.325,.66,.012],[0,-.325,.66,.012],[-.325,0,.012,.65],[.325,0,.012,.65]]){
-                    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,.34),wallMaterial);wall.position.set(x,y,0);frame.add(wall);
+                    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,.22),wallMaterial);wall.position.set(x,y,0);frame.add(wall);
                 }
                 const rimMaterial=new THREE.MeshStandardMaterial({color:0xb5cbbf,roughness:.6});
                 for(const [x,y,w,h] of [[0,.325,.66,.009],[0,-.325,.66,.009],[-.325,0,.009,.65],[.325,0,.009,.65]]){
-                    const rim=new THREE.Mesh(new THREE.BoxGeometry(w,h,.012),rimMaterial);rim.position.set(x,y,.174);frame.add(rim);
+                    const rim=new THREE.Mesh(new THREE.BoxGeometry(w,h,.012),rimMaterial);rim.position.set(x,y,.114);frame.add(rim);
                 }
                 content.add(frame);
             }
@@ -119,6 +134,11 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             restoreXR();syncButtons();announce(()=>t(item.label)+'. '+t('Ready. The arrow marks the fruit you can pick.'));onState();
         }catch(error){if(!destroyed&&version===loadVersion){announce(()=>t('Unable to load')+' '+t(item.label)+'. '+t('Try loading it again.'));console.error('[Fruit Window]',error);}}
         finally{if(version===loadVersion)loading=false;}
+    }
+    function updateRip(){
+        if(!asset || !fruitHold.pair)return;
+        const progress=fruitHold.pullProgress();asset.setCutaway(progress);
+        if(progress>=1){const parts=asset.splitFruit(content);if(parts.length>=2){fruitHold.separate(parts);announce(()=>t('Opened. Inspect both halves and the seeds.'));}}
     }
     function updateIdentity(next){
         identityValue=next||{};const match=fruitWindowSpecies(identityValue),key=[identityValue.plant||identityValue.commonName,identityValue.scientific||identityValue.scientificName].join('|'),changed=key!==identityKey;identityKey=key;
@@ -132,15 +152,15 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         if(asset.stages[name])asset.showStage(name);
         else if(name==='play'){fruitHold.reset();asset.play();}else if(name==='pause')asset.pause();
         else if(name==='pick')asset.pick(content,{hold:true});else if(name==='return'){fruitHold.reset();asset.returnFruit();}
-        else if(name==='open')asset.open();else if(name==='close')asset.close();
+        else if(name==='close'){fruitHold.reset();asset.restoreParts();asset.setCutaway(0);}
         syncButtons();onState();
     }
     element.addEventListener('click',event=>{const button=event.target.closest('[data-action]');if(button&&!button.disabled)action(button.dataset.action);});select.addEventListener('change',()=>choose(select.value));
     function pointRay(event){const box=canvas.getBoundingClientRect();raycaster.setFromCamera(new THREE.Vector2((event.clientX-box.left)/box.width*2-1,-(event.clientY-box.top)/box.height*2+1),camera);return {origin:raycaster.ray.origin.clone(),direction:raycaster.ray.direction.clone()};}
-    canvas.addEventListener('pointermove',event=>{const ray=pointRay(event);if(fruitHold.owns(event.pointerId)){const distance=fruitHold.desktopDepth,position=ray.origin.clone().addScaledVector(ray.direction,distance);fruitHold.update(event.pointerId,{position,quaternion:camera.quaternion});if(performance.now()-fruitHold.startedAt>700)asset?.open();return;}hover=cast(ray).map(hit=>({hit,kind:botanicalHit(hit)})).find(value=>value.kind)||null;canvas.style.cursor=hover?.kind==='fruit'&&asset?.canPick?'pointer':'grab';});
+    canvas.addEventListener('pointermove',event=>{const ray=pointRay(event);if(fruitHold.owns(event.pointerId)){const distance=fruitHold.holds.get(event.pointerId).desktopDepth,position=ray.origin.clone().addScaledVector(ray.direction,distance);fruitHold.update(event.pointerId,{position,quaternion:camera.quaternion});updateRip();return;}hover=cast(ray).map(hit=>({hit,kind:botanicalHit(hit)})).find(value=>value.kind)||null;canvas.style.cursor=hover?.kind==='fruit'&&asset?.canPick?'pointer':'grab';});
     canvas.addEventListener('pointerleave',()=>{hover=null;});
-    canvas.addEventListener('pointerdown',event=>{const ray=pointRay(event),hit=cast(ray).find(hit=>botanicalHit(hit));if(botanicalHit(hit)==='play'){action('play');return;}if(botanicalHit(hit)!=='fruit'||!pickHit(hit))return;orbit.enabled=false;canvas.setPointerCapture(event.pointerId);fruitHold.desktopDepth=hit.distance;fruitHold.begin(event.pointerId,asset.fruit,{position:ray.origin.clone().addScaledVector(ray.direction,hit.distance),quaternion:camera.quaternion},performance.now());});
-    const releasePointer=event=>{if(fruitHold.release(event.pointerId)){orbit.enabled=true;syncButtons();}};canvas.addEventListener('pointerup',releasePointer);canvas.addEventListener('pointercancel',releasePointer);canvas.addEventListener('lostpointercapture',releasePointer);
+    canvas.addEventListener('pointerdown',event=>{const ray=pointRay(event),hit=cast(ray).find(hit=>botanicalHit(hit));if(botanicalHit(hit)==='play'){action('play');return;}if(botanicalHit(hit)!=='fruit'||!pickHit(hit))return;orbit.enabled=false;canvas.setPointerCapture(event.pointerId);fruitHold.begin(event.pointerId,hitFruit(hit),{position:ray.origin.clone().addScaledVector(ray.direction,hit.distance),quaternion:camera.quaternion},performance.now());const hold=fruitHold.holds.get(event.pointerId);if(hold)hold.desktopDepth=hit.distance;});
+    const releasePointer=event=>{if(fruitHold.release(event.pointerId)){orbit.enabled=fruitHold.holds.size===0;syncButtons();}};canvas.addEventListener('pointerup',releasePointer);canvas.addEventListener('pointercancel',releasePointer);canvas.addEventListener('lostpointercapture',releasePointer);
     // On touch screens, both explicit handles must remain pressed. A lone
     // contact can orbit the model but cannot shift the physical window.
     for(const button of element.querySelectorAll('.fruit-window-grip')){
@@ -170,8 +190,10 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         action,
         chooseExample:choose,
         nextExample(){const index=FRUIT_WINDOW_LIBRARY.findIndex(item=>item.id===activeSpecies?.id);choose(FRUIT_WINDOW_LIBRARY[(index+1)%FRUIT_WINDOW_LIBRARY.length].id);},
+        getPerchPose(side='right'){if(!shown)return null;const right=new THREE.Vector3(1,0,0).applyQuaternion(anchor.quaternion),up=new THREE.Vector3(0,1,0).applyQuaternion(anchor.quaternion),normal=new THREE.Vector3(0,0,1).applyQuaternion(anchor.quaternion),center=anchor.position.clone().addScaledVector(right,side==='left'?-.22:.22).addScaledVector(up,.331).addScaledVector(normal,.119);return {center,right,up,normal};},
         getLabel(){return activeSpecies?.label||'Plant example';},
         getExample(){return activeSpecies?.id||null;},
+        gripContact(source){const hold=grips.holds.get(source),handle=hold && handles.find(item=>item.userData.gripSide===hold.side);return handle?handle.position.clone().applyQuaternion(anchor.quaternion).add(anchor.position):null;},
         refreshMedia(){if(!asset)return;renderer.render(scene,camera);onMedia({image:canvas.toDataURL('image/png'),caption:activeSpecies.label,imageAlt:activeSpecies.label+' in the Fruit Discovery Window'});},
         getInteractionTargets(){
             content.updateMatrixWorld(true);const worldCenter=node=>new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3()).applyQuaternion(anchor.quaternion).add(anchor.position);
@@ -185,27 +207,24 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             point.applyQuaternion(anchor.quaternion).add(anchor.position);
             return {kind:'fruit-window',card:{id:'fruit-window'},point:{x:point.x,y:point.y,z:point.z},distance:point.distanceTo(vector(ray.origin))};
         },
-        canAction(name){return Boolean(asset)&&(!['pick','open','close'].includes(name)||asset.canPick)&&(name!=='pick'||!asset.picked)&&(name!=='return'||asset.picked);},
+        canAction(name){return Boolean(asset)&&(name!=='play'||Boolean(asset.clips.Development))&&(!['pick','open','close'].includes(name)||asset.canPick)&&(name!=='pick'||!asset.picked)&&(name!=='return'||asset.picked);},
         attach(gl){if(gl===xrGl)return;xrGl=gl;element.hidden=Boolean(gl)||!shown;if(gl&&raf){cancelAnimationFrame(raf);raf=0;}restoreXR();if(!gl&&shown&&!raf)raf=requestAnimationFrame(tick);},
         bindSession(next,referenceSpace){grips.reset();fruitHold.reset();session=next;space=referenceSpace;placed=false;},
         updateSpatial(pose,time,inputRay,xrFrame){
             if(!shown||!xrGl)return;
-            if(!placed&&pose){anchor.position.copy(vector(pose.center)).addScaledVector(vector(pose.right),(pose.width || .84)/2+.345+.05);anchor.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(vector(pose.right),vector(pose.up),vector(pose.normal)));placed=true;}
+            if(pose){dockPose={position:vector(pose.center).addScaledVector(vector(pose.right),(pose.width || .84)/2+.345+.025),quaternion:new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(vector(pose.right),vector(pose.up),vector(pose.normal)))};if(!placed || magnetized && !grips.holds.size){anchor.position.copy(dockPose.position);anchor.quaternion.copy(dockPose.quaternion);placed=true;}}
             if(xrFrame&&session){const points=new Map();for(const source of grips.holds.keys()){let grip=null;try{grip=xrFrame.getPose(source.gripSpace||source.targetRaySpace,space)?.transform.position;}catch{}if(Array.from(session.inputSources||[]).includes(source)&&source.gamepad?.buttons?.[1]?.pressed!==false&&grip)points.set(source,grip);}grips.update(points,anchor);
-                for(let i=0;i<handles.length;i++){const handle=handles[i],hold=[...grips.holds.values()].find(hold=>hold.side===handle.userData.gripSide);handle.material.color.setHex(hold?0xffd88b:0x80c5b0);beams[i].visible=Boolean(hold);if(hold){const start=hold.point.clone().sub(anchor.position).applyQuaternion(anchor.quaternion.clone().invert()),direction=handle.position.clone().sub(start);beams[i].position.copy(start).add(handle.position).multiplyScalar(.5);beams[i].scale.set(1,direction.length(),1);beams[i].quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());}}
+                if(grips.holds.size===2){const values=[...grips.holds.keys()].map(source=>{const axes=source.gamepad?.axes || [];return Number(axes.length>=4?axes[3]:axes[1]) || 0;}),vertical=values.reduce((total,value)=>total+value,0)/values.length,amount=Math.max(0,(Math.abs(vertical)-.18)/.82);if(amount)grips.moveDepth(-Math.sign(vertical)*amount*amount*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.45,new THREE.Vector3(0,0,-1).applyQuaternion(anchor.quaternion),anchor);}
+                for(let i=0;i<handles.length;i++){const handle=handles[i],hold=[...grips.holds.values()].find(hold=>hold.side===handle.userData.gripSide);handle.material.color.setHex(hold?0xffd88b:0x80c5b0);beams[i].visible=false;}
+                finishBoxGrip();
             }
-            if(fruitHold.source && xrFrame){
-                const source=fruitHold.source;let transform=null;try{transform=xrFrame.getPose(source.targetRaySpace,space)?.transform;}catch{}
-                if(!Array.from(session?.inputSources||[]).includes(source)||source.gamepad?.buttons?.[0]?.pressed===false||!transform)fruitHold.release(source);
-                else {
-                    const axes=source.gamepad?.axes||[],vertical=Number(axes.length>=4?axes[3]:axes[1])||0;
-                    if(Math.abs(vertical)>.18)fruitHold.moveDistance(-vertical*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.65);
-                    fruitHold.update(source,localSourcePose(transform));
-                    let eyes=null;try{eyes=xrFrame.getViewerPose(space)?.transform.position;}catch{}
-                    const fruitWorld=asset.fruit.getWorldPosition(new THREE.Vector3()).applyQuaternion(anchor.quaternion).add(anchor.position);
-                    if(eyes && time-fruitHold.startedAt>=700 && fruitWorld.distanceTo(vector(eyes))<.60)asset.open();
-                }
-            }
+            if(xrFrame){for(const source of [...fruitHold.holds.keys()]){
+                let transform=null;try{transform=xrFrame.getPose(source.targetRaySpace,space)?.transform;}catch{}
+                if(!Array.from(session?.inputSources||[]).includes(source)||source.gamepad?.buttons?.[0]?.pressed===false||!transform){fruitHold.release(source);continue;}
+                const axes=source.gamepad?.axes||[],vertical=Number(axes.length>=4?axes[3]:axes[1])||0,amount=Math.max(0,(Math.abs(vertical)-.18)/.82);
+                if(amount && !fruitHold.pair)fruitHold.moveDistance(-Math.sign(vertical)*amount*amount*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.45,source);
+                fruitHold.update(source,localSourcePose(transform));
+            }updateRip();}
             const ray=inputRay?.origin&&inputRay.direction?localRay(inputRay):null;hover=ray?cast(ray).map(hit=>({hit,kind:botanicalHit(hit)})).find(value=>value.kind)||null:null;
             advance(time);
         },
@@ -214,20 +233,20 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             if(event.type==='selectend' && fruitHold.release(source)){syncButtons();return true;}
             if(event.type==='selectstart')selections.delete(source);
             if(selections.has(source)){if(event.type==='select')selections.delete(source);return true;}
-            if(event.type==='squeezeend')return grips.release(source);
+            if(event.type==='squeezeend'){const released=grips.release(source);finishBoxGrip();return released;}
             if(event.type==='squeezestart'){
                 let transform=null,grip=null;try{transform=event.frame?.getPose(source.targetRaySpace,space)?.transform;grip=event.frame?.getPose(source.gripSpace||source.targetRaySpace,space)?.transform.position;}catch{}
                 if(!transform||!grip)return false;const m=transform.matrix,ray={origin:{x:m[12],y:m[13],z:m[14]},direction:{x:-m[8],y:-m[9],z:-m[10]}},handle=handleAt(ray);
-                return Boolean(handle&&grips.press(source,handle.userData.gripSide,grip));
+                const pressed=Boolean(handle&&grips.press(source,handle.userData.gripSide,grip));if(pressed)magnetized=false;return pressed;
             }
             if(grips.owns(source))return true;
             if(event.type==='selectstart'){
                 let transform;try{transform=event.frame?.getPose(source.targetRaySpace,space)?.transform;}catch{}if(!transform)return false;
                 const m=transform.matrix,hits=cast(localRay({origin:{x:m[12],y:m[13],z:m[14]},direction:{x:-m[8],y:-m[9],z:-m[10]}}));
                 const hit=hits.find(hit=>botanicalHit(hit));
-                if(fruitHold.source!==null && ['play','fruit'].includes(botanicalHit(hit))){selections.add(source);return true;}
+                if(fruitHold.source!==null && botanicalHit(hit)==='play'){selections.add(source);return true;}
                 if(botanicalHit(hit)==='play'){action('play');selections.add(source);return true;}
-                if(botanicalHit(hit)==='fruit'&&pickHit(hit)){fruitHold.begin(source,asset.fruit,localSourcePose(transform),performance.now());selections.add(source);syncButtons();return true;}
+                if(botanicalHit(hit)==='fruit'&&pickHit(hit)){fruitHold.begin(source,hitFruit(hit),localSourcePose(transform),performance.now());selections.add(source);syncButtons();return true;}
             }
             return false;
         },
@@ -236,9 +255,9 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         resetGrips(){grips.reset();fruitHold.reset();selections.clear();},
         owns(source){return grips.owns(source)||fruitHold.owns(source)||selections.has(source);},
         rebase(matrix){anchor.position.applyMatrix4(new THREE.Matrix4().fromArray(matrix));anchor.quaternion.premultiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix)));grips.reset();},
-        destroy(){if(destroyed)return;destroyed=true;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);loadVersion++;api.hide();resize.disconnect();xr?.destroy();orbit.dispose();asset?.dispose();disposeScene(frame);for(const handle of [...handles,...beams,nameplate,playButton]){handle.geometry.dispose();handle.material.dispose();}nameTexture.dispose();playTexture.dispose();arrowTip.geometry.dispose();arrowStem.geometry.dispose();arrowMaterial.dispose();handleMaterial.dispose();renderer.dispose();element.remove();}
+        destroy(){if(destroyed)return;destroyed=true;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);loadVersion++;api.hide();resize.disconnect();xr?.destroy();orbit.dispose();asset?.dispose();disposeScene(frame);disposeScene(branchSupports);for(const handle of [...handles,...beams,nameplate,playButton]){handle.geometry.dispose();handle.material.dispose();}nameTexture.dispose();playTexture.dispose();arrowTip.geometry.dispose();arrowStem.geometry.dispose();arrowMaterial.dispose();handleMaterial.dispose();renderer.dispose();element.remove();}
     };
-    function languageChanged(){translateApp(element);describeContext();labelWindow(activeSpecies?.label||'Plant example');if(statusCopy){status.textContent=statusCopy();element.dataset.status=status.textContent;}onState();}
+    function languageChanged(){translateApp(element);describeContext();labelWindow((activeSpecies?.label||'Plant example')+' · FDW');if(statusCopy){status.textContent=statusCopy();element.dataset.status=status.textContent;}onState();}
     globalThis.addEventListener?.('nxr-languagechange',languageChanged);translateApp(element);
     api.show(identity);return api;
 }

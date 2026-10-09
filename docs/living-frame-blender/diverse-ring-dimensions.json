@@ -1,0 +1,193 @@
+{
+  "stage": 4,
+  "arc_degrees": [
+    0,
+    360
+  ],
+  "growth_seconds": 60,
+  "texture_count": 4,
+  "groundcover_clusters": 70,
+  "new_shoots": 70,
+  "static_geometry_batched": true,
+  "growth_behaviour": "soil and roots, staggered shoots, distinct foliage, winding vines, buds, flowers opening at the finish",
+  "base_opening_diameter_m": 1.664,
+  "protected_reading_radius_m": 0.8,
+  "minimum_soil_radius_m": 0.834,
+  "glb_contains_text": false,
+  "seed": 94039,
+  "plant_clusters": 70,
+  "shoot_count": 70,
+  "plant_habits": [
+    "oval shrub",
+    "succulent rosette",
+    "pinnate frond",
+    "arching grass",
+    "lobed groundcover",
+    "silver herb"
+  ],
+  "habit_counts": [
+    18,
+    7,
+    14,
+    10,
+    9,
+    6
+  ],
+  "large_leaf_clusters": 6,
+  "leaf_size_range_m": [
+    0.0025,
+    0.165
+  ],
+  "aerial_roots": 11,
+  "aerial_root_lengths_m": [
+    0.223,
+    0.214,
+    0.325,
+    0.38,
+    0.335,
+    0.203,
+    0.193,
+    0.298,
+    0.377,
+    0.224,
+    0.202
+  ],
+  "root_architectures": 3,
+  "root_systems": 18,
+  "root_fingerprints": [
+    [
+      4.5034,
+      0,
+      3,
+      0.0293
+    ],
+    [
+      1.0594,
+      1,
+      5,
+      0.1485
+    ],
+    [
+      0.2154,
+      2,
+      9,
+      0.0482
+    ],
+    [
+      1.9248,
+      0,
+      2,
+      0.0199
+    ],
+    [
+      5.4032,
+      1,
+      5,
+      0.1441
+    ],
+    [
+      5.6739,
+      2,
+      11,
+      0.0682
+    ],
+    [
+      5.349,
+      0,
+      3,
+      0.0132
+    ],
+    [
+      1.7901,
+      1,
+      5,
+      0.0971
+    ],
+    [
+      3.8028,
+      2,
+      8,
+      0.0462
+    ],
+    [
+      6.0513,
+      0,
+      3,
+      0.0177
+    ],
+    [
+      3.6099,
+      1,
+      5,
+      0.1313
+    ],
+    [
+      2.8591,
+      2,
+      8,
+      0.0354
+    ],
+    [
+      2.0288,
+      0,
+      2,
+      0.032
+    ],
+    [
+      5.6963,
+      1,
+      5,
+      0.1511
+    ],
+    [
+      3.5508,
+      2,
+      11,
+      0.0481
+    ],
+    [
+      0.1211,
+      0,
+      2,
+      0.0184
+    ],
+    [
+      1.7653,
+      1,
+      6,
+      0.099
+    ],
+    [
+      5.3862,
+      2,
+      11,
+      0.0649
+    ]
+  ],
+  "vines": 9,
+  "vine_lengths_m": [
+    0.467,
+    0.417,
+    0.426,
+    0.452,
+    0.459,
+    0.405,
+    0.37,
+    0.345,
+    0.657
+  ],
+  "flowers": 27,
+  "bloom_starts_seconds": [
+    42.03,
+    45.86,
+    48.03,
+    42.44,
+    45.18,
+    48.89,
+    42.18,
+    45.37,
+    48.08
+  ],
+  "sequence": "soil and roots, staggered shoots, distinct foliage, winding vines, buds, flowers opening at the finish",
+  "growth_method": "individual-anchor morph extension and unfolding, with independently staggered groups"
+}

@@ -40,7 +40,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "SPACE 1.3",
         "act": "Place a sample",
         "title": "Begin with one small discovery",
-        "main": "A connected place can begin with one plant and one question.\n\nOur sample is Pigeon Pea, a shrub grown for food and its useful roles in a garden. It is one small part of a much larger living story.\n\nPlace its Plant Orb to begin. We will add another plant, a message and connected Areas to show how the experience can grow.",
+        "main": "Give your first discovery a location.\n\nChoose an open space and place a Plant Orb. This spatial tag connects what you learn to a position in your surroundings.",
         "panel": "Keep the image panel closed. Reveal the prepared Pigeon Pea image after placement at ELEMENTS 1.6.",
         "hint": "Place the sample when you are ready.",
         "art": null
@@ -58,7 +58,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.6",
         "act": "Open a profile",
         "title": "Your first plant to explore",
-        "main": "Let’s begin with Pigeon Pea — a versatile shrub grown in many parts of the world for food, soil improvement and its many roles in the garden.\n\nIts Plant Orb is now in place. Select it and start discovering what makes this plant interesting.",
+        "main": "Your Orb is placed. This sample represents Pigeon Pea, a shrub grown for food and its useful roles in a garden.\n\nSelect the Orb to open its Tag, then unfold Curiosity to follow its connected information.",
         "panel": "Selected plant identity. Curiosity is the standard presentation.",
         "hint": "Select the Pigeon Pea Orb.",
         "art": null
@@ -147,8 +147,8 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "ELEMENTS 1.12",
         "act": "Compare profiles",
-        "title": "Explore another story",
-        "main": "Choose Blue Quandong, Finger Lime or Lemon Myrtle. Your choice gives this Orb its own plant information. Continue becomes available after your choice.",
+        "title": "Thousands of plants. Thousands of stories.",
+        "main": "Imagine choosing from thousands of plants, each with its own story of food, ecology and place. These Elements turn a landscape into a world of discovery. Try Blue Quandong, Finger Lime or Lemon Myrtle now. Your choice gives this Orb its own plant information.",
         "panel": "Selected plant information only; Curiosity remains standard.",
         "hint": "Choose a plant to continue.",
         "art": null
@@ -249,7 +249,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Explore, learn and plan",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
-        "hint": "Grip both opposite plate edges to turn and gently tilt the landscape. Release either grip to stop. Place Totems from beside the frame onto the pulsing circles: entrance, open forest, then swales. Totem names appear in a cloud above the plate.",
+        "hint": "Hold both edge grips to move the landscape. Left joystick turns and tilts; right joystick rolls and moves it nearer or farther. Release either grip to leave it in place. Place Totems onto the pulsing circles: entrance, open forest, then swales.",
         "art": null
     },
     {

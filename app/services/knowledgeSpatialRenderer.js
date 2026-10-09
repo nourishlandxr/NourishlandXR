@@ -32,12 +32,13 @@ export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performanc
     // These anchors can diverge when the existing hold-to-move interaction
     // moves the knowledge surface. Never overwrite the physical subject.
     state.subjectAnchor=record.position || null;state.knowledgeAnchor=pose.position;
-    const key=JSON.stringify([state.revision,state.mode,selected,expanded,record.knowledgeConnectedPath,record.knowledgeFloor,pose.position.y]);
+    const scale=Math.max(.65,Math.min(1.6,record.pimoScale || 1));
+    const key=JSON.stringify([scale,state.revision,state.mode,selected,expanded,record.knowledgeConnectedPath,record.knowledgeFloor,pose.position.y]);
     let cache=caches.get(record);
     if(!cache || cache.key!==key || cache.knowledge!==knowledge){
         const nodes=state.mode==='tag'?[]:pimVisibleNodes(knowledge,expanded,{...knowledgeExplorerOptions(record),layoutWidth:1440,layoutHeight:1080,cellWidthPixels:200,cellHeightPixels:173.2});
         const source=cache?.mode==='explore' && state.mode==='curiosity'?new Map((cache.nodes || []).map(node=>[node.path,{x:0,y:0,z:0}])):cache?.local || new Map(),targets=new Map([['core',{x:0,y:0,z:0}]]);
-        nodes.forEach(node=>targets.set(node.path,nodePoint(node,false)));
+        nodes.forEach(node=>targets.set(node.path,(()=>{const p=nodePoint(node,false);return {x:p.x*scale,y:p.y*scale,z:p.z*scale};})()));
         const exits=(cache?.nodes || []).filter(node=>!targets.has(node.path));
         cache={key,knowledge,nodes,exits,source,targets,local:new Map(),started:time,mode:state.mode};caches.set(record,cache);
     }
@@ -53,8 +54,8 @@ export function knowledgeSurfaces(record,knowledge,expanded,pose,time=performanc
         const cellOpacity=curiositySurfaceOpacity(getSpatialVisualSettings().cellOpacity);
         const nativeChild=record.demoNativeChoice==='blue-quandong' && node.depth>0;
         const roles=(identity.roles || knowledge.roles || []).slice(0,3).map(role=>typeof role==='string'?role:role.label || role.title).filter(Boolean);
-        surfaces.push({record,node,center:world(pose,p),right:pose.right,up:pose.up,normal:pose.normal,width:tag ? .43 : node.depth>0?.195:KNOWLEDGE_VISUALS.nodeWidth,height:tag ? .28 : node.depth>0?.169:KNOWLEDGE_VISUALS.nodeHeight,interactive:!exiting && (id==='core' || progress>.55),pressProgress:record.pimPressPath===node.path?Number(record.pimPressProgress)||0:0,
-            card:{id,core:id==='core' && !tag,child:node.depth>0,depth:node.depth || 0,title:node.label,scientific:tag?core.description:'',roles:tag?roles.join(' · '):'',subtitle:tag?(identity.identityStatement || knowledge.identityStatement || knowledge.summary || ''):'',identity:tag,branchColour:KNOWLEDGE_VISUALS.branchColours[node.rootDirection] || KNOWLEDGE_VISUALS.border,selected:selectedNode,contextual:role==='context',infoOpacity:tag?currentInfoOpacity():nativeChild?Math.max(.35,cellOpacity):cellOpacity,fontRevision,resolution:currentGraphicsQuality()==='low'?KNOWLEDGE_VISUALS.labelResolution/2:KNOWLEDGE_VISUALS.labelResolution,height:512,fadeDuration:120},opacity:(exiting?1-progress:id==='core' || cache.source.has(id)?1:smooth((progress-.30)/.70))*(role==='context' ? .62 : 1)});
+        surfaces.push({record,node,center:world(pose,p),right:pose.right,up:pose.up,normal:pose.normal,width:(tag ? .52 : node.depth>0?.195:KNOWLEDGE_VISUALS.nodeWidth)*scale,height:(tag ? .34 : node.depth>0?.169:KNOWLEDGE_VISUALS.nodeHeight)*scale,interactive:!exiting && (id==='core' || progress>.55),pressProgress:record.pimPressPath===node.path?Number(record.pimPressProgress)||0:0,
+            card:{id,core:id==='core' && !tag,child:node.depth>0,depth:node.depth || 0,title:node.label,scientific:tag?core.description:'',roles:tag?roles.join(' · '):'',subtitle:tag?(identity.identityStatement || knowledge.identityStatement || knowledge.summary || ''):'',identity:tag,branchColour:KNOWLEDGE_VISUALS.branchColours[node.rootDirection] || KNOWLEDGE_VISUALS.border,selected:selectedNode,contextual:role==='context',infoOpacity:tag?Math.max(.85,currentInfoOpacity()):nativeChild?Math.max(.35,cellOpacity):cellOpacity,fontRevision,resolution:tag?1024:currentGraphicsQuality()==='low'?KNOWLEDGE_VISUALS.labelResolution/2:KNOWLEDGE_VISUALS.labelResolution,height:512,fadeDuration:120},opacity:(exiting?1-progress:id==='core' || cache.source.has(id)?1:smooth((progress-.30)/.70))*(role==='context' ? .62 : 1)});
     }
     return surfaces;
 }
@@ -91,7 +92,7 @@ function labelCanvas(card){
     ctx.save();if(!card.identity){ctx.translate(256,256);ctx.scale(1,KNOWLEDGE_VISUALS.nodeWidth/KNOWLEDGE_VISUALS.nodeHeight);ctx.translate(-256,-256);}
     ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#ffffff';ctx.shadowColor='transparent';ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.font=card.identity?'700 39px Manrope, system-ui':`800 ${card.core?76:card.child?68:KNOWLEDGE_VISUALS.labelFont}px Manrope, system-ui`;
     if(card.identity){
-        const fonts={title:'700 31px Manrope, system-ui',scientific:'italic 550 18px Manrope, system-ui',roles:'650 19px Manrope, system-ui',body:'550 18px Manrope, system-ui'},measure={};
+        const fonts={title:'750 34px Manrope, system-ui',scientific:'italic 650 20px Manrope, system-ui',roles:'700 20px Manrope, system-ui',body:'650 18px Manrope, system-ui'},measure={};
         for(const [key,font] of Object.entries(fonts))measure[key]=text=>{ctx.font=font;return ctx.measureText(text).width;};
         const layout=identityTextLayout({title:card.title,scientific:card.scientific,roles:card.roles,body:card.subtitle},measure);
         const colours={title:'#ffffff',scientific:'#e0f0ff',roles:'#c4f1e3',body:'#f5fbff'};

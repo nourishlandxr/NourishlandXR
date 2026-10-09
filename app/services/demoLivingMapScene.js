@@ -3,7 +3,7 @@ import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import { createDemoLivingMapSchedule, demoLivingMapAreaProgress, demoLivingMapItemProgress, demoLivingMapProgress, demoLivingMapStage, LIVING_MAP_ORB_SETTLE_MS } from './demoLivingMapModel.js';
 import {livingMapRoutes,sampleLivingMapRoute} from './demoLivingMapRoute.js';
 import {createLivingMapVisitors,LIVING_MAP_VISITOR_COLOURS} from './demoLivingMapVisitors.js';
-import {createTotemSculptureGeometry} from './spatialTotemSculpture.js';
+import {createTotemSculptureGeometry,createTotemMaterialCanvas} from './spatialTotemSculpture.js';
 import {livingMapGreeneryProgress} from './demoLivingMapReveal.js';
 import {createLivingMapDetailKit} from './demoLivingMapDetail.js';
 import {createLivingMapHandles} from './demoLivingMapHandles.js';
@@ -22,6 +22,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const material = color => { if (!materials.has(color)) materials.set(color, new THREE.MeshLambertMaterial({ color })); return materials.get(color); };
     const geometry = value => { geometries.add(value); return value; };
     const sphere = geometry(new THREE.SphereGeometry(1, 16, 10));
+    const timberTexture=new THREE.CanvasTexture(createTotemMaterialCanvas());timberTexture.colorSpace=THREE.SRGBColorSpace;
     const cylinder = geometry(new THREE.CylinderGeometry(1, 1, 1, 12));
     const mesh = (geo, color, x, y, z, sx, sy = sx, sz = sx, parent = scene) => {
         const node = new THREE.Mesh(geo, material(color)); node.position.set(x, y, z); node.scale.set(sx, sy, sz); parent.add(node); return node;
@@ -81,31 +82,32 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const plantGrowthIndices=new Map(model.items.filter(item=>item.type==='plant').map((item,index)=>[item.id,index]));
     const markers = model.items.map((item,index) => {
         const group = new THREE.Group(); group.position.set(item.x,0,item.z);group.visible=false;scene.add(group);
-        let orb=null;
+        let orb=null,beacon=null;
         if (item.type === 'plant') {
             const grass = /vetiver/i.test(item.name), tree = item.tree || /jackfruit|lychee|acacia/i.test(item.name);
             detail.plant(group,index,{grass,tree});
             const orbMaterial=new THREE.MeshPhongMaterial({color:'#bed8a3',transparent:true,opacity:.24,shininess:65,depthWrite:false});materials.set('orb'+index,orbMaterial);
             orb=new THREE.Mesh(sphere,orbMaterial);orb.position.y=.4;orb.scale.setScalar(.38);group.add(orb);
         } else if(item.type === 'zone') {
-            const data=createTotemSculptureGeometry(24,16,'botanical'),shape=geometry(new THREE.BufferGeometry()),positions=[],normals=[];
-            for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));}
-            shape.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));shape.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));shape.setIndex(new THREE.BufferAttribute(data.indices,1));
-            mesh(shape,'#795f41',0,1.25,0,.095,1.25,.075,group);
+            const data=createTotemSculptureGeometry(24,16,'botanical'),shape=geometry(new THREE.BufferGeometry()),positions=[],normals=[],uvs=[];
+            for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));uvs.push(...data.vertices.slice(i+6,i+8));}
+            shape.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));shape.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));shape.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));shape.setIndex(new THREE.BufferAttribute(data.indices,1));
+            const timber=new THREE.MeshLambertMaterial({color:'#795f41',map:timberTexture});materials.set('totem-timber'+index,timber);
+            const post=new THREE.Mesh(shape,timber);post.position.y=1.35;post.scale.set(.095,1.35,.075);group.add(post);
             const glass=new THREE.MeshPhongMaterial({color:'#bfe0d6',transparent:true,opacity:.48,shininess:85,depthWrite:false});materials.set('totem-glass'+index,glass);
-            const collar=new THREE.Mesh(cylinder,glass);collar.position.y=2.34;collar.scale.set(.073,.16,.073);group.add(collar);
-            const tip=new THREE.MeshPhongMaterial({color:'#fff2b7',emissive:'#b7a152',emissiveIntensity:.65,shininess:50});materials.set('totem-tip'+index,tip);
-            const beacon=new THREE.Mesh(cylinder,tip);beacon.position.y=2.50;beacon.scale.set(.064,.04,.064);group.add(beacon);
+            const collar=new THREE.Mesh(cylinder,glass);collar.position.y=2.53125;collar.scale.set(.073,.3375,.073);group.add(collar);
+            const tip=new THREE.MeshPhongMaterial({color:'#a5db8d',emissive:'#a5db8d',emissiveIntensity:.3,transparent:true,opacity:.25,depthWrite:false,shininess:50});materials.set('totem-tip'+index,tip);
+            beacon=new THREE.Mesh(cylinder,tip);beacon.position.y=2.673;beacon.scale.set(.064,.03,.064);group.add(beacon);
         } else {
             const note=mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#d5bd84',0,.24,0,.16,.2,.055,group);note.rotation.y=.35;
         }
         const ringMaterial=new THREE.MeshBasicMaterial({color:item.type==='note'?'#dec88e':'#c7e4ae',transparent:true,opacity:.8,depthWrite:false});materials.set('ring'+index,ringMaterial);
         const ring=new THREE.Mesh(geometry(new THREE.RingGeometry(.17,.195,32)),ringMaterial);ring.rotation.x=-Math.PI/2;ring.position.y=.095;group.add(ring);
         if(model.concept && item.type==='plant')ring.visible=false;
-        return {item,group,ring,orb};
+        return {item,group,ring,orb,beacon};
     });
-    const targetMaterial=new THREE.MeshBasicMaterial({color:'#e5f6c6',transparent:true,opacity:.65,depthWrite:false});materials.set('placement-target',targetMaterial);
-    const targetRing=new THREE.Mesh(geometry(new THREE.RingGeometry(.30,.35,40)),targetMaterial);targetRing.rotation.x=-Math.PI/2;targetRing.position.y=.1;targetRing.visible=false;scene.add(targetRing);
+    const targetMaterial=new THREE.MeshBasicMaterial({color:'#ffd16c',transparent:true,opacity:.95,depthWrite:false});materials.set('placement-target',targetMaterial);
+    const targetRing=new THREE.Mesh(geometry(new THREE.RingGeometry(.34,.49,40)),targetMaterial);targetRing.rotation.x=-Math.PI/2;targetRing.position.y=.1;targetRing.visible=false;scene.add(targetRing);
     let welcomeTexture=null,welcomeScreen=null;
     if(model.interactive){
         const label=document.createElement('canvas');label.width=256;label.height=256;
@@ -117,7 +119,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     // Bake the solid toy scenery into a single coloured mesh per group. Tiny
     // leaves and trunks keep their detail without a draw call for every part.
     function mergeSolids(parent){
-        const sources=parent.children.filter(node=>node.isMesh && !node.isInstancedMesh && !node.material.transparent && !Array.isArray(node.material));
+        const sources=parent.children.filter(node=>node.isMesh && !node.isInstancedMesh && !node.material.transparent && !node.material.map && !Array.isArray(node.material));
         if(sources.length<2)return;
         const positions=[],normals=[],colours=[],point=new THREE.Vector3(),normal=new THREE.Vector3(),normalMatrix=new THREE.Matrix3();
         for(const node of sources){node.updateMatrix();normalMatrix.getNormalMatrix(node.matrix);const data=node.geometry.index?node.geometry.toNonIndexed():node.geometry;
@@ -238,7 +240,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 cameraPrepared=true;
                 }
                 boundaries.forEach(({area,line,fill})=>{const boundary=model.concept?1:demoLivingMapAreaProgress(schedule,area.id,elapsed,reducedMotion);line.visible=boundary>0;line.geometry.setDrawRange(0,Math.round(boundary*64)+1);fill.visible=boundary>=.99;});
-                markers.forEach(({item,group,ring,orb})=>{
+                markers.forEach(({item,group,ring,orb,beacon})=>{
                     const born=bornFor(item.id);
                     const landscapePlant=model.concept && item.type==='plant';
                     const growth=landscapePlant?livingMapGreeneryProgress(elapsed,plantGrowthIndices.get(item.id),reducedMotion):born;
@@ -246,10 +248,11 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                     group.position.y=landscapePlant?0:item.type==='zone'?-.68*(1-born):.12*(1-born);
                     if(landscapePlant){orb.visible=born>0;orb.scale.setScalar(.38*born);orb.material.opacity=.32*born;}
                     const age=elapsed-schedule.items[item.id].startAt;
+                    if(beacon){const blink=!reducedMotion && age>=0 && age<1800?Math.pow(Math.max(0,Math.sin(age*Math.PI/300)),2):0;const phase=Math.floor((elapsed+index*380)/400)%4,colour=phase%2?'#050810':phase===0?'#308aff':index%2?'#b04fff':'#ffd15c';beacon.material.color.set(colour);beacon.material.emissive.set(colour);beacon.material.opacity=phase%2?.2:1;beacon.material.emissiveIntensity=phase%2?0:1.5;const collar=materials.get('totem-glass'+index);collar.color.set(colour);collar.opacity=phase%2?.85:.96;}
                     ring.material.opacity=born*(reducedMotion || age>1600?.65:.65+.25*Math.sin(age/180));
                 });
                 paths.forEach((path,index)=>{const arrival=placed[index+1],t=model.interactive?arrival?(reducedMotion?1:Math.max(0,Math.min(1,(elapsed-arrival.at-200)/1500))):0:progress.path;path.visible=t>0;path.geometry.setDrawRange(0,Math.floor(t*32)*30);});
-                const current=placement?.current(elapsed);targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.09*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.65:.5+.18*Math.sin(elapsed/430);}
+                const current=placement?.current(elapsed);targetRing.visible=Boolean(current);if(current){targetRing.position.set(current.x,.1,current.z);targetRing.scale.setScalar(reducedMotion?1:1+.12*Math.sin(elapsed/430));targetMaterial.opacity=reducedMotion?.95:.80+.18*Math.sin(elapsed/430);}
                 if(welcomeScreen){welcomeScreen.visible=placed.length>0;welcomeScreen.position.set(model.areas[0].totem.x-.65,.62,model.areas[0].totem.z);welcomeScreen.quaternion.copy(camera.quaternion);welcomeScreen.scale.setScalar(Math.max(.001,bornFor(model.areas[0].id)));}
                 const greenery=model.interactive?livingMapGreeneryProgress(elapsed,0,reducedMotion):progress.scenery;
                 scenery.visible=progress.scenery>0;scenery.scale.y=Math.max(.001,greenery);shrub.count=planted;
@@ -339,6 +342,6 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             }
             ctx.restore();
         },
-        dispose(){if(disposed)return;disposed=true;visitorTotemTitles.forEach(entry=>entry.texture.dispose());welcomeTexture?.dispose();geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
+        dispose(){if(disposed)return;disposed=true;visitorTotemTitles.forEach(entry=>entry.texture.dispose());welcomeTexture?.dispose();timberTexture.dispose();geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
     };
 }

@@ -31,12 +31,13 @@ export const TOTEM_NOTIFICATION_COLOUR=Object.freeze([.22,.82,.86]);
 export function totemNotificationLight(record,now=performance.now()){
     const hex=String((record?.marker || record)?.appearance?.notificationColor || '').replace('#','');
     const colour=/^[\da-f]{6}$/i.test(hex)?hex.match(/../g).map(value=>parseInt(value,16)/255):record?.notificationColour || TOTEM_NOTIFICATION_COLOUR;
-    const age=now-record?.signBeaconStartedAt;
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if(!Number.isFinite(age) || age<0 || record.signNotificationSelected===false || (age>12000 && !record.signNotificationSelected))return {colour,strength:reduced?.22:.18+.10*(.5+.5*Math.sin(now/2300)),phase:reduced?0:now/1000};
-    const local=age%4800,burst=Math.pow(Math.max(0,Math.sin(local*Math.PI/460)),4),wave=.5+.5*Math.sin(age/850);
-    const strength=reduced?1:.25+.5*burst+.25*wave;
-    return {colour,strength:strength*(record.signNotificationSelected?1:Math.max(0,Math.min(1,(12000-age)/900))),phase:reduced?0:now/1000};
+    const key=String(record?.id || record?.marker?.id || record?.name || ''),hash=[...key].reduce((sum,char)=>sum+char.charCodeAt(0),0);
+    const alternate=hash%2?[.72,.24,.96]:[1,.78,.12],age=now-record?.demoArriveAt,selected=record?.signNotificationSelected;
+    const speed=Number.isFinite(age) && age>=0 && age<2100?230:selected?380:760;
+    const phase=Math.floor(now/speed)%4;
+    if(reduced)return {colour,strength:.85,phase:0};
+    return {colour:phase%2?[.015,.02,.035]:phase===0?[.12,.48,1]:alternate,strength:phase%2?.02:1,phase:now/1000};
 }
 const buffers=new WeakMap();
 const unitShapes=Object.fromEntries(['ellipse','box'].map(shape=>{

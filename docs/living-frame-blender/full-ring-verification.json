@@ -1,0 +1,87 @@
+{
+  "stage": 3,
+  "assetBytes": 4209252,
+  "meshes": 29,
+  "primitives": 29,
+  "triangles": 89428,
+  "textures": 4,
+  "animations": 1,
+  "channels": 24,
+  "leafHinges": 6,
+  "newShoots": 3,
+  "geometrySamples": [
+    {
+      "time": 0,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9758021980524063,
+        1.9919658973813057,
+        0.3396586896851659
+      ]
+    },
+    {
+      "time": 6,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9758021980524063,
+        1.9919658973813057,
+        0.3396586896851659
+      ]
+    },
+    {
+      "time": 12,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9758021980524063,
+        1.9919658973813057,
+        0.3396586896851659
+      ]
+    },
+    {
+      "time": 18,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9758021980524063,
+        1.9919658973813057,
+        0.34256761823627535
+      ]
+    },
+    {
+      "time": 24,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9758021980524063,
+        1.9919658973813057,
+        0.3453817144036293
+      ]
+    },
+    {
+      "time": 30,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9758021980524063,
+        1.9919658973813057,
+        0.3453817144036293
+      ]
+    },
+    {
+      "time": 36,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9758021980524063,
+        1.9919658973813057,
+        0.3453817144036293
+      ]
+    }
+  ],
+  "checks": [
+    "four embedded textures",
+    "reference and cameras excluded",
+    "single growth clip",
+    "six hinge rotations",
+    "three extending stems",
+    "batched geometry budget",
+    "reading clearance at seven animation times"
+  ],
+  "headsetVerified": false
+}

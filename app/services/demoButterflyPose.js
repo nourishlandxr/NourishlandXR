@@ -11,7 +11,7 @@ export function butterflyDropSurface(position,hits,tolerance=.12){
     return hits.map(hit=>hit?.point || hit?.position).filter(point=>point && Math.hypot(point.x-position.x,point.y-position.y,point.z-position.z)<=tolerance)
         .sort((a,b)=>Math.hypot(a.x-position.x,a.y-position.y,a.z-position.z)-Math.hypot(b.x-position.x,b.y-position.y,b.z-position.z))[0] || null;
 }
-export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs=BUTTERFLY_PERCH_MS,seed=0}={}){
+export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs=BUTTERFLY_PERCH_MS,seed=0,allowLanding=true}={}){
     if(!Number.isFinite(startedAt) || elapsed<startedAt)return null;
     const age=elapsed-startedAt,time=Math.max(0,age-perchMs)/1000;
     const perchWiggle=(!reducedMotion && age<perchMs)?(elapsed/1000+seed*2.17):0;
@@ -21,15 +21,15 @@ export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs
     // Gentle uneven loops with a few spaced approaches. The world origin is
     // captured on takeoff, so head movement never drags the insect around.
     const flightPeriod=BUTTERFLY_FLIGHT_CYCLE_SECONDS+seed*4,cycle=flightPeriod+BUTTERFLY_LAND_SECONDS,window=Math.floor((time+BUTTERFLY_LAND_SECONDS)/cycle),local=(time+BUTTERFLY_LAND_SECONDS)-window*cycle,landStart=flightPeriod;
-    const landing=smooth((local-landStart)/1.4);
-    const flightTime=(window*flightPeriod+Math.min(local,landStart))*BUTTERFLY_MOVEMENT_SPEED;
+    const landing=allowLanding?smooth((local-landStart)/2.2):0;
+    const flightTime=(allowLanding?window*flightPeriod+Math.min(local,landStart):time)*BUTTERFLY_MOVEMENT_SPEED;
     const flightPoint=butterflyFlightPoint(flightTime,seed),flightHeading=butterflyFlightHeading(flightTime,seed);
     const perchPoint=butterflyFlightPoint((window*flightPeriod+landStart)*BUTTERFLY_MOVEMENT_SPEED,seed);
-    const landed=local>=landStart+1.4;
+    const landed=allowLanding && local>=landStart+2.2;
     const point={x:flightPoint.x+(perchPoint.x-flightPoint.x)*landing,y:flightPoint.y+(perchPoint.y-flightPoint.y)*landing,z:flightPoint.z+(perchPoint.z-flightPoint.z)*landing};
     const heading=landed?{yaw:insectHeading(perchPoint,seed)+Math.sin(time*.65+seed)*.12,pitch:0,bank:0}:flightHeading;
     const close=0;
     const flight=takeoff*(1-landing);
-    return {state:landed?'landed':flight<1?'takeoff':'flying',flight,x:point.x*flight,y:point.y*flight,z:point.z*flight,
+    return {state:landed?'landed':flight<1?'takeoff':'flying',flight,landing:allowLanding && local>=landStart,landingProgress:landing,x:point.x*takeoff,y:point.y*takeoff,z:point.z*takeoff,
         ...heading,close,encounterIndex:window,opacity:1};
 }
