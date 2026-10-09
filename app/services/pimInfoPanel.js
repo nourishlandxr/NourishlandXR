@@ -418,7 +418,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
         return isDesktopDemo()?visible.filter(item=>item.action!=='Recenter'):visible;
     };
     // Fixed geometry prevents tabs and cell lengths from moving the panel in space.
-    const spatialHeight=()=>guided?Math.max(phoneAR?900:headset?700:620,height()):phoneAR?900:headset?700:height();
+    // The demo keeps one stable spatial frame while its slide copy changes.
+    const spatialHeight=()=>phoneAR?900:headset?700:620;
     const spatialControls=()=>spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
     function act(action){
         if(action==='LanguageMenu'){languageOpen=!languageOpen;graphicsOpen=false;soundOpen=false;render(true);return;}
@@ -1434,7 +1435,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;
-            const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:mediaImage?.naturalWidth?Math.round(984*mediaImage.naturalHeight/mediaImage.naturalWidth)+84:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
+            const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',limo:fruitVisible?null:selection?.limo,explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
             if(fruitVisible)explorerCard.question='Hold Trigger to carry fruit. Bring it close and keep holding to open it.';
             explorerCard.linkedLabel=fruitVisible?(fruitWindow?.getLabel()||'Fruit Discovery Window')+' · FDW':(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
@@ -1461,8 +1462,16 @@ export function createPimInfoPanel({ onLimoAction = () => {}, root, headset = fa
             if(source)handSelections.set(source,sequence);
             if(!slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;
         },
-        getPerchPose(side='right'){
-            if(!pose || hidden || detached)return null;const {mainWidth,mainHeight}=spatialDimensions();
+        getPerchPose(side='right',surface='control'){
+            if(!pose || hidden || detached)return null;
+            if(surface==='image'){
+                if(mediaCollapsed || !previewMedia()?.image)return null;
+                const {mediaWidth}=spatialDimensions(),mediaSurface=mediaDetached?mediaPose:spatialMediaDockPose(mediaDockSide);
+                if(!mediaSurface)return null;
+                const across=(side==='left'?-1:1)*mediaWidth/2,up=mediaWidth*.76/2;
+                return {...mediaSurface,center:{x:mediaSurface.center.x+mediaSurface.right.x*across+mediaSurface.up.x*up,y:mediaSurface.center.y+mediaSurface.right.y*across+mediaSurface.up.y*up,z:mediaSurface.center.z+mediaSurface.right.z*across+mediaSurface.up.z*up}};
+            }
+            const {mainWidth,mainHeight}=spatialDimensions();
             // Feet sit on the extreme top-right edge, outside companion faces.
             const across=(side==='left'?-1:1)*mainWidth/2;
             return {...pose,center:{x:pose.center.x+pose.right.x*across+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*across+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*across+pose.up.z*mainHeight/2}};

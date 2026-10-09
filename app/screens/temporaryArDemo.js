@@ -4605,7 +4605,7 @@ function renderInterface(simulated) {
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of BUTTERFLY_VARIANTS){
-        const insect={...variant,model:null,startedAt:NaN,flightAnchor:null,encounter:null,lastElapsed:NaN,position:null,pose:null,canvas:document.createElement('canvas')};
+        const insect={...variant,perchMs:16000+Math.random()*38000,model:null,startedAt:NaN,flightAnchor:null,encounter:null,lastElapsed:NaN,position:null,pose:null,canvas:document.createElement('canvas')};
         insect.canvas.className='tryit-butterfly-model';insect.canvas.dataset.butterflyVariant=variant.id;insect.canvas.setAttribute('aria-hidden','true');insect.canvas.style.visibility='hidden';appRoot.querySelector('.tryit-stage')?.append(insect.canvas);butterflyCompanions.push(insect);
         import('../services/demoButterflyModel.js').then(({mountDemoButterflyModel})=>{if(insect.canvas.isConnected)insect.model=mountDemoButterflyModel(insect.canvas,{gl:simulated?null:gl,red:insect.red,colour:insect.colour,wingOpacity:insect.wingOpacity});}).catch(error=>console.warn('Butterfly unavailable:',error));
     }
@@ -5786,7 +5786,7 @@ function keepButterflyOutsideFrame(position,side){
 function drawSpatialButterfly(view){
     if(!getSpatialVisualSettings().insects || !program || !buffer || !viewerMatrix)return;
     for(const insect of butterflyCompanions){
-        if(!insect.model?.ready)continue;const perch=butterflyPanelPerch(infoPanel?.getPerchPose(insect.side),insect);if(!perch && !insect.flightAnchor)continue;
+        if(!insect.model?.ready)continue;const perch=butterflyPanelPerch(infoPanel?.getPerchPose(insect.side,insect.surface),insect) || butterflyPanelPerch(infoPanel?.getPerchPose(insect.side,'control'),insect);if(!perch && !insect.flightAnchor)continue;
         const elapsed=arWelcomeClock.elapsed;
         if(!Number.isFinite(insect.startedAt))insect.startedAt=elapsed;
         if(insect.lastElapsed!==elapsed){

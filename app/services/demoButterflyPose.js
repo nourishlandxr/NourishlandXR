@@ -14,7 +14,9 @@ export function butterflyDropSurface(position,hits,tolerance=.12){
 export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs=BUTTERFLY_PERCH_MS,seed=0}={}){
     if(!Number.isFinite(startedAt) || elapsed<startedAt)return null;
     const age=elapsed-startedAt,time=Math.max(0,age-perchMs)/1000;
-    if(reducedMotion || age<perchMs)return {state:'landed',flight:0,x:0,y:0,z:0,yaw:.45,bank:0,pitch:0,close:0,opacity:smooth(age/1600)};
+    const perchWiggle=(!reducedMotion && age<perchMs)?(elapsed/1000+seed*2.17):0;
+    const resting={x:Math.sin(perchWiggle*1.7+seed)*.012,y:Math.sin(perchWiggle*2.3+seed*.7)*.008,z:Math.cos(perchWiggle*1.3+seed)*.01,yaw:seed*2.399+Math.sin(perchWiggle*.8+seed)*.22};
+    if(reducedMotion || age<perchMs)return {state:'landed',flight:0,...resting,bank:0,pitch:0,close:0,opacity:smooth(age/1600)};
     const takeoff=smooth((age-perchMs)/BUTTERFLY_TAKEOFF_MS);
     // Gentle uneven loops with a few spaced approaches. The world origin is
     // captured on takeoff, so head movement never drags the insect around.
@@ -25,7 +27,7 @@ export function demoButterflyPose(elapsed,startedAt,{reducedMotion=false,perchMs
     const perchPoint=butterflyFlightPoint((window*flightPeriod+landStart)*BUTTERFLY_MOVEMENT_SPEED,seed);
     const landed=local>=landStart+1.4;
     const point={x:flightPoint.x+(perchPoint.x-flightPoint.x)*landing,y:flightPoint.y+(perchPoint.y-flightPoint.y)*landing,z:flightPoint.z+(perchPoint.z-flightPoint.z)*landing};
-    const heading=landed?{yaw:insectHeading(perchPoint,seed),pitch:0,bank:0}:flightHeading;
+    const heading=landed?{yaw:insectHeading(perchPoint,seed)+Math.sin(time*.65+seed)*.12,pitch:0,bank:0}:flightHeading;
     const close=0;
     const flight=takeoff*(1-landing);
     return {state:landed?'landed':flight<1?'takeoff':'flying',flight,x:point.x*flight,y:point.y*flight,z:point.z*flight,

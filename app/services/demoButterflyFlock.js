@@ -2,7 +2,7 @@ export const BUTTERFLY_VARIANTS=Object.freeze([
     ['blue','#8abed6',1],['red','#cf8c7d',1],['yellow','#e0cb7f',1],['green','#98b99a',1],
     ['white','#eeeade',1],['transparent','#dcece5',.28],['purple','#b8a1cd',1],['orange','#d9ae81',1]
 ].map(([id,colour,wingOpacity],seed)=>Object.freeze({id,colour,wingOpacity,seed,
-    red:id==='red',side:seed%2?'left':'right',slot:Math.floor(seed/2),size:id==='red'?.055:.065,
+    red:id==='red',side:seed%2?'left':'right',slot:Math.floor(seed/2),surface:seed%3===0?'image':'control',size:(id==='red'?.055:.065)*.7,
     perchMs:seed===0?60000:seed===1?30000:30000+seed*4200})));
 
 // Brief paired loops, separated by long quiet windows. No attraction to the
