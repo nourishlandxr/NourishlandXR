@@ -2,13 +2,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
-import {createLivingFrameModel,prepareLivingFrameModel} from '../app/services/livingFrameModel.js';
+import {createLivingFrameModel,prepareLivingFrameModel,LIVING_FRAME_GROWTH_DURATION_MS} from '../app/services/livingFrameModel.js';
 import {createLivingFrameXR} from '../app/services/livingFrameXR.js';
 import {getSpatialVisualSettings,setSpatialVisualSettings} from '../app/services/spatialVisualSettings.js';
 import {panelSettingsControls} from '../app/services/pimInfoPanel.js';
 
 function scene(){const root=new THREE.Group(),g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute([1,0,0,1,1,0,2,0,0],3));g.setAttribute('normal',new THREE.Float32BufferAttribute([0,0,1,0,0,1,0,0,1],3));g.setIndex([0,1,2]);g.morphTargetsRelative=true;g.morphAttributes.position=[new THREE.Float32BufferAttribute([0,0,0,0,0,.1,0,0,0],3),new THREE.Float32BufferAttribute([0,0,0,.1,0,0,0,0,0],3)];const mesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({color:'#657e46'}));mesh.name='leaves';mesh.morphTargetInfluences=[.3,.7];root.add(mesh);return root;}
 const entry=()=>({asset:{scene:scene(),animations:[]},users:0});
+
+test('SD and HD stretch the growth sequence to three minutes and hold the finished frame',async()=>{
+ const previous=getSpatialVisualSettings();
+ try{assert.equal(LIVING_FRAME_GROWTH_DURATION_MS,180000);for(const tier of ['sd','hd']){
+  setSpatialVisualSettings({livingFrameQuality:tier});const asset=entry();asset.asset.animations=[new THREE.AnimationClip('growth',60,[new THREE.NumberKeyframeTrack('leaves.morphTargetInfluences[0]',[0,60],[0,1])])];
+  const model=createLivingFrameModel({load:async()=>asset});await model.select(tier);
+  for(const [elapsed,weight] of [[0,0],[60000,1/3],[90000,.5],[180000,1],[300000,1]]){model.update(elapsed);assert.ok(Math.abs(model.scene.children[0].morphTargetInfluences[0]-weight)<1e-6);assert.equal(model.growthTime,Math.min(elapsed/1000,180));}
+  model.update(0,{reduced:true});assert.equal(model.growthTime,180);assert.equal(model.scene.children[0].morphTargetInfluences[0],1);model.destroy();
+ }}finally{setSpatialVisualSettings(previous);}
+});
 
 test('startup preparation is shared and reused when the demo is reopened',async()=>{
  const previous=getSpatialVisualSettings(),originalFetch=globalThis.fetch;let requests=0,resolve;

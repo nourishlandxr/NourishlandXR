@@ -3,6 +3,9 @@ import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {createLivingFrameXR} from './livingFrameXR.js';
 import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 
+export const LIVING_FRAME_GROWTH_DURATION_MS=180000;
+const SOURCE_GROWTH_SECONDS=60;
+
 const assets=new Map(),pending=new Map();
 const url=quality=>new URL('../assets/living-frame/living-frame-'+quality+'.glb',import.meta.url).href;
 function disposeAsset(asset){const geometries=new Set(),materials=new Set(),textures=new Set();asset.scene.traverse(node=>{if(node.isMesh){geometries.add(node.geometry);for(const material of Array.isArray(node.material)?node.material:[node.material]){materials.add(material);for(const value of Object.values(material))if(value?.isTexture)textures.add(value);}}});for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures){t.dispose();t.image?.close?.();}}
@@ -38,8 +41,8 @@ export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()
   update(elapsed,{show=true,reduced=false,frameToken=elapsed}={}){
    const next=getSpatialVisualSettings().livingFrameQuality;if(next!==quality)void select(next);visible=show;
    if(!scene)return;
-   const seconds=reduced?60:Math.max(0,Math.min(60,elapsed/1000)),time=quality==='sd'?Math.floor(seconds*15)/15:Math.floor(seconds*30)/30;
-   const changed=time!==lastTime;if(changed){mixer.setTime(time);lastTime=time;}
+   const duration=LIVING_FRAME_GROWTH_DURATION_MS/1000,seconds=reduced?duration:Math.max(0,Math.min(duration,elapsed/1000)),time=quality==='sd'?Math.floor(seconds*15)/15:Math.floor(seconds*30)/30;
+   const changed=time!==lastTime;if(changed){mixer.setTime(time*SOURCE_GROWTH_SECONDS/duration);lastTime=time;}
    if(xr&&!xr.ready&&lastDraw!==frameToken){const finished=xr.prepareNext();lastDraw=frameToken;if(finished)onChange();}
    if(!desktop)return;
    desktop.canvas.hidden=!show||quality==='off';if(!show)return;

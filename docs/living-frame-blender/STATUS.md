@@ -18,7 +18,8 @@ until the native model is uploaded and drawable, and is then replaced once.
   with fewer longitudinal leaf rows and without fine underground/branch root groups.
 - HD: approved 255,964 triangles, 112 source meshes, 19,974,136 bytes.
 - Native XR: both tiers are batched to 24 material draws per eye. GPU morphs retain
-  the 60-second growth sequence; both eyes share static uploads and use independent
+  the original growth sequence, stretched to 180 seconds (3 minutes) in both tiers;
+  both eyes share static uploads and use independent
   view matrices. Text timing and controller hit paths remain independent of loading.
 - CPU/Three.js desktop playback samples growth at 15 Hz for SD and 30 Hz for HD;
   finished artwork sleeps until visibility, size or quality changes.

@@ -105,6 +105,52 @@ badge verified; welcome-version.png. The badge's Live label is not deployment pr
 
 ## Next step and limits
 
+### App painting test — 2026-10-10, V0.9453
+
+Release candidate V0.9456 packages this app test with the three-minute runtime
+Living Frame growth update. The isolated test keeps its 60-second source-clip
+scrubber for inspection. The screenshots/reports below record the original
+V0.9453 review checkpoint; deployment and headset evidence are separate.
+
+Open the built app at `/dist/xr/?test=living-painting`. This explicit test route
+combines the animated property painting with the actual SD/HD Living Frame GLB.
+Normal welcome/demo routes, text, navigation and reveal timing are unchanged.
+Return to welcome removes the test parameter and disposes the test renderer.
+
+The painting/aperture implementations now live in `app/services/peekOpening.js`,
+`propertyPainting.js` and `animatedPropertyPainting.js`; the docs preview reuses
+these modules. The painting asset is packaged in `app/assets/peek-world/` so the
+built app does not depend on a deployed docs directory. The test screen is
+`app/screens/livingPaintingTest.js`. Frame cache geometry/textures retain their
+existing ownership; only cloned test materials are disposed by this screen.
+
+Controls: whole-frame/close-up/lean, SD/HD/test-rim selection, 60-second growth
+replay/scrubbing, painting pause/strength/toggle, simulated 64 mm stereo, and
+immersive AR/VR where supported. XR places the frame 1.8 m ahead of the viewer,
+with explicit recenter and exit controls; controller select pauses painting and
+squeeze recenters. Reduced-motion starts the painting paused; frame starts mature.
+
+Verification: 13/13 focused Node checks pass. Final rendered SD framebuffer checks
+pass all six views with zero outside-aperture changed pixels; animation changes
+142,288 pixels between sampled moments, with zero loop seam, zero-strength or
+paused changes. See `app-painting-review.json`. Growth start/scrub, SD/HD selection,
+test-rim fallback and return to welcome were exercised through actual app controls.
+An odd-width drawing-buffer edge in the stereo pixel checker was corrected without
+relaxing the aperture check. Build and welcome V0.9453 verified locally;
+`app-welcome-0.9453.png`. Its Live label describes the build target, not deployment.
+
+Observed mature SD draw: 98 calls / 152,168 submitted triangles / 97 geometries /
+96 textures. These are renderer counters, not a headset performance assessment.
+Final app image: `app-painting-preview.png`; earlier growth/HD images are checkpoints.
+
+This test uses a separate Three.js renderer/session inside the app. Integration
+into the existing native demo XR renderer and its stencil/state ownership remains
+a later stage. No introduction text pause, automatic scene entry, production
+deployment or full narrative audit was added. No immersive device was available
+in the review browser, so AR/VR startup, passthrough, comfort, anchoring, controller
+behavior and actual headset performance remain unverified. A headset must access
+the build through HTTPS; this computer's loopback URL is for local desktop review.
+
 Review painting v2 as the artistic reference. Develop one convincing 3D foreground/
 terrace section with natural foliage silhouettes and textured surfaces, guided by
 this painting, before extending the world. One photograph does not reveal hidden

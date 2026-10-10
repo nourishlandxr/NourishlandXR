@@ -5,18 +5,18 @@
 <script type="module">
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {startTemporaryArDemo} from '../app/screens/temporaryArDemo.js';
-import {prepareLivingFrameModel,createLivingFrameModel} from '../app/services/livingFrameModel.js';
+import {prepareLivingFrameModel,createLivingFrameModel,LIVING_FRAME_GROWTH_DURATION_MS} from '../app/services/livingFrameModel.js';
 import {getSpatialVisualSettings,setSpatialVisualSettings} from '../app/services/spatialVisualSettings.js';
 import {BUILD_INFO} from '../app/services/buildInfo.js';
 document.querySelector('#version').textContent='V'+BUILD_INFO.version;
 window.renderLaunchScreen=()=>location.href='../app/index.html';
-const report=document.querySelector('#report'),stereo=document.querySelector('#stereo');let native=false,started=performance.now()-60000,loading=false,lastUpdate=0,cpu=[],loadedAt=0;
+const report=document.querySelector('#report'),stereo=document.querySelector('#stereo');let native=false,started=performance.now()-LIVING_FRAME_GROWTH_DURATION_MS,loading=false,lastUpdate=0,cpu=[],loadedAt=0;
 const gl=stereo.getContext('webgl2',{antialias:true}),model=createLivingFrameModel({onChange:()=>{loadedAt=performance.now();}}),anchor=new THREE.Matrix4();if(gl)model.setContext(gl);
 const loadStarted=performance.now();await prepareLivingFrameModel();const preloadedMs=Math.round(performance.now()-loadStarted);
 await startTemporaryArDemo(document.querySelector('#app'),{refinementPreview:'intro',livingFramePreviewClock:()=>performance.now()-started});
-for(const button of document.querySelectorAll('[data-quality]'))button.onclick=()=>{setSpatialVisualSettings({livingFrameQuality:button.dataset.quality});model.update(60000);cpu=[];};
+for(const button of document.querySelectorAll('[data-quality]'))button.onclick=()=>{setSpatialVisualSettings({livingFrameQuality:button.dataset.quality});model.update(performance.now()-started);cpu=[];};
 document.querySelector('#mode').onclick=()=>{native=!native;stereo.hidden=!native;document.querySelector('#app').hidden=native;document.querySelector('#mode').textContent=native?'Return to demo':'Test native stereo';};
-document.querySelector('#growth').onclick=()=>{started=performance.now();cpu=[];};document.querySelector('#finish').onclick=()=>{started=performance.now()-60000;cpu=[];};
+document.querySelector('#growth').onclick=()=>{started=performance.now();cpu=[];};document.querySelector('#finish').onclick=()=>{started=performance.now()-LIVING_FRAME_GROWTH_DURATION_MS;cpu=[];};
 window.addEventListener('error',event=>report.textContent='ERROR: '+event.message);
 function tick(now){requestAnimationFrame(tick);const quality=getSpatialVisualSettings().livingFrameQuality;
  const elapsed=now-started;model.update(elapsed,{show:native,frameToken:now});for(const button of document.querySelectorAll('[data-quality]'))button.setAttribute('aria-pressed',String(button.dataset.quality===quality));

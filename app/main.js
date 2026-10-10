@@ -164,6 +164,16 @@ async function bootstrap() {
     try {
         await unregisterServiceWorkersForTesting();
         const params = new URLSearchParams(window.location.search);
+        // Explicit development test only. Normal demo/visitor routes are unchanged.
+        if (params.get('test') === 'living-painting') {
+            setExperienceRole('launch');
+            const {renderLivingPaintingTest} = await import('./screens/livingPaintingTest.js');
+            await renderLivingPaintingTest(app, {onBack: () => {
+                const clean = new URL(location.href);clean.searchParams.delete('test');
+                history.replaceState(history.state, '', clean);window.renderLaunchScreen();
+            }});
+            return;
+        }
         const recoveryKey = 'nourishland-xr-active-creator-ar';
         let recovery = null;
         try { recovery = JSON.parse(sessionStorage.getItem(recoveryKey) || 'null'); }
