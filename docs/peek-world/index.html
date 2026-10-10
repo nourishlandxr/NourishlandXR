@@ -17,18 +17,27 @@
 <script type="module">
 import * as THREE from '../../app/vendor/three.module.min.js';
 import {createPeekWorld,OPENING_RADIUS,rayThroughOpening} from './peek-world.mjs';
+import {createFoodForestWorld} from './food-forest-world.mjs';
 import {createPropertyPeekWorld} from './property-world.mjs';
 import {createAnimatedPropertyPeekWorld,MOTION_LOOP_SECONDS} from './animated-property.mjs';
 import {createHilltopPeekWorld} from './hilltop-world.mjs';
 import {GLTFLoader} from '../../app/assets/fruit-window/vendor/GLTFLoader.js';
 const $=id=>document.getElementById(id),mount=$('view');
 const requestedStudy=new URLSearchParams(location.search).get('scene');
-const study=['mock','hilltop','animated'].includes(requestedStudy)?requestedStudy:'property';
+const study=['forest','mock','hilltop','animated'].includes(requestedStudy)?requestedStudy:'property';
+const forestStudy=study==='forest';
 const animatedStudy=study==='animated',propertyStudy=study==='property'||animatedStudy,hilltopStudy=study==='hilltop';
 const paintingVersion=new URLSearchParams(location.search).get('art')==='v1'?'v1':'v2';
 const paintingUrl='./property-painting-'+paintingVersion+'.png';
-const chooser=document.createElement('p');chooser.innerHTML='<a href="?scene=animated">Living painting</a> · <a href="?scene=property">Still painting</a> · <a href="?scene=hilltop">Geometry blockout</a> · <a href="?scene=mock">Mechanics mock</a>';
+const chooser=document.createElement('p');chooser.innerHTML='<a href="?scene=forest">Food forest wonder</a> · <a href="?scene=animated">Living painting</a> · <a href="?scene=property">Still painting</a> · <a href="?scene=hilltop">Geometry blockout</a> · <a href="?scene=mock">Mechanics mock</a>';
 document.querySelector('aside h1').after(chooser);
+if(forestStudy){
+ document.title='NourishlandXR · food forest wonder';
+ document.querySelector('aside h1').innerHTML='A window into<br>what could grow.';
+ $('study-description').textContent='Start with the forest and birds. Move closer and peek between the trees: discover fruit, berries and a dam, then the house and Nourishland XR among the clouds.';
+ $('scene-note').textContent='Three layers of real geometry with gentle canopy movement, birds, water ripples and drifting clouds. An introductory wonder prototype.';
+ $('approach').max='1.65';
+}
 if(hilltopStudy){
  document.querySelector('aside h1').innerHTML='From the hilltop.<br>Look into depth.';
  $('study-description').textContent='An editable 3D blockout of your property: a lower foreground dam, the veranda house on the higher left terrace, temperate planting below the dam and food forest beside the house.';
@@ -61,6 +70,7 @@ try{
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(55,1,.025,120);camera.position.set(0,1.6,0);camera.lookAt(0,1.6,-10);camera.focus=8;
  scene.add(new THREE.HemisphereLight(0xe6f0ec,0x3f5034,2));const light=new THREE.DirectionalLight(0xffe7c2,2);light.position.set(-4,8,3);scene.add(light);
  async function createStudy(){
+  if(forestStudy)return createFoodForestWorld();
   if(hilltopStudy)return createHilltopPeekWorld(await new GLTFLoader().loadAsync('./hilltop-property-v1.glb'));
   if(!propertyStudy)return createPeekWorld();
   const texture=await new THREE.TextureLoader().loadAsync(paintingUrl);
@@ -196,7 +206,7 @@ try{
  $('enter-ar').onclick=()=>enter('immersive-ar');$('enter-vr').onclick=()=>enter('immersive-vr');
  renderer.setAnimationLoop((time,frame)=>{
   if(checking)return;
-  if(animatedStudy){if(lastAnimationTime&&!document.hidden)peek.advanceAnimation((time-lastAnimationTime)/1000);lastAnimationTime=time;}
+  if(animatedStudy||forestStudy){if(lastAnimationTime&&!document.hidden)peek.advanceAnimation((time-lastAnimationTime)/1000);lastAnimationTime=time;}
   if(session&&placementPending&&frame){const p=frame.getViewerPose(renderer.xr.getReferenceSpace());if(p){
    const head=p.transform.position,q=p.transform.orientation,forward=new THREE.Vector3(0,0,-1).applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w));forward.y=0;forward.normalize();
    peek.root.position.set(head.x+forward.x*1.8,head.y,head.z+forward.z*1.8);peek.root.rotation.y=Math.atan2(-forward.x,-forward.z);placementPending=false;
@@ -212,7 +222,7 @@ try{
    $('metrics').textContent=`${session?'Headset session':stereo?'Simulated stereo':'Desktop'} · ${renderer.info.render.calls} draw calls\n${renderer.info.render.triangles.toLocaleString()} submitted triangles\n${renderer.info.memory.geometries} GPU geometries · ${renderer.info.memory.textures} textures\nFrame interval: mean ${mean.toFixed(1)} ms · p95 ${p95.toFixed(1)} ms\nTiming is observed cadence, not isolated GPU cost.`;
   }
  });
- $('caption').textContent=animatedStudy?'Living painting · slow clouds, gentle foliage and pond reflections':hilltopStudy?'True 3D property blockout · use “Look down from hilltop” to inspect the dam':propertyStudy?'Textured painting '+paintingVersion+' · preserved artistic character with gentle depth':'A separate 3D scene through a circular opening · lean or move closer';document.body.dataset.ready='true';
+ $('caption').textContent=forestStudy?'Forest → fruit and berries → dam → house among clouds · move closer and lean':animatedStudy?'Living painting · slow clouds, gentle foliage and pond reflections':hilltopStudy?'True 3D property blockout · use “Look down from hilltop” to inspect the dam':propertyStudy?'Textured painting '+paintingVersion+' · preserved artistic character with gentle depth':'A separate 3D scene through a circular opening · lean or move closer';document.body.dataset.ready='true';
  window.addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);session?.end();peek.dispose();grid.geometry.dispose();grid.material.dispose();renderer.dispose();},{once:true});
 }catch(error){$('caption').textContent='Preview unavailable: '+error.message;document.body.dataset.ready='error';console.error(error);}
 </script></body></html>
