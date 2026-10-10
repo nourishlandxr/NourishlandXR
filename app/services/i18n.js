@@ -1021,7 +1021,11 @@ const lookup = (text, language = currentNxrLanguage()) => {
     return null;
 };
 
+export function publicKnowledgeText(value){return typeof value==='string'?value.replace(/\bPIMO?(?:\s+cells)?\b/g,'Plant cells').replace(/\bLIMO?(?:\s+cells)?\b/g,'Learning cells'):value;}
 export function translateNxrText(value, language = currentNxrLanguage()) {
+    return publicKnowledgeText(translateInternalText(value,language));
+}
+function translateInternalText(value, language = currentNxrLanguage()) {
     if(value==null)return value;
     const text = normalize(value);
     const source=translatedSources.get(text.toLocaleLowerCase('en'));

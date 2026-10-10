@@ -4,7 +4,7 @@ import {localizedCanvasContext,translateNxrText} from './i18n.js';
 
 // Upload the actual miniature meshes to the session's context: each eye sees
 // its own perspective, depth and occlusion, including the land's solid sides.
-export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false}={}){
+export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false,fadeTransform=true}={}){
     const resources=[],cache=new Map(),textures=new Map(),textureVersions=new Map(),instanceGeometry=new Map(),instanceBuffers=new WeakMap();
     // This renderer shares the XR context with every panel and object. Keep
     // its attribute pointers in a private VAO so deleting map buffers cannot
@@ -38,7 +38,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
     const instanceColourAttribute=gl.getAttribLocation(program,'ic');
     const surfaceMatrix=new THREE.Matrix4(),surfaceNormal=new THREE.Matrix3(),eyeMatrix=new THREE.Matrix4();
     const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),materialColours=new WeakMap(),renderNodes=[];
-    scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});let prepareIndex=0;
+    scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});if(detailed)renderNodes.sort((a,b)=>Number(Boolean(a.material?.transparent))-Number(Boolean(b.material?.transparent)));let prepareIndex=0;
     function geometry(source){
         if(cache.has(source)){
             const entry=cache.get(source);
@@ -115,7 +115,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         }
         const transparent=material.transparent || opacity<.999;
         if(transparent){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);
-        gl.depthMask(!transparent);gl.disable(gl.CULL_FACE);
+        gl.depthMask(detailed ? material.depthWrite!==false && !material.transparent : !transparent);gl.disable(gl.CULL_FACE);
         const start=batch?0:node.geometry.drawRange.start,count=batch?node.count*batch.verticesPerInstance:Math.min(entry.count-start,node.geometry.drawRange.count);
         if(count>0){if(gpu)instancing.draw(gl.TRIANGLES,start,count,node.count);else gl.drawArrays(node.isLine?gl.LINE_STRIP:gl.TRIANGLES,start,count);}
         if(gpu){for(const attribute of matrixAttributes){instancing.divisor(attribute,0);gl.disableVertexAttribArray(attribute);}instancing.divisor(instanceColourAttribute,0);gl.disableVertexAttribArray(instanceColourAttribute);instancing.divisor(attributes[3],0);}
@@ -133,7 +133,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             if(opacity<=0)return;
             const previousBuffer=gl.getParameter(gl.ARRAY_BUFFER_BINDING),restoreAttributes=saveAttributes();
             try{
-            root.compose(new THREE.Vector3(origin.x,origin.y-.10*(1-opacity),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(worldScale*(.78+.22*opacity)));
+            root.compose(new THREE.Vector3(origin.x,origin.y-(fadeTransform ? .10*(1-opacity) : 0),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(worldScale*(fadeTransform ? .78+.22*opacity : 1)));
             gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
             for(const node of renderNodes){let visible=true;for(let parent=node;parent;parent=parent.parent)if(!parent.visible){visible=false;break;}if(!visible)continue;world.multiplyMatrices(root,node.matrixWorld);drawNode(node,world,opacity,node.isInstancedMesh && !(instancing && node.userData.livingMapDynamic)?batchInstances(node):null);}
             if(guidance){

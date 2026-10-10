@@ -165,11 +165,11 @@ test('each archetype keeps its ordered illustration while plant media retains ho
     }
     const panel = read('app/services/pimInfoPanel.js');
     assert.match(panel, /\['lim','fruit'\]\.includes\(selection\?\.mesh\)\s*\? learningPanelMedia\(selection\)/);
-    assert.match(panel, /imageSource=learningPanelMedia\(content\)\?\.image/);
-    assert.match(panel, /showLearning\(content\).*mediaCollapsed=true;mediaTouched=false/s);
+    assert.match(panel, /imageSource=learningPanelMedia\(selection\)\?\.image/);
+    assert.match(panel, /showLearning\(content\).*mediaCollapsed=!imageSource;mediaTouched=false/s);
     assert.match(panel, /focusPlant\(nextRecord,document,media=null\).*mediaCollapsed=!nextMedia\?\.image;mediaTouched=false/s);
     assert.doesNotMatch(panel, /LIMO cell sketch|LIMO CELL SKETCH|PLANT MEDIA/);
-    assert.match(panel, /caption:content.title \|\| '',plant:false/);
+    assert.match(panel, /caption:content.imageCaption \|\| content.title \|\| '',plant:false/);
     assert.match(panel, /caption:preview\?\.caption \|\| ''/);
 });
 

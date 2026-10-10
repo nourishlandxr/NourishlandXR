@@ -1,0 +1,18 @@
+{
+  "preview": "http://127.0.0.1:8769/docs/living-frame-blender/preview.html?model=full",
+  "model": "wrap-ring.glb",
+  "modelReady": true,
+  "initialAutoplaySecondsObserved": 0.2,
+  "trianglesObserved": 245804,
+  "meshesObserved": 106,
+  "rootGrowthSecondsObserved": 38,
+  "matureSecondsObserved": 60,
+  "viewsObserved": ["side detail","root detail","side","back","perspective"],
+  "floorReferenceUncheckedAndRestored": true,
+  "approvedFrontComparison": {"trianglesObserved":151644,"meshesObserved":78,"floorReferenceHidden":true},
+  "warningOrErrorLogsObserved": [],
+  "localWelcomeVersion": "0.9445",
+  "frontendBuildSucceeded": true,
+  "deployedByThisTask": false,
+  "headsetVerified": false
+}

@@ -1,0 +1,24 @@
+{
+  "stage": "true 3D blockout",
+  "approximate_dimensions": true,
+  "viewer_ground_y": -1.6,
+  "pond_y": -7.96,
+  "pond_below_viewer_ground_m": 6.36,
+  "pond_gltf": [
+    2,
+    -7.96,
+    -11
+  ],
+  "house_gltf": [
+    -6.0,
+    -2.3972801163502604,
+    -20.0
+  ],
+  "zones": {
+    "below_dam": "temperate trees",
+    "beside_house": "subtropical/tropical food forest terraces"
+  },
+  "source_photo_single_view": true,
+  "reference_image_exported": false,
+  "separate_from_living_frame": true
+}

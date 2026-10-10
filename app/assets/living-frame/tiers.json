@@ -1,0 +1,33 @@
+{
+  "sd": {
+    "triangles": 140552,
+    "meshes": 94,
+    "bytes": 13876024,
+    "omitted": [
+      "Aerial root fine branching wave 0",
+      "Aerial root fine branching wave 1",
+      "Aerial root fine branching wave 2",
+      "Plant attached roots architecture 0 wave 0",
+      "Plant attached roots architecture 0 wave 1",
+      "Plant attached roots architecture 0 wave 2",
+      "Plant attached roots architecture 0 wave 3",
+      "Plant attached roots architecture 1 wave 0",
+      "Plant attached roots architecture 1 wave 1",
+      "Plant attached roots architecture 1 wave 2",
+      "Plant attached roots architecture 1 wave 3",
+      "Plant attached roots architecture 2 wave 0",
+      "Plant attached roots architecture 2 wave 1",
+      "Plant attached roots architecture 2 wave 2",
+      "Plant attached roots architecture 2 wave 3",
+      "Plant attached roots outer side wave 0",
+      "Plant attached roots outer side wave 1",
+      "Plant attached roots outer side wave 2"
+    ]
+  },
+  "hd": {
+    "triangles": 255964,
+    "meshes": 112,
+    "bytes": 19974136
+  },
+  "source": "docs/living-frame-blender/moss-ring.glb"
+}

@@ -1,4 +1,4 @@
-import {currentGraphicsQuality} from './spatialVisualSettings.js';
+import {currentGraphicsQuality,getSpatialVisualSettings} from './spatialVisualSettings.js';
 import {prepareLivingFrameArtwork} from './livingFrameArtwork.js';
 // Small shared registry: bounded decoded images, concurrent request deduplication,
 // retryable failures, and real settled-asset progress. Project/API data is never cached here.
@@ -32,13 +32,15 @@ export const AR_PRELOAD_ASSETS=Object.freeze({
  // Remaining tutorial/LIMO illustrations, project media and optional audio stay on demand.
 });
 const sessions=new Map();
-function stateFor(experience){const key=experience+':'+currentGraphicsQuality();if(!sessions.has(key))sessions.set(key,{prepared:false,active:null,progress:{loaded:0,total:0,failures:[]},listeners:new Set()});return sessions.get(key);}
+function stateFor(experience){const key=experience+':'+currentGraphicsQuality()+':'+getSpatialVisualSettings().livingFrameQuality;if(!sessions.has(key))sessions.set(key,{prepared:false,active:null,progress:{loaded:0,total:0,failures:[]},listeners:new Set()});return sessions.get(key);}
 export function arAssetsReady(experience='demo'){return stateFor(experience).prepared;}
 export function prepareArAssets({onProgress=()=>{},retry=false,experience='demo'}={}){
  const state=stateFor(experience);state.listeners.add(onProgress);onProgress(state.progress);
  if(retry && !state.active)state.prepared=false;
  if(!state.active && !state.prepared){
   const assets=(experience==='demo'?AR_PRELOAD_ASSETS.critical:[]).map(path=>({id:path,critical:true,load:()=>loadPreparedImage(assetURL(path))}));
+  const frameQuality=getSpatialVisualSettings().livingFrameQuality;
+  if(frameQuality!=='off')assets.push({id:'living-frame-'+frameQuality,critical:false,load:()=>import('./livingFrameModel.js').then(module=>module.prepareLivingFrameModel(frameQuality))});
   if(experience!=='desktop' && currentGraphicsQuality()==='high')assets.push({id:'living-frame-artwork',critical:false,load:()=>prepareLivingFrameArtwork('high')});
   if(experience==='demo'){
    assets.push({id:'bee-model',critical:false,load:()=>import('./demoBeeModel.js').then(module=>module.prepareDemoBeeModel())});

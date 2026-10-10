@@ -58,10 +58,11 @@ test('floor toy bounces, settles and stays within reach at each Quest refresh ra
   assert.ok(bounced);assert.equal(p.state.velocity.y,0);assert.ok(Math.abs(p.state.position.y-HERO_TOY_RADIUS)<1e-8);
  }
 });
-test('Totem notification cycles stay bounded, accelerate on selection and respect reduced motion',()=>{
- const bright=totemNotificationLight({},100),dim=totemNotificationLight({},800);assert.equal(bright.strength,1);assert.equal(dim.strength,.02);
+test('Totem stays steady until selected, then pulses with contrast and respects reduced motion',()=>{
+ const bright=totemNotificationLight({},100),dim=totemNotificationLight({},800);assert.equal(bright.strength,.32);assert.deepEqual(dim,bright);
  assert.equal(totemNotificationLight({signNotificationSelected:true},400).strength,.02);
- assert.equal(totemNotificationLight({demoArriveAt:0},300).strength,.02);
+ assert.equal(totemNotificationLight({demoArriveAt:0},300).strength,.32);
+ const selected={signNotificationSelected:true};assert.equal(totemNotificationLight(selected,100).strength,1);assert.notDeepEqual(totemNotificationLight(selected,100).colour,totemNotificationLight(selected,800).colour);
  for(let t=0;t<15000;t+=37){const light=totemNotificationLight({},t);assert.ok(light.strength>=0 && light.strength<=1);assert.ok(light.colour.every(c=>c>=0 && c<=1));}
  const previous=globalThis.matchMedia;globalThis.matchMedia=()=>({matches:true});try{
   const record={appearance:{notificationColor:'#eaa8b9'}},first=totemNotificationLight(record,100);assert.deepEqual(first.colour,[234/255,168/255,185/255]);assert.deepEqual(totemNotificationLight(record,9000),first);

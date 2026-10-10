@@ -232,6 +232,6 @@ export function createLimoSpatialExperience({panel,loadContext,publishRecord=nul
   return {...value,selectedId:state.cellId,pinnedIds:[...pinned].filter(Boolean)};
  }
  function graph(){return graphCache || buildGraph();}
- function close(){closed=true;request++;connections.cancel();graphCache=null;remember();onClose();}
+ function close({notify=true}={}){closed=true;request++;connections.cancel();graphCache=null;remember();if(notify)onClose();}
  return {open:start,show(){closed=false;render();},select,handle,close,content,graph,cell:connections.cell,snapshot:()=>({context,state:JSON.parse(JSON.stringify(state)),records:JSON.parse(JSON.stringify(records)),connections:connections.snapshot()})};
 }

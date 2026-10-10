@@ -12,12 +12,14 @@ test('Fruit Window laser contacts follow translated and rotated geometry and rej
  const vector=p=>new THREE.Vector3(p.x,p.y,p.z),caster=new THREE.Raycaster();
  const localRay=ray=>({origin:vector(ray.origin).sub(anchor.position).applyQuaternion(anchor.quaternion.clone().invert()),direction:vector(ray.direction).applyQuaternion(anchor.quaternion.clone().invert()).normalize()});
  const cast=ray=>{caster.set(ray.origin,ray.direction);return caster.intersectObjects(content.children,true);};
- const api=vm.runInNewContext('({'+method+'})',{shown:true,xrGl:{},THREE,anchor,vector,localRay,cast,botanicalHit:()=> 'fruit'});
+ const context={shown:true,fadeStartedAt:null,xrGl:{},THREE,anchor,vector,localRay,cast,botanicalHit:()=> 'fruit'};
+ const api=vm.runInNewContext('({'+method+'})',context);
  const normal=new THREE.Vector3(0,0,1).applyQuaternion(anchor.quaternion),origin=anchor.position.clone().addScaledVector(normal,1),direction=normal.clone().negate();
  const contact=api.hit({origin,direction});assert.equal(contact.kind,'fruit-window');assert.ok(Math.abs(contact.distance-.94)<.002);
  const point=vector(contact.point);assert.ok(point.distanceTo(anchor.position.clone().addScaledVector(normal,.06))<.002);
  assert.equal(api.hit({origin:origin.clone().add(new THREE.Vector3(3,0,0)),direction}),null);
  assert.equal(api.hit({origin,direction:normal}),null);
+ context.fadeStartedAt=100;assert.equal(api.hit({origin,direction}),null);
 });
 test('Stage changes and return preserve the placement applied by the Fruit Window',()=>{
  const scene=new THREE.Group(),species=new THREE.Group(),fruit=new THREE.Group();fruit.name='fruit';species.add(fruit);scene.add(species);

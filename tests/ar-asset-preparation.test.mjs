@@ -18,7 +18,7 @@ test('image requests and decoding are reused; timeout failures can retry',async 
  const first=loadPreparedImage('shared');assert.equal(first,loadPreparedImage('shared'));await first;assert.equal(first,loadPreparedImage('shared'));assert.equal(requests,1);assert.equal(decodes,1);
  await assert.rejects(loadPreparedImage('timeout',{timeoutMs:5}),/timed out/);fail=false;await loadPreparedImage('timeout');assert.equal(decodes,2);
 });
-test('Creator preparation avoids all demo downloads; fonts settle before readiness',async()=>{
+test('startup prepares the selected Living Frame and fonts without loading demo insects',async()=>{
  assert.ok(AR_PRELOAD_ASSETS.critical.length<3);assert.ok(AR_PRELOAD_ASSETS.nearFuture.length<4);
- const result=await prepareArAssets({experience:'creator'});assert.equal(result.total,3);assert.equal(arAssetsReady('creator'),true);
+ const result=await prepareArAssets({experience:'creator'});assert.equal(result.total,4);assert.ok(!result.failures.some(item=>/bee|butterfly/.test(item.id)));assert.equal(arAssetsReady('creator'),true);
 });

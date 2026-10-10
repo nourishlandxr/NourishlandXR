@@ -1,0 +1,23 @@
+{
+  "stage": 6,
+  "url": "http://127.0.0.1:8769/docs/living-frame-blender/preview.html?model=full",
+  "observedStatus": "GLB loaded · 255,964 triangles · 112 meshes · complete planted rim",
+  "checks": [
+    "initial growth on reload",
+    "mature moss and droplets viewed up close",
+    "42 second comparison before dew",
+    "front text clearance at 60 seconds",
+    "approved wrap model still loads and blooms",
+    "local welcome badge V0.9446"
+  ],
+  "console": [],
+  "screenshots": [
+    "moss-preview-finish.png",
+    "moss-preview-before-dew.png",
+    "moss-preview-front.png",
+    "welcome-0.9446.png"
+  ],
+  "liveFrameChanged": false,
+  "headsetVerified": false,
+  "deployed": false
+}

@@ -12,7 +12,7 @@ function outline(ctx) {
  ctx.closePath();
 }
 export const WELCOME_RIM_MOTION = Object.freeze({revolutionMs:1200000,refreshMs:1000});
-export function drawArWelcomePanel(ctx,{elapsed=0,reducedMotion=false,backgroundOpacity=currentInfoOpacity(),simple=false}={}) {
+export function drawArWelcomePanel(ctx,{elapsed=0,reducedMotion=false,backgroundOpacity=currentInfoOpacity(),simple=false,rim=true}={}) {
  ctx.save();
  const opacity=Math.max(0,Math.min(1,backgroundOpacity));
  const glass=ctx.createLinearGradient(190,110,1210,990);
@@ -21,7 +21,7 @@ export function drawArWelcomePanel(ctx,{elapsed=0,reducedMotion=false,background
  glass.addColorStop(1,`rgba(6,17,23,${opacity})`);
  outline(ctx);ctx.fillStyle=glass;ctx.fill();
  // The inner circle stays exact; bark texture lives on the outer rim only.
- ctx.strokeStyle=INFO_GLASS.soilEdge;ctx.lineWidth=6;ctx.stroke();
+ if(rim){ctx.strokeStyle=INFO_GLASS.soilEdge;ctx.lineWidth=6;ctx.stroke();}
  if(simple){ctx.restore();return;}
  const {cx,cy,radius}=WELCOME_SHAPE;
  ctx.save();ctx.lineCap='round';

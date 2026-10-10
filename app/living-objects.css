@@ -289,6 +289,11 @@
     object-fit:fill;
     filter:saturate(1.08) drop-shadow(0 22px 42px rgba(4,24,14,.2));
 }
+.tryit-demo[data-lim-surface="true"] .tryit-live-welcome canvas[data-living-frame] {
+    position:absolute;
+    pointer-events:none;
+    filter:none;
+}
 .tryit-demo[data-lim-surface="true"] .tryit-live-welcome button[data-welcome-cell] {
     border-color:transparent !important;
     background:transparent !important;
@@ -2227,7 +2232,7 @@ body[data-project-theme] .creator-ar-context-toolbar button {
     backdrop-filter:blur(14px) saturate(.9);
 }
 
-/* Calm glass Continue control and botanical PIMO typography. */
+/* Calm glass Continue control and botanical plant typography. */
 .tryit-demo .tryit-demo-taskbar .tryit-intro-continue:not([hidden]),
 .tryit-demo .tryit-context-trigger[data-context-mode="continue"] {
  background:linear-gradient(145deg,rgba(15,29,34,var(--nlxr-panels-opacity,.38)),rgba(6,17,23,var(--nlxr-panels-opacity,.38)))!important;color:#f8f6ed!important;
@@ -2547,3 +2552,24 @@ body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],butt
 .tryit-live-welcome button.is-limo-compatible{outline:3px solid #f2d990;outline-offset:4px;}
 .tryit-live-welcome button.is-limo-source{outline:3px solid #f2d990;outline-offset:4px;}
 .tryit-live-welcome button.is-limo-discovery{border-color:#d1c298;}
+
+/* Ready actions invite a deliberate next step with an outline only. */
+@keyframes demo-ready-outline{0%,100%{outline-color:rgba(193,239,210,.2);outline-offset:2px}50%{outline-color:rgba(193,239,210,.9);outline-offset:6px}}
+.tryit-context-trigger:not([hidden]):not(:disabled),.tryit-intro-continue:not([hidden]):not(:disabled){outline:2px solid rgba(193,239,210,.3);animation:demo-ready-outline 1.6s ease-in-out infinite}
+.note-anchor.is-note-collapsed button{width:64px;height:64px;padding:10px;border-radius:15px;background:#243e34;border:1px solid #bcd4b0;color:#edf2dc}
+.note-anchor.is-note-collapsed svg{display:block;width:100%;height:100%}
+@media(prefers-reduced-motion:reduce){.tryit-context-trigger,.tryit-intro-continue{animation:none!important}}
+.has-fruit-observation .tryit-context-trigger:not([hidden]){position:fixed!important;left:auto!important;top:auto!important;right:18px!important;bottom:18px!important;transform:none!important;z-index:13030!important}
+
+.demo-note-showcase .note-anchor.is-note-collapsed button{width:64px;height:64px;border-radius:15px;background:#263e35;border:1px solid #a8bfa2;box-shadow:0 3px 10px #0003;padding:8px}
+/* The desktop console is a fixed shell; reading changes stay inside it. */
+.nlxr-info-panel.is-demo-panel.is-desktop-demo-panel:not(.is-hidden){position:fixed!important;left:18px;top:auto!important;bottom:18px!important;width:min(440px,36vw)!important;height:min(420px,58dvh)!important;min-height:0;max-height:none!important;grid-template-rows:100px minmax(0,1fr) 70px;}
+.nlxr-info-panel.is-desktop-demo-panel > .nlxr-control-header{height:100px;min-height:0;overflow:auto;}
+.nlxr-info-panel.is-desktop-demo-panel > [role=tabpanel]{min-height:0;overflow:auto;}
+.nlxr-info-panel.is-desktop-demo-panel > .nlxr-tools-dock{height:70px;overflow:auto;}
+.nlxr-info-panel.is-desktop-demo-panel.has-fruit-choices{grid-template-rows:100px minmax(0,1fr) 170px!important;}
+.nlxr-info-panel.is-desktop-demo-panel.has-fruit-choices > .nlxr-tools-dock{height:170px;}
+.nlxr-info-panel.is-desktop-demo-panel.has-fruit-choices .nlxr-control-utilities{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;}
+.nlxr-info-panel.is-desktop-demo-panel.has-fruit-choices button[data-control-kind="fruit-choice"]{padding:8px!important;min-height:48px;}
+.nlxr-info-panel.is-desktop-demo-panel > .nlxr-media-wing{height:min(260px,32dvh)!important;min-height:0;max-height:none;bottom:calc(100% + 8px);top:auto;}
+@media(max-width:700px){.nlxr-info-panel.is-demo-panel.is-desktop-demo-panel:not(.is-hidden){left:8px;width:calc(100vw - 16px)!important;height:42dvh!important;bottom:8px!important;}.nlxr-info-panel.is-desktop-demo-panel > .nlxr-media-wing{height:24dvh!important;}}

@@ -309,3 +309,18 @@ test('XR grips move only the chosen wing and cancel safely when the wing is remo
     const previous={...wing.position};matrix.makeTranslation(.2,.1,-.08);input.update(frame);assert.ok(Math.abs(wing.position.x-previous.x-.2)<1e-6);assert.deepEqual(state.root,root);assert.equal(activations,0);
     removeExplorerWing(record,knowledge,'explorer-wildlife');input.update(frame);assert.equal(input.active,null);event('squeezeend');assert.equal(activations,0);input.destroy();
 });
+
+test('held Plant cells turn with the stick, change distance and retain the adjustment when centred',()=>{
+    class Session extends EventTarget{inputSources=[];visibilityState='visible';}
+    const original=globalThis.performance;let time=0;globalThis.performance={now:()=>time};
+    const record=fixture(),object=record.explorerMolecule.root,s=new Session(),source={targetRaySpace:{},gripSpace:{},gamepad:{axes:[0,0,0,0]}};s.inputSources=[source];
+    const basis={position:{x:0,y:0,z:-1},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:0,z:1}};
+    const input=bindExplorerMoleculeInteraction(s,{}, {hit:()=>({record,knowledge,object,pose:basis,node:{explorerNodeId:'core'}}),near:()=>null}),frame={getPose:()=>({transform:{matrix:new THREE.Matrix4().elements}})};
+    try{
+        input.update(frame);const event=new Event('squeezestart');Object.defineProperty(event,'inputSource',{value:source});s.dispatchEvent(event);
+        const before=localObjectMatrix(object),worldBefore=knowledgePoseMatrix(basis).multiply(before),distanceBefore=new THREE.Vector3().setFromMatrixPosition(worldBefore).length();
+        source.gamepad.axes=[0,0,1,-1];time=50;input.update(frame);const turned=localObjectMatrix(object),distanceAfter=new THREE.Vector3().setFromMatrixPosition(knowledgePoseMatrix(basis).multiply(turned)).length();
+        assert.ok(distanceAfter<distanceBefore);assert.ok(object.rotation.y>0);
+        source.gamepad.axes=[0,0,0,0];time=100;input.update(frame);assert.deepEqual(localObjectMatrix(object).elements,turned.elements);
+    }finally{input.destroy();globalThis.performance=original;}
+});

@@ -5,11 +5,13 @@ import {FruitDiscoveryAsset} from '../assets/fruit-window/discovery-runtime.js';
 import {FRUIT_WINDOW_LIBRARY,fruitWindowSpecies,fruitWindowCanPick,FruitWindowGripPair,FruitWindowTriggerHold} from './fruitWindowInteraction.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
 import {localizedCanvasContext,translateNxrText as t,translateApp} from './i18n.js';
+import {spatialStick} from './spatialStick.js';
 
 const assets=new URL('../assets/fruit-window/',import.meta.url);
 const vector=point=>new THREE.Vector3(point.x,point.y,point.z);
 const visible=node=>{for(let parent=node;parent;parent=parent.parent)if(!parent.visible)return false;return true;};
 const disposeScene=scene=>scene?.traverse(node=>{if(!node.isMesh)return;node.geometry.dispose();for(const material of Array.isArray(node.material)?node.material:[node.material]){for(const value of Object.values(material))if(value?.isTexture)value.dispose();material.dispose();}});
+export function fruitWindowMotionActive(asset,{held=0,hover=false,hoverAmount=0,hoverOffsets=0}={}){return Boolean(asset?.playing || asset?.motion || Math.abs((asset?.opening||0)-(asset?.targetOpening||0))>1e-5 || held || hover || hoverAmount>.0001 || hoverOffsets);}
 
 export function createFruitWindowExperience({root=document.body,identity={},showLibraryChoices=true,onHide=()=>{},onState=()=>{},onMedia=()=>{}}={}){
     if(!document.querySelector('link[data-fruit-window-style]')){const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./fruitWindow.css',import.meta.url).href;style.dataset.fruitWindowStyle='';document.head.append(style);}
@@ -21,20 +23,21 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     for(const item of FRUIT_WINDOW_LIBRARY){const option=document.createElement('option');option.value=item.id;option.textContent=item.label;select.append(option);}
     const actions=[['play','Play development'],['pause','Pause'],['return','Return fruit']];
     for(const [action,label] of actions){const button=document.createElement('button');button.type='button';button.dataset.action=action;button.textContent=label;nav.append(button);}
-    const scene=new THREE.Scene();scene.background=new THREE.Color(0xdce3d8);
-    scene.add(new THREE.HemisphereLight(0xfff4d7,0x304435,1.7));const light=new THREE.DirectionalLight(0xffffff,1.8);light.position.set(-1,2,3);scene.add(light);
+    const scene=new THREE.Scene();scene.background=new THREE.Color(0x718477);
+    scene.add(new THREE.HemisphereLight(0xfff4d7,0x304435,1.1));const light=new THREE.DirectionalLight(0xfff4e0,1.2);light.position.set(-1,2,3);scene.add(light);
     const content=new THREE.Group();scene.add(content);
     const plantMount=new THREE.Group();content.add(plantMount);
     const branchSupports=new THREE.Group();content.add(branchSupports);
     const nameCanvas=document.createElement('canvas');nameCanvas.width=768;nameCanvas.height=112;
-    const nameTexture=new THREE.CanvasTexture(nameCanvas),nameMaterial=new THREE.MeshBasicMaterial({map:nameTexture,transparent:true,depthWrite:false});
-    const nameplate=new THREE.Mesh(new THREE.PlaneGeometry(.48,.045),nameMaterial);nameplate.position.set(0,.278,.117);content.add(nameplate);
+    const nameTexture=new THREE.CanvasTexture(nameCanvas);nameTexture.colorSpace=THREE.SRGBColorSpace;const nameMaterial=new THREE.MeshBasicMaterial({map:nameTexture,transparent:true,depthWrite:false});
+    const nameplate=new THREE.Mesh(new THREE.PlaneGeometry(.48,.064),nameMaterial);nameplate.position.set(0,.278,.061);content.add(nameplate);
+    const plaque=new THREE.Mesh(new THREE.BoxGeometry(.49,.074,.004),new THREE.MeshStandardMaterial({color:0x9ca895,roughness:1}));plaque.position.set(0,.278,.058);content.add(plaque);
     const playCanvas=document.createElement('canvas');playCanvas.width=128;playCanvas.height=128;const pc=playCanvas.getContext('2d');pc.fillStyle='rgba(25,51,40,.9)';pc.beginPath();pc.roundRect(2,2,124,124,28);pc.fill();pc.strokeStyle='#bbebc7';pc.lineWidth=4;pc.stroke();pc.fillStyle='#f8ffed';pc.beginPath();pc.moveTo(48,32);pc.lineTo(94,64);pc.lineTo(48,96);pc.closePath();pc.fill();
     const playTexture=new THREE.CanvasTexture(playCanvas),playMaterial=new THREE.MeshBasicMaterial({map:playTexture,transparent:true,depthWrite:false});
     const playButton=new THREE.Mesh(new THREE.PlaneGeometry(.07,.07),playMaterial);playButton.position.set(.26,-.36,.166);playButton.name='Flower_development_play';content.add(playButton);
     playButton.visible=true;
     const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;
-    const camera=new THREE.PerspectiveCamera(36,1,.01,20);camera.position.set(.05,.08,1.65);
+    const camera=new THREE.PerspectiveCamera(36,1,.01,20);camera.position.set(.02,.02,1.18);
     const orbit=new OrbitControls(camera,canvas);orbit.target.set(0,0,0);orbit.enableDamping=true;orbit.minDistance=.65;orbit.maxDistance=2.4;orbit.enablePan=false;
     const loader=new GLTFLoader(),raycaster=new THREE.Raycaster(),grips=new FruitWindowGripPair(),fruitHold=new FruitWindowTriggerHold();
     const anchor={position:new THREE.Vector3(.75,1.3,-1.3),quaternion:new THREE.Quaternion()};
@@ -46,32 +49,63 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     const arrowTip=new THREE.Mesh(new THREE.ConeGeometry(.009,.022,8),arrowMaterial);arrowTip.rotation.z=Math.PI;arrow.add(arrowTip);
     const arrowStem=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,.018,6),arrowMaterial);arrowStem.position.y=.018;arrow.add(arrowStem);content.add(arrow);arrow.visible=false;
     let asset=null,frame=null,xr=null,xrGl=null,session=null,space=null,shown=true,destroyed=false,loadVersion=0,placed=false,lastTime=0,raf=0,activeSpecies=null,hover=null,leaves=[],hoverOffsets=[],identityValue=identity,identityKey='',hoverAmount=0,hoverNodes=[];
-    const pointers=new Map(),selections=new Set();let pointerSnapshot=null,loading=false,lastControlState='',hoverSampleAt=-Infinity;
-    let dockPose=null,magnetized=true;
+    const pointers=new Map(),selections=new Set();let pointerSnapshot=null,loading=false,lastControlState='',hoverSampleAt=-Infinity,modelDirty=true,arrowSampleAt=-Infinity,modelUpdates=0,boundsUpdates=0;
+    let dockPose=null,magnetized=true,fadeStartedAt=null,fadeTimer=0;
+    const fadeOpacity=time=>fadeStartedAt===null?1:Math.max(0,1-(time-fadeStartedAt)/550);
     function finishBoxGrip(){if(!grips.holds.size && dockPose && anchor.position.distanceTo(dockPose.position)<.22){anchor.position.copy(dockPose.position);anchor.quaternion.copy(dockPose.quaternion);magnetized=true;}}
     function joinBranchToWalls(){
         disposeScene(branchSupports);branchSupports.clear();let wood=null,best=0;
         asset.object.traverse(node=>{if(!node.isMesh || !/woody|branch|trunk|stem/i.test(node.name) || /leaf|stalk|vein|petiole|fruit/i.test(node.name))return;const box=new THREE.Box3().setFromObject(node),score=box.getSize(new THREE.Vector3()).lengthSq();if(score>best){wood=node;best=score;}});
         if(!wood)return;
         const box=new THREE.Box3().setFromObject(wood),size=box.getSize(new THREE.Vector3()),axis=size.x>size.y?'x':'y',attribute=wood.geometry.attributes.position;
-        let low=null,high=null;
-        for(let i=0;i<attribute.count;i++){const point=content.worldToLocal(new THREE.Vector3().fromBufferAttribute(attribute,i).applyMatrix4(wood.matrixWorld));if(!low || point[axis]<low[axis])low=point;if(!high || point[axis]>high[axis])high=point;}
-        for(const [point,side] of [[low,-1],[high,1]]){if(!point)continue;const end=point.clone();end[axis]=side*.319;const direction=end.clone().sub(point),length=direction.length();if(length<.001)continue;const original=Array.isArray(wood.material)?wood.material[0]:wood.material;const support=new THREE.Mesh(new THREE.CylinderGeometry(.004,.005,length,8),original.clone());support.name='Observation_branch_support';support.position.copy(point).add(end).multiplyScalar(.5);support.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());branchSupports.add(support);}
+        const points=[];
+        for(let i=0;i<attribute.count;i++)points.push(content.worldToLocal(new THREE.Vector3().fromBufferAttribute(attribute,i).applyMatrix4(wood.matrixWorld)));
+        points.sort((a,b)=>a[axis]-b[axis]);
+        const span=points.at(-1)[axis]-points[0][axis];if(span<.001)return;
+        for(const side of [-1,1]){
+            const extreme=side<0?points[0][axis]:points.at(-1)[axis],distance=p=>side*(extreme-p[axis]);
+            const tip=points.filter(p=>distance(p)<=span*.04),neck=points.filter(p=>distance(p)>=span*.12 && distance(p)<=span*.28);
+            if(!tip.length || !neck.length)continue;
+            const centre=cloud=>cloud.reduce((sum,p)=>sum.add(p),new THREE.Vector3()).divideScalar(cloud.length);
+            const point=centre(tip),inside=centre(neck),direction=point.clone().sub(inside).normalize();
+            if(direction[axis]*side<=.1)continue;
+            const radii=tip.map(p=>{const offset=p.clone().sub(point);return offset.addScaledVector(direction,-offset.dot(direction)).length();}).sort((a,b)=>a-b);
+            const radius=THREE.MathUtils.clamp(radii[Math.floor(radii.length*.65)],.0015,.012);
+            const start=point.clone().addScaledVector(direction,-radius*2);
+            // Continue the actual end tangent until it enters an enclosure wall.
+            // A shallow curve and taper keep this part of the branch, not a rail.
+            const contacts=['x','y'].map(key=>Math.abs(direction[key])>.001?((direction[key]>0?.324:-.324)-start[key])/direction[key]:Infinity).filter(value=>value>0);
+            const length=Math.min(...contacts);if(!Number.isFinite(length)||length<.002)continue;
+            const end=start.clone().addScaledVector(direction,length);
+            const bend=new THREE.Vector3(-direction.y,direction.x,0).normalize().multiplyScalar(Math.min(.012,length*.06)*side);
+            const curve=new THREE.CatmullRomCurve3([start,start.clone().addScaledVector(direction,length*.32),start.clone().addScaledVector(direction,length*.7).add(bend),end]);
+            for(const p of curve.points)p.z=THREE.MathUtils.clamp(p.z,-.045,.045);
+            const geometry=new THREE.TubeGeometry(curve,12,radius,8,false),positions=geometry.attributes.position;
+            for(let ring=0;ring<=12;ring++){
+                const amount=ring/12,c=curve.getPointAt(amount),taper=1-.18*amount;
+                for(let segment=0;segment<=8;segment++){const index=ring*9+segment,p=new THREE.Vector3().fromBufferAttribute(positions,index).sub(c).multiplyScalar(taper*(1+.025*Math.sin(segment*2.4+ring*.8))).add(c);positions.setXYZ(index,p.x,p.y,p.z);}
+            }
+            geometry.computeVertexNormals();
+            const original=Array.isArray(wood.material)?wood.material[0]:wood.material,extension=new THREE.Mesh(geometry,original.clone());
+            extension.name='Observation_branch_extension';branchSupports.add(extension);
+        }
     }
-    const fruitBox=new THREE.Box3(),fruitCenter=new THREE.Vector3();
+    const fruitBox=new THREE.Box3(),fruitCenter=new THREE.Vector3(),observationBounds=new THREE.Box3(new THREE.Vector3(-.43,-.44,-.14),new THREE.Vector3(.43,.4,.27));
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let statusCopy=null;
     function announce(message){statusCopy=message;status.textContent=message();element.dataset.status=status.textContent;translateApp(element);onState();}
-    function labelWindow(label){const ctx=localizedCanvasContext(nameCanvas.getContext('2d'));ctx.clearRect(0,0,768,112);ctx.fillStyle='rgba(18,40,31,.92)';ctx.beginPath();ctx.roundRect(2,2,764,108,25);ctx.fill();ctx.strokeStyle='#a4c9b5';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#fff9e7';ctx.font='600 46px Manrope, system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,384,56,720);nameTexture.needsUpdate=true;}
+    function labelWindow(item){const ctx=localizedCanvasContext(nameCanvas.getContext('2d'));ctx.clearRect(0,0,768,112);ctx.fillStyle='#9ca895';ctx.fillRect(0,0,768,112);ctx.textAlign='center';ctx.textBaseline='middle';ctx.shadowColor='#cbd3bf';ctx.shadowOffsetY=2;ctx.fillStyle='#263b31';ctx.font='750 39px Manrope, system-ui';ctx.fillText(item.label,384,36,720);ctx.font='italic 500 27px Manrope, system-ui';ctx.fillText(item.scientific,384,82,720);ctx.shadowOffsetY=0;nameTexture.needsUpdate=true;}
     function describeContext(){
         const match=fruitWindowSpecies(identityValue),plant=identityValue.plant||identityValue.commonName||'this PIMO';
         const same=match&&(match.id===activeSpecies?.id||match.id.startsWith('pigeon_pea_')&&activeSpecies?.id.startsWith('pigeon_pea_'));
         context.textContent=same?t('Visual example for')+' '+t(plant):match?t('Library example')+': '+t(activeSpecies?.label||'choose a plant')+'. '+t('PIMO information remains')+' '+t(plant)+'.':t('No matching model for')+' '+t(plant)+'. '+t('Library example')+': '+t(activeSpecies?.label||'choose a plant')+'.';
     }
     function syncButtons(){
-        element.dataset.stage=asset?.mode||'loading';element.dataset.picked=String(Boolean(asset?.picked));element.dataset.arrow=String(arrow.visible);element.dataset.hover=hover?.kind||'';element.dataset.hoverAmount=String(hoverAmount);element.dataset.grips=String(grips.holds.size);
+        const values={stage:asset?.mode||'loading',picked:String(Boolean(asset?.picked)),arrow:String(arrow.visible),hover:hover?.kind||'',hoverAmount:String(Math.round(hoverAmount*100)/100),grips:String(grips.holds.size)};
+        for(const [key,value] of Object.entries(values))if(element.dataset[key]!==value)element.dataset[key]=value;
+        const controlState=[Boolean(asset),asset?.canPick,asset?.picked,asset?.mode].join('|');if(controlState===lastControlState)return;
         for(const button of nav.querySelectorAll('button')){const action=button.dataset.action;button.disabled=!asset||(['pick','open','close'].includes(action)&&!asset.canPick)||(action==='pick'&&asset.picked)||(action==='return'&&!asset.picked);button.setAttribute('aria-pressed',String(asset?.mode===action));}
-        const controlState=[Boolean(asset),asset?.canPick,asset?.picked,asset?.mode].join('|');if(controlState!==lastControlState){lastControlState=controlState;onState();}
+        lastControlState=controlState;onState();
     }
     function restoreHover(){for(const [node,q] of hoverOffsets)node.quaternion.copy(q);hoverOffsets=[];}
     function botanicalHit(intersection){
@@ -91,6 +125,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     }
     function localRay(ray){const inverse=anchor.quaternion.clone().invert();return {origin:vector(ray.origin).sub(anchor.position).applyQuaternion(inverse),direction:vector(ray.direction).applyQuaternion(inverse).normalize()};}
     function cast(ray){
+        if(!asset?.picked && !fruitHold.holds.size && !new THREE.Ray(ray.origin,ray.direction).intersectsBox(observationBounds))return [];
         content.updateMatrixWorld(true);raycaster.set(ray.origin,ray.direction);
         const hits=raycaster.intersectObjects(content.children,true).filter(hit=>visible(hit.object));
         // The opaque enclosure also blocks picking through its back or sides.
@@ -101,7 +136,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     function restoreXR(){xr?.destroy();xr=null;if(xrGl&&!destroyed&&asset){xr=createFruitWindowXR(xrGl,content);xr.update();}}
     async function choose(id){
         const item=FRUIT_WINDOW_LIBRARY.find(item=>item.id===id);if(!item)return;
-        const version=++loadVersion;loading=true;activeSpecies=item;select.value=id;describeContext();labelWindow(item.label+' · FDW');hover=null;hoverAmount=0;hoverNodes=[];grips.reset();fruitHold.reset();selections.clear();restoreHover();arrow.visible=false;
+        const version=++loadVersion;loading=true;modelDirty=true;arrowSampleAt=-Infinity;activeSpecies=item;select.value=id;describeContext();labelWindow(item);hover=null;hoverAmount=0;hoverNodes=[];grips.reset();fruitHold.reset();selections.clear();restoreHover();arrow.visible=false;
         xr?.destroy();xr=null;if(asset){plantMount.remove(asset.object);asset.dispose();asset=null;}leaves=[];syncButtons();announce(()=>t('Loading')+' '+t(item.label)+'…');
         let gltf=null;
         try{
@@ -111,34 +146,33 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             asset=new FruitDiscoveryAsset(gltf,config);plantMount.position.set(0,0,0);plantMount.scale.setScalar(1);plantMount.add(asset.object);content.updateMatrixWorld(true);
             // Fit the complete branch inside the square, once, independently
             // of the animation mixer so Harvest cannot undo the placement.
-            const bounds=new THREE.Box3().setFromObject(asset.object),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),scale=Math.min(1,.48/Math.max(size.x,size.y),.17/Math.max(.001,size.z));
+            const bounds=new THREE.Box3().setFromObject(asset.object),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),scale=Math.min(1,.48/Math.max(size.x,size.y),.09/Math.max(.001,size.z));
             plantMount.scale.setScalar(scale);plantMount.position.set(-center.x*scale,-center.y*scale,-center.z*scale);content.updateMatrixWorld(true);
             joinBranchToWalls();
             asset.object.traverse(node=>{if(node.isMesh&&/leaf|leaflet/i.test(node.name)&&!/(stalk|vein|petiole)/i.test(node.name))leaves.push(node);});
             if(!frame){
                 frame=new THREE.Group();frame.name='Fruit_observation_box';
-                const back=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.008),new THREE.MeshBasicMaterial({color:0xcdd7c9}));back.position.z=-.114;frame.add(back);
-                const wallMaterial=new THREE.MeshStandardMaterial({color:0xd8dfd3,roughness:.85});
+                const back=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.008),new THREE.MeshBasicMaterial({color:0x718477}));back.position.z=-.064;frame.add(back);
+                const wallMaterial=new THREE.MeshStandardMaterial({color:0x8a9989,roughness:1});
                 for(const [x,y,w,h] of [[0,.325,.66,.012],[0,-.325,.66,.012],[-.325,0,.012,.65],[.325,0,.012,.65]]){
-                    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,.22),wallMaterial);wall.position.set(x,y,0);frame.add(wall);
+                    const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,.12),wallMaterial);wall.position.set(x,y,0);frame.add(wall);
                 }
                 const rimMaterial=new THREE.MeshStandardMaterial({color:0xb5cbbf,roughness:.6});
                 for(const [x,y,w,h] of [[0,.325,.66,.009],[0,-.325,.66,.009],[-.325,0,.009,.65],[.325,0,.009,.65]]){
-                    const rim=new THREE.Mesh(new THREE.BoxGeometry(w,h,.012),rimMaterial);rim.position.set(x,y,.114);frame.add(rim);
+                    const rim=new THREE.Mesh(new THREE.BoxGeometry(w,h,.009),rimMaterial);rim.position.set(x,y,.064);frame.add(rim);
                 }
                 content.add(frame);
             }
-            if(xrGl)renderer.setSize(768,768,false);
-            renderer.render(scene,camera);
-            onMedia({image:canvas.toDataURL('image/png'),caption:item.label,imageAlt:item.label+' in the Fruit Discovery Window'});
+            if(!xrGl)renderer.render(scene,camera);
+            onMedia({image:item.image,caption:item.label,imageAlt:item.label,exampleId:item.id});
             restoreXR();syncButtons();announce(()=>t(item.label)+'. '+t('Ready. The arrow marks the fruit you can pick.'));onState();
         }catch(error){if(!destroyed&&version===loadVersion){announce(()=>t('Unable to load')+' '+t(item.label)+'. '+t('Try loading it again.'));console.error('[Fruit Window]',error);}}
         finally{if(version===loadVersion)loading=false;}
     }
     function updateRip(){
         if(!asset || !fruitHold.pair)return;
-        const progress=fruitHold.pullProgress();asset.setCutaway(progress);
-        if(progress>=1){const parts=asset.splitFruit(content);if(parts.length>=2){fruitHold.separate(parts);announce(()=>t('Opened. Inspect both halves and the seeds.'));}}
+        const progress=fruitHold.pullProgress();if(Math.abs(progress-asset.opening)>1e-5){asset.setCutaway(progress);modelDirty=true;}
+        if(progress>=1){const parts=asset.splitFruit(content);if(parts.length>=2){modelDirty=true;fruitHold.separate(parts);announce(()=>t('Opened. Inspect both halves and the seeds.'));}}
     }
     function updateIdentity(next){
         identityValue=next||{};const match=fruitWindowSpecies(identityValue),key=[identityValue.plant||identityValue.commonName,identityValue.scientific||identityValue.scientificName].join('|'),changed=key!==identityKey;identityKey=key;
@@ -148,6 +182,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     }
     function action(name){
         if(name==='hide'){onHide();return;}if(!asset)return;
+        modelDirty=true;arrowSampleAt=-Infinity;
         restoreHover();hover=null;
         if(asset.stages[name])asset.showStage(name);
         else if(name==='play'){fruitHold.reset();asset.play();}else if(name==='pause')asset.pause();
@@ -168,39 +203,44 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         button.addEventListener('pointermove',event=>{const point=pointers.get(event.pointerId);if(!point)return;point.x=event.clientX;point.y=event.clientY;if(pointers.size!==2)return;const values=[...pointers.values()],center={x:(values[0].x+values[1].x)/2,y:(values[0].y+values[1].y)/2};if(!pointerSnapshot){const box=element.getBoundingClientRect();pointerSnapshot={...center,left:box.left,top:box.top};return;}element.style.left=Math.max(0,Math.min(innerWidth-element.offsetWidth,pointerSnapshot.left+center.x-pointerSnapshot.x))+'px';element.style.top=Math.max(0,Math.min(innerHeight-80,pointerSnapshot.top+center.y-pointerSnapshot.y))+'px';});
         const release=event=>{pointers.delete(event.pointerId);pointerSnapshot=null;button.classList.remove('held');};button.addEventListener('pointerup',release);button.addEventListener('pointercancel',release);button.addEventListener('lostpointercapture',release);
     }
-    const resize=new ResizeObserver(()=>{const box=canvas.getBoundingClientRect();if(box.width&&box.height){renderer.setSize(box.width,box.height,false);camera.aspect=box.width/box.height;camera.updateProjectionMatrix();}});resize.observe(canvas);
+    let desktopDirty=true,desktopRenders=0;orbit.addEventListener('change',()=>{desktopDirty=true;});
+    const resize=new ResizeObserver(()=>{const box=canvas.getBoundingClientRect();if(box.width&&box.height){renderer.setSize(box.width,box.height,false);camera.aspect=box.width/box.height;camera.updateProjectionMatrix();desktopDirty=true;}});resize.observe(canvas);
     function advance(time){
-        const delta=Math.min(.05,Math.max(0,(time-lastTime)/1000));lastTime=time;restoreHover();asset?.update(delta);
+        const delta=Math.min(.05,Math.max(0,(time-lastTime)/1000));lastTime=time;
+        const moving=fruitWindowMotionActive(asset,{held:fruitHold.holds.size,hover,hoverAmount,hoverOffsets:hoverOffsets.length});
+        modelDirty ||= moving;restoreHover();if(moving)asset?.update(delta);
         hoverAmount+=((hover&&!reduced?1:0)-hoverAmount)*(1-Math.exp(-delta*8));
         // Keep a soft envelope so foliage settles instead of snapping back.
         if(hover && time-hoverSampleAt>120){hoverSampleAt=time;const nearby=hover.hit.point;hoverNodes=leaves.map(node=>({node,distance:node.getWorldPosition(new THREE.Vector3()).distanceToSquared(nearby)})).sort((a,b)=>a.distance-b.distance).slice(0,5).map(value=>value.node);if(hover.kind==='fruit' && !asset.picked)hoverNodes.unshift(asset.fruit);}
         const strength=Math.sin(time*.004)*.025*hoverAmount;
         if(strength&&asset)for(const node of hoverNodes){if(!visible(node)||asset.motion)continue;hoverOffsets.push([node,node.quaternion.clone()]);node.rotateZ(strength*(node===asset.fruit?.35:1));}
-        content.updateMatrixWorld(true);arrow.visible=fruitWindowCanPick(asset);
-        if(arrow.visible){fruitBox.setFromObject(asset.mainFruit);fruitBox.getCenter(fruitCenter);arrow.position.set(fruitCenter.x,fruitBox.max.y+.035,fruitCenter.z);}
-        syncButtons();if(xrGl){for(let i=0;i<6;i++)if(xr?.prepareNext())break;xr?.update();}
+        const showArrow=fruitWindowCanPick(asset);if(arrow.visible!==showArrow){arrow.visible=showArrow;modelDirty=true;}
+        if(modelDirty){content.updateMatrixWorld(true);if(arrow.visible && (arrowSampleAt===-Infinity || time-arrowSampleAt>=50)){fruitBox.setFromObject(asset.mainFruit);fruitBox.getCenter(fruitCenter);arrow.position.set(fruitCenter.x,fruitBox.max.y+.035,fruitCenter.z);arrowSampleAt=time;boundsUpdates++;}}
+        syncButtons();const changed=modelDirty;if(xrGl){for(let i=0;i<6;i++)if(xr?.prepareNext())break;if(modelDirty && xr){xr.update();modelUpdates++;modelDirty=false;}}else modelDirty=false;return changed;
     }
     function tick(time){
-        raf=0;if(destroyed||!shown)return;if(!xrGl){advance(time);orbit.update();renderer.render(scene,camera);}raf=requestAnimationFrame(tick);
+        raf=0;if(destroyed||!shown)return;if(!xrGl && !document.hidden){const changed=advance(time);orbit.update();if(changed || desktopDirty){renderer.render(scene,camera);desktopRenders++;desktopDirty=false;}}raf=requestAnimationFrame(tick);
     }
     const api={element,anchor,grips,
         dockBeside(panel){const box=panel?.getBoundingClientRect();if(!box)return;const width=Math.min(440,innerWidth*.38);element.style.width=width+'px';element.style.left=Math.max(8,Math.min(innerWidth-width-8,box.right+16))+'px';element.style.top=Math.max(8,Math.min(innerHeight-element.offsetHeight-8,box.top))+'px';},
-        show(next=identityValue){shown=true;element.hidden=Boolean(xrGl);updateIdentity(next);if(!asset&&!loading&&activeSpecies)choose(activeSpecies.id);lastTime=performance.now();if(!xrGl&&!raf)raf=requestAnimationFrame(tick);onState();},
-        hide(){shown=false;element.hidden=true;asset?.pause();grips.reset();fruitHold.reset();selections.clear();pointers.clear();pointerSnapshot=null;hover=null;hoverAmount=0;restoreHover();if(raf)cancelAnimationFrame(raf);raf=0;onState();},
+        show(next=identityValue){clearTimeout(fadeTimer);fadeTimer=0;fadeStartedAt=null;element.style.opacity='1';shown=true;element.hidden=Boolean(xrGl);updateIdentity(next);if(!asset&&!loading&&activeSpecies)choose(activeSpecies.id);lastTime=performance.now();if(!xrGl&&!raf)raf=requestAnimationFrame(tick);onState();},
+        hide({immediate=false}={}){asset?.pause();grips.reset();fruitHold.reset();selections.clear();pointers.clear();pointerSnapshot=null;hover=null;hoverAmount=0;restoreHover();clearTimeout(fadeTimer);const finish=()=>{shown=false;fadeStartedAt=null;element.hidden=true;if(raf)cancelAnimationFrame(raf);raf=0;onState();};if(immediate || reduced || !shown){finish();return;}fadeStartedAt=performance.now();element.style.opacity='0';fadeTimer=setTimeout(finish,550);onState();},
         action,
         chooseExample:choose,
         nextExample(){const index=FRUIT_WINDOW_LIBRARY.findIndex(item=>item.id===activeSpecies?.id);choose(FRUIT_WINDOW_LIBRARY[(index+1)%FRUIT_WINDOW_LIBRARY.length].id);},
-        getPerchPose(side='right'){if(!shown)return null;const right=new THREE.Vector3(1,0,0).applyQuaternion(anchor.quaternion),up=new THREE.Vector3(0,1,0).applyQuaternion(anchor.quaternion),normal=new THREE.Vector3(0,0,1).applyQuaternion(anchor.quaternion),center=anchor.position.clone().addScaledVector(right,side==='left'?-.22:.22).addScaledVector(up,.331).addScaledVector(normal,.119);return {center,right,up,normal};},
+        getPerchPose(side='right'){if(!shown||fadeStartedAt!==null)return null;const right=new THREE.Vector3(1,0,0).applyQuaternion(anchor.quaternion),up=new THREE.Vector3(0,1,0).applyQuaternion(anchor.quaternion),normal=new THREE.Vector3(0,0,1).applyQuaternion(anchor.quaternion),center=anchor.position.clone().addScaledVector(right,side==='left'?-.22:.22).addScaledVector(up,.331).addScaledVector(normal,.064);return {center,right,up,normal};},
+        getPhoto(){return asset&&!loading?{image:activeSpecies.image,caption:activeSpecies.label,imageAlt:activeSpecies.label,exampleId:activeSpecies.id}:null;},
+        performanceSnapshot(){return {modelUpdates,boundsUpdates,desktopRenders,playing:Boolean(asset?.playing),ready:Boolean(asset)&&!loading};},
         getLabel(){return activeSpecies?.label||'Plant example';},
         getExample(){return activeSpecies?.id||null;},
         gripContact(source){const hold=grips.holds.get(source),handle=hold && handles.find(item=>item.userData.gripSide===hold.side);return handle?handle.position.clone().applyQuaternion(anchor.quaternion).add(anchor.position):null;},
-        refreshMedia(){if(!asset)return;renderer.render(scene,camera);onMedia({image:canvas.toDataURL('image/png'),caption:activeSpecies.label,imageAlt:activeSpecies.label+' in the Fruit Discovery Window'});},
+        refreshMedia(){const photo=api.getPhoto();if(photo)onMedia(photo);},
         getInteractionTargets(){
             content.updateMatrixWorld(true);const worldCenter=node=>new THREE.Box3().setFromObject(node).getCenter(new THREE.Vector3()).applyQuaternion(anchor.quaternion).add(anchor.position);
             return {leaf:leaves.find(visible)?worldCenter(leaves.find(visible)):null,fruit:asset&&visible(asset.fruit)?worldCenter(asset.fruit):null};
         },
         hit(ray){
-            if(!shown||!xrGl||!ray?.origin||!ray.direction)return null;
+            if(!shown||fadeStartedAt!==null||!xrGl||!ray?.origin||!ray.direction)return null;
             const local=localRay(ray),meshHit=cast(local)[0];
             const point=meshHit?.point.clone() || new THREE.Ray(local.origin,local.direction).intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),0),new THREE.Vector3());
             if(!point || !meshHit && (Math.abs(point.x)>.35 || Math.abs(point.y)>.36))return null;
@@ -212,9 +252,9 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         bindSession(next,referenceSpace){grips.reset();fruitHold.reset();session=next;space=referenceSpace;placed=false;},
         updateSpatial(pose,time,inputRay,xrFrame){
             if(!shown||!xrGl)return;
-            if(pose){dockPose={position:vector(pose.center).addScaledVector(vector(pose.right),(pose.width || .84)/2+.345+.025),quaternion:new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(vector(pose.right),vector(pose.up),vector(pose.normal)))};if(!placed || magnetized && !grips.holds.size){anchor.position.copy(dockPose.position);anchor.quaternion.copy(dockPose.quaternion);placed=true;}}
+            if(pose && fadeStartedAt===null){dockPose={position:vector(pose.center).addScaledVector(vector(pose.right),(pose.width || .84)/2+.345+.025),quaternion:new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().makeBasis(vector(pose.right),vector(pose.up),vector(pose.normal))).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-.16))};if(!placed || magnetized && !grips.holds.size){anchor.position.copy(dockPose.position);anchor.quaternion.copy(dockPose.quaternion);placed=true;}}
             if(xrFrame&&session){const points=new Map();for(const source of grips.holds.keys()){let grip=null;try{grip=xrFrame.getPose(source.gripSpace||source.targetRaySpace,space)?.transform.position;}catch{}if(Array.from(session.inputSources||[]).includes(source)&&source.gamepad?.buttons?.[1]?.pressed!==false&&grip)points.set(source,grip);}grips.update(points,anchor);
-                if(grips.holds.size===2){const values=[...grips.holds.keys()].map(source=>{const axes=source.gamepad?.axes || [];return Number(axes.length>=4?axes[3]:axes[1]) || 0;}),vertical=values.reduce((total,value)=>total+value,0)/values.length,amount=Math.max(0,(Math.abs(vertical)-.18)/.82);if(amount)grips.moveDepth(-Math.sign(vertical)*amount*amount*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.45,new THREE.Vector3(0,0,-1).applyQuaternion(anchor.quaternion),anchor);}
+                if(grips.holds.size===2){const values=[...grips.holds.keys()].map(source=>spatialStick(source,time-lastTime)),depth=values.reduce((sum,value)=>sum+value.depth,0)/values.length,yaw=values.reduce((sum,value)=>sum+value.yaw,0)/values.length;if(depth)grips.moveDepth(depth,new THREE.Vector3(0,0,-1).applyQuaternion(anchor.quaternion),anchor);if(yaw)grips.rotate(yaw,anchor);}
                 for(let i=0;i<handles.length;i++){const handle=handles[i],hold=[...grips.holds.values()].find(hold=>hold.side===handle.userData.gripSide);handle.material.color.setHex(hold?0xffd88b:0x80c5b0);beams[i].visible=false;}
                 finishBoxGrip();
             }
@@ -223,13 +263,13 @@ export function createFruitWindowExperience({root=document.body,identity={},show
                 if(!Array.from(session?.inputSources||[]).includes(source)||source.gamepad?.buttons?.[0]?.pressed===false||!transform){fruitHold.release(source);continue;}
                 const axes=source.gamepad?.axes||[],vertical=Number(axes.length>=4?axes[3]:axes[1])||0,amount=Math.max(0,(Math.abs(vertical)-.18)/.82);
                 if(amount && !fruitHold.pair)fruitHold.moveDistance(-Math.sign(vertical)*amount*amount*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.45,source);
-                fruitHold.update(source,localSourcePose(transform));
+                fruitHold.update(source,localSourcePose(transform));modelDirty=true;
             }updateRip();}
             const ray=inputRay?.origin&&inputRay.direction?localRay(inputRay):null;hover=ray?cast(ray).map(hit=>({hit,kind:botanicalHit(hit)})).find(value=>value.kind)||null:null;
             advance(time);
         },
         handleEvent(event){
-            if(!shown||!xrGl||!space)return false;const source=event.inputSource;
+            if(!shown||fadeStartedAt!==null||!xrGl||!space)return false;const source=event.inputSource;
             if(event.type==='selectend' && fruitHold.release(source)){syncButtons();return true;}
             if(event.type==='selectstart')selections.delete(source);
             if(selections.has(source)){if(event.type==='select')selections.delete(source);return true;}
@@ -250,14 +290,14 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             }
             return false;
         },
-        activate(ray){if(!shown||!xrGl||!ray)return false;const hit=cast(localRay(ray)).find(hit=>botanicalHit(hit));if(!hit)return false;if(botanicalHit(hit)==='play')action('play');return true;},
-        draw(view){if(shown&&xr)xr.draw(view,anchor);},
+        activate(ray){if(!shown||fadeStartedAt!==null||!xrGl||!ray)return false;const hit=cast(localRay(ray)).find(hit=>botanicalHit(hit));if(!hit)return false;if(botanicalHit(hit)==='play')action('play');return true;},
+        draw(view){if(shown&&xr)xr.draw(view,anchor,fadeOpacity(performance.now()));},
         resetGrips(){grips.reset();fruitHold.reset();selections.clear();},
         owns(source){return grips.owns(source)||fruitHold.owns(source)||selections.has(source);},
         rebase(matrix){anchor.position.applyMatrix4(new THREE.Matrix4().fromArray(matrix));anchor.quaternion.premultiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix)));grips.reset();},
-        destroy(){if(destroyed)return;destroyed=true;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);loadVersion++;api.hide();resize.disconnect();xr?.destroy();orbit.dispose();asset?.dispose();disposeScene(frame);disposeScene(branchSupports);for(const handle of [...handles,...beams,nameplate,playButton]){handle.geometry.dispose();handle.material.dispose();}nameTexture.dispose();playTexture.dispose();arrowTip.geometry.dispose();arrowStem.geometry.dispose();arrowMaterial.dispose();handleMaterial.dispose();renderer.dispose();element.remove();}
+        destroy(){if(destroyed)return;destroyed=true;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);loadVersion++;api.hide({immediate:true});resize.disconnect();xr?.destroy();orbit.dispose();asset?.dispose();disposeScene(frame);disposeScene(branchSupports);for(const handle of [...handles,...beams,nameplate,plaque,playButton]){handle.geometry.dispose();handle.material.dispose();}nameTexture.dispose();playTexture.dispose();arrowTip.geometry.dispose();arrowStem.geometry.dispose();arrowMaterial.dispose();handleMaterial.dispose();renderer.dispose();element.remove();}
     };
-    function languageChanged(){translateApp(element);describeContext();labelWindow((activeSpecies?.label||'Plant example')+' · FDW');if(statusCopy){status.textContent=statusCopy();element.dataset.status=status.textContent;}onState();}
+    function languageChanged(){translateApp(element);describeContext();if(activeSpecies)labelWindow(activeSpecies);if(statusCopy){status.textContent=statusCopy();element.dataset.status=status.textContent;}onState();}
     globalThis.addEventListener?.('nxr-languagechange',languageChanged);translateApp(element);
     api.show(identity);return api;
 }

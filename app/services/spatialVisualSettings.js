@@ -13,6 +13,7 @@ export const GRAPHICS_PRESETS=Object.freeze({
  high:Object.freeze({label:'HIGH',orbLatitude:48,orbLongitude:72,detail:2,totemRadial:72,totemVertical:48,textureScale:2,frameScale:1.5,frameLeafPixels:256,frameRootSamples:36,rain:'hq'})
 });
 export const RAIN_QUALITIES=Object.freeze({off:{label:'Off',intensity:0,style:'v1',drops:0},low:{label:'Low',intensity:.45,style:'v1',drops:60},high:{label:'High',intensity:1,style:'v1',drops:220},hq:{label:'HQ',intensity:1.65,style:'v2',drops:480}});
+export const LIVING_FRAME_QUALITIES=Object.freeze({off:{label:'No Living Frame'},sd:{label:'LF SD'},hd:{label:'LF HD'}});
 export function resolveGraphicsQuality(choice='auto',device=globalThis.navigator){
  if(GRAPHICS_PRESETS[choice])return choice;
  // Missing hints and Quest default to MED. Manual HIGH is never downgraded.
@@ -20,11 +21,13 @@ export function resolveGraphicsQuality(choice='auto',device=globalThis.navigator
  if(device && ((device.deviceMemory>0 && device.deviceMemory<=4) || (device.hardwareConcurrency>0 && device.hardwareConcurrency<=4)))return 'low';
  return 'medium';
 }
-export function currentGraphicsQuality(){return resolveGraphicsQuality(preferences.graphicsQuality);}
+let adaptiveGraphicsQuality=null;
+export function setAdaptiveGraphicsQuality(value=null){adaptiveGraphicsQuality=GRAPHICS_PRESETS[value]?value:null;return currentGraphicsQuality();}
+export function currentGraphicsQuality(){return preferences.graphicsQuality==='auto' && adaptiveGraphicsQuality?adaptiveGraphicsQuality:resolveGraphicsQuality(preferences.graphicsQuality);}
 export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
 export function currentRainQuality(){return preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,insects:true,livingFrame:true,eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+let preferences={cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,insects:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
@@ -33,7 +36,9 @@ function validated(change){
     if(ORB_MODELS[change?.orbModel])result.orbModel=change.orbModel;
     if(TOTEM_MODELS[change?.totemModel])result.totemModel=change.totemModel;
     if(['pointer','outline'].includes(change?.handMode))result.handMode=change.handMode;
-    for(const key of ['largeText','showFps','insects','heroDice','livingFrame'])if(typeof change?.[key]==='boolean')result[key]=change[key];
+    for(const key of ['largeText','showFps','insects','heroDice'])if(typeof change?.[key]==='boolean')result[key]=change[key];
+    if(LIVING_FRAME_QUALITIES[change?.livingFrameQuality]){result.livingFrameQuality=change.livingFrameQuality;result.livingFrame=change.livingFrameQuality!=='off';}
+    else if(typeof change?.livingFrame==='boolean'){result.livingFrame=change.livingFrame;result.livingFrameQuality=change.livingFrame?'sd':'off';}
     if(['auto',60,72,90,120].includes(change?.refreshRate))result.refreshRate=change.refreshRate;
     return result;
 }
@@ -51,6 +56,7 @@ function syncVisualCss(){globalThis.document?.documentElement?.style.setProperty
 syncVisualCss();
 export function getSpatialVisualSettings(){return {heroDice:true,...preferences};}
 export function setSpatialVisualSettings(change){
+    if(change?.graphicsQuality!==undefined)adaptiveGraphicsQuality=null;
     Object.assign(preferences,validated(change));
     syncVisualCss();
     try{globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}catch{ /* Keep the active session usable. */ }

@@ -26,7 +26,7 @@ export function createFruitWindowXR(gl,source){
         }
         data.dispose();
     });
-    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true});
+    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true,fadeTransform:false});
     return {
         update(){
             source.updateMatrixWorld(true);
@@ -47,7 +47,7 @@ export function createFruitWindowXR(gl,source){
             }
             scene.updateMatrixWorld(true);
         },
-        draw(view,anchor){renderer.draw(view,anchor.position,anchor.quaternion,1);},
+        draw(view,anchor,opacity=1){renderer.draw(view,anchor.position,anchor.quaternion,opacity);},
         prepareNext(){return renderer.prepareNext();},
         destroy(){renderer.destroy();for(const geometry of new Set(entries.map(entry=>entry.mesh.geometry)))geometry.dispose();sharedGeometry.clear();}
     };

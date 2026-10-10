@@ -61,14 +61,14 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').settingLabel,'Main / Control glass');
     assert.equal(graphics.find(item=>item.action==='RainQuality').label,'HQ');
     assert.equal(graphics.find(item=>item.action==='GraphicsQuality').label,'HIGH');
-    assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality','RainQuality','Insects','SettingsHelp','CloseSettings']);
+    assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality','RainQuality','Insects','LivingFrame:off','LivingFrame:sd','LivingFrame:hd','SettingsHelp','CloseSettings']);
     assert.ok(performance.find(item=>item.action==='RefreshRate').y<performance.find(item=>item.action==='ShowFps').y);
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Hand tracking');
     assert.equal(desktop.find(item=>item.action==='HeroDice').label,'Floor dice');
     assert.equal(desktop.find(item=>item.action==='HeroDice').selected,true);
-    assert.equal(desktop.find(item=>item.action==='LivingFrame').label,'Frame animation');
+    assert.equal(desktop.find(item=>item.action==='LivingFrame').label,'LF SD');
     for(const action of ['LivingFrame','HeroDice'])assert.equal(desktop.find(item=>item.action===action).settingLabel,'','paired buttons need no overlapping row captions');
-    assert.equal(desktop.find(item=>item.action==='LivingFrame').selected,true);
+    assert.equal(graphics.find(item=>item.action==='LivingFrame:sd').selected,true);
     assert.equal(panelSettingsControls({headset:true,handVisualMode:'pointer'}).find(item=>item.action==='HandMode').label,'Pointer');
     for(const items of [desktop,quest,graphics,performance]){
         for(const [index,a] of items.entries()){

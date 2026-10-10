@@ -97,7 +97,7 @@ function buildButterfly({gltf,bitmap},red=false){
     mixer.setTime(0);idle.setEffectiveWeight(0);flying.setEffectiveWeight(1);mixer.update(.2);root.updateMatrixWorld(true);meshes.forEach(mesh=>{mesh.skeleton.update();mesh.computeBoundingBox();});bounds.setFromObject(root);bounds.getCenter(center);bounds.getSize(size);
     foldedPoseCache.set(gltf,{closed:closed.map(q=>q.clone()),open:open.map(q=>q.clone()),center:center.clone(),size:size.clone()});}
     const centered=new THREE.Group();centered.add(root);root.position.sub(center);const wrapper=new THREE.Group();wrapper.add(centered);wrapper.scale.setScalar(1/Math.max(size.x,size.y,size.z));
-    idle.setEffectiveWeight(1);flying.setEffectiveWeight(0);mixer.setTime(0);
+    idle.setEffectiveWeight(1);flying.setEffectiveWeight(0);mixer.setTime(0);idle.setEffectiveTimeScale(0);
     return {wrapper,mixer,idle,flying,nodes,hinges,closed,open,texture,materials,geometries,meshes,bitmap};
 }
 // Bake the small animated mesh at the existing quality cadence. The same
@@ -163,7 +163,7 @@ export function mountDemoButterflyModel(canvas,{gl=null,red=false,colour=null,wi
     return {get ready(){return Boolean(model);},get interval(){return BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()].interval;},
         renderSprite(elapsed,pose){
             if(!model || !pose || !renderer)return null;const budget=BUTTERFLY_RENDER_BUDGETS[currentGraphicsQuality()];if(canvas.dataset.insectState!==pose.state)canvas.dataset.insectState=pose.state;
-            if(elapsed>=lastPaint && elapsed-lastPaint<budget.interval)return canvas;
+            if(elapsed>=lastPaint && elapsed-lastPaint<(pose.flight>0?budget.interval:100))return canvas;
             renderer.setSize(budget.pixels,budget.pixels,false);
             updatePose(elapsed,pose);
             renderer.render(scene,camera);lastPaint=elapsed;return canvas;

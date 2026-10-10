@@ -242,9 +242,8 @@ export function welcomeExperienceFrames(elapsed,reducedMotion=false,graphs=AR_WE
     const parent=frame.nodes.find(candidate=>candidate.id===node.parent);
     const parentId=parent?.limId || node.parent;
     const parentExpanded=expanded.has(node.parent)||expanded.has(parentId);
-    const activeRoot=[...expanded].reverse().find(id=>LIMO_BRANCHES.some(branch=>branch.id===id));
     if(pinned.has(node.limId)){node.progress=1;node.opacity=1;node.emphasis=0;node.state='settled';}
-    else if(!parentExpanded || (activeRoot && frame.nodes[0].limId!==activeRoot)){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
+    else if(!parentExpanded){node.progress=0;node.opacity=0;node.emphasis=0;node.state='hidden';}
     else if(Number.isFinite(expandedAt[parentId])){
      const siblings=frame.nodes.filter(candidate=>candidate.parent===node.parent);
      const siblingIndex=Math.max(0,siblings.indexOf(node));
@@ -509,7 +508,7 @@ export function drawArWelcomeShowcase(ctx,elapsed,reducedMotion=false,graphs=AR_
  ctx.clearRect(0,0,2500,2100);ctx.save();ctx.save();ctx.translate(WELCOME_PANEL_DRAW_OFFSET.x,WELCOME_PANEL_DRAW_OFFSET.y);
  if(options.drawPanel!==false){
  ctx.save();if(options.opening && !reducedMotion)ctx.globalAlpha=.18+.82*smooth(elapsed,0,900);
- drawArWelcomePanel(ctx,{elapsed:options.frameAnimation===false?0:elapsed,reducedMotion:reducedMotion || options.frameAnimation===false,...(options.simpleDesktop?{simple:true}:{})});ctx.restore();
+ drawArWelcomePanel(ctx,{elapsed:options.frameAnimation===false?0:elapsed,reducedMotion:reducedMotion || options.frameAnimation===false,...(options.simpleDesktop || options.frameArtwork===false?{simple:true}:{}),rim:options.frameArtwork!==false});ctx.restore();
  }
  if(options.drawRoots!==false && options.frameAnimation!==false){
  let reservedCells=vegetationClearanceCache.get(graphs);

@@ -10,7 +10,7 @@ function joystickAdjustment(samples,elapsed){
     const controllers=samples.filter(sample=>!sample.source.hand),left=controllers.find(sample=>sample.handedness==='left'),right=controllers.find(sample=>sample.handedness==='right');
     const axes=sample=>{const values=sample?.source.gamepad?.axes || [],start=values.length>=4?2:0;return [stickAxis(values[start]),stickAxis(values[start+1])];};
     const [lx,ly]=axes(left),[rx,ry]=axes(right),dt=Math.min(50,Math.max(0,elapsed))/1000;
-    return {turn:-lx*dt*1.1,tilt:-ly*dt*.85,roll:-rx*dt*.85,depth:-ry*dt*.55,forward:right?.forward || {x:0,y:0,z:-1},allowFullTilt:controllers.length===2};
+    return {turn:lx*dt*1.1,tilt:-ly*dt*.85,roll:-rx*dt*.85,depth:-ry*dt*.55,forward:right?.forward || {x:0,y:0,z:-1},allowFullTilt:controllers.length===2};
 }
 export function limitLivingMapTilt(rotation){
     const q=quaternion(rotation).normalize();

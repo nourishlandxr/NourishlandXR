@@ -18,7 +18,7 @@ test('Live availability ignores empty category shells and separates draft/visito
     assert.equal(plantKnowledgeState(empty).state,'basic');
     let document=pimAddNode(empty,{id:'care',parentId:'cultivation',title:'Care',body:'Local care',status:'draft'});
     const profile={pim_document:document};
-    assert.equal(resolve(profile).label,'Draft PIM');
+    assert.equal(resolve(profile).label,'Draft Plant cells');
     assert.equal(resolve(profile,{includeDraft:false}).state,'basic');
     document=pimUpdateNode(document,'care',{status:'published'});
     profile.pim_document=document;

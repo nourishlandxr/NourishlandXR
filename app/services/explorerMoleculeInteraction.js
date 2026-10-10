@@ -2,11 +2,12 @@ import * as THREE from '../vendor/three.module.min.js';
 import {knowledgePoseMatrix,localObjectMatrix} from './knowledgeObjectModel.js';
 import {commitExplorerPuzzle,magnetExplorerPuzzle} from './explorerMoleculeModel.js';
 import {handTrackingState} from './xrPointer.js';
+import {spatialStick} from './spatialStick.js';
 
 // Object grabs and face presses have separate owners. An explicit Move action
 // also works on devices that expose a trigger/pinch but no grip button.
 export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=()=>true,onActivate=()=>{}}={}){
-    const abort=new AbortController(),suppressed=new WeakMap(),handPinches=new WeakMap(),holds=new Map(),claimedSources=new Set();let active=null;const inputMatrices=new Map(),rayMatrices=new Map();
+    const abort=new AbortController(),suppressed=new WeakMap(),handPinches=new WeakMap(),holds=new Map(),claimedSources=new Set();let active=null,lastUpdate=null;const inputMatrices=new Map(),rayMatrices=new Map();
     const faceKey=t=>t?.object?.id+'|'+(t?.face?.faceId || 'context');
     function cancelHold(source){const held=holds.get(source);if(held){held.target.record.pimObjectPressProgress=0;holds.delete(source);}}
     const listen=(type,handler)=>session.addEventListener(type,handler,{capture:true,signal:abort.signal});
@@ -39,6 +40,7 @@ export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=
     listen('end',()=>{for(const source of holds.keys())cancelHold(source);claimedSources.clear();active=null;inputMatrices.clear();rayMatrices.clear();});
     return {
         update(value){
+            const now=performance.now(),elapsed=lastUpdate===null?16:now-lastUpdate;lastUpdate=now;
             if(active && (active.target.record.knowledgeExplorer.mode!=='explore' || ![active.target.record.explorerMolecule?.root,active.target.record.explorerMolecule?.pending,active.target.record.explorerMolecule?.pendingConnector,...Object.values(active.target.record.explorerMolecule?.wingObjects || {}),...Object.values(active.target.record.explorerMolecule?.nodeObjects || {})].includes(active.target.object)))finish(active.source);
             for(const source of session.inputSources || []){
                 let grip=null,rayPose=null;try{grip=value.getPose(source.gripSpace || source.targetRaySpace,space);rayPose=value.getPose(source.targetRaySpace,space);}catch{/* Lost input cancels its gesture. */}
@@ -62,7 +64,13 @@ export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=
             }
             if(!active)return;
             const matrix=inputMatrix(active.source);if(!matrix){finish(active.source);return;}
-            const {record,object,pose,knowledge}=active.target,world=matrix.multiply(active.offset),basis=knowledgePoseMatrix(pose),worldPosition=new THREE.Vector3().setFromMatrixPosition(world);
+            const sourceMatrix=matrix.clone(),{record,object,pose,knowledge}=active.target,world=matrix.multiply(active.offset),basis=knowledgePoseMatrix(pose),worldPosition=new THREE.Vector3().setFromMatrixPosition(world),stick=spatialStick(active.source,elapsed);
+            if(stick.yaw || stick.depth){
+                const rotation=new THREE.Quaternion(),scale=new THREE.Vector3();world.decompose(worldPosition,rotation,scale);
+                if(stick.yaw)rotation.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),stick.yaw));
+                if(stick.depth){const origin=new THREE.Vector3().setFromMatrixPosition(sourceMatrix),toward=origin.sub(worldPosition),distance=toward.length();if(distance>.01)worldPosition.addScaledVector(toward.normalize(),Math.min(stick.depth,Math.max(0,distance-.12)));}
+                world.compose(worldPosition,rotation,scale);active.offset.copy(sourceMatrix).invert().multiply(world);
+            }
             if(Number.isFinite(record.knowledgeFloor))worldPosition.y=Math.max(worldPosition.y,record.knowledgeFloor+object.radius*object.scale+.01);world.setPosition(worldPosition);
             const local=basis.invert().multiply(world),position=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3();local.decompose(position,rotation,scale);
             object.position={x:position.x,y:position.y,z:position.z};object.rotation={x:rotation.x,y:rotation.y,z:rotation.z,w:rotation.w};object.userPositioned=true;record.knowledgeExplorer.saved=false;

@@ -25,7 +25,7 @@ export function mountDemoNoteShowcase(root,record,{onChange=()=>{},onSelect=()=>
         const widgets=spatialNote(record).widgets,bays=demoNoteWidgetPlacement(widgets.length+(arm?1:0));
         root.classList?.add('note-experience','demo-note-showcase');
         root.classList?.toggle('is-note-put-away',Boolean(record.demoNoteCollapsed));
-        if(record.demoNoteCollapsed){root.innerHTML=`<div class="note-spatial-board"><article class="note-anchor is-note-collapsed"><button type="button" data-demo-note="reopen" aria-label="Reopen ${e(record.name)}">✦</button></article></div>`;return;}
+        if(record.demoNoteCollapsed){root.innerHTML=`<div class="note-spatial-board"><article class="note-anchor is-note-collapsed"><button type="button" data-demo-note="reopen" aria-label="Reopen ${e(record.name)}"><svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 8h22l10 10v38H18zM40 8v12h10M24 29h19M24 38h19M24 47h12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></button></article></div>`;return;}
         const cards=widgets.map(widget=>({id:widget.id,html:renderNoteWidget(widget,states.get(widget.id))}));
         if(arm && photoPicker)cards.push({id:arm,html:`<h3>Choose an image</h3><div class="demo-note-photo-options">${DEMO_NOTE_PHOTOS.map(item=>`<button type="button" data-demo-note="photo:${item.id}"><img src="${e(item.image)}" alt="${e(item.label)}"><span>${e(item.label)}</span></button>`).join('')}</div>`});
         else if(arm)cards.push({id:arm,html:`<h3>Add a widget</h3>${DEMO_NOTE_WIDGETS.map(item=>`<button type="button" data-demo-note="widget:${item.type}">${item.label}</button>`).join('')}`});

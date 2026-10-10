@@ -6327,6 +6327,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (frame.session !== session || !gl) return;
             frame.session.requestAnimationFrame(draw);
             creatorPerformance.tick(_time);
+            if(frame.session.visibilityState==='hidden' || frame.session.visibilityState==='visible-blurred')return;
+            const cpuStarted=performance.now();
             const pose = frame.getViewerPose(refSpace);
             if (!pose) return;
             latestViewerMatrix = Float32Array.from(pose.transform.matrix);
@@ -6397,6 +6399,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawControllerPointerContact(view);
             }
             gl.disable(gl.SCISSOR_TEST);
+            creatorPerformance.frameComplete(performance.now()-cpuStarted);
         };
 
         launchedSession.addEventListener('end', async () => {

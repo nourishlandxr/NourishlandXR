@@ -9,7 +9,7 @@ test('second controller can join the held fruit but cannot play while it is carr
  const text=readFileSync(new URL('../app/services/fruitWindowExperience.js',import.meta.url),'utf8'),a=text.indexOf('handleEvent(event){'),b=text.indexOf('        activate(ray)',a);
  const first={},second={},fruit=new THREE.Object3D(),hold=new FruitWindowTriggerHold();hold.begin(first,fruit,{position:new THREE.Vector3(),quaternion:new THREE.Quaternion()},0);
  let picks=0,plays=0,kind='fruit';
- const ctx=vm.createContext({performance,hitFruit:()=>fruit,localSourcePose:()=>({position:new THREE.Vector3(),quaternion:new THREE.Quaternion()}),shown:true,xrGl:{},space:{},fruitHold:hold,grips:{owns:()=>false},selections:new Set(),syncButtons(){},cast:()=>[{}],localRay:ray=>ray,botanicalHit:()=>kind,pickHit:()=>{picks++;return true;},action:()=>plays++});
+ const ctx=vm.createContext({performance,fadeStartedAt:null,hitFruit:()=>fruit,localSourcePose:()=>({position:new THREE.Vector3(),quaternion:new THREE.Quaternion()}),shown:true,xrGl:{},space:{},fruitHold:hold,grips:{owns:()=>false},selections:new Set(),syncButtons(){},cast:()=>[{}],localRay:ray=>ray,botanicalHit:()=>kind,pickHit:()=>{picks++;return true;},action:()=>plays++});
  vm.runInContext('globalThis.api=({'+text.slice(a,b)+'})',ctx);
  const event={type:'selectstart',inputSource:second,frame:{getPose:()=>({transform:{matrix:new THREE.Matrix4().elements}})}};
  assert.equal(ctx.api.handleEvent(event),true);assert.equal(hold.holds.size,2);assert.equal(hold.pair.fruit,fruit);

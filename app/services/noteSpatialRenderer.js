@@ -3,6 +3,7 @@ import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {createSpatialTetherRenderer,drawSpatialTether,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {noteWidgetPlacement} from './spatialNotes.js';
 import {NOTE_WIDGET_FOOTPRINT_SCALE,NOTE_WIDGET_LAYOUT,wrapMeasuredText} from './demoTextWidgetLayout.js';
+import {turnSpatialAxes} from './spatialStick.js';
 export const NOTE_CARD_LAYOUT=Object.freeze({width:.86,height:.336,canvasWidth:1024,canvasHeight:400,buttonX:36,buttonY:240,columnStep:482,rowStep:40,buttonWidth:460,buttonHeight:36});
 export function noteAnchorPose(record,viewer){
     const center={...(record.position || {x:0,y:1,z:-1})};
@@ -18,8 +19,9 @@ export function noteCardActionOffset(index,count=8,hasBody=true){
     return {x:((b.x+b.width/2)/l.canvasWidth-.5)*l.width,y:(.5-(b.y+b.height/2)/l.canvasHeight)*l.height};
 }
 export function noteSurfaceFacing(center,viewer){
-    const dx=viewer[12]-center.x,dz=viewer[14]-center.z,length=Math.hypot(dx,dz)||1;
-    return {right:{x:dz/length,y:0,z:-dx/length},up:{x:0,y:1,z:0}};
+    const dx=viewer[12]-center.x,dy=viewer[13]-center.y,dz=viewer[14]-center.z,length=Math.hypot(dx,dy,dz)||1,horizontal=Math.hypot(dx,dz)||1;
+    const right={x:dz/horizontal,y:0,z:-dx/horizontal},normal={x:dx/length,y:dy/length,z:dz/length};
+    return {right,up:{x:normal.y*right.z,y:normal.z*right.x-normal.x*right.z,z:-normal.y*right.x}};
 }
 export function noteConnectionEndpoint(surface,toward){
     const delta={x:toward.x-surface.center.x,y:toward.y-surface.center.y,z:toward.z-surface.center.z},dot=axis=>delta.x*axis.x+delta.y*axis.y+delta.z*axis.z;
@@ -37,13 +39,13 @@ export function resolveNoteCardButton(root,id,actionIndex,fallback){
 export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},onHold=()=>{},onSelect=()=>{},widgetPlacement=noteWidgetPlacement}={}){
     const tether=createSpatialTetherRenderer(gl),canvases=new Map(),pages=new Map(),widgetBirths=new Map(),styledWidgets=new WeakSet();let revision=0,pose=record.demoNotePose?{center:{...record.position},right:{...record.demoNotePose.right},up:{...record.demoNotePose.up}}:null,layout=[],openingAt=performance.now(),closingAt=null,wasExpanded=false;
     root.style.setProperty('--note-spatial-widget-width',`${230*NOTE_WIDGET_FOOTPRINT_SCALE}px`);root.style.setProperty('--note-spatial-widget-max-height',`${210*NOTE_WIDGET_FOOTPRINT_SCALE}px`);root.style.setProperty('--note-spatial-picker-max-height',`${170*NOTE_WIDGET_FOOTPRINT_SCALE}px`);
-    const marker=record.marker || record,positions=new Map(Object.entries(record.demoNoteWidgetPositions || {}));let held=null,selectionHold=null;
+    const marker=record.marker || record,positions=new Map(Object.entries(record.demoNoteWidgetPositions || {})),widgetRotations=new Map(Object.entries(record.demoNoteWidgetRotations || {}));let held=null,selectionHold=null;
     const observer=new MutationObserver(()=>revision++);observer.observe(root,{childList:true,subtree:true,characterData:true,attributes:true});
     const imageLoaded=()=>revision++;root.addEventListener('load',imageLoaded,true);
     const canvas=card=>{
         const c=document.createElement('canvas');c.width=1024;c.height=card.element.querySelector('img') && !card.element.classList.contains('note-widget-picker')?1024:512;const ctx=localizedCanvasContext(c.getContext('2d'));ctx.scale(1,c.height/400);
         if(c.height===1024){ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#142e26';ctx.beginPath();ctx.roundRect(4,4,1016,1016,28);ctx.fill();ctx.strokeStyle='#a7c6a2';ctx.lineWidth=4;ctx.stroke();const image=card.element.querySelector('img');ctx.fillStyle='#fffdf0';ctx.font='750 48px Manrope,system-ui';ctx.textAlign='center';ctx.fillText(card.element.querySelector('h3')?.textContent || 'Observation image',512,66,944);if(image.complete && image.naturalWidth){const scale=Math.min(944/image.naturalWidth,808/image.naturalHeight),w=image.naturalWidth*scale,h=image.naturalHeight*scale;ctx.drawImage(image,(1024-w)/2,110+(808-h)/2,w,h);}ctx.font='650 34px Manrope,system-ui';ctx.fillText(card.element.querySelector('figcaption')?.textContent || '',512,976,944);card.buttons=[];canvases.set(card.id,card);return c;}
-        if(card.collapsed){const button=card.element.querySelector('button');ctx.fillStyle='rgba(38,74,64,.9)';ctx.strokeStyle='#c9f3b5';ctx.lineWidth=10;ctx.beginPath();ctx.arc(512,200,165,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.fillStyle='#eaffce';ctx.font='170px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('✦',512,204);card.buttons=[{button,actionIndex:0,x:0,y:0,width:1024,height:400}];canvases.set(card.id,card);return c;}
+        if(card.collapsed){c.width=400;c.height=400;const button=card.element.querySelector('button');ctx.fillStyle='#243e34';ctx.strokeStyle='#bcd4b0';ctx.lineWidth=7;ctx.beginPath();ctx.roundRect(35,25,330,350,55);ctx.fill();ctx.stroke();ctx.strokeStyle='#e9efce';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(110,95);ctx.lineTo(240,95);ctx.lineTo(290,145);ctx.lineTo(290,310);ctx.lineTo(110,310);ctx.closePath();ctx.stroke();ctx.beginPath();ctx.moveTo(240,95);ctx.lineTo(240,145);ctx.lineTo(290,145);ctx.moveTo(145,192);ctx.lineTo(254,192);ctx.moveTo(145,236);ctx.lineTo(254,236);ctx.moveTo(145,278);ctx.lineTo(218,278);ctx.stroke();card.buttons=[{button,actionIndex:0,x:0,y:0,width:1024,height:400}];canvases.set(card.id,card);return c;}
         const compact=card.id!=='main',glassColour=/^#[\da-f]{6}$/i.test(record.appearance?.color || '')?record.appearance.color:'#0c1f1b';ctx.fillStyle=compact?'rgba(24,74,96,.88)':glassColour+'66';ctx.beginPath();ctx.roundRect(5,5,1014,390,36);ctx.fill();ctx.strokeStyle=compact?'rgba(153,220,231,.92)':'rgba(215,237,219,.76)';ctx.lineWidth=3;ctx.stroke();
         for(const ring of card.attachments || []){ctx.fillStyle='#17392f';ctx.strokeStyle='#edfff5';ctx.lineWidth=3;ctx.beginPath();ctx.arc(Math.max(16,Math.min(1008,ring.x)),Math.max(16,Math.min(384,ring.y)),10,0,Math.PI*2);ctx.fill();ctx.stroke();}
         const element=card.element,title=element.querySelector('h2,h3')?.textContent || marker.name;
@@ -65,6 +67,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
     const renderer=createSpatialTotemCards(gl,{canvas,surfaces:()=>layout,containedFeedback:true});
     const api={
         draw(view,currentViewer=viewer){
+            if(root.hidden){held=null;selectionHold=null;return;}
             if(!pose && currentViewer)pose=noteAnchorPose(record,currentViewer);
             if(!pose)return;
             if(held && !held.notified && performance.now()-held.startedAt>=650){held.notified=true;onHold(held.id);}
@@ -85,7 +88,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
                 const progress=reduced?1:Math.min(1,(time-widgetBirths.get(id))/480),unfold=progress*progress*(3-2*progress),bay=bays[index],spread=.55+.45*unfold;
                 const center={x:pose.center.x+(pose.right.x*bay.x+pose.up.x*bay.y)*spread,y:pose.center.y+(pose.right.y*bay.x+pose.up.y*bay.y)*spread,z:pose.center.z+(pose.right.z*bay.x+pose.up.z*bay.y)*spread};
                 const offset=positions.get(id);if(offset){center.x=pose.center.x+offset.x;center.y=pose.center.y+offset.y;center.z=pose.center.z+offset.z;}
-                return {...card(element,id,center,index),opacity:Math.min(amount,unfold)};
+                return {...card(element,id,center,index),...(widgetRotations.get(id) || (currentViewer?noteSurfaceFacing(center,currentViewer):{})),opacity:Math.min(amount,unfold)};
             })];
             for(const surface of layout)surface.card.attachments=[];
             const links=layout.slice(1).map(surface=>({surface,start:noteConnectionEndpoint(layout[0],surface.center),end:noteConnectionEndpoint(surface,pose.center)}));
@@ -101,18 +104,18 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
                 drawSpatialTether(gl,tether,view,start,end,{segments:8,width:.0035,curve:.009,lift:.012,color:[.86,.94,.88,.72*surface.opacity]});
             }
         },
-        hit:ray=>renderer.hit(ray),
-        beginGrab(ray,source){const hit=renderer.hit(ray);if(!hit || !pose)return false;const surface=layout.find(item=>item.card.id===hit.card.id);if(!surface)return false;held={source,id:hit.card.id,startedAt:performance.now(),distance:hit.distance,offset:{x:surface.center.x-ray.origin.x-ray.direction.x*hit.distance,y:surface.center.y-ray.origin.y-ray.direction.y*hit.distance,z:surface.center.z-ray.origin.z-ray.direction.z*hit.distance}};return true;},
+        hit:ray=>root.hidden?null:renderer.hit(ray),
+        beginGrab(ray,source){if(root.hidden)return false;const hit=renderer.hit(ray);if(!hit || !pose)return false;const surface=layout.find(item=>item.card.id===hit.card.id);if(!surface)return false;held={source,id:hit.card.id,startedAt:performance.now(),distance:hit.distance,offset:{x:surface.center.x-ray.origin.x-ray.direction.x*hit.distance,y:surface.center.y-ray.origin.y-ray.direction.y*hit.distance,z:surface.center.z-ray.origin.z-ray.direction.z*hit.distance}};return true;},
         updateGrab(ray){if(!held || !pose || !ray)return;const center={x:ray.origin.x+ray.direction.x*held.distance+held.offset.x,y:ray.origin.y+ray.direction.y*held.distance+held.offset.y,z:ray.origin.z+ray.direction.z*held.distance+held.offset.z};if(held.id==='main'){pose.center=center;record.position={...center};}else {positions.set(held.id,{x:center.x-pose.center.x,y:center.y-pose.center.y,z:center.z-pose.center.z});record.demoNoteWidgetPositions=Object.fromEntries(positions);}},
-        getPerchPose(id='main',side='right'){const surface=layout.find(item=>item.card.id===id) || layout[0];if(!surface)return null;const normal={x:surface.right.y*surface.up.z-surface.right.z*surface.up.y,y:surface.right.z*surface.up.x-surface.right.x*surface.up.z,z:surface.right.x*surface.up.y-surface.right.y*surface.up.x},offset=(side==='left'?-1:1)*surface.width*.35;return {...surface,normal,center:{x:surface.center.x+surface.right.x*offset+surface.up.x*surface.height/2+normal.x*.008,y:surface.center.y+surface.right.y*offset+surface.up.y*surface.height/2+normal.y*.008,z:surface.center.z+surface.right.z*offset+surface.up.z*surface.height/2+normal.z*.008}};},
-        rotate(delta){if(!pose || !Number.isFinite(delta))return false;record.demoNoteRotationBase ||= {right:{...pose.right},up:{...pose.up}};record.demoNoteYaw=Math.max(-Math.PI*.42,Math.min(Math.PI*.42,(record.demoNoteYaw || 0)+delta));const c=Math.cos(record.demoNoteYaw),s=Math.sin(record.demoNoteYaw),r=record.demoNoteRotationBase.right;pose.right={x:r.x*c+r.z*s,y:r.y,z:-r.x*s+r.z*c};pose.up={...record.demoNoteRotationBase.up};record.demoNoteManualRotation=true;record.demoNotePose={right:{...pose.right},up:{...pose.up}};return true;},
+        getPerchPose(id='main',side='right'){if(root.hidden)return null;const surface=layout.find(item=>item.card.id===id) || layout[0];if(!surface)return null;const normal={x:surface.right.y*surface.up.z-surface.right.z*surface.up.y,y:surface.right.z*surface.up.x-surface.right.x*surface.up.z,z:surface.right.x*surface.up.y-surface.right.y*surface.up.x},offset=(side==='left'?-1:1)*surface.width*.35;return {...surface,normal,center:{x:surface.center.x+surface.right.x*offset+surface.up.x*surface.height/2+normal.x*.008,y:surface.center.y+surface.right.y*offset+surface.up.y*surface.height/2+normal.y*.008,z:surface.center.z+surface.right.z*offset+surface.up.z*surface.height/2+normal.z*.008}};},
+        rotate(delta){if(!pose || !Number.isFinite(delta))return false;if(held?.id && held.id!=='main'){const surface=layout.find(item=>item.card.id===held.id);if(!surface)return false;const turned=turnSpatialAxes(widgetRotations.get(held.id) || surface,delta);widgetRotations.set(held.id,{right:turned.right,up:turned.up});record.demoNoteWidgetRotations=Object.fromEntries(widgetRotations);return true;}pose=turnSpatialAxes(pose,delta);record.demoNoteManualRotation=true;record.demoNotePose={right:{...pose.right},up:{...pose.up}};return true;},
         adjustDepth(delta){if(!held)return false;held.distance=Math.max(.4,Math.min(2.5,held.distance+delta));return true;},
         moveDepth(delta,currentViewer=viewer,id='main'){if(!pose || !currentViewer)return false;const offset=id==='main'?{x:0,y:0,z:0}:positions.get(id) || (()=>{const surface=layout.find(item=>item.card.id===id);return surface?{x:surface.center.x-pose.center.x,y:surface.center.y-pose.center.y,z:surface.center.z-pose.center.z}:null;})();if(!offset)return false;const center={x:pose.center.x+offset.x,y:pose.center.y+offset.y,z:pose.center.z+offset.z},direction={x:center.x-currentViewer[12],y:center.y-currentViewer[13],z:center.z-currentViewer[14]},distance=Math.hypot(direction.x,direction.y,direction.z);if(distance<.001)return false;const shift=(Math.max(.4,Math.min(2.5,distance+delta))-distance)/distance;for(const axis of ['x','y','z'])center[axis]+=direction[axis]*shift;if(id==='main'){pose.center=center;record.position={...center};}else{positions.set(id,{x:center.x-pose.center.x,y:center.y-pose.center.y,z:center.z-pose.center.z});record.demoNoteWidgetPositions=Object.fromEntries(positions);}return true;},
         releaseGrab(source){if(held?.source!==source)return false;record.position={...pose.center};record.demoNoteWidgetPositions=Object.fromEntries(positions);held=null;return true;},
         get heldSource(){return held?.source;},
-        beginSelection(ray,source){const hit=renderer.hit(ray);if(!hit)return false;selectionHold={source,id:hit.card.id,startedAt:performance.now(),notified:false};return true;},
+        beginSelection(ray,source){if(root.hidden)return false;const hit=renderer.hit(ray);if(!hit)return false;selectionHold={source,id:hit.card.id,startedAt:performance.now(),notified:false};return true;},
         endSelection(source){if(selectionHold?.source!==source)return false;const consumed=selectionHold.notified;selectionHold=null;return consumed;},
-        activate(ray){const hit=renderer.hit(ray);if(!hit)return false;onSelect(hit.card.id);const entry=canvases.get(hit.card.id),x=(hit.localX/hit.width+.5)*1024,y=(.5-hit.localY/hit.height)*400;
+        activate(ray){if(root.hidden)return false;const hit=renderer.hit(ray);if(!hit)return false;onSelect(hit.card.id);const entry=canvases.get(hit.card.id),x=(hit.localX/hit.width+.5)*1024,y=(.5-hit.localY/hit.height)*400;
             const target=entry?.buttons?.find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height);
             // Timer renders replace DOM nodes even when a card's artwork is
             // unchanged. Resolve the current action, never a detached button.

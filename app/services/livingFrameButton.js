@@ -1,7 +1,7 @@
 import {currentInfoOpacity} from './spatialVisualSettings.js';
 // Soft glass button rendered to the existing high-resolution XR texture.
 // Logical coordinates match the existing button surface and ray-hit bounds.
-export function drawLivingFrameButton(ctx, labelText, aimed=false,disabled=false,backgroundOpacity=currentInfoOpacity()) {
+export function drawLivingFrameButton(ctx, labelText, aimed=false,disabled=false,backgroundOpacity=currentInfoOpacity(),time=performance.now()) {
     ctx.clearRect(0,0,2048,1024);
     ctx.save();ctx.scale(2048/900,1024/360);
     ctx.shadowBlur=0;ctx.shadowColor='transparent';
@@ -11,7 +11,8 @@ export function drawLivingFrameButton(ctx, labelText, aimed=false,disabled=false
     if(aimed && !disabled){ctx.shadowColor='#b9ffe1';ctx.shadowBlur=20;}
     ctx.strokeStyle=disabled?'rgba(207,224,215,.24)':aimed?'#effff4':'rgba(213,244,226,.78)';ctx.lineWidth=aimed?7:3;
     ctx.beginPath();ctx.roundRect(26,26,848,308,38);ctx.stroke();
-    ctx.shadowBlur=0;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=disabled?'rgba(236,242,238,.62)':'#ffffff';
+    if(!disabled && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches){const pulse=(1-Math.cos(time/1600*Math.PI*2))/2;ctx.save();ctx.globalAlpha=.18+.55*pulse;ctx.shadowColor='#c5f3d7';ctx.shadowBlur=12*pulse;ctx.strokeStyle='#c5f3d7';ctx.lineWidth=2+3*pulse;ctx.beginPath();ctx.roundRect(18,18,864,324,44);ctx.stroke();ctx.restore();}
+    ctx.shadowBlur=0;ctx.shadowColor='transparent';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle=disabled?'rgba(236,242,238,.62)':'#ffffff';
     const text=String(labelText || 'Continue');
     let size=112;ctx.font=`600 ${size}px Manrope, "Segoe UI Variable", Inter, system-ui, sans-serif`;
     while(size>84 && ctx.measureText(text).width>800){size-=2;ctx.font=`600 ${size}px Manrope, "Segoe UI Variable", Inter, system-ui, sans-serif`;}

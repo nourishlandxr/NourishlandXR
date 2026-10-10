@@ -1,0 +1,66 @@
+{
+  "motion": {
+    "passed": true,
+    "movement": {
+      "changedPixels": 46783,
+      "meanChannelChange": 1.1494299247985904
+    },
+    "seam": {
+      "changedPixels": 0,
+      "meanChannelChange": 0
+    },
+    "zeroStrength": {
+      "changedPixels": 0,
+      "meanChannelChange": 0
+    },
+    "paused": {
+      "changedPixels": 0,
+      "meanChannelChange": 0
+    },
+    "headsetVerified": false
+  },
+  "clipping": {
+    "passed": true,
+    "results": [
+      {
+        "view": "centre",
+        "changedPixels": 137056,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "left",
+        "changedPixels": 137028,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "right",
+        "changedPixels": 137031,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "near",
+        "changedPixels": 391603,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "left eye",
+        "changedPixels": 136301,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "right eye",
+        "changedPixels": 136959,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      }
+    ],
+    "headsetVerified": false
+  },
+  "metrics": "Desktop · 4 draw calls\n12,000 submitted triangles\n4 GPU geometries · 1 textures\nFrame interval: mean 7.7 ms · p95 10.1 ms\nTiming is observed cadence, not isolated GPU cost.",
+  "pauseStatus": "Paused · 24.1 / 120s · strength 65%"
+}

@@ -56,7 +56,7 @@ test('Quest rays select all six LIMO roots and child cells outside the central w
         expandedAt:Object.fromEntries(pathwayRoots.map(node=>[node.limId,0]))
     });
     const pathwayChildren=expandedFrames.flatMap(frame=>frame.nodes.filter(node=>node.depth===1 && node.opacity>.5));
-    assert.equal(pathwayChildren.length,5);
+    assert.equal(pathwayChildren.length,30);
     for (const { x: pixelX, y: pixelY, key } of [...pathwayRoots,...pathwayChildren]) {
         const local = demoBillboardTextureLocalPoint(pixelX, pixelY, 2500, 2100);
         const ray={

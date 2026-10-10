@@ -1,0 +1,13 @@
+✔ The Blender property is true geometry with the dam below and nearer than the house (72.5442ms)
+✔ The opening rejects rays beyond its edge and views from behind it (1.2459ms)
+✔ Property relief retains image projection while giving foreground and horizon different depth (34.4221ms)
+✔ Leaning changes foreground alignment more than the distant house (0.7347ms)
+✔ The independent scene is bounded, has a raised hill and supports release/reload (65.4066ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 572.0817

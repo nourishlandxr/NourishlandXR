@@ -388,14 +388,16 @@ def build(full_ring=False, planting=None, seconds=36, draft_name=None):
         obj=bpy.data.objects.new(name,data);scene.collection.objects.link(obj);obj.location=location
         obj.rotation_euler=(Vector(target)-obj.location).to_track_quat('-Z','Y').to_euler()
         return obj
-    wide=camera('Botanical perspective',(-2.0,-3.8,1.6),(0,0,-.10) if planting else (0,0,0),3.35 if planting else 2.9)
+    wrapped=bool(plant_metadata.get('outer_side_clusters'))
+    floor=plant_metadata.get('preview_floor_y_m',-1.6)
+    wide=camera('Botanical perspective',(-2.0,-3.8,1.6),(0,0,(1+floor)/2) if wrapped else (0,0,-.10) if planting else (0,0,0),(1-floor)*1.50 if wrapped else 3.35 if planting else 2.9)
     close=camera('Botanical detail',(-1.5,-1.8,-.90),(-.70,-.07,-.77),1.10) if planting else camera('Botanical detail',(-1.5,-1.8,.78),(-.79,-.04,.36),.76)
     scene.camera=wide
     for screen in bpy.data.screens:
         for area in screen.areas:
             if area.type=='VIEW_3D':
                 space=area.spaces.active;space.shading.type='MATERIAL'
-                space.region_3d.view_location=(0,0,0);space.region_3d.view_distance=3.2
+                space.region_3d.view_location=(0,0,(1+floor)/2 if wrapped else 0);space.region_3d.view_distance=3.9 if wrapped else 3.2
                 space.region_3d.view_rotation=wide.rotation_euler.to_quaternion()
                 space.region_3d.view_perspective='ORTHO'
     source=bpy.data.texts.new('create_botanical_section.py');source.write(Path(__file__).read_text())
@@ -403,16 +405,33 @@ def build(full_ring=False, planting=None, seconds=36, draft_name=None):
         source=bpy.data.texts.new('create_full_ring.py');source.write((ROOT/'create_full_ring.py').read_text())
     if draft_name:
         source=bpy.data.texts.new('create_diverse_ring.py');source.write((ROOT/'create_diverse_ring.py').read_text())
+    if wrapped:
+        source=bpy.data.texts.new('create_wrap_ring.py');source.write((ROOT/'create_wrap_ring.py').read_text())
+    if plant_metadata.get('moss_tufts'):
+        source=bpy.data.texts.new('create_moss_ring.py');source.write((ROOT/'create_moss_ring.py').read_text())
     scene.frame_end=GROWTH_SECONDS*24+1
     scene.frame_set(scene.frame_end)
     bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/(asset_name+'.blend')))
-    (ROOT/(prefix+'-dimensions.json')).write_text(json.dumps(dict(stage=4 if planting else 3 if full_ring else 2,arc_degrees=[0,360] if full_ring else [100,205],
+    (ROOT/(prefix+'-dimensions.json')).write_text(json.dumps(dict(stage=plant_metadata.get('study_stage',4 if planting else 3 if full_ring else 2),arc_degrees=[0,360] if full_ring else [100,205],
        growth_seconds=GROWTH_SECONDS,texture_count=4,groundcover_clusters=plant_metadata.get('plant_clusters',cluster_count-len(quiet_gaps)),new_shoots=plant_metadata.get('shoot_count',3),
        static_geometry_batched=full_ring,
        growth_behaviour=plant_metadata.get('sequence','staggered stem extension and paired leaf unfolding; established foliage expands gently'),
        base_opening_diameter_m=1.664,protected_reading_radius_m=.8,
        minimum_soil_radius_m=.834,glb_contains_text=False,**plant_metadata),indent=2))
-    for cam,name in [(wide,prefix+'-perspective.png'),(close,prefix+'-detail.png')]:
+    views=[(wide,prefix+'-perspective.png'),(close,prefix+'-detail.png')]
+    if wrapped:
+        side=camera('Fully planted outer side',(-4,-.04,.10),(0,0,(1+floor)/2),(1-floor)*1.50)
+        side_detail=camera('Outer side planting detail',(-1.65,.55,.70),(-.86,.015,.31),.72)
+        views.extend([(side,prefix+'-side.png'),(side_detail,prefix+'-side-detail.png')])
+    if plant_metadata.get('moss_tufts'):
+        target=Vector(plant_metadata['moss_detail_target_blender'])
+        moss_close=camera('Inner right moss and droplets',target+Vector((-.176,-.132,.024)),target,.20)
+        # One modest close-up keeps this small final detail review inexpensive.
+        scene.cycles.samples=8;scene.render.threads_mode='FIXED';scene.render.threads=2
+        scene.render.resolution_x=1000;scene.render.resolution_y=760
+        views=[(moss_close,prefix+'-moss-detail.png')]
+        bpy.ops.wm.save_as_mainfile(filepath=str(ROOT/(asset_name+'.blend')))
+    for cam,name in views:
         scene.camera=cam;scene.render.filepath=str(ROOT/name);bpy.ops.render.render(write_still=True)
     scene.camera=wide
     print('FULL_RING_READY' if full_ring else 'BOTANICAL_SECTION_READY',ROOT,flush=True)

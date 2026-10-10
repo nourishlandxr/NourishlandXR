@@ -1,0 +1,46 @@
+{
+  "checks": {
+    "passed": true,
+    "results": [
+      {
+        "view": "centre",
+        "changedPixels": 722821,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "left",
+        "changedPixels": 722898,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "right",
+        "changedPixels": 722918,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "near",
+        "changedPixels": 1562760,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "left eye",
+        "changedPixels": 619863,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      },
+      {
+        "view": "right eye",
+        "changedPixels": 620974,
+        "outsideOpeningPixels": 0,
+        "passed": true
+      }
+    ],
+    "headsetVerified": false
+  },
+  "metrics": "Desktop · 14 draw calls\n16,150 submitted triangles\n14 GPU geometries · 0 textures\nFrame interval: mean 6.8 ms · p95 10.0 ms\nTiming is observed cadence, not isolated GPU cost.",
+  "artworkApproved": false
+}

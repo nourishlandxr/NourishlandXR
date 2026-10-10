@@ -1,0 +1,218 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NourishlandXR · textured property painting</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#15212a;color:#e8eee6;font:15px system-ui}main{display:grid;grid-template-columns:300px 1fr;min-height:100vh}aside{padding:25px;background:#1b2c30}h1{font:normal 30px Georgia;line-height:1.15}p{color:#bbccc6;line-height:1.55}.tag{font-size:11px;letter-spacing:1.4px;color:#c4c8a1}nav{display:flex;gap:7px;flex-wrap:wrap}button{background:#31494a;color:#eef2e9;border:1px solid #647874;border-radius:7px;padding:9px 11px;cursor:pointer}button:disabled{opacity:.5;cursor:default}label{display:block;margin:18px 0}input[type=range]{width:100%;accent-color:#c1cbaa}#view{height:100vh;min-height:400px;position:relative;overflow:hidden}canvas{width:100%;height:100%;display:block}#caption{position:absolute;bottom:16px;left:16px;right:16px;padding:10px 14px;background:#142126dc;border:1px solid #526366;border-radius:8px;pointer-events:none;font-size:13px}output{display:block;font:12px/1.6 ui-monospace,monospace;white-space:pre-wrap;color:#c6d7cc;margin:14px 0}.note{font-size:12px}a{color:#cad7ba}#xr-overlay{display:none;position:fixed;bottom:15px;left:15px;background:#15212adf;padding:12px;border-radius:8px;z-index:3}body.xr #xr-overlay{display:block}body.xr main{display:none}#xr-overlay p{margin:8px 0}button[aria-pressed=true]{background:#4c6654}@media(max-width:760px){main{display:flex;flex-direction:column}#view{order:-1;height:58vh;min-height:290px}aside{padding:20px}h1{font-size:24px}#study-description{display:none}}
+</style></head><body><main><aside><span class="tag">MECHANICS STUDY · SEPARATE FROM LIVING FRAME</span><h1>A small window.<br>A world beyond.</h1><p id="study-description">A mock house on a hill gives us something simple to peek into. Move sideways or closer and notice how the nearer trees move against the distant house.</p>
+<nav aria-label="Peek positions"><button data-pose="centre">Centre</button><button data-pose="left">Lean left</button><button data-pose="right">Lean right</button><button data-pose="near">Look closer</button></nav>
+<label>Lean sideways <input id="lean" aria-label="Lean sideways" type="range" min="-.6" max=".6" step=".01" value="0"></label>
+<label>Move closer <input id="approach" aria-label="Move closer" type="range" min="0" max="1.35" step=".01" value="0"></label>
+<label><input id="peek" type="checkbox" checked> Show the separate peek world</label>
+<label><input id="stereo" type="checkbox"> Inspect two simulated eye views</label>
+<nav><button id="check">Run desktop checks</button><button id="reload-world">Reload mock world</button></nav>
+<output id="metrics" aria-live="off">Preparing preview…</output><details><summary id="check-summary" aria-live="polite">Desktop checks have not run.</summary><output id="check-result">Run checks to inspect the result.</output></details>
+<nav><button id="enter-ar" disabled>Test in mixed reality</button><button id="enter-vr" disabled>Test in VR</button></nav><p id="xr-status" class="note">Checking headset support…</p>
+<p id="scene-note" class="note">The temporary rim is a test reference. This page loads no Living Frame model and changes no introduction stages. The landscape is a mechanics placeholder.</p><p class="note">Simulated eyes check rendering; actual headset performance remains unverified.</p><p><a href="../living-frame-blender/preview.html?model=full">Return to Living Frame v2 artwork</a></p>
+</aside><section id="view" aria-label="Separate 3D peek preview"><div id="caption">Preparing the independent landscape…</div></section></main>
+<div id="xr-overlay"><nav><button id="xr-toggle">Toggle peek</button><button id="recenter">Recenter opening</button><button id="leave">Leave XR</button></nav><p>Lean to look around. Controller select toggles the peek.</p></div>
+<script type="module">
+import * as THREE from '../../app/vendor/three.module.min.js';
+import {createPeekWorld,OPENING_RADIUS,rayThroughOpening} from './peek-world.mjs';
+import {createPropertyPeekWorld} from './property-world.mjs';
+import {createAnimatedPropertyPeekWorld,MOTION_LOOP_SECONDS} from './animated-property.mjs';
+import {createHilltopPeekWorld} from './hilltop-world.mjs';
+import {GLTFLoader} from '../../app/assets/fruit-window/vendor/GLTFLoader.js';
+const $=id=>document.getElementById(id),mount=$('view');
+const requestedStudy=new URLSearchParams(location.search).get('scene');
+const study=['mock','hilltop','animated'].includes(requestedStudy)?requestedStudy:'property';
+const animatedStudy=study==='animated',propertyStudy=study==='property'||animatedStudy,hilltopStudy=study==='hilltop';
+const paintingVersion=new URLSearchParams(location.search).get('art')==='v1'?'v1':'v2';
+const paintingUrl='./property-painting-'+paintingVersion+'.png';
+const chooser=document.createElement('p');chooser.innerHTML='<a href="?scene=animated">Living painting</a> · <a href="?scene=property">Still painting</a> · <a href="?scene=hilltop">Geometry blockout</a> · <a href="?scene=mock">Mechanics mock</a>';
+document.querySelector('aside h1').after(chooser);
+if(hilltopStudy){
+ document.querySelector('aside h1').innerHTML='From the hilltop.<br>Look into depth.';
+ $('study-description').textContent='An editable 3D blockout of your property: a lower foreground dam, the veranda house on the higher left terrace, temperate planting below the dam and food forest beside the house.';
+ $('scene-note').textContent='Approximate forms from your photographs and description. This is a geometry checkpoint before painterly surface detail. The landscape and Living Frame remain separate.';
+ const down=document.createElement('button');down.textContent='Look down from hilltop';down.id='hilltop-view';document.querySelector('nav[aria-label="Peek positions"]').append(down);
+ const pitchLabel=document.createElement('label');pitchLabel.innerHTML='Look down <input id="pitch" aria-label="Look down" type="range" min="0" max="40" step="1" value="0">';$('approach').closest('label').after(pitchLabel);
+ $('approach').max='1.6';
+ const sourceLink=document.createElement('p');sourceLink.innerHTML='<a href="./hilltop-property-v1.blend">Editable Blender model</a>';chooser.after(sourceLink);
+}
+if(propertyStudy){
+ document.querySelector('aside h1').innerHTML='A familiar place.<br>A closer look.';
+ $('study-description').textContent='Your property with richer natural texture: fine foliage, weathered timber, irregular groundcover and soft water reflections. Temperate planting below the dam; food forest terraces beside the house. Lean gently to explore.';
+ $('scene-note').textContent='A painted relief with approximate depth, preserving the artistic source. This is not a full 3D reconstruction of the property. The geometry blockout remains a separate proportions study. The Living Frame remains separate.';
+ const artLink=document.createElement('p');artLink.innerHTML='<a href="'+paintingUrl+'" target="_blank">View the full painting</a> · <a href="?scene=property&art=v1">Compare original painting</a>';chooser.after(artLink);
+}
+if(animatedStudy){
+ document.title='NourishlandXR · living painting';
+ document.querySelector('aside h1').innerHTML='A familiar place.<br>Quietly alive.';
+ $('study-description').textContent='A new real-time animation of your painting: soft cloud drift, a light breeze through the foliage and gentle movement in the pond reflections. The house and landscape stay steady.';
+ $('scene-note').textContent='Original procedural animation on the painting, with approximate depth. No website video is used. This remains separate from the Living Frame and is not a full property reconstruction.';
+ const controls=document.createElement('section');controls.setAttribute('aria-label','Painting animation');
+ controls.innerHTML='<nav><button id="motion-toggle">Pause motion</button><button id="motion-reset">Reset animation</button></nav><label>Motion strength <input id="motion-strength" aria-label="Motion strength" type="range" min="0" max="1" step=".05" value=".65"></label><label>Animation moment <input id="motion-moment" aria-label="Animation moment" type="range" min="0" max="120" step="1" value="0"></label><output id="motion-status">Preparing motion…</output><button id="motion-check">Check animation</button><output id="motion-result">Animation check has not run.</output>';
+ $('peek').closest('label').before(controls);
+}
+try{
+ const renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,stencil:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+ renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.localClippingEnabled=true;renderer.xr.enabled=true;renderer.xr.setReferenceSpaceType('local-floor');
+ renderer.setClearColor(0x15212a,1);mount.prepend(renderer.domElement);
+ if(!renderer.getContext().getContextAttributes().stencil)throw new Error('This experiment requires a stencil buffer.');
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(55,1,.025,120);camera.position.set(0,1.6,0);camera.lookAt(0,1.6,-10);camera.focus=8;
+ scene.add(new THREE.HemisphereLight(0xe6f0ec,0x3f5034,2));const light=new THREE.DirectionalLight(0xffe7c2,2);light.position.set(-4,8,3);scene.add(light);
+ async function createStudy(){
+  if(hilltopStudy)return createHilltopPeekWorld(await new GLTFLoader().loadAsync('./hilltop-property-v1.glb'));
+  if(!propertyStudy)return createPeekWorld();
+  const texture=await new THREE.TextureLoader().loadAsync(paintingUrl);
+  texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
+  return animatedStudy?createAnimatedPropertyPeekWorld(texture,{reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches}):createPropertyPeekWorld(texture);
+ }
+ let peek=await createStudy();peek.root.position.set(0,1.6,-1.8);scene.add(peek.root);
+ const grid=new THREE.GridHelper(8,16,0x3f535b,0x2c3d45);grid.material.transparent=true;grid.material.opacity=.3;scene.add(grid);
+ // The host reference grid must never draw across the world inside the opening.
+ grid.renderOrder=2;grid.material.stencilWrite=true;grid.material.stencilRef=1;
+ grid.material.stencilFunc=THREE.NotEqualStencilFunc;grid.material.stencilWriteMask=0;
+ let session=null,placementPending=false,stereo=false,checking=false,previousFrame=0,samples=[],metricTime=0,warmupFrames=2,lastAnimationTime=0;
+ function syncMotionControls(){if(!animatedStudy)return;$('motion-toggle').textContent=peek.playing?'Pause motion':'Resume motion';$('motion-strength').value=peek.motionStrength;$('motion-moment').value=peek.moment;$('motion-status').textContent=`${peek.playing?'Playing':'Paused'} · ${peek.moment.toFixed(1)} / ${MOTION_LOOP_SECONDS}s · strength ${Math.round(peek.motionStrength*100)}%`;}
+ if(animatedStudy){
+  $('motion-toggle').onclick=()=>{peek.setPlaying(!peek.playing);syncMotionControls();};
+  $('motion-strength').oninput=()=>{peek.setMotionStrength(Number($('motion-strength').value));syncMotionControls();};
+  $('motion-moment').oninput=()=>{peek.setPlaying(false);peek.setMoment(Number($('motion-moment').value));syncMotionControls();};
+  $('motion-reset').onclick=()=>{peek.setMoment(0);syncMotionControls();};syncMotionControls();
+ }
+ const eyePair=new THREE.StereoCamera();eyePair.eyeSep=.064;
+ function updateEyes(){
+  eyePair.aspect=.5;eyePair.update(camera);
+  // StereoCamera changes projection matrices. Unprojection in our pixel checker
+  // also needs the inverse of each changed projection, not the default inverse.
+  for(const eye of [eyePair.cameraL,eyePair.cameraR])eye.projectionMatrixInverse.copy(eye.projectionMatrix).invert();
+ }
+ function resize(){if(session)return;renderer.setSize(mount.clientWidth,mount.clientHeight,false);camera.aspect=mount.clientWidth/mount.clientHeight;camera.updateProjectionMatrix();}
+ new ResizeObserver(resize).observe(mount);resize();
+ function pose(){camera.position.set(Number($('lean').value),1.6,-Number($('approach').value));camera.rotation.set(-Number($('pitch')?.value||0)*Math.PI/180,0,0);camera.updateMatrixWorld(true);}
+ $('lean').oninput=$('approach').oninput=pose;
+ if(hilltopStudy){$('pitch').oninput=pose;$('hilltop-view').onclick=()=>{$('lean').value=0;$('approach').value=1.6;$('pitch').value=18;pose();};}
+ const positions={centre:[0,0],left:[-.42,0],right:[.42,0],near:[0,1.12]};
+ document.querySelectorAll('[data-pose]').forEach(button=>button.onclick=()=>{$('lean').value=positions[button.dataset.pose][0];$('approach').value=positions[button.dataset.pose][1];if($('pitch'))$('pitch').value=0;pose();});
+ $('peek').onchange=()=>peek.setEnabled($('peek').checked);$('stereo').onchange=()=>stereo=$('stereo').checked;
+ $('xr-toggle').onclick=()=>{peek.setEnabled(!peek.enabled);$('peek').checked=peek.enabled;};
+ for(let i=0;i<2;i++)renderer.xr.getController(i).addEventListener('select',()=>{$('xr-toggle').click();});
+ $('recenter').onclick=()=>placementPending=true;$('leave').onclick=()=>session?.end();
+ function draw(){
+  camera.updateMatrixWorld(true);peek.update(camera);renderer.info.reset();
+  renderer.info.autoReset=false;
+  if(stereo&&!session){
+   updateEyes();renderer.setScissorTest(true);renderer.clear();
+   const size=renderer.getSize(new THREE.Vector2()),half=Math.floor(size.x/2);
+   renderer.setViewport(0,0,half,size.y);renderer.setScissor(0,0,half,size.y);renderer.render(scene,eyePair.cameraL);
+   renderer.setViewport(half,0,size.x-half,size.y);renderer.setScissor(half,0,size.x-half,size.y);renderer.render(scene,eyePair.cameraR);
+   renderer.setScissorTest(false);renderer.setViewport(0,0,size.x,size.y);
+  }else renderer.render(scene,camera);
+ }
+ if(animatedStudy)$('motion-check').onclick=()=>{
+  if(session||checking)return;checking=true;
+  const moment=peek.moment,strength=peek.motionStrength,playing=peek.playing,oldStereo=stereo;
+  const gl=renderer.getContext(),width=gl.drawingBufferWidth,height=gl.drawingBufferHeight;
+  const read=(seconds,amount)=>{peek.setMoment(seconds);peek.setMotionStrength(amount);draw();const pixels=new Uint8Array(width*height*4);gl.readPixels(0,0,width,height,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;};
+  const difference=(a,b)=>{let pixels=0,total=0;for(let i=0;i<a.length;i+=4){const d=Math.max(Math.abs(a[i]-b[i]),Math.abs(a[i+1]-b[i+1]),Math.abs(a[i+2]-b[i+2]));if(d>1)pixels++;total+=d;}return {changedPixels:pixels,meanChannelChange:total/(width*height)};};
+  try{
+   stereo=false;peek.setPlaying(false);
+   const start=read(0,.65),middle=read(36,.65),end=read(MOTION_LOOP_SECONDS,.65);
+   const movement=difference(start,middle),seam=difference(start,end);
+   const unchanged=difference(read(0,0),read(36,0));
+   const pause=difference(read(36,.65),read(36,.65));
+   const report={passed:movement.changedPixels>100&&seam.changedPixels===0&&unchanged.changedPixels===0&&pause.changedPixels===0&&gl.getError()===gl.NO_ERROR,movement,seam,zeroStrength:unchanged,paused:pause,headsetVerified:false};
+   $('motion-result').textContent=JSON.stringify(report,null,2);document.body.dataset.motionPassed=String(report.passed);
+  }catch(error){$('motion-result').textContent='Motion check failed: '+error.message;console.error(error);}
+  finally{peek.setMoment(moment);peek.setMotionStrength(strength);peek.setPlaying(playing);stereo=oldStereo;checking=false;lastAnimationTime=0;previousFrame=0;samples=[];warmupFrames=2;draw();syncMotionControls();}
+ };
+ // Real framebuffer checks: compare world on/off and confirm changes stay in
+ // the projected opening for each eye, rather than testing configuration alone.
+ function inspectView(c,viewport){
+  const gl=renderer.getContext(),w=gl.drawingBufferWidth,h=gl.drawingBufferHeight;
+  const before=new Uint8Array(w*h*4),after=new Uint8Array(w*h*4);
+  peek.setEnabled(false);peek.update(c);renderer.render(scene,c);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,before);
+  peek.setEnabled(true);peek.update(c);renderer.render(scene,c);gl.readPixels(0,0,w,h,gl.RGBA,gl.UNSIGNED_BYTE,after);
+  const inverse=new THREE.Matrix4().copy(peek.root.matrixWorld).invert();
+  const origin=new THREE.Vector3().setFromMatrixPosition(c.matrixWorld).applyMatrix4(inverse),far=new THREE.Vector3(),direction=new THREE.Vector3();
+  let changed=0,leaks=0;
+  for(let y=viewport.y;y<viewport.y+viewport.h;y++)for(let x=viewport.x;x<viewport.x+viewport.w;x++){
+   const index=(y*w+x)*4;if(Math.max(Math.abs(after[index]-before[index]),Math.abs(after[index+1]-before[index+1]),Math.abs(after[index+2]-before[index+2]))<8)continue;
+   changed++;far.set((x+.5-viewport.x)/viewport.w*2-1,(y+.5-viewport.y)/viewport.h*2-1,.5).unproject(c).applyMatrix4(inverse);direction.copy(far).sub(origin);
+   if(!rayThroughOpening(origin,direction,OPENING_RADIUS+.035))leaks++;
+  }
+  return {changedPixels:changed,outsideOpeningPixels:leaks,passed:changed>300&&leaks===0};
+ }
+ $('check').onclick=()=>{
+  if(session||checking)return;checking=true;$('check').disabled=true;
+  const saved=camera.position.clone(),savedOrientation=camera.quaternion.clone(),enabled=peek.enabled,oldStereo=stereo,size=renderer.getSize(new THREE.Vector2());
+  try{
+   const gl=renderer.getContext();
+   const results=[];stereo=false;camera.rotation.set(0,0,0);renderer.setScissorTest(false);renderer.setViewport(0,0,size.x,size.y);
+   for(const [name,[x,approach]] of Object.entries(positions)){
+    camera.position.set(x,1.6,-approach);camera.updateMatrixWorld(true);
+    results.push({view:name,...inspectView(camera,{x:0,y:0,w:gl.drawingBufferWidth,h:gl.drawingBufferHeight})});
+   }
+   camera.position.set(0,1.6,0);camera.updateMatrixWorld(true);updateEyes();
+   renderer.setScissorTest(true);const half=Math.floor(size.x/2),ratio=renderer.getPixelRatio();
+   for(const [name,c,x,width] of [['left eye',eyePair.cameraL,0,half],['right eye',eyePair.cameraR,half,size.x-half]]){
+    renderer.setViewport(x,0,width,size.y);renderer.setScissor(x,0,width,size.y);
+    results.push({view:name,...inspectView(c,{x:Math.floor(x*ratio),y:0,w:Math.floor(width*ratio),h:gl.drawingBufferHeight})});
+   }
+   renderer.setScissorTest(false);renderer.setViewport(0,0,size.x,size.y);
+   camera.position.copy(saved);camera.quaternion.copy(savedOrientation);camera.updateMatrixWorld(true);peek.setEnabled(enabled);stereo=oldStereo;draw();
+   const report={passed:results.every(r=>r.passed)&&gl.getError()===gl.NO_ERROR,results,headsetVerified:false};
+   $('check-result').textContent=JSON.stringify(report,null,2);$('check-summary').textContent=report.passed?'6/6 desktop views pass · no mask leaks':'Desktop rendering checks failed';document.body.dataset.checksPassed=String(report.passed);
+  }catch(error){$('check-summary').textContent='Checks failed: '+error.message;console.error(error);}
+  finally{
+   renderer.setScissorTest(false);renderer.setViewport(0,0,size.x,size.y);camera.position.copy(saved);camera.quaternion.copy(savedOrientation);camera.updateMatrixWorld(true);peek.setEnabled(enabled);stereo=oldStereo;
+   checking=false;$('check').disabled=false;previousFrame=0;samples=[];metricTime=0;warmupFrames=2;
+  }
+ };
+ $('reload-world').textContent=hilltopStudy?'Reload 3D blockout':propertyStudy?'Reload property study':'Reload mock world';
+ $('reload-world').onclick=async()=>{
+  $('reload-world').disabled=$('check').disabled=true;
+  try{
+   const next=await createStudy(),before=renderer.info.memory.geometries,beforeTextures=renderer.info.memory.textures,transform=peek.root.matrix.clone(),enabled=peek.enabled;
+   if(animatedStudy){next.setMoment(peek.moment);next.setMotionStrength(peek.motionStrength);next.setPlaying(peek.playing);}
+   peek.dispose();const afterDispose=renderer.info.memory.geometries,afterTextures=renderer.info.memory.textures;peek=next;peek.root.applyMatrix4(transform);scene.add(peek.root);peek.setEnabled(enabled);draw();
+   $('check-summary').textContent=`Reload: ${before} geometries → ${afterDispose} after disposal → ${renderer.info.memory.geometries} rebuilt.`;
+   $('check-result').textContent=`Textures: ${beforeTextures} → ${afterTextures} after disposal → ${renderer.info.memory.textures} rebuilt. Run checks again after reload.`;
+   previousFrame=0;lastAnimationTime=0;samples=[];metricTime=0;warmupFrames=2;document.body.dataset.checksPassed='pending';syncMotionControls();
+  }catch(error){$('check-summary').textContent='Reload failed: '+error.message;console.error(error);}
+  finally{$('reload-world').disabled=$('check').disabled=false;}
+ };
+ let arSupported=false,vrSupported=false;
+ if(navigator.xr&&isSecureContext){[arSupported,vrSupported]=await Promise.all(['immersive-ar','immersive-vr'].map(mode=>navigator.xr.isSessionSupported(mode).catch(()=>false)));}
+ $('enter-ar').disabled=!arSupported;$('enter-vr').disabled=!vrSupported;
+ $('xr-status').textContent=arSupported?'Mixed reality available. Headset testing has not run.':vrSupported?'VR available; mixed reality unavailable here.':'No immersive WebXR device available here. Desktop checks remain available.';
+ async function enter(mode){
+  try{
+   session=await navigator.xr.requestSession(mode,{requiredFeatures:['local-floor'],optionalFeatures:['dom-overlay'],domOverlay:{root:$('xr-overlay')}});
+   placementPending=true;await renderer.xr.setSession(session);document.body.classList.add('xr');renderer.setClearColor(0x15212a,mode==='immersive-ar'?0:1);grid.visible=mode!=='immersive-ar';
+   session.addEventListener('end',()=>{session=null;document.body.classList.remove('xr');renderer.setClearColor(0x15212a,1);grid.visible=true;peek.root.position.set(0,1.6,-1.8);peek.root.rotation.set(0,0,0);pose();resize();samples=[];});
+  }catch(error){session=null;$('xr-status').textContent='XR could not start: '+error.message;console.error(error);}
+ }
+ $('enter-ar').onclick=()=>enter('immersive-ar');$('enter-vr').onclick=()=>enter('immersive-vr');
+ renderer.setAnimationLoop((time,frame)=>{
+  if(checking)return;
+  if(animatedStudy){if(lastAnimationTime&&!document.hidden)peek.advanceAnimation((time-lastAnimationTime)/1000);lastAnimationTime=time;}
+  if(session&&placementPending&&frame){const p=frame.getViewerPose(renderer.xr.getReferenceSpace());if(p){
+   const head=p.transform.position,q=p.transform.orientation,forward=new THREE.Vector3(0,0,-1).applyQuaternion(new THREE.Quaternion(q.x,q.y,q.z,q.w));forward.y=0;forward.normalize();
+   peek.root.position.set(head.x+forward.x*1.8,head.y,head.z+forward.z*1.8);peek.root.rotation.y=Math.atan2(-forward.x,-forward.z);placementPending=false;
+  }}
+  if(warmupFrames>0)warmupFrames--;else if(previousFrame)samples.push(time-previousFrame);
+  previousFrame=time;if(samples.length>180)samples.shift();
+  // WebXRManager supplies eye cameras for rendering. Use the current viewer pose
+  // for the one-sided guard; desktop camera position is not headset tracking.
+  if(session&&frame){const p=frame.getViewerPose(renderer.xr.getReferenceSpace());if(p){camera.position.set(p.transform.position.x,p.transform.position.y,p.transform.position.z);camera.updateMatrixWorld(true);}}
+  draw();
+  if(time-metricTime>700){metricTime=time;const sorted=samples.slice().sort((a,b)=>a-b),p95=sorted[Math.floor(sorted.length*.95)]||0,mean=samples.reduce((a,b)=>a+b,0)/Math.max(samples.length,1);
+   syncMotionControls();
+   $('metrics').textContent=`${session?'Headset session':stereo?'Simulated stereo':'Desktop'} · ${renderer.info.render.calls} draw calls\n${renderer.info.render.triangles.toLocaleString()} submitted triangles\n${renderer.info.memory.geometries} GPU geometries · ${renderer.info.memory.textures} textures\nFrame interval: mean ${mean.toFixed(1)} ms · p95 ${p95.toFixed(1)} ms\nTiming is observed cadence, not isolated GPU cost.`;
+  }
+ });
+ $('caption').textContent=animatedStudy?'Living painting · slow clouds, gentle foliage and pond reflections':hilltopStudy?'True 3D property blockout · use “Look down from hilltop” to inspect the dam':propertyStudy?'Textured painting '+paintingVersion+' · preserved artistic character with gentle depth':'A separate 3D scene through a circular opening · lean or move closer';document.body.dataset.ready='true';
+ window.addEventListener('pagehide',()=>{renderer.setAnimationLoop(null);session?.end();peek.dispose();grid.geometry.dispose();grid.material.dispose();renderer.dispose();},{once:true});
+}catch(error){$('caption').textContent='Preview unavailable: '+error.message;document.body.dataset.ready='error';console.error(error);}
+</script></body></html>

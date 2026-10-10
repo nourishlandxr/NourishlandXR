@@ -240,7 +240,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 cameraPrepared=true;
                 }
                 boundaries.forEach(({area,line,fill})=>{const boundary=model.concept?1:demoLivingMapAreaProgress(schedule,area.id,elapsed,reducedMotion);line.visible=boundary>0;line.geometry.setDrawRange(0,Math.round(boundary*64)+1);fill.visible=boundary>=.99;});
-                markers.forEach(({item,group,ring,orb,beacon})=>{
+                markers.forEach(({item,group,ring,orb,beacon},index)=>{
                     const born=bornFor(item.id);
                     const landscapePlant=model.concept && item.type==='plant';
                     const growth=landscapePlant?livingMapGreeneryProgress(elapsed,plantGrowthIndices.get(item.id),reducedMotion):born;
@@ -248,7 +248,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                     group.position.y=landscapePlant?0:item.type==='zone'?-.68*(1-born):.12*(1-born);
                     if(landscapePlant){orb.visible=born>0;orb.scale.setScalar(.38*born);orb.material.opacity=.32*born;}
                     const age=elapsed-schedule.items[item.id].startAt;
-                    if(beacon){const blink=!reducedMotion && age>=0 && age<1800?Math.pow(Math.max(0,Math.sin(age*Math.PI/300)),2):0;const phase=Math.floor((elapsed+index*380)/400)%4,colour=phase%2?'#050810':phase===0?'#308aff':index%2?'#b04fff':'#ffd15c';beacon.material.color.set(colour);beacon.material.emissive.set(colour);beacon.material.opacity=phase%2?.2:1;beacon.material.emissiveIntensity=phase%2?0:1.5;const collar=materials.get('totem-glass'+index);collar.color.set(colour);collar.opacity=phase%2?.85:.96;}
+                    if(beacon){const colour='#5b9da6';beacon.material.color.set(colour);beacon.material.emissive.set(colour);beacon.material.opacity=.6;beacon.material.emissiveIntensity=.15;const collar=materials.get('totem-glass'+index);if(collar){collar.color.set(colour);collar.opacity=.85;}}
                     ring.material.opacity=born*(reducedMotion || age>1600?.65:.65+.25*Math.sin(age/180));
                 });
                 paths.forEach((path,index)=>{const arrival=placed[index+1],t=model.interactive?arrival?(reducedMotion?1:Math.max(0,Math.min(1,(elapsed-arrival.at-200)/1500))):0:progress.path;path.visible=t>0;path.geometry.setDrawRange(0,Math.floor(t*32)*30);});

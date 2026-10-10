@@ -1,4 +1,5 @@
 import {limoSpatialControls,drawLimoSpatialControls,drawLimoSpatialReading} from './limoSpatialPresentation.js';
+import {spatialStick,turnSpatialAxes} from './spatialStick.js';
 import {pimToArKnowledge} from './pimModel.js';
 import {spatialControlLayout} from './spatialControlLayout.js';
 import {currentNxrLanguage,setNxrLanguage,translateNxrText as t,translateApp,localizedCanvasContext} from './i18n.js';
@@ -9,7 +10,7 @@ import {knowledgeExplorer,knowledgeExplorerAction,savedKnowledgeDiscovery,KNOWLE
 import {subscribePimoCapabilities,supportsSpatialPIMO,isPimoDeveloperOverride} from './pimoSpatialCapabilities.js';
 import {prepareLivingFrameArtwork} from './livingFrameArtwork.js';
 import {loadPreparedImage} from './arAssetPreparation.js';
-import {ORB_MODELS,TOTEM_MODELS,RAIN_QUALITIES,resolveGraphicsQuality,currentTotemModel,getSpatialVisualSettings,currentInfoOpacity,currentOrbModel,setSpatialVisualSettings} from './spatialVisualSettings.js';
+import {ORB_MODELS,TOTEM_MODELS,RAIN_QUALITIES,LIVING_FRAME_QUALITIES,resolveGraphicsQuality,currentTotemModel,getSpatialVisualSettings,currentInfoOpacity,currentOrbModel,setSpatialVisualSettings} from './spatialVisualSettings.js';
 import { pimAncestors, pimKnowledgeScope } from './pimModel.js';
 import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js';
 import { handTrackingState } from './xrPointer.js';
@@ -47,7 +48,7 @@ export function pimInfoContent(document, path) {
 export function learningPanelMedia(content) {
     const image=content?.image || content?.sketchImage;
     if(!image)return null;
-    return {image,alt:(content.image ? content.imageAlt : content.sketchImageAlt) || content.title || '',caption:content.title || '',plant:false,fit:content.imageFit || 'contain'};
+    return {image,alt:(content.image ? content.imageAlt : content.sketchImageAlt) || content.title || '',caption:content.imageCaption || content.title || '',plant:false,fit:content.imageFit || 'contain'};
 }
 
 export function pimPanelMedia(document,selection=null,fallback=null,previous=null) {
@@ -100,7 +101,7 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
     const drop=phoneAR ? .24 : headset ? .30 : .72;
     const center={ x: matrix[12] - right.x * side + right.z * forward,
         y: matrix[13] - drop, z: matrix[14] - right.z * side - right.x * forward };
-    return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:center.y+(headset?.08:0),z:matrix[14]})};
+    return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
 }
 
 // Build companion faces from the main panel's local axes. The restrained
@@ -195,9 +196,10 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
     const includeLanguage=simpleDesktop || typeof document!=='undefined';
     const navigation=choice('GraphicsMenu',graphicsOpen?'‹ General':'Graphics ›','navigation','',100,56,888);
     const close={...choice('CloseSettings','Done','close','Close settings',26,806,138),kind:'settings-close'};
+    const frameControls=y=>Object.entries(LIVING_FRAME_QUALITIES).map(([quality,item],index)=>({...choice('LivingFrame:'+quality,item.label,'living-frame','',y,56+index*300,288),selected:getSpatialVisualSettings().livingFrameQuality===quality}));
     if(languageOpen)return [choice('LanguageMenu','‹ General','navigation','',100,56,888),...[['en','English'],['pt-PT','Português (Portugal)'],['nl-NL','Nederlands']].map(([code,label],index)=>({...choice('Language:'+code,label,'language','Language',202+index*88,56,888),selected:currentNxrLanguage()===code})),close];
     if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),close];
-    if(simpleDesktop)return [slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),choice('LanguageMenu','Language ›','language','',290,56,888),choice('SettingsHelp','Help','help','',378,56,888),close];
+    if(simpleDesktop)return [slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),choice('LanguageMenu','Language ›','language','',290,56,888),...frameControls(378),choice('SettingsHelp','Help','help','',466,56,888),close];
     const rates=Array.from(performanceSettings?.supported || []).filter(rate=>[60,72,90,120].includes(rate)).sort((a,b)=>a-b);
     const safeRate=Math.max(0,...rates.filter(rate=>rate<=90)) || rates[0];
     const rateWidth=(464-12*Math.max(0,rates.length-1))/Math.max(1,rates.length);
@@ -206,6 +208,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         choice('GraphicsQuality',graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),'graphics','Graphics quality',202),
         ...(rainEnabled?[choice('RainQuality',RAIN_QUALITIES[rainQuality]?.label || 'Off','rain','Rain quality',290)]:[]),
         choice('Insects',insects?'On':'Off','insects','Insects',358),
+        ...frameControls(446),
 
         ...(performanceSettings?[...rateControls,choice('ShowFps',performanceSettings.showFps?'On':'Off','fps','FPS / CPU readout',620,540,404)]:[]),
         choice('SettingsHelp','Help','help','',746,56,888),close];
@@ -216,7 +219,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
         {...choice('HeroDice','Floor dice','hero-dice','',488,56,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().heroDice!==false},
-        {...choice('LivingFrame','Frame animation','living-frame','',488,506,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().livingFrame!==false},
+        {...choice('LivingFrame',LIVING_FRAME_QUALITIES[getSpatialVisualSettings().livingFrameQuality].label,'living-frame','Living Frame artwork',488,506,438),settingLabel:'',height:50},
 
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
@@ -282,7 +285,7 @@ function controlDescription(item={}){
         Previous:'Show the previous page.',
         Next:'Show the next page.',
         ToggleMedia:'Show or hide the Media panel for the selected image.',
-        Explorer:'Show or hide the PIMO controls, including Fruit Window.',
+        Explorer:'Show or hide the controls for the selected element.',
         ToggleMediaDetach:'Detach or dock the media panel.',
         'Utility:close':'Close the current demo experience.',
         'Utility:continue':'Continue to the next demo step.',
@@ -315,19 +318,19 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     let fruitWindow=null,fruitVisible=false,fruitPending=null,fruitDestroyed=false,fruitGl=null,fruitSession=null,fruitSpace=null,fruitIdentity=null,fruitExample=null;
     let visibilityItems=[],visibilitySignature='';
     const visiblePimoModes=()=>availablePimoModes().filter(mode=>mode!=='explore'||isPimoDeveloperOverride()&&new URLSearchParams(globalThis.location?.search||'').get('explorerConcept')==='1');
-    const hideFruitWindow=()=>{fruitVisible=false;fruitWindow?.hide();fruitIdentityMedia=null;loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || '');render(true);renderExplorer();};
+    const hideFruitWindow=()=>{fruitVisible=false;fruitWindow?.hide();fruitIdentityMedia=null;loadPanelImage(identity?.media?.image || learningPanelMedia(selection)?.image || mediaImageSource);render(true);renderExplorer();};
     async function loadFruitWindow(){
         fruitVisible=true;
         fruitControlsActive=true;
         fruitIdentityMedia ||= identity?.media?.image?{...identity.media}:learningPanelMedia(selection);
-        loadPanelImage(fruitIdentityMedia?.image || '');
+        loadPanelImage(fruitIdentityMedia?.image || mediaImageSource);
         mediaCollapsed=false;explorerClosed=false;
-        if(fruitWindow){fruitWindow.show(fruitIdentity||identity||{});if(fruitExample && fruitWindow.getExample()!==fruitExample)fruitWindow.chooseExample(fruitExample);render(true);renderExplorer();return;}
+        if(fruitWindow){fruitWindow.show(fruitIdentity||identity||{});if(fruitExample && fruitWindow.getExample()!==fruitExample)fruitWindow.chooseExample(fruitExample);else if(fruitMediaMode==='observation'){const photo=fruitWindow.getPhoto();if(photo){fruitIdentityMedia={image:photo.image,alt:photo.imageAlt,caption:photo.caption,plant:false};loadPanelImage(photo.image);}}render(true);renderExplorer();return;}
         renderExplorer();
         if(fruitPending)return;
         fruitPending=import('./fruitWindowExperience.js');
         try{const {createFruitWindowExperience}=await fruitPending;if(fruitDestroyed||!fruitVisible)return;
-            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:fruitIdentity||identity||{},showLibraryChoices:false,onHide:hideFruitWindow,onState:()=>{if(!fruitDestroyed)renderExplorer();}});
+            fruitWindow=createFruitWindowExperience({root:root||document.body,identity:fruitIdentity||identity||{},showLibraryChoices:false,onHide:hideFruitWindow,onMedia:media=>{if(fruitDestroyed || !fruitVisible || fruitMediaMode!=='observation' || media.exampleId!==fruitExample)return;fruitIdentityMedia={image:media.image,alt:media.imageAlt,caption:media.caption,plant:false};loadPanelImage(media.image);mediaCollapsed=false;render(true);},onState:()=>{if(!fruitDestroyed){render(true);renderExplorer();}}});
             fruitWindow.dockBeside(element);
             if(fruitExample && fruitWindow.getExample()!==fruitExample)fruitWindow.chooseExample(fruitExample);
             if(fruitGl)fruitWindow.attach(fruitGl);if(fruitSession)fruitWindow.bindSession(fruitSession,fruitSpace);
@@ -360,7 +363,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         return sentences.reduce((parts,sentence,index)=>{if(index%2===0)parts.push(sentence.trim());else parts[parts.length-1]+=' '+sentence.trim();return parts;},[]).join('\n\n');
     };
     const currentHint=()=>confirmation || tab==='Help'?'':previewHint || contextHint || (record && identity?KNOWLEDGE_MODES[knowledgeExplorer(record).mode].hint:'') || identity?.hint || rotatingPanelHints[panelHintIndex] || '';
-    const pages=()=>infoPages(text(),selection?.limo?(largeText?34:40):headset?(largeText?44:52):(largeText?46:54),selection?.limo?5:guided?1000:pathwayContext?4:headset&&(headerProgress||taskProgress)?5:7);
+    const pages=()=>infoPages(text(),selection?.limo?(largeText?34:40):headset?(largeText?44:52):(largeText?46:54),selection?.limo?(largeText?2:3):guided?1000:pathwayContext?4:headset&&(headerProgress||taskProgress)?5:7);
     const title=()=>confirmation?.title || (tab==='Help'?'Help':selection?.hideTitle?'':selection?.title || '');
     const hasPimPath=()=>Boolean(selection && identity);
     const pimPath=()=>{
@@ -434,6 +437,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action.startsWith('OpenSource:'))return;
         if(guidanceAction===action){guidanceAction='';element.classList.remove('is-panel-guidance');element.querySelectorAll('.is-guidance-target').forEach(button=>button.classList.remove('is-guidance-target'));}
         if(action==='Notes'){onUtilityAction('notes');return;}
+        if(action.startsWith('Utility:visibility:')){onUtilityAction(action.slice(8));return;}
         if(action.startsWith('Limo:')){const command=action.slice(5);if(command==='open'){if(limoAvailable())onLimoAction(command,knowledgeRecord || record);}else selection?.limo?.onAction?.(command);return;}
         if(action.startsWith('Object:')){objectContext?.onAction?.(action.slice(7));return;}
         if(action.startsWith('FruitWindow:')){const command=action.slice(12);if(command==='toggle'){if(fruitVisible)hideFruitWindow();else void loadFruitWindow();render(true);}else if(command==='load')api.showFruitWindow(identity);else if(command==='hide')hideFruitWindow();else if(command==='next')fruitWindow?.nextExample();else fruitWindow?.action(command);renderExplorer();return;}
@@ -507,7 +511,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         }
         if(action==='Insects')setSpatialVisualSettings({insects:!getSpatialVisualSettings().insects});
         if(action==='HeroDice')setSpatialVisualSettings({heroDice:getSpatialVisualSettings().heroDice===false});
-        if(action==='LivingFrame'){setSpatialVisualSettings({livingFrame:getSpatialVisualSettings().livingFrame===false});onGraphicsQuality();}
+        if(action==='LivingFrame' || action.startsWith('LivingFrame:')){const values=Object.keys(LIVING_FRAME_QUALITIES),current=getSpatialVisualSettings().livingFrameQuality;const quality=action.includes(':')?action.split(':')[1]:values[(values.indexOf(current)+1)%values.length];setSpatialVisualSettings({livingFrameQuality:quality});onGraphicsQuality();}
         if(action==='RainQuality'){
             const values=Object.keys(RAIN_QUALITIES);rainQuality=values[(values.indexOf(rainQuality)+1)%values.length];setSpatialVisualSettings({rainQuality});
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);
@@ -603,7 +607,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(item.kind==='tab'){button.setAttribute('role','tab');button.setAttribute('aria-selected',String(item.selected));button.setAttribute('aria-controls',contentId);button.id=contentId+'-'+item.action;button.tabIndex=item.selected?0:-1;}
         if(item.action===guidanceAction)button.classList.add('is-guidance-target');
         if(item.action==='Utility:close-confirm')button.classList.add('is-glass-danger');
-        if(item.action.startsWith('Object:') || ['HeroDice','LivingFrame'].includes(item.action)){button.setAttribute('aria-pressed',String(Boolean(item.selected)));button.classList.toggle('is-selected',Boolean(item.selected));}
+        if(item.action.startsWith('Object:') || item.action.startsWith('LivingFrame:') || item.action==='HeroDice'){button.setAttribute('aria-pressed',String(Boolean(item.selected)));button.classList.toggle('is-selected',Boolean(item.selected));}
         button.addEventListener('pointerenter',()=>api.setPreviewHint(controlDescription(item)));button.addEventListener('pointerleave',()=>api.setPreviewHint(''));
         button.addEventListener('focus',()=>api.setPreviewHint(controlDescription(item)));button.addEventListener('blur',()=>api.setPreviewHint(''));
         button.addEventListener('click',event=>{event.stopPropagation();if(performance.now()<minimizedDragUntil)return;act(item.action);});return button;
@@ -892,6 +896,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(!existing)element.querySelector('[role="tabpanel"]')?.before(pathway);
     }
     function render(force=false){
+        element.classList.toggle('is-desktop-demo-panel',isDesktopDemo());
+        element.classList.toggle('has-fruit-choices',utilityActions.some(item=>item.id.startsWith('fruit-example:')));
+        root?.classList.toggle('has-fruit-observation',isDesktopDemo() && fruitVisible);
         if(record?.knowledgeExplorer && tab==='Details')record.knowledgeExplorer.readingPage=page;
         if(detached)return;
         renderSettings();
@@ -974,7 +981,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             const visibility=document.createElement('nav');visibility.className='nlxr-visibility-footer';visibility.setAttribute('aria-label','Scene visibility');visibility.style.cssText='display:flex;gap:8px;flex-wrap:wrap';controls().filter(item=>item.kind==='visibility').forEach(item=>visibility.append(makeButton(item)));if(visibility.childElementCount)tools.append(visibility);
             if(!confirmation){const pager=document.createElement('nav');pager.className='nlxr-content-pager';pager.setAttribute('aria-label','Topic pages');controls().filter(item=>item.kind==='pager').forEach(item=>pager.append(makeButton(item)));tools.append(pager);}
             const nav=document.createElement('nav');nav.className='nlxr-control-actions';nav.setAttribute('aria-label','Reading controls');controls().filter(item=>!item.kind && item.action!=='Hide' && !item.disabled).forEach(item=>nav.append(makeButton(item)));if(nav.childElementCount)tools.append(nav);
-            if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>item.kind==='utility').forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)tools.append(utilities);}
+            if(utilityActions.length){const utilities=document.createElement('nav');utilities.className='nlxr-control-utilities';utilities.setAttribute('aria-label','Experience controls');controls().filter(item=>['utility','fruit-choice'].includes(item.kind)).forEach(item=>utilities.append(makeButton(item)));if(utilities.childElementCount)tools.append(utilities);}
             element.append(tools);
         }
         syncDetachedMedia();
@@ -1089,7 +1096,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(card.accent){ctx.fillStyle=card.accent;ctx.fillRect(left,y-3,5,30);}
             if(card.title){ctx.fillStyle='#f3f8fc';ctx.font='650 27px system-ui';ctx.textAlign='center';ctx.fillText(card.title,left+width/2,y,width-10);ctx.textAlign='left';y+=48;}
             if(card.trail){ctx.fillStyle='#c9e0ed';ctx.font='500 21px system-ui';ctx.fillText(card.trail,left,y,width);y+=32;}
-            const actionTop=Math.min(...card.controls.filter(item=>item.kind==='utility'||item.kind==='reference'||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-76);
+            const actionTop=Math.min(...card.controls.filter(item=>['utility','fruit-choice','reference'].includes(item.kind)||['TextSize','Recenter'].includes(item.action)).map(item=>item.y),card.height-76);
             const readingHint=card.hoverHint || card.hint,contentBottom=actionTop-14,hintHeight=readingHint?60:0;
             ctx.fillStyle='rgba(4,18,23,.38)';ctx.strokeStyle='rgba(211,241,231,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(left-10,y-10,width+20,Math.max(20,contentBottom-y+10),16);ctx.fill();ctx.stroke();
             ctx.save();ctx.beginPath();ctx.rect(left,y,width,Math.max(0,contentBottom-y-hintHeight));ctx.clip();
@@ -1229,13 +1236,13 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
 
     function renderExplorer(){
         explorerElement.classList.toggle('is-fruit-controls',fruitVisible && fruitControlsActive);
-        explorerElement.hidden=hidden || detached || confirmation || explorerClosed || Boolean(renderer);element.classList.toggle('has-explorer-companion',!explorerElement.hidden);if(explorerElement.hidden)return;
+        explorerElement.hidden=hidden || detached || confirmation || explorerClosed || Boolean(renderer) || isDesktopDemo() && fruitVisible && fruitControlsActive;element.classList.toggle('has-explorer-companion',!explorerElement.hidden);if(explorerElement.hidden)return;
         const state=knowledgeRecord?knowledgeExplorer(knowledgeRecord):{mode:availablePimoModes().includes(panelModeChoice)?panelModeChoice:'curiosity'},main=element.getBoundingClientRect();explorerElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));
-        explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? main.left)+'px';explorerElement.style.top=(explorerPosition?.y ?? Math.max(8,Math.min(main.bottom+12,window.innerHeight-166)))+'px';
-        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=fruitVisible && fruitControlsActive?'Controls · FDW':selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=fruitVisible && fruitControlsActive?fruitWindow?.getLabel()||'Fruit Discovery Window':objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
+        explorerElement.style.width=main.width+'px';explorerElement.style.left=(explorerPosition?.x ?? (isDesktopDemo()?Math.min(innerWidth-main.width-8,main.right+12):main.left))+'px';explorerElement.style.top=(explorerPosition?.y ?? (isDesktopDemo()?main.top:Math.max(8,Math.min(main.bottom+12,window.innerHeight-166))))+'px';
+        explorerElement.replaceChildren();const header=document.createElement('header'),title=document.createElement('h2');title.textContent=fruitVisible && fruitControlsActive?'Fruit controls':selection?.limo?'LIMO · '+selection.limo.cue:objectContext?.title || (knowledgeRecord?'Controls · PIMO':selection?.controlsType==='LIMO'?'Controls · LIMO':'Controls');header.append(title);header.title='Grip to move Controls';const linked=document.createElement('small');linked.textContent=fruitVisible && fruitControlsActive?fruitWindow?.getLabel()||'Fruit Discovery Window':objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '';header.append(linked);
         const hint=document.createElement('span');hint.className='nlxr-explorer-hint';hint.textContent=fruitVisible && fruitControlsActive?'Hold fruit with both pointers; pull apart to open it.':selection?.limo?.coverage || objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[state.mode].question:'Select a Note, Totem or Plant Orb to see its controls.');header.append(hint);explorerElement.append(header);
         const modes=document.createElement('nav');modes.className='nlxr-explorer-modes';modes.setAttribute('aria-label','Knowledge view');
-        const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label','PIMO controls');
+        const options=document.createElement('nav');options.className='nlxr-explorer-options';options.setAttribute('aria-label',fruitVisible && fruitControlsActive?'Fruit controls':selection?.limo?'Learning cells controls':objectContext?.title || 'Plant cells controls');
         for(const item of explorerControls()){
             if(item.action==='Explorer'){header.append(makeButton(item));continue;}
             if(item.kind==='heading'){const heading=document.createElement('h3');heading.className='nlxr-object-control-heading';heading.textContent=item.label;options.append(heading);continue;}
@@ -1314,11 +1321,13 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         },
         clearPlant(nextRecord){if(knowledgeRecord===nextRecord)knowledgeRecord=null;if(record!==nextRecord){renderExplorer();return false;}record=null;identity=null;selection=null;mediaCollapsed=true;loadPanelImage('');page=0;render(true);return true;},
         showLearning(content){
+            const retainedMedia=content?.retainImage?(previewMedia() || visibleMedia):null;
             objectContext=null;contextHint='';
             if(!content?.keepExplorerContext)knowledgeRecord=null;
             record=null;identity=null;selection={...content,sources:[],editable:false,mesh:content?.mesh || 'lim'};
-            const imageSource=learningPanelMedia(content)?.image || '';
-            mediaCollapsed=true;mediaTouched=false;
+            if(!learningPanelMedia(content)?.image && retainedMedia?.image){selection.image=retainedMedia.image;selection.imageAlt=retainedMedia.alt || retainedMedia.caption;selection.imageCaption=retainedMedia.caption;}
+            const imageSource=learningPanelMedia(selection)?.image || (content?.retainImage?mediaImageSource:'');
+            mediaCollapsed=!imageSource;mediaTouched=false;
             if(imageSource)mediaCollapsed=false;
             loadPanelImage(imageSource,{delayMs:Number(content?.imageTransitionDelayMs)||0,discardPrevious:Boolean(content?.discardPreviousImage)});
             tab='Details';page=0;if(content?.controlsType)explorerClosed=false;render(true);
@@ -1326,7 +1335,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         setLearningModules(value,{open=false}={}){const previousTab=tab;moduleContext=value?{...value,actions:[...(value.actions||[])]}:null;if(open && moduleContext)tab='Help';page=0;if(previousTab==='Details' && tab==='Details')updateReading();else render();},
         setUtilityActions(items=[]){utilityActions=items.slice(0,8).map(item=>({...item}));render();},
         setVisibilityItems(items=[]){const signature=JSON.stringify(items);if(signature===visibilitySignature)return;visibilitySignature=signature;visibilityItems=items.map(item=>({...item}));render(true);},
-        showFruitWindow(nextIdentity=null,example=null,{mediaMode='identity'}={}){fruitIdentity=nextIdentity || identity;fruitExample=example || fruitWindowSpecies(fruitIdentity || {})?.id || null;const item=FRUIT_WINDOW_LIBRARY.find(entry=>entry.id===fruitExample);if(mediaMode==='observation' && item?.image){fruitIdentity={plant:item.label,scientific:item.scientific};fruitIdentityMedia={image:item.image,alt:item.label,caption:item.label};}else if(mediaMode!==fruitMediaMode)fruitIdentityMedia=null;fruitMediaMode=mediaMode;return loadFruitWindow();},
+        showFruitWindow(nextIdentity=null,example=null,{mediaMode='identity'}={}){fruitIdentity=nextIdentity || identity;fruitExample=example || fruitWindowSpecies(fruitIdentity || {})?.id || null;const item=FRUIT_WINDOW_LIBRARY.find(entry=>entry.id===fruitExample);if(mediaMode==='observation' && item){fruitIdentity={plant:item.label,scientific:item.scientific};}fruitMediaMode=mediaMode;return loadFruitWindow();},
         hideFruitWindow,
         setObjectContext(value){objectContext=value;knowledgeRecord=null;knowledgeDocument=null;panelModeChoice=null;mediaCollapsed=true;loadPanelImage('');render(true);},
         setStageContext(value,{preserveObject=false}={}){stageContext=value;if(!preserveObject){objectContext=null;knowledgeRecord=null;knowledgeDocument=null;}renderExplorer();},
@@ -1413,14 +1422,15 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(spatialMove && heldRay?.origin && heldRay?.direction){
                 panelShift=null;
                 const depthSource=spatialMove.source;
-                const axes=depthSource?.gamepad?.axes || [],stick=Number(axes.length>2?axes[3]:axes[1]) || 0;
-                if(Math.abs(stick)>.15)spatialMove.distance=Math.max(.4,Math.min(2.5,spatialMove.distance-stick*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.9));
+                const stickPose=spatialStick(depthSource,time-lastTime);
+                spatialMove.distance=Math.max(.4,Math.min(2.5,spatialMove.distance+stickPose.depth));
                 pose ||= next;
                 if(spatialMove.panel==='media')mediaPose ||= spatialMediaDockPose(mediaDockSide);
                 const current=spatialMove.panel==='explorer'?explorerSpatialPose():spatialMove.panel==='settings'?settingsPose || spatialMediaDockPose('left'):spatialMove.panel==='media'?mediaPose:pose;
                 const center=spatialMove.handCenter || panelCenterFromGrab(heldRay,spatialMove,current);
-                const facing=facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]});
-                const moved={...current,center,...facing,anchorHeading:facing.right};
+                spatialMove.yaw=(spatialMove.yaw ?? current.rotationYaw ?? 0)+stickPose.yaw;
+                const facing=turnSpatialAxes(facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]}),spatialMove.yaw);
+                const moved={...current,center,...facing,anchorHeading:facing.right,rotationYaw:spatialMove.yaw};
                 if(spatialMove.panel==='explorer'){explorerPose=moved;if(explorerNearDock())explorerPose=explorerDockPose();}else if(spatialMove.panel==='settings'){settingsPose=moved;if(settingsNearDock())settingsPose=settingsDockPose();settingsElement.classList.toggle('is-magnetized',settingsNearDock());}else if(spatialMove.panel==='media'){
                     mediaPose=moved;const candidate=spatialDockCandidate(mediaPose);
                     if(candidate){mediaPose=spatialMediaDockPose(candidate.side);spatialMove.dockSide=candidate.side;}else spatialMove.dockSide=null;
@@ -1456,7 +1466,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(imageFade>=1)mediaPreviousImage=null;
             const preview=previewMedia(),mediaCard={id:'media',media:true,panelGuidance:guidanceAction==='ToggleMedia',mediaRevision,imageSource:preview?.image || '',height:760,image:mediaImage,previousImage:mediaPreviousImage,imageFade,fadeDuration:selection?.imageFadeMs || MEDIA_FADE_MS,caption:preview?.caption || '',grabState:spatialMove?.panel==='media'?'held':spatialGrabPending?.panel==='media'?'ready':hoveredPanelId==='media'?'hover':'',hoverHint:hoveredPanelId==='media'?hoveredDescription:''};
             const explorerCard={id:'explorer',limo:fruitVisible?null:selection?.limo,explorer:true,infoOpacity,height:explorerHeight(),question:objectContext?.hint || (knowledgeRecord?KNOWLEDGE_MODES[knowledgeExplorer(knowledgeRecord).mode].question:'Select a Note, Totem or Plant Orb to see its controls.'),controls:explorerControls(),hoverAction:hoveredPanelId==='explorer'?hoveredAction:'',grabState:spatialMove?.panel==='explorer'?'held':hoveredPanelId==='explorer'?'hover':''};
-            if(fruitVisible && fruitControlsActive)explorerCard.question='Hold Trigger to carry fruit. Bring it close and keep holding to open it.';
+            if(fruitVisible && fruitControlsActive)explorerCard.question='Hold fruit with both pointers, then pull apart to open it. Hold both window grips to carry the box; use the sticks to turn it or change its distance.';
             explorerCard.linkedLabel=fruitVisible && fruitControlsActive?(fruitWindow?.getLabel()||'Fruit Discovery Window')+' · FDW':(objectContext?.linkedName || identity?.plant || record?.name || stageContext?.linkedName || selection?.title || '')+' · '+(objectContext?.title?.replace('Controls · ','') || (knowledgeRecord?'PIMO':selection?.controlsType || ''));
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
@@ -1563,7 +1573,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(type==='selectend')panelGestureSource=null;
         };const visibility=()=>{if(session.visibilityState!=='visible'){fruitWindow?.resetGrips();sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
             removeXrControls=()=>{fruitWindow?.resetGrips();fruitSession=null;fruitSpace=null;handReferenceSpace=null;handContacts.clear();handPokes.clear();sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},
-        destroy(){fruitDestroyed=true;fruitVisible=false;fruitWindow?.destroy();fruitWindow=null;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);removeCapabilities();mediaLoadToken++;clearTimeout(mediaTransitionTimer);clearInterval(panelHintTimer);mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;panelCanvases.clear();mediaFloating?.remove();element.remove();settingsElement.remove();explorerElement.remove();if(simpleDesktop)root?.classList.remove('is-simple-desktop-ar');}
+        destroy(){root?.classList.remove('has-fruit-observation');fruitDestroyed=true;fruitVisible=false;fruitWindow?.destroy();fruitWindow=null;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);removeCapabilities();mediaLoadToken++;clearTimeout(mediaTransitionTimer);clearInterval(panelHintTimer);mediaImage=null;mediaPreviousImage=null;removePanelMove();removeXrControls();renderer?.destroy();renderer=null;panelCanvases.clear();mediaFloating?.remove();element.remove();settingsElement.remove();explorerElement.remove();if(simpleDesktop)root?.classList.remove('is-simple-desktop-ar');}
     };const removeCapabilities=subscribePimoCapabilities(()=>{if(knowledgeRecord)knowledgeExplorer(knowledgeRecord);render(true);});
     function languageChanged(){render(true);}
     globalThis.addEventListener?.('nxr-languagechange',languageChanged);

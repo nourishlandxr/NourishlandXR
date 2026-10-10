@@ -33,8 +33,9 @@ export function totemNotificationLight(record,now=performance.now()){
     const colour=/^[\da-f]{6}$/i.test(hex)?hex.match(/../g).map(value=>parseInt(value,16)/255):record?.notificationColour || TOTEM_NOTIFICATION_COLOUR;
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     const key=String(record?.id || record?.marker?.id || record?.name || ''),hash=[...key].reduce((sum,char)=>sum+char.charCodeAt(0),0);
-    const alternate=hash%2?[.72,.24,.96]:[1,.78,.12],age=now-record?.demoArriveAt,selected=record?.signNotificationSelected;
-    const speed=Number.isFinite(age) && age>=0 && age<2100?230:selected?380:760;
+    const alternate=hash%2?[.72,.24,.96]:[1,.78,.12],selected=record?.signNotificationSelected;
+    if(!selected && !record?.totemSelectedCard)return {colour,strength:.32,phase:0};
+    const speed=380;
     const phase=Math.floor(now/speed)%4;
     if(reduced)return {colour,strength:.85,phase:0};
     return {colour:phase%2?[.015,.02,.035]:phase===0?[.12,.48,1]:alternate,strength:phase%2?.02:1,phase:now/1000};

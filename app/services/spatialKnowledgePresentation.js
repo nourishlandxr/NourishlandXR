@@ -12,7 +12,7 @@ export function plantKnowledgeState(document, { expanded = false, loading = fals
     const draftOnly = live && nodes.every(node => node.status !== 'published');
     const state = loading ? 'loading' : unavailable ? 'unavailable' : live ? (expanded ? 'expanded' : 'live') : 'basic';
     return { state, live: !loading && !unavailable && live, count: nodes.length, draftOnly,
-        label: loading ? 'Loading knowledge' : unavailable ? 'Knowledge unavailable' : !live ? 'Basic plant' : draftOnly ? 'Draft PIM' : expanded ? 'PIM open' : 'Live PIM' };
+        label: loading ? 'Loading knowledge' : unavailable ? 'Knowledge unavailable' : !live ? 'Basic plant' : draftOnly ? 'Draft Plant cells' : expanded ? 'Plant cells open' : 'Plant cells' };
 }
 
 export function createPlantKnowledgeResolver() {

@@ -1,0 +1,243 @@
+{
+  "stage": 5,
+  "assetBytes": 19012464,
+  "meshes": 106,
+  "primitives": 106,
+  "triangles": 245804,
+  "textures": 4,
+  "animations": 1,
+  "channels": 106,
+  "morphGrowthGroups": 103,
+  "bloomGroups": 12,
+  "plantClusters": 573,
+  "attachedRootSystems": 573,
+  "rootAttachmentEvidence": {
+    "originsChecked": 573,
+    "maxRootDistanceM": 0.0019494923860190869,
+    "maxStemDistanceM": 0.0015999916610189913
+  },
+  "earlyFlowers": 4,
+  "lateFlowers": 23,
+  "worms": 3,
+  "sideCoverageEvidence": {
+    "occupiedAngleDepthBins": 384,
+    "totalBins": 384,
+    "minDepthM": -0.14199957251548767,
+    "maxDepthM": 0.14254430681467056
+  },
+  "taprootEvidence": {
+    "floorYM": -1.6,
+    "lowestTapVertexYM": -1.599584698677063,
+    "lowestModelVertexYM": -1.6045554280281067,
+    "lateralForks": 9
+  },
+  "geometrySamples": [
+    {
+      "time": 0,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.921831727027893,
+        1.9253003001213074,
+        0.2461279258131981
+      ]
+    },
+    {
+      "time": 3,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.921831727027893,
+        1.9253003001213074,
+        0.2461279258131981
+      ]
+    },
+    {
+      "time": 6,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.921831727027893,
+        1.9253003001213074,
+        0.24815771163730282
+      ]
+    },
+    {
+      "time": 9,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.921831727027893,
+        1.9253003001213074,
+        0.2518835503375907
+      ]
+    },
+    {
+      "time": 12,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9219579723923452,
+        1.9253003001213074,
+        0.26245454585198913
+      ]
+    },
+    {
+      "time": 15,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.924251254177051,
+        1.9253003001213074,
+        0.28193713764331046
+      ]
+    },
+    {
+      "time": 18,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9260881941732038,
+        1.9253540806795253,
+        0.3047417184812464
+      ]
+    },
+    {
+      "time": 21,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.945762878350635,
+        1.9585363815676544,
+        0.32507256987879485
+      ]
+    },
+    {
+      "time": 24,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9560075234047716,
+        2.006623024802174,
+        0.3367389805847676
+      ]
+    },
+    {
+      "time": 27,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9687661913210714,
+        2.059975077216942,
+        0.33740302312542747
+      ]
+    },
+    {
+      "time": 30,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9804785236680758,
+        2.127900126593155,
+        0.3376286951098299
+      ]
+    },
+    {
+      "time": 33,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.988791874773235,
+        2.2112978460431627,
+        0.342299242722922
+      ]
+    },
+    {
+      "time": 36,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9909233359372536,
+        2.2848847099690914,
+        0.34085665078341565
+      ]
+    },
+    {
+      "time": 39,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        1.9957845744633005,
+        2.4175084454109097,
+        0.33698198311594396
+      ]
+    },
+    {
+      "time": 42,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        2.000116271283275,
+        2.525964744044373,
+        0.33337096356239293
+      ]
+    },
+    {
+      "time": 45,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        2.0020615926333676,
+        2.5857284824454894,
+        0.3317492911035238
+      ]
+    },
+    {
+      "time": 48,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        2.0020620226860046,
+        2.595767637166631,
+        0.33174893260002136
+      ]
+    },
+    {
+      "time": 51,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        2.0020620226860046,
+        2.595767621174339,
+        0.33174893260002136
+      ]
+    },
+    {
+      "time": 54,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        2.0020620226860046,
+        2.595767617225647,
+        0.33174893260002136
+      ]
+    },
+    {
+      "time": 57,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        2.0020620226860046,
+        2.595767617225647,
+        0.33174893260002136
+      ]
+    },
+    {
+      "time": 60,
+      "minRadius": 0.8319999826721532,
+      "dimensionsM": [
+        2.0020620226860046,
+        2.595767617225647,
+        0.33174893260002136
+      ]
+    }
+  ],
+  "checks": [
+    "four embedded textures",
+    "reference and cameras excluded",
+    "single growth clip",
+    "different foliage maturity at the same time",
+    "few early flowers and mostly late blooms",
+    "exported roots meet each planting origin and stem",
+    "shallow and deep root depths",
+    "worms emerge before the organic layer completes",
+    "soil accumulation morphs",
+    "winding vines and aerial root tracks",
+    "reading clearance including morph geometry at 21 times",
+    "provisional geometry budget",
+    "side foliage occupies all 384 angle-depth bins and both shoulders",
+    "taproot reaches preview floor and splits sideways",
+    "secondary and fine roots grow after primary roots"
+  ],
+  "headsetVerified": false
+}

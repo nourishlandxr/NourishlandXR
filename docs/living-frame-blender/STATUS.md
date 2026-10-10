@@ -1,3 +1,183 @@
+# Living Frame — runtime SD/HD trial (2026-10-10)
+
+The approved stage 6 artwork is now connected to the demo behind three saved
+settings: **No Living Frame**, **LF SD** (default), and **LF HD**. Off removes
+the decorative rim and retains the reading surface, text, navigation and cells.
+The choices appear in desktop review Settings and the spatial Graphics settings;
+the General settings button cycles the same three modes.
+
+Startup preparation downloads and decodes only the saved tier, independently of
+the welcome page. Off skips the model download. Concurrent startup/demo requests
+share one promise and asset. A failed download is optional and retryable; delayed
+loads cannot restore an Off or destroyed frame. Existing canvas artwork remains
+until the native model is uploaded and drawable, and is then replaced once.
+
+- Runtime files: app/assets/living-frame/living-frame-sd.glb and living-frame-hd.glb.
+- Rebuild assets: node tools/build-living-frame-assets.mjs. Approved Blender files are preserved.
+- SD: 140,552 triangles, 94 source meshes, 13,876,024 bytes; all leaf patches remain,
+  with fewer longitudinal leaf rows and without fine underground/branch root groups.
+- HD: approved 255,964 triangles, 112 source meshes, 19,974,136 bytes.
+- Native XR: both tiers are batched to 24 material draws per eye. GPU morphs retain
+  the 60-second growth sequence; both eyes share static uploads and use independent
+  view matrices. Text timing and controller hit paths remain independent of loading.
+- CPU/Three.js desktop playback samples growth at 15 Hz for SD and 30 Hz for HD;
+  finished artwork sleeps until visibility, size or quality changes.
+- Runtime review: http://127.0.0.1:8769/tools/preview-living-frame-runtime.html.
+  Test native stereo exercises the actual shared-context GPU renderer in two viewports.
+
+Validation: 736 regression tests passed with local-server access (the restricted
+sandbox initially blocked persistence test loopback connections). Additional
+exported SD/HD clearance checks passed at 0, 15, 30, 42 and 60 seconds. Focused
+checks cover Off/destroy/load races, failed upgrade/retry, material batching,
+per-eye matrices, upload reuse and restoration of the surrounding GL state.
+Browser review confirmed the actual Settings actions, both native tiers, growth
+and mature playback, a single selected-tier startup request and zero model
+requests when reloading with Off saved. Frontend build and local welcome badge:
+**V0.9452**. A built badge labelled Live is local build evidence here.
+
+This is a local integration trial. Physical Quest performance, placement (including
+root clearance relative to the real floor) and interactions beside open learning
+cells remain for headset review. Desktop/software rendering timings do not establish
+Quest frame rates. No commit, push or deployment was performed by this task.
+
+---
+
+# Living Frame - stage 6 inner-right moss and microdroplets
+
+A localized moss patch builds along the inner-right wall and lip. Its 280 low
+cushions use three dark matte greens: 224 on the inner wall and 56 on the lip.
+An irregular 5-17 degree arc keeps the effect local. Three waves develop during
+seconds 27-58. The approved planting, roots, soil and flower timing are retained.
+
+Twenty-four translucent water beads, 1.39-3.17 mm wide, form on the moss during
+seconds 50-60. Tiny static highlights make them legible up close. Alpha blending
+and low roughness avoid a transmission render pass or emissive sparkle. This is
+stylized art, not a simulation of moss colonization or condensation. Collapsed
+growth geometry is tiny rather than removed, following the existing morph approach.
+
+## Files and review
+
+- `create_moss_ring.py`: repeatable additive generation/export entry point.
+- `moss-ring.blend`: editable source, packed textures, scripts and timeline.
+- `moss-ring.glb`: separate candidate; approved `wrap-ring` files preserved.
+- `moss-ring-dimensions.json`, `moss-ring-verification.json`: parameters/checks.
+- `moss-ring-moss-detail.png`: final Blender close-up render.
+- `moss-preview-finish.png`, `moss-preview-before-dew.png`,
+  `moss-preview-front.png`: browser timing and clearance evidence.
+- `moss-browser-review.json`, `welcome-0.9446.png`: local browser/build evidence.
+
+The default `preview.html?model=full` loads this candidate. Use **Moss detail**,
+then **Moss & dew**; **Before dew** compares at 42 seconds. `?model=wrap` preserves
+the approved planted sides. Other previous models remain available. Text reference
+is independent of the GLB. Blender generation opened visibly and completed; a
+focused 1000 x 760 close-up uses eight samples and two render threads.
+
+## Verification and next step
+
+The candidate has 255,964 triangles, 112 meshes/primitives, 109 morph groups,
+four embedded textures and one 60-second clip. GLB: 19,974,136 bytes. Six groups
+and 10,160 triangles were added, about 4.1% over the approved side/root model.
+Mature envelope remains 2.002 x 2.596 x 0.332 m. The scaffold opening is 1.664 m.
+Moss extends slightly inward to a minimum radius of 0.82705 m; the protected
+0.800 m reading radius passes at all 21 sampled animation times.
+
+Wave checks confirm staggered moss buildup and late condensation. All 573
+plant/root attachments, 384 side angle/depth bins, floor contact, branching-root
+timing, flowers and soil checks still pass. The final Blender render and browser
+close-up show droplets on moss. Browser review covers the 42-second comparison,
+mature text clearance and loading the preserved side model. Warning/error logs
+are empty. Frontend build and local welcome badge are verified at **0.9446**.
+`git diff --check` passes. Existing uncommitted application work was preserved;
+the shared checkout's complete regression suite was not claimed here.
+
+This remains isolated artwork. Live Living Frame text/navigation/timing/reveal
+code was not edited for this addition. No commit, push or deployment was performed.
+Next: integrate behind independent text loading and the existing-frame fallback,
+then validate native WebXR morph playback, loading and Quest performance. This
+roughly 20 MB / 256k-triangle art candidate needs a runtime budget before deployment.
+
+---
+
+# Earlier stage 5 record
+
+# Living Frame — stage 5 planted outer side and branching root crown
+
+The new `wrap-ring` draft preserves the approved front model (`diverse-ring`).
+It adds a full-depth living skin to the cylindrical outer side, not just more
+front-facing leaves. Four depth rows span the complete 360-degree circumference,
+with 384 additional pockets. Their leaf planes follow the side surface; varied
+rounded, oval, fine and lobed leaves overlap across both shoulders. The front's
+lower section remains mostly reserved for roots. Existing growth, muted greens,
+soil/worm activity, early flowers and the predominantly late bloom are retained.
+
+The lower structure now has 28 aerial roots, 117 secondary splits and 234 fine
+branches. Primary roots emerge first, followed by secondary and fine growth.
+Four buttress roots lead into a shared central crown. A thicker tapered taproot
+extends to a preview floor and splits into nine lateral branches, including two
+terminal forks that spread sideways along the floor. This remains generic art,
+not a claim about one plant species' root anatomy.
+
+Preview centre height is assumed to be 1.60 m, so floor Y is -1.60 m relative to
+the frame centre. Configure generation with `-- --centre-height 1.6`; supported
+range is 1.3–2.4 m. The browser floor grid is an independent reference, not part
+of the GLB or a landscape. Real project/XR floor placement is not implemented.
+
+## Current files
+
+- `create_wrap_ring.py`: new repeatable generation/export entry point; reuses
+  `create_diverse_ring.py` and `create_botanical_section.py`.
+- `wrap-ring.blend`: editable source, packed textures, scripts and 60 s timeline.
+- `wrap-ring.glb`: separate runtime candidate with one synchronized clip.
+- `wrap-ring-dimensions.json`: planting, branching and floor parameters.
+- `wrap-ring-perspective.png`, `wrap-ring-detail.png`, `wrap-ring-side.png`,
+  `wrap-ring-side-detail.png`: Blender renders for the visual review.
+- `verify-full-ring.mjs --wrap` and `wrap-ring-verification.json`: exported checks.
+- `wrap-preview-side-detail.png`, `wrap-preview-roots.png`,
+  `wrap-preview-root-growth.png`, `wrap-preview-side.png`, `wrap-preview-back.png`,
+  `wrap-preview-perspective.png`: browser review evidence.
+- `wrap-browser-review.json` and `welcome-0.9445.png`: browser/build evidence.
+
+The usual `?model=full` URL now opens this draft, including Side detail, Back,
+Root detail and a floor-reference toggle. `?model=front` preserves the approved
+front canopy. Earlier previous/section/plain models are still available. The
+GLB contains no text, so a future reusable Project welcome can keep its title,
+copy, timing and navigation independent of the living artwork. Project welcome
+integration is a later stage; no live project screen has been changed here.
+
+## Verification and next step
+
+The candidate has 573 pockets with 573 attached root systems, 245,804 triangles,
+106 meshes/primitives, 103 morph groups, four embedded textures and one clip.
+GLB size: 19,012,464 bytes. Mature envelope: 2.002 × 2.596 × 0.332 m.
+The original 1.664 m opening and 0.800 m protected reading radius remain.
+Exported root/stem attachment passes for all pockets (maximum gaps 1.95/1.60 mm).
+Side leaf geometry occupies every one of the 384 angle/depth bins and extends
+past both shoulders. This tests distribution; small natural soil gaps remain
+between individual leaves rather than an opaque green shell.
+
+All 21 sampled animation times retain a minimum reading radius of 0.832 m.
+The taproot reaches Y -1.5996 m; the lowest root surface reaches -1.6046 m,
+within the 12 mm floor tolerance. Lateral branching reaches both sides.
+Branch-weight checks confirm later secondary/fine growth, while the few early
+flowers and late finale retain their original timing. The new draft ceiling is
+260k triangles / 110 primitives. This is an art-review budget, not headset proof.
+
+Blender generation was visible in fresh windows, preserving existing windows.
+The first attempt stopped at a viewport-mode mismatch before export; setting the
+render engine before the material checkpoint fixed it. Generation and all four
+renders then completed. Browser review covers the planted side, rear shoulder,
+root growth, mature floor contact and floor-grid visibility. Local frontend build
+and welcome badge are verified at 0.9445. No commit/push/deployment was performed.
+
+Next: approve this volume and root silhouette, then refine natural surfaces and
+prepare a cheaper runtime variant. Native WebXR morph playback, loading and Quest
+performance still need validation before this becomes a reusable Project welcome.
+Live Living Frame text, navigation, timing and reveal were not modified by this
+work. Existing uncommitted work and the approved front assets were preserved.
+
+---
+
+# Earlier stage 4 record
 # Living Frame outer ring — stage 4 dense, low groundcover
 
 ## Current review: wider coverage, attached roots and late flowering
@@ -17,6 +197,7 @@ local jitter, varied size, leaf shapes and four growth waves prevent a uniform
 pattern. Sideways runners overlap neighbouring pockets and some spread inward.
 Seed 94039 is repeatable; a new seed produces a different authored arrangement.
 Small curved leaf surfaces and faint veins replace the earlier fluorescent atlas.
+Leaf widths overlap more generously in the final canopy pass without raising stems.
 This is generic groundcover, not a species-identification model.
 
 Every planting pocket has its own root system starting at the actual stem origin.
@@ -46,9 +227,10 @@ visible in the preview. The bee remains separate from the exported ring GLB.
 - diverse-ring-perspective.png and diverse-ring-detail.png: mature Blender renders.
 - diverse-preview-soil.png, diverse-preview-growth.png,
   diverse-preview-early-flowers.png, diverse-preview-root-cutaway.png,
-  diverse-preview-root-growth.png and diverse-preview-bloom.png: browser evidence.
+  diverse-preview-root-growth.png, diverse-preview-bloom.png and
+  diverse-preview-flower-detail.png: browser evidence.
 - verify-full-ring.mjs --diverse and diverse-ring-verification.json: export checks.
-- diverse-browser-review.json and welcome-0.9443.png: observed controls and badge.
+- diverse-browser-review.json and welcome-0.9444.png: observed controls and badge.
 
 The existing preview with ?model=full loads this draft. New visits start at the
 early growth state and play; reduced-motion visits show the finish. Controls
@@ -60,7 +242,7 @@ makes the soil transparent. Previous, botanical and plain previews are preserved
 ## Verification and current limits
 
 The latest asset has 151,644 triangles, 78 meshes/primitives, four embedded
-textures, 75 morph groups, 78 animation channels, one clip and 11,945,148 bytes.
+textures, 75 morph groups, 78 animation channels, one clip and 11,945,132 bytes.
 The mature envelope is 2.002 m wide × 2.257 m high × 0.283 m deep. The scaffold
 retains its 1.664 m opening and 0.180 m depth. The protected reading radius is
 0.800 m; the minimum exported vertex radius stays 0.832 m at all 21 sampled times.
@@ -88,8 +270,9 @@ script overwrites this draft's outputs and Blender creates a .blend1 backup.
 Live frame geometry, text loading, navigation, timing and reveal were not changed
 by this task. Shared uncommitted application changes were preserved.
 
-The final local frontend build used version 0.9443 and the welcome screen visibly
-showed V0.9443. The badge's Live label is a build channel, not proof of deployment.
+This task incremented the observed version to 0.9443. Other shared work subsequently
+advanced it to 0.9444; the final local frontend build and welcome check use 0.9444.
+The badge's Live label is a build channel, not proof of deployment.
 No commit, push, deployment or headset verification was performed by this task.
 
 Next: review density, leaf scale, root variation and subtle growth here. Then

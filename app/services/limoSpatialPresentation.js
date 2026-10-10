@@ -1,7 +1,7 @@
 // These exact controls are drawn and hit-tested by the native XR panel.
 const cues={question:'?',filter:'FIND',observation:'NOTE',action:'TRY',scenario:'DRAFT',review:'RETURN',navigation:'BACK',connection:'CONNECT'};
 export function limoSpatialControls(limo){
- return [{action:'Limo:close',label:'Close LIMO',role:'navigation',x:802,y:16,width:176,height:48},...(limo?.actions || []).map((item,index)=>({...item,action:'Limo:'+item.id,kind:'limo',x:24+(index%2)*486,y:156+Math.floor(index/2)*106,width:462,height:94}))];
+ return [{action:'Limo:close',label:'Return to demo',role:'navigation',x:750,y:16,width:226,height:48},...(limo?.actions || []).map((item,index)=>({...item,action:'Limo:'+item.id,kind:'limo',x:24+(index%2)*486,y:156+Math.floor(index/2)*106,width:462,height:94}))];
 }
 function wrap(ctx,text,width){
  const words=String(text || '').split(/\s+/),lines=[];let line='';
@@ -32,11 +32,11 @@ export function drawLimoSpatialReading(ctx,card){
  ctx.fillStyle=card.accent || '#a9ce8c';ctx.fillRect(left+10,26,4,68);
  ctx.fillStyle='#d2dccd';ctx.font='650 19px system-ui';ctx.fillText('LIMO / '+(cues[card.limo.role] || 'QUESTION'),left+30,25,width-50);
  ctx.font='500 19px system-ui';ctx.fillText(card.limo.project+' · '+card.limo.scope,left+30,53,width-50);
- ctx.fillStyle='#f4f0df';ctx.font='700 38px system-ui';const titles=wrap(ctx,card.title,width-20);titles.slice(0,2).forEach((line,index)=>ctx.fillText(line,left+10,96+index*44,width-20));
- const summaryY=100+Math.min(2,titles.length)*44;ctx.fillStyle='#b9cfbb';ctx.font='500 26px system-ui';const summaries=wrap(ctx,card.limo.summary,width-20);summaries.slice(0,2).forEach((line,index)=>ctx.fillText(line,left+10,summaryY+index*32,width-20));
- ctx.strokeStyle='rgba(208,228,203,.27)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left+10,183);ctx.lineTo(left+width-10,183);ctx.stroke();
+ ctx.fillStyle='#f4f0df';ctx.font='700 36px system-ui';const titles=wrap(ctx,card.title,width-20);titles.slice(0,2).forEach((line,index)=>ctx.fillText(line,left+10,82+index*39,width-20));
+ const summaryY=85+Math.min(2,titles.length)*39;ctx.fillStyle='#b9cfbb';ctx.font='500 23px system-ui';ctx.fillText(card.limo.summary,left+10,summaryY,width-20);
  const bottom=Math.min(...card.controls.filter(item=>item.kind==='utility').map(item=>item.y),card.height-70);
- const bodyY=Math.max(207,summaryY+Math.min(2,summaries.length)*32+22);
+ const bodyY=summaryY+36;
+ ctx.strokeStyle='rgba(208,228,203,.27)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(left+10,bodyY-9);ctx.lineTo(left+width-10,bodyY-9);ctx.stroke();
  ctx.save();ctx.beginPath();ctx.rect(left+10,bodyY,width-20,Math.max(20,bottom-bodyY-12));ctx.clip();
  ctx.font=(card.largeText?'600 36':'500 32')+'px system-ui';ctx.fillStyle='#f4f0df';let y=bodyY;
  for(const line of card.lines){for(const wrapped of wrap(ctx,line,width-20)){ctx.fillText(wrapped,left+10,y);y+=card.largeText?44:40;}}

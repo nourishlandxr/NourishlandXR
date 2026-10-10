@@ -4,7 +4,7 @@ import {nativePlantDepthNodes,NATIVE_PLANT_DEPTH_TRANSLATIONS} from './demoNativ
 
 const illustrationCaption='Stylised black-and-white teaching illustration';
 const source=(id,title,url)=>({id,title,url});
-export const NATIVE_PLANT_CHOOSER_COPY='Imagine choosing from thousands of plants, each opening a new story of food, ecology and place. These Elements are the starting points for a living landscape of knowledge. Try Blue Quandong, Finger Lime or Lemon Myrtle now: your second Orb becomes the plant you choose.';
+export const NATIVE_PLANT_CHOOSER_COPY='Thousands of plants. Thousands of living stories.\n\nChoose Blue Quandong, Finger Lime or Lemon Myrtle. Your second Orb becomes that plant, ready to explore.';
 
 const blueQuandongSources=[
     source('plantnet-blue-quandong','NSW Flora Online · Elaeocarpus grandis','https://plantnet.rbgsyd.nsw.gov.au/cgi-bin/NSWfl.pl?lvl=sp&name=Elaeocarpus~grandis&page=nswfl'),

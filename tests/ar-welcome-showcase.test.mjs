@@ -200,13 +200,13 @@ test('Continue unlocks after the welcome entrance without requiring Vision',asyn
  assert.equal(welcomeCanContinue(96000),true);
 });
 
-test('six roots stay calm and only the selected question family opens',()=>{
+test('six roots stay calm and both expanded question families remain open',()=>{
  const waiting=welcomeExperienceFrames(32000).flatMap(frame=>frame.nodes);
  assert.equal(waiting.filter(node=>node.opacity===1).length,6);
  const expandedIds=['limo-place','limo-relationships'];
  const settled=welcomeExperienceFrames(64000,false,undefined,new Set(),{expandedLimIds:expandedIds});
  const visible=settled.flatMap(frame=>frame.nodes).filter(node=>node.opacity===1);
- assert.equal(visible.length,11);assert.ok(visible.filter(node=>node.depth===1).every(node=>node.parent==='limo-relationships'));
+ assert.equal(visible.length,16);for(const id of expandedIds)assert.equal(visible.filter(node=>node.depth===1 && node.parent===id).length,5);
  assert.deepEqual(welcomeExperienceFrames(640000,false,undefined,new Set(),{expandedLimIds:expandedIds}),settled);
 });
 

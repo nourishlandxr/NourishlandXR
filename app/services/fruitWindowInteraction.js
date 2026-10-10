@@ -5,8 +5,8 @@ export const FRUIT_WINDOW_LIBRARY=Object.freeze([
     {id:'african_peach',scientific:'Sarcocephalus latifolius',image:new URL('../assets/fruit-window/photos/african-peach.png',import.meta.url).href,label:'African peach',folder:'mamey-african',aliases:['african peach','nauclea latifolia','sarcocephalus latifolius']},
     {id:'carambola',scientific:'Averrhoa carambola',image:new URL('../assets/fruit-window/photos/carambola.png',import.meta.url).href,label:'Star fruit',folder:'carambola-bayberry',aliases:['carambola','star fruit','starfruit','averrhoa carambola']},
     {id:'chinese_bayberry',scientific:'Morella rubra',image:new URL('../assets/fruit-window/photos/chinese-bayberry.png',import.meta.url).href,label:'Chinese bayberry',folder:'carambola-bayberry',aliases:['bayberry','yangmei','morella rubra','myrica rubra']},
-    {id:'pigeon_pea_fresh',label:'Pigeon pea · fresh',folder:'pigeon-pea',aliases:['pigeon pea','pigeonpea','cajanus cajan']},
-    {id:'pigeon_pea_dry',label:'Pigeon pea · dry',folder:'pigeon-pea',aliases:[]}
+    {id:'pigeon_pea_fresh',scientific:'Cajanus cajan',image:new URL('../assets/pigeon-pea-cajanus-cajan.png',import.meta.url).href,label:'Pigeon pea · fresh',folder:'pigeon-pea',aliases:['pigeon pea','pigeonpea','cajanus cajan']},
+    {id:'pigeon_pea_dry',scientific:'Cajanus cajan',image:new URL('../assets/pigeon-pea-cajanus-cajan.png',import.meta.url).href,label:'Pigeon pea · dry',folder:'pigeon-pea',aliases:[]}
 ]);
 export function fruitWindowSpecies(identity={}){
     const text=[identity.plant,identity.commonName,identity.scientific,identity.scientificName].filter(Boolean).join(' ').toLowerCase().replace(/[_-]/g,' ');
@@ -56,4 +56,5 @@ export class FruitWindowGripPair{
         anchor.quaternion.copy(this.snapshot.quaternion);return true;
     }
     moveDepth(delta,forward,anchor){if(!this.snapshot || !Number.isFinite(delta))return;const offset=new THREE.Vector3(forward.x,forward.y,forward.z).normalize().multiplyScalar(delta);this.snapshot.position.add(offset);anchor.position.add(offset);}
+    rotate(delta,anchor){if(!this.snapshot || !Number.isFinite(delta))return;const turn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),delta);this.snapshot.quaternion.premultiply(turn);anchor.quaternion.copy(this.snapshot.quaternion);}
 }
