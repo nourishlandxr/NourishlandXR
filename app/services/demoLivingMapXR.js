@@ -5,7 +5,7 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 
 // Upload the actual miniature meshes to the session's context: each eye sees
 // its own perspective, depth and occlusion, including the land's solid sides.
-export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false,fadeTransform=true,maxTextureSize=Infinity,detailMaps=true}={}){
+export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false,fadeTransform=true,maxTextureSize=Infinity,detailMaps=true,alphaCompositing=false}={}){
     const resources=[],cache=new Map(),textures=new Map(),textureVersions=new Map(),instanceGeometry=new Map(),instanceBuffers=new WeakMap();
     // This renderer shares the XR context with every panel and object. Keep
     // its attribute pointers in a private VAO so deleting map buffers cannot
@@ -120,7 +120,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             gl.activeTexture(gl.TEXTURE0);
         }
         const transparent=material.transparent || opacity<.999;
-        if(transparent){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);
+        if(transparent){gl.enable(gl.BLEND);if(alphaCompositing)gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);
         gl.depthMask(detailed ? material.depthWrite!==false && (!material.transparent || material.userData?.occludesInsects===true) : !transparent);gl.disable(gl.CULL_FACE);
         const start=batch?0:node.geometry.drawRange.start,count=batch?node.count*batch.verticesPerInstance:Math.min(entry.count-start,node.geometry.drawRange.count);
         if(count>0){if(gpu)instancing.draw(gl.TRIANGLES,start,count,node.count);else gl.drawArrays(node.isLine?gl.LINE_STRIP:gl.TRIANGLES,start,count);}

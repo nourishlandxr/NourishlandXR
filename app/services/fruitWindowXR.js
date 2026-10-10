@@ -3,7 +3,7 @@ import {createDemoLivingMapXR} from './demoLivingMapXR.js';
 
 // Split multi-material GLB meshes and apply their animated morphs once per
 // update. The session renderer then draws the same geometry for both eyes.
-export function createFruitWindowXR(gl,source){
+export function createFruitWindowXR(gl,source,{alphaCompositing=false}={}){
     const scene=new THREE.Scene(),entries=[],sharedGeometry=new Map(),batches=[];
     source.traverse(node=>{
         if(!node.isMesh)return;
@@ -35,7 +35,7 @@ export function createFruitWindowXR(gl,source){
         group.forEach((entry,index)=>{scene.remove(entry.mesh);entry.batch=mesh;entry.instanceIndex=index;entry.lastMatrix=new THREE.Matrix4();});
     }
     const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
-    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true,fadeTransform:false,maxTextureSize:1024,detailMaps:false});
+    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true,fadeTransform:false,maxTextureSize:1024,detailMaps:false,alphaCompositing});
     return {
         get stats(){return {...renderer.stats,sourceMeshes:entries.length,instanceBatches:batches.length};},
         update(){

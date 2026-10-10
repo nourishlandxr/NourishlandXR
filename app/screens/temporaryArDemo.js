@@ -100,7 +100,10 @@ import {supportsSpatialPIMO} from '../services/pimoSpatialCapabilities.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
-import {createHeroDiceToy} from '../services/heroDiceToy.js';
+import {createWelcomePracticeXR} from '../services/welcomePracticeXR.js';
+import {createWelcomePracticeVoice} from '../services/welcomePracticeVoice.js';
+let welcomePractice=null,welcomePracticeVoice=null,welcomePracticeCompleted=false;
+let welcomePracticeOverlay=null,welcomePracticeAmbientStart=null,welcomePracticeDisposeTimer=null;
 let knowledgeRenderer=null,heroDiceToy=null;
 import {INSECT_VISUALS,beeFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
 import {shiftDemoAreaToFloor} from '../services/demoFloorPlacement.js';
@@ -141,7 +144,7 @@ import { createSpatialTriangleRenderer, destroySpatialTriangleRenderer, drawSpat
 import { AR_EXPERIENCE_CONFIG } from '../services/arExperienceConfig.js';
 import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonPeaExample.js';
 import { currentNxrLanguage, translateNxrText, translateApp, localizedCanvasContext } from '../services/i18n.js';
-import { getSpatialVisualSettings, setSpatialVisualSettings, currentGraphicsQuality, currentInfoOpacity, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
+import { getSpatialVisualSettings, setSpatialVisualSettings, resetSpatialVisualSettings, currentGraphicsQuality, currentInfoOpacity, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
@@ -554,6 +557,8 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    welcomePractice?.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeCompleted=false;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;welcomePracticeAmbientStart=null;
+    clearTimeout(welcomePracticeDisposeTimer);welcomePracticeDisposeTimer=null;
     ++livingPeekGeneration;livingPeekConsumedSources=new WeakMap();closeLivingPeek();livingPeek?.destroy();livingPeek=null;livingPeekPose=null;
     demoSeenElements.clear();demoHiddenElements.clear();infoPanel?.hideFruitWindow();
     // Placed Notes survive slide changes, never a new demo visit.
@@ -2468,6 +2473,19 @@ function showArWelcomeShowcase() {
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     setGuide(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
+    if(welcomePractice && !welcomePracticeCompleted){
+        // Stage 0.1 owns both input and rendering until the visitor is ready.
+        // Keep the existing opening clock paused so its narration cannot race.
+        appRoot.querySelector('.tryit-demo')?.setAttribute('data-welcome-practice','true');
+        welcomePracticeOverlay=document.createElement('section');welcomePracticeOverlay.className='tryit-practice-caption';
+        welcomePracticeOverlay.setAttribute('aria-label','Welcome practice');
+        welcomePracticeOverlay.innerHTML='<p data-practice-title></p><p data-practice-caption aria-live="polite"></p><nav aria-label="Practice controls"><button type="button" data-practice-action="replay">Hear again</button><button type="button" data-practice-action="mute">Voice on</button><button type="button" data-practice-action="skip">Skip practice</button><button type="button" data-practice-action="next" hidden>Continue</button><button type="button" data-practice-exit>Close</button></nav>';
+        if(!welcomePracticeVoice)for(const action of ['replay','mute'])welcomePracticeOverlay.querySelector('[data-practice-action="'+action+'"]' ).hidden=true;
+        for(const button of welcomePracticeOverlay.querySelectorAll('[data-practice-action]')){button.addEventListener('beforexrselect',event=>event.preventDefault());button.addEventListener('click',()=>welcomePractice?.stage.button(button.dataset.practiceAction));}
+        welcomePracticeOverlay.querySelector('[data-practice-exit]').addEventListener('click',returnToWelcome);
+        appRoot.querySelector('.tryit-demo').append(welcomePracticeOverlay);
+        welcomePractice.start(viewerMatrix,calibratedDemoGroundY());
+    }
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -4735,7 +4753,8 @@ function renderInterface(simulated) {
     if(!simulated && session){
         const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.style.visibility='hidden';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
         appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
-        import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{gl:simulated?null:gl});}).catch(error=>console.warn('Bee model unavailable:',error));
+        const loadBees=()=>import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{gl:simulated?null:gl});}).catch(error=>console.warn('Bee model unavailable:',error));
+        if(welcomePractice && !welcomePracticeCompleted)welcomePracticeAmbientStart=loadBees;else void loadBees();
     }
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
@@ -4961,7 +4980,15 @@ function setupRenderer() {
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
-    heroDiceToy=createHeroDiceToy(gl,{home:()=>{const p=introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):null;return p?{x:p.x,y:calibratedDemoGroundY(),z:p.z}:null;},visible:()=> introBoardStep!=='UTILITY 1.1' && (arWelcomeSettleStage || !arWelcomeIntroPending) && getSpatialVisualSettings().heroDice!==false,onFeedback:(kind,source)=>{demoFeedback?.start();demoFeedback?.sound('dice');if(source)demoFeedback?.pulse(source,kind==='grab'?.22:.12,45);},canGrab:target=>{if(demoLivingMapGrip?.owns(target.source) || placementReady || demoKnowledgeIsModal() || demoWebModeOpen || infoPanel?.isHandInteracting(target.source))return false;const hits=[infoPanel?.hit(target.inputRay),knowledgeRenderer?.hit(target.inputRay),totemCardsRenderer?.hit(target.inputRay),demoNoteRenderer?.hit(target.inputRay)].filter(Boolean);return hits.every(hit=>hit.distance>=target.distance);}});
+    // The interaction toy now has a purpose on the welcome table. The loose
+    // Hero Dice no longer competes with the plant/Control panel journey.
+    if(isQuestHeadsetBrowser() || sessionMode==='immersive-vr')welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,
+        onFeedback:(kind,source)=>{demoFeedback?.sound(kind==='impact'?'dice':'placement');if(source && kind==='grab')demoFeedback?.pulse(source,.18,35);},
+        onChange:state=>{if(!welcomePracticeOverlay)return;welcomePracticeOverlay.querySelector('[data-practice-title]').textContent=state.title;welcomePracticeOverlay.querySelector('[data-practice-caption]').textContent=state.caption;const next=welcomePracticeOverlay.querySelector('[data-practice-action="next"]');next.hidden=Boolean(state.voice?.playing || !['hands','explore'].includes(state.phase));next.textContent=state.phase==='hands'?'Use controllers':'Continue';welcomePracticeOverlay.querySelector('[data-practice-action="mute"]').textContent=state.voice?.muted?'Voice off':'Voice on';},
+        onComplete:()=>{welcomePracticeCompleted=true;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;welcomePracticeAmbientStart?.();welcomePracticeAmbientStart=null;
+            const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeDisposeTimer=null;},750);
+        }
+    });
 }
 
 function demoControllerInputSource() {
@@ -6443,6 +6470,7 @@ async function startImmersive() {
             setGuide(`${sessionMode === 'immersive-vr' ? 'Spatial device immersive mode' : 'Passthrough AR'} is active. Surface detection unavailable; placement uses your view direction. (${error.message})`);
         }
         setupRenderer();
+        welcomePractice?.bind(session,referenceSpace);
         // Modal input is reserved before every scene/panel capture listener.
         for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,event=>{
             if(livingPeekConsumedSources.get(event.inputSource)==='released' && type==='selectstart')livingPeekConsumedSources.delete(event.inputSource);
@@ -6630,6 +6658,17 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
+            if(welcomePractice?.active){
+                arWelcomeClock.tick(Date.now(),false);
+                runXrFrameStep('welcome practice input',()=>welcomePractice.update(frame,_time,viewerMatrix,calibratedDemoGroundY(),latestTrackedHandStates));
+                const practiceLayer=frame.session.renderState.baseLayer;
+                if(practiceLayer && pose){gl.bindFramebuffer(gl.FRAMEBUFFER,practiceLayer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
+                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
+                    gl.disable(gl.SCISSOR_TEST);markXrFirstContentRendered();
+                }
+                if(xrRecoveryStatus==='failed')welcomePractice.stage.button('skip');
+                if(measureXrFrame)demoPerformance.frameComplete(performance.now()-cpuStarted);return;
+            }
             runXrFrameStep('landscape grab',()=>{demoLivingMapGrip?.update(frame);demoLivingMapScene?.setHeldHandles(demoLivingMapGrip?.heldHandles);if(demoLivingMapGrip?.active && !demoMapPlateGripped){demoMapPlateGripped=true;introBoardTextureDirty=true;}});
             for(const note of demoPlacedNoteViews.values())if(note.renderer.heldSource){const ray=demoControllerRayForInputEvent({frame,inputSource:note.renderer.heldSource});note.renderer.updateGrab(ray);}
             runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const elapsed=insect.depthUpdatedAt?Math.max(0,Math.min(60,_time-insect.depthUpdatedAt)):16;insect.depthUpdatedAt=_time;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}const axes=insect.heldSource.gamepad?.axes || [];insect.controllerDistance=Math.max(.25,Math.min(2.5,insect.controllerDistance+spatialDepthDelta(axes.length>2?axes[3]:axes[1],elapsed)));insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
@@ -6717,14 +6756,16 @@ export function openTemporaryArDemoWindow(app) {
 export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null, refinementPreview = null, livingFramePreviewClock:framePreviewClock = null } = {}) {
     // Development fixtures may inspect XR, but public desktop entry is a book.
     if(!livingMapPreviewRecords && !refinementPreview && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
-    setSpatialVisualSettings({infoOpacity:.70});
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
     demoPeekPortal=createPeekPortalExperience();
+    if(!livingMapPreviewRecords && !refinementPreview)resetSpatialVisualSettings();
+    demoCellOpacity=getSpatialVisualSettings().cellOpacity;demoHandMode=getSpatialVisualSettings().handMode;
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
-    demoFeedback=createDemoFeedback();demoFeedbackLastTick=-Infinity;demoFeedback.start();
+    demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});demoFeedbackLastTick=-Infinity;demoFeedback.start();
+    welcomePracticeVoice=createWelcomePracticeVoice({enabled:true});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = livingMapPreviewRecords || refinementPreview ? false : await startImmersive();

@@ -29,7 +29,8 @@ export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQ
 export function currentLivingFrameQuality(){return preferences.graphicsQuality==='auto'&&currentGraphicsQuality()==='low'&&preferences.livingFrameQuality==='hd'?'sd':preferences.livingFrameQuality;}
 export function currentRainQuality(){return preferences.graphicsQuality==='auto'&&currentGraphicsQuality()==='low'?'off':preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={livingOrbRevision:1,cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,livingFrameHeight:0,insects:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'living',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+export function spatialVisualDefaults(){return {livingOrbRevision:1,cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,livingFrameHeight:0,insects:true,heroDice:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'living',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};}
+let preferences=spatialVisualDefaults();
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
@@ -58,6 +59,8 @@ try{
 function syncVisualCss(){globalThis.document?.documentElement?.style.setProperty('--nlxr-panels-opacity',String(preferences.infoOpacity));}
 syncVisualCss();
 export function getSpatialVisualSettings(){return {heroDice:true,...preferences};}
+// A fresh demo restores experience controls, never project or notebook data.
+export function resetSpatialVisualSettings(){preferences=spatialVisualDefaults();adaptiveGraphicsQuality=null;syncVisualCss();try{globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}catch{}return getSpatialVisualSettings();}
 export function setSpatialVisualSettings(change){
     if(change?.graphicsQuality!==undefined)adaptiveGraphicsQuality=null;
     Object.assign(preferences,validated(change));

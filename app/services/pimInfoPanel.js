@@ -1,4 +1,5 @@
 import {lowerCompanionLayout} from './lowerCompanionLayout.js';
+import {getWelcomeNarrationSettings,setWelcomeNarrationSettings} from './welcomePracticeVoice.js';
 import {limoSpatialControls,drawLimoSpatialControls,drawLimoSpatialReading} from './limoSpatialPresentation.js';
 import {spatialStick,turnSpatialAxes,tiltSpatialAxes} from './spatialStick.js';
 import {pimToArKnowledge} from './pimModel.js';
@@ -208,7 +209,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
     const close={...choice('CloseSettings','Done','close','Close settings',26,806,138),kind:'settings-close'};
     const frameControls=y=>Object.entries(LIVING_FRAME_QUALITIES).map(([quality,item],index)=>({...choice('LivingFrame:'+quality,item.label,'living-frame','',y,56+index*300,288),selected:getSpatialVisualSettings().livingFrameQuality===quality}));
     if(languageOpen)return [choice('LanguageMenu','‹ General','navigation','',100,56,888),...[['en','English'],['pt-PT','Português (Portugal)'],['nl-NL','Nederlands']].map(([code,label],index)=>({...choice('Language:'+code,label,'language','Language',202+index*88,56,888),selected:currentNxrLanguage()===code})),close];
-    if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),close];
+    if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),choice('Narration',getWelcomeNarrationSettings().enabled?'On':'Off','narration','Spoken guidance',466),slider('NarrationVolume','narration-volume','Voice volume',getWelcomeNarrationSettings().volume,0,2,.05,554),close];
     if(simpleDesktop)return [slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),choice('LanguageMenu','Language ›','language','',290,56,888),...frameControls(378),slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight||0,-1,1,.05,466),choice('SettingsHelp','Help','help','',570,56,888),close];
     const rates=Array.from(performanceSettings?.supported || []).filter(rate=>[60,72,90,120].includes(rate)).sort((a,b)=>a-b);
     const safeRate=Math.max(0,...rates.filter(rate=>rate<=90)) || rates[0];
@@ -228,8 +229,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,264),
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
-        {...choice('HeroDice','Floor dice','hero-dice','',488,56,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().heroDice!==false},
-        {...choice('LivingFrame',LIVING_FRAME_QUALITIES[getSpatialVisualSettings().livingFrameQuality].label,'living-frame','Living Frame artwork',488,506,438),settingLabel:'',height:50},
+        {...choice('LivingFrame',LIVING_FRAME_QUALITIES[getSpatialVisualSettings().livingFrameQuality].label,'living-frame','Living Frame artwork',488,56,888),settingLabel:'',height:50},
 
         slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight,-1,1,.05,570),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
@@ -509,6 +509,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='GraphicsMenu'){graphicsOpen=!graphicsOpen;soundOpen=false;renderSettings();return;}
         if(action==='SoundMenu'){soundOpen=!soundOpen;graphicsOpen=false;renderSettings();return;}
         if(action==='Haptics'){demoSound?.setHaptics(!demoSound.volumes().haptics);renderSettings();return;}
+        if(action==='Narration'){setWelcomeNarrationSettings({enabled:!getWelcomeNarrationSettings().enabled});renderSettings();return;}
         if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
         if(action==='Previous')page=0;
         if(action==='Next')page=Math.min(pages().length-1,page+1);
@@ -526,7 +527,6 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);onGraphicsQuality(graphicsQuality);
         }
         if(action==='Insects')setSpatialVisualSettings({insects:!getSpatialVisualSettings().insects});
-        if(action==='HeroDice')setSpatialVisualSettings({heroDice:getSpatialVisualSettings().heroDice===false});
         if(action==='LivingFrame' || action.startsWith('LivingFrame:')){const values=Object.keys(LIVING_FRAME_QUALITIES),current=getSpatialVisualSettings().livingFrameQuality;const quality=action.includes(':')?action.split(':')[1]:values[(values.indexOf(current)+1)%values.length];setSpatialVisualSettings({livingFrameQuality:quality});onGraphicsQuality();}
         if(action==='RainQuality'){
             const values=Object.keys(RAIN_QUALITIES);rainQuality=values[(values.indexOf(rainQuality)+1)%values.length];setSpatialVisualSettings({rainQuality});
@@ -543,6 +543,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     }
     function setSliderValue(action,value){
         if(action==='MusicVolume' || action==='FxVolume')demoSound?.setVolume(action==='MusicVolume'?'music':'fx',value);
+        if(action==='NarrationVolume')setWelcomeNarrationSettings({volume:value});
         if(action==='InfoOpacity'){value=Math.round(value*20)/20;if(value===infoOpacity)return;infoOpacity=value;setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);}
         if(action==='CellOpacity'){value=Math.round(value*20)/20;if(value===meshCellOpacity)return;meshCellOpacity=value;setSpatialVisualSettings({cellOpacity:value});onCellOpacity(value);}
         if(action==='PimoScale' && knowledgeRecord){knowledgeRecord.pimoScale=value;onExplorerAction(knowledgeRecord,'PimoScale:'+value);renderExplorer();}

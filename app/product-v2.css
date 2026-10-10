@@ -525,3 +525,12 @@ body:not(.creator-ar-quest-headset) .creator-ar-taskbar[data-creator-controls="3
  #app .nlxr-db-v2 .nlxr-db-v2-map-node strong { font-size:.9rem; }
  #app .nlxr-db-v2 .nlxr-db-v2-map-node small { font-size:.82rem; }
 }
+/* Welcome practice owns the scene until basic input feels familiar. */
+.tryit-demo[data-welcome-practice="true"] > .tryit-stage,
+.tryit-demo[data-welcome-practice="true"] > .tryit-context-trigger,
+.tryit-demo[data-welcome-practice="true"] > .tryit-virtual-tag-mode { visibility:hidden; pointer-events:none; }
+.tryit-practice-caption { position:absolute; bottom:1rem; left:50%; transform:translateX(-50%); width:min(94vw,680px); padding:.65rem .9rem; border-radius:1.4rem; background:rgba(238,241,228,.92); color:#354d37; text-align:center; }
+.tryit-practice-caption p { margin:.2rem; font-size:.88rem; }
+.tryit-practice-caption nav { display:flex; justify-content:center; flex-wrap:wrap; gap:.35rem; }
+.tryit-practice-caption button { min-height:38px; padding:.4rem .8rem; border:1px solid #b7c8ac; border-radius:1rem; background:#f3f4e9; color:#354d37; font-size:.82rem; }
+.tryit-practice-caption [hidden] { display:none!important; }
