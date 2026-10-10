@@ -56,13 +56,19 @@ test('Return to demo closes the Learning surface and offers a fresh Continue act
  assert.equal(board[2],'Continue');assert.equal(board[3],context.showAudienceValue);assert.match(board[1],/discoveries remain saved/);
 });
 
-test('sustained slow automatic quality reduces only the session budget and clears on exit',()=>{
+for(const hardwareConcurrency of [8,2])test(`sustained slow automatic quality preserves preferences and clears on exit (${hardwareConcurrency}-core device)`,()=>{
+ // Node exposes the runner's real CPU count through navigator. Model both
+ // automatic starting budgets explicitly rather than depending on CI hardware.
+ const originalNavigator=Object.getOwnPropertyDescriptor(globalThis,'navigator');
  const prefs=getSpatialVisualSettings(),listeners=new Map(),session={frameRate:90,visibilityState:'visible',addEventListener(type,fn){listeners.set(type,fn);}},snapshots=[];
  try{
+  Object.defineProperty(globalThis,'navigator',{configurable:true,value:{hardwareConcurrency,userAgent:'Test desktop'}});
   setSpatialVisualSettings({graphicsQuality:'auto'});const controller=createXRPerformanceSettings({getSession:()=>session,publish:s=>snapshots.push(s)});
+  const initialQuality=hardwareConcurrency===8?'medium':'low';assert.equal(currentGraphicsQuality(),initialQuality);
   for(let time=0;time<=6500;time+=50)controller.tick(time);
-  assert.equal(currentGraphicsQuality(),'low');assert.equal(getSpatialVisualSettings().graphicsQuality,'auto');assert.match(snapshots.at(-1).message,/Automatic graphics/);
-  listeners.get('end')();assert.equal(currentGraphicsQuality(),'medium');
+  assert.equal(currentGraphicsQuality(),'low');assert.equal(getSpatialVisualSettings().graphicsQuality,'auto');
+  assert.equal(snapshots.some(snapshot=>/Automatic graphics/.test(snapshot.message)),initialQuality==='medium');
+  listeners.get('end')();assert.equal(currentGraphicsQuality(),initialQuality);
   setSpatialVisualSettings({graphicsQuality:'high'});for(let time=7000;time<=14000;time+=50)controller.tick(time);assert.equal(currentGraphicsQuality(),'high');
- }finally{setAdaptiveGraphicsQuality(null);setSpatialVisualSettings(prefs);}
+ }finally{if(originalNavigator)Object.defineProperty(globalThis,'navigator',originalNavigator);else delete globalThis.navigator;setAdaptiveGraphicsQuality(null);setSpatialVisualSettings(prefs);}
 });
