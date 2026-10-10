@@ -14,11 +14,12 @@ test('VIEW owns visibility and PEEK; the welcome and main action rail have no pe
  const controls=panelViewControls([{id:'plant',label:'ORBS',selected:false}]);
  assert.equal(controls.find(item=>item.action==='Utility:visibility:plant').label,'Show');
  for(const id of ['plant','zone','note'])assert.ok(controls.some(item=>item.action==='Utility:visibility:'+id));
- assert.equal(controls.find(item=>item.action==='Utility:peek-3d').label,'PEEK 3D');
+ assert.equal(controls.find(item=>item.action==='Utility:peek-3d').label,'PEEK 3D 1');
  const demo=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8'),launch=readFileSync(new URL('../app/screens/launch.js',import.meta.url),'utf8');
  assert.doesNotMatch(launch,/openLivingPaintingTest/);
  assert.doesNotMatch(demo,/actions.push\(\{id:'peek-3d'/);
- assert.match(demo,/if\(action==='peek-3d'\)\{void openLivingPeek\(\)/);
+ assert.match(demo,/openDemoPeek\(action==='peek-3d-2'\?2:1\)/);
+ assert.equal(controls.find(item=>item.action==='Utility:peek-3d-2').label,'PEEK 3D 2');
  assert.match(demo,/if\(livingPeekActive && livingPeekPose\)/);
  assert.match(demo,/livingPeekPinches/);
 });
