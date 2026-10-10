@@ -24,7 +24,6 @@ export function spatialCardTextureContent(card) {
 function totemFaceDepth(y, bodyHalfDepth = .035, bodyHalfHeight = .69, topTaper = .9, style=currentTotemModel()) {
     // Place both the visible control and its text/hit surface on the carved face.
     const t=Math.max(0,Math.min(1,y/(bodyHalfHeight*2)));
-    if(style==='basic')return bodyHalfDepth*(1-(1-topTaper)*t);
     const twist=(SPATIAL_OBJECT_VISUALS.totem[style] || SPATIAL_OBJECT_VISUALS.totem.carved).twist*Math.sin(t*Math.PI-.6);
     return bodyHalfDepth*totemSculpturePoint(t,Math.PI/2-twist,style)[2];
 }
@@ -38,7 +37,7 @@ export function totemControlButtonLayout(position, right, { bodyHalfDepth = .035
     ].map(button => {
         const face = totemFaceDepth(button.y, bodyHalfDepth, bodyHalfHeight, topTaper,style);
         const centerOffset = face + .001;
-        const faceOffset = face + (style==='basic'?.014:.002);
+        const faceOffset = face + .002;
         const point = offset => ({
             x: position.x + front.x * offset,
             y: position.y + button.y,
@@ -60,7 +59,7 @@ export function totemControlButtonLayout(position, right, { bodyHalfDepth = .035
 }
 
 export function drawSpatialTotemButtons(gl, renderer, projectionMatrix, viewMatrix, position, rotationY = Math.PI / 7, state = {}) {
-    if((state.style || currentTotemModel())!=='basic')return; // The carved controls are rendered inside the post material.
+    if(['basic','carved','botanical','organic'].includes(state.style || currentTotemModel()))return; // Flush controls live in the shared post material.
     const right = { x: Math.cos(rotationY), y: 0, z: -Math.sin(rotationY) };
     const bodyHalfWidth = Number(state.bodyHalfWidth) || .07;
     const bodyHalfDepth = Number(state.bodyHalfDepth) || bodyHalfWidth * .5;
@@ -123,7 +122,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const titleBottom=buttons[0].faceCenter.y-position.y+.075;
     const titleHeight=Math.max(.025,Math.min(.18,1.88*bodyHalfHeight-titleBottom-.015));
     const headerBoard = cards[0] ? {
-        ...place(0,bodyHalfHeight*2+.12,demoZone ? .72 : .78,.17,{...cards[0],glassOpacity:.94,freeText:false,boardStyle:'header-compact',stats:undefined}),
+        ...place(0,bodyHalfHeight*2+(['basic','organic'].includes(state.style || currentTotemModel())?bodyHalfHeight*.68+.12:.12),demoZone ? .72 : .78,.17,{...cards[0],glassOpacity:.94,freeText:false,boardStyle:'header-compact',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
@@ -137,7 +136,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         ].filter(Boolean).map(surface=>({...surface,opacity:signOpacity*(surface.opacity ?? 1),interactive:signInteractive})) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.30,2.04*demoScale),.90,.42,{...selected,freeText:false,glassOpacity:.96,body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
+    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.30,2.04*demoScale)+(['basic','organic'].includes(state.style || currentTotemModel())?bodyHalfHeight*.68+.2:0),.90,.42,{...selected,freeText:false,glassOpacity:.96,body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
     return surfaces;
 }
 

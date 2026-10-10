@@ -6182,7 +6182,7 @@ function drawMarker(view) {
             : Number(record.position?.y || 0) - demoTotemHalfHeight(record);
         const bodyHalfHeight=demoTotemHalfHeight(record),miniScale=record.demoMapPiece?bodyHalfHeight/DEMO_TOTEM_HALF_HEIGHT_METRES:1,bodyHalfWidth=.095*miniScale,bodyHalfDepth=.075*miniScale,rotationY=demoTotemRotationY(record);
         const style=renderedTotemStyle(record);
-        if(style==='organic' || style==='flat-disc'){
+        if(style==='flat-disc'){
             const radius=style==='organic'?.28:.32,light=totemNotificationLight(record),base={...record.position,y:groundBaseY+(style==='organic'?radius:.045)};
             drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,base,radius,{color:totemColour,alpha:arrival*.92*departure,emissive:.12,...(style==='flat-disc'?{scale:{x:1,y:.16,z:1}}:{})});
             drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...base,y:base.y+(style==='organic'?radius:.07)},.045,{color:light.colour,alpha:arrival*.86*departure,emissive:light.strength+.22});return;
@@ -6192,8 +6192,7 @@ function drawMarker(view) {
             color:totemColour,alpha:arrival*demoTotemVisualOpacity(record),rotationY,style,
             signsVisible:record.demoTotemSignsVisible,faded:record.demoTotemFaded,controlOpacity:arrival,
             highlighted:Boolean(record.totemSelectedCard || record.demoMapPiece)};
-        if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,{...record.position,y:groundBaseY},{...postOptions,topColor:totemColour,woodGrain:.8,topTaper:.96});
-        else drawTotemSculpture(gl, totemSculptureRenderer, view, { ...record.position, y:groundBaseY },postOptions);
+        drawTotemSculpture(gl, totemSculptureRenderer, view, { ...record.position, y:groundBaseY },postOptions);
         if(record.demoMapPiece)return;
         drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...record.position,y:groundBaseY},rotationY,{
             bodyHalfWidth:bodyHalfWidth,bodyHalfDepth,bodyHalfHeight,style,

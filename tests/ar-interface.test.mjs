@@ -209,14 +209,14 @@ test('calibrated Totem routes render as a segmented ground path with arrows', ()
     assert.ok(values.some(value => Math.abs(value - .05) < .01));
 });
 
-test('the demo keeps the three simple Totem forms and uses physical plaques and buttons', () => {
+test('the demo offers crafted Totem forms and uses physical plaques and buttons', () => {
     const appearance = read('app/services/totemAppearance.js');
     const arSource = read('app/screens/arMode.js');
     const demoSource = read('app/screens/temporaryArDemo.js').replace(/\r\n/g,'\n');
-    assert.match(appearance, /id: 'basic', label: 'Elemental Totem'/);
-    assert.match(appearance, /id: 'organic', label: 'Light Bulb'/);
+    assert.match(appearance, /id: 'basic', label: 'Bionic Pole'/);
+    assert.match(appearance, /id: 'organic', label: 'Halo Stem'/);
     assert.match(appearance, /id: 'flat-disc', label: 'Disk Totem'/);
-    assert.match(arSource, /totemStyle === 'organic'/);
+    assert.match(arSource, /drawTotemSculpture\(gl, totemSculptureRenderer/);
     assert.match(arSource, /totemStyle === 'flat-disc'/);
     assert.match(arSource, /drawSpatialPrism\(gl, prismRenderer/);
     assert.match(demoSource, /drawTotemSculpture\(gl, totemSculptureRenderer/);

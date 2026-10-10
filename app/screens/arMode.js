@@ -4221,16 +4221,6 @@ function drawSpatialMarkers(view) {
             const totemStyle = normalizeTotemStyle(record.marker);
             const style=renderedTotemStyle(record.marker);
             const totemColor = markerRgb(record.marker, colors.area_checkpoint);
-            if (totemStyle === 'organic') {
-                const radius = Math.max(.12, Math.min(.36, halfHeight * .56));
-                const light=totemNotificationLight(record);drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...groundPosition,y:groundPosition.y+radius*2+.025},.045,{color:light.colour,alpha:.84,emissive:light.strength+.22});
-                drawSpatialSphere(gl, sphereRenderer, view.projectionMatrix, view.transform.inverse.matrix, { ...groundPosition, y: groundPosition.y + radius }, radius, {
-                    color: totemColor,
-                    alpha: .94,
-                    emissive: .14
-                });
-                return;
-            }
             if (totemStyle === 'flat-disc') {
                 const radius = Math.max(.14, Math.min(.38, halfHeight * .56));
                 const light=totemNotificationLight(record);drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,{...groundPosition,y:groundPosition.y+.085},.035,{color:light.colour,alpha:.84,emissive:light.strength+.22});
@@ -4251,8 +4241,7 @@ function drawSpatialMarkers(view) {
                 color:totemColor.map(channel=>channel*visual.postContrast+visual.postLift),
                 alpha:fadeOpacity,rotationY,style,signsVisible:record.demoTotemSignsVisible,faded:record.demoTotemFaded,
                 highlighted:Boolean(record.totemSelectedCard)};
-            if(style==='basic')drawSpatialPrism(gl,prismRenderer,view,groundPosition,{...postOptions,topColor:totemColor,woodGrain:visual.woodGrain,topTaper:.9});
-            else drawTotemSculpture(gl, totemSculptureRenderer, view, groundPosition,postOptions);
+            drawTotemSculpture(gl, totemSculptureRenderer, view, groundPosition,postOptions);
             drawSpatialTotemButtons(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,groundPosition,rotationY,{
                 bodyHalfWidth:halfWidth,bodyHalfDepth:halfWidth*.5,bodyHalfHeight,style,signsVisible:Boolean(record.demoTotemSignsVisible),faded:Boolean(record.demoTotemFaded),fadeOpacity:record.demoTotemFaded?Math.max(.78,fadeOpacity):1
             });

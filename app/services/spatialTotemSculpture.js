@@ -5,6 +5,10 @@ const VERTEX_ATTRIBUTES=Object.freeze([['position',0,3],['normal',12,3],['uv',24
 // One reusable mesh and one small, mipmapped material per WebGL context.
 // Shape is part of the mesh, so it remains sculptural without extra effects.
 export function totemSculpturePoint(t, angle, style='carved') {
+    if(style==='basic' || style==='organic'){
+        const radius=.43+.075*Math.exp(-t*28)+.018*Math.cos(t*Math.PI*2);
+        return [Math.cos(angle)*radius,t*2-1,Math.sin(angle)*radius];
+    }
     const form=SPATIAL_OBJECT_VISUALS.totem[style] || SPATIAL_OBJECT_VISUALS.totem.carved;
     const twist = form.twist * Math.sin(t * Math.PI - .6);
     const a = angle + twist;
@@ -46,6 +50,26 @@ export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='
             indices.push(...(t ? [center,edge+1,edge] : [center,edge,edge+1]));
         }
     }
+    if(style==='basic' || style==='organic'){
+        // Crown is part of the cached mesh: no additional draw calls or textures.
+        const rows=style==='organic'?16:Math.max(16,Math.floor(vertical*.75)),start=vertices.length/8;
+        for(let row=0;row<=rows;row++)for(let column=0;column<=radial;column++){
+            const a=column/radial*Math.PI*2,b=row/rows*Math.PI*2;
+            let p,n;
+            if(style==='organic'){
+                const tube=Math.cos(b)*.31;
+                p=[Math.cos(a)*(1.85+tube),1.29+Math.sin(a)*(.29+tube*.155),-Math.sin(b)*.38];
+                n=[Math.cos(a)*Math.cos(b),Math.sin(a)*Math.cos(b)/.155,-Math.sin(b)/1.22];
+            }else{
+                const latitude=row/rows*Math.PI-Math.PI/2,c=Math.cos(latitude),s=Math.sin(latitude);
+                const ribs=1+.014*Math.cos(a*8)*c*c;
+                p=[Math.cos(a)*c*2.05*ribs,1.29+s*.31,Math.sin(a)*c*2.6*ribs];
+                n=[Math.cos(a)*c/2.05,s/.31,Math.sin(a)*c/2.6];
+            }
+            const length=Math.hypot(...n);vertices.push(...p,...n.map(value=>value/length),column/radial,1.1+row/rows*.8);
+            if(row<rows && column<radial){const i=start+row*(radial+1)+column;indices.push(i,i+radial+1,i+1,i+1,i+radial+1,i+radial+2);}
+        }
+    }
     return { vertices:new Float32Array(vertices), indices:new Uint16Array(indices) };
 }
 
@@ -72,6 +96,11 @@ export function createTotemMaterialCanvas(scale=1) {
             for(let y=0;y<=1024;y+=6){const px=x+Math.sin(y*.007+phase)*1.5;if(y===0)ctx.moveTo(px,y);else ctx.lineTo(px,y);}ctx.stroke();
         }
     }
+    // Small growth knots and hairline pores enrich close views without stippling.
+    ctx.strokeStyle='rgba(62,40,23,.11)';ctx.lineWidth=.7;
+    for(const [kx,ky] of [[284,240],[414,738],[38,865]])for(let ring=0;ring<5;ring++){
+        ctx.beginPath();ctx.ellipse(kx,ky,3+ring*2,13+ring*6,.06,0,Math.PI*2);ctx.stroke();
+    }
     // Front-facing botanical inlay: fern/leaf marks, contained below the boards.
     const x=102,y=550;
     ctx.save();ctx.translate(x,y);ctx.rotate(-.10);
@@ -83,8 +112,9 @@ export function createTotemMaterialCanvas(scale=1) {
         const ly=78-i*28, reach=(26-i*2)*side;
         ctx.beginPath();ctx.moveTo(1,ly);ctx.bezierCurveTo(reach*.5,ly-2,reach,ly-20,reach,ly-33);
         ctx.bezierCurveTo(reach*.25,ly-25,0,ly-15,1,ly);
-        ctx.fillStyle=i%2?'#ad8b55':'#c1a16a';ctx.fill();
+    ctx.fillStyle=i%2?'#ad8b55':'#c1a16a';ctx.fill();
         ctx.strokeStyle='#6d5438';ctx.lineWidth=.8;ctx.stroke();
+        ctx.beginPath();ctx.moveTo(1,ly);ctx.lineTo(reach*.72,ly-24);ctx.strokeStyle='rgba(237,211,155,.48)';ctx.lineWidth=.6;ctx.stroke();
     }
     ctx.restore();return canvas;
 }
@@ -107,8 +137,18 @@ export function createSpatialTotemSculpture(gl) {
         uniform sampler2D timber;uniform vec3 tint,notificationColour;uniform float alpha,aim,twist,controlOpacity,signsActive,fadeActive,form,notificationStrength;uniform vec2 dimensions,controls;
         void main(){
             vec3 normal=normalize(n),light=normalize(vec3(-.55,.7,.65)),viewer=normalize(eye);
+            if(tex.y>1.0){
+                float diffuse=max(dot(normal,light),0.),facing=max(dot(normal,viewer),0.);
+                float sheen=pow(max(dot(normal,normalize(light+viewer)),0.),42.);
+                float ribs=pow(.5+.5*cos(tex.x*50.2655),16.);
+                vec3 frost=mix(notificationColour,vec3(.87,.94,.85),.38);
+                vec3 glass=frost*(.58+.23*diffuse)+vec3(.94,.98,.91)*sheen*.16;
+                glass+=frost*(.06+notificationStrength*.16)+vec3(.12,.17,.14)*pow(1.-facing,3.);
+                glass=mix(glass,glass*.94,ribs*.45);
+                gl_FragColor=vec4(glass,alpha);return;
+            }
             vec3 wood=texture2D(timber,tex).rgb;
-            float collar=smoothstep(.86,.875,tex.y);
+            float collar=smoothstep(.90,.925,tex.y);
             float foot=1.-smoothstep(.025,.07,tex.y);
             vec3 base=wood*mix(vec3(.69,.51,.35),tint,.36);
             base=mix(base,vec3(.13,.16,.13),foot*.62);
@@ -124,16 +164,19 @@ export function createSpatialTotemSculpture(gl) {
             float active=d0<d1?signsActive:fadeActive;
             base=mix(base,base*.53,recess*.8);
             base=mix(base,vec3(.53,.39,.20)+vec3(.13,.11,.06)*active,edge*.82);
-            base=mix(base,base*vec3(.74,.82,.76),form*.5);
+            base=mix(base,base*vec3(.74,.82,.76),form>.5 && form<1.5?.5:0.);
             float diffuse=max(dot(normal,light),0.);
-            float spec=pow(max(dot(normal,normalize(light+viewer)),0.),36.);
+            float spec=pow(max(dot(normal,normalize(light+viewer)),0.),48.);
             vec3 shaded=base*(.64+.40*diffuse);
             shaded+=vec3(.92,.81,.58)*spec*(.055+collar*.13);
             shaded+=vec3(.60,.68,.48)*pow(1.-max(dot(normal,viewer),0.),3.)*.045;
             shaded=mix(shaded,shaded+vec3(.09,.065,.025),aim);
             float glassGrain=.5+.5*sin(tex.x*90.+sin(tex.y*110.)*.65);
-            vec3 glass=notificationColour*(.72+.18*glassGrain)+vec3(.74,.93,.88)*spec*.9+vec3(.24,.37,.33)*pow(1.-max(dot(normal,viewer),0.),3.);
-            shaded=mix(shaded,glass+notificationColour*notificationStrength*1.5,collar);
+            float seam=(1.-smoothstep(.001,.004,abs(tex.y-.89)))+(1.-smoothstep(.001,.004,abs(tex.y-.065)));
+            shaded=mix(shaded,vec3(.46,.39,.26)*(.7+.25*diffuse),min(1.,seam)*.8);
+            vec3 glass=mix(notificationColour,vec3(.83,.90,.79),.38)*(.61+.035*glassGrain)+vec3(.74,.93,.88)*spec*.12;
+            if(form>1.5)glass=vec3(.55,.47,.31)*(.70+.24*diffuse)+vec3(.83,.74,.51)*spec*.10;
+            shaded=mix(shaded,glass+notificationColour*notificationStrength*.16,collar);
             gl_FragColor=vec4(shaded,max(alpha,(1.-smoothstep(.031,.034,d))*controlOpacity*.90));
         }
     `);
@@ -141,7 +184,7 @@ export function createSpatialTotemSculpture(gl) {
     gl.deleteShader(vertex);gl.deleteShader(fragment);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS)){const error=gl.getProgramInfoLog(program);gl.deleteProgram(program);throw new Error(error);}
     const meshes={};
-    for(const [quality,budget] of Object.entries(GRAPHICS_PRESETS))for(const style of ['carved','botanical']){
+    for(const [quality,budget] of Object.entries(GRAPHICS_PRESETS))for(const style of ['basic','carved','botanical','organic']){
         const geometry=createTotemSculptureGeometry(budget.totemRadial,budget.totemVertical,style),buffer=gl.createBuffer(),indexBuffer=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,geometry.vertices,gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,geometry.indices,gl.STATIC_DRAW);
@@ -170,7 +213,7 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     gl.useProgram(renderer.program);gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);
     for(const [key,offset,size] of VERTEX_ATTRIBUTES){gl.enableVertexAttribArray(renderer.attributes[key]);gl.vertexAttribPointer(renderer.attributes[key],size,gl.FLOAT,false,32,offset);}
     const u=renderer.uniforms;gl.uniformMatrix4fv(u.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(u.modelView,false,out);
-    gl.uniform3fv(u.notificationColour,options.notification?.colour || [1,1,1]);gl.uniform1f(u.notificationStrength,options.notification?.strength || 0);
+    gl.uniform3fv(u.notificationColour,options.notification?.colour || [.58,.78,.65]);gl.uniform1f(u.notificationStrength,options.notification?.strength || 0);
     gl.uniform3fv(u.inverseScale,renderer.inverseScale);
     gl.activeTexture(gl.TEXTURE0);
     const quality=currentGraphicsQuality();
@@ -187,7 +230,7 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     gl.bindTexture(gl.TEXTURE_2D,renderer.textures[quality]);gl.uniform1i(u.timber,0);
     gl.uniform3fv(u.tint,options.color || SPATIAL_OBJECT_VISUALS.totem.sculptureTint);gl.uniform1f(u.alpha,alpha);gl.uniform1f(u.aim,options.highlighted?1:0);
     gl.uniform1f(u.twist,(visual[style] || visual.carved).twist);gl.uniform2f(u.dimensions,width,height*2);gl.uniform2f(u.controls,signsY/(height*2),fadeY/(height*2));
-    gl.uniform1f(u.signsActive,options.signsVisible?1:0);gl.uniform1f(u.fadeActive,options.faded?1:0);gl.uniform1f(u.controlOpacity,options.controlOpacity ?? 1);gl.uniform1f(u.form,style==='botanical'?1:0);
+    gl.uniform1f(u.signsActive,options.signsVisible?1:0);gl.uniform1f(u.fadeActive,options.faded?1:0);gl.uniform1f(u.controlOpacity,options.controlOpacity ?? 1);gl.uniform1f(u.form,style==='botanical'?1:['basic','organic'].includes(style)?2:0);
     gl.drawElements(gl.TRIANGLES,mesh.count,gl.UNSIGNED_SHORT,0);gl.depthMask(true);gl.disable(gl.CULL_FACE);
 }
 

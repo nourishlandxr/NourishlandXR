@@ -26,19 +26,16 @@ export function selectedTotemDestinationIds(records,cardsFor,isActive=()=>true){
 
 export const SIGN_DESTINATION_HIGHLIGHT=Object.freeze({color:Object.freeze([.98,.88,.61,.94]),inset:.95,padding:1.12});
 
-export const TOTEM_NOTIFICATION_COLOUR=Object.freeze([.22,.82,.86]);
-// The post shaders apply this only to their existing collar, without geometry.
+export const TOTEM_NOTIFICATION_COLOUR=Object.freeze([.55,.72,.60]);
+// A calm light in the chosen area colour, with a slow breath when selected.
 export function totemNotificationLight(record,now=performance.now()){
     const hex=String((record?.marker || record)?.appearance?.notificationColor || '').replace('#','');
     const colour=/^[\da-f]{6}$/i.test(hex)?hex.match(/../g).map(value=>parseInt(value,16)/255):record?.notificationColour || TOTEM_NOTIFICATION_COLOUR;
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    const key=String(record?.id || record?.marker?.id || record?.name || ''),hash=[...key].reduce((sum,char)=>sum+char.charCodeAt(0),0);
-    const alternate=hash%2?[.72,.24,.96]:[1,.78,.12],selected=record?.signNotificationSelected;
-    if(!selected && !record?.totemSelectedCard)return {colour,strength:.32,phase:0};
-    const speed=380;
-    const phase=Math.floor(now/speed)%4;
-    if(reduced)return {colour,strength:.85,phase:0};
-    return {colour:phase%2?[.015,.02,.035]:phase===0?[.12,.48,1]:alternate,strength:phase%2?.02:1,phase:now/1000};
+    const selected=record?.signNotificationSelected || record?.totemSelectedCard;
+    const softColour=colour.map(value=>value*.68+.20);
+    if(!selected)return {colour:softColour,strength:.16,phase:0};
+    return {colour:softColour,strength:reduced?.27:.27+Math.sin(now/2200)*.035,phase:reduced?0:now/1000};
 }
 const buffers=new WeakMap();
 const unitShapes=Object.fromEntries(['ellipse','box'].map(shape=>{
