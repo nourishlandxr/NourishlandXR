@@ -1,8 +1,9 @@
 // Demo-only streamed music and lightweight, original touch tones.
-export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.82, beeApproachDuration:260 });
+export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.24, beeApproachDuration:50 });
 export function createDemoFeedback() {
     let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
     const encounters=new WeakMap(),encounterPulseUntil=new WeakMap();
+    let nextBeeBuzz=-Infinity;
     const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35,haptics:true};
     try{const saved=JSON.parse(globalThis.localStorage?.getItem('nxr-demo-sound') || '{}');for(const key of ['music','fx'])if(Number.isFinite(saved[key]))levels[key]=Math.max(0,Math.min(1,saved[key]));if(typeof saved.haptics==='boolean')levels.haptics=saved.haptics;}catch{}
     const save=()=>{try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}};
@@ -59,15 +60,20 @@ export function createDemoFeedback() {
         for(const source of sources){
             // Grab entry already sends one 100 ms confirmation. Let it finish;
             // holding an object must never restart that vibration every frame.
+            const fresh=beeEncounters.some(id=>!(encounters.get(source) || []).includes(id));
+            if(fresh)encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));
             if(source===heldSource)continue;
-            else if(beeEncounters.some(id=>!(encounters.get(source) || []).includes(id))){
-                // One short pulse per bee encounter, only when a bee comes
-                // within the near-field radius supplied by the XR scene.
-                encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration);encounterPulseUntil.set(source,time+DEMO_FEEDBACK.beeApproachDuration);
+            if(time<(encounterPulseUntil.get(source) || 0))continue;
+            if((fresh || beeAround) && time>=nextBeeBuzz){
+                // One shared quiet period prevents several nearby bees or
+                // controllers from turning a greeting into continuous rumble.
+                nextBeeBuzz=time+8000+Math.random()*12000;
+                if(fresh || Math.random()<.3){
+                    const strength=DEMO_FEEDBACK.beeApproachStrength*(.65+Math.random()*.65),duration=Math.round(DEMO_FEEDBACK.beeApproachDuration*(.6+Math.random()*.9));
+                    pulse(source,strength,duration);encounterPulseUntil.set(source,time+duration);continue;
+                }
             }
-            else if(time<(encounterPulseUntil.get(source) || 0))continue;
-            else if(beeAround)pulse(source,.055,150);
-            else if(pulsing.has(source))pulse(source,0,1);
+            if(pulsing.has(source))pulse(source,0,1);
         }
     }
     function destroy() {

@@ -6407,8 +6407,7 @@ function drawDemoInputPointer(view,pointerSource) {
         color:latestTrackedHandStates.length ? [.78,.85,.84,handPinchActive ? .58 : .4] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
     // An open contact ring replaces the hard-to-aim vertical tip.
-    if(surface?.kind==='living-frame-rim')drawSpatialPointerContact(gl,tetherRenderer,view,end,.045);
-    if(surfacePoint)drawSpatialPointerContact(gl,tetherRenderer,view,end,Math.max(.009,Math.min(.018,(surface.distance || 1)*.007)));
+    if(surfacePoint)drawSpatialPointerContact(gl,tetherRenderer,view,end,surface.kind==='living-frame-rim'?.0035:Math.max(.009,Math.min(.018,(surface.distance || 1)*.007)),surface.kind==='living-frame-rim'?[...XR_LASER_POINTER_CONFIG.color,XR_LASER_POINTER_CONFIG.alpha]:undefined);
 
 }
 

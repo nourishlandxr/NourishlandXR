@@ -15,9 +15,9 @@ test('demo music streams, touch tones release resources, haptics throttle and st
         feedback.tick(121,{sources:[source],beeClose:true});assert.equal(pulses.length,1);
         feedback.tick(240,{sources:[source],beeClose:true});assert.deepEqual(pulses[1],[0,1],'the grab confirmation ends without restarting');
         assert.equal(pulses.length,2,'ordinary proximity must not vibrate');
-        feedback.tick(360,{sources:[source],beeEncounters:['bee-1']});assert.deepEqual(pulses[2],[DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration]);
-        assert.ok(pulses[2][0]>=.35 && pulses[2][1]>=100,'close bees give a clearly perceptible bounded pulse');
-        feedback.tick(480,{sources:[source],beeEncounters:['bee-1'],beeAround:true});assert.equal(pulses.length,3,'ambient buzzing cannot interrupt the strong encounter pulse');
+        feedback.tick(360,{sources:[source],beeEncounters:['bee-1']});
+        assert.ok(pulses[2][0]>=.15 && pulses[2][0]<=.32 && pulses[2][1]>=30 && pulses[2][1]<=75,'close bees give a brief randomized greeting');
+        feedback.tick(480,{sources:[source],beeEncounters:['bee-1'],beeAround:true});assert.equal(pulses.filter(([strength])=>strength>0).length,2,'ambient proximity stays quiet during the shared cooldown');
         feedback.tick(720,{sources:[source],beeEncounters:['bee-1']});assert.equal(pulses[3][0],0,'a close encounter ends after its bounded pulse');
         feedback.tick(1440,{sources:[source],beeEncounters:['bee-1']});assert.equal(pulses.filter(([strength])=>strength>0).length,2,'the same bee encounter never restarts buzzing');
         feedback.destroy();assert.equal(paused,1);assert.equal(closed,1);assert.equal(audio.src,'');feedback.start();assert.equal(plays,1);

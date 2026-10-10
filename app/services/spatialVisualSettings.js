@@ -4,7 +4,8 @@ export const INFO_GLASS = Object.freeze({defaultOpacity:.70,soil:'#32271f',soilE
 export const ORB_MODELS = Object.freeze({
     basic:Object.freeze({label:'Basic',latitudeBands:24,longitudeBands:32,roughness:.5,metalness:.03,detail:0}),
     improved:Object.freeze({label:'Improved',latitudeBands:32,longitudeBands:48,roughness:.28,metalness:.08,detail:1}),
-    advanced:Object.freeze({label:'Advanced',latitudeBands:32,longitudeBands:48,roughness:.34,metalness:.05,detail:2})
+    advanced:Object.freeze({label:'Advanced',latitudeBands:32,longitudeBands:48,roughness:.34,metalness:.05,detail:2}),
+    living:Object.freeze({label:'Living sphere',roughness:.72,metalness:0,detail:0})
 });
 // Budgets are independent of object style and XR refresh rate.
 export const GRAPHICS_PRESETS=Object.freeze({
@@ -28,7 +29,7 @@ export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQ
 export function currentLivingFrameQuality(){return preferences.graphicsQuality==='auto'&&currentGraphicsQuality()==='low'&&preferences.livingFrameQuality==='hd'?'sd':preferences.livingFrameQuality;}
 export function currentRainQuality(){return preferences.graphicsQuality==='auto'&&currentGraphicsQuality()==='low'?'off':preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-let preferences={cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,livingFrameHeight:0,insects:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
+let preferences={livingOrbRevision:1,cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,livingFrameHeight:0,insects:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'living',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){
     const result={};
     if(['auto',...Object.keys(GRAPHICS_PRESETS)].includes(change?.graphicsQuality)){result.graphicsQuality=change.graphicsQuality;result.rainQuality=GRAPHICS_PRESETS[resolveGraphicsQuality(change.graphicsQuality)].rain;}
@@ -46,6 +47,7 @@ function validated(change){
 try{
     const saved=JSON.parse(globalThis.localStorage?.getItem(storageKey) || 'null');
     Object.assign(preferences,validated(saved));
+    if(saved && saved.livingOrbRevision!==1){preferences.orbModel='living';globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}
     if(saved && saved.cellGlassRevision!==1){preferences.cellOpacity=.42;globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}
     // HIGH refresh is a per-session trial. A reload recovers from a saved 120 Hz.
     if(preferences.refreshRate===120 || preferences.refreshRate==='auto')preferences.refreshRate=90;
