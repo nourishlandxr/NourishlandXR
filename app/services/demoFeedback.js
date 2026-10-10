@@ -1,8 +1,8 @@
 // Demo-only streamed music and lightweight, original touch tones.
-export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.38, beeApproachDuration:110 });
+export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .16, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.82, beeApproachDuration:260 });
 export function createDemoFeedback() {
     let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
-    const encounters=new WeakMap();
+    const encounters=new WeakMap(),encounterPulseUntil=new WeakMap();
     const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35,haptics:true};
     try{const saved=JSON.parse(globalThis.localStorage?.getItem('nxr-demo-sound') || '{}');for(const key of ['music','fx'])if(Number.isFinite(saved[key]))levels[key]=Math.max(0,Math.min(1,saved[key]));if(typeof saved.haptics==='boolean')levels.haptics=saved.haptics;}catch{}
     const save=()=>{try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}};
@@ -63,8 +63,9 @@ export function createDemoFeedback() {
             else if(beeEncounters.some(id=>!(encounters.get(source) || []).includes(id))){
                 // One short pulse per bee encounter, only when a bee comes
                 // within the near-field radius supplied by the XR scene.
-                encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration);
+                encounters.set(source,[...(encounters.get(source) || []),...beeEncounters].slice(-16));pulse(source,DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration);encounterPulseUntil.set(source,time+DEMO_FEEDBACK.beeApproachDuration);
             }
+            else if(time<(encounterPulseUntil.get(source) || 0))continue;
             else if(beeAround)pulse(source,.055,150);
             else if(pulsing.has(source))pulse(source,0,1);
         }
