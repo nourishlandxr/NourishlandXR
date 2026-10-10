@@ -9,3 +9,9 @@ export function turnSpatialAxes(pose,angle){
  const c=Math.cos(angle),s=Math.sin(angle),turn=v=>({x:v.x*c+v.z*s,y:v.y,z:-v.x*s+v.z*c});
  return {...pose,right:turn(pose.right),up:turn(pose.up),...(pose.normal?{normal:turn(pose.normal)}:{})};
 }
+
+export function tiltSpatialAxes(pose,angle){
+ const c=Math.cos(angle),s=Math.sin(angle),up=pose.up,normal=pose.normal;
+ if(!up || !normal)return pose;
+ return {...pose,up:{x:up.x*c+normal.x*s,y:up.y*c+normal.y*s,z:up.z*c+normal.z*s},normal:{x:normal.x*c-up.x*s,y:normal.y*c-up.y*s,z:normal.z*c-up.z*s}};
+}

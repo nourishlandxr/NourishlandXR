@@ -35,7 +35,7 @@ export function createFruitWindowXR(gl,source){
         group.forEach((entry,index)=>{scene.remove(entry.mesh);entry.batch=mesh;entry.instanceIndex=index;entry.lastMatrix=new THREE.Matrix4();});
     }
     const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
-    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true,fadeTransform:false});
+    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true,fadeTransform:false,maxTextureSize:1024,detailMaps:false});
     return {
         get stats(){return {...renderer.stats,sourceMeshes:entries.length,instanceBatches:batches.length};},
         update(){

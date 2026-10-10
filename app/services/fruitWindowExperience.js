@@ -139,7 +139,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     function cast(ray){
         if(!asset?.picked && !fruitHold.holds.size && !new THREE.Ray(ray.origin,ray.direction).intersectsBox(observationBounds))return [];
         const key=[ray.origin.x,ray.origin.y,ray.origin.z,ray.direction.x,ray.direction.y,ray.direction.z].join('|');if(castCache.has(key))return castCache.get(key);
-        content.updateMatrixWorld(true);raycaster.set(ray.origin,ray.direction);
+        content.updateMatrixWorld(false);raycaster.set(ray.origin,ray.direction);
         // Hidden development and cutaway meshes must never consume triangle
         // intersection work. Reuse contacts requested by several UI consumers.
         const hits=raycaster.intersectObjects(rayMeshes.filter(visible),false);
@@ -238,12 +238,12 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     function advance(time){
         if(modelDirty)castCache.clear();
         const delta=Math.min(.05,Math.max(0,(time-lastTime)/1000));lastTime=time;
-        const moving=fruitWindowMotionActive(asset,{held:fruitHold.holds.size,hover,hoverAmount,hoverOffsets:hoverOffsets.length});
+        const moving=fruitWindowMotionActive(asset,{held:fruitHold.holds.size,hover:xrGl?null:hover,hoverAmount:xrGl?0:hoverAmount,hoverOffsets:hoverOffsets.length});
         modelDirty ||= moving;restoreHover();if(moving)asset?.update(delta);
         hoverAmount+=((hover&&!reduced?1:0)-hoverAmount)*(1-Math.exp(-delta*8));
         // Keep a soft envelope so foliage settles instead of snapping back.
-        if(hover && time-hoverSampleAt>120){hoverSampleAt=time;const nearby=hover.hit.point;hoverNodes=leaves.map(node=>({node,distance:node.getWorldPosition(new THREE.Vector3()).distanceToSquared(nearby)})).sort((a,b)=>a.distance-b.distance).slice(0,5).map(value=>value.node);if(hover.kind==='fruit' && !asset.picked)hoverNodes.unshift(asset.fruit);}
-        const strength=Math.sin(time*.004)*.025*hoverAmount;
+        if(hover && time-hoverSampleAt>200){hoverSampleAt=time;const nearby=hover.hit.point;hoverNodes=leaves.map(node=>({node,distance:node.getWorldPosition(new THREE.Vector3()).distanceToSquared(nearby)})).sort((a,b)=>a.distance-b.distance).slice(0,5).map(value=>value.node);if(hover.kind==='fruit' && !asset.picked)hoverNodes.unshift(asset.fruit);}
+        const strength=xrGl?0:Math.sin(time*.004)*.025*hoverAmount;
         if(strength&&asset)for(const node of hoverNodes){if(!visible(node)||asset.motion)continue;hoverOffsets.push([node,node.quaternion.clone()]);node.rotateZ(strength*(node===asset.fruit?.35:1));}
         const showArrow=fruitWindowCanPick(asset);if(arrow.visible!==showArrow){arrow.visible=showArrow;modelDirty=true;}
         if(modelDirty){content.updateMatrixWorld(true);if(arrow.visible && (arrowSampleAt===-Infinity || time-arrowSampleAt>=50)){fruitWindowVisibleBounds(asset.mainFruit,fruitBox);fruitBox.getCenter(fruitCenter);arrow.position.set(fruitCenter.x,fruitBox.max.y+.035,fruitCenter.z);arrowSampleAt=time;boundsUpdates++;}}
@@ -272,9 +272,11 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         },
         hit(ray){
             if(!shown||fadeStartedAt!==null||!xrGl||!ray?.origin||!ray.direction)return null;
-            const local=localRay(ray),meshHit=cast(local)[0];
-            const point=meshHit?.point.clone() || new THREE.Ray(local.origin,local.direction).intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),0),new THREE.Vector3());
-            if(!point || !meshHit && (Math.abs(point.x)>.35 || Math.abs(point.y)>.36))return null;
+            // Panel routing needs only the observation envelope, not a triangle
+            // raycast over the entire botanical model on every XR frame.
+            const local=localRay(ray);
+            const point=new THREE.Ray(local.origin,local.direction).intersectBox(observationBounds,new THREE.Vector3());
+            if(!point)return null;
             point.applyQuaternion(anchor.quaternion).add(anchor.position);
             return {kind:'fruit-window',card:{id:'fruit-window'},point:{x:point.x,y:point.y,z:point.z},distance:point.distanceTo(vector(ray.origin))};
         },
@@ -306,7 +308,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
                 if(amount && !fruitHold.pair)fruitHold.moveDistance(-Math.sign(vertical)*amount*amount*Math.min(.05,Math.max(0,(time-lastTime)/1000))*.45,source);
                 fruitHold.update(source,localSourcePose(transform));modelDirty=true;
             }updateRip();}
-            if(time-hoverCastAt>=50){hoverCastAt=time;const ray=inputRay?.origin&&inputRay.direction?localRay(inputRay):null;hover=ray?cast(ray).map(hit=>({hit,kind:botanicalHit(hit)})).find(value=>value.kind)||null:null;}
+            if(time-hoverCastAt>=100){hoverCastAt=time;const ray=inputRay?.origin&&inputRay.direction?localRay(inputRay):null;hover=ray?cast(ray).map(hit=>({hit,kind:botanicalHit(hit)})).find(value=>value.kind)||null:null;}
             advance(time);
         },
         handleEvent(event){

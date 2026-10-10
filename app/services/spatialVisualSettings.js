@@ -1,4 +1,4 @@
-export const TOTEM_MODELS = Object.freeze({basic:Object.freeze({label:'Bionic Pole'}),carved:Object.freeze({label:'Carved timber'}),botanical:Object.freeze({label:'Botanical column'}),organic:Object.freeze({label:'Halo Stem'})});
+export const TOTEM_MODELS = Object.freeze({basic:Object.freeze({label:'Bionic Pole'}),carved:Object.freeze({label:'Carved timber'}),botanical:Object.freeze({label:'Botanical column'}),organic:Object.freeze({label:'Halo Stem'}),sun:Object.freeze({label:'Sun Totem'}),leaf:Object.freeze({label:'Leaf Totem'}),rock:Object.freeze({label:'Rock Totem'}),moon:Object.freeze({label:'Moon Totem'})});
 // Presentation preferences only; project records and anchors stay untouched.
 export const INFO_GLASS = Object.freeze({defaultOpacity:.70,soil:'#32271f',soilEdge:'#514032',soilGrain:'#705840'});
 export const ORB_MODELS = Object.freeze({

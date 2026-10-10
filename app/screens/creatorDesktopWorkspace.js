@@ -10,21 +10,39 @@ const typeLabel = marker => ({ plant:'Plant', note:'Note', area_checkpoint:'Tote
 const icon = name => `<span aria-hidden="true">${dashboardIcon(name)}</span>`;
 
 export async function renderWorkspace(app, projectId, options = {}) {
-    const model = await loadCreatorWorkspace(projectId);
+    const model = await loadCreatorWorkspace(projectId, { overviewOnly: true });
     const abort = new AbortController();
     const state = { siteId: options.siteId || model.sites[0]?.id || '', areaId:'', query:'', type:'all', page:0,
-        view:['records','map','knowledge','field'].includes(options.view) ? options.view : 'records', selected:options.recordKey || '', checked:new Set(), dirty:false, generation:0, busy:false, topicId:'', categoryId:'', newTopic:false };
+        view:['overview','records','map','knowledge','field'].includes(options.view) ? options.view : 'overview', selected:options.recordKey || '', checked:new Set(), dirty:false, generation:0, busy:false, topicId:'', categoryId:'', newTopic:false };
     app.innerHTML = `<section class="screen creator-studio" aria-label="Desktop Studio">${workspaceHeader(model,'desktop',state)}
-      <div class="studio-context"><label>Site<select data-site>${model.sites.map(site=>`<option value="${html(site.id)}"${site.id===state.siteId?' selected':''}>${html(site.name)}</option>`).join('')}</select></label><p data-summary></p><button type="button" data-action="prepare">${icon('scan')}Prepare for field</button><button type="button" data-action="export">Export records</button></div>
-      <div class="studio-body"><nav class="studio-sidebar" aria-label="Desktop tasks"><p>WORKSPACE</p>${[['records','grid','Records'],['map','area','Map'],['knowledge','webhub','Knowledge'],['field','scan','Field work']].map(([view,symbol,label])=>`<button type="button" data-view="${view}">${icon(symbol)}${label}</button>`).join('')}<hr><div data-areas></div><button type="button" data-action="new-area">+ Add Area</button><hr><button type="button" data-action="print">${icon('print')}Print tags</button><button type="button" data-action="visitor">${icon('explore')}Visitor preview</button><details><summary>Project tools</summary><button type="button" data-action="settings">Project settings</button><button type="button" data-action="import">Import project archive</button></details></nav>
+      <div class="studio-context"><label>Site<select data-site>${model.sites.map(site=>`<option value="${html(site.id)}"${site.id===state.siteId?' selected':''}>${html(site.name)}</option>`).join('')}</select></label><p data-summary></p><button type="button" data-action="prepare" hidden>${icon('scan')}Prepare for field</button></div>
+      <div class="studio-body"><nav class="studio-sidebar" aria-label="Desktop tasks"><p>WORKSPACE</p>${[['overview','grid','Overview'],['records','grid','Records'],['map','area','Map'],['knowledge','webhub','Knowledge'],['field','scan','Field work']].map(([view,symbol,label])=>`<button type="button" data-view="${view}">${icon(symbol)}${label}</button>`).join('')}<hr><details class="studio-area-tree"><summary>Areas</summary><div data-areas></div></details><button type="button" data-action="new-area">+ Add Area</button><hr><details><summary>Field & project tools</summary><button type="button" data-action="export">Export records</button><button type="button" data-action="print">${icon('print')}Print tags</button><button type="button" data-action="visitor">${icon('explore')}Visitor preview</button><button type="button" data-action="settings">Project settings</button><button type="button" data-action="import">Import project archive</button></details></nav>
       <main class="studio-main"><div class="studio-toolbar"><h1 data-heading>Plant records</h1><button type="button" data-action="add">+ Add record</button></div><div class="studio-filters"><label class="studio-search">Search<input type="search" data-search placeholder="Name, code or tag"></label><label>Type<select data-type><option value="all">All records</option><option value="plant">Plants</option><option value="note">Notes</option><option value="area_checkpoint">Totems</option><option value="archived">Archived</option></select></label></div><p class="studio-status" role="status" data-status>${model.offline?'Prepared records · server unavailable. Database edits require a connection.':''}</p><div data-center></div></main>
-      <aside class="studio-inspector" aria-label="Selected record" data-inspector></aside></div><dialog class="studio-dialog" data-dialog></dialog></section>`;
+      <aside hidden class="studio-inspector" aria-label="Selected record" data-inspector></aside></div><dialog class="studio-dialog" data-dialog></dialog></section>`;
     const root = app.firstElementChild;
     let activeEntry = null, profile = {}, anchor = null, pimDocument = null;
     const message = (text, error = false) => { const output=root.querySelector('[data-status]'); output.textContent=text; output.classList.toggle('is-error',error); };
     function route() {
         history.replaceState({nourishlandView:'creator-workspace',projectId,workspace:'desktop',siteId:state.siteId,recordKey:state.selected,view:state.view},'',workspaceUrl(projectId,{mode:'desktop',siteId:state.siteId,recordKey:state.selected,view:state.view}));
         root.querySelectorAll('.workspace-mode-picker a').forEach(link=>{ const mode=new URL(link.href).searchParams.get('workspace');link.href=workspaceUrl(projectId,{mode,siteId:state.siteId,recordKey:state.selected,view:state.view}).href; });
+    }
+    async function ensureRecords() {
+        if(model.recordsLoaded) return true;
+        if(state.busy) return false;
+        state.busy=true; message('Loading project records…');
+        try {
+            const loaded=await loadCreatorWorkspace(projectId);
+            if(!root.isConnected) return false;
+            Object.assign(model,loaded); model.recordsLoaded=true;
+            renderAreas(); message(loaded.offline?'Prepared copy · reconnect to edit.':'');
+            return true;
+        } catch(error) { message(`${error.message} Try opening Records again.`,true); return false; }
+        finally { state.busy=false; }
+    }
+    function clearSelection() {
+        state.generation++; state.selected=''; state.checked.clear(); activeEntry=null;
+        profile={}; anchor=null; pimDocument=null; state.topicId=''; state.newTopic=false;
+        renderRecordInspector();
     }
     const allowChange = () => { if (state.busy) { message('Wait for the current save to finish.');return false; } if(state.dirty){message('Save or discard the selected record’s changes before changing views.',true);return false;}return true; };
     function filtered() {
@@ -42,11 +60,21 @@ export async function renderWorkspace(app, projectId, options = {}) {
     }
     function renderCenter() {
         root.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-current',button.dataset.view===state.view?'page':'false'));
-        root.querySelector('[data-heading]').textContent=({records:'Project records',map:'Map and register',knowledge:'Knowledge studio',field:'Field work'})[state.view];
-        root.querySelector('.studio-filters').hidden=state.view==='knowledge';
+        root.querySelector('[data-heading]').textContent=({overview:'Your project',records:'Project records',map:'Map and register',knowledge:'Knowledge studio',field:'Field work'})[state.view];
+        root.querySelector('.studio-filters').hidden=['overview','knowledge'].includes(state.view);
+        root.querySelector('[data-action=add]').hidden=state.view==='overview';
+        root.querySelector('[data-action=prepare]').hidden=!['records','field'].includes(state.view)||(!state.selected&&!state.checked.size);
+        root.querySelector('[data-inspector]').hidden=!activeEntry;
+        root.querySelector('.studio-body').classList.toggle('has-inspector',Boolean(activeEntry));
         const rows=filtered();state.page=Math.min(state.page,Math.max(0,Math.ceil(rows.length/25)-1));
         root.querySelector('[data-summary]').textContent=`${model.sites.find(site=>site.id===state.siteId)?.name || 'Site'} · ${rows.length} records${state.checked.size?` · ${state.checked.size} selected`:''}`;
         const center=root.querySelector('[data-center]');
+        if(state.view==='overview') {
+            const areas=model.areas.filter(area=>area.siteId===state.siteId);
+            root.querySelector('[data-summary]').textContent=`${model.sites.find(site=>site.id===state.siteId)?.name || 'Site'} · ${areas.length} Areas`;
+            center.innerHTML=`<section class="studio-start"><p class="studio-eyebrow">BUILD YOUR LIVING PROJECT</p><h2>Start with a place.</h2><p>Choose an Area, add a plant, then build its story. Your work stays a draft until you choose to share it.</p><div class="studio-start-actions"><button type="button" class="studio-primary" data-action="${areas.length?'add':'new-area'}">${areas.length?'Add a plant':'Create your first Area'}</button><button type="button" data-view="records">Browse records</button></div><ol class="studio-start-steps"><li><strong>1. Choose a place</strong><span>Organise your Site into Areas.</span></li><li><strong>2. Add a plant</strong><span>Start with its name, photo and a short description.</span></li><li><strong>3. Build its story</strong><span>Add learning topics and preview the visitor experience.</span></li></ol>${areas.length?`<label>Work in an Area<select data-start-area><option value="">Choose an Area…</option>${areas.map(area=>`<option value="${html(area.id)}">${html(area.name)}</option>`).join('')}</select></label>`:'<p class="studio-hint">Create an Area before adding plants, notes or totems.</p>'}</section>`;
+            return;
+        }
         if(state.view==='knowledge') { renderKnowledge();return; }
         let before='';
         if(state.view==='map') {
@@ -58,17 +86,18 @@ export async function renderWorkspace(app, projectId, options = {}) {
         if(state.view==='field') loadFieldOperations(projectId).then(ops=>{if(root.isConnected&&state.view==='field')root.querySelector('[data-queue-status]').textContent=`${ops.filter(op=>op.status==='pending').length} pending · ${ops.filter(op=>op.status==='conflict').length} need review`;}).catch(error=>message(error.message,true));
     }
     function renderRecordInspector() {
+        root.querySelector('[data-inspector]').hidden=!activeEntry; root.querySelector('.studio-body').classList.toggle('has-inspector',Boolean(activeEntry));
         if(!activeEntry) {root.querySelector('[data-inspector]').innerHTML='<h2>Select a record</h2><p>Edit information here while the register stays visible.</p>';return;}
         const marker=activeEntry.marker, isPlant=marker.type==='plant';
         const tagAllowed=isPlant||marker.type==='area_checkpoint'||marker.semantic_type==='area_checkpoint';
         const tag=marker.physicalAnchor;
-        root.querySelector('[data-inspector]').innerHTML=`<p class="studio-eyebrow">${html(typeLabel(marker))}</p><h2>${html(marker.name)}</h2><p class="studio-record-id">${html(marker.plant_code || marker.id)}</p><form data-record-form>
+        root.querySelector('[data-inspector]').innerHTML=`<button type="button" class="studio-close-inspector" data-action="close-inspector" aria-label="Close record editor">×</button><p class="studio-eyebrow">${html(typeLabel(marker))}</p><h2>${html(marker.name)}</h2><p class="studio-record-id">${html(marker.plant_code || marker.id)}</p><form data-record-form>
          <label>${isPlant?'Common name':'Name'}<input name="name" value="${html(marker.name)}" required></label>${isPlant?`<label>Scientific name<input name="scientific_name" value="${html(profile.scientific_name || '')}"></label>`:''}
          <label>Area<select name="area">${model.areas.filter(area=>area.siteId===activeEntry.siteId).map(area=>`<option value="${html(area.id)}"${area.id===activeEntry.place.id?' selected':''}>${html(area.name)}</option>`).join('')}</select></label>
          <label>${isPlant?'Overview':'Description'}<textarea name="overview" rows="3">${html(isPlant?profile.overview || marker.description:marker.description || '')}</textarea></label>
-         <label>Local notes<textarea name="notes" rows="3">${html(isPlant?profile.notes || '':marker.notes || '')}</textarea></label>
-         ${tagAllowed?`<div class="studio-tag-fields"><label>Printed ArUco tag<select name="tag"><option value="">Unassigned</option>${PHYSICAL_ANCHOR_IDS.map(id=>{const owner=model.entries.find(entry=>entry.key!==activeEntry.key&&entry.marker.physicalAnchor?.enabled&&Number(entry.marker.physicalAnchor.markerId)===id);return `<option value="${id}"${tag?.enabled&&Number(tag.markerId)===id?' selected':''}${owner?' disabled':''}>${physicalMarkerLabel(id)}${owner?' · '+html(owner.marker.name):''}</option>`;}).join('')}</select></label><label>Black square size (mm)<input name="tagSize" type="number" min="10" max="2000" value="${tag?.markerSizeMm || 140}"></label><p>${html(fieldCheckState(marker))} · ${anchor?'Position saved; field placement unverified':'No spatial position saved'}</p></div>`:''}
-         <details><summary>Sources, media & publication</summary>${isPlant?`<label>References<textarea name="references" rows="2">${html(profile.references || '')}</textarea></label><label>Photo<input type="file" accept="image/jpeg,image/png,image/webp" data-photo></label><input name="photo" type="hidden" value="${html(profile.photo || '')}">${profile.photo?`<img class="studio-photo" src="${html(profile.photo)}" alt="${html(marker.name)}">`:''}`:''}<label>Visitor visibility<select name="visibility"><option value="draft"${marker.visibility!=='public'&&marker.visibility!=='hidden'?' selected':''}>Draft</option><option value="public"${marker.visibility==='public'?' selected':''}>Public</option><option value="hidden"${marker.visibility==='hidden'?' selected':''}>Hidden</option></select></label><p>Project, Site and Area visibility also control visitor access.</p></details>
+         <details><summary>Local observations</summary><label>Local notes<textarea name="notes" rows="3">${html(isPlant?profile.notes || '':marker.notes || '')}</textarea></label></details>
+         ${tagAllowed?`<details><summary>Placement & printed tag</summary><div class="studio-tag-fields"><label>Printed ArUco tag<select name="tag"><option value="">Unassigned</option>${PHYSICAL_ANCHOR_IDS.map(id=>{const owner=model.entries.find(entry=>entry.key!==activeEntry.key&&entry.marker.physicalAnchor?.enabled&&Number(entry.marker.physicalAnchor.markerId)===id);return `<option value="${id}"${tag?.enabled&&Number(tag.markerId)===id?' selected':''}${owner?' disabled':''}>${physicalMarkerLabel(id)}${owner?' · '+html(owner.marker.name):''}</option>`;}).join('')}</select></label><label>Black square size (mm)<input name="tagSize" type="number" min="10" max="2000" value="${tag?.markerSizeMm || 140}"></label><p>${html(fieldCheckState(marker))} · ${anchor?'Position saved; field placement unverified':'No spatial position saved'}</p></div></details>`:''}
+         ${isPlant?`<label>Photo<input type="file" accept="image/jpeg,image/png,image/webp" data-photo></label><input name="photo" type="hidden" value="${html(profile.photo || '')}">${profile.photo?`<img class="studio-photo" src="${html(profile.photo)}" alt="${html(marker.name)}">`:''}`:''}<details><summary>Sources & publication</summary>${isPlant?`<label>References<textarea name="references" rows="2">${html(profile.references || '')}</textarea></label>`:''}<label>Visitor visibility<select name="visibility"><option value="draft"${marker.visibility!=='public'&&marker.visibility!=='hidden'?' selected':''}>Draft</option><option value="public"${marker.visibility==='public'?' selected':''}>Public</option><option value="hidden"${marker.visibility==='hidden'?' selected':''}>Hidden</option></select></label><p>Project, Site and Area visibility also control visitor access.</p></details>
          <div class="studio-save-actions"><button class="studio-primary" type="submit"${model.offline?' disabled':''}>Save record</button><button type="button" data-action="discard">Discard changes</button></div><p role="status" data-save-status>${model.offline?'Prepared copy · reconnect to edit':'Saved record'}</p><button class="studio-quiet" type="button" data-action="archive">${marker.status==='archived'?'Restore record':'Archive record'}</button></form>`;
     }
     function renderKnowledge() {
@@ -85,7 +114,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
     function renderKnowledgePreview() {
         const form=root.querySelector('[data-topic-form]');if(!form)return;
         const value=name=>form.elements.namedItem(name).value;
-        root.querySelector('[data-inspector]').innerHTML=`<p class="studio-eyebrow">Reading preview</p><h2>${html(activeEntry.marker.name)}</h2><p>${html(profile.scientific_name || '')}</p><article class="studio-reading-preview"><small>${value('knowledgeScope')==='specimen'?'Local specimen knowledge':value('knowledgeScope')==='species'?'Species knowledge':'Scope needs review'}</small><h3>${html(value('title') || 'Untitled topic')}</h3><p>${html(value('body'))}</p></article><p>${value('status')==='published'?'Published topic · project visibility still applies':'Draft · not public'}</p><p class="studio-hint">Same topic in the desktop guide, Android reader and XR PIMO.</p>`;
+        root.querySelector('[data-inspector]').innerHTML=`<p class="studio-eyebrow">Reading preview</p><h2>${html(activeEntry.marker.name)}</h2><p>${html(profile.scientific_name || '')}</p><article class="studio-reading-preview"><small>${value('knowledgeScope')==='specimen'?'Local specimen knowledge':value('knowledgeScope')==='species'?'Species knowledge':'Scope needs review'}</small><h3>${html(value('title') || 'Untitled topic')}</h3><p>${html(value('body'))}</p></article><p>${value('status')==='published'?'Published topic · project visibility still applies':'Draft · not public'}</p><p class="studio-hint">Same topic in the desktop guide, Android reader and XR plant cells.</p>`;
     }
     async function selectEntry(key) {
         const entry=model.entries.find(entry=>entry.key===key);
@@ -134,7 +163,12 @@ export async function renderWorkspace(app, projectId, options = {}) {
     },{signal:abort.signal});
     root.addEventListener('change',async event=>{
         const target=event.target;
-        if(target.matches('[data-site]')){if(!allowChange()){target.value=state.siteId;return;}state.siteId=target.value;state.areaId='';state.page=0;renderAreas();await selectEntry(filtered()[0]?.key);renderCenter();route();}
+        if(target.matches('[data-start-area]')) {
+            if(!target.value||!allowChange()) return;
+            if(!await ensureRecords()) return;
+            state.areaId=target.value;state.view='records';state.page=0;clearSelection();renderAreas();renderCenter();route();return;
+        }
+        if(target.matches('[data-site]')){if(!allowChange()){target.value=state.siteId;return;}state.siteId=target.value;state.areaId='';state.page=0;clearSelection();renderAreas();renderCenter();route();}
         if(target.matches('[data-type]')){state.type=target.value;state.page=0;renderCenter();}
         if(target.matches('[data-topic]')){if(!allowChange()){target.value=state.topicId;return;}state.topicId=target.value;state.newTopic=false;renderKnowledge();}
         if(target.matches('[data-check]')){target.checked?state.checked.add(target.dataset.check):state.checked.delete(target.dataset.check);renderCenter();}
@@ -146,15 +180,17 @@ export async function renderWorkspace(app, projectId, options = {}) {
         const link=event.target.closest('a');if(link && !allowChange()){event.preventDefault();return;}
         const button=event.target.closest('button');if(!button)return;
         if(button.dataset.record){if(allowChange())await selectEntry(button.dataset.record);return;}
-        if(button.dataset.view){if(!allowChange())return;state.view=button.dataset.view;state.page=0;renderCenter();if(state.view!=='knowledge')renderRecordInspector();route();return;}
-        if(Object.hasOwn(button.dataset,'area')||button.dataset.mapArea){if(!allowChange())return;state.areaId=button.dataset.area ?? button.dataset.mapArea;state.page=0;renderAreas();renderCenter();return;}
+        if(button.dataset.view){if(!allowChange())return;if(button.dataset.view!=='overview'&&!await ensureRecords())return;if(button.dataset.view==='overview')clearSelection();state.view=button.dataset.view;state.page=0;renderCenter();if(state.view!=='knowledge')renderRecordInspector();route();return;}
+        if(Object.hasOwn(button.dataset,'area')||button.dataset.mapArea){if(!allowChange())return;if(!await ensureRecords())return;state.areaId=button.dataset.area ?? button.dataset.mapArea;state.page=0;clearSelection();if(state.view==='overview'||state.view==='knowledge')state.view='records';renderAreas();renderCenter();route();return;}
         if(button.dataset.category){if(!allowChange())return;state.categoryId=button.dataset.category;state.topicId='';state.newTopic=false;renderKnowledge();return;}
         if(button.dataset.page){state.page+=Number(button.dataset.page);renderCenter();return;}
         const action=button.dataset.action;if(!action)return;
         try {
+            if(action==='close-inspector'){if(!allowChange())return;clearSelection();renderCenter();route();return;}
             if(action==='discard'){state.dirty=false;state.newTopic=false;state.view==='knowledge'?renderKnowledge():renderRecordInspector();message('Unsaved changes discarded.');return;}
             if(action==='close-dialog'){root.querySelector('dialog').close();return;}
             if(!allowChange())return;
+            if(['add','create-record','prepare','export'].includes(action)&&!await ensureRecords())return;
             if(action==='reload-record'){delete model.profiles[activeEntry.key];await selectEntry(activeEntry.key);return;}
             if(action==='add-topic'){if(!activeEntry||!document)return;state.newTopic=true;state.dirty=true;renderKnowledge();return;}
             if(action==='archive'){await saveWorkspaceRecord(model,activeEntry,{markerChanges:{status:activeEntry.marker.status==='archived'?'draft':'archived',visibility:'hidden'}});renderAreas();renderCenter();renderRecordInspector();message('Record saved.');return;}
@@ -166,6 +202,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
                 state.busy=true;const tasks=model.entries.filter(entry=>state.checked.size?state.checked.has(entry.key):entry.key===state.selected);
                 if(!tasks.length)throw new Error('Select at least one record to prepare field work.');
                 for(const entry of tasks)await saveWorkspaceRecord(model,entry,{markerChanges:{field_work:{...entry.marker.field_work,requested:true,requestedAt:new Date().toISOString()}}});
+                message('Downloading the full project for offline field use…');
                 const pack=await prepareCreatorFieldPackage(model,(done,total)=>message(`Preparing local field records ${done}/${total}…`));
                 message(`Field tasks saved. Text, profiles and saved positions are prepared locally (${new Date(pack.preparedAt).toLocaleString()}). Online camera detector and uncached media still require a connection.`);renderCenter();return;
             }
@@ -175,9 +212,10 @@ export async function renderWorkspace(app, projectId, options = {}) {
             }
             if(action==='create-area'){const name=root.querySelector('[data-new-area]').value.trim();if(!name)throw new Error('Add an Area name.');await createWorkspaceArea(model,state.siteId,name);root.querySelector('dialog').close();renderAreas();renderCenter();message('Area created as a draft.');return;}
             if(action==='add'){
-                dialogMarkup('Add record',`<label>Name<input data-new-name required></label><label>Type<select data-new-type><option value="plant">Plant</option><option value="note">Note</option><option value="area_checkpoint">Totem</option></select></label><label>Area<select data-new-area-id>${model.areas.filter(area=>area.siteId===state.siteId).map(area=>`<option value="${html(area.id)}">${html(area.name)}</option>`).join('')}</select></label><button type="button" class="studio-primary" data-action="create-record">Create draft</button>`);return;
+                if(!model.areas.some(area=>area.siteId===state.siteId))throw new Error('Create an Area first, then add your plant.');
+                dialogMarkup('Add record',`<label>Name<input data-new-name required></label><label>Type<select data-new-type><option value="plant">Plant</option><option value="note">Note</option><option value="area_checkpoint">Totem</option></select></label><label>Area<select data-new-area-id>${model.areas.filter(area=>area.siteId===state.siteId).map(area=>`<option value="${html(area.id)}"${area.id===state.areaId?' selected':''}>${html(area.name)}</option>`).join('')}</select></label><button type="button" class="studio-primary" data-action="create-record">Create draft</button>`);return;
             }
-            if(action==='create-record'){const name=root.querySelector('[data-new-name]').value.trim();if(!name)throw new Error('Add a record name.');const entry=await createWorkspaceRecord(model,{name,type:root.querySelector('[data-new-type]').value,siteId:state.siteId,areaId:root.querySelector('[data-new-area-id]').value});root.querySelector('dialog').close();state.view='records';state.areaId='';state.type='all';state.query='';root.querySelector('[data-search]').value='';await selectEntry(entry.key);renderAreas();message('Draft record created.');return;}
+            if(action==='create-record'){const name=root.querySelector('[data-new-name]').value.trim();if(!name)throw new Error('Add a record name.');const entry=await createWorkspaceRecord(model,{name,type:root.querySelector('[data-new-type]').value,siteId:state.siteId,areaId:root.querySelector('[data-new-area-id]').value});root.querySelector('dialog').close();state.view='records';state.areaId=entry.place.id;state.checked.clear();state.type='all';root.querySelector('[data-type]').value='all';state.query='';root.querySelector('[data-search]').value='';await selectEntry(entry.key);renderAreas();message('Draft record created.');return;}
             if(action==='plan-point'){
                 if(!activeEntry)throw new Error('Select a record to choose its Area.');message(`Click the plan to position ${activeEntry.place.name}.`);
                 root.querySelector('[data-plan]').addEventListener('click',async click=>{if(click.target.closest('button'))return;const bounds=click.currentTarget.getBoundingClientRect();try{await savePlanPoint(model,activeEntry,{x:100*(click.clientX-bounds.left)/bounds.width,y:100*(click.clientY-bounds.top)/bounds.height});renderCenter();message('Planning point saved. Physical placement still needs field work.');}catch(error){message(error.message,true);}},{once:true,signal:abort.signal});return;
@@ -194,7 +232,8 @@ export async function renderWorkspace(app, projectId, options = {}) {
     const beforeUnload=event=>{if(state.dirty){event.preventDefault();event.returnValue='';}};
     window.addEventListener('beforeunload',beforeUnload,{signal:abort.signal});
     renderAreas();renderCenter();
-    const initial=model.entries.find(entry=>entry.key===state.selected || (!options.recordKey&&entry.marker.id===options.recordId)) || filtered()[0];
-    if(initial) {state.siteId=initial.siteId;root.querySelector('[data-site]').value=state.siteId;renderAreas();await selectEntry(initial.key);}else renderRecordInspector();
+    if((state.view!=='overview'||options.recordKey||options.recordId)&&!await ensureRecords())return {root,signal:abort.signal,destroy(){abort.abort();}};
+    const initial=model.entries.find(entry=>entry.key===state.selected || (!options.recordKey&&entry.marker.id===options.recordId));
+    if(initial) {if(state.view==='overview')state.view='records';state.siteId=initial.siteId;state.areaId=initial.place.id;root.querySelector('[data-site]').value=state.siteId;renderAreas();await selectEntry(initial.key);}else {renderCenter();renderRecordInspector();}route();
     return {root,signal:abort.signal,destroy(){state.generation++;abort.abort();}};
 }

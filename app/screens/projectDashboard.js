@@ -19,6 +19,7 @@ import {
     DEFAULT_TOTEM_COLOR,
     TOTEM_HEIGHT_PRESETS,
     TOTEM_STYLES,
+    TOTEM_MODEL_CHOICES,
     TOTEM_TONES,
     normalizeTotemHeightPreset,
     normalizeTotemStyle,
@@ -812,7 +813,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const totemHeightDetails = totemHeightPreset(totemHeight);
         const totemToneOptions = TOTEM_TONES.map(tone => `<option value="${tone.color}" ${tone.color.toLowerCase() === totemColor.toLowerCase() ? 'selected' : ''}>${tone.label}</option>`).join('');
         const totemHeightButtons = TOTEM_HEIGHT_PRESETS.map(preset => `<button type="button" data-totem-height="${preset.id}" aria-pressed="${preset.id === totemHeight}"><strong>${preset.label}</strong><small>${preset.metres.toFixed(2)} m</small></button>`).join('');
-        const totemStyleButtons = TOTEM_STYLES.map(style => `<button type="button" data-totem-style="${style.id}" aria-pressed="${style.id === totemStyle}"><span class="totem-style-preview totem-style-preview-${style.id}" aria-hidden="true"></span><strong>${style.label}</strong><small>${style.description}</small></button>`).join('');
+        const totemStyleButtons = TOTEM_MODEL_CHOICES.map(style => `<button type="button" data-totem-style="${style.id}" aria-pressed="${style.id === totemStyle}"><span class="totem-style-preview totem-style-preview-${style.id}" aria-hidden="true"></span><strong>${style.label}</strong><small>${style.description}</small></button>`).join('');
         const board = existing?.marker.area_information_board || {};
         const linkableAreas = context.places.filter(place => !isDefaultHomeArea(place) && place.id !== context.area.id);
         const existingLinks = normalizeAreaLinks(context.area, context.places);
@@ -922,6 +923,11 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
             const style = normalizeTotemStyle(button.dataset.totemStyle);
             if (!styleInput) return;
             styleInput.value = style;
+            const preset=TOTEM_MODEL_CHOICES.find(item=>item.id===style)?.secondary?'secondary':'area';
+            const heightInput=app.querySelector('#areaCheckpointHeight');
+            if(heightInput)heightInput.value=preset;
+            app.querySelectorAll('[data-totem-height]').forEach(candidate=>candidate.setAttribute('aria-pressed',String(candidate.dataset.totemHeight===preset)));
+            app.querySelector('.totem-profile-visual')?.style.setProperty('--totem-preview-height',`${totemHeightPreset(preset).previewPixels}px`);
             app.querySelectorAll('[data-totem-style]').forEach(candidate => candidate.setAttribute('aria-pressed', String(candidate === button)));
             app.querySelector('.totem-profile-visual')?.classList.remove(...TOTEM_STYLES.map(candidate => `is-style-${candidate.id}`));
             app.querySelector('.totem-profile-visual')?.classList.add(`is-style-${style}`);

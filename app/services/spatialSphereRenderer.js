@@ -321,8 +321,8 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         const state=renderer.livingStates.get(key) || {at:now,opening:target};
         if(state.at!==now){const dt=Math.min(.1,Math.max(0,now-state.at));state.opening+=(target-state.opening)*(1-Math.exp(-dt/ .32));state.at=now;}renderer.livingStates.set(key,state);
         const soft=authoredColor.map((c,i)=>c*.48+[.88,.87,.80][i]*.52);
-        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.94,{orbModel:'basic',color:authoredColor,alpha:.98,roughness:.8,emissive:.04,coreGlow:.03+state.opening*.18,opacity:options.opacity});
-        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:'living',color:soft,alpha:.98,roughness:.72,emissive:moving?.18:targeted?.12:.04,opening:state.opening,opacity:options.opacity});
+        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.94,{orbModel:'basic',color:authoredColor,alpha:.98,roughness:.8,emissive:.04,rotationY:options.rotationY || 0,coreGlow:.03+state.opening*(.15+.08*(.5+.5*Math.sin(now*2.8))),opacity:options.opacity});
+        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:'living',color:soft,alpha:.98,roughness:.72,emissive:moving?.18:targeted?.12:.04,rotationY:options.rotationY || 0,opening:state.opening,opacity:options.opacity});
         gl.enable(gl.CULL_FACE);return;
     }
 
@@ -334,7 +334,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         position,
         radius,
         { color: shellColor, alpha: plant ? .98 : .94, emissive: moving ? .65 : selected ? .53 : targeted ? .43 : plant ? .27 : .24,
-            orbModel:model,detail:Math.min(appearance.detail,currentGraphicsPreset().detail),roughness:appearance.roughness,metalness:appearance.metalness,opacity: options.opacity }
+            rotationY:options.rotationY || 0,coreGlow:selected?.12+.07*Math.sin((options.time || 0)*2.8):.025,orbModel:model,detail:Math.min(appearance.detail,currentGraphicsPreset().detail),roughness:appearance.roughness,metalness:appearance.metalness,opacity: options.opacity }
     );
 
     if(plant && model==='advanced' && currentGraphicsPreset().detail>0){

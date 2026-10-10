@@ -4233,7 +4233,7 @@ function drawSpatialMarkers(view) {
                 return;
             }
             const rotationY=(Number(record.rotationDegrees) || 24) * Math.PI / 180;
-            const crownRadius=halfWidth,bodyHalfHeight=Math.max(.12,halfHeight-crownRadius*.35);
+            const crownRadius=halfWidth,bodyHalfHeight=Math.max(.12,halfHeight-(['sun','leaf','rock','moon'].includes(style)?0:crownRadius*.35));
             const visual=SPATIAL_OBJECT_VISUALS.totem;
             const fadeOpacity=creatorTotemOpacity(record);
             const postOptions={halfWidth,halfHeight:bodyHalfHeight,halfDepth:halfWidth*.5,

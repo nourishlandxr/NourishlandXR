@@ -2,7 +2,7 @@ import {configureXRFrameRate,safeXRFrameRate} from './webxrSession.js';
 import {getSpatialVisualSettings,setSpatialVisualSettings,currentGraphicsQuality,setAdaptiveGraphicsQuality} from './spatialVisualSettings.js';
 
 // Callback cadence is a recovery signal, not a compositor/GPU timing measurement.
-export function createXRPerformanceSettings({getSession,publish,configure=configureXRFrameRate}) {
+export function createXRPerformanceSettings({getSession,publish,alwaysReadout=false,configure=configureXRFrameRate}) {
     let tracked=null,started=null,frames=0,fps=null,observedRate=null,pending=false;
     let requestId=0,changedAt=0,lastTick=0,slowWindows=0,message='',desired=null,lastRecoveryAt=-Infinity;
     let cpuTotal=0,cpuFrames=0,cpuMs=null,heaviest='',qualitySlowWindows=0;const phaseCosts=new Map();
@@ -77,7 +77,7 @@ export function createXRPerformanceSettings({getSession,publish,configure=config
                 const lower=Array.from(session.supportedFrameRates||[]).filter(value=>value>=60&&value<rate).sort((a,b)=>b-a)[0];
                 if(slowWindows>=3 && lower && time-lastRecoveryAt>=10000){lastRecoveryAt=time;void apply(lower,{recovery:true});}
             }
-            if(getSpatialVisualSettings().showFps)notify();
+            if(alwaysReadout || getSpatialVisualSettings().showFps)notify();
         },
         async action(action){
             if(action==='ShowFps'){setSpatialVisualSettings({showFps:!getSpatialVisualSettings().showFps});notify();return;}

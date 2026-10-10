@@ -34,6 +34,11 @@ export function totemNotificationLight(record,now=performance.now()){
     const reduced=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
     const selected=record?.signNotificationSelected || record?.totemSelectedCard;
     const softColour=colour.map(value=>value*.68+.20);
+    const signal=record?.communicationSignal,elapsed=now-Number(signal?.startedAt),duration=Number(signal?.duration || 4200);
+    if(signal && elapsed>=0 && elapsed<duration){
+        const envelope=Math.min(1,elapsed/240,(duration-elapsed)/500);
+        return {colour, strength:reduced?.45:.16+envelope*(.28+.48*(.5-.5*Math.cos(elapsed/300))),phase:reduced?0:elapsed/1000};
+    }
     if(!selected)return {colour:softColour,strength:.16,phase:0};
     return {colour:softColour,strength:reduced?.27:.27+Math.sin(now/2200)*.035,phase:reduced?0:now/1000};
 }

@@ -6,8 +6,13 @@ export const TOTEM_STYLES = Object.freeze([
     Object.freeze({ id: 'carved', label: 'Carved timber', description: 'Flowing timber with engraved controls' }),
     Object.freeze({ id: 'botanical', label: 'Botanical column', description: 'Quiet flutes and bronze leaf inlay' }),
     Object.freeze({ id: 'organic', label: 'Halo Stem', description: 'Slender timber pole with an open oval glass halo' }),
+    Object.freeze({ id: 'sun', label: 'Sun Totem', secondary: true, color: '#ecc276', description: '1.35 m · Sunny clearings, flowering guilds and pollinator areas. A warm sun light in carved timber.' }),
+    Object.freeze({ id: 'leaf', label: 'Leaf Totem', secondary: true, color: '#a5db8d', description: '1.35 m · Woodland edges, edible foliage and regeneration guilds. Light follows the leaf veins.' }),
+    Object.freeze({ id: 'rock', label: 'Rock Totem', secondary: true, color: '#38d1dc', description: '1.35 m · Rock gardens, soil communities and water edges. A mineral light seam in stacked stone.' }),
+    Object.freeze({ id: 'moon', label: 'Moon Totem', secondary: true, color: '#c2b4ef', description: '1.35 m · Shaded retreats, nocturnal life and reflection areas. A softly lit crescent.' }),
     Object.freeze({ id: 'flat-disc', label: 'Disk Totem', description: 'Flat round marker' })
 ]);
+export const TOTEM_MODEL_CHOICES = Object.freeze(TOTEM_STYLES.filter(style=>style.id!=='flat-disc'));
 
 const LEGACY_TOTEM_STYLE_IDS = Object.freeze({ 'light-post': 'flat-disc' });
 
@@ -26,7 +31,9 @@ export const TOTEM_HEIGHT_PRESETS = Object.freeze([
     Object.freeze({ id: 'low', label: 'Low', metres: .92, halfHeightMetres: .46, previewPixels: 72 }),
     Object.freeze({ id: 'standard', label: 'Standard', metres: 1.2, halfHeightMetres: .6, previewPixels: 92 }),
     Object.freeze({ id: 'life-size', label: 'Life size', metres: 2, halfHeightMetres: 1, previewPixels: 152 }),
-    Object.freeze({ id: 'tall', label: 'Tall', metres: 1.5, halfHeightMetres: .75, previewPixels: 116 })
+    Object.freeze({ id: 'tall', label: 'Tall', metres: 1.5, halfHeightMetres: .75, previewPixels: 116 }),
+    Object.freeze({ id: 'secondary', label: 'Sub-area', metres: 1.35, halfHeightMetres: .675, previewPixels: 104 }),
+    Object.freeze({ id: 'area', label: 'Main area', metres: 2.5, halfHeightMetres: 1.25, previewPixels: 190 })
 ]);
 
 export function normalizeTotemHeightPreset(value) {
@@ -35,6 +42,7 @@ export function normalizeTotemHeightPreset(value) {
 }
 
 export function totemHeightPreset(value) {
+    if(typeof value==='object' && !value?.appearance?.heightPreset && TOTEM_MODEL_CHOICES.find(style=>style.id===renderedTotemStyle(value))?.secondary)return TOTEM_HEIGHT_PRESETS.find(preset=>preset.id==='secondary');
     const id = normalizeTotemHeightPreset(value);
     return TOTEM_HEIGHT_PRESETS.find(preset => preset.id === id);
 }

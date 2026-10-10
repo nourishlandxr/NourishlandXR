@@ -25,7 +25,7 @@ async function openDemoPeek(variant=1){
 import {createLivingFramePeekXR} from '../services/livingFramePeekXR.js';
 import {livingFramePose,avoidLivingFrameDisk,livingFrameRimHit} from '../services/livingFramePlacement.js';
 import {limoConnectionIsAnimating} from '../services/limoConnectionLayout.js';
-import {spatialStick} from '../services/spatialStick.js';
+import {spatialStick,turnSpatialAxes} from '../services/spatialStick.js';
 import {butterflyElementVisit} from '../services/butterflyElementVisit.js';
 import {LIMO_CELL_BY_ID,limoRouteId} from '../services/limoProjectLearning.js';
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
@@ -209,7 +209,7 @@ let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=nul
 let demoKnowledgeScrollAt=0;
 let appRoot = null;
 let session = null;
-const demoPerformance=createXRPerformanceSettings({getSession:()=>session,publish:value=>infoPanel?.setXRPerformance(value)});
+const demoPerformance=createXRPerformanceSettings({getSession:()=>session,alwaysReadout:true,publish:value=>infoPanel?.setXRPerformance(value)});
 let measureXrFrame=false;
 function publishDemoPerformance(){demoPerformance.publish();}
 function handleDemoPerformanceAction(action){return demoPerformance.action(action);}
@@ -5043,6 +5043,7 @@ function pollDemoControllerDepth(time = performance.now()) {
     }
     const record = markers[demoHeldIndex];
     if (!record) return;
+    if(record.demoType==='plant' && stickPose.yaw){record.rotationY=(record.rotationY || 0)+stickPose.yaw;if(record.informationPose){const turned=turnSpatialAxes(record.informationPose,stickPose.yaw);Object.assign(record.informationPose,turned);}knowledgeRenderer?.clear(record);}
     if(record.demoType==='zone' && stickPose.yaw){record.rotationY=demoTotemRotationY(record)+stickPose.yaw;record.totemCardsRefreshed=0;}
     if (!delta) return;
     record.demoGrabDepth = Math.max(.4, Math.min(4, (Number(record.demoGrabDepth) || Number(record.demoDistance) || 1) + delta));
@@ -5389,7 +5390,7 @@ function drawIntroNoteContent(ctx) {
         const headingBottom=drawDemoHeading(ctx,demoMapIntroPaused?'Let’s test adding these elements to the landscape.':guidedDemoStep('UTILITY 1.1').title);
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
         const elapsed=demoLivingMapElapsed(),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:headingBottom+85,height:300,hideGuidance:true});
+        if(demoMapIntroPaused)drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:headingBottom+85,height:300,hideGuidance:true});
         if(!demoMapIntroPaused && livingMapReveal(elapsed,reduced).preview<.05){
             ctx.font=`500 34px ${DEMO_PRESENTATION_FONT}`;
             const copy=demoLocalizedText(livingMapPlacementCopy(demoLivingMapPlacement?.snapshot().length || 0));
@@ -5541,8 +5542,8 @@ function createIntroPointerTexture(texture = null) {
     label.height = 256;
     const ctx = localizedCanvasContext(label.getContext('2d'));
     const glow = ctx.createRadialGradient(128, 128, 32, 128, 128, 120);
-    glow.addColorStop(0, 'rgba(226,244,181,.42)');
-    glow.addColorStop(.58, 'rgba(154,211,122,.16)');
+    glow.addColorStop(0, 'rgba(226,244,181,0)');
+    glow.addColorStop(.58, 'rgba(154,211,122,0)');
     glow.addColorStop(1, 'rgba(154,211,122,0)');
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, 256, 256);
@@ -5730,7 +5731,7 @@ function drawIntroSpatial(view) {
         if(introPointerTextureKind!==pointerKind){if(introPointerTexture)gl.deleteTexture(introPointerTexture);introPointerTexture=pointerKind==='totem'?createTotemPlacementTexture():pointerKind==='note'?createNotePlacementTexture():createIntroPointerTexture();introPointerTextureKind=pointerKind;}
         const pointerPosition = demoStage==='totem'?totemPlacementPosition():placementPosition();
         const orbPulse=pointerKind==='aim'?1+.05*Math.sin(performance.now()/380):1;
-        if (pointerPosition) drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.95*orbPulse, pointerKind==='aim'?.8+.12*Math.sin(performance.now()/380):1);
+        if (pointerPosition) {gl.depthMask(false);drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.95*orbPulse, pointerKind==='aim'?.68:1);gl.depthMask(true);}
     }
     if(livingFrameModel?.ready && arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);livingFrameModel.drawXR(view,livingFramePose(board).matrix);}
 }
@@ -6077,9 +6078,8 @@ function ambientBeeWorldPosition(bee,index=0){
         y:ambientEncounterOrigin.y+faceHeight-Math.sin(Math.PI*progress)*.025,
         z:ambientEncounterOrigin.z+rightZ*faceAcross-frontZ*faceDistance
     };
-    const dx=facePosition.x-viewerMatrix[12],dy=facePosition.y-viewerMatrix[13],dz=facePosition.z-viewerMatrix[14],distance=Math.hypot(dx,dy,dz)||1;
-    // Only curious body vibration responds to gaze; wingbeats stay active.
-    const attention=Math.max(0,Math.min(1,((-viewerMatrix[8]*dx-viewerMatrix[9]*dy-viewerMatrix[10]*dz)/distance-.90)/.07));
+    // Curious inspection follows its own motion; wingbeats stay active.
+    const attention=1; // Encounter motion stays independent of headset movement.
     bee.headTurn*=attention;bee.bank*=1-flyby+flyby*attention;
     facePosition.x+=curious.x*attention;facePosition.y+=curious.y*attention;facePosition.z+=curious.z*attention;
     const blended={
@@ -6167,7 +6167,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1),
-            { type: orbType, color: material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, placementHighlight:record.demoPlacementHighlight || (orbType==='plant' && !record.demoAmbientNeighbour && orbMentioned),placementAge:performance.now()-(record.demoPlacementHighlightAt || 0), held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
+            { type: orbType, rotationY:record.rotationY || 0, animationKey:record, pimoOpen:record.demoExpanded, color: orbType==='plant' && !record.demoAmbientNeighbour ? [.32,.52,.34] : material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, placementHighlight:record.demoPlacementHighlight || (orbType==='plant' && !record.demoAmbientNeighbour && orbMentioned),placementAge:performance.now()-(record.demoPlacementHighlightAt || 0), held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {
@@ -6287,7 +6287,7 @@ function drawMarker(view) {
     });
     if(totemCardsRenderer) {
         totemCardsRenderer.begin();
-        markers.filter(record=>record.demoType==='zone' && record.demoExpanded && !record.demoNarrativeFaded && demoAreaVisible(record)).forEach(record=>{
+        markers.filter(record=>record.demoType==='zone' && (record.demoExpanded || record.demoTotemSignsVisible) && !record.demoNarrativeFaded && demoAreaVisible(record)).forEach(record=>{
             if(!record.totemCardsRefreshed || performance.now()-record.totemCardsRefreshed>500) {
                 record.liveTotemCards=demoTotemCards(record);record.totemCardsRefreshed=performance.now();
             }
@@ -6636,7 +6636,7 @@ async function startImmersive() {
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
             runXrFrameStep('floor dice input',()=>heroDiceToy?.update(frame,_time));
             runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
-            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || demoKnowledgeIsModal()));
+            runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source) || demoKnowledgeIsModal()));
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
             runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
             runXrFrameStep('hand pinch',()=>{if(!demoLivingMapGrip?.active && !knowledgeRenderer?.movingAtAim())pollDemoHandPinch();});

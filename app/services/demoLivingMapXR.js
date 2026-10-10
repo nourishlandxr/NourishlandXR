@@ -5,7 +5,7 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 
 // Upload the actual miniature meshes to the session's context: each eye sees
 // its own perspective, depth and occlusion, including the land's solid sides.
-export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false,fadeTransform=true}={}){
+export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false,fadeTransform=true,maxTextureSize=Infinity,detailMaps=true}={}){
     const resources=[],cache=new Map(),textures=new Map(),textureVersions=new Map(),instanceGeometry=new Map(),instanceBuffers=new WeakMap();
     // This renderer shares the XR context with every panel and object. Keep
     // its attribute pointers in a private VAO so deleting map buffers cannot
@@ -75,7 +75,11 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         let texture=textures.get(map);gl.activeTexture(gl.TEXTURE0+unit);
         if(!texture){texture=gl.createTexture();resources.push(['Texture',texture]);textures.set(map,texture);gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
         gl.bindTexture(gl.TEXTURE_2D,texture);
-        if(textureVersions.get(map)!==map.version){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,map.flipY);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,map.image);textureVersions.set(map,map.version);}
+        if(textureVersions.get(map)!==map.version){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,map.flipY);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);let image=map.image;
+            const limit=Math.min(maxTextureSize,gl.getParameter(gl.MAX_TEXTURE_SIZE));
+            const width=image?.width || 0,height=image?.height || 0;
+            if(width>limit || height>limit){const ratio=limit/Math.max(width,height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*ratio));canvas.height=Math.max(1,Math.round(height*ratio));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);image=canvas;}
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);textureVersions.set(map,map.version);}
         gl.uniform1i(uniform,unit);
     }
     function drawNode(node,matrix,opacity,batch=null){
@@ -107,7 +111,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.image,0);
         }
         if(detailed){
-            const detail=currentGraphicsQuality()!=='low';
+            const detail=detailMaps && currentGraphicsQuality()!=='low';
             surfaceMatrix.multiplyMatrices(eyeMatrix,matrix);surfaceNormal.getNormalMatrix(surfaceMatrix);
             gl.uniformMatrix3fv(uniforms.normalView,false,surfaceNormal.elements);
             gl.uniform1f(uniforms.normalMapped,detail&&material.normalMap?1:0);gl.uniform2f(uniforms.normalScale,material.normalScale?.x ?? 1,material.normalScale?.y ?? 1);

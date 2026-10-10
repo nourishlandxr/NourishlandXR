@@ -1,5 +1,6 @@
 import {GRAPHICS_PRESETS,currentGraphicsQuality} from './spatialVisualSettings.js';
 import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
+import {SECONDARY_TOTEM_IDS,createSecondaryTotemGeometry} from './secondaryTotemGeometry.js';
 const VERTEX_ATTRIBUTES=Object.freeze([['position',0,3],['normal',12,3],['uv',24,2]]);
 
 // One reusable mesh and one small, mipmapped material per WebGL context.
@@ -21,6 +22,7 @@ export function totemSculpturePoint(t, angle, style='carved') {
 }
 
 export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='carved') {
+    if(SECONDARY_TOTEM_IDS.includes(style))return createSecondaryTotemGeometry(style,Math.min(32,radial));
     const vertices = [], indices = [];
     for (let row = 0; row <= vertical; row++) {
         const t = row / vertical;
@@ -143,12 +145,14 @@ export function createSpatialTotemSculpture(gl) {
                 float ribs=pow(.5+.5*cos(tex.x*50.2655),16.);
                 vec3 frost=mix(notificationColour,vec3(.87,.94,.85),.38);
                 vec3 glass=frost*(.58+.23*diffuse)+vec3(.94,.98,.91)*sheen*.16;
-                glass+=frost*(.06+notificationStrength*.16)+vec3(.12,.17,.14)*pow(1.-facing,3.);
+                glass+=frost*(.06+notificationStrength*(form>2.5?.65:.16))+vec3(.12,.17,.14)*pow(1.-facing,3.);
                 glass=mix(glass,glass*.94,ribs*.45);
                 gl_FragColor=vec4(glass,alpha);return;
             }
             vec3 wood=texture2D(timber,tex).rgb;
+            if(form>2.5 && form<3.5)wood=vec3(.57,.58,.53)*(.80+.20*wood.r);
             float collar=smoothstep(.90,.925,tex.y);
+            if(form>2.5)collar=0.;
             float foot=1.-smoothstep(.025,.07,tex.y);
             vec3 base=wood*mix(vec3(.69,.51,.35),tint,.36);
             base=mix(base,vec3(.13,.16,.13),foot*.62);
@@ -184,17 +188,20 @@ export function createSpatialTotemSculpture(gl) {
     gl.deleteShader(vertex);gl.deleteShader(fragment);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS)){const error=gl.getProgramInfoLog(program);gl.deleteProgram(program);throw new Error(error);}
     const meshes={};
-    for(const [quality,budget] of Object.entries(GRAPHICS_PRESETS))for(const style of ['basic','carved','botanical','organic']){
+    function getMesh(style,quality){
+        const key=style+':'+quality;
+        if(meshes[key])return meshes[key];
+        const budget=GRAPHICS_PRESETS[quality];
         const geometry=createTotemSculptureGeometry(budget.totemRadial,budget.totemVertical,style),buffer=gl.createBuffer(),indexBuffer=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,geometry.vertices,gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indexBuffer);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,geometry.indices,gl.STATIC_DRAW);
-        meshes[style+':'+quality]={buffer,indexBuffer,count:geometry.indices.length};
+        return meshes[key]={buffer,indexBuffer,count:geometry.indices.length};
     }
     // Material atlases are uploaded once on first use of each tier.
     const textures={};
     const attributes=Object.fromEntries(['position','normal','uv'].map(key=>[key,gl.getAttribLocation(program,key)]));
     const uniforms=Object.fromEntries(['projection','modelView','inverseScale','timber','tint','alpha','aim','twist','controlOpacity','signsActive','fadeActive','form','dimensions','controls','notificationColour','notificationStrength'].map(key=>[key,gl.getUniformLocation(program,key)]));
-    return {program,meshes,textures,attributes,uniforms,model:new Float32Array(16),modelView:new Float32Array(16),inverseScale:new Float32Array(3)};
+    return {program,meshes,getMesh,textures,attributes,uniforms,model:new Float32Array(16),modelView:new Float32Array(16),inverseScale:new Float32Array(3)};
 }
 
 export function drawTotemSculpture(gl,renderer,view,position,options={}) {
@@ -206,9 +213,10 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     model[8]=s*depth;model[10]=c*depth;model[12]=position.x;model[13]=position.y+height;model[14]=position.z;model[15]=1;
     renderer.inverseScale[0]=1/width;renderer.inverseScale[1]=1/height;renderer.inverseScale[2]=1/depth;
     for(let c=0;c<4;c++)for(let r=0;r<4;r++)out[c*4+r]=inverse[r]*model[c*4]+inverse[4+r]*model[c*4+1]+inverse[8+r]*model[c*4+2]+inverse[12+r]*model[c*4+3];
-    const alpha=options.alpha ?? 1,style=options.style || 'carved',mesh=renderer.meshes[style+':'+currentGraphicsQuality()] || renderer.meshes['carved:medium'],visual=SPATIAL_OBJECT_VISUALS.totem;
+    const alpha=options.alpha ?? 1,style=options.style || 'carved',mesh=renderer.getMesh(style,currentGraphicsQuality()),visual=SPATIAL_OBJECT_VISUALS.totem;
     const signsY=Math.min(visual.controlHeights[0],height*1.50),fadeY=Math.min(visual.controlHeights[1],height*1.26);
     gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.frontFace(gl.CCW);
+    if(SECONDARY_TOTEM_IDS.includes(style))gl.disable(gl.CULL_FACE);
     gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(alpha>=.95);
     gl.useProgram(renderer.program);gl.bindBuffer(gl.ARRAY_BUFFER,mesh.buffer);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,mesh.indexBuffer);
     for(const [key,offset,size] of VERTEX_ATTRIBUTES){gl.enableVertexAttribArray(renderer.attributes[key]);gl.vertexAttribPointer(renderer.attributes[key],size,gl.FLOAT,false,32,offset);}
@@ -230,7 +238,7 @@ export function drawTotemSculpture(gl,renderer,view,position,options={}) {
     gl.bindTexture(gl.TEXTURE_2D,renderer.textures[quality]);gl.uniform1i(u.timber,0);
     gl.uniform3fv(u.tint,options.color || SPATIAL_OBJECT_VISUALS.totem.sculptureTint);gl.uniform1f(u.alpha,alpha);gl.uniform1f(u.aim,options.highlighted?1:0);
     gl.uniform1f(u.twist,(visual[style] || visual.carved).twist);gl.uniform2f(u.dimensions,width,height*2);gl.uniform2f(u.controls,signsY/(height*2),fadeY/(height*2));
-    gl.uniform1f(u.signsActive,options.signsVisible?1:0);gl.uniform1f(u.fadeActive,options.faded?1:0);gl.uniform1f(u.controlOpacity,options.controlOpacity ?? 1);gl.uniform1f(u.form,style==='botanical'?1:['basic','organic'].includes(style)?2:0);
+    gl.uniform1f(u.signsActive,options.signsVisible?1:0);gl.uniform1f(u.fadeActive,options.faded?1:0);gl.uniform1f(u.controlOpacity,options.controlOpacity ?? 1);gl.uniform1f(u.form,style==='rock'?3:SECONDARY_TOTEM_IDS.includes(style)?4:style==='botanical'?1:['basic','organic'].includes(style)?2:0);
     gl.drawElements(gl.TRIANGLES,mesh.count,gl.UNSIGNED_SHORT,0);gl.depthMask(true);gl.disable(gl.CULL_FACE);
 }
 

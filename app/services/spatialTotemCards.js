@@ -147,7 +147,7 @@ export function totemLayoutForRecord(record, position, cards, selectedId = '', r
     const bodyHalfWidth=record?.demoType==='zone' ? .095 : .07*sizeFactor;
     const bodyHalfHeight=record?.demoType==='zone'
         ? Number(record.demoHalfHeight) || 1
-        : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-bodyHalfWidth*.35);
+        : Math.max(.12,totemHeightPreset(record?.marker || record).halfHeightMetres*sizeFactor-(['sun','leaf','rock','moon'].includes(renderedTotemStyle(record?.marker || record))?0:bodyHalfWidth*.35));
     const now=performance.now(),visual=SPATIAL_OBJECT_VISUALS.totem;
     const signProgress=spatialTransitionProgress(now,record?.demoSignsChangedAt,visual.signTransitionMs,globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches);
     const signsVisible=Boolean(record?.demoTotemSignsVisible);

@@ -1,6 +1,6 @@
 import {lowerCompanionLayout} from './lowerCompanionLayout.js';
 import {limoSpatialControls,drawLimoSpatialControls,drawLimoSpatialReading} from './limoSpatialPresentation.js';
-import {spatialStick,turnSpatialAxes} from './spatialStick.js';
+import {spatialStick,turnSpatialAxes,tiltSpatialAxes} from './spatialStick.js';
 import {pimToArKnowledge} from './pimModel.js';
 import {spatialControlLayout} from './spatialControlLayout.js';
 import {currentNxrLanguage,setNxrLanguage,translateNxrText as t,translateApp,localizedCanvasContext} from './i18n.js';
@@ -1087,7 +1087,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(c.width!==1000)c.width=1000;
         const h=card.hidden?1000:card.height;if(c.height!==h)c.height=h;
         const ctx=localizedCanvasContext(c.getContext('2d'));ctx.clearRect(0,0,c.width,c.height);ctx.textAlign='left';ctx.globalAlpha=1;
-        if(card.hidden){const footerRestore=card.controls?.some(item=>item.action==='Restore' && item.kind==='visibility');ctx.fillStyle='rgba(19,38,34,.25)';ctx.beginPath();ctx.arc(500,500,440,0,Math.PI*2);ctx.fill();ctx.strokeStyle=card.grabState?'#eaffdf':footerRestore?'#ee8f8b':'rgba(237,255,245,.66)';ctx.lineWidth=8;ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='600 140px Manrope, system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(footerRestore?'CONTROL':'Show',500,420,720);ctx.font='600 140px Manrope, system-ui';ctx.fillText(footerRestore?'PANEL':'Panel',500,590,720);return c;}
+        if(card.hidden){const footerRestore=card.controls?.some(item=>item.action==='Restore' && item.kind==='visibility');ctx.fillStyle='rgba(19,38,34,.70)';ctx.beginPath();ctx.arc(500,500,440,0,Math.PI*2);ctx.fill();ctx.strokeStyle=card.grabState?'#eaffdf':footerRestore?'#ee8f8b':'rgba(237,255,245,.9)';ctx.lineWidth=8;ctx.stroke();ctx.fillStyle='#ffffff';ctx.font='600 140px Manrope, system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(footerRestore?'CONTROL':'Show',500,420,720);ctx.font='600 140px Manrope, system-ui';ctx.fillText(footerRestore?'PANEL':'Panel',500,590,720);return c;}
             const gradient=ctx.createLinearGradient(0,0,1000,c.height);gradient.addColorStop(0,`rgba(15,29,34,${card.infoOpacity ?? .38})`);gradient.addColorStop(1,`rgba(6,17,23,${card.infoOpacity ?? .38})`);
         ctx.fillStyle=gradient;ctx.beginPath();ctx.roundRect(4,4,992,c.height-8,24);ctx.fill();
         ctx.strokeStyle=card.grabState==='held'?'#dfff9b':card.grabState==='ready'?'#bceeff':card.grabState==='hover'?'#a6e7fa':card.guided?'#93d9f2':'rgba(166,204,229,.72)';
@@ -1255,7 +1255,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             ctx.fillStyle=button.disabled?'#899297':isContinue?'#ffffff':button.primary?'#f3fbf4':button.kind==='toggle'||button.kind==='handle'?'#a9e7fa':'#f1f7fb';ctx.font=(isContinue?'750 ':button.primary?'680 ':button.kind==='toggle'||button.kind==='handle'?'650 ':'600 ')+(isContinue?'46px':button.primary?'32px':button.kind==='toggle'||button.kind==='handle'?'28px':'25px')+' Manrope, system-ui';ctx.textAlign='center';
             if(isContinue && ctx.measureText(button.label).width>button.width-28){ctx.font='700 34px Manrope, system-ui';const words=button.label.split(/\s+/),split=Math.ceil(words.length/2),lines=[words.slice(0,split).join(' '),words.slice(split).join(' ')];lines.forEach((line,i)=>ctx.fillText(line,button.x+button.width/2,button.y+button.height/2-34+i*36,button.width-28));}
             else ctx.fillText(button.label,button.x+button.width/2,button.y+(button.height-(isContinue?44:button.primary?34:button.kind==='toggle'||button.kind==='handle'?30:28))/2,button.width-16);
-        });return c;
+        });
+        if(card.id==='control' && card.performanceReadout){ctx.save();ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillStyle='#dcebd7';ctx.font='600 18px system-ui';ctx.fillText(card.performanceReadout,970,c.height-4,300);ctx.restore();}
+        return c;
     }
     function hit(ray){const fruitTarget=fruitWindow?.hit(ray);if(!pose || !renderer || detached)return fruitTarget || null;const target=renderer.hit(ray);if(target?.card.hidden && Math.hypot(target.localX/target.width,target.localY/target.height)>.44)return fruitTarget || null;return fruitTarget && (!target || fruitTarget.distance<target.distance)?fruitTarget:target;}
     const controlsForTarget=target=>target?.card?.lowerCompanion==='view'?panelViewControls(sceneVisibility()):target?.card?.guides?guidesControls():target?.card?.explorer?explorerControls():target?.card?.settings?settingsControls():(headset?spatialControls():controls());
@@ -1309,7 +1311,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         return [{action:'Explorer',label:'Done',x:852,y:8,width:124,height:38},...visiblePimoModes().map((id,i)=>({action:'KnowledgeMode:'+id,label:KNOWLEDGE_MODES[id].label,x:22+i*326,y:128,width:304,height:54,kind:'mode',description:KNOWLEDGE_MODES[id].description,selected:state.mode===id})),
             ...(limoAvailable()?[{action:'Limo:open',label:'Learn in this Project · LIMO',x:22,y:66,width:948,height:54}]:[]),
             {action:'OrbModel',label:'Orb model · '+(ORB_MODELS[orbModel]?.label || 'Improved'),x:22,y:268,width:948,height:54},
-            {action:'CellOpacity',label:'Opacity',x:276,y:344,width:694,height:48,kind:'slider',value:meshCellOpacity,min:0,max:1,step:.05},
+            {action:'CellOpacity',label:'Cells & tag opacity',x:276,y:344,width:694,height:48,kind:'slider',value:meshCellOpacity,min:0,max:1,step:.05},
             {action:'PimoScale',label:'Size',x:276,y:410,width:694,height:48,kind:'slider',value:knowledgeRecord?.pimoScale || 1,min:.65,max:1.6,step:.05},
             ];
     }
@@ -1327,7 +1329,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         for(const item of explorerControls()){
             if(item.action==='Explorer'){header.append(makeButton(item));continue;}
             if(item.kind==='heading'){const heading=document.createElement('h3');heading.className='nlxr-object-control-heading';heading.textContent=item.label;options.append(heading);continue;}
-            if(item.kind==='slider'){const label=document.createElement('label');label.className='nlxr-explorer-size';label.textContent=item.action==='CellOpacity'?'Cell surface · '+Math.round(item.value*100)+'% solid':'Structure scale · '+item.value.toFixed(2)+'×';const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label',item.action==='CellOpacity'?'PIMO cell opacity':'Explorer structure scale');slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));label.append(slider);options.append(label);}
+            if(item.kind==='slider'){const label=document.createElement('label');label.className='nlxr-explorer-size';label.textContent=item.action==='CellOpacity'?'Cell surface · '+Math.round(item.value*100)+'% solid':'Structure scale · '+item.value.toFixed(2)+'×';const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label',item.action==='CellOpacity'?'Plant cells and tag opacity':'Explorer structure scale');slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));label.append(slider);options.append(label);}
             else {const button=makeButton(item);button.setAttribute('aria-pressed',String(Boolean(item.selected)));if(item.ariaLabel)button.setAttribute('aria-label',item.ariaLabel);if(item.kind==='swatch'){button.textContent='';button.setAttribute('aria-label',t('Light · '+item.label));const swatch=document.createElement('span');swatch.className='nlxr-light-swatch';swatch.style.backgroundColor=item.color;button.append(swatch);}if(item.kind==='mode'){const choice=document.createElement('div'),description=document.createElement('p');choice.className='nlxr-explorer-mode-choice';description.textContent=item.description;description.id=contentId+'-'+item.action.replace(':','-')+'-description';button.setAttribute('aria-describedby',description.id);choice.append(button,description);modes.append(choice);}else options.append(button);}
         }explorerElement.append(modes,options);
         translateApp(explorerElement);
@@ -1364,7 +1366,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function settingsDockPose(){return spatialMediaDockPose(!mediaCollapsed && mediaDockSide==='left'?'top':'left');}
     function settingsNearDock(){const dock=settingsDockPose();return Boolean(dock && settingsPose && Math.hypot(settingsPose.center.x-dock.center.x,settingsPose.center.y-dock.center.y,settingsPose.center.z-dock.center.z)<.24);}
     function finishSettingsDock(){if(settingsNearDock()){settingsPose=null;settingsElement.classList.add('is-magnetized');}}
-    function spatialDimensions(){return {mainWidth:(hidden ? .14 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .14 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
+    function spatialDimensions(){return {mainWidth:(hidden ? .22 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .22 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
     function spatialMediaDockPose(side){
         if(!pose)return null;
         const {mainWidth,mainHeight,mediaWidth}=spatialDimensions(),mediaHeight=mainHeight,gap=.035;
@@ -1485,6 +1487,16 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             return surfaces;
         }});element.hidden=true;settingsElement.hidden=true;syncDetachedMedia();},
         update(matrix,time=performance.now(),inputRay=null,xrFrame=null,touchBlocked=false){
+            if(xrFrame?.session){
+                const sources=Array.from(xrFrame.session.inputSources || []);
+                const held=source=>sources.includes(source) && (source.hand || source.gamepad?.buttons?.[0]?.pressed || source.gamepad?.buttons?.[1]?.pressed);
+                if(sliderGrab && !held(sliderGrab.source))sliderGrab=null;
+                if(spatialMove && !held(spatialMove.source)){if(spatialMove.panel==='explorer')finishExplorerDock();if(spatialMove.panel==='settings')finishSettingsDock();spatialMove=null;}
+                if(spatialGrabPending && !held(spatialGrabPending.source))spatialGrabPending=null;
+                if(panelGestureSource && !held(panelGestureSource))panelGestureSource=null;
+                if(finishingMoveSource && !sources.includes(finishingMoveSource))finishingMoveSource=null;
+                if(finishingSliderSource && !sources.includes(finishingSliderSource))finishingSliderSource=null;
+            }
             const next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
             const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
@@ -1506,14 +1518,16 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 panelShift=null;
                 const depthSource=spatialMove.source;
                 const stickPose=spatialStick(depthSource,time-lastTime);
-                spatialMove.distance=Math.max(.4,Math.min(2.5,spatialMove.distance+stickPose.depth));
+                spatialMove.distance=Math.max(.4,Math.min(2.5,spatialMove.distance+(spatialMove.panel==='main' && depthSource?.handedness==='left'?0:stickPose.depth)));
                 pose ||= next;
                 if(spatialMove.panel==='media')mediaPose ||= spatialMediaDockPose(mediaDockSide);
                 const current=['view','guides'].includes(spatialMove.panel)?lowerSpatialPose(spatialMove.panel):spatialMove.panel==='explorer'?explorerSpatialPose():spatialMove.panel==='settings'?settingsPose || spatialMediaDockPose('left'):spatialMove.panel==='media'?mediaPose:pose;
                 const center=spatialMove.handCenter || panelCenterFromGrab(heldRay,spatialMove,current);
                 spatialMove.yaw=(spatialMove.yaw ?? current.rotationYaw ?? 0)+stickPose.yaw;
-                const facing=turnSpatialAxes(facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]}),spatialMove.yaw);
-                const moved={...current,center,...facing,anchorHeading:facing.right,rotationYaw:spatialMove.yaw};
+                const leftSource=spatialMove.panel==='main'?Array.from(xrFrame?.session?.inputSources || []).find(source=>source.handedness==='left' && source.gamepad):null;
+                spatialMove.pitch=Math.max(-.65,Math.min(.65,(spatialMove.pitch ?? current.rotationPitch ?? 0)+spatialStick(leftSource,time-lastTime).depth*1.5));
+                const facing=tiltSpatialAxes(turnSpatialAxes(facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]}),spatialMove.yaw),spatialMove.pitch);
+                const moved={...current,center,...facing,anchorHeading:facing.right,rotationYaw:spatialMove.yaw,rotationPitch:spatialMove.pitch};
                 if(['view','guides'].includes(spatialMove.panel)){lowerPoses[spatialMove.panel]=moved;}else if(spatialMove.panel==='explorer'){explorerPose=moved;if(explorerNearDock())explorerPose=explorerDockPose();}else if(spatialMove.panel==='settings'){settingsPose=moved;if(settingsNearDock())settingsPose=settingsDockPose();settingsElement.classList.toggle('is-magnetized',settingsNearDock());}else if(spatialMove.panel==='media'){
                     mediaPose=moved;const candidate=spatialDockCandidate(mediaPose);
                     if(candidate){mediaPose=spatialMediaDockPose(candidate.side);spatialMove.dockSide=candidate.side;}else spatialMove.dockSide=null;
@@ -1542,7 +1556,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             fruitWindow?.draw(view);
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
-            const card={id:'control',limo:selection?.limo,infoOpacity,headset,hidden,panelGuidance:guidanceAction==='ToggleMedia',tab,height:hidden?1000:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',guidancePhase:guidanceAction?Math.floor(lastTime/180):0,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(readingTrail()):'',lines:p[page],hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:'',metadata:metadata()};
+            const card={id:'control',limo:selection?.limo,infoOpacity,headset,hidden,panelGuidance:guidanceAction==='ToggleMedia',tab,height:hidden?1000:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',guidancePhase:guidanceAction?Math.floor(lastTime/180):0,fadeDuration:introduction?1500:450,controls:headset?spatialControls():controls(),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(readingTrail()):'',lines:p[page],performanceReadout:performanceSettings?.label || '',hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:'',metadata:metadata()};
             const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,languageOpen,performanceMessage:performanceStatus(),infoOpacity,height:840,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
@@ -1596,12 +1610,15 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if((fruitWindow?.owns(event.inputSource)||!inputOccupied(event.inputSource))&&fruitWindow?.handleEvent(event)){if(event.type==='selectstart'){fruitControlsActive=true;explorerClosed=false;renderExplorer();}event.stopImmediatePropagation();return;}
             const grip=event.type.startsWith('squeeze'),type=grip?(event.type==='squeezestart'?'selectstart':'selectend'):event.type;
             if(grip && event.inputSource?.hand)return;
-            if(inputOccupied(event.inputSource))return;
+            if(inputOccupied(event.inputSource)){
+                if(type==='selectend'){if(sliderGrab?.source===event.inputSource)sliderGrab=null;if(spatialMove?.source===event.inputSource)spatialMove=null;if(spatialGrabPending?.source===event.inputSource)spatialGrabPending=null;if(panelGestureSource===event.inputSource)panelGestureSource=null;finishingMoveSource=null;finishingSliderSource=null;}
+                return;
+            }
             if(grip && onGripEvent(event)){event.stopImmediatePropagation();return;}
-            if(!event.inputSource?.hand && !grip && (spatialMove?.source===event.inputSource || spatialGrabPending?.source===event.inputSource))return;
+            if(!event.inputSource?.hand && !grip && type!=='selectend' && (spatialMove?.source===event.inputSource || spatialGrabPending?.source===event.inputSource))return;
             if(event.inputSource?.hand && api.isHandInteracting(event.inputSource) && type==='select'){event.stopImmediatePropagation();return;}
             if(sliderGrab && sliderGrab.source!==event.inputSource)return;
-            if(type==='selectstart')finishingSliderSource=null;
+            if(type==='selectstart'){finishingSliderSource=null;if(panelGestureSource && panelGestureSource!==event.inputSource && !sliderGrab && !spatialMove && !spatialGrabPending)panelGestureSource=null;}
             if(type==='select' && finishingSliderSource===event.inputSource){finishingSliderSource=null;event.stopImmediatePropagation();return;}
             if(sliderGrab?.source===event.inputSource && type==='selectend'){sliderGrab=null;panelGestureSource=null;finishingSliderSource=event.inputSource;event.stopImmediatePropagation();return;}
             if(type==='selectstart' && finishingMoveSource===event.inputSource)finishingMoveSource=null;
@@ -1651,7 +1668,6 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'main',cardId:'control',startedAt:performance.now()-PANEL_GRAB_HOLD_MS,handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
-            if(type==='selectend' && button?.action?.startsWith('Object:') && !spatialMove){spatialGrabPending=null;act(button.action);finishingMoveSource=event.inputSource;panelGestureSource=null;event.stopImmediatePropagation();return;}
             if(type==='selectend' && button?.action?.startsWith('Object:') && !spatialMove){spatialGrabPending=null;act(button.action);finishingMoveSource=event.inputSource;panelGestureSource=null;event.stopImmediatePropagation();return;}
             if(type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
             if(type==='selectend')panelGestureSource=null;

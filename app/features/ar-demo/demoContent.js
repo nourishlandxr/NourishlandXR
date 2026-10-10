@@ -13,7 +13,7 @@ export const DEMO_TUTORIAL_ART = Object.freeze({
     orb:{image:new URL('../../assets/demo-tutorial-art/06-plant-orb-effects.png',import.meta.url).href,alt:'A Plant Orb connects a plant to its information.'},
     note:{image:new URL('../../assets/demo-tutorial-art/07-add-a-plant-note.png',import.meta.url).href,alt:'A visitor adds a note beside a plant.'},
     connection:{image:new URL('../../assets/demo-tutorial-art/08-connect-pimo-to-limo.png',import.meta.url).href,alt:'Plant information is connected to a learning pathway.'},
-    connectedAreas:{image:new URL('../../assets/demo-tutorial-art/10-connected-areas-garden.png',import.meta.url).href,alt:'A monochrome panorama of a large garden with several distinct Totems marking connected Areas.'},
+    connectedAreas:{image:new URL('../../assets/demo-tutorial-art/10-connected-areas-garden-color.png',import.meta.url).href,alt:'A welcoming color garden path with four distinct Totems, green Plant Orbs and observation Notes.'},
     pathways:{image:new URL('../../assets/demo-tutorial-art/09-explore-archetype-pathways.png',import.meta.url).href,alt:'A visitor explores connected learning pathway archetypes.'}
 });
 

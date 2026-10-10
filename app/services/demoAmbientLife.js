@@ -36,10 +36,10 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
         +seededUnit(encounterSeed+101)*Math.PI*2+index*Math.PI*2/BEE_COUNT+(variation-.5)*.4;
     const candidate=demoBeeEncounter(elapsed-startedAt,{enabled:encounters,seed:encounterSeed});
     const lead=candidate ? (candidate.index+encounterSeed)%BEE_COUNT : -1;
-    const waistVisit=Boolean(candidate && candidate.index%3===2);
-    const encounter=candidate && (lead===index || waistVisit && (lead+1)%BEE_COUNT===index) ? candidate : null;
+    const waistVisit=Boolean(candidate && seededUnit(encounterSeed+candidate.index*71)>.78);
+    const encounter=candidate && (lead===index || waistVisit && seededUnit(encounterSeed+candidate.index*113)>.72 && (lead+1)%BEE_COUNT===index) ? candidate : null;
     const follower=encounter && waistVisit && lead!==index;
-    const delay=follower?1100+variation*700:0;
+    const delay=follower?5500+variation*4200:variation*1800;
     const flybyProgress=encounter?clamp01((encounter.progress*BEE_ENCOUNTER_DURATION_MS-delay)/(BEE_ENCOUNTER_DURATION_MS-delay)):0;
     const flyby=encounter?smooth(flybyProgress/.35)*(1-smooth((flybyProgress-.64)/.36)):0;
     const orbitX=.5+Math.cos(phase)*(.22+.07*Math.sin(time*.13+index));

@@ -14,23 +14,23 @@ export async function concurrent(items, worker, limit = 6) {
     return results;
 }
 
-export async function loadCreatorWorkspace(projectId) {
+export async function loadCreatorWorkspace(projectId, { overviewOnly = false } = {}) {
     try {
         const [project, sites] = await Promise.all([loadProject(projectId), loadProjectSites(projectId)]);
         const groups = await concurrent(sites, async site => {
             const places = await loadSitePlaces(projectId, site.id);
-            return concurrent(places, async place => ({ site, place, markers: await loadPlaceMarkers(projectId, site.id, place.id) }));
+            return concurrent(places, async place => ({ site, place, markers: overviewOnly ? [] : await loadPlaceMarkers(projectId, site.id, place.id) }));
         });
         const areas = groups.flat().map(group => ({ ...group.place, siteId: group.site.id, siteName: group.site.name }));
         const entries = groups.flat().flatMap(group => group.markers.map(marker => {
             const entry = { marker, place: group.place, siteId: group.site.id, siteName: group.site.name };
             return { ...entry, key: recordKey(entry) };
         }));
-        return { project, sites, areas, entries, profiles: {}, anchors: {}, offline: false };
+        return { project, sites, areas, entries, profiles: {}, anchors: {}, offline: false, recordsLoaded: !overviewOnly };
     } catch (error) {
         const snapshot = await loadFieldPackage(projectId).catch(() => null);
         if (!snapshot) throw error;
-        return { ...snapshot.model, offline: true, preparedAt: snapshot.preparedAt, loadError: error.message };
+        return { ...snapshot.model, offline: true, recordsLoaded: true, preparedAt: snapshot.preparedAt, loadError: error.message };
     }
 }
 
