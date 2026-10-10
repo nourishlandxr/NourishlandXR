@@ -813,13 +813,21 @@ test('Creator AR places lightweight drafts and keeps move and select modes exclu
     assert.match(persistenceSource, /body: JSON\.stringify\(\{ spatial_anchor:/);
 });
 
-test('Creator dashboard has one DOM source shared by Web Mode and the Quest spatial mirror', () => {
+test('Creator Area worklist provides the DOM source for the Quest spatial mirror', () => {
     const arSource = read('app/screens/arMode.js');
     const mirrorSource = read('app/services/spatialDashboardMirror.js');
     const html2canvasSource = read('app/vendor/html2canvas.esm.js');
     const html2canvasLicense = read('app/vendor/html2canvas.LICENSE.txt');
     const hostedBuildSource = read('tools/build-hosted.mjs');
-    assert.match(arSource, /renderProjectDashboard\(dashboardRoot, encodeURIComponent\(activeProjectId\)\)/);
+    assert.match(arSource, /mountCreatorXrWorklist\(dashboardRoot,\s*\{/);
+    assert.match(arSource, /createSpatialDashboardMirror\(\{\s*gl,\s*root: dashboardRoot/);
+    assert.match(arSource, /questSpatialWorklist\?\.destroy\(\)/);
+    const worklistSource = read('app/services/creatorXrWorklist.js');
+    assert.match(worklistSource, /export function mountCreatorXrWorklist\(root,/);
+    assert.match(worklistSource, /data-inspect=/);
+    assert.match(worklistSource, /data-place=/);
+    assert.match(worklistSource, /data-knowledge=/);
+    assert.match(worklistSource, /abort\.abort\(\)/);
     assert.match(mirrorSource, /import\('\.\.\/vendor\/html2canvas\.esm\.js'\)/);
     assert.match(mirrorSource, /foreignObjectRendering: false/);
     assert.match(mirrorSource, /function waitForSpatialDashboardLayout\(\)/);
