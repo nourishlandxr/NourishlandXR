@@ -51,7 +51,8 @@ export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()
    desktop.canvas.hidden=!desktopShow||quality==='off';if(!desktopShow)return;
    const width=Math.max(1,desktop.canvas.clientWidth),height=Math.max(1,desktop.canvas.clientHeight),ratio=Math.min(globalThis.devicePixelRatio||1,quality==='hd'?2:1.5),resized=width!==desktop.width||height!==desktop.height||desktop.renderer.getPixelRatio()!==ratio;
    if(resized){desktop.width=width;desktop.height=height;desktop.renderer.setPixelRatio(ratio);desktop.renderer.setSize(width,height,false);if(desktop.detail){desktop.camera.left=-1.68*width/height;desktop.camera.right=1.68*width/height;desktop.camera.updateProjectionMatrix();}}
-   if(changed||resized||lastDraw<0){desktop.renderer.render(desktop.world,desktop.camera);lastDraw=frameToken;}
+   const frameHeight=getSpatialVisualSettings().livingFrameHeight||0,heightChanged=desktop.heightOffset!==frameHeight;desktop.heightOffset=frameHeight;desktop.group.position.y=-.016+frameHeight;
+   if(changed||resized||heightChanged||lastDraw<0){desktop.renderer.render(desktop.world,desktop.camera);lastDraw=frameToken;}
   },
   drawXR(view,anchorMatrix){if(!visible||!api.ready||!xr)return;const matrix=new THREE.Matrix4().fromArray(anchorMatrix);matrix.multiply(new THREE.Matrix4().makeTranslation(0,0,.012));xr.draw(view,matrix);},
   retry(){if(!failedQuality)return Promise.resolve();const next=quality;quality='off';return select(next);},

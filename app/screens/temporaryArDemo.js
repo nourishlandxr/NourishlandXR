@@ -2,10 +2,12 @@ import {createLimoSpatialExperience} from '../services/limoSpatialExperience.js'
 import {createLivingFrameModel} from '../services/livingFrameModel.js';
 import {createPeekPortalExperience} from '../services/peekPortalExperience.js';
 let demoPeekPortal=null,demoViewOpen=false,demoPeekPending=false;
-async function openDemoPeek(){
+let demoPeekVariant=1;
+async function openDemoPeek(variant=1){
     if(demoPeekPending||demoPeekPortal?.active)return;
+    if(variant!==demoPeekVariant){demoPeekPortal?.destroy();demoPeekPortal=null;demoPeekVariant=variant;}
     demoPeekPending=true;
-    demoPeekPortal ||= createPeekPortalExperience();
+    demoPeekPortal ||= createPeekPortalExperience({variant:demoPeekVariant});
     const preparedPortal=demoPeekPortal;
     await preparedPortal.ready;
     if(demoPeekPortal!==preparedPortal)return;
@@ -110,7 +112,7 @@ import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
 import {createSpatialRainRenderer,drawSpatialRainField,destroySpatialRainRenderer} from '../services/spatialRainRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,totemNotificationLight} from '../services/totemSignSelection.js';
 import {LIM_ALL_CELLS,LIM_CELL_BY_ID,LIM_INTRO_CELL_BY_ID,LIM_PATHWAYS,limLearningContent} from '../services/limLearning.js';
-import { createPimInfoPanel } from '../services/pimInfoPanel.js';
+import { createPimInfoPanel } from '../services/pimInfoPanel.js?v=0.9474';
 import { avoidDemoPanelOverlap } from '../services/demoPanelGeometry.js';
 import { createLimActivationController } from '../services/limActivation.js';
 import { advanceLimPathway, backLimPathway, completeLimPathway, idleLimPathwayState, loadLimPathwayState, pauseLimPathway, resumeLimPathway, saveLimPathwayState, startLimPathway, visitLimPathwayCell } from '../services/limPathwayState.js';
@@ -745,7 +747,7 @@ function demoControlIsVisible(selector) {
 function demoPanelActions() {
     if(demoViewOpen)return [
         ...demoVisibilityFooter(demoSeenElements,demoHiddenElements).filter(item=>item.id!=='control').map(item=>({id:'visibility:'+item.id,label:(item.selected?'Hide ':'Show ')+item.label})),
-        {id:'peek-3d',label:'PEEK 3D'},{id:'view-close',label:'Back to controls'}
+        {id:'peek-3d',label:'PEEK 3D 1'},{id:'peek-3d-2',label:'PEEK 3D 2'},{id:'view-close',label:'Back to controls'}
     ];
     if(demoExitLifecycle.state===DEMO_EXIT_STATES.ENDING)return [
         {id:'close-confirm',label:'Closing…',primary:true,disabled:true}
@@ -828,7 +830,7 @@ function setLimMeshVisible(visible) {
 
 function handleDemoPanelAction(action) {
     if(action==='view'||action==='view-close'){demoViewOpen=action==='view';syncDemoPanelActions();return;}
-    if(action==='peek-3d'){void openDemoPeek();return;}
+    if(action==='peek-3d'||action==='peek-3d-2'){void openDemoPeek(action==='peek-3d-2'?2:1);return;}
     if(action.startsWith('visibility:')){
         const type=action.slice(11);
         if(type==='note' && !markers.some(record=>record.demoType==='note')){demoHiddenElements.delete('note');createDemoNote();syncDemoPanelActions();return;}
@@ -6405,7 +6407,7 @@ async function startImmersive() {
         if (!gl) throw new Error('WebGL unavailable');
         await gl.makeXRCompatible();
         session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: transparentSession, antialias: true, stencil:true }) });
-        demoPeekPortal ||= createPeekPortalExperience();await demoPeekPortal.ready;demoPeekPortal.setContext(gl);
+        demoPeekPortal ||= createPeekPortalExperience({variant:demoPeekVariant});await demoPeekPortal.ready;demoPeekPortal.setContext(gl);
         session.addEventListener('select',event=>{if(!demoPeekPortal?.active)return;event.stopImmediatePropagation();event.preventDefault();appRoot?.querySelector('[data-peek-return]')?.remove();demoPeekPortal.close();},{capture:true});
         try { referenceSpace = await session.requestReferenceSpace('local-floor');referenceSpaceHasFloor=true; } catch { referenceSpace = await session.requestReferenceSpace('local');referenceSpaceHasFloor=false; }
         try {

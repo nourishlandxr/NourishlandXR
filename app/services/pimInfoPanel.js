@@ -199,7 +199,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
     const frameControls=y=>Object.entries(LIVING_FRAME_QUALITIES).map(([quality,item],index)=>({...choice('LivingFrame:'+quality,item.label,'living-frame','',y,56+index*300,288),selected:getSpatialVisualSettings().livingFrameQuality===quality}));
     if(languageOpen)return [choice('LanguageMenu','‹ General','navigation','',100,56,888),...[['en','English'],['pt-PT','Português (Portugal)'],['nl-NL','Nederlands']].map(([code,label],index)=>({...choice('Language:'+code,label,'language','Language',202+index*88,56,888),selected:currentNxrLanguage()===code})),close];
     if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),close];
-    if(simpleDesktop)return [slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),choice('LanguageMenu','Language ›','language','',290,56,888),...frameControls(378),choice('SettingsHelp','Help','help','',466,56,888),close];
+    if(simpleDesktop)return [slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),choice('LanguageMenu','Language ›','language','',290,56,888),...frameControls(378),slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight||0,-1,1,.05,466),choice('SettingsHelp','Help','help','',570,56,888),close];
     const rates=Array.from(performanceSettings?.supported || []).filter(rate=>[60,72,90,120].includes(rate)).sort((a,b)=>a-b);
     const safeRate=Math.max(0,...rates.filter(rate=>rate<=90)) || rates[0];
     const rateWidth=(464-12*Math.max(0,rates.length-1))/Math.max(1,rates.length);
@@ -221,6 +221,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         {...choice('HeroDice','Floor dice','hero-dice','',488,56,438),settingLabel:'',height:50,selected:getSpatialVisualSettings().heroDice!==false},
         {...choice('LivingFrame',LIVING_FRAME_QUALITIES[getSpatialVisualSettings().livingFrameQuality].label,'living-frame','Living Frame artwork',488,506,438),settingLabel:'',height:50},
 
+        slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight,-1,1,.05,570),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
 }
@@ -532,6 +533,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='PimoScale' && knowledgeRecord){knowledgeRecord.pimoScale=value;onExplorerAction(knowledgeRecord,'PimoScale:'+value);renderExplorer();}
         if(action==='SpatialScale'){spatialScale=value;setSpatialVisualSettings({spatialScale});}
         if(action==='TextSize'){largeText=value>=.5;page=0;setSpatialVisualSettings({largeText});updateReading();}
+        if(action==='LivingFrameHeight'){setSpatialVisualSettings({livingFrameHeight:value});}
         if(action==='FloorOffset'){floorOffset=value;setSpatialVisualSettings({floorOffset});onFloorOffset(value);}
         if(action==='KnowledgeDiceSize' && knowledgeRecord){const knowledge=knowledgeDocument?pimToArKnowledge(knowledgeDocument.explorerSourceDocument || knowledgeDocument):null;if(knowledge)explorerMoleculeAction(knowledgeRecord,knowledge,'KnowledgeMoleculeSize:'+value);onExplorerAction(knowledgeRecord,'KnowledgeMoleculeSize:'+value);renderExplorer();}
     }

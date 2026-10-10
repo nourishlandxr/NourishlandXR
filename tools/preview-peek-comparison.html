@@ -1,0 +1,5 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Peek comparison</title><style>body{margin:0;background:#172126}</style></head><body><script type="module">
+import {createPeekPortalExperience} from '../app/services/peekPortalExperience.js';
+const variant=new URLSearchParams(location.search).get('test')==='1'?1:2;
+const portal=createPeekPortalExperience({variant});await portal.ready;await portal.openDesktop(document.body,()=>location.href='./preview-living-frame-runtime.html');
+</script></body></html>

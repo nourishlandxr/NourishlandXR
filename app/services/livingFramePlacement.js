@@ -1,3 +1,4 @@
+import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 import {WELCOME_SHAPE} from './arWelcomePanel.js';
 import {WELCOME_PANEL_DRAW_OFFSET,AR_WELCOME_CANVAS} from './arWelcomeShowcase.js';
 
@@ -7,7 +8,7 @@ export function livingFramePose(board){
  const right={x:board[0]/sx,y:board[1]/sx,z:board[2]/sx},up={x:board[4]/sy,y:board[5]/sy,z:board[6]/sy},normal={x:board[8],y:board[9],z:board[10]};
  const x=((WELCOME_PANEL_DRAW_OFFSET.x+WELCOME_SHAPE.cx)/AR_WELCOME_CANVAS.width-.5)*.4*sx;
  const y=(.5-(WELCOME_PANEL_DRAW_OFFSET.y+WELCOME_SHAPE.cy)/AR_WELCOME_CANVAS.height)*.16*sy;
- const center={x:board[12]+right.x*x+up.x*y,y:board[13]+right.y*x+up.y*y,z:board[14]+right.z*x+up.z*y};
+ const center={x:board[12]+right.x*x+up.x*y,y:board[13]+right.y*x+up.y*y+(getSpatialVisualSettings().livingFrameHeight||0),z:board[14]+right.z*x+up.z*y};
  return {center,right,up,normal,radius:WELCOME_SHAPE.radius/AR_WELCOME_CANVAS.width*.4*sx,matrix:new Float32Array([right.x,right.y,right.z,0,up.x,up.y,up.z,0,normal.x,normal.y,normal.z,0,center.x,center.y,center.z,1])};
 }
 
