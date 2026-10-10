@@ -24,13 +24,14 @@ test('VIEW owns visibility and PEEK; the welcome and main action rail have no pe
  assert.match(demo,/livingPeekPinches/);
 });
 
-test('shaking a perch starts a brief flight, then returns; quiet motion and reduced motion do not startle',()=>{
+test('shaking a perch starts an individual flight; quiet motion and reduced motion do not startle',()=>{
  const home={id:'fruit',center:{x:0,y:1,z:-1},right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}},insect={seed:0,size:.04};
  butterflyElementVisit(insect,home,home,0);
  const moved={...home,center:{x:.04,y:1,z:-1}};
  butterflyElementVisit(insect,home,moved,32);assert.ok(insect.visit.startle);
- const flying=butterflyElementVisit(insect,home,moved,1032);assert.equal(flying.pose.state,'flying');assert.ok(flying.position.z>moved.center.z+.1);
- const landed=butterflyElementVisit(insect,home,moved,insect.visit.startle.at+insect.visit.startle.duration+1);assert.deepEqual(landed.position,moved.center);assert.equal(landed.pose.state,'landed');
+ const flight=insect.visit.startle;
+ const flying=butterflyElementVisit(insect,home,moved,flight.at+flight.duration*.5);assert.equal(flying.pose.state,'flying');assert.ok(flying.position.z>moved.center.z+.1);
+ const returned=butterflyElementVisit(insect,home,moved,flight.at+flight.duration);assert.deepEqual(returned.position,moved.center);assert.equal(Boolean(insect.visit.hover),!flight.lands);
  const quiet={seed:1};butterflyElementVisit(quiet,home,home,0);butterflyElementVisit(quiet,home,{...home,center:{x:.002,y:1,z:-1}},32);assert.equal(quiet.visit.startle,undefined);
  const reduced={seed:2};butterflyElementVisit(reduced,home,home,0,true);butterflyElementVisit(reduced,home,moved,32,true);assert.equal(reduced.visit.startle,undefined);
 });
@@ -53,7 +54,7 @@ test('Peek choices share one bounded row and shake reactions vary per butterfly'
  assert.equal(new Set(reactions.map(r=>r.duration)).size,8);assert.equal(new Set(reactions.map(r=>r.at)).size,8);
  assert.equal(new Set(reactions.map(r=>r.side)).size,8);
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
- assert.match(source,/ambientBeesStartedAt=0/);assert.match(source,/surface\?\.kind==='living-frame-rim'\)drawSpatialPointerContact/);
+ assert.match(source,/ambientBeesStartedAt=0/);assert.match(source,/surface.kind==='living-frame-rim'\?\.0035/);
 });
 
 test('peek clips each eye at the aperture, draws shared depth geometry and disposes resources',async()=>{

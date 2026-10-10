@@ -1,3 +1,4 @@
+import {createLivingSphereGeometry} from './livingSphereGeometry.js';
 import {ORB_MODELS,GRAPHICS_PRESETS,currentGraphicsQuality,currentGraphicsPreset,currentOrbModel} from './spatialVisualSettings.js';
 import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
 
@@ -58,6 +59,7 @@ export function createUvSphereGeometry(latitudeBands = 12, longitudeBands = 16) 
 
 // Each model has its own reusable geometry, with the same interaction centre.
 export function createPlantOrbGeometry(model='improved',quality='medium') {
+    if(model==='living')return createLivingSphereGeometry(quality);
     const budget=GRAPHICS_PRESETS[quality] || GRAPHICS_PRESETS.medium;
     const geometry=createUvSphereGeometry(budget.orbLatitude,budget.orbLongitude);
     if(model!=='advanced')return geometry;
@@ -125,14 +127,19 @@ export function createSpatialSphereRenderer(gl) {
     const vertexSource = `
         attribute vec3 position;
         attribute vec3 normal;
+        attribute vec3 cellAxis;
+        attribute float cellId;
+        uniform float cellOpening;
+        varying float cellTone;
         uniform mat4 projection;
         uniform mat4 modelView;
         varying vec3 surfaceNormal;
         varying vec3 viewDirection;
         varying vec3 localPosition;
         void main() {
+            cellTone=cellId;
             localPosition = position;
-            vec4 viewPosition = modelView * vec4(position, 1.0);
+            vec4 viewPosition = modelView * vec4(position+cellAxis*cellOpening*.22, 1.0);
             surfaceNormal = normalize((modelView * vec4(normal, 0.0)).xyz);
             viewDirection = normalize(-viewPosition.xyz);
             gl_Position = projection * viewPosition;
@@ -151,6 +158,9 @@ export function createSpatialSphereRenderer(gl) {
         uniform float roughness;
         uniform float metalness;
         uniform float botanicalDetail;
+        uniform float livingShell;
+        uniform float coreGlow;
+        varying float cellTone;
         void main() {
             if(haloPass > .5){
                 float angle=atan(localPosition.y,localPosition.x);
@@ -166,9 +176,11 @@ export function createSpatialSphereRenderer(gl) {
             float rim = pow(1.0 - facing, 2.4);
             float highlight = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), mix(42.0, 8.0, roughness));
             float pearl = 0.5 + 0.5 * sin(normal.y * 4.2 + normal.x * 2.6);
-            vec3 shaded = color * (0.62 + diffuse * 0.36);
+            vec3 base=color;
+            if(livingShell>.5){float tone=mod(floor(cellTone+.5),3.0);base=tone<.5?mix(color,vec3(.92,.89,.81),.65):tone<1.5?mix(color,vec3(.74,.78,.70),.32):mix(color,vec3(.63,.75,.74),.35);}
+            vec3 shaded = base * (0.62 + diffuse * 0.36);
             shaded = mix(shaded, mix(color, vec3(0.88, 0.94, 0.9), 0.42), pearl * 0.09);
-            shaded += mix(vec3(.26),color*.55+vec3(.14),metalness) * highlight;
+            shaded += mix(vec3(.26),color*.55+vec3(.14),metalness) * highlight * (livingShell>.5?.22:1.0);
             shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
             shaded += mix(color, vec3(0.82, 0.91, 0.82), 0.55) * rim * 0.23;
             if(botanicalDetail > .5){
@@ -182,6 +194,7 @@ export function createSpatialSphereRenderer(gl) {
                 shaded=mix(shaded,color*.68,petal*.12);
                 shaded+=vec3(.16,.21,.10)*vein*.3;
             }
+            shaded+=color*coreGlow*.58;
             gl_FragColor = vec4(shaded, alpha);
         }
     `;
@@ -208,14 +221,14 @@ export function createSpatialSphereRenderer(gl) {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW);
 
     const modelBuffers={};
-    for(const quality of Object.keys(GRAPHICS_PRESETS))for(const model of ['basic','improved','advanced']){
+    for(const quality of Object.keys(GRAPHICS_PRESETS))for(const model of ['basic','improved','advanced','living']){
         const shape=createPlantOrbGeometry(model,quality),vertices=gl.createBuffer(),indices=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,vertices);gl.bufferData(gl.ARRAY_BUFFER,shape.vertices,gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,shape.indices,gl.STATIC_DRAW);
         const rim=createOrbCrownGeometry(model==='advanced'?.018:.022),crownVertices=gl.createBuffer(),crownIndices=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,crownVertices);gl.bufferData(gl.ARRAY_BUFFER,rim.vertices,gl.STATIC_DRAW);
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,crownIndices);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,rim.indices,gl.STATIC_DRAW);
-        modelBuffers[model+':'+quality]={vertexBuffer:vertices,indexBuffer:indices,indexCount:shape.indices.length,crownVertexBuffer:crownVertices,crownIndexBuffer:crownIndices,crownIndexCount:rim.indices.length};
+        modelBuffers[model+':'+quality]={vertexBuffer:vertices,indexBuffer:indices,indexCount:shape.indices.length,stride:shape.stride || 6,crownVertexBuffer:crownVertices,crownIndexBuffer:crownIndices,crownIndexCount:rim.indices.length};
     }
     const sepals=createOrbSepalGeometry(),sepalVertices=gl.createBuffer(),sepalIndices=gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER,sepalVertices);gl.bufferData(gl.ARRAY_BUFFER,sepals.vertices,gl.STATIC_DRAW);
@@ -230,6 +243,8 @@ export function createSpatialSphereRenderer(gl) {
 
     return {
         program,
+        livingStates:new WeakMap(),
+        cellAxisLocation:gl.getAttribLocation(program,'cellAxis'),cellIdLocation:gl.getAttribLocation(program,'cellId'),cellOpeningLocation:gl.getUniformLocation(program,'cellOpening'),livingShellLocation:gl.getUniformLocation(program,'livingShell'),coreGlowLocation:gl.getUniformLocation(program,'coreGlow'),
         modelBuffers,
         vertexBuffer,
         indexBuffer,
@@ -259,9 +274,12 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     const buffers=renderer.modelBuffers[material.orbModel] || renderer.modelBuffers[material.orbModel+':'+currentGraphicsQuality()] || renderer;
     gl.bindBuffer(gl.ARRAY_BUFFER, material.crown ? buffers.crownVertexBuffer : buffers.vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);
-    gl.vertexAttribPointer(renderer.positionLocation, 3, gl.FLOAT, false, 24, 0);
+    const stride=material.crown?6:(buffers.stride || 6);
+    gl.vertexAttribPointer(renderer.positionLocation, 3, gl.FLOAT, false, stride*4, 0);
     gl.enableVertexAttribArray(renderer.normalLocation);
-    gl.vertexAttribPointer(renderer.normalLocation, 3, gl.FLOAT, false, 24, 12);
+    gl.vertexAttribPointer(renderer.normalLocation, 3, gl.FLOAT, false, stride*4, 12);
+    for(const [location,size,offset] of [[renderer.cellAxisLocation,3,24],[renderer.cellIdLocation,1,36]]){if(stride===10){gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,size,gl.FLOAT,false,40,offset);}else {gl.disableVertexAttribArray(location);if(size===3)gl.vertexAttrib3f(location,0,0,0);else gl.vertexAttrib1f(location,0);}}
+    gl.uniform1f(renderer.cellOpeningLocation,material.opening || 0);gl.uniform1f(renderer.livingShellLocation,material.orbModel==='living'&&!material.crown?1:0);gl.uniform1f(renderer.coreGlowLocation,material.coreGlow || 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, material.crown ? buffers.crownIndexBuffer : buffers.indexBuffer);
     gl.uniformMatrix4fv(renderer.projectionLocation, false, projectionMatrix);
     gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
@@ -297,6 +315,16 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(true);
+
+    if(plant && model==='living'){
+        const now=options.time ?? performance.now()/1000,key=options.animationKey || position,target=options.pimoOpen===true || options.knowledge?.state==='expanded'?1:0;
+        const state=renderer.livingStates.get(key) || {at:now,opening:target};
+        if(state.at!==now){const dt=Math.min(.1,Math.max(0,now-state.at));state.opening+=(target-state.opening)*(1-Math.exp(-dt/ .32));state.at=now;}renderer.livingStates.set(key,state);
+        const soft=authoredColor.map((c,i)=>c*.48+[.88,.87,.80][i]*.52);
+        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.94,{orbModel:'basic',color:authoredColor,alpha:.98,roughness:.8,emissive:.04,coreGlow:.03+state.opening*.18,opacity:options.opacity});
+        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:'living',color:soft,alpha:.98,roughness:.72,emissive:moving?.18:targeted?.12:.04,opening:state.opening,opacity:options.opacity});
+        gl.enable(gl.CULL_FACE);return;
+    }
 
     drawSpatialSphere(
         gl,
