@@ -1905,7 +1905,7 @@ test('spatial roles use distinct Marker, Totem and gateway shapes', () => {
     assert.match(arSource, /shape === 1[\s\S]*drawTotemSculpture/);
     assert.match(arSource, /function groundedTotemPosition\(position\)/);
     assert.match(arSource, /sessionGroundY = latestViewerMatrix\[13\] - getSpatialVisualSettings\(\)\.eyeHeight/);
-    assert.match(arSource, /totemStyle === 'organic'/);
+    assert.doesNotMatch(arSource, /totemStyle === 'organic'/); // Halo Stem uses the shared sculptural renderer.
     assert.match(arSource, /totemStyle === 'flat-disc'/);
     assert.match(arSource, /type === 'area_checkpoint'[\s\S]*groundedTotemPosition\(placementPosition\)/);
     assert.match(arSource, /shape === 0 \|\| shape === 1 \|\| shape === 3 \|\| shape === 4/);

@@ -22,7 +22,7 @@ test('VIEW is always offered immediately below Controls on the main left rail',(
  const buttons=panelOpenerControls();const controls=buttons.findIndex(b=>b.action==='Explorer');assert.equal(buttons[controls+1].action,'View');assert.equal(buttons[controls+1].x,18);assert.equal(buttons[controls+1].y,buttons[controls].y+62);
 });
 
-test('curious visits resume during learning with slow approach, soft exit and strong contact feedback',async()=>{
+test('curious visits resume during learning with slow approach, soft exit and brief gentle feedback',async()=>{
  const {demoBeeEncounter,BEE_FIRST_ENCOUNTER_MS,BEE_ENCOUNTER_DURATION_MS}=await import('../app/services/demoAmbientLife.js');
  const {DEMO_FEEDBACK}=await import('../app/services/demoFeedback.js');
  const {readFileSync}=await import('node:fs');
@@ -30,7 +30,8 @@ test('curious visits resume during learning with slow approach, soft exit and st
  const envelope=t=>demoBeeEncounter(BEE_FIRST_ENCOUNTER_MS+t*BEE_ENCOUNTER_DURATION_MS).envelope;
  assert.ok(envelope(.1)<envelope(.2));assert.ok(envelope(.2)<envelope(.35));
  assert.ok(envelope(.75)>envelope(.9));assert.ok(envelope(.9)>envelope(.99));
- assert.ok(DEMO_FEEDBACK.beeApproachStrength>=.8);assert.ok(DEMO_FEEDBACK.beeApproachDuration>=250);
+ assert.ok(DEMO_FEEDBACK.beeApproachStrength>=.15 && DEMO_FEEDBACK.beeApproachStrength<=.3);
+ assert.ok(DEMO_FEEDBACK.beeApproachDuration>=30 && DEMO_FEEDBACK.beeApproachDuration<=75);
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
  assert.doesNotMatch(source,/ambientCloseVisitsSuppressed|enteringInteraction/);
  assert.match(source,/Math.min\(1,\.60\*dt\/distance\)/);

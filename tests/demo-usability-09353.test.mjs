@@ -36,10 +36,14 @@ test('mode-only Explorer starts with topic faces on one dice and preserves exist
 test('dice shadow softens and expands as a dice is lifted',()=>{
  const ground=diceShadowAppearance({y:.19},0),high=diceShadowAppearance({y:1.19},0);assert.ok(high.radius>ground.radius);assert.ok(high.opacity<ground.opacity);assert.ok(ground.opacity<=.4);
 });
-test('each close bee encounter sends one gentle haptic and controller contact is silent',()=>{
+test('close bee greetings are brief, spaced apart and controller contact is silent',()=>{
+ const previousRandom=Math.random;Math.random=()=>.5;
+ try{
  const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...values)=>{pulses.push(values);return Promise.resolve();}}]}},feedback=createDemoFeedback();
- feedback.tick(100,{sources:[source],beeEncounters:['0:1']});assert.deepEqual(pulses[0],[DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration]);
+ feedback.tick(100,{sources:[source],beeEncounters:['0:1']});assert.deepEqual(pulses[0],[DEMO_FEEDBACK.beeApproachStrength*(.65+.5*.65),Math.round(DEMO_FEEDBACK.beeApproachDuration*(.6+.5*.9))]);
  feedback.tick(1600,{sources:[source],beeEncounters:['0:1']});assert.equal(pulses.filter(p=>p[0]>0).length,1);
- feedback.tick(1800,{sources:[source],beeEncounters:['1:1']});assert.equal(pulses.filter(p=>p[0]>0).length,2);
- const beforeContact=pulses.filter(([strength])=>strength>0).length;feedback.tick(2900,{sources:[source],beeContactSources:[source]});assert.equal(pulses.filter(([strength])=>strength>0).length,beforeContact);feedback.destroy();
+ feedback.tick(1800,{sources:[source],beeEncounters:['1:1']});assert.equal(pulses.filter(p=>p[0]>0).length,1,'another bee must respect the shared quiet period');
+ const beforeContact=pulses.filter(([strength])=>strength>0).length;feedback.tick(2900,{sources:[source],beeContactSources:[source]});assert.equal(pulses.filter(([strength])=>strength>0).length,beforeContact);
+ feedback.tick(30000,{sources:[source],beeEncounters:['2:1']});assert.equal(pulses.filter(p=>p[0]>0).length,2,'a later fresh encounter can greet again');feedback.destroy();
+ }finally{Math.random=previousRandom;}
 });

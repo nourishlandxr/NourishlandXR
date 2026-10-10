@@ -51,20 +51,24 @@ test('a shared bee rig resumes original wing motion even on a same-time rest-to-
  applyBeeWingPose(model,true);assert.ok(bone.quaternion.equals(rotation));applyBeeWingPose(model,false);assert.ok(bone.quaternion.angleTo(flying)<1e-6);
  model.hoverAction.time=.7;applyBeeWingPose(model,false);assert.ok(bone.quaternion.angleTo(flying)>.1);
 });
-test('bees give a soft ambient buzz and a distinct short encounter pulse',()=>{
+test('bees give sparse randomized greetings with a shared quiet period',()=>{
+ const previousRandom=Math.random;Math.random=()=>.1;
+ try{
  const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...args)=>{pulses.push(args);return Promise.resolve();}}]}},fx=createDemoFeedback();
  for(const time of [120,240,360])fx.tick(time,{sources:[source],beeAround:true});
- assert.equal(pulses.length,3);assert.ok(pulses.every(([strength,duration])=>strength>0 && strength<.1 && duration>=120));
+ const positive=()=>pulses.filter(([strength])=>strength>0);
+ const validGreeting=([strength,duration])=>strength>=DEMO_FEEDBACK.beeApproachStrength*.65 && strength<=DEMO_FEEDBACK.beeApproachStrength*1.3 && duration>=30 && duration<=75;
+ assert.equal(positive().length,1);assert.ok(positive().every(validGreeting));
  const beforeEncounter=pulses.length;
  fx.tick(480,{sources:[source],beeEncounters:['bee-1']});
- const encounterPulse=[DEMO_FEEDBACK.beeApproachStrength,DEMO_FEEDBACK.beeApproachDuration];
- assert.deepEqual(pulses.slice(beforeEncounter),[encounterPulse]);
+ assert.equal(pulses.length,beforeEncounter,'a nearby encounter respects the ambient greeting cooldown');
  fx.tick(600,{sources:[source],beeEncounters:['bee-1']});
- assert.equal(pulses.slice(beforeEncounter).filter(([strength])=>strength>0).length,1,'the same encounter must not fire again');
- assert.equal(pulses.filter(([strength,duration])=>strength===encounterPulse[0]&&duration===encounterPulse[1]).length,1);
- fx.tick(720,{sources:[source],beeEncounters:['bee-2']});assert.deepEqual(pulses.at(-1),encounterPulse);
- assert.equal(pulses.filter(([strength,duration])=>strength===encounterPulse[0]&&duration===encounterPulse[1]).length,2,'a different bee still triggers its own encounter');
- fx.setHaptics(false);const before=pulses.length;fx.tick(840,{sources:[source],beeEncounters:['bee-3']});assert.equal(pulses.length,before);fx.destroy();
+ assert.equal(positive().length,1,'the same encounter must not fire again');
+ fx.tick(21000,{sources:[source],beeEncounters:['bee-2']});assert.ok(validGreeting(pulses.at(-1)));
+ assert.equal(positive().length,2,'a fresh bee encounter can greet after the quiet period');
+ fx.tick(21200,{sources:[source],beeEncounters:['bee-2']});assert.equal(positive().length,2);
+ fx.setHaptics(false);const before=pulses.length;fx.tick(43000,{sources:[source],beeEncounters:['bee-3']});assert.equal(pulses.length,before);fx.destroy();
+ }finally{Math.random=previousRandom;}
 });
 test('dice landing emits impact feedback, resting micro-collisions do not',()=>{
  const impacts=[],physics=createHeroDicePhysics({x:0,y:0,z:0},{onImpact:value=>impacts.push(value)});physics.state.position.y=1;

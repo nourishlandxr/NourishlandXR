@@ -23,10 +23,12 @@ test('held surfaces use the same joystick direction and a bounded time step',()=
 test('a butterfly begins on its home perch, visits an element continuously and lands',()=>{
  const insect={seed:1,size:.04},home={id:'control',center:{x:0,y:1,z:-1},right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}},target={...home,id:'fruit',center:{x:.8,y:1,z:-1}};
  assert.deepEqual(butterflyElementVisit(insect,home,target,0).position,home.center);
- assert.deepEqual(butterflyElementVisit(insect,home,target,2800).position,home.center);
- assert.deepEqual(butterflyElementVisit(insect,home,target,3000).position,home.center);
- const midway=butterflyElementVisit(insect,home,target,3800);assert.ok(midway.position.x>0 && midway.position.x<.8);assert.equal(midway.pose.state,'flying');
- const landed=butterflyElementVisit(insect,home,target,10000);assert.deepEqual(landed.position,target.center);assert.equal(landed.pose.state,'landed');
+ const departure=insect.visit.pending.at;assert.ok(departure>=800 && departure<=6100);
+ assert.deepEqual(butterflyElementVisit(insect,home,target,departure-1).position,home.center);
+ assert.deepEqual(butterflyElementVisit(insect,home,target,departure).position,home.center);
+ const duration=insect.visit.trip.duration;
+ const midway=butterflyElementVisit(insect,home,target,departure+duration/2);assert.ok(midway.position.x>0 && midway.position.x<.8);assert.equal(midway.pose.state,'flying');
+ const landed=butterflyElementVisit(insect,home,target,departure+duration);assert.deepEqual(landed.position,target.center);assert.equal(landed.pose.state,'landed');
 });
 
 test('idle fruit meshes need no animation update; growth, grips, rip and foliage remain live',()=>{
