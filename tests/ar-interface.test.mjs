@@ -835,7 +835,9 @@ test('Creator dashboard has one DOM source shared by Web Mode and the Quest spat
     assert.match(html2canvasLicense, /Permission is hereby granted, free of charge/);
     assert.match(hostedBuildSource, /'vendor'/);
     assert.match(hostedBuildSource, /style\|pim\|product-v2\|living-objects/);
-    assert.match(hostedBuildSource, /main\\\.js\(\?:\\\?v=\[\^"\]\*\)\?/);
+    assert.match(hostedBuildSource, /\(\?:main\|entry\)\\\.js\(\?:\\\?v=\[\^"\]\*\)\?/);
+    assert.match(read('app/index.html'), /src="entry\.js/);
+    assert.match(read('app/entry.js'), /import\('\.\/main\.js'\)/);
     assert.doesNotMatch(mirrorSource, /XMLSerializer|<foreignObject/);
     assert.doesNotMatch(arSource, /QUEST_SPATIAL_DASHBOARD_CONTROLS|dashboard-home|dashboard-area/);
     assert.doesNotMatch(arSource, /data-ar-web-mode/);
