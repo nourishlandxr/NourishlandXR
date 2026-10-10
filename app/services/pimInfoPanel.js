@@ -189,8 +189,7 @@ export function panelViewControls(items=[]){
     const defaults=[{id:'plant',label:'ORBS'},{id:'zone',label:'TOTEMS'},{id:'note',label:'NOTES'}];
     const visibility=[...defaults.map(item=>({...item,selected:true,...items.find(value=>value.id===item.id)})),...items.filter(item=>item.id==='fruit-box')];
     return [...visibility.map((item,index)=>({...item,action:item.id==='fruit-box'?'FruitWindow:toggle':'Utility:visibility:'+item.id,label:item.selected?'Hide':'Show',kind:'visibility',settingGroup:'visibility-'+item.id,settingLabel:item.label,ariaLabel:(item.selected?'Hide ':'Show ')+item.label,x:540,y:150+index*78,width:404,height:58})),
-        {action:'Utility:peek-3d',label:'PEEK 3D 1',settingGroup:'peek',settingLabel:'Living Frame',x:540,y:174+visibility.length*78,width:404,height:58},
-        {action:'Utility:peek-3d-2',label:'PEEK 3D 2',settingGroup:'peek-2',settingLabel:'Tree test',x:540,y:252+visibility.length*78,width:404,height:58},
+        ...[['peek-3d','PEEK 1'],['peek-3d-2','PEEK 2'],['peek-off','OFF']].map(([action,label],index)=>({action:'Utility:'+action,label,settingGroup:'peek',settingLabel:'Living Frame',x:540+index*138,y:174+visibility.length*78,width:128,height:58})),
         {action:'CloseView',label:'Done',x:760,y:40,width:180,height:58}];
 }
 export function controlPanelHeight(lines,largeText=false,pathway=false,utilities=0,moduleCount=0){
@@ -590,7 +589,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(id==='view'){
                 const actions=document.createElement('div');actions.className='nlxr-settings-actions';body.append(actions);
                 for(const item of panelViewControls(sceneVisibility()).filter(item=>item.action!=='CloseView')){
-                    const row=document.createElement('div');row.className='nlxr-setting-row';const label=document.createElement('span');label.className='nlxr-setting-label';label.textContent=item.settingLabel;
+                    const existing=actions.querySelector(`[data-setting-group="${item.settingGroup}"]`);if(existing){existing.querySelector('.nlxr-setting-options').append(makeButton(item));continue;}
+                    const row=document.createElement('div');row.className='nlxr-setting-row';row.dataset.settingGroup=item.settingGroup;const label=document.createElement('span');label.className='nlxr-setting-label';label.textContent=item.settingLabel;
                     const options=document.createElement('div');options.className='nlxr-setting-options';options.append(makeButton(item));row.append(label,options);actions.append(row);
                 }
             }else{

@@ -43,7 +43,7 @@ export function prepareArAssets({onProgress=()=>{},retry=false,experience='demo'
   if(frameQuality!=='off')assets.push({id:'living-frame-'+frameQuality,critical:false,load:()=>import('./livingFrameModel.js').then(module=>module.prepareLivingFrameModel(frameQuality))});
   if(experience!=='desktop' && currentGraphicsQuality()==='high')assets.push({id:'living-frame-artwork',critical:false,load:()=>prepareLivingFrameArtwork('high')});
   if(experience==='demo'){
-   assets.push({id:'bee-model',critical:false,load:()=>import('./demoBeeModel.js').then(module=>module.prepareDemoBeeModel())});
+   assets.push({id:'bee-model',critical:true,load:()=>import('./demoBeeModel.js').then(module=>module.prepareDemoBeeModel())});
    assets.push({id:'butterfly-model',critical:false,load:()=>import('./demoButterflyModel.js').then(module=>module.prepareDemoButterflyModel())});
   }
   // Fonts can fall back to system faces when offline. No audio autoplay.

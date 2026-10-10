@@ -853,6 +853,7 @@ async function openLivingPeek(){
 }
 
 function handleDemoPanelAction(action) {
+    if(action==='peek-off'){demoPeekPortal?.close();closeLivingPeek();return;}
     if(action==='view'||action==='view-close'){demoViewOpen=action==='view';syncDemoPanelActions();return;}
     if(action==='peek-3d'||action==='peek-3d-2'){void openDemoPeek(action==='peek-3d-2'?2:1);return;}
     if(action.startsWith('visibility:')){
@@ -2252,9 +2253,9 @@ function showArWelcomeShowcase() {
     const seedBytes=new Uint32Array(1);
     if(globalThis.crypto?.getRandomValues)globalThis.crypto.getRandomValues(seedBytes);else seedBytes[0]=Math.floor(Math.random()*0xffffffff);
     arWelcomeClusters=createArWelcomeClusters();limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limMeshVisible=true;limMeshActivatedAt=NaN;arWelcomeOpeningActive=true;arWelcomeOpeningDuration=reducedOpening?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_OPENING_MS;arWelcomeOpeningSeed=seedBytes[0];arWelcomeClock=createWelcomePresentationClock();
-    // Let the frame and opening question settle before ambient bees arrive.
+    // Start ambient bees with the opening; individual entrances remain staggered.
     // Their existing flight supplies the cue; close flybys wait until orientation ends.
-    ambientBeesStartedAt=reducedOpening?AR_WELCOME_REDUCED_OPENING_MS:DEMO_WELCOME_TITLE_HOLD_MS+4200;
+    ambientBeesStartedAt=0;
     arWelcomeRootMilestone=WELCOME_ROOT_MILESTONES.arrival;arWelcomeRootMilestoneStartedAt=0;arWelcomeRootsLastRefreshAt=-Infinity;
     // Reset transient learning state for every demo visit.
     limPathwayState=idleLimPathwayState();
@@ -6406,6 +6407,7 @@ function drawDemoInputPointer(view,pointerSource) {
         color:latestTrackedHandStates.length ? [.78,.85,.84,handPinchActive ? .58 : .4] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
     // An open contact ring replaces the hard-to-aim vertical tip.
+    if(surface?.kind==='living-frame-rim')drawSpatialPointerContact(gl,tetherRenderer,view,end,.045);
     if(surfacePoint)drawSpatialPointerContact(gl,tetherRenderer,view,end,Math.max(.009,Math.min(.018,(surface.distance || 1)*.007)));
 
 }

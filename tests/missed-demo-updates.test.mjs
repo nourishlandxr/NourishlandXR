@@ -14,12 +14,12 @@ test('VIEW owns visibility and PEEK; the welcome and main action rail have no pe
  const controls=panelViewControls([{id:'plant',label:'ORBS',selected:false}]);
  assert.equal(controls.find(item=>item.action==='Utility:visibility:plant').label,'Show');
  for(const id of ['plant','zone','note'])assert.ok(controls.some(item=>item.action==='Utility:visibility:'+id));
- assert.equal(controls.find(item=>item.action==='Utility:peek-3d').label,'PEEK 3D 1');
+ assert.equal(controls.find(item=>item.action==='Utility:peek-3d').label,'PEEK 1');
  const demo=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8'),launch=readFileSync(new URL('../app/screens/launch.js',import.meta.url),'utf8');
  assert.doesNotMatch(launch,/openLivingPaintingTest/);
  assert.doesNotMatch(demo,/actions.push\(\{id:'peek-3d'/);
  assert.match(demo,/openDemoPeek\(action==='peek-3d-2'\?2:1\)/);
- assert.equal(controls.find(item=>item.action==='Utility:peek-3d-2').label,'PEEK 3D 2');
+ assert.equal(controls.find(item=>item.action==='Utility:peek-3d-2').label,'PEEK 2');
  assert.match(demo,/if\(livingPeekActive && livingPeekPose\)/);
  assert.match(demo,/livingPeekPinches/);
 });
@@ -30,7 +30,7 @@ test('shaking a perch starts a brief flight, then returns; quiet motion and redu
  const moved={...home,center:{x:.04,y:1,z:-1}};
  butterflyElementVisit(insect,home,moved,32);assert.ok(insect.visit.startle);
  const flying=butterflyElementVisit(insect,home,moved,1032);assert.equal(flying.pose.state,'flying');assert.ok(flying.position.z>moved.center.z+.1);
- const landed=butterflyElementVisit(insect,home,moved,3232);assert.deepEqual(landed.position,moved.center);assert.equal(landed.pose.state,'landed');
+ const landed=butterflyElementVisit(insect,home,moved,insect.visit.startle.at+insect.visit.startle.duration+1);assert.deepEqual(landed.position,moved.center);assert.equal(landed.pose.state,'landed');
  const quiet={seed:1};butterflyElementVisit(quiet,home,home,0);butterflyElementVisit(quiet,home,{...home,center:{x:.002,y:1,z:-1}},32);assert.equal(quiet.visit.startle,undefined);
  const reduced={seed:2};butterflyElementVisit(reduced,home,home,0,true);butterflyElementVisit(reduced,home,moved,32,true);assert.equal(reduced.visit.startle,undefined);
 });
@@ -41,6 +41,19 @@ test('rim clearance includes outer petals and catches sideways flight through th
  const previous={x:-1.2,y:0,z:.09},next={x:1.2,y:0,z:.09},safe=avoidLivingFrameDisk(next,pose,0,previous);
  assert.equal(safe.x,previous.x);assert.ok(safe.z>=.219);
  assert.equal(avoidLivingFrameDisk({x:1.2,y:0,z:.3},pose,0,{x:-1.2,y:0,z:.3}).x,1.2);
+});
+
+test('Peek choices share one bounded row and shake reactions vary per butterfly',()=>{
+ const choices=panelViewControls().filter(item=>item.settingGroup==='peek');
+ assert.deepEqual(choices.map(item=>item.label),['PEEK 1','PEEK 2','OFF']);
+ assert.equal(new Set(choices.map(item=>item.y)).size,1);
+ for(let i=1;i<choices.length;i++)assert.ok(choices[i].x>=choices[i-1].x+choices[i-1].width);
+ const home={id:'p',center:{x:0,y:1,z:-1},right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}},moved={...home,center:{x:.04,y:1,z:-1}};
+ const reactions=Array.from({length:8},(_,seed)=>{const insect={seed};butterflyElementVisit(insect,home,home,0);butterflyElementVisit(insect,home,moved,32);return insect.visit.startle;});
+ assert.equal(new Set(reactions.map(r=>r.duration)).size,8);assert.equal(new Set(reactions.map(r=>r.at)).size,8);
+ assert.equal(new Set(reactions.map(r=>r.side)).size,8);
+ const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+ assert.match(source,/ambientBeesStartedAt=0/);assert.match(source,/surface\?\.kind==='living-frame-rim'\)drawSpatialPointerContact/);
 });
 
 test('peek clips each eye at the aperture, draws shared depth geometry and disposes resources',async()=>{

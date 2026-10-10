@@ -1,4 +1,5 @@
 const ease=t=>t*t*(3-2*t);
+const variation=(seed,salt)=>{const n=Math.sin((seed+1)*127.1+salt*311.7)*43758.5453;return n-Math.floor(n);};
 // Existing butterflies leave their perch along a continuous arc. New elements
 // are destinations, never spawn points; a journey keeps its destination identity.
 export function butterflyElementVisit(insect,home,target,time,reduced=false){
@@ -11,7 +12,8 @@ export function butterflyElementVisit(insect,home,target,time,reduced=false){
  const motion=lastPerch&&lastPerch.id===destination.id?Math.hypot(destination.center.x-lastPerch.center.x,destination.center.y-lastPerch.center.y,destination.center.z-lastPerch.center.z):0;
  const turn=lastPerch&&lastPerch.id===destination.id?Math.hypot(destination.normal.x-lastPerch.normal.x,destination.normal.y-lastPerch.normal.y,destination.normal.z-lastPerch.normal.z):0;
  if(!reduced && !state.trip && !state.startle && destination.id===state.id && time>=(state.startleAfter || 0) && dt<.25 && (motion>.008 && motion/dt>.38 || turn>.05 && turn/dt>1.2)){
-  state.startle={at:time,from:{...state.position},perch:destination};state.startleAfter=time+5000;
+  const seed=insect.seed||0;
+  state.startle={at:time+variation(seed,1)*420,duration:2400+variation(seed,2)*2200,lift:.1+variation(seed,3)*.22,reach:.15+variation(seed,4)*.3,side:(variation(seed,5)-.5)*.3,from:{...state.position},perch:destination};state.startleAfter=time+5000+variation(seed,6)*2200;
  }
  state.lastPerch={id:destination.id,center:{...destination.center},normal:{...destination.normal}};state.perchAt=time;
  if(destination.id!==state.id && !state.trip){
@@ -21,8 +23,8 @@ export function butterflyElementVisit(insect,home,target,time,reduced=false){
  let position,flight=0,axes=state.perch;
  if(state.startle){const startled=state.startle;
   if(destination.id===state.id)startled.perch=destination;
-  const t=Math.min(1,Math.max(0,(time-startled.at)/3200)),s=ease(t),bend=Math.sin(Math.PI*t),to=startled.perch.center,side=insect.seed%2?1:-1;
-  position={x:startled.from.x+(to.x-startled.from.x)*s+startled.perch.normal.x*bend*.24+startled.perch.right.x*bend*.08*side,y:startled.from.y+(to.y-startled.from.y)*s+bend*.14,z:startled.from.z+(to.z-startled.from.z)*s+startled.perch.normal.z*bend*.24+startled.perch.right.z*bend*.08*side};
+  const t=Math.min(1,Math.max(0,(time-startled.at)/startled.duration)),s=ease(t),bend=Math.sin(Math.PI*t),to=startled.perch.center;
+  position={x:startled.from.x+(to.x-startled.from.x)*s+startled.perch.normal.x*bend*startled.reach+startled.perch.right.x*bend*startled.side,y:startled.from.y+(to.y-startled.from.y)*s+bend*startled.lift,z:startled.from.z+(to.z-startled.from.z)*s+startled.perch.normal.z*bend*startled.reach+startled.perch.right.z*bend*startled.side};
   flight=Math.min(1,t*14,(1-t)*14);axes=startled.perch;
   if(t===1){position={...to};state.perch=startled.perch;state.startle=null;}
  }else if(state.trip){const trip=state.trip;
