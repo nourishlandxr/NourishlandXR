@@ -181,7 +181,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             asset.object.traverse(node=>{if(node.isMesh&&/leaf|leaflet/i.test(node.name)&&!/(stalk|vein|petiole)/i.test(node.name))leaves.push(node);});
             if(!frame){
                 frame=new THREE.Group();frame.name='Fruit_observation_box';
-                const back=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.008),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.22,depthWrite:false}));back.position.z=-.154;frame.add(back);
+                const back=new THREE.Mesh(new THREE.BoxGeometry(.65,.65,.008),new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.22,depthWrite:true}));back.material.userData.occludesInsects=true;back.position.z=-.154;frame.add(back);
                 const wallMaterial=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.8,transparent:true,opacity:.3,depthWrite:false});
                 for(const [x,y,w,h] of [[0,.325,.66,.012],[0,-.325,.66,.012],[-.325,0,.012,.65],[.325,0,.012,.65]]){
                     const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,.30),wallMaterial);wall.position.set(x,y,0);frame.add(wall);
@@ -259,7 +259,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         action,
         chooseExample:choose,
         nextExample(){const index=FRUIT_WINDOW_LIBRARY.findIndex(item=>item.id===activeSpecies?.id);choose(FRUIT_WINDOW_LIBRARY[(index+1)%FRUIT_WINDOW_LIBRARY.length].id);},
-        getPerchPose(side='right'){if(!shown||fadeStartedAt!==null)return null;const right=new THREE.Vector3(1,0,0).applyQuaternion(anchor.quaternion),up=new THREE.Vector3(0,1,0).applyQuaternion(anchor.quaternion),normal=new THREE.Vector3(0,0,1).applyQuaternion(anchor.quaternion),center=anchor.position.clone().addScaledVector(right,side==='left'?-.22:.22).addScaledVector(up,.331).addScaledVector(normal,.064);return {center,right,up,normal};},
+        getPerchPose(side='right'){if(!shown||fadeStartedAt!==null)return null;const right=new THREE.Vector3(1,0,0).applyQuaternion(anchor.quaternion),up=new THREE.Vector3(0,1,0).applyQuaternion(anchor.quaternion),normal=new THREE.Vector3(0,0,1).applyQuaternion(anchor.quaternion),center=anchor.position.clone().addScaledVector(right,side==='left'?-.22:.22).addScaledVector(up,.331).addScaledVector(normal,.19);return {center,right,up,normal};},
         getPhoto(){return asset&&!loading?{image:activeSpecies.image,caption:activeSpecies.label,imageAlt:activeSpecies.label,exampleId:activeSpecies.id}:null;},
         performanceSnapshot(){return {modelUpdates,boundsUpdates,desktopRenders,playing:Boolean(asset?.playing),ready:Boolean(asset)&&!loading,renderStats:xr?.stats||null};},
         getLabel(){return activeSpecies?.label||'Plant example';},

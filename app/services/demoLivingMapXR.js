@@ -117,7 +117,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         }
         const transparent=material.transparent || opacity<.999;
         if(transparent){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);
-        gl.depthMask(detailed ? material.depthWrite!==false && !material.transparent : !transparent);gl.disable(gl.CULL_FACE);
+        gl.depthMask(detailed ? material.depthWrite!==false && (!material.transparent || material.userData?.occludesInsects===true) : !transparent);gl.disable(gl.CULL_FACE);
         const start=batch?0:node.geometry.drawRange.start,count=batch?node.count*batch.verticesPerInstance:Math.min(entry.count-start,node.geometry.drawRange.count);
         if(count>0){if(gpu)instancing.draw(gl.TRIANGLES,start,count,node.count);else gl.drawArrays(node.isLine?gl.LINE_STRIP:gl.TRIANGLES,start,count);}
         if(gpu){for(const attribute of matrixAttributes){instancing.divisor(attribute,0);gl.disableVertexAttribArray(attribute);}instancing.divisor(instanceColourAttribute,0);gl.disableVertexAttribArray(instanceColourAttribute);instancing.divisor(attributes[3],0);}

@@ -15,11 +15,11 @@ test('six new colours join the original two 30% smaller, with distinct panel per
  const perch={center:{x:0,y:1,z:-1},right:{x:1,y:0,z:0}};
  const points=BUTTERFLY_VARIANTS.map(v=>butterflyPanelPerch({...perch,center:{...perch.center,x:v.side==='left'?-.3:.3}},v).center.x);
  assert.equal(new Set(points).size,8);assert.ok(points.every(x=>Math.abs(x)<=.3));
- assert.equal(BUTTERFLY_VARIANTS.find(v=>v.id==='transparent').wingOpacity,.28);
+ assert.equal(BUTTERFLY_VARIANTS.find(v=>v.id==='transparent').wingOpacity,1);
  for(const v of BUTTERFLY_VARIANTS)assert.equal(demoButterflyPose(2000,0,{perchMs:v.perchMs,seed:v.seed}).flight,0);
 });
 test('flight speeds increase without user close approaches; resting remains calm',()=>{
- assert.equal(BUTTERFLY_MOVEMENT_SPEED,1.55);assert.equal(BUTTERFLY_FLIGHT_SPEED,4.2);
+ assert.equal(BUTTERFLY_MOVEMENT_SPEED,2.6);assert.equal(BUTTERFLY_FLIGHT_SPEED,7.2);
  for(const v of BUTTERFLY_VARIANTS)for(let t=0;t<180000;t+=777){const pose=demoButterflyPose(t,0,{seed:v.seed,perchMs:v.perchMs});assert.equal(pose.close,0);assert.ok(Number.isFinite(pose.x+pose.y+pose.z));}
  assert.equal(demoButterflyPose(120000,0,{reducedMotion:true}).flight,0);
 });

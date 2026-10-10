@@ -25,7 +25,7 @@ test('a butterfly begins on its home perch, visits an element continuously and l
  assert.deepEqual(butterflyElementVisit(insect,home,target,0).position,home.center);
  assert.deepEqual(butterflyElementVisit(insect,home,target,2800).position,home.center);
  assert.deepEqual(butterflyElementVisit(insect,home,target,3000).position,home.center);
- const midway=butterflyElementVisit(insect,home,target,6000);assert.ok(midway.position.x>0 && midway.position.x<.8);assert.equal(midway.pose.state,'flying');
+ const midway=butterflyElementVisit(insect,home,target,3800);assert.ok(midway.position.x>0 && midway.position.x<.8);assert.equal(midway.pose.state,'flying');
  const landed=butterflyElementVisit(insect,home,target,10000);assert.deepEqual(landed.position,target.center);assert.equal(landed.pose.state,'landed');
 });
 

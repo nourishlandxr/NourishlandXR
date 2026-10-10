@@ -19,9 +19,9 @@ test('second controller can join the held fruit but cannot play while it is carr
 test('discovery labels and dynamic message parts have Portuguese and Dutch translations',()=>{
  for(const language of ['pt-PT','nl-NL'])for(const label of ['Fruit Window','Return fruit','Plant example','Loading','Visual example for','PIMO information remains','Ready. The arrow marks the fruit you can pick.','Pigeon pea · fresh','Pigeon pea · dry'])assert.notEqual(translateNxrText(label,language),label,language+': '+label);
 });
-test('Notes footer creates a fresh note when none remain',()=>{
+test('Notes visibility toggles without creating a note',()=>{
  const text=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8'),a=text.indexOf("    if(action.startsWith('visibility:')){"),b=text.indexOf("    if(action==='notes')",a);
- let created=0;const ctx=vm.createContext({markers:[],demoHiddenElements:new Set(['note']),createDemoNote:()=>created++,syncDemoPanelActions(){}});
+ let created=0;const ctx=vm.createContext({markers:[],demoHiddenElements:new Set(['note']),createDemoNote:()=>created++,syncDemoPanelActions(){},updateSimulatedMarkers(){},demoPlacedNoteDomViews:new Map(),demoPlacedNoteViews:new Map()});
  vm.runInContext('function run(action){'+text.slice(a,b)+'} run("visibility:note")',ctx);
- assert.equal(created,1);assert.equal(ctx.demoHiddenElements.has('note'),false);
+ assert.equal(created,0);assert.equal(ctx.demoHiddenElements.has('note'),false);
 });

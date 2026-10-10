@@ -27,7 +27,7 @@ test('bees cannot penetrate or tunnel through a rotated Living Frame disk',()=>{
  const kept=avoidLivingFrameDisk(behind,pose,0,front),relative=new THREE.Vector3(kept.x,kept.y,kept.z).sub(center);
  assert.ok(relative.dot(normal)>=.159);
  const outside=center.clone().add(new THREE.Vector3(pose.right.x,pose.right.y,pose.right.z).multiplyScalar(1.4));assert.equal(avoidLivingFrameDisk(outside,pose),outside);
- const flower=center.clone().add(new THREE.Vector3(pose.right.x,pose.right.y,pose.right.z).multiplyScalar(.89)).addScaledVector(normal,.09);assert.equal(avoidLivingFrameDisk(flower,pose),flower);
+ const flower=center.clone().add(new THREE.Vector3(pose.right.x,pose.right.y,pose.right.z).multiplyScalar(.89)).addScaledVector(normal,.09);assert.notEqual(avoidLivingFrameDisk(flower,pose),flower);
  const intrusion=center.clone().addScaledVector(normal,.01),safe=avoidLivingFrameDisk(intrusion,pose);assert.ok(new THREE.Vector3(safe.x,safe.y,safe.z).sub(center).dot(normal)>=.159);
 });
 

@@ -2,7 +2,7 @@ const clamp01=value=>Math.max(0,Math.min(1,value));
 const smooth=value=>{const t=clamp01(value);return t*t*(3-2*t);};
 export const BEE_COUNT=4;
 export const BEE_WING_SPEED=58;
-export const BEE_ENCOUNTER_DURATION_MS=14000;
+export const BEE_ENCOUNTER_DURATION_MS=22000;
 export const BEE_FIRST_ENCOUNTER_MS=11000;
 export function beeWingsAtRest({nectar=false,flyby=0,displacement=0,pointerContact=false,speed=0,flowerDistance=0}={}){
     return Boolean(nectar && flyby<.02 && displacement<=.012 && !pointerContact && speed<.025 && flowerDistance<.006);
@@ -21,7 +21,7 @@ export function demoBeeEncounter(age,{enabled=true,seed=0}={}){
     if(age<start || age>start+BEE_ENCOUNTER_DURATION_MS)return null;
     const progress=clamp01((age-start)/BEE_ENCOUNTER_DURATION_MS);
     const phase=progress<.38?'approach':progress<.52?'inspect':progress<.8?'pass':'exit';
-    const envelope=smooth(progress/.18)*(1-smooth((progress-.82)/.18));
+    const envelope=smooth(progress/.35)*(1-smooth((progress-.64)/.36));
     return {index,start,progress,phase,envelope};
 }
 
@@ -41,7 +41,7 @@ export function demoBeePose(elapsed,startedAt,index=0,{encounters=true,encounter
     const follower=encounter && waistVisit && lead!==index;
     const delay=follower?1100+variation*700:0;
     const flybyProgress=encounter?clamp01((encounter.progress*BEE_ENCOUNTER_DURATION_MS-delay)/(BEE_ENCOUNTER_DURATION_MS-delay)):0;
-    const flyby=encounter?smooth(flybyProgress/.18)*(1-smooth((flybyProgress-.82)/.18)):0;
+    const flyby=encounter?smooth(flybyProgress/.35)*(1-smooth((flybyProgress-.64)/.36)):0;
     const orbitX=.5+Math.cos(phase)*(.22+.07*Math.sin(time*.13+index));
     const orbitY=.5+Math.sin(phase*.83+index*.4)*(.20+.08*Math.cos(time*.17+index));
     const orbitDepth=Math.sin(phase*.71-.9)+Math.sin(time*.19+index)*.12;

@@ -2573,3 +2573,15 @@ body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],butt
 .nlxr-info-panel.is-desktop-demo-panel.has-fruit-choices button[data-control-kind="fruit-choice"]{padding:8px!important;min-height:48px;}
 .nlxr-info-panel.is-desktop-demo-panel > .nlxr-media-wing{height:min(260px,32dvh)!important;min-height:0;max-height:none;bottom:calc(100% + 8px);top:auto;}
 @media(max-width:700px){.nlxr-info-panel.is-demo-panel.is-desktop-demo-panel:not(.is-hidden){left:8px;width:calc(100vw - 16px)!important;height:42dvh!important;bottom:8px!important;}.nlxr-info-panel.is-desktop-demo-panel > .nlxr-media-wing{height:24dvh!important;}}
+
+/* VIEW keeps the scene switches and PEEK visible together in one companion. */
+.nlxr-settings-companion.is-view-companion .nlxr-settings-actions{display:grid;gap:8px}
+.nlxr-settings-companion.is-view-companion .nlxr-setting-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px;padding:10px 14px;margin:0}
+.nlxr-settings-companion.is-view-companion .nlxr-setting-label{margin:0}
+.nlxr-settings-companion.is-view-companion .nlxr-setting-options{margin:0;padding:0;background:none}
+.nlxr-settings-companion.is-view-companion .nlxr-setting-options button{min-height:42px;padding:8px 16px}
+
+.nlxr-guide-reading{white-space:pre-wrap;line-height:1.55;color:#edf5eb;margin:0 0 14px}
+.nlxr-guide-actions{display:flex;flex-wrap:wrap;gap:8px}
+.nlxr-lower-companion header{cursor:grab;touch-action:none}
+.nlxr-lower-companion[hidden]{display:none!important}

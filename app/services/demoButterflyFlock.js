@@ -1,6 +1,6 @@
 export const BUTTERFLY_VARIANTS=Object.freeze([
     ['blue','#8abed6',1],['red','#cf8c7d',1],['yellow','#e0cb7f',1],['green','#98b99a',1],
-    ['white','#eeeade',1],['transparent','#dcece5',.28],['purple','#b8a1cd',1],['orange','#d9ae81',1]
+    ['white','#eeeade',1],['transparent','#dcece5',1],['purple','#b8a1cd',1],['orange','#d9ae81',1]
 ].map(([id,colour,wingOpacity],seed)=>Object.freeze({id,colour,wingOpacity,seed,
     red:id==='red',side:seed%2?'left':'right',slot:Math.floor(seed/2),surface:seed%3===0?'image':'control',size:(id==='red'?.055:.065)*.7,
     perchMs:seed===0?60000:seed===1?30000:30000+seed*4200})));
@@ -21,6 +21,10 @@ export function butterflySocialPoint(position,peer,social){
 }
 export function butterflyPanelPerch(perch,variant){
     if(!perch)return null;
+    if(perch.cellEdge){
+        const across=(variant.side==='left'?-1:1)*perch.width*(.08+Math.min(3,variant.slot)*.045),rise=perch.height*.5+.015;
+        return {...perch,center:{x:perch.center.x+perch.right.x*across+perch.up.x*rise+perch.normal.x*.03,y:perch.center.y+perch.right.y*across+perch.up.y*rise+perch.normal.y*.03,z:perch.center.z+perch.right.z*across+perch.up.z*rise+perch.normal.z*.03}};
+    }
     const across=(variant.side==='left'?1:-1)*variant.slot*.07;
     return {...perch,center:{x:perch.center.x+perch.right.x*across,y:perch.center.y+perch.right.y*across,z:perch.center.z+perch.right.z*across}};
 }

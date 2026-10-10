@@ -2,10 +2,10 @@ import {butterflyFlightPoint,butterflyFlightHeading} from './demoInsectFlight.js
 const smooth=x=>{const t=Math.max(0,Math.min(1,x));return t*t*(3-2*t);};
 const insectHeading=(point,seed)=>Math.atan2(point.x+Math.sin(seed*1.73)*.1,point.z+.28);
 export const BUTTERFLY_PERCH_MS=60000;
-export const BUTTERFLY_TAKEOFF_MS=4500;
+export const BUTTERFLY_TAKEOFF_MS=1800;
 export const BUTTERFLY_FLIGHT_CYCLE_SECONDS=36;
 export const BUTTERFLY_LAND_SECONDS=5.5;
-export const BUTTERFLY_MOVEMENT_SPEED=1.55;
+export const BUTTERFLY_MOVEMENT_SPEED=2.6;
 export function butterflyDropSurface(position,hits,tolerance=.12){
     if(!position)return null;
     return hits.map(hit=>hit?.point || hit?.position).filter(point=>point && Math.hypot(point.x-position.x,point.y-position.y,point.z-position.z)<=tolerance)
