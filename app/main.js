@@ -3,6 +3,7 @@ import { isArActive as isVisitorArActive } from './services/arNote.js';
 import { launchCreatorArFromPage } from './services/creatorArNavigation.js';
 import {isDesktopLearningBookTarget} from './services/desktopLearningBookTarget.js';
 import { enhanceProductScreen } from './services/productExperience.js';
+import { renderCreatorWorkspace } from './services/creatorWorkspaceRouting.js';
 import { renderVisitorExperience, clearVisitorCache, cancelVisitorExperience } from './screens/visitorExperience.js';
 import { SiteManager } from './managers/siteManager.js';
 import { renderLaunchScreen } from './screens/launch.js';
@@ -43,7 +44,7 @@ import { applyNxrLanguage, translateApp } from './services/i18n.js';
 const app = document.getElementById('app');
 document.body.dataset.desktopAr=isDesktopLearningBookTarget()?'unavailable':'available';
 // Only common fonts on the welcome page; garden data and demo media remain scoped.
-prepareArAssets({experience:'creator'}).catch(error=>console.warn('AR preparation:',error));
+// Spatial preparation belongs to an explicit AR entry, not desktop authoring.
 const CURRENT_VIEW_KEY = 'nourishland-xr-current-view-v1';
 function rememberCurrentView(view, args = []) {
     try { sessionStorage.setItem(CURRENT_VIEW_KEY, JSON.stringify({ view, args })); }
@@ -314,7 +315,7 @@ window.renderProjectDashboard = async (projectId, projectName = '', fromHistory 
         history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName, viewArgs: args }, '', window.location.href);
     }
     setExperienceRole('creator');
-    return renderProjectDashboardV2Screen(app, projectId);
+    return renderCreatorWorkspace(app, decodeMainValue(projectId));
 };
 window.renderProjectGuide = (projectId = '', returnTo = 'creator') => {
     setExperienceRole('creator');
@@ -1025,7 +1026,7 @@ window.renderVisitorLocationIntro=(id,creator=false,preview=false)=>creator||pre
 window.renderFieldGuide=(id,creator=false)=>creator?legacyFieldGuide(id,true):window.openVisitor('plants',decodeMainValue(id));
 window.renderBrowseContent=(id,creator=false)=>creator?legacyBrowse(id,true):window.openVisitor('plants',decodeMainValue(id));
 if(!history.state?.nourishlandView) replaceViewHistory('welcome');
-bootstrap();
+if (!window.__nxrSkipBootstrap) bootstrap();
 
 // Creator camera entry is independent of immersive AR capability.
 window.scanCreatorArUco = async projectId => {

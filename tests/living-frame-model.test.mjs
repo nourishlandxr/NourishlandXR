@@ -60,8 +60,10 @@ function mockGL(){
  return {gl,calls,state,enabled,boundTextures};
 }
 test('native surface detail uploads normal maps with mipmaps and restores both texture units',()=>{
+ const saved=getSpatialVisualSettings();setSpatialVisualSettings({graphicsQuality:'high'});try{
  const {gl,calls,state,boundTextures}=mockGL(),root=scene(),m=root.children[0].material;m.name='Brown lower soil';m.map=new THREE.Texture({width:2,height:2});m.normalMap=new THREE.Texture({width:2,height:2});m.normalScale.set(.36,.36);const originalColour={id:'colour'},originalNormal={id:'normal'};boundTextures.set(gl.TEXTURE0,originalColour);boundTextures.set(gl.TEXTURE0+1,originalNormal);state.set(gl.ACTIVE_TEXTURE,gl.TEXTURE0+3);
  const renderer=createLivingFrameXR(gl,root);renderer.prepareNext();const matrix=new THREE.Matrix4();renderer.draw({projectionMatrix:matrix.elements,transform:{inverse:{matrix:matrix.elements}}},matrix);assert.equal(calls.filter(c=>c[0]==='texImage2D').length,2);assert.equal(calls.filter(c=>c[0]==='generateMipmap').length,2);assert.ok(calls.some(c=>c[0]==='uniform1f'&&c[1]==='normalMapped'&&c[2]===1));assert.ok(calls.some(c=>c[0]==='uniform1f'&&c[1]==='surfaceKind'&&c[2]===4));assert.equal(boundTextures.get(gl.TEXTURE0),originalColour);assert.equal(boundTextures.get(gl.TEXTURE0+1),originalNormal);assert.equal(state.get(gl.ACTIVE_TEXTURE),gl.TEXTURE0+3);renderer.destroy();
+ }finally{setSpatialVisualSettings(saved);}
 });
 test('native stereo batches shared materials, uploads once, uses independent eye matrices and restores GL state',()=>{
  const {gl,calls,state}=mockGL(),root=scene(),other=root.children[0].clone();other.position.x=1;root.add(other);const previous={id:'other renderer'};state.set(gl.CURRENT_PROGRAM,previous);state.set(gl.ACTIVE_TEXTURE,gl.TEXTURE0+3);state.set(gl.DEPTH_WRITEMASK,false);

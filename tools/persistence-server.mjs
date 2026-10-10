@@ -1479,6 +1479,67 @@ function handleApi(req, res) {
         return true;
     }
 
+    // One workspace save keeps marker identity, profile revisions and Area moves
+    // together. A failed write restores the original record before responding.
+    const workspaceRecordMatch = pathname.match(/^\/api\/workspace-record\/([^/]+)\/([^/]+)\/([^/]+)\/([^/]+)$/);
+    if (workspaceRecordMatch && req.method === 'PUT') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+            let sourceDir, destinationDir, originalMarker, originalProfile, moved = false, wrote = false;
+            try {
+                const [projectId, siteId, placeId, markerId] = workspaceRecordMatch.slice(1).map(decodeURIComponent);
+                const data = JSON.parse(body || '{}');
+                const targetAreaId = String(data.targetAreaId || placeId);
+                for (const part of [projectId, siteId, placeId, markerId, targetAreaId]) {
+                    if (!part || part === '.' || part === '..' || /[\\/\0]/.test(part)) throw new Error('Invalid workspace record identifier');
+                }
+                const sitePath = getCanonicalSitePath(projectId, siteId);
+                sourceDir = path.join(sitePath, 'places', placeId, 'markers', markerId);
+                destinationDir = path.join(sitePath, 'places', targetAreaId, 'markers', markerId);
+                if (!readJson(path.join(sitePath, 'places', targetAreaId, 'place.json'), null)) throw new Error('Destination Area not found');
+                originalMarker = readJson(path.join(sourceDir, 'marker.json'), null);
+                if (!originalMarker) return sendJson(res, 404, { error: 'Record not found' });
+                if (String(data.expectedMarkerModified ?? '') !== String(originalMarker.modified || '')) return sendJson(res, 409, { error: 'This record changed elsewhere. Reload before saving.' });
+                originalProfile = originalMarker.type === 'plant' ? readJson(path.join(sourceDir, 'plant_profile.json'), {}) : null;
+                if (originalProfile && Object.hasOwn(data, 'expectedProfileRevision') && Number(data.expectedProfileRevision) !== Number(originalProfile.revision || 0)) return sendJson(res, 409, { error: 'This plant profile changed elsewhere. Reload before saving.' });
+                const allowed = ['name', 'description', 'notes', 'physicalAnchor', 'field_work', 'visibility', 'status', 'reference_photo'];
+                const markerChanges = Object.fromEntries(Object.entries(data.markerChanges || {}).filter(([key]) => allowed.includes(key)));
+                const profileChanges = originalProfile ? data.profileChanges || {} : {};
+                const physicalAnchor = Object.hasOwn(markerChanges, 'physicalAnchor') ? normalizePhysicalAnchor(markerChanges.physicalAnchor) : originalMarker.physicalAnchor || null;
+                if (physicalAnchor && !['plant', 'area_checkpoint'].includes(originalMarker.type) && originalMarker.semantic_type !== 'area_checkpoint') throw new Error('Only Plants and Totems can have printed tags');
+                const assignment = findPhysicalAnchorAssignment(projectId, physicalAnchor, path.join(sourceDir, 'marker.json'));
+                if (assignment) return sendJson(res, 409, { error: `${physicalAnchor.markerLabel} is already assigned to ${assignment.marker.name}. Choose another tag.` });
+                const name = String(markerChanges.name ?? originalMarker.name).trim();
+                if (!name) throw new Error('Record name is required');
+                const now = new Date().toISOString();
+                const marker = { ...originalMarker, ...markerChanges, id: markerId, name, physicalAnchor,
+                    visibility: normalizeVisibility(markerChanges.visibility, originalMarker.visibility || 'draft'), modified: now };
+                if (targetAreaId !== placeId) marker.field_work = { ...marker.field_work, placementNeedsRecheck: true };
+                const profile = originalProfile ? { ...originalProfile, ...profileChanges, revision: Number(originalProfile.revision || 0) + 1, modified: now } : null;
+                if (targetAreaId !== placeId) {
+                    if (fs.existsSync(destinationDir)) return sendJson(res, 409, { error: 'A record with this ID already exists in the destination Area.' });
+                    fs.mkdirSync(path.dirname(destinationDir), { recursive: true });
+                    fs.renameSync(sourceDir, destinationDir); moved = true;
+                }
+                wrote = true;
+                writeJson(path.join(destinationDir, 'marker.json'), marker);
+                if (profile) writeJson(path.join(destinationDir, 'plant_profile.json'), profile);
+                sendJson(res, 200, { marker, profile, placeId: targetAreaId });
+            } catch (error) {
+                try {
+                    if (wrote && originalMarker) {
+                        writeJson(path.join(destinationDir, 'marker.json'), originalMarker);
+                        if (originalProfile) writeJson(path.join(destinationDir, 'plant_profile.json'), originalProfile);
+                    }
+                    if (moved) fs.renameSync(destinationDir, sourceDir);
+                } catch (restoreError) { console.error('Workspace record restore failed:', restoreError.message); }
+                sendJson(res, 400, { error: error.message });
+            }
+        });
+        return true;
+    }
+
     const markersMatch = pathname.match(/^\/api\/projects\/([^/]+)\/sites\/([^/]+)\/places\/([^/]+)\/markers$/);
     if (markersMatch && req.method === 'GET') {
         const [ , projectId, siteId, placeId ] = markersMatch;
@@ -1490,7 +1551,7 @@ function handleApi(req, res) {
             return sendJson(res, 404, { error: 'Place not found' });
         }
         const markers = fs.readdirSync(markersDir, { withFileTypes: true }).filter(entry => entry.isDirectory()).map(entry => readJson(path.join(markersDir, entry.name, 'marker.json'), { id: entry.name })).filter(marker => !visitor || isPublic(marker));
-        sendJson(res, 200, markers);
+        sendJson(res, 200, visitor ? markers.map(({ field_work, ...marker }) => marker) : markers);
         return true;
     }
     if (markersMatch && req.method === 'POST') {

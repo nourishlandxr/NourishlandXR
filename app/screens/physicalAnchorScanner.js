@@ -1,4 +1,3 @@
-import { isArModeActive } from './arMode.js';
 import { loadPlaceMarkers, loadProjectSites, loadSitePlaces } from '../services/persistence.js';
 import {
     PHYSICAL_ANCHOR_FAMILY,
@@ -109,7 +108,7 @@ export async function startVisitorMarkerScanner(onMarker) {
             last = time;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const detection = detector.detect(context.getImageData(0, 0, canvas.width, canvas.height))
-                .find(item => Number.isInteger(item.id) && item.id >= 1 && item.id <= 9);
+                .find(item => Number.isInteger(item.id) && item.id >= 1 && item.id <= 10);
             if (!detection) { previousId = 0; repeatCount = 0; return; }
             repeatCount = detection.id === previousId ? repeatCount + 1 : 1;
             previousId = detection.id;
@@ -129,14 +128,15 @@ export async function startVisitorMarkerScanner(onMarker) {
 
 async function loadProjectAssignments(projectId) {
     const sites = await loadProjectSites(projectId);
-    const site = sites.find(item => item.id === 'main_food_forest') || sites[0];
-    if (!site) return [];
-    const places = await loadSitePlaces(projectId, site.id);
-    const groups = await Promise.all(places.map(async place => ({
-        place,
-        markers: await loadPlaceMarkers(projectId, site.id, place.id).catch(() => [])
-    })));
-    return groups.flatMap(group => group.markers.map(marker => ({ marker, place: group.place, site })));
+    const assignments = [];
+    for (const site of sites) {
+        const places = await loadSitePlaces(projectId, site.id);
+        for (const place of places) {
+            const markers = await loadPlaceMarkers(projectId, site.id, place.id);
+            assignments.push(...markers.map(marker => ({marker,place,site})));
+        }
+    }
+    return assignments;
 }
 
 function scannerMarkup() {
@@ -148,8 +148,9 @@ function scannerMarkup() {
             <span class="physical-anchor-totem-pillar"></span>
             <strong data-physical-anchor-totem-name></strong>
         </div>
-        <header><p>SCAN ARUCO · NL-001–NL-009</p><strong data-physical-anchor-status>Opening camera…</strong><p>Point the camera at the full black square of a printed tag.</p></header>
+        <header><p>SCAN ARUCO · NL-001–NL-010</p><strong data-physical-anchor-status>Opening camera…</strong><p>Point the camera at the full black square of a printed tag.</p></header>
         <footer>
+            <button type="button" data-use-physical-anchor hidden>Use this linked record</button>
             <details><summary>Advanced</summary><button type="button" data-copy-physical-anchor-diagnostics>Copy diagnostics</button></details>
             <button type="button" data-stop-physical-anchor>Exit scanner</button>
         </footer>
@@ -260,6 +261,8 @@ function detectionFrame(scanner, now) {
         return matching.length === 1 ? resolvePhysicalAnchorEntry(matching, markerId) : null;
     };
     const decision = scanner.tracking.update(detections, now, resolve);
+    scanner.useButton.hidden = !scanner.onUse || decision.state !== 'tracked';
+    scanner.association = decision.state === 'tracked' ? decision.association : null;
     if (decision.state === 'tracked') {
         const association = decision.association;
         if (!association?.marker?.name) {
@@ -297,7 +300,7 @@ function detectionFrame(scanner, now) {
         if (duplicates.length > 1) { updateStatus(scanner, `${detectedMarkerLabel(detections[0].id)} has multiple assignments. Review the linked records.`, 'ambiguous'); return; }
         updateStatus(scanner, `${detectedMarkerLabel(detections[0].id)} detected — assign this tag in a Plant or Totem editor`, 'unassigned');
     } else {
-        updateStatus(scanner, 'Point the camera at NL-001–NL-009', 'searching');
+        updateStatus(scanner, 'Point the camera at NL-001–NL-010', 'searching');
     }
 }
 
@@ -323,9 +326,9 @@ export async function stopPhysicalAnchorScanner() {
     debugLog('camera-stopped');
 }
 
-export async function startPhysicalAnchorScanner(projectId, previewAssociation = null) {
+export async function startPhysicalAnchorScanner(projectId, previewAssociation = null, options = {}) {
     if (activeScanner) return false;
-    if (isArModeActive()) throw new Error('Exit the current AR session before scanning a Physical Marker.');
+    if (window.isArModeActive?.()) throw new Error('Exit the current AR session before scanning a Physical Marker.');
     if (!navigator.mediaDevices?.getUserMedia) throw new Error('Unsupported browser: camera access is unavailable.');
 
     const root = document.createElement('div');
@@ -358,6 +361,14 @@ export async function startPhysicalAnchorScanner(projectId, previewAssociation =
         previousFocus: document.activeElement,
         stopped: false
     };
+    scanner.useButton = scannerRoot.querySelector('[data-use-physical-anchor]');
+    scanner.onUse = options.onUse;
+    scanner.useButton.addEventListener('click', async () => {
+        const association = scanner.association;
+        if (!association || scanner.state !== 'tracked') return;
+        await stopPhysicalAnchorScanner();
+        scanner.onUse?.(association);
+    });
     activeScanner = scanner;
     scanner.onKeyDown = event => { if (event.key === 'Escape') void stopPhysicalAnchorScanner(); };
     document.addEventListener('keydown', scanner.onKeyDown);
@@ -386,7 +397,7 @@ export async function startPhysicalAnchorScanner(projectId, previewAssociation =
         canvas.width = Math.min(640, Math.max(320, video.videoWidth || 640));
         canvas.height = Math.round(canvas.width * (video.videoHeight || 480) / (video.videoWidth || 640));
         debugLog('camera-ready');
-        const [assignments] = await Promise.all([loadProjectAssignments(projectId), loadDetector()]);
+        const [assignments] = await Promise.all([options.assignments || loadProjectAssignments(projectId), loadDetector()]);
         if (activeScanner !== scanner) return false;
         scanner.assignments = previewAssociation
             ? [previewAssociation, ...assignments.filter(entry => entry.marker.id !== previewAssociation.marker.id)]

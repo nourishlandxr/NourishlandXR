@@ -22,6 +22,8 @@ const protectedDirectoryNames = new Set(['workspace', 'xr-api', 'nourishland-dat
 const frontendEntries = [
     'index.html',
     'main.js',
+    'entry.js',
+    'creator-studio.css',
     'style.css',
     'pim.css',
     'product-v2.css',
@@ -74,7 +76,7 @@ const indexPath = path.join(webDist, 'index.html');
 const versionQuery = encodeURIComponent(buildVersion);
 const versionedIndex = fs.readFileSync(indexPath, 'utf8')
     .replace(/href="(style|pim|product-v2|living-objects|creator-workspace|note-widgets)\.css(?:\?v=[^"]*)?"/g, (_match,name) => `href="${name}.css?v=${versionQuery}"`)
-    .replace(/src="main\.js(?:\?v=[^"]*)?"/, `src="main.js?v=${versionQuery}"`);
+    .replace(/src="(?:main|entry)\.js(?:\?v=[^"]*)?"/, `src="entry.js?v=${versionQuery}"`);
 fs.writeFileSync(indexPath, versionedIndex);
 fs.writeFileSync(path.join(webDist, 'services', 'buildInfo.js'), `export const BUILD_INFO = Object.freeze(${JSON.stringify({
     version: buildVersion,
