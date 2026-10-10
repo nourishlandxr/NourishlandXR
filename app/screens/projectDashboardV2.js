@@ -70,18 +70,42 @@ function creatorActionsMarkup(model) {
     return `<section class="creator-primary-actions" aria-label="Creator actions"><button type="button" data-creator-scan title="Open camera to scan NL-001–NL-009" aria-label="Scan ArUco tag">${dashboardIcon('ar')}<span>Scan</span></button><button type="button" onclick="window.renderLocationFieldMarker('${projectId}', 'plant', 'without-ar', true)">${dashboardIcon('plant')}<span>Add Plant</span></button><button type="button" onclick="window.renderProjectAreaForm('${projectId}', 'dashboard')">${dashboardIcon('area')}<span>Add Area</span></button></section>`;
 }
 
-function tagAssignmentsMarkup(model) {
+function tagAssignmentsMarkup(model, expanded = false) {
     const projectId = encoded(model.project.id);
-    return `<details class="creator-tag-register"><summary>Your printed tags · NL-001–NL-009</summary><p>Assign a tag in a Plant or Totem editor, set its printed black-square size, then scan it. A saved link is not a placement verification.</p><div class="creator-tag-grid">${PHYSICAL_ANCHOR_IDS.filter(id => id <= 9).map(id => {
+    return `<details class="creator-tag-register"${expanded ? ' open' : ''}><summary>Your printed tags · NL-001–NL-009</summary><p>Assign a tag in a Plant or Totem editor, set its printed black-square size, then scan it. A saved link is not a placement verification.</p><div class="creator-tag-grid">${PHYSICAL_ANCHOR_IDS.filter(id => id <= 9).map(id => {
         const entries = model.entries.filter(entry => entry.marker.physicalAnchor?.enabled && Number(entry.marker.physicalAnchor.markerId) === id);
         return `<article><strong>${physicalMarkerLabel(id)}</strong><span>${entries.length > 1 ? 'Multiple assignments — review' : entries.length ? escapeHtml(entries[0].marker.name) : 'Available'}</span>${entries.map(entry => `<button type="button" onclick="window.openProjectEntry('${projectId}','${encoded(entry.marker.id)}')">Open linked record</button>`).join('')}</article>`;
     }).join('')}</div></details>`;
 }
 
+function mobileLauncherMarkup(model) {
+    const projectId = encoded(model.project.id);
+    const tiles = [
+        ['Scan', 'scan', 'blue', 'data-mobile-scan aria-label="Scan ArUco tag"'],
+        ['Add Plant', 'plant', 'green', `onclick="window.renderLocationFieldMarker('${projectId}', 'plant', 'without-ar', true)"`],
+        ['Areas', 'area', 'amber', 'data-mobile-open-mode="areas"'],
+        ['Map', 'pin', 'cyan', 'data-mobile-open-mode="map"'],
+        ['Knowledge', 'webhub', 'purple', 'data-mobile-open-mode="content"'],
+        ['Printed tags', 'grid', 'orange', 'data-mobile-open-mode="tags"'],
+        ['Explorer', 'explore', 'teal', `onclick="window.openCreatorVisitorPreview('${projectId}')" aria-label="Preview in Explorer"`],
+        ['AR mode', 'ar', 'indigo', 'data-mobile-ar'],
+        ['Settings', 'settings', 'slate', `onclick="window.renderProjectSettings('${projectId}')" aria-label="Project settings"`]
+    ];
+    return `<section class="creator-mobile-home" aria-label="Project home"><div class="creator-mobile-heading"><h2>Your workspace</h2><p>What would you like to do?</p></div><nav class="creator-mobile-apps" aria-label="Project actions">${tiles.map(([label, icon, colour, action])=>`<button class="creator-mobile-app is-${colour}" type="button" ${action}><span class="creator-mobile-app-icon" aria-hidden="true">${dashboardIcon(icon)}</span><span class="creator-mobile-app-label">${label}</span></button>`).join('')}</nav><div class="creator-mobile-counts" aria-label="Project summary"><span><strong>${model.totalPlants}</strong>Plants</span><span><strong>${model.areas.length}</strong>Areas</span><span><strong>${model.tagLinkedPlants}</strong>Tag linked</span></div></section>`;
+}
+
+function mobileNavigationMarkup() {
+    return `<nav class="creator-mobile-dock" aria-label="Project navigation">${[['overview','home','Home'],['map','area','Map'],['content','webhub','Knowledge'],['tools','grid','Tools']].map(([mode,icon,label])=>`<button type="button" data-v2-mode="${mode}"${mode==='overview'?' class="is-active" aria-current="page"':''}><span aria-hidden="true">${dashboardIcon(icon)}</span><span>${label}</span></button>`).join('')}</nav>`;
+}
+
+function mobileSectionBackMarkup() {
+    return `<button class="creator-mobile-back" type="button" data-mobile-open-mode="overview"><span aria-hidden="true">←</span> Project home</button>`;
+}
+
 function overviewMarkup(model) {
-    return `${projectStatusMarkup(model)}
+    return `${mobileLauncherMarkup(model)}<div class="creator-desktop-overview">${projectStatusMarkup(model)}
         ${areaSummaryMarkup(model)}${tagAssignmentsMarkup(model)}
-        <div class="nlxr-db-v2-lower-grid">${activityMarkup(model)}${toolsMarkup(model)}</div>`;
+        <div class="nlxr-db-v2-lower-grid">${activityMarkup(model)}${toolsMarkup(model)}</div></div>`;
 }
 
 function mapControlsMarkup(model) {
@@ -108,6 +132,9 @@ function mapWorkspaceMarkup(model) {
 
 function previewModeMarkup(model, mode) {
     if (mode === 'map') return mapWorkspaceMarkup(model);
+    if (mode === 'areas') return `${mobileSectionBackMarkup()}${areaSummaryMarkup(model)}`;
+    if (mode === 'tags') return `${mobileSectionBackMarkup()}${tagAssignmentsMarkup(model, true)}`;
+    if (mode === 'tools') return `${toolsMarkup(model)}${isDesktopLearningBookTarget()?`<p class="workspace-ar-notice">${DESKTOP_AR_EXPLANATION}</p>`:'<button class="creator-mobile-ar" type="button" data-mobile-ar><span aria-hidden="true">'+dashboardIcon('ar')+'</span><span><strong>Open AR mode</strong><small>Place plants, notes and markers</small></span><span aria-hidden="true">→</span></button>'}${activityMarkup(model)}`;
     return overviewMarkup(model);
 }
 
@@ -135,7 +162,7 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
         const offlineStatus = typeof navigator !== 'undefined' && navigator.onLine === false
             ? '<p class="nlxr-db-v2-sync is-offline"><i aria-hidden="true"></i> Offline</p>'
             : '';
-        app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2" data-project-id="${projectKey}">
+        app.innerHTML = `<div class="screen app-surface app-surface-dashboard nlxr-db-v2" data-project-id="${projectKey}" data-dashboard-mode="overview">
             <header class="nlxr-db-v2-header workspace-art-header"><div class="nlxr-db-v2-header-copy"><p class="nlxr-db-v2-eyebrow">PROJECT</p><div class="nlxr-db-v2-project-title"><h1>${projectLabel}</h1></div><p class="workspace-header-summary">A workspace for your living landscape.</p>${offlineStatus}</div></header>
             <nav class="nlxr-db-v2-mode-nav" aria-label="Dashboard views"><button type="button" class="is-active" data-v2-mode="overview" aria-current="page"><span aria-hidden="true">${dashboardIcon('plant')}</span> Overview</button><button type="button" data-v2-mode="map"><span aria-hidden="true">${dashboardIcon('area')}</span> Map</button><button type="button" data-v2-mode="content"><span aria-hidden="true">${dashboardIcon('webhub')}</span> Knowledge</button><button type="button" onclick="window.openCreatorVisitorPreview('${projectKey}')"><span aria-hidden="true">${dashboardIcon('ar')}</span> Preview in Explorer</button></nav>
             ${isDesktopLearningBookTarget()?`<p class="workspace-ar-notice">${DESKTOP_AR_EXPLANATION}</p>`:`<div class="nlxr-db-v2-ar-strip" aria-label="AR access"><button type="button" class="nlxr-db-v2-ar-button" data-v2-open-ar><span class="nlxr-db-v2-ar-icon" aria-hidden="true">${dashboardIcon('ar')}</span><span class="nlxr-db-v2-ar-copy"><strong>Open AR mode</strong><small>Create and position plants, notes and area markers.</small></span><span class="nlxr-db-v2-ar-meta"><b>AR</b><i aria-hidden="true">→</i></span></button></div>`}
@@ -145,12 +172,14 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
             <p id="nlxrDbV2Notice" class="nlxr-db-v2-notice" role="status" hidden></p>
             <div class="nlxr-living-map-sheet" id="nlxrLivingMapSheet" hidden></div>
             <footer class="nlxr-db-v2-close-project"><button type="button" data-v2-close-project>Close Project</button></footer>
+            ${mobileNavigationMarkup()}
         </div>`;
 
-        app.querySelector('[data-creator-scan]').addEventListener('click', async () => {
+        const scanProject = async () => {
             try { await startPhysicalAnchorScanner(model.project.id); }
             catch (error) { const status = app.querySelector('#nlxrDbV2Notice'); status.hidden = false; status.textContent = error.message; }
-        });
+        };
+        app.querySelector('[data-creator-scan]').addEventListener('click', scanProject);
         const panel = app.querySelector('.nlxr-db-v2-mode-panel');
         const notice = message => {
             const target = app.querySelector('#nlxrDbV2Notice');
@@ -162,12 +191,13 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
         let modeGeneration = 0;
         const modeKey = `nlxr.dashboard-mode.${model.project.id}`;
         const showMode = async mode => {
+            if (!['overview','map','content','areas','tags','tools'].includes(mode)) return;
             const request = ++modeGeneration;
             try { sessionStorage.setItem(modeKey, mode); } catch {}
-            const button = app.querySelector(`[data-v2-mode="${mode}"]`);
-            if (!button) return;
+            const navigationMode = ['areas','tags'].includes(mode) ? 'overview' : mode;
+            app.querySelector('[data-dashboard-mode]').dataset.dashboardMode = mode;
             app.querySelectorAll('[data-v2-mode]').forEach(candidate => {
-                const active = candidate === button;
+                const active = candidate.dataset.v2Mode === navigationMode;
                 candidate.classList.toggle('is-active', active);
                 if (active) candidate.setAttribute('aria-current', 'page');
                 else candidate.removeAttribute('aria-current');
@@ -181,8 +211,12 @@ export async function renderProjectDashboardV2(app, encodedProjectId) {
                 panel.innerHTML = previewModeMarkup(model, mode);
                 bindPanel();
             }
+            if(request===modeGeneration && window.matchMedia('(max-width: 640px)').matches)app.querySelector('[data-dashboard-mode]').scrollIntoView({block:'start',behavior:'instant'});
         };
         const bindPanel = () => {
+            panel.querySelector('[data-mobile-scan]')?.addEventListener('click', scanProject);
+            panel.querySelector('[data-mobile-ar]')?.addEventListener('click', () => window.openProjectArMode(projectKey));
+            panel.querySelectorAll('[data-mobile-open-mode]').forEach(button => button.addEventListener('click', () => void showMode(button.dataset.mobileOpenMode)));
             panel.querySelector('[data-v2-publish]')?.addEventListener('click', () => window.renderProjectSettings(projectKey));
             const mapImage = panel.querySelector('.nlxr-db-v2-map-image');
             const fitImage = () => { if (mapImage?.naturalWidth) { const canvas = mapImage.closest('[data-site-map-canvas]'); canvas.style.aspectRatio = `${mapImage.naturalWidth} / ${mapImage.naturalHeight}`; canvas.style.minHeight = '0'; } };

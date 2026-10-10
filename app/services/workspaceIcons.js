@@ -6,6 +6,8 @@ const DASHBOARD_ICON_PATHS = Object.freeze({
     grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
     clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
     ar: '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5M7 9l5-3 5 3v6l-5 3-5-3zM7 9l5 3 5-3M12 12v6"/>',
+    scan: '<path d="M8 3H3v5M16 3h5v5M3 16v5h5M21 16v5h-5"/><rect x="7" y="7" width="4" height="4" rx=".5"/><path d="M15 7h2v4h-2M7 15v2h4v-2M15 14v3h2v-3M14 11h3"/>',
+    explore: '<circle cx="12" cy="12" r="9"/><path d="m16.5 7.5-3 6-6 3 3-6 6-3Z"/>',
     arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
     upload: '<path d="M12 16V3m-5 5 5-5 5 5M3 16v5h18v-5"/>',
     close: '<path d="m6 6 12 12M6 18 18 6"/>',
