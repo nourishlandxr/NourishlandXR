@@ -41,12 +41,12 @@ const animatedMap=`
 #endif
 `;
 
-export function createAnimatedPropertyPeekWorld(texture,{reducedMotion=false}={}){
- const study=createPropertyPeekWorld(texture),material=study.world.children[0].material;
- const uniforms={nlMoment:{value:0},nlMotion:{value:.65}};
- let moment=0,strength=.65,playing=!reducedMotion;
+export function createAnimatedPropertyPeekWorld(texture,{reducedMotion=false,flat=false}={}){
+ const study=createPropertyPeekWorld(texture,{flat}),material=study.world.children[0].material;
+ const uniforms={nlMoment:{value:0},nlMotion:{value:flat?0:.65}};
+ let moment=0,strength=flat?0:.65,playing=!flat&&!reducedMotion;
  material.name='Living painting: masked wind, cloud drift, pond shimmer';
- material.onBeforeCompile=shader=>{
+ if(!flat)material.onBeforeCompile=shader=>{
   Object.assign(shader.uniforms,uniforms);
   shader.fragmentShader=fragmentDeclarations+shader.fragmentShader.replace('#include <map_fragment>',animatedMap);
  };
@@ -55,8 +55,8 @@ export function createAnimatedPropertyPeekWorld(texture,{reducedMotion=false}={}
  // The paused frame retains its appearance; amount=0 exactly restores the art.
  Object.assign(study,{
   advanceAnimation(delta){if(playing&&study.enabled&&!study.disposed&&Number.isFinite(delta)&&delta>0){moment=(moment+Math.min(delta,.1))%MOTION_LOOP_SECONDS;sync();}},
-  setPlaying(value){playing=Boolean(value);},
-  setMotionStrength(value){if(Number.isFinite(value)){strength=Math.max(0,Math.min(1,value));sync();}},
+  setPlaying(value){playing=!flat&&Boolean(value);},
+  setMotionStrength(value){if(Number.isFinite(value)){strength=flat?0:Math.max(0,Math.min(1,value));sync();}},
   setMoment(seconds){if(Number.isFinite(seconds)){moment=((seconds%MOTION_LOOP_SECONDS)+MOTION_LOOP_SECONDS)%MOTION_LOOP_SECONDS;sync();}},
   animationUniforms:uniforms
  });

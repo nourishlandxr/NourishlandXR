@@ -1,13 +1,13 @@
 // Shared aperture mechanics for the isolated app test and artwork preview.
 import * as THREE from '../vendor/three.module.min.js';
 export const OPENING_RADIUS=.832;
-export function createOpening({world,plane,ownedGeometry,ownedMaterials,extras={},release=()=>{}}){
+export function createOpening({world,plane,ownedGeometry,ownedMaterials,extras={},release=()=>{},radius=OPENING_RADIUS}){
  const root=new THREE.Group();root.name='Independent peek experiment';root.add(world);
- const maskGeometry=new THREE.CircleGeometry(OPENING_RADIUS,96);ownedGeometry.add(maskGeometry);
+ const maskGeometry=new THREE.CircleGeometry(radius,128);ownedGeometry.add(maskGeometry);
  const maskMaterial=new THREE.MeshBasicMaterial({side:THREE.DoubleSide,colorWrite:false,depthWrite:false,depthTest:false,
   stencilWrite:true,stencilRef:1,stencilFunc:THREE.AlwaysStencilFunc,stencilZPass:THREE.ReplaceStencilOp});
  ownedMaterials.add(maskMaterial);const aperture=new THREE.Mesh(maskGeometry,maskMaterial);aperture.renderOrder=0;root.add(aperture);
- const rimGeometry=new THREE.TorusGeometry(OPENING_RADIUS+.024,.024,8,96);ownedGeometry.add(rimGeometry);
+ const rimGeometry=new THREE.TorusGeometry(radius+.024,.024,8,96);ownedGeometry.add(rimGeometry);
  const rimMaterial=new THREE.MeshLambertMaterial({color:0xa6b3a5});ownedMaterials.add(rimMaterial);
  const rim=new THREE.Mesh(rimGeometry,rimMaterial);rim.name='Temporary test rim only';rim.renderOrder=2;root.add(rim);
  const closedMaterial=new THREE.MeshBasicMaterial({color:0x1c2929,side:THREE.DoubleSide});ownedMaterials.add(closedMaterial);

@@ -1,6 +1,7 @@
 // A hand-authored depth painting from one property reference, not photogrammetry.
 import * as THREE from '../vendor/three.module.min.js';
 import {createOpening} from './peekOpening.js';
+export const STILL_PICTURE_RADIUS=.89;
 
 const smooth=(a,b,x)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
 export function propertyDepth(u,v){
@@ -14,15 +15,15 @@ export function propertyDepth(u,v){
  const foreground=smooth(.82,1,row);depth=depth*(1-foreground)+3.0*foreground;
  return depth;
 }
-export function createPropertyPeekWorld(texture){
+export function createPropertyPeekWorld(texture,{flat=false}={}){
  const world=new THREE.Group();world.name='Painted property depth study';
  const aspect=(texture.image?.width||1672)/(texture.image?.height||941);
- const width=96,height=54,positions=[],uv=[],indices=[],span=.94,viewDistance=1.8;
+ const width=flat?1:96,height=flat?1:54,positions=[],uv=[],indices=[],span=flat ? STILL_PICTURE_RADIUS+.01 : .94,viewDistance=1.8;
  for(let row=0;row<=height;row++)for(let column=0;column<=width;column++){
-  const u=column/width,v=row/height,depth=propertyDepth(u,v),perspective=(viewDistance+depth)/viewDistance;
+  const u=column/width,v=row/height,depth=flat ? .004 : propertyDepth(u,v),perspective=flat?1:(viewDistance+depth)/viewDistance;
   // Project the unchanged painting from the initial viewpoint onto a curved
   // depth surface. The centre view retains its composition; leaning adds relief.
-  positions.push((u-.46)*2*span*aspect*perspective,(v-.5)*2*span*perspective,-depth);uv.push(u,v);
+  positions.push((u-(flat ? .5 : .46))*2*span*aspect*perspective,(v-.5)*2*span*perspective,-depth);uv.push(u,v);
  }
  for(let row=0;row<height;row++)for(let column=0;column<width;column++){
   const a=row*(width+1)+column,b=a+1,c=a+width+1,d=c+1;indices.push(a,b,d,a,d,c);
@@ -35,5 +36,5 @@ export function createPropertyPeekWorld(texture){
   stencilFunc:THREE.EqualStencilFunc,stencilWriteMask:0,stencilZPass:THREE.KeepStencilOp,clippingPlanes:[plane]});
  const painting=new THREE.Mesh(geometry,material);painting.renderOrder=1;painting.name='Property painting on depth relief';world.add(painting);
  return createOpening({world,plane,ownedGeometry:new Set([geometry]),ownedMaterials:new Set([material]),release:()=>texture.dispose(),
-  extras:{study:'artistic depth approximation',paintingTriangles:width*height*2}});
+  radius:flat?STILL_PICTURE_RADIUS:undefined,extras:{study:flat?'still photograph':'artistic depth approximation',paintingTriangles:width*height*2}});
 }

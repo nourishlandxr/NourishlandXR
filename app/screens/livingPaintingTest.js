@@ -1,7 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {BUILD_INFO} from '../services/buildInfo.js';
 import {createAnimatedPropertyPeekWorld} from '../services/animatedPropertyPainting.js';
-import {OPENING_RADIUS} from '../services/peekOpening.js';
+import {STILL_PICTURE_RADIUS} from '../services/propertyPainting.js';
 import {prepareLivingFrameModel} from '../services/livingFrameModel.js';
 
 // Explicit experiment: separate renderer/session; never changes the demo timeline.
@@ -28,24 +28,24 @@ export async function renderLivingPaintingTest(app,{onBack}={}){
  @media(max-width:800px){[data-living-painting-test] .painting-layout{grid-template-columns:1fr}[data-living-painting-test] .painting-view{height:60vh;min-height:380px}}
  </style>
  <button data-back>← Return to welcome</button> <small>App experiment · V${BUILD_INFO.version}</small>
- <h1>A familiar place. Quietly alive.</h1>
+ <h1>A familiar place. Picture review.</h1>
  <div class="painting-layout"><div class="painting-view" data-view><div class="painting-overlay" data-overlay>
  <span data-frame-status>Loading the Living Frame…</span><br><button data-recenter disabled>Recenter in XR</button> <button data-leave disabled>Leave XR</button>
  </div></div><aside>
- <p>Your property painting inside the Living Frame. Lean or look closer to explore its gentle depth.</p>
+ <p>A still property picture filling the Living Frame. Look closer to review its detail before adding depth.</p>
  <div class="painting-desktop-controls"><button data-centre>Whole frame</button> <button data-near>Look closer</button>
  <label>Lean sideways<input data-lean aria-label="Lean sideways" type="range" min="-.6" max=".6" step=".01" value="0"></label>
  <label>Move closer<input data-approach aria-label="Move closer" type="range" min="0" max="2.8" step=".01" value="0"></label>
  <label>Frame quality <select data-quality aria-label="Frame quality"><option value="sd">SD</option><option value="hd">HD</option><option value="off">Test rim only</option></select></label>
  <label>Frame growth<input data-growth aria-label="Frame growth" type="range" min="0" max="60" step=".1" value="60"></label><button data-grow>Replay frame growth</button>
  <label><input data-stereo type="checkbox"> Simulated stereo (64 mm)</label></div>
- <button data-motion disabled>Pause painting</button>
- <label>Painting motion<input data-strength aria-label="Painting motion" type="range" min="0" max="1" step=".05" value=".65"></label>
+ <button data-motion disabled>Still picture</button>
+ <label>Picture motion paused for review<input data-strength aria-label="Painting motion" type="range" min="0" max="1" step=".05" value="0" disabled></label>
  <label><input data-peek type="checkbox" checked> Show painting</label>
  <button data-ar disabled>Test mixed reality</button> <button data-vr disabled>Test VR</button>
  <output data-xr-status>Checking WebXR availability…</output>
  <details class="painting-desktop-controls"><summary>Desktop verification</summary><button data-check disabled>Check rendering</button><output data-check-summary>Checks have not run.</output><pre data-report></pre></details>
- <pre data-metrics></pre><p>Painted depth relief, with approximate geometry. This is an app test; headset comfort and performance still need review.</p>
+ <pre data-metrics></pre><p>7680 × 4320 export, upscaled from a regenerated 1672 × 941 source. This picture review has no depth distortion or animated texture.</p>
  </aside></div></section>`;
  const root=app.querySelector('[data-living-painting-test]'),get=name=>root.querySelector(`[data-${name}]`),mount=get('view');
  let disposed=false,renderer=null,peek=null,entry=null,frameScene=null,mixer=null,frameMaterials=[],session=null,xrBusy=false,frameGeneration=0;
@@ -62,10 +62,10 @@ export async function renderLivingPaintingTest(app,{onBack}={}){
   mount.prepend(renderer.domElement);
   const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(55,1,.025,120),eyePair=new THREE.StereoCamera();eyePair.eyeSep=.064;
   scene.add(new THREE.HemisphereLight(0xdce9f4,0x303820,3),new THREE.AmbientLight(0xe4e9df,.9));const key=new THREE.DirectionalLight(0xffedcf,4.2);key.position.set(-2,3,4);scene.add(key);
-  const texture=await new THREE.TextureLoader().loadAsync(new URL('../assets/peek-world/property-painting-v2.png',import.meta.url).href);
+  const texture=await new THREE.TextureLoader().loadAsync(new URL('../assets/peek-world/property-photo-v3-8k.jpg',import.meta.url).href);
   if(disposed){texture.dispose();return;}
   texture.anisotropy=Math.min(4,renderer.capabilities.getMaxAnisotropy());
-  peek=createAnimatedPropertyPeekWorld(texture,{reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches});
+  peek=createAnimatedPropertyPeekWorld(texture,{reducedMotion:true,flat:true});
   peek.world.traverse(obj=>{if(obj.material)obj.material.toneMapped=false;});peek.root.position.set(0,1.6,-1.8);scene.add(peek.root);
   function pose(){camera.position.set(Number(get('lean').value),1.6,1.4-Number(get('approach').value));camera.rotation.set(0,0,0);camera.updateMatrixWorld(true);}
   function resize(){if(session||disposed)return;const w=Math.max(1,mount.clientWidth),h=Math.max(1,mount.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
@@ -73,7 +73,7 @@ export async function renderLivingPaintingTest(app,{onBack}={}){
   function syncMotion(){get('motion').textContent=peek.playing?'Pause painting':'Resume painting';}
   get('lean').oninput=get('approach').oninput=pose;
   get('centre').onclick=()=>{get('lean').value=get('approach').value=0;pose();};get('near').onclick=()=>{get('lean').value=0;get('approach').value=1.4;pose();};
-  get('motion').disabled=false;get('motion').onclick=()=>{peek.setPlaying(!peek.playing);syncMotion();};syncMotion();
+  get('motion').textContent='Still picture';
   get('strength').oninput=()=>peek.setMotionStrength(Number(get('strength').value));get('peek').onchange=()=>peek.setEnabled(get('peek').checked);
   get('stereo').onchange=()=>stereo=get('stereo').checked;get('growth').oninput=()=>{growing=false;mixer?.setTime(Number(get('growth').value));};
   get('grow').onclick=()=>{get('growth').value=0;mixer?.setTime(0);growing=true;};
@@ -119,7 +119,7 @@ export async function renderLivingPaintingTest(app,{onBack}={}){
     for(let y=Math.max(0,viewport.y);y<Math.min(h,viewport.y+viewport.h);y++)for(let x=Math.max(0,viewport.x);x<Math.min(w,viewport.x+viewport.w);x++){
      const i=(y*w+x)*4;if(Math.max(Math.abs(after[i]-before[i]),Math.abs(after[i+1]-before[i+1]),Math.abs(after[i+2]-before[i+2]))<8)continue;
      changed++;far.set((x+.5-viewport.x)/viewport.w*2-1,(y+.5-viewport.y)/viewport.h*2-1,.5).unproject(c).applyMatrix4(inverse).sub(origin);
-     const t=-origin.z/far.z,px=origin.x+far.x*t,py=origin.y+far.y*t;if(!(t>0&&px*px+py*py<(OPENING_RADIUS+.035)**2)){leaks++;if(leakSamples.length<3)leakSamples.push({x,y,radius:Math.hypot(px,py),before:[...before.slice(i,i+4)],after:[...after.slice(i,i+4)]});}
+     const t=-origin.z/far.z,px=origin.x+far.x*t,py=origin.y+far.y*t;if(!(t>0&&px*px+py*py<(STILL_PICTURE_RADIUS+.035)**2)){leaks++;if(leakSamples.length<3)leakSamples.push({x,y,radius:Math.hypot(px,py),before:[...before.slice(i,i+4)],after:[...after.slice(i,i+4)]});}
     }
     return {changedPixels:changed,outsideOpeningPixels:leaks,...(leaks?{viewport,leakSamples}:{}),passed:changed>300&&leaks===0};
    }
@@ -131,8 +131,8 @@ export async function renderLivingPaintingTest(app,{onBack}={}){
     renderer.setScissorTest(false);renderer.setViewport(0,0,size.x,size.y);camera.position.set(0,1.6,0);peek.setEnabled(true);
     const read=(t,s)=>{peek.setMoment(t);peek.setMotionStrength(s);draw();return readPixels();};const a=read(0,.65),b=read(36,.65),end=read(120,.65),stillA=read(0,0),stillB=read(36,0);const paused=read(36,.65);draw();
     const motion={changedPixels:difference(a,b),loopSeamPixels:difference(a,end),zeroStrengthPixels:difference(stillA,stillB),pausedChangePixels:difference(paused,readPixels())};
-    const report={version:BUILD_INFO.version,frame:root.dataset.frameReady,passed:results.every(r=>r.passed)&&motion.changedPixels>300&&motion.loopSeamPixels===0&&motion.zeroStrengthPixels===0&&motion.pausedChangePixels===0&&gl.getError()===gl.NO_ERROR,results,motion,headsetVerified:false};
-    root.dataset.checksPassed=String(report.passed);get('report').textContent=JSON.stringify(report,null,2);get('check-summary').textContent=report.passed?'6/6 aperture views + animation checks pass':'Rendering checks failed; inspect report';
+    const report={version:BUILD_INFO.version,frame:root.dataset.frameReady,imageMode:'still',imageDimensions:[texture.image.width,texture.image.height],passed:results.every(r=>r.passed)&&motion.changedPixels===0&&motion.loopSeamPixels===0&&motion.zeroStrengthPixels===0&&motion.pausedChangePixels===0&&gl.getError()===gl.NO_ERROR,results,motion,headsetVerified:false};
+    root.dataset.checksPassed=String(report.passed);get('report').textContent=JSON.stringify(report,null,2);get('check-summary').textContent=report.passed?'6/6 aperture views + still image checks pass':'Rendering checks failed; inspect report';
    }catch(error){get('check-summary').textContent='Checks failed: '+error.message;root.dataset.checksPassed='false';}
    finally{renderer.setScissorTest(false);renderer.setViewport(0,0,size.x,size.y);camera.position.copy(savedPosition);peek.setEnabled(enabled);peek.setMoment(moment);peek.setMotionStrength(strength);peek.setPlaying(playing);stereo=oldStereo;checking=false;get('check').disabled=false;previous=0;draw();}
   };
