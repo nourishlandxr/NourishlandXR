@@ -67,6 +67,7 @@ import { mountCreatorArKnowledge, creatorKnowledgeDocument } from '../services/c
 import { creatorArControlsMarkup, bindCreatorArControls } from '../services/creatorArControls.js';
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
+import { mountCreatorXrWorklist } from '../services/creatorXrWorklist.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, renderedTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
 import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../services/totemLinkCalibration.js';
@@ -76,6 +77,9 @@ let session = null;
 let creatorCellOpacity=getSpatialVisualSettings().cellOpacity;
 let creatorHandMode=getSpatialVisualSettings().handMode;
 const creatorPerformance=createXRPerformanceSettings({getSession:()=>session,publish:value=>infoPanel?.setXRPerformance(value)});
+export function getCreatorPerformanceSnapshot() {
+    return { ...creatorPerformance.snapshot(), spatialPanel: questSpatialDashboardMirror?.captureMetrics || null };
+}
 let consumedMarkerSource=null;
 function pulseCreatorHaptics(source=null){
     const inputs=source?[source]:Array.from(session?.inputSources || []);
@@ -1830,22 +1834,34 @@ async function openQuestSpatialWebPanel() {
     // that transform unchanged so the surface remains world locked.
     questSpatialDashboardPanel = spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);
     controllerMenuActive = true;
-    setPlacementStatus('Loading the full Project Dashboard into the spatial panel…');
+    setPlacementStatus('Opening Area elements…');
     updateControllerHud();
     try {
         const dashboardRoot = document.getElementById('app');
         if (!dashboardRoot || !gl || !questSpatialDashboardPanel) throw new Error('The dashboard surface is not ready.');
-        await renderProjectDashboard(dashboardRoot, encodeURIComponent(activeProjectId));
+        questSpatialWorklist?.destroy();
+        questSpatialWorklist = mountCreatorXrWorklist(dashboardRoot, {
+            projectName: activeProjectName || activeProjectId,
+            areaName: activeAreaName,
+            getRecords: activeAreaMarkers,
+            onClose: closeQuestSpatialWebPanel,
+            onInspect: record => { closeQuestSpatialWebPanel(); openMarkerContextToolbar(record, true); },
+            onPlace: async record => { closeQuestSpatialWebPanel(); await prepareExistingMarkerPlacement(record.marker.id); },
+            onKnowledge: record => { closeQuestSpatialWebPanel(); openCreatorKnowledge(record); }
+        });
         if (!questSpatialWebVisible || !gl) return;
         questSpatialDashboardMirror?.destroy();
         questSpatialDashboardMirror = createSpatialDashboardMirror({
             gl,
             root: dashboardRoot,
+            width: 720,
+            height: 620,
+            title: 'AREA ELEMENTS',
             onStatus: setPlacementStatus,
             onError: error => setPlacementStatus(`Spatial Dashboard refresh failed: ${error.message}`)
         });
         document.body.classList.add('creator-ar-spatial-web-ready');
-        setPlacementStatus('Project Dashboard ready. Aim and trigger to use it; move the thumbstick vertically to scroll. Press HUB again to close.');
+        setPlacementStatus('Area elements ready. Aim and trigger to inspect, place or read. Press HUB again to close.');
     } catch (error) {
         closeQuestSpatialWebPanel();
         setPlacementStatus(`Project Dashboard could not open: ${error.message}`);
@@ -2088,10 +2104,13 @@ function closeQuestSpecialPalette() {
     document.body.classList.remove('creator-ar-spatial-special-palette');
 }
 
+let questSpatialWorklist = null;
 function closeQuestSpatialWebPanel() {
     questSpatialWebVisible = false;
     questSpatialDashboardMirror?.destroy();
     questSpatialDashboardMirror = null;
+    questSpatialWorklist?.destroy();
+    questSpatialWorklist = null;
     questSpatialDashboardPanel = null;
     questSpatialDashboardHit = null;
     document.body.classList.remove('creator-ar-spatial-web-ready');
@@ -6074,7 +6093,10 @@ function navigateAfterAr(projectId, areaId, returnContext) {
     if (!projectId && !destination) return;
     queueMicrotask(() => {
         if (destination) { destination(); return; }
-        if (String(returnContext || '').startsWith('plant-editor-preview:')) {
+        if (String(returnContext || '').startsWith('creator-spatial:')) {
+            const siteId = String(returnContext).slice('creator-spatial:'.length);
+            import('../services/creatorWorkspaceRouting.js').then(module => module.renderCreatorWorkspace(document.getElementById('app'),projectId,{mode:'spatial',siteId}));
+        } else if (String(returnContext || '').startsWith('plant-editor-preview:')) {
             const markerId = String(returnContext).slice('plant-editor-preview:'.length);
             window.openProjectEntry?.(encodeURIComponent(projectId), encodeURIComponent(markerId), false, 'plant-editor-preview', { workspace: 'pim' });
         } else if (String(returnContext || '').startsWith('web-marker:')) {

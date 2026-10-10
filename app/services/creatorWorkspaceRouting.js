@@ -2,6 +2,7 @@ import { CREATOR_WORKSPACES, suggestedCreatorWorkspace, workspaceUrl } from './c
 import { ensureCreatorAuthentication } from './apiClient.js';
 import { loadFieldPackage } from './creatorWorkspaceStore.js';
 import { escapeWorkspaceHtml } from './creatorWorkspaceFrame.js';
+import { BUILD_INFO } from './buildInfo.js';
 let activeWorkspace = null;
 let generation = 0;
 export async function renderCreatorWorkspace(app, projectId, options = {}) {
@@ -13,7 +14,7 @@ export async function renderCreatorWorkspace(app, projectId, options = {}) {
     const mode = CREATOR_WORKSPACES[options.mode] ? options.mode : CREATOR_WORKSPACES[preferred] ? preferred : suggestedCreatorWorkspace();
     document.body.dataset.experienceRole = 'creator';
     document.body.dataset.creatorWorkspace = mode;
-    const stylesheet = new URL('../creator-studio.css', import.meta.url).href;
+    const stylesheet = new URL(`../creator-studio.css?v=${BUILD_INFO.version}`, import.meta.url).href;
     if (!document.querySelector('link[data-creator-studio]')) { const link = document.createElement('link'); link.rel = 'stylesheet'; link.href = stylesheet; link.dataset.creatorStudio = ''; document.head.append(link); }
     app.innerHTML = `<section class="screen creator-loading"><h1>${CREATOR_WORKSPACES[mode].label}</h1><p role="status">Opening project records…</p></section>`;
     try {
@@ -24,8 +25,6 @@ export async function renderCreatorWorkspace(app, projectId, options = {}) {
         const controller = await module.renderWorkspace(app, projectId, options);
         if (request !== generation) { controller.destroy(); return; }
         activeWorkspace = controller;
-        const url = workspaceUrl(projectId, { ...options, mode });
-        history.replaceState({ nourishlandView: 'creator-workspace', projectId, workspace: mode, ...options }, '', url);
         try { localStorage.setItem(preferenceKey, mode); sessionStorage.setItem('nourishland-xr-current-view-v1', JSON.stringify({ view: 'creator-workspace', args: [projectId, { ...options, mode }] })); } catch {}
         const observer = new MutationObserver(() => {
             if (!controller.root.isConnected) { controller.destroy(); observer.disconnect(); if (activeWorkspace === controller) activeWorkspace = null; }

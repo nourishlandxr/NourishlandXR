@@ -246,6 +246,10 @@ export function createSpatialDashboardMirror(options = {}) {
     let refreshTimer = 0;
     let refreshGeneration = 0;
     let refreshPromise = Promise.resolve();
+    let settleRefresh = null;
+    let lastCaptureAt = -Infinity;
+    const minimumCaptureInterval = Math.max(100, Number(options.captureIntervalMs) || 150);
+    const captureMetrics = { count: 0, lastMs: 0, maxMs: 0 };
 
     const maxScroll = () => Math.max(0, Math.max(root.scrollHeight, root.getBoundingClientRect().height) - height);
     const positionKeyboard = () => {
@@ -257,11 +261,12 @@ export function createSpatialDashboardMirror(options = {}) {
         if (destroyed) return;
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
     };
 
     const capture = async () => {
         if (destroyed) return;
+        const started = performance.now();
         const generation = ++refreshGeneration;
         await waitForSpatialDashboardLayout();
         if (destroyed || generation !== refreshGeneration) return;
@@ -303,6 +308,9 @@ export function createSpatialDashboardMirror(options = {}) {
         });
         if (destroyed || generation !== refreshGeneration) return;
         upload();
+        captureMetrics.count++;
+        captureMetrics.lastMs = performance.now() - started;
+        captureMetrics.maxMs = Math.max(captureMetrics.maxMs,captureMetrics.lastMs);
         options.onUpdate?.();
     };
 
@@ -310,23 +318,30 @@ export function createSpatialDashboardMirror(options = {}) {
     const refresh = () => {
         if (destroyed) return refreshPromise;
         if(capturing){captureAgain=true;return refreshPromise;}
-        clearTimeout(refreshTimer);
-        refreshPromise = new Promise(resolve => {
-            refreshTimer = window.setTimeout(() => {
+        if (refreshTimer) return refreshPromise;
+        if (!settleRefresh) refreshPromise = new Promise(resolve => { settleRefresh = resolve; });
+        refreshTimer = window.setTimeout(() => {
+                refreshTimer = 0;
                 capturing=true;
+                lastCaptureAt=performance.now();
                 capture().catch(error => {
                     if(destroyed)return;
                     paintStatus('DASHBOARD UNAVAILABLE', String(error?.message || 'Dashboard rendering failed.').slice(0, 78));
                     upload();
                     options.onUpdate?.();
                     options.onError?.(error);
-                }).finally(()=>{capturing=false;resolve();if(captureAgain && !destroyed){captureAgain=false;refresh();}});
-            }, 35);
-        });
+                }).finally(()=>{
+                    capturing=false;
+                    if(captureAgain && !destroyed){captureAgain=false;refresh();}
+                    else {settleRefresh?.();settleRefresh=null;}
+                });
+            }, Math.max(35,minimumCaptureInterval-(performance.now()-lastCaptureAt)));
         return refreshPromise;
     };
 
-    const observer = new MutationObserver(() => refresh());
+    const observer = new MutationObserver(records => {
+        if(records.some(record=>!(record.target===root&&record.type==='attributes'&&record.attributeName==='style') && !record.target.closest?.('[data-spatial-mirror-ignore]'))) refresh();
+    });
     observer.observe(root, { childList: true, subtree: true, characterData: true, attributes: true });
 
     const targetAt = (pixelX, pixelY) => {
@@ -419,6 +434,7 @@ export function createSpatialDashboardMirror(options = {}) {
         if (destroyed) return;
         destroyed = true;
         clearTimeout(refreshTimer);
+        settleRefresh?.(); settleRefresh=null;
         observer.disconnect();
         keyboard?.remove();
         delete root.dataset.spatialDashboardMirrorSource;
@@ -437,6 +453,7 @@ export function createSpatialDashboardMirror(options = {}) {
         scrollBy,
         refresh,
         destroy,
+        get captureMetrics() { return {...captureMetrics}; },
         get scrollTop() { return scrollTop; },
         get maxScroll() { return maxScroll(); }
     };

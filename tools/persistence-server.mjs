@@ -710,6 +710,10 @@ function renameProject(projectId, projectData) {
         throw new Error('Project not found');
     }
     migrateProject(projectId);
+    const currentProject = readJson(path.join(currentDir, 'project.json'), {});
+    if (Object.hasOwn(projectData, '_expectedModified') && String(projectData._expectedModified) !== String(currentProject.modified || '')) {
+        throw new Error('Project settings changed elsewhere. Reload before saving.');
+    }
     if (projectData.theme !== undefined && !PROJECT_THEMES.has(projectData.theme)) {
         throw new Error('Unsupported project theme');
     }
@@ -732,12 +736,14 @@ function renameProject(projectId, projectData) {
     const existing = readJson(path.join(nextDir, 'project.json'), {});
     const storedProjectData = { ...projectData };
     delete storedProjectData.preserveId;
+    delete storedProjectData._expectedModified;
     const renamed = {
         ...existing,
         ...storedProjectData,
         visibility: normalizeVisibility(projectData.visibility, existing.visibility || 'draft'),
         id: nextProjectId,
-        name
+        name,
+        modified: new Date().toISOString()
     };
     writeJson(path.join(nextDir, 'project.json'), renamed);
     return renamed;

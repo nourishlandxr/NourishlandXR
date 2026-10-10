@@ -24,6 +24,7 @@ const frontendEntries = [
     'main.js',
     'entry.js',
     'creator-studio.css',
+    'creator-field-worker.js',
     'style.css',
     'pim.css',
     'product-v2.css',

@@ -21,7 +21,7 @@ body[data-creator-workspace]{background:var(--studio-paper);color:var(--studio-i
 #app :is(.creator-studio,.creator-field,.creator-spatial) details{border-top:1px solid var(--studio-line);padding:12px 0;margin:8px 0}
 #app :is(.creator-studio,.creator-field,.creator-spatial) summary{cursor:pointer;font-weight:600;margin-bottom:12px}
 #app :is(.creator-studio,.creator-field,.creator-spatial) [hidden]{display:none!important}
-#app .workspace-shell-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;background:linear-gradient(110deg,#f5f6e9,#e5edda);border-bottom:1px solid var(--studio-line)}
+#app .workspace-shell-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 24px;background:linear-gradient(110deg,#f5f6e9f5,#e5eddacb),url('./assets/botanical-cell-mosaic.jpg') center 43%/cover;border-bottom:1px solid var(--studio-line)}
 #app .workspace-brand{font:600 24px Georgia,serif;color:#37533e}
 #app .workspace-brand small{display:block;font:12px/1.5 system-ui,sans-serif;color:var(--studio-muted);margin-top:2px}
 #app .workspace-mode-picker{display:flex;gap:4px;padding:4px;border:1px solid #d0d9c5;border-radius:12px;background:#ffffff70}

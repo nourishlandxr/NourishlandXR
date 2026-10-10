@@ -42,6 +42,7 @@ export function createXRPerformanceSettings({getSession,publish,configure=config
         finally{if(id===requestId){pending=false;notify();}}
     }
     return {
+        snapshot,
         publish:notify,
         recordCpuCost(phase,milliseconds){phaseCosts.set(phase,(phaseCosts.get(phase)||0)+milliseconds);},
         frameComplete(milliseconds){cpuTotal+=milliseconds;cpuFrames++;},

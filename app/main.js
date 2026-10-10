@@ -1,4 +1,3 @@
-import {prepareArAssets} from './services/arAssetPreparation.js';
 import { isArActive as isVisitorArActive } from './services/arNote.js';
 import { launchCreatorArFromPage } from './services/creatorArNavigation.js';
 import {isDesktopLearningBookTarget} from './services/desktopLearningBookTarget.js';
@@ -18,7 +17,8 @@ import { renderAssetWorkspace, renderAssetGeneral } from './screens/assetWorkspa
 import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors } from './components/v1Editors.js';
 import { exitAr, renderArFailure, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, startArWithSkipCheck, toggleArTechnicalDetails, toggleGlobalAr, updateExplorerGps } from './screens/explorer.js';
 import { openTemporaryArDemoWindow, startTemporaryArDemo } from './screens/temporaryArDemo.js';
-import { startArMode, exitArMode, isArModeActive } from './screens/arMode.js';
+import { startArMode, exitArMode, isArModeActive, getCreatorPerformanceSnapshot } from './screens/arMode.js';
+import { workspaceUrl, suggestedCreatorWorkspace } from './services/creatorWorkspaceMode.js';
 import { cancelGlobalPlantPreview, confirmGlobalPlantImport, continueManualPlantCreation, createFieldArea, refreshFieldLocation, renderFieldMarker, reviewGlobalPlantImport, saveFieldMarker, searchGlobalPlantOptions, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, selectGlobalImportExistingPlant, selectGlobalImportRecommended, selectGlobalPlant, setFieldMarkerType, setGlobalImportDestination, setPlantSearchScope } from './screens/fieldMarker.js';
 import { renderFieldTest } from './screens/fieldTest.js';
 import { renderDemoHome } from './screens/demo.js';
@@ -168,7 +168,7 @@ window.openLivingPaintingTest = async () => {
 
 async function bootstrap() {
     try {
-        await unregisterServiceWorkersForTesting();
+        if (new URLSearchParams(location.search).has('reset-workers')) await unregisterServiceWorkersForTesting();
         const params = new URLSearchParams(window.location.search);
         // Explicit development test only. Normal demo/visitor routes are unchanged.
         if (params.get('test') === 'living-painting') {
@@ -204,6 +204,10 @@ async function bootstrap() {
             setExperienceRole('creator');
             replaceViewHistory('dashboard', rememberedView.args, { projectId: rememberedView.args[0], projectName: rememberedView.args[1] || '' });
             await window.renderProjectDashboard(rememberedView.args[0], rememberedView.args[1] || '', true);
+            return;
+        }
+        if (rememberedView?.view === 'creator-workspace' && rememberedView.args?.[0]) {
+            location.href=workspaceUrl(rememberedView.args[0],rememberedView.args[1] || {});
             return;
         }
         if (rememberedView?.view === 'print-center' && rememberedView.args?.[0]) {
@@ -315,7 +319,14 @@ window.renderProjectDashboard = async (projectId, projectName = '', fromHistory 
         history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName, viewArgs: args }, '', window.location.href);
     }
     setExperienceRole('creator');
-    return renderCreatorWorkspace(app, decodeMainValue(projectId));
+    const decodedProjectId=decodeMainValue(projectId);
+    if (!new URLSearchParams(location.search).has('workspace')) {
+        let mode=suggestedCreatorWorkspace();
+        try {mode=localStorage.getItem(`nlxr.creator-workspace.${decodedProjectId}`) || mode;}catch{}
+        location.href=workspaceUrl(decodedProjectId,{mode});
+        return;
+    }
+    return renderCreatorWorkspace(app, decodedProjectId);
 };
 window.renderProjectGuide = (projectId = '', returnTo = 'creator') => {
     setExperienceRole('creator');
@@ -725,6 +736,7 @@ window.startExistingMarkerPlacement = async (projectId, siteId, areaId, markerId
 };
 window.exitArMode = () => exitArMode();
 window.isArModeActive = () => isArModeActive();
+window.getNourishlandCreatorPerformance = getCreatorPerformanceSnapshot;
 window.openTemporaryArDemoWindow = () => { setExperienceRole('visitor'); return openTemporaryArDemoWindow(app); };
 window.openHillyardsExplorer = () => renderHillyardsExplorer(app);
 window.openHostedProjectPrompt = () => { const url = window.prompt('Hosted project.json URL'); if (url) openHostedProject(app, url); };
