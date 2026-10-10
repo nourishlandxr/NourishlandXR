@@ -85,6 +85,6 @@ test('SPACE 1.4 is the only intro board opting into single paragraph sequencing'
     assert.match(source,/guidedDemoStep\('SPACE 1\.4'\)[\s\S]*?paragraphSequence:'single-centered'/);
     assert.match(source,/introBoardStep==='SPACE 1\.4'\?demoParagraphSequence\?\.snapshot/);
     assert.match(source,/if\(sequenceFadeActive\)introBoardTextureDirty=true/);
-    assert.match(source,/paragraphFadeActive \|\| sequenceFadeActive \|\| openingCopyRevealActive \? DEMO_TEXT_TEXTURE_INTERVAL_MS/);
+    assert.match(source,/paragraphFadeActive \|\| sequenceFadeActive \|\| openingCopyRevealActive \? Math\.max\(DEMO_TEXT_TEXTURE_INTERVAL_MS/);
     assert.match(source,/if\(useParagraphSequence\)[\s\S]*?demoParagraphSequence=createDemoParagraphSequence/);
 });

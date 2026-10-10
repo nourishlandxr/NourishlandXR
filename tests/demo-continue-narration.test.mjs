@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
-// Execute the actual button handlers: a click during narration must advance
-// once, clear the previous copy and cancel its pending reveal callbacks.
+// Execute the actual ready button handlers: a click advances once, clears
+// the previous copy and cancels its pending reveal callbacks.
 const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
 const clear=source.slice(source.indexOf('function clearDemoNarration('),source.indexOf('function showIntroBoard('));
 function context(){
@@ -13,7 +13,7 @@ function context(){
     vm.runInContext(clear,ctx);return {ctx,paragraphs,cancelled,button,advances:()=>advances};
 }
 function cleared(h){assert.equal(h.advances(),1);assert.equal(h.paragraphs[0].textContent,'');assert.equal(h.ctx.skipDemoNarration,null);assert.ok(h.cancelled.includes(11));assert.ok(h.cancelled.includes(12));}
-test('ordinary Continue advances on its first press during paragraph playback',()=>{
+test('ordinary Continue advances on its first press when the action is visible',()=>{
     const h=context(),body=source.slice(source.indexOf('function showIntroBoard('),source.indexOf('function rememberDemoSlide('));
     const handler=body.match(/continueButton\.onclick = (\(\) => \{[\s\S]*?\n        \});/)[1];
     vm.runInContext(`(${handler})()`,h.ctx);cleared(h);assert.equal(h.ctx.typing,false);
@@ -22,9 +22,9 @@ test('opening Continue advances immediately instead of repainting INTRO 1.1',()=
     const h=context(),handler=source.match(/waitingButton\.onclick=(\(\)=>\{[^\n]*?\});\}syncDemoPanelActions/)[1];
     vm.runInContext(`(${handler})()`,h.ctx);cleared(h);
 });
-test('Start the demo advances during INTRO 1.2 and discards old callbacks',()=>{
+test('Start the demo advances after INTRO 1.2 narration and discards old callbacks',()=>{
     const h=context(),handler=source.match(/const continueOpeningCopy=(event=>\{[^\n]*\});/)[1];
-    vm.runInContext(`(${handler})()`,h.ctx);cleared(h);assert.equal(h.ctx.openingTyping,false);assert.ok(h.cancelled.includes(13));assert.equal(h.button.disabled,true);
+    vm.runInContext(`(${handler})()`,h.ctx);cleared(h);assert.equal(h.ctx.openingTyping,false);assert.ok(h.cancelled.includes(13));assert.equal(h.button.hidden,true);assert.equal(h.button.disabled,false);
 });
 
 test('opening Continue waits for narration, then advances once it is ready',()=>{

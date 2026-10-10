@@ -25,7 +25,8 @@ let adaptiveGraphicsQuality=null;
 export function setAdaptiveGraphicsQuality(value=null){adaptiveGraphicsQuality=GRAPHICS_PRESETS[value]?value:null;return currentGraphicsQuality();}
 export function currentGraphicsQuality(){return preferences.graphicsQuality==='auto' && adaptiveGraphicsQuality?adaptiveGraphicsQuality:resolveGraphicsQuality(preferences.graphicsQuality);}
 export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQuality()];}
-export function currentRainQuality(){return preferences.rainQuality;}
+export function currentLivingFrameQuality(){return preferences.graphicsQuality==='auto'&&adaptiveGraphicsQuality==='low'&&preferences.livingFrameQuality==='hd'?'sd':preferences.livingFrameQuality;}
+export function currentRainQuality(){return preferences.graphicsQuality==='auto'&&adaptiveGraphicsQuality==='low'?'off':preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
 let preferences={cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,insects:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'improved',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};
 function validated(change){

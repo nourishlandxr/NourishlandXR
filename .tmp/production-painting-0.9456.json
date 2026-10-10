@@ -1,0 +1,50 @@
+{
+  "version": "0.9456",
+  "frame": "sd",
+  "passed": true,
+  "results": [
+    {
+      "view": "whole frame",
+      "changedPixels": 142728,
+      "outsideOpeningPixels": 0,
+      "passed": true
+    },
+    {
+      "view": "left",
+      "changedPixels": 450678,
+      "outsideOpeningPixels": 0,
+      "passed": true
+    },
+    {
+      "view": "right",
+      "changedPixels": 450647,
+      "outsideOpeningPixels": 0,
+      "passed": true
+    },
+    {
+      "view": "closer",
+      "changedPixels": 874184,
+      "outsideOpeningPixels": 0,
+      "passed": true
+    },
+    {
+      "view": "left eye",
+      "changedPixels": 436511,
+      "outsideOpeningPixels": 0,
+      "passed": true
+    },
+    {
+      "view": "right eye",
+      "changedPixels": 436274,
+      "outsideOpeningPixels": 0,
+      "passed": true
+    }
+  ],
+  "motion": {
+    "changedPixels": 142288,
+    "loopSeamPixels": 0,
+    "zeroStrengthPixels": 0,
+    "pausedChangePixels": 0
+  },
+  "headsetVerified": false
+}

@@ -1,8 +1,45 @@
 {
   "sd": {
-    "triangles": 140552,
-    "meshes": 94,
-    "bytes": 13876024,
+    "triangles": 136356,
+    "meshes": 93,
+    "bytes": 11860472,
+    "refinedLeafMeshes": 42,
+    "refinedLeaves": 3066,
+    "sourceLeaves": 8970,
+    "leafVarieties": [
+      {
+        "name": "rounded creeping",
+        "count": 367
+      },
+      {
+        "name": "ovate pointed",
+        "count": 312
+      },
+      {
+        "name": "elliptic",
+        "count": 370
+      },
+      {
+        "name": "heart shaped",
+        "count": 387
+      },
+      {
+        "name": "fern leaflet",
+        "count": 580
+      },
+      {
+        "name": "lanceolate",
+        "count": 552
+      },
+      {
+        "name": "soft lobed",
+        "count": 225
+      },
+      {
+        "name": "rainforest drip tip",
+        "count": 273
+      }
+    ],
     "omitted": [
       "Aerial root fine branching wave 0",
       "Aerial root fine branching wave 1",
@@ -21,13 +58,84 @@
       "Plant attached roots architecture 2 wave 3",
       "Plant attached roots outer side wave 0",
       "Plant attached roots outer side wave 1",
-      "Plant attached roots outer side wave 2"
-    ]
+      "Plant attached roots outer side wave 2",
+      "Taproot splitting lateral branches"
+    ],
+    "taproot": {
+      "primaryAxes": 1,
+      "feederRoots": 16,
+      "maxFeederDiameterM": 0.00216,
+      "thickSplits": 0
+    }
   },
   "hd": {
-    "triangles": 255964,
-    "meshes": 112,
-    "bytes": 19974136
+    "triangles": 215452,
+    "meshes": 93,
+    "bytes": 18113564,
+    "refinedLeafMeshes": 42,
+    "refinedLeaves": 5390,
+    "sourceLeaves": 8970,
+    "leafVarieties": [
+      {
+        "name": "rounded creeping",
+        "count": 649
+      },
+      {
+        "name": "ovate pointed",
+        "count": 571
+      },
+      {
+        "name": "elliptic",
+        "count": 663
+      },
+      {
+        "name": "heart shaped",
+        "count": 698
+      },
+      {
+        "name": "fern leaflet",
+        "count": 1019
+      },
+      {
+        "name": "lanceolate",
+        "count": 986
+      },
+      {
+        "name": "soft lobed",
+        "count": 374
+      },
+      {
+        "name": "rainforest drip tip",
+        "count": 430
+      }
+    ],
+    "omitted": [
+      "Aerial root fine branching wave 0",
+      "Aerial root fine branching wave 1",
+      "Aerial root fine branching wave 2",
+      "Plant attached roots architecture 0 wave 0",
+      "Plant attached roots architecture 0 wave 1",
+      "Plant attached roots architecture 0 wave 2",
+      "Plant attached roots architecture 0 wave 3",
+      "Plant attached roots architecture 1 wave 0",
+      "Plant attached roots architecture 1 wave 1",
+      "Plant attached roots architecture 1 wave 2",
+      "Plant attached roots architecture 1 wave 3",
+      "Plant attached roots architecture 2 wave 0",
+      "Plant attached roots architecture 2 wave 1",
+      "Plant attached roots architecture 2 wave 2",
+      "Plant attached roots architecture 2 wave 3",
+      "Plant attached roots outer side wave 0",
+      "Plant attached roots outer side wave 1",
+      "Plant attached roots outer side wave 2",
+      "Taproot splitting lateral branches"
+    ],
+    "taproot": {
+      "primaryAxes": 1,
+      "feederRoots": 16,
+      "maxFeederDiameterM": 0.00216,
+      "thickSplits": 0
+    }
   },
   "source": "docs/living-frame-blender/moss-ring.glb"
 }

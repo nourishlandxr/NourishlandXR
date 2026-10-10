@@ -13,6 +13,11 @@ export function createXRPerformanceSettings({getSession,publish,configure=config
             actual:session?.frameRate || null,label:`${fps===null?'Measuring...':fps+' FPS'} / ${session?.frameRate || '?'} Hz`};
     };
     const notify=()=>publish(snapshot());
+    function tuneLayer(session){
+        const layer=session?.renderState?.baseLayer;if(!layer||!('fixedFoveation' in layer))return;
+        const level=currentGraphicsQuality(),value=level==='low'?.65:level==='high'?.2:.4;
+        try{if(layer.fixedFoveation!==value)layer.fixedFoveation=value;}catch{ /* Optional runtime support. */ }
+    }
     function track(session,time){
         if(tracked===session)return;
         tracked=session;started=null;frames=0;fps=null;observedRate=null;requestId++;pending=false;slowWindows=0;qualitySlowWindows=0;cpuTotal=0;cpuFrames=0;cpuMs=null;phaseCosts.clear();setAdaptiveGraphicsQuality(null);desired=getSpatialVisualSettings().refreshRate;message='';changedAt=time;lastRecoveryAt=-Infinity;
@@ -44,6 +49,7 @@ export function createXRPerformanceSettings({getSession,publish,configure=config
             const session=getSession();if(!session)return;
             lastTick=time;
             track(session,time);
+            tuneLayer(session);
             if(observedRate!==session.frameRate){observedRate=session.frameRate;notify();}
             if(session.visibilityState==='hidden' || session.visibilityState==='visible-blurred'){started=null;frames=0;slowWindows=0;qualitySlowWindows=0;cpuTotal=0;cpuFrames=0;phaseCosts.clear();changedAt=time;return;}
             if(started===null){started=time;return;}frames++;
@@ -62,6 +68,13 @@ export function createXRPerformanceSettings({getSession,publish,configure=config
                 if((slowWindows>=2 || (Number.isFinite(desired) && desired<=90)) && time-lastRecoveryAt>=5000){
                     lastRecoveryAt=time;void apply(safeXRFrameRate(session),{recovery:true});
                 }
+            }
+            // If the lighter scene still misses its budget, 90 Hz also needs
+            // recovery. A supported 72 Hz gives the GPU more time per frame.
+            if(!pending && rate<=90 && rate>60 && getSpatialVisualSettings().graphicsQuality==='auto' && currentGraphicsQuality()==='low' && time-changedAt>=8000){
+                slowWindows=fps<rate*.85?slowWindows+1:0;
+                const lower=Array.from(session.supportedFrameRates||[]).filter(value=>value>=60&&value<rate).sort((a,b)=>b-a)[0];
+                if(slowWindows>=3 && lower && time-lastRecoveryAt>=10000){lastRecoveryAt=time;void apply(lower,{recovery:true});}
             }
             if(getSpatialVisualSettings().showFps)notify();
         },

@@ -160,6 +160,11 @@ async function openDirectExplorer(params) {
     renderExplorerMarker(app, project, site, place, marker);
 }
 
+window.openLivingPaintingTest = async () => {
+    const {renderLivingPaintingTest} = await import('./screens/livingPaintingTest.js');
+    await renderLivingPaintingTest(app,{onBack:()=>window.renderLaunchScreen()});
+};
+
 async function bootstrap() {
     try {
         await unregisterServiceWorkersForTesting();

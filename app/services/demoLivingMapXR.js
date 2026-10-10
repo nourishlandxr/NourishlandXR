@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {LIVING_MAP_WORLD_SCALE,livingMapRotation} from './demoLivingMapReveal.js';
 import {localizedCanvasContext,translateNxrText} from './i18n.js';
+import {currentGraphicsQuality} from './spatialVisualSettings.js';
 
 // Upload the actual miniature meshes to the session's context: each eye sees
 // its own perspective, depth and occlusion, including the land's solid sides.
@@ -38,7 +39,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
     const instanceColourAttribute=gl.getAttribLocation(program,'ic');
     const surfaceMatrix=new THREE.Matrix4(),surfaceNormal=new THREE.Matrix3(),eyeMatrix=new THREE.Matrix4();
     const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),materialColours=new WeakMap(),renderNodes=[];
-    scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});if(detailed)renderNodes.sort((a,b)=>Number(Boolean(a.material?.transparent))-Number(Boolean(b.material?.transparent)));let prepareIndex=0;
+    scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});if(detailed)renderNodes.sort((a,b)=>Number(Boolean(a.material?.transparent))-Number(Boolean(b.material?.transparent)) || a.renderOrder-b.renderOrder);let prepareIndex=0;
     function geometry(source){
         if(cache.has(source)){
             const entry=cache.get(source);
@@ -106,11 +107,12 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.image,0);
         }
         if(detailed){
+            const detail=currentGraphicsQuality()!=='low';
             surfaceMatrix.multiplyMatrices(eyeMatrix,matrix);surfaceNormal.getNormalMatrix(surfaceMatrix);
             gl.uniformMatrix3fv(uniforms.normalView,false,surfaceNormal.elements);
-            gl.uniform1f(uniforms.normalMapped,material.normalMap?1:0);gl.uniform2f(uniforms.normalScale,material.normalScale?.x ?? 1,material.normalScale?.y ?? 1);
-            gl.uniform1f(uniforms.roughMapped,material.roughnessMap?1:0);gl.uniform1f(uniforms.roughness,material.roughness ?? .7);gl.uniform1f(uniforms.unlit,material.isMeshBasicMaterial?1:0);
-            bindSurfaceMap(material.normalMap,1,uniforms.normalImage);bindSurfaceMap(material.roughnessMap,2,uniforms.roughImage);
+            gl.uniform1f(uniforms.normalMapped,detail&&material.normalMap?1:0);gl.uniform2f(uniforms.normalScale,material.normalScale?.x ?? 1,material.normalScale?.y ?? 1);
+            gl.uniform1f(uniforms.roughMapped,detail&&material.roughnessMap?1:0);gl.uniform1f(uniforms.roughness,material.roughness ?? .7);gl.uniform1f(uniforms.unlit,material.isMeshBasicMaterial?1:0);
+            if(detail){bindSurfaceMap(material.normalMap,1,uniforms.normalImage);bindSurfaceMap(material.roughnessMap,2,uniforms.roughImage);}
             gl.activeTexture(gl.TEXTURE0);
         }
         const transparent=material.transparent || opacity<.999;
@@ -121,6 +123,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         if(gpu){for(const attribute of matrixAttributes){instancing.divisor(attribute,0);gl.disableVertexAttribArray(attribute);}instancing.divisor(instanceColourAttribute,0);gl.disableVertexAttribArray(instanceColourAttribute);instancing.divisor(attributes[3],0);}
     }
     return {
+        get stats(){const visible=renderNodes.filter(node=>{for(let parent=node;parent;parent=parent.parent)if(!parent.visible)return false;return true;});return {drawCalls:visible.length,triangles:visible.reduce((sum,node)=>sum+(node.geometry.index?.count||node.geometry.attributes.position.count)/3*(node.isInstancedMesh?node.count:1),0)};},
         prepareNext(){
             // One mesh per frame during the reading interval, including meshes
             // that appear only after placement. Both eyes share these buffers.
@@ -168,5 +171,5 @@ float r=roughness;if(roughMapped>.5)r*=texture2D(roughImage,v).g;r=clamp(r,.18,1
 vec3 L=normalize(vec3(-.45,.72,.55)),V=normalize(-pointView),H=normalize(L+V);
 float diffuse=max(dot(N,L),0.),fill=max(dot(N,normalize(vec3(.6,.1,.7))),0.);
 float shininess=mix(150.,8.,r*r);float spec=pow(max(dot(N,H),0.),shininess)*(.055+.13*(1.-r))*diffuse;
-vec3 lit=albedo*(.44+.58*diffuse+.14*fill)+vec3(spec);if(unlit>.5)lit=albedo;
+vec3 lit=albedo*(.64+.68*diffuse+.20*fill)+vec3(spec);if(unlit>.5)lit=albedo;
 gl_FragColor=vec4(pow(max(lit,vec3(0.)),vec3(1./2.2)),texel.a*alpha);}`;

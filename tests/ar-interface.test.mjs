@@ -1447,9 +1447,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /createElement\('button'\)[\s\S]{0,180}tryit-intro-continue/);
     assert.match(source, /appRoot\.querySelector\('\.tryit-demo'\)\?\.append\(placementPointer\)/);
     assert.match(source, /introLocalPosition\(introWorldAnchor/);
-    assert.deepEqual(AR_PHONE_COMFORT.boardPosition,[.42,.82,-2.8]);
+    assert.deepEqual(AR_PHONE_COMFORT.boardPosition,[.42,.70,-2.8]);
     assert.deepEqual(AR_PHONE_COMFORT.boardScale,[5.6,10.8]);
-    assert.match(source, /const width=arWelcomeShowcaseActive\?2500:1400,height=arWelcomeShowcaseActive\?2100:1080/);
+    assert.match(source, /const width=Math\.round\(\(arWelcomeShowcaseActive\?2500:1400\)\*textureScale\),height=Math\.round\(\(arWelcomeShowcaseActive\?2100:1080\)\*textureScale\)/);
     assert.match(source, /if\(label\.height!==height\)label\.height=height/);
     assert.match(source, /fitIntroBodyLayout\(ctx, narrative\?\.text \|\| \(introBoardStep==='INTRO 1.2'\?DEMO_QUICK_ACCESS_COPY\['INTRO 1.2'\]:introBoardBody\), contentWidth, bodyBottom - bodyTop\)/);
     assert.match(source, /if\(introBoardNextGuideVisible && introBoardNextGuide\)/);
@@ -1462,7 +1462,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /billboardMatrix\(position, scaleX, scaleY, introWorldAnchor\)/);
     assert.equal(DEMO_TEXT_TEXTURE_INTERVAL_MS,48);
     assert.match(source, /label\.width = 2048;\s*label\.height = 1024/);
-    assert.deepEqual(INTRO_CONTROL_POSITION,[.42,.16,-2.755]);
+    assert.deepEqual(INTRO_CONTROL_POSITION,[.42,.04,-2.755]);
     assert.match(source, /const mainScreen=introBoardStep\.startsWith\('UTILITY '\) && simulatedMode \? board : arWelcomeLayer \|\| board/);
     assert.match(source, /const phoneFooterAction=simulatedMode && !desktopPreview/);
     assert.match(source, /trigger\.classList\.toggle\('is-phone-footer-action',phoneFooterAction\)/);

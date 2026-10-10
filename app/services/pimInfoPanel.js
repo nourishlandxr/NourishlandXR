@@ -1450,7 +1450,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             const nextHoverDescription=hoverButton ? controlDescription(hoverButton) : '';
             const nextHoverPanelId=hoverTarget?.card?.id || '';
             if(nextHoverDescription!==hoveredDescription || nextHoverPanelId!==hoveredPanelId){hoveredDescription=nextHoverDescription;hoveredPanelId=nextHoverPanelId;}
-            fruitWindow?.updateSpatial(pose?{...pose,width:spatialDimensions().mainWidth}:null,time,inputRay,xrFrame);lastTime=time;
+            fruitWindow?.updateSpatial(pose?{...pose,width:spatialDimensions().mainWidth}:null,time,inputRay,xrFrame,source=>!inputOccupied(source));lastTime=time;
         },
         recenter(){heading=null;pose=null;explorerPose=null;explorerPosition=null;mediaPose=mediaDetached?null:mediaPose;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;spatialGrabPending=null;renderExplorer();},
         getPosition(){return pose?.center ? {...pose.center} : null;},
@@ -1482,7 +1482,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         getFruitPerchPose(side='right'){return fruitVisible && fruitControlsActive?fruitWindow?.getPerchPose(side):null;},
         getFruitGripContact(source){return fruitWindow?.gripContact(source) || null;},
         activate(ray){if(fruitWindow?.activate(ray)){fruitControlsActive=true;explorerClosed=false;renderExplorer();return true;}const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
-        isHandInteracting(source){return Boolean(source && handContacts.get(source));},
+        isHandInteracting(source){return Boolean(source && (fruitWindow?.owns(source)||handContacts.get(source)));},
         hitPoint(point){return !pose || !renderer || detached?null:renderer.hitPoint(point,{front:.045,back:.025});},
         activateHand(ray,source,state){
             if(api.isHandInteracting(source))return true;

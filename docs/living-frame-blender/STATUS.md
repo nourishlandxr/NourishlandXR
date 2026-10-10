@@ -1,4 +1,47 @@
-# Living Frame — runtime SD/HD trial (2026-10-10)
+# Living Frame — rainforest refinement (2026-10-10)
+
+Local V0.9460 adds eight leaf forms grouped into planting habits: rounded creeping,
+ovate pointed, elliptic, heart shaped, fern leaflet, lanceolate, soft lobed and
+rainforest drip tip. Both tiers use curved leaf bodies, rounded shoulders and
+tapered tips, with darker cool greens. Repeated blades are thinned evenly within
+each planting group; retained leaves are slightly broader to preserve rim coverage.
+Leaf veins and relief remain analytic shader detail, with no added texture download
+or material batches. Surface patterns now stay attached when the frame moves.
+
+The taproot is one tapered primary axis reaching the existing preview floor, with
+16 fine feeders attached directly to it (maximum diameter 2.16 mm). Thick lateral
+splits and sideways floor forks are removed. Crown connections are slimmer.
+
+| Runtime tier | Triangles | File bytes | Retained leaf blades |
+| --- | ---: | ---: | ---: |
+| SD | 136,356 | 11,860,472 | 3,066 |
+| HD | 215,452 | 18,113,564 | 5,390 |
+
+Compared with V0.9457's HD detail pass, HD triangles fall by 51.1% and file size by
+46.5%. SD is also below its preceding triangle and download budgets. Hidden fine
+underground geometry is omitted in both tiers. The approved Blender source is
+preserved; `node tools/build-living-frame-assets.mjs` reproducibly builds both
+runtime derivatives. Three-minute growth, startup caching and 24 material draws
+per eye are retained. No extra runtime randomness or per-leaf scene objects are added.
+
+Eleven focused tests passed, covering tier budgets, all eight forms, dark palette,
+one primary root, direct fine-feeder attachment, reading clearance at all sampled
+growth stages, loading races, shared startup cache and native GL state restoration.
+Review: http://127.0.0.1:8769/tools/preview-living-frame-runtime.html includes Close
+detail and Root detail. This update is local; headset performance and physical
+floor placement still require device review.
+
+## Earlier runtime SD/HD trial (2026-10-10)
+
+Close-up refinement, local V0.9457: desktop artwork uses display pixel density;
+native XR now uses the exported normal maps and animated normals, respects texture
+wrapping, and adds mipmaps with anisotropic filtering where supported. Shared
+analytic shaders add fine leaf veins and subtle petal, soil, root and moss relief.
+Runtime HD refines 6,750 leaf silhouettes to ten longitudinal segments while
+preserving their three growth poses: 440,420 triangles and 33,870,000 bytes.
+The approved source artwork remains preserved. SD retains its lighter geometry.
+The runtime review now includes Close detail. Ten focused model tests passed,
+including the protected reading opening throughout both tiers' growth.
 
 The approved stage 6 artwork is now connected to the demo behind three saved
 settings: **No Living Frame**, **LF SD** (default), and **LF HD**. Off removes
@@ -16,7 +59,7 @@ until the native model is uploaded and drawable, and is then replaced once.
 - Rebuild assets: node tools/build-living-frame-assets.mjs. Approved Blender files are preserved.
 - SD: 140,552 triangles, 94 source meshes, 13,876,024 bytes; all leaf patches remain,
   with fewer longitudinal leaf rows and without fine underground/branch root groups.
-- HD: approved 255,964 triangles, 112 source meshes, 19,974,136 bytes.
+- HD: refined 440,420 triangles, 112 source meshes, 33,870,000 bytes.
 - Native XR: both tiers are batched to 24 material draws per eye. GPU morphs retain
   the original growth sequence, stretched to 180 seconds (3 minutes) in both tiers;
   both eyes share static uploads and use independent

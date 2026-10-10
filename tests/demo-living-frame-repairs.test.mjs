@@ -5,6 +5,33 @@ import vm from 'node:vm';
 import {DEMO_HEADING_FONT,DEMO_HEADING_SIZE} from '../app/features/ar-demo/demoConfig.js';
 import {drawLivingMapPreview} from '../app/services/demoLivingMapReveal.js';
 const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+
+test('Continue stays hidden through narration and the final reading time, then appears enabled',()=>{
+ const show=source.slice(source.indexOf('function showIntroBoard('),source.indexOf('function syncDemoStageControls('));
+ const button={hidden:false,disabled:true},timers=[];let advanced=0;
+ const noop=()=>{},scope=vm.createContext({
+  appRoot:{querySelector:selector=>selector==='[data-tryit-intro-continue]'?button:null},
+  demoSlideHistoryReplay:true,clearDemoNarration:noop,demoNarrationRevision:1,infoPanel:null,
+  guidedDemoStep:()=>null,DEMO_TUTORIAL_STEPS:{GUIDED:'guided',PIM:'pim'},demoLivingMapScene:null,
+  useSharedWelcomeBoard:noop,setDemoTutorialStep:noop,demoLocalizedText:value=>value,DEMO_QUICK_ACCESS_COPY:{},
+  nextDemoSlideCode:()=> 'SPACE 1.1',rememberDemoSlide:noop,clearTimeout:noop,
+  setTimeout:callback=>{timers.push(callback);return timers.length;},revealIntroBoardNextGuide:noop,
+  syncDemoPanelActions:noop,demoFastSkipActive:false,DEMO_BOARD_TYPING_SAFETY_MS:30000,
+  demoParagraphReadingTime:()=>1000,setGuide:noop,syncDemoStageControls:noop,performance:{now:()=>100},
+  advance:()=>advanced++
+ });
+ vm.runInContext(show+";showIntroBoard('Title','One paragraph','Continue',advance)",scope);
+ assert.equal(button.hidden,true);assert.equal(button.disabled,false);button.onclick();assert.equal(advanced,0);
+ timers[0]();assert.equal(scope.introBoardVisibleBody,'One paragraph');assert.equal(button.hidden,true);
+ timers.at(-1)();assert.equal(button.hidden,false);assert.equal(button.disabled,false);
+ button.onclick();assert.equal(button.hidden,true);assert.equal(advanced,1);button.onclick();assert.equal(advanced,1);
+});
+
+test('opening narration hides its Continue and Let’s start controls instead of disabling them',()=>{
+ assert.match(source,/waitingButton\.hidden=true;waitingButton\.disabled=false/);
+ assert.match(source,/openingButton\.hidden=true;openingButton\.textContent='Let’s start';openingButton\.disabled=false/);
+ assert.doesNotMatch(source,/continueButton\.disabled\s*=\s*true|openingButton\.disabled=true|waitingButton\.disabled=true/);
+});
 test('Y exposes the opening Continue without replacing INTRO 1.1 with INTRO 1.2',()=>{
  const welcome=source.slice(source.indexOf('function showArWelcomeShowcase()'),source.indexOf('// Use the same billboard geometry'));
  const handler=welcome.slice(welcome.indexOf('skipDemoNarration=()=>{'),welcome.indexOf("    const layer=document.createElement('div')"));
