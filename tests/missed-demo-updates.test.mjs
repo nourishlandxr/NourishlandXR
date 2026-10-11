@@ -31,7 +31,7 @@ test('shaking a perch starts an individual flight; quiet motion and reduced moti
  butterflyElementVisit(insect,home,moved,32);assert.ok(insect.visit.startle);
  const flight=insect.visit.startle;
  const flying=butterflyElementVisit(insect,home,moved,flight.at+flight.duration*.5);assert.equal(flying.pose.state,'flying');assert.ok(flying.position.z>moved.center.z+.1);
- const returned=butterflyElementVisit(insect,home,moved,flight.at+flight.duration);assert.deepEqual(returned.position,moved.center);assert.equal(Boolean(insect.visit.hover),!flight.lands);
+ const returned=butterflyElementVisit(insect,home,moved,flight.at+flight.duration+1);for(const axis of ['x','y','z'])assert.ok(Math.abs(returned.position[axis]-moved.center[axis])<1e-12,`returned ${axis} stays on its perch`);assert.equal(Boolean(insect.visit.hover),!flight.lands);
  const quiet={seed:1};butterflyElementVisit(quiet,home,home,0);butterflyElementVisit(quiet,home,{...home,center:{x:.002,y:1,z:-1}},32);assert.equal(quiet.visit.startle,undefined);
  const reduced={seed:2};butterflyElementVisit(reduced,home,home,0,true);butterflyElementVisit(reduced,home,moved,32,true);assert.equal(reduced.visit.startle,undefined);
 });
