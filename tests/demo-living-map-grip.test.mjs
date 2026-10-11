@@ -1,19 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../app/vendor/three.module.min.js';
-import {createLivingMapTwoGrip,createLivingMapGripInput,limitLivingMapTilt,LIVING_MAP_MAX_TILT,livingMapGripContact} from '../app/services/demoLivingMapGrip.js';
+import {createLivingMapGripInput,limitLivingMapTilt,LIVING_MAP_MAX_TILT,livingMapGripContact} from '../app/services/demoLivingMapGrip.js';
 import {livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapTotemRayHit} from '../app/services/demoLivingMapReveal.js';
 const origin={x:0,y:1,z:-1},identity=new THREE.Quaternion(),left={},right={};
 test('missing plate pose cannot capture a grip while the map is loading',()=>{
     assert.equal(livingMapGripContact({x:0,y:1,z:-1},null,identity),null);
     assert.equal(livingMapGripContact({x:NaN,y:1,z:-1},origin,identity),null);
 });
-test('distant grips carry by hand translation without a wrist lever or behind-plate occlusion',()=>{
-    const session=new EventTarget(),sources=['left','right'].map(handedness=>({handedness,gripSpace:{},targetRaySpace:{},gamepad:{buttons:[{},{pressed:true}]}}));session.inputSources=sources;
+test('a distant grip carries by hand translation without a wrist lever or behind-plate occlusion',()=>{
+    const session=new EventTarget(),sources=['left','right'].map(handedness=>({handedness,gripSpace:{},targetRaySpace:{},gamepad:{buttons:[{},{pressed:true}]}}));session.inputSources=[sources[0]];
     let wrist=0,shift=0,position={...origin},rotation=identity.clone();const contacts=[];
-    const frame={getPose:key=>{const s=sources.find(s=>s.gripSpace===key || s.targetRaySpace===key),x=s.handedness==='left'?-.5:.5;
+    const frame={getPose:key=>{const s=sources.find(s=>s.gripSpace===key || s.targetRaySpace===key),x=0;
         const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(key===s.targetRaySpace?-Math.PI/4:wrist,0,0));
-        return {transform:{matrix:new THREE.Matrix4().compose(new THREE.Vector3(x,1.5,-.5+shift),q,new THREE.Vector3(1,1,1)).elements}};}};
+        return {transform:{matrix:new THREE.Matrix4().compose(new THREE.Vector3(x,1.5,-.13+shift),q,new THREE.Vector3(1,1,1)).elements}};}};
     const input=createLivingMapGripInput({enabled:()=>true,origin:()=>position,rotation:()=>rotation,onMove:p=>position={...p},onRotate:q=>rotation=q,canUse:(_s,c)=>{if(c){contacts.push(c.distance);return c.distance<1;}return true;}});input.bind(session,{});
     try{input.update(frame);assert.equal(input.active,true);assert.ok(contacts.every(d=>Number.isFinite(d) && d<1));
         wrist=.2;input.update(frame);assert.ok(Math.abs(position.z-origin.z)<.02,'wrist tilt pivots at the raised handles, without a distant ray-length lever');
@@ -41,25 +41,9 @@ test('map grip capture yields to a loose Totem even when controller touches the 
     input.bind(session,{});const event=new Event('squeezestart',{cancelable:true});event.inputSource=source;event.frame=frame;session.dispatchEvent(event);
     assert.equal(event.defaultPrevented,false);assert.equal(input.owns(source),false);input.destroy();
 });
-function samples(q=identity){return [left,right].map((source,i)=>{const p=new THREE.Vector3(i?.5:-.5,0,0).applyQuaternion(q).add(new THREE.Vector3(0,1,-1)),up=new THREE.Vector3(0,1,0).applyQuaternion(q);return {source,handedness:i?'right':'left',position:p,up,pressed:true,tracked:true};});}
-test('one grip cannot rotate; two opposite grips allow a continuous complete turn',()=>{
-    const state=createLivingMapTwoGrip();assert.equal(state.update(samples().slice(0,1),origin,identity),null);assert.equal(state.active,false);
-    assert.equal(state.update(samples(),origin,identity),null);assert.equal(state.active,true);
-    for(let angle=.1;angle<Math.PI*4;angle+=.1){const q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),angle),result=state.update(samples(q),origin,identity);assert.ok(result.angleTo(q)<1e-6);}
-});
-test('same-side grips do not engage; losing either tracking or grip stops movement',()=>{
-    const state=createLivingMapTwoGrip(),same=samples();same[0].position.x=.4;assert.equal(state.update(same,origin,identity),null);assert.equal(state.active,false);
-    state.update(samples(),origin,identity);const lost=samples();lost[0].tracked=false;assert.equal(state.update(lost,origin,identity),null);assert.equal(state.active,false);
-    state.update(samples(),origin,identity);const released=samples();released[1].pressed=false;state.update(released,origin,identity);assert.equal(state.active,false);
-});
 test('tilt is limited in every direction while yaw stays free',()=>{
     for(let angle=0;angle<Math.PI*2;angle+=.3){const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(1,angle,.8,'YXZ')),bounded=limitLivingMapTilt(q);assert.ok(new THREE.Vector3(0,1,0).applyQuaternion(bounded).angleTo(new THREE.Vector3(0,1,0))<=LIVING_MAP_MAX_TILT+1e-7);}
     const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(.15,.9,.1,'YXZ'));assert.ok(q.angleTo(limitLivingMapTilt(q))<1e-6);
-});
-test('re-gripping preserves current orientation without jumping',()=>{
-    const state=createLivingMapTwoGrip(),q=new THREE.Quaternion().setFromEuler(new THREE.Euler(.2,.7,0,'YXZ'));
-    state.update(samples(),origin,identity);const rotated=state.update(samples(q),origin,identity);state.update(samples(q).slice(0,1),origin,rotated);
-    assert.equal(state.update(samples(q),origin,rotated),null);assert.ok(state.update(samples(q),origin,rotated).angleTo(rotated)<1e-6);
 });
 test('Totem drop ray follows tilted plate and rejects a stale horizontal target',()=>{
     const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(.35,.7,.1,'YXZ')),target=livingMapWorldPoint({x:4,z:2},origin,q),normal=new THREE.Vector3(0,1,0).applyQuaternion(q);
@@ -72,37 +56,38 @@ test('placement rays outside the finite plate do not create distant phantom hits
     const onPlate={origin:{x:.2,y:1.5,z:-1},direction:{x:0,y:-1,z:0}};
     assert.ok(livingMapRayPoint(onPlate,origin));
 });
-test('XR grip events reserve inputs, require both controller grips and recover from loss',()=>{
-    const session=new EventTarget(),space={},a={handedness:'left',gripSpace:{},gamepad:{buttons:[{}, {pressed:false}]}},b={handedness:'right',gripSpace:{},gamepad:{buttons:[{}, {pressed:false}]}};session.inputSources=[a,b];
-    let pose=identity.clone(),rotation=identity.clone(),calls=0;
-    const frame={getPose:sourceSpace=>{const source=sourceSpace===a.gripSpace?a:b,p=new THREE.Vector3(source===a?-.5:.5,0,0).applyQuaternion(pose).add(new THREE.Vector3(0,1,-1));return {transform:{matrix:new THREE.Matrix4().compose(p,pose,new THREE.Vector3(1,1,1)).elements}};}};
-    const input=createLivingMapGripInput({enabled:()=>true,origin:()=>origin,rotation:()=>rotation,onRotate:q=>{rotation=q;calls++;}});input.bind(session,space);
+function fixture(){
+    const session=new EventTarget(),sources=['left','right'].map(handedness=>({handedness,gripSpace:{},gamepad:{buttons:[{}, {pressed:false}],axes:[0,0,0,0]}}));session.inputSources=sources;
+    let position=new THREE.Vector3(0,1,-1),rotation=identity.clone(),tracked=true;
+    const controller=new THREE.Vector3(0,1.03,-.63025),orientation=identity.clone();
+    const frame={getPose:()=>tracked?{transform:{matrix:new THREE.Matrix4().compose(controller,orientation,new THREE.Vector3(1,1,1)).elements}}:null};
+    const input=createLivingMapGripInput({enabled:()=>true,origin:()=>position,rotation:()=>rotation,onMove:p=>position=p,onRotate:q=>rotation=q});input.bind(session,{});
     const event=(type,source)=>{const e=new Event(type,{cancelable:true});e.inputSource=source;e.frame=frame;session.dispatchEvent(e);return e;};
-    a.gamepad.buttons[1].pressed=true;assert.equal(event('squeezestart',a).defaultPrevented,true);input.update(frame);assert.equal(calls,0);
-    b.gamepad.buttons[1].pressed=true;event('squeezestart',b);input.update(frame);assert.equal(input.active,true);
-    pose.setFromEuler(new THREE.Euler(.3,1.8,.1,'YXZ'));input.update(frame);assert.ok(rotation.angleTo(pose)<1e-6);assert.equal(event('select',a).defaultPrevented,true);
-    a.gamepad.buttons[1].pressed=false;event('squeezeend',a);input.update(frame);assert.equal(input.active,false);
-    const before=calls;pose.setFromAxisAngle(new THREE.Vector3(0,1,0),2);input.update(frame);assert.equal(calls,before);
-    session.inputSources=[];input.update(frame);assert.equal(input.owns(b),false);input.destroy();
+    return {session,sources,controller,orientation,frame,input,event,get position(){return position;},get rotation(){return rotation;},loseTracking(){tracked=false;}};
+}
+test('one central grip carries and rotates, reserves its input and prevents a second owner',()=>{
+    const f=fixture(),[a,b]=f.sources;
+    try{
+        a.gamepad.buttons[1].pressed=true;assert.equal(f.event('squeezestart',a).defaultPrevented,true);f.input.update(f.frame);assert.equal(f.input.active,true);
+        assert.equal(f.event('select',a).defaultPrevented,true);assert.equal(f.event('squeezestart',b).defaultPrevented,false);assert.equal(f.input.owns(b),false);
+        for(let angle=.1;angle<Math.PI*4;angle+=.1){f.orientation.setFromAxisAngle(new THREE.Vector3(0,1,0),angle);f.input.update(f.frame);assert.ok(f.rotation.angleTo(f.orientation)<1e-6);}
+        f.controller.add(new THREE.Vector3(.15,.3,.65));f.input.update(f.frame);assert.ok(f.position.distanceTo(new THREE.Vector3(.15,1.3,-.35))<1e-6);
+        a.gamepad.buttons[1].pressed=false;f.event('squeezeend',a);assert.equal(f.input.active,false);const stopped=f.position.clone();f.controller.z+=.2;f.input.update(f.frame);assert.ok(f.position.equals(stopped));
+    }finally{f.input.destroy();}
 });
-test('tracked hand pinches also require both opposite rim contacts',()=>{
-    const session=new EventTarget(),space={},states=new Map();let rotations=0;
-    const sources=['left','right'].map((handedness,i)=>{const hand=new Map();for(const name of ['wrist','index-finger-tip','thumb-tip']){const key={};hand.set(name,key);states.set(key,{x:i?.5:-.5,y:1,z:-1});}return {handedness,hand};});session.inputSources=sources;
-    const frame={getJointPose:key=>{const p=states.get(key);return p?{transform:{matrix:new THREE.Matrix4().makeTranslation(p.x,p.y,p.z).elements}}:null;}};
-    const input=createLivingMapGripInput({enabled:()=>true,origin:()=>origin,rotation:()=>identity,onRotate:()=>rotations++});input.bind(session,space);input.update(frame);assert.equal(input.active,true);assert.equal(rotations,0);
-    states.get(sources[0].hand.get('thumb-tip')).x-=.1;input.update(frame);assert.equal(input.active,false);assert.equal(input.owns(sources[0]),false);assert.equal(rotations,0);input.destroy();
+test('tracking loss and source removal release the central grip',()=>{
+    for(const remove of [false,true]){const f=fixture();try{f.sources[0].gamepad.buttons[1].pressed=true;f.input.update(f.frame);assert.equal(f.input.active,true);if(remove)f.session.inputSources=[];else f.loseTracking();f.input.update(f.frame);assert.equal(f.input.active,false);}finally{f.input.destroy();}}
 });
-
-test('off-centre grips rotate around the held midpoint and retain left/right order',()=>{
-    const state=createLivingMapTwoGrip(),initial=samples();initial.forEach(s=>s.position.z+=.04);
-    state.update([...initial].reverse(),origin,identity);
-    const turn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI/2),midpoint=new THREE.Vector3(0,1,-.96),translation=new THREE.Vector3(.15,.1,.2);
-    const moved=initial.map(s=>({...s,position:s.position.clone().sub(midpoint).applyQuaternion(turn).add(midpoint).add(translation),up:s.up.clone().applyQuaternion(turn)}));
-    const result=state.update(moved,origin,identity);assert.ok(result.angleTo(turn)<1e-6);
-    const expected=new THREE.Vector3(origin.x,origin.y,origin.z).sub(midpoint).applyQuaternion(turn).add(midpoint).add(translation);
-    assert.ok(state.position.distanceTo(expected)<1e-6);
-    // Controller wrist roll can cancel the two up vectors; the last plate up
-    // keeps the tray stable instead of dropping the gesture.
-    moved[0].up.set(0,1,0);moved[1].up.set(0,-1,0);
-    assert.ok(state.update(moved,origin,identity).angleTo(turn)<1e-6);assert.equal(state.active,true);
+test('re-gripping preserves the current map pose without a jump',()=>{
+    const f=fixture(),a=f.sources[0];try{a.gamepad.buttons[1].pressed=true;f.input.update(f.frame);f.orientation.setFromEuler(new THREE.Euler(.15,.7,.1,'YXZ'));f.input.update(f.frame);const rotation=f.rotation.clone(),position=f.position.clone();a.gamepad.buttons[1].pressed=false;f.input.update(f.frame);f.controller.copy(new THREE.Vector3(0,.03,.36975).applyQuaternion(rotation).add(position));a.gamepad.buttons[1].pressed=true;f.input.update(f.frame);assert.equal(f.input.active,true);assert.ok(f.rotation.angleTo(rotation)<1e-6);assert.ok(f.position.equals(position));}finally{f.input.destroy();}
+});
+test('single controller stick rotates and adjusts distance while carrying',()=>{
+    const f=fixture();try{f.sources[0].gamepad.buttons[1].pressed=true;f.input.update(f.frame);f.sources[0].gamepad.axes=[0,0,1,-1];f.input.update(f.frame);assert.ok(f.rotation.angleTo(identity)>0);assert.ok(f.position.z<-1);}finally{f.input.destroy();}
+});
+test('one tracked hand pinch captures the central grip and release stops carrying',()=>{
+    const session=new EventTarget(),states=new Map(),hand=new Map();for(const name of ['wrist','index-finger-tip','thumb-tip']){const key={};hand.set(name,key);states.set(key,{x:0,y:1.03,z:-.63025});}
+    const source={handedness:'right',hand};session.inputSources=[source];let rotations=0;
+    const frame=()=>({getJointPose:key=>{const p=states.get(key);return p?{transform:{matrix:new THREE.Matrix4().makeTranslation(p.x,p.y,p.z).elements}}:null;}});
+    const input=createLivingMapGripInput({enabled:()=>true,origin:()=>origin,rotation:()=>identity,onRotate:()=>rotations++});input.bind(session,{});
+    try{input.update(frame());assert.equal(input.active,true);assert.equal(rotations,1);states.get(hand.get('thumb-tip')).x-=.1;input.update(frame());assert.equal(input.active,false);assert.equal(rotations,1);}finally{input.destroy();}
 });

@@ -20,7 +20,7 @@ test('butterfly perches for a minute, pauses naturally, and never approaches the
 test('four bees visit gently, with a waist-level pair at spaced intervals',()=>{
  assert.equal(BEE_COUNT,4);const visitors=new Set();
  let paired=false;
- for(let age=0;age<360000;age+=250){const poses=Array.from({length:BEE_COUNT},(_,i)=>demoBeePose(age,0,i));const visitorsNow=poses.map((pose,i)=>pose?.flyby>0?i:-1).filter(i=>i>=0);assert.ok(visitorsNow.length<=2);if(visitorsNow.length===2){paired=true;assert.ok(visitorsNow.every(i=>poses[i].waistVisit));}visitorsNow.forEach(i=>visitors.add(i));}
+ for(let age=0;age<1200000;age+=250){const poses=Array.from({length:BEE_COUNT},(_,i)=>demoBeePose(age,0,i,{encounterSeed:1}));const visitorsNow=poses.map((pose,i)=>pose?.flyby>0?i:-1).filter(i=>i>=0);assert.ok(visitorsNow.length<=2);if(visitorsNow.length===2){paired=true;assert.ok(visitorsNow.every(i=>poses[i].waistVisit));}visitorsNow.forEach(i=>visitors.add(i));}
  assert.equal(paired,true);
  assert.equal(visitors.size,4);assert.ok(demoBeeEncounter(12000));
 });

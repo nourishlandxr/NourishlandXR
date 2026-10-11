@@ -62,14 +62,15 @@ test('uniform learning cells preserve peripheral planting rather than erasing fu
 });
 
 
-test('close-up bees face the viewer while ambient bees remain free to turn',()=>{
+test('bee flight heading stays independent of viewer position',()=>{
  const viewer=new Float32Array(16);viewer[12]=2;viewer[14]=3;
  const origin={x:1,z:1},target=Math.atan2(1,2);
  for(const worldYaw of [-3,-1,0,1,3]){
   const yaw=beeRenderYaw({worldYaw,flyby:1,viewer},origin);
-  assert.ok(Math.abs(Math.atan2(Math.sin(yaw-target),Math.cos(yaw-target)))<1e-6);
+  assert.equal(yaw,worldYaw);
   assert.equal(beeRenderYaw({worldYaw,flyby:0,viewer},origin),worldYaw);
  }
+ assert.equal(beeRenderYaw({worldYaw:.7,headTurn:.2,viewer},origin),.7+.2);
  for(let flyby=0;flyby<.65;flyby+=.001){
   const a=beeRenderYaw({worldYaw:-3,flyby,viewer},origin),b=beeRenderYaw({worldYaw:-3,flyby:flyby+.001,viewer},origin);
   assert.ok(Math.abs(a-b)<.01,'engagement rotates smoothly without a sudden snap');

@@ -34,10 +34,11 @@ test('bees must actually settle on a flower before their wings rest',()=>{
  assert.equal(beeWingsAtRest({nectar:true,speed:0,flowerDistance:.04}),false);
  assert.equal(beeWingsAtRest({nectar:true,pointerContact:true,speed:0,flowerDistance:0}),false);
 });
-test('Totem showcase groups four model buttons and real light swatches, opens Controls',async()=>{
- let context,opened=false;const record={demoType:'zone',appearance:{},demoTotemSignsVisible:true};
- focusSpatialObjectControls({showLearning(){},setObjectContext:value=>context=value,setExplorerOpen:value=>opened=value},record,{demo:true});
- assert.equal(opened,true);assert.deepEqual(context.actions.filter(a=>a.group==='Totem model').map(a=>a.label),['1','2','3','4']);
+test('Totem showcase cycles eight models and groups real light swatches',async()=>{
+ let context,opened=false;const record={demoType:'zone',appearance:{},position:{x:0,y:1.25,z:-1},groundBaseY:0,demoTotemSignsVisible:true};
+ focusSpatialObjectControls({showLearning(){},setContextualHint(message){assert.fail(message);},setObjectContext:value=>context=value,setExplorerOpen:value=>opened=value},record,{demo:true});
+ assert.equal(opened,true);assert.deepEqual(context.actions.filter(a=>a.group==='Choose your Totem').map(a=>a.id),['previous-model','preview-light','next-model']);
+ const chosen=new Set();for(let i=0;i<8;i++){await context.onAction('next-model');chosen.add(record.appearance.totemStyle);}assert.equal(chosen.size,8);
  assert.equal(context.actions.filter(a=>a.kind==='swatch' && /^#[\da-f]{6}$/i.test(a.color)).length,4);
  const controls=spatialControlLayout(context.actions);assert.equal(controls.filter(a=>a.kind==='heading').length,3);
  for(const item of controls)assert.ok(item.x>=0 && item.x+item.width<=1000 && item.y+item.height<450);

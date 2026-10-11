@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from '../app/vendor/three.module.min.js';
-import {createLivingMapTwoGrip} from '../app/services/demoLivingMapGrip.js';
+import {createLivingMapGripInput} from '../app/services/demoLivingMapGrip.js';
 import {noteSurfaceFacing,noteCardButtonLayout} from '../app/services/noteSpatialRenderer.js';
 import {createDemoLivingMapXR} from '../app/services/demoLivingMapXR.js';
 import {livingMapPlacementCopy,resetDemoPlantForMap} from '../app/services/demoLivingMapPresentation.js';
@@ -20,15 +20,14 @@ test('map progress narration keeps the real Continue callback usable, but changi
  button.disabled=false;vm.runInContext('clearDemoNarration()',context);button.onclick();assert.equal(advanced,1,'an old slide still cannot advance after replacement');
 });
 
-test('two hands carry the plate toward the viewer without scaling; release freezes its pose',()=>{
- const origin={x:0,y:1,z:-1.2},rotation=new THREE.Quaternion(),gesture=createLivingMapTwoGrip();
- const samples=['left','right'].map((handedness,i)=>({source:{},handedness,tracked:true,pressed:true,position:{x:i?.5:-.5,y:1,z:-1.2},up:{x:0,y:1,z:0}}));
- gesture.update(samples,origin,rotation);
- for(const hand of samples){hand.position.y+=.3;hand.position.z+=.65;}
- assert.ok(gesture.update(samples,origin,rotation).angleTo(rotation)<1e-6);
- assert.ok(gesture.position.distanceTo(new THREE.Vector3(0,1.3,-.55))<1e-6);
- samples[0].pressed=false;assert.equal(gesture.update(samples,origin,rotation),null);assert.equal(gesture.active,false);
+test('one central grip carries the plate toward the viewer without scaling; release freezes its pose',()=>{
+ const session=new EventTarget(),source={gripSpace:{},gamepad:{buttons:[{}, {pressed:true}]}};session.inputSources=[source];
+ let position=new THREE.Vector3(0,1,-1.2);const rotation=new THREE.Quaternion(),controller=new THREE.Vector3(0,1.03,-.83025);
+ const frame={getPose:()=>({transform:{matrix:new THREE.Matrix4().makeTranslation(controller.x,controller.y,controller.z).elements}})};
+ const input=createLivingMapGripInput({enabled:()=>true,origin:()=>position,rotation:()=>rotation,onMove:p=>position=p,onRotate:()=>{}});input.bind(session,{});
+ try{input.update(frame);controller.y+=.3;controller.z+=.65;input.update(frame);assert.ok(position.distanceTo(new THREE.Vector3(0,1.3,-.55))<1e-6);source.gamepad.buttons[1].pressed=false;input.update(frame);assert.equal(input.active,false);controller.z+=.2;input.update(frame);assert.ok(position.distanceTo(new THREE.Vector3(0,1.3,-.55))<1e-6);}finally{input.destroy();}
 });
+
 test('each offset widget faces the user, and sparse options occupy the card',()=>{
  const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
  for(const x of [-.98,.98]){const center={x,y:1.4,z:-1.6},face=noteSurfaceFacing(center,viewer),normal=new THREE.Vector3(-face.right.z,0,face.right.x),toward=new THREE.Vector3(-x,0,1.6).normalize();assert.ok(normal.dot(toward)>.99999);}

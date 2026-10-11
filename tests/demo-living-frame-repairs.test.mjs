@@ -11,6 +11,7 @@ test('Continue stays hidden through narration and the final reading time, then a
  const button={hidden:false,disabled:true},timers=[];let advanced=0;
  const noop=()=>{},scope=vm.createContext({
   appRoot:{querySelector:selector=>selector==='[data-tryit-intro-continue]'?button:null},
+  ambientBeeScreens:new Set(),ambientBeeCount:1,BEE_COUNT:4,
   demoSlideHistoryReplay:true,clearDemoNarration:noop,demoNarrationRevision:1,infoPanel:null,
   guidedDemoStep:()=>null,DEMO_TUTORIAL_STEPS:{GUIDED:'guided',PIM:'pim'},demoLivingMapScene:null,
   useSharedWelcomeBoard:noop,setDemoTutorialStep:noop,demoLocalizedText:value=>value,DEMO_QUICK_ACCESS_COPY:{},
@@ -25,6 +26,10 @@ test('Continue stays hidden through narration and the final reading time, then a
  timers[0]();assert.equal(scope.introBoardVisibleBody,'One paragraph');assert.equal(button.hidden,true);
  timers.at(-1)();assert.equal(button.hidden,false);assert.equal(button.disabled,false);
  button.onclick();assert.equal(button.hidden,true);assert.equal(advanced,1);button.onclick();assert.equal(advanced,1);
+ assert.equal(scope.ambientBeeCount,1);
+ for(const [title,count] of [['Title',1],['Second',2],['Third',3],['Fourth',4],['Fifth',4],['Second',4]]){
+  vm.runInContext(`showIntroBoard(${JSON.stringify(title)},'Body','Continue',advance)`,scope);assert.equal(scope.ambientBeeCount,count);
+ }
 });
 
 test('opening narration hides its Continue and Let’s start controls instead of disabling them',()=>{
@@ -72,4 +77,11 @@ test('INTRO 1.2 declines stale first-slide copy and accepts its own narration',(
  const ctx=vm.createContext({introBoardStep:'INTRO 1.2',introBoardVisibleBody:'A plant can share its story.',DEMO_QUICK_ACCESS_COPY:{'INTRO 1.2':'For this demo, we prepared samples.'},demoLocalizedText:value=>value});
  vm.runInContext(helper,ctx);assert.equal(vm.runInContext('introVisibleCopy()',ctx),'');
  ctx.introBoardVisibleBody='For this demo';assert.equal(vm.runInContext('introVisibleCopy()',ctx),'For this demo');
+});
+
+
+test('welcome never paints the retired flat rim before the native frame is ready',()=>{
+ const options=[...source.matchAll(/frameAnimation:([^,]+),frameArtwork:([^,]+)/g)];
+ assert.equal(options.length,2);for(const option of options)assert.deepEqual(option.slice(1),['false','false']);
+ assert.match(source,/drawArWelcomePanel\(ctx,\{[^\n]*simple:true,rim:false\}/);
 });
