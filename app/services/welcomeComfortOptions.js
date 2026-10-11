@@ -17,7 +17,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         }
         items.push(button('skip','Skip tutorial',30,584,460,{primary:true}),button('next','Continue',510,584,460,{disabled:disabled || voice.playing || voice.paused || state.phase!=='explore'}));
         for(const item of items)item.disabled ||= disabled;
-        return {title:'Comfort options',subtitle:expanded?'Voice · visual detail · comfortable height':'Adjust a few things, or take your time.',expanded,items,onAction:act};
+        return {title:'Comfort options',subtitle:expanded?'Voice · visual detail · comfortable height':'Grip and move this panel. Take your time.',expanded,items,onAction:act};
     }
     function act(id){
         if(stage.snapshot().exiting)return;
@@ -38,6 +38,5 @@ export function welcomePracticeVisualGuide(state){
     const illustrations={orange:'15-orange-guide.svg',lime:'16-lime-guide.svg',banana:'17-banana-guide.svg'};
     if(['fruit','explore'].includes(state.phase) && illustrations[fruit])return {image:new URL('../assets/demo-tutorial-art/'+illustrations[fruit],import.meta.url).href,caption:WELCOME_FRUIT_ASSETS[fruit].label+' · illustration'};
     if(['fruit','harvest','explore'].includes(state.phase) && photos[fruit])return {image:new URL('../assets/fruit-window/photos/'+photos[fruit]+'.png',import.meta.url).href,caption:WELCOME_FRUIT_ASSETS[fruit].label};
-    const hands=['hands','packet','seed','water','grow','harvest','explore'].includes(state.phase),caption=hands?'Your own hands · point and pinch':state.phase==='gloves' || state.phase==='fruit'?'Gardening hands · keep the controllers':'Controllers · trigger selects, grip holds';
-    return {image:new URL('../assets/demo-tutorial-art/'+(hands?'13-hand-pinch-guide.svg':'14-controller-comfort-guide.svg'),import.meta.url).href,caption};
+    return {image:'',caption:''};
 }

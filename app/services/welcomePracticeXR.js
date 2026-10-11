@@ -3,17 +3,25 @@ import {createWelcomePracticeScene} from './welcomePracticeScene.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
 import {createSpatialTetherRenderer,drawSpatialTether,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {controllerRayFromPose} from './xrPointer.js';
+import {createWelcomeInputRouting} from './welcomeInputRouting.js';
 
-export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit}={}){
+export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null}={}){
     let renderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false;
     const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
     const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onAssets:()=>{rebuild=true;},embedded:true,onSelect});
+    const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:onHit});
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}};
     function eventRay(event){try{return controllerRayFromPose(event.frame.getPose(event.inputSource.targetRaySpace,space),event.inputSource.handedness);}catch{return inputs.find(i=>i.source===event.inputSource)?.ray || null;}}
     function unbind(){abort?.abort();abort=null;stage.releaseAll(false);forceGrip.clear();forceTrigger.clear();curling.clear();comfortPinches.clear();session=null;}
     function bind(value,referenceSpace){unbind();session=value;space=referenceSpace;abort=new AbortController();
         for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,event=>{
             if(!stage.active){if(performance.now()<(suppressed.get(event.inputSource) || 0)){event.stopImmediatePropagation();event.preventDefault?.();}return;}
+            const source=event.inputSource;
+            // Let the standard panel listener receive grip, move and release.
+            // Keep ownership through release so it cannot also grab a fruit.
+            if(panelRouting.routeToPanel(source,eventRay(event))){
+                forceGrip.delete(source);forceTrigger.delete(source);return;
+            }
             suppressed.set(event.inputSource,performance.now()+700);event.stopImmediatePropagation();event.preventDefault?.();
             if(type==='selectstart'){forceTrigger.set(event.inputSource,true);if(!event.inputSource.hand)stage.select(eventRay(event),event.inputSource);}
             else if(type==='selectend')forceTrigger.set(event.inputSource,false);
@@ -27,6 +35,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
     function update(frame,time,viewer,floor,trackedHands){
         if(disposed || !stage.active)return;const dt=lastTime===null?0:(time-lastTime)/1000;lastTime=time;hands=trackedHands || [];inputs=[];controllers=[];
         for(const source of session?.inputSources || []){
+            if(panelRouting.occupied(source))continue;
             let pose=null,ray=null;try{pose=frame.getPose(source.gripSpace || source.targetRaySpace,space);ray=controllerRayFromPose(frame.getPose(source.targetRaySpace,space),source.handedness);}catch{}
             if(source.hand){const state=hands.find(h=>h.source===source)?.state,wrist=state?.rawJoints.get('wrist'),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');
                 if(!state?.tracked || !wrist || !index || !thumb){comfortPinches.delete(source);inputs.push({source,matrix:null});continue;}
@@ -38,7 +47,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 inputs.push({source,matrix:new THREE.Matrix4().compose(gripPoint,q,new THREE.Vector3(1,1,1)).elements,ray:state.pointer,tip:index,down:Boolean(state.pinch || fist),trigger:Boolean(state.pinch)});
             }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0)};inputs.push(input);if(input.matrix)controllers.push(input);}
         }
-        stage.update(dt,{viewer,floor,hands,controllers,inputs});revealTime+=Math.max(0,Math.min(.1,dt));
+        stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError()});revealTime+=Math.max(0,Math.min(.1,dt));
         if(!renderer || rebuild){rebuild=false;renderer?.destroy();renderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true});}
         if(stage.handsEnabled)controllers=[];
         renderer.update();renderer.prepareNext();

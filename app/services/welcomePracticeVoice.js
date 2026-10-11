@@ -14,12 +14,12 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
     }
     function detach(){if(!current)return;current.onended=null;try{current.stop();}catch{}current.disconnect();current=null;}
     function stop({forget=false}={}){if(forget)lesson=null;generation++;detach();globalThis.speechSynthesis?.cancel();buffer=null;offset=0;playing=false;paused=false;changed();}
-    function pause(){if(disposed || paused || !playing)return;if(current && buffer)offset=Math.min(buffer.duration,offset+Math.max(0,(context.currentTime-startedAt)*.92));else globalThis.speechSynthesis?.pause();detach();playing=false;paused=true;changed();}
+    function pause(){if(disposed || paused || !playing)return;if(current && buffer)offset=Math.min(buffer.duration,offset+Math.max(0,(context.currentTime-startedAt)));else globalThis.speechSynthesis?.pause();detach();playing=false;paused=true;changed();}
     function playBuffer(token){
         if(token!==generation || disposed || muted || paused || !buffer)return;
         if(context.state!=='running'){playing=false;paused=true;changed();return;}
         if(offset>=buffer.duration){playing=false;buffer=null;changed();return;}
-        current=context.createBufferSource();current.buffer=buffer;current.playbackRate.value=.92;current.connect(gain);startedAt=context.currentTime;
+        current=context.createBufferSource();current.buffer=buffer;current.playbackRate.value=1;current.connect(gain);startedAt=context.currentTime;
         const source=current;source.onended=()=>{if(token!==generation || current!==source)return;source.disconnect();current=null;buffer=null;offset=0;playing=false;changed();onEnded();};
         playing=true;source.start(0,offset);changed();
     }
@@ -35,7 +35,7 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
     }
     async function speak(value){
         stop();lesson=value;if(!value || muted || disposed || !context){changed();return;}
-        if(value.spokenOverride || value.id?.startsWith('fruit-name-')){
+        if(!value.recorded && (value.spokenOverride || value.id?.startsWith('fruit-name-'))){
             const token=generation,text=value.spoken;playing=true;changed();
             const base=globalThis.NOURISHLAND_CONFIG?.apiBase || (globalThis.location?.pathname.startsWith('/xr/')?'/xr-api':'/api');
             try{const response=await fetch(base+'/zinnia/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Speech unavailable');const bytes=await response.arrayBuffer();if(token!==generation || disposed)return;buffer=await context.decodeAudioData(bytes);if(token===generation)playBuffer(token);return;}catch{}

@@ -1,0 +1,76 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {WELCOME_PRACTICE_LESSONS as lessons,WELCOME_PRACTICE_RESPONSES as responses} from '../app/services/welcomePracticeContent.js';
+import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';
+import {createWelcomeInputRouting} from '../app/services/welcomeInputRouting.js';
+import {welcomeComfortPanelPose} from '../app/services/pimInfoPanel.js';
+import {welcomePracticeVisualGuide} from '../app/services/welcomeComfortOptions.js';
+import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
+import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.js';
+
+test('soft landing order introduces the frame, voice, table, face, comfort, then hands',()=>{
+    assert.deepEqual(lessons.slice(0,16).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','comfort','living-frame','practice-ready','grab','gloves','basket','basket-reveal','fruit']);
+    assert.equal(lessons.some(l=>l.id==='point'),false);
+    assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
+    for(const clip of [...lessons,...responses].filter(c=>c.spoken))assert.ok(fs.statSync(new URL('../app/assets/welcome-practice/voice/'+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
+});
+
+test('white silhouette precedes the solid object and follows adjusted geometry',()=>{
+    const root=new THREE.Group(),mesh=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial());root.add(mesh);
+    const reveal=createWelcomeObjectReveal(root);reveal.update(-1);assert.equal(root.visible,false);
+    mesh.position.y=.4;reveal.update(.7);assert.equal(root.visible,true);assert.equal(mesh.material.opacity,0);
+    const shell=root.children.find(c=>c.name.endsWith('white arrival glow'));assert.ok(shell.children[0].material.opacity>.4);assert.equal(shell.children[0].matrix.elements[13],.4);
+    reveal.update(4);assert.equal(shell.visible,false);assert.equal(mesh.material.opacity,1);assert.equal(mesh.material.depthWrite,true);
+});
+
+test('comfort panel begins to the side and panel gestures retain input ownership through release',()=>{
+    const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements,pose=welcomeComfortPanelPose(viewer);
+    assert.equal(pose.center.x,-1.05);assert.equal(pose.center.z,-1.08);assert.ok(pose.normal.x>.5);
+    const source={},other={};let time=0,owned=false,holding=false,hit=true;
+    const routing=createWelcomeInputRouting({now:()=>time,ownsPanel:s=>s===source && owned,holdsObject:s=>s===source && holding,hitPanel:()=>hit});
+    assert.equal(routing.routeToPanel(source,{}),true); // squeeze start reaches the normal panel listener
+    hit=false;time=100;assert.equal(routing.occupied(source),true);
+    owned=true;time=2000;assert.equal(routing.routeToPanel(source,{}),true); // hold continues after moving away from its initial ray
+    owned=false;time=2100;assert.equal(routing.routeToPanel(source,{}),true); // squeeze end also reaches the panel
+    time=2900;assert.equal(routing.occupied(source),false);assert.equal(routing.occupied(other),false);
+    holding=true;hit=true;assert.equal(routing.routeToPanel(source,{}),false); // a held orange stays with its controller
+});
+
+function canvasDocument(){const context=new Proxy({measureText:text=>({width:text.length*18}),createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(target,key)=>target[key] || (()=>{})});return {createElement:()=>({getContext:()=>context})};}
+
+test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia, pauses, and lets an orange be observed',async()=>{
+    const oldDocument=globalThis.document,oldFetch=globalThis.fetch,oldWarn=console.warn,oldImage=globalThis.Image;
+    globalThis.Image=class {set src(value){this.onerror?.();}};globalThis.document=canvasDocument();globalThis.fetch=async()=>{throw Error('Test intentionally uses geometry placeholders');};console.warn=()=>{};
+    let stage;
+    try{
+        const spoken=[],voice={status:()=>({playing:false,paused:false,muted:true}),speak:clip=>{if(clip)spoken.push(clip);},stop(){},unlock(){},pause(){},resume(){}};
+        stage=createWelcomePracticeScene({voice,embedded:true});await stage.loading;
+        const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
+        const tick=(seconds,extra={})=>{for(let i=0;i<Math.ceil(seconds/.05);i++)stage.update(.05,{viewer,floor:0,...extra});};
+        stage.start(viewer,0);tick(10,{frameReady:false});assert.equal(stage.phase,'frame');assert.equal(stage.objects.get('orange').visible,false);assert.equal(stage.snapshot().comfortVisible,false);
+        assert.equal(stage.zinniaMount.parent.visible,false);
+        tick(.1,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,0);
+        tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/Hi, my name is Zinnia/);assert.equal(spoken.at(-1).recorded,true);
+        stage.previewLesson('table-reveal');tick(1);assert.equal(stage.objects.get('orange').visible,false);assert.equal(stage.zinniaMount.parent.visible,false);
+        stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.ok(stage.zinniaMount.children[0].userData.zinnia);
+        stage.previewLesson('comfort');assert.equal(stage.snapshot().comfortVisible,true);stage.button('pause');tick(60);assert.equal(stage.phase,'comfort');assert.equal(stage.snapshot().voice.paused,true);stage.button('pause');
+        stage.previewLesson('grab');tick(2);
+        const orange=stage.bodies.find(b=>b.id==='orange'),source={handedness:'right'},position=new THREE.Vector3(orange.position.x,orange.position.y,orange.position.z).applyMatrix4(stage.root.matrixWorld);
+        const ray={origin:{x:position.x,y:position.y,z:position.z+.2},direction:{x:0,y:0,z:-1}},before={...orange.velocity};assert.equal(stage.select(ray,source),false);assert.deepEqual(orange.velocity,before);
+        const pose=new THREE.Matrix4().makeTranslation(position.x,position.y,position.z).elements;
+        tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
+        const lifted=[...pose];lifted[13]+=.12;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});tick(.1,{inputs:[{source,matrix:lifted,down:false}]});assert.equal(stage.snapshot().completed,true);
+        tick(3);assert.equal(stage.phase,'gloves');
+        let disposed=false;const character=stage.takeZinniaCharacter();character.children[0].geometry.addEventListener('dispose',()=>disposed=true);stage.destroy();stage=null;assert.equal(disposed,false);
+    }finally{stage?.destroy();globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.Image=oldImage;console.warn=oldWarn;}
+});
+
+test('fixed narration uses its bundled recording at natural speed and resumes at the same offset',async()=>{
+    const oldContext=globalThis.AudioContext,oldFetch=globalThis.fetch;let context,source,requested;
+    class Context{constructor(){context=this;this.currentTime=0;this.state='running';this.destination={};}resume(){return Promise.resolve();}close(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({duration:20});}createGain(){return {connect(){},gain:{setTargetAtTime(){}}};}createDelay(){return {connect(){},delayTime:{}};}createDynamicsCompressor(){return {connect(){},threshold:{},knee:{},ratio:{}};}createBufferSource(){source={connect(){},disconnect(){},stop(){},playbackRate:{},start:(_when,offset)=>{source.offset=offset;}};return source;}}
+    globalThis.AudioContext=Context;globalThis.fetch=async url=>{requested=String(url);return {ok:true,arrayBuffer:async()=>new ArrayBuffer(1)};};
+    const voice=createWelcomePracticeVoice();
+    try{voice.unlock();await voice.speak({...lessons.find(l=>l.id==='arrival'),recorded:true});assert.match(requested,/arrival\.mp3$/);assert.equal(source.playbackRate.value,1);context.currentTime=3;voice.pause();voice.resume();await Promise.resolve();await Promise.resolve();assert.equal(source.offset,3);assert.equal(source.playbackRate.value,1);}finally{voice.destroy();globalThis.AudioContext=oldContext;globalThis.fetch=oldFetch;}
+});

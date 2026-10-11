@@ -106,6 +106,13 @@ export function infoPanelPose(matrix, heading = null, headset = false, phoneAR =
     return {anchorHeading:right,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
 }
 
+// A quiet side placement for the tutorial; held panels keep their own pose.
+export function welcomeComfortPanelPose(matrix,heading=null,headset=true,phoneAR=false){
+    const pose=infoPanelPose(matrix,heading,headset,phoneAR);if(!pose)return null;
+    const center={x:pose.center.x-pose.anchorHeading.x*1.05,y:pose.center.y-.12,z:pose.center.z-pose.anchorHeading.z*1.05};
+    return {...pose,center,...facePanelTowardEyes(center,{x:matrix[12],y:matrix[13],z:matrix[14]})};
+}
+
 // Build companion faces from the main panel's local axes. The restrained
 // inward turn reads as one curved workstation without billboarding each face.
 export function companionPanelPose(pose, side, mainWidth, companionWidth, angleDegrees = 18, gap = 0) {
@@ -1530,7 +1537,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 if(finishingMoveSource && !sources.includes(finishingMoveSource))finishingMoveSource=null;
                 if(finishingSliderSource && !sources.includes(finishingSliderSource))finishingSliderSource=null;
             }
-            let next=infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;if(comfortContext){next.center.y-=.26;next={...next,...facePanelTowardEyes(next.center,{x:matrix[12],y:matrix[13],z:matrix[14]})};}heading=next.anchorHeading;
+            const next=comfortContext?welcomeComfortPanelPose(matrix,heading,headset,phoneAR):infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
             const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
             if(spatialMove?.panel==='settings' && grab?.source?.hand && xrFrame){const state=handTrackingState(xrFrame,grab.source,grab.referenceSpace);if(!state?.tracked || !state.pinch)finishSettingsDock();}
@@ -1608,7 +1615,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             }
             renderExplorer();
         },
-        getHeldInputSource(){return spatialMove?.source || null;},
+        getHeldInputSource(){return spatialMove?.source || spatialGrabPending?.source || sliderGrab?.source || null;},
         getFruitPerchPose(side='right'){return fruitVisible && fruitControlsActive?fruitWindow?.getPerchPose(side):null;},
         getFruitGripContact(source){return fruitWindow?.gripContact(source) || null;},
         activate(ray){if(fruitWindow?.activate(ray)){fruitControlsActive=true;explorerClosed=false;renderExplorer();return true;}const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
