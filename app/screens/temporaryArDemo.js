@@ -68,7 +68,7 @@ function updateSpatialLivingMap(now){
     const flatPreview=appRoot?.querySelector('[data-demo-living-map]');if(flatPreview)flatPreview.hidden=reveal.preview<=0;
     if(reveal.appear>0 && demoMapNarrationCount!==placedCount){
         clearDemoNarration({preserveAction:true});demoMapNarrationCount=placedCount;
-        introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));
+        introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));demoProjectVoice?.speak(introBoardBody);
         introBoardParagraphFadeStartedAt=now;introBoardParagraphFadeTimes=[now];introBoardTextureDirty=true;
         const text=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
         if(text){text.innerHTML='<p class="is-revealed"></p>';const paragraph=text.querySelector('p');paragraph.textContent=introBoardVisibleBody;paragraph.style.cssText='opacity:0;transition:opacity 1.2s ease';requestAnimationFrame(()=>{if(paragraph.isConnected)paragraph.style.opacity='1';});}
@@ -106,6 +106,8 @@ import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRender
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
 import {createWelcomePracticeXR} from '../services/welcomePracticeXR.js';
 import {createWelcomePracticeVoice} from '../services/welcomePracticeVoice.js';
+import {createProjectNarration} from '../services/projectNarration.js';
+let demoProjectVoice=null;
 import {welcomeTutorialEnabled,setWelcomeTutorialEnabled} from '../services/welcomeTutorialSettings.js';
 let welcomePractice=null,welcomePracticeVoice=null,welcomePracticeCompleted=false;
 let welcomePracticeOverlay=null,welcomePracticeAmbientStart=null,welcomePracticeDisposeTimer=null;
@@ -563,6 +565,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    demoProjectVoice?.destroy();demoProjectVoice=null;
     welcomePractice?.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeCompleted=false;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;welcomePracticeAmbientStart=null;
     clearTimeout(welcomePracticeDisposeTimer);welcomePracticeDisposeTimer=null;
     ++livingPeekGeneration;livingPeekConsumedSources=new WeakMap();closeLivingPeek();livingPeek?.destroy();livingPeek=null;livingPeekPose=null;
@@ -1448,6 +1451,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(choiceLabels.length===1?`Use ${choiceLabels[0]} below.`:'Choose an option below.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
     const fullText = paragraph?.textContent || '';
+    demoProjectVoice?.speak(fullText);
     const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
     const choiceButtons = [...panel.querySelectorAll('[data-demo-choice]')];
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -1540,6 +1544,7 @@ const DEMO_QUICK_ACCESS_COPY=Object.freeze({
 
 let demoNarrationRevision=0;
 function clearDemoNarration({preserveAction=false}={}) {
+    if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.stop();
     if(!preserveAction)demoNarrationRevision++;
     clearTimeout(boardTypingTimer);
     clearTimeout(boardTypingWatchdogTimer);
@@ -1752,6 +1757,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     setGuide('');
     syncDemoStageControls(options);
     if(options.stepLabel==='UTILITY 1.1')spawnDemoMapTotem();
+    if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.speak(bodyText);
 }
 
 function syncDemoStageControls(options={}){
@@ -1823,7 +1829,7 @@ function showDemoSlideFromHistory(index){
             else slide.onContinue?.();
         },{...slide.options,stepLabel:slide.stepLabel,historyReplay:true});
     }else if(slide.kind==='welcome' || slide.kind==='placement'){
-        introSceneActive=true;introBoardVisible=true;introBoardTitle=slide.title;introBoardBody=slide.body;introBoardVisibleBody=slide.body;introBoardStep=slide.stepLabel;introBoardTextureDirty=true;useSharedWelcomeBoard(true);
+        introSceneActive=true;introBoardVisible=true;introBoardTitle=slide.title;introBoardBody=slide.body;introBoardVisibleBody=slide.body;introBoardStep=slide.stepLabel;introBoardTextureDirty=true;useSharedWelcomeBoard(true);demoProjectVoice?.speak(slide.body);
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${slide.title}</h2><div class="tryit-board-text-window"><p class="is-revealed">${slide.body}</p></div>`;board.hidden=false;board.classList.add('is-copy-ready','is-persistent-demo-board');}
         const button=appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -1965,7 +1971,7 @@ function paintLearningModuleBoard(){
     clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);skipDemoNarration=null;
     const board=learningModuleBoard(),step=learningModule.steps[learningModuleStep];
     introBoardStep=`LEARNING 2.${learningModuleStep+1}`;
-    introBoardTitle=board.title;introBoardBody=board.body;introBoardVisibleBody=board.body;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;
+    introBoardTitle=board.title;introBoardBody=board.body;demoProjectVoice?.speak(board.body);introBoardVisibleBody=board.body;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');if(panel){panel.innerHTML=`<small>${introBoardStep}</small><h2>${board.title}</h2><div class="tryit-board-text-window"><p>${board.body.replace(/\n\n/g,'</p><p>')}</p></div>`;prepareTutorialBoard(panel);panel.classList.remove('is-typing');panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');}
     setIntroBoardNextGuide(step?`Select ${limLearningContent(step.cellId).title} to continue. To finish, open Tools in the Control panel and choose End learning.` :'Open Tools in the Control panel and choose End learning to return to the demo.');
     infoPanel?.setLearningModules(board,{open:true});
@@ -2148,7 +2154,7 @@ function bindLimSessionInteractions(arSession) {
         const resolved=resolveDemoCellTarget(),node=resolved?.kind==='lim-cell'?resolved.node:null;
         if(node || event.inputSource===limInputSource || event.inputSource===limInputSuppressSource && performance.now()<limActivationSessionSuppressUntil){event.preventDefault?.();event.stopImmediatePropagation?.();if(node)limActivation.consumeSyntheticClick(node.key,performance.now());return;}
     };
-    const visibility=()=>{if(arSession.visibilityState==='hidden'){limActivation.cancel('session-hidden');limInputSource=null;cancelDemoInteractionState('session-hidden');}else if(arSession.visibilityState==='visible'){preservePlacedDemoPlants(markers);introBoardTextureDirty=true;}};
+    const visibility=()=>{if(arSession.visibilityState==='hidden'){demoProjectVoice?.pause();limActivation.cancel('session-hidden');limInputSource=null;cancelDemoInteractionState('session-hidden');}else if(arSession.visibilityState==='visible'){demoProjectVoice?.resume();preservePlacedDemoPlants(markers);introBoardTextureDirty=true;}};
     const reset=event=>{
         const matrix=event.transform?.inverse?.matrix;if(!matrix)return;
         cancelDemoInteractionState('reference-space-reset');rebaseDemoRecords(markers,matrix);
@@ -2368,7 +2374,7 @@ function showArWelcomeShowcase() {
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
-        introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
+        introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);demoProjectVoice?.speak(introBoardBody);
         introBoardVisibleBody='';introBoardParagraphFadeTimes=[];introTextureUploadedAt=-Infinity;introBoardTextureDirty=true;
         const continueOpeningCopy=event=>{event?.stopImmediatePropagation?.();if(openingTyping || introBoardStep!=='INTRO 1.2')return;suppressSessionSelectUntil=performance.now()+700;openingTyping=false;clearDemoNarration();const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=true;button.onclick=null;}clearTimeout(arWelcomeUnlockTimer);arWelcomeIntroPending=false;arWelcomeSettleStage=false;runArWelcomeTutorial(0);};
         rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Let’s start',onContinue:continueOpeningCopy,kind:'welcome'});
@@ -2497,6 +2503,7 @@ function showArWelcomeShowcase() {
         arWelcomeOpeningActive=false;introOpeningCopySkipped=true;limMeshVisible=false;
         welcomePractice.start(viewerMatrix,calibratedDemoGroundY());
     }else if(calmWelcome)showDemoCalmWelcome();
+    else demoProjectVoice?.speak(introBoardBody);
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -3422,7 +3429,7 @@ function armDemoPlacement(type, {explained=false}={}) {
                     : {title:'Leave a Note',body:DEMO_GUIDED_COPY['ELEMENTS 1.16'],next:questTriggerPlacement?'Choose a location and press the trigger to place the Note.':'Choose a location and tap the aiming circle to place the Note.'};
         introBoardStep=type==='plant'?'ELEMENTS 1.5':type==='plant2'?'ELEMENTS 1.11':type==='note'?'ELEMENTS 1.16':'ELEMENTS 1.24';
         introBoardTitle=placementCopy.title;
-        introBoardBody=placementCopy.body;
+        introBoardBody=placementCopy.body;demoProjectVoice?.speak(placementCopy.body);
         introBoardVisibleBody=placementCopy.body;
         rememberDemoSlide({stepLabel:introBoardStep,title:placementCopy.title,body:placementCopy.body,buttonLabel:'',onContinue:null,options:{nextGuide:placementCopy.next},kind:'placement'});
         introBoardTextureDirty=true;
@@ -5016,7 +5023,7 @@ function setupRenderer() {
         onFeedback:(kind,source)=>{if(kind==='transform'){demoFeedback.sound('practice-reward');if(source)demoFeedback.pulse(source,.8,180);return;}const reward=['lesson','plant','collect','open','harvest','ring','land'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
         onChange:state=>{introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Use controllers':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
         onSelect:(ray,source)=>{const hit=welcomePracticeFrameHit(ray);if(!hit)return false;welcomePractice?.stage.button(hit.id,source);return true;},onHit:welcomePracticeFrameHit,
-        onComplete:()=>{welcomePracticeCompleted=true;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome();
+        onComplete:()=>{welcomePracticeVoice?.stop();welcomePracticeCompleted=true;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome();
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeDisposeTimer=null;},750);
         }
     });
@@ -6836,8 +6843,9 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     demoCellOpacity=getSpatialVisualSettings().cellOpacity;demoHandMode=getSpatialVisualSettings().handMode;
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
-    demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});demoFeedbackLastTick=-Infinity;demoFeedback.start();
-    if(welcomeTutorialEnabled()){welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing)});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
+    demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});
+    demoProjectVoice=createProjectNarration({onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
+    if(welcomeTutorialEnabled()){welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = livingMapPreviewRecords || refinementPreview ? false : await startImmersive();
