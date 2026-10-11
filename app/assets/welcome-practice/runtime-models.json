@@ -1,0 +1,30 @@
+[
+  {
+    "name": "strawberry",
+    "originalBytes": 15058752,
+    "originalTriangles": 413192,
+    "runtimeBytes": 383884,
+    "runtimeTriangles": 9090,
+    "sourceSha256": "2e808335644283b538598b665be9dc8eb8c7c8dd6c3a466262b9dbae9f5a10eb",
+    "credit": {
+      "author": "RISD Nature Lab (https://sketchfab.com/RISDNaturelab)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/strawberry-a32a74b2b306478dbece5a79c5e5cf23",
+      "title": "Strawberry"
+    }
+  },
+  {
+    "name": "dragonfly",
+    "originalBytes": 8838476,
+    "originalTriangles": 15666,
+    "runtimeBytes": 726404,
+    "runtimeTriangles": 10311,
+    "sourceSha256": "22f4994df07bc1bbdeb68923a5be5d470bc37335ebb30a4e4379e0ad44701784",
+    "credit": {
+      "author": "7SkyArtist (https://sketchfab.com/7SkyArtist)",
+      "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+      "source": "https://sketchfab.com/3d-models/dragonfly-3cbbe9177ae24f1a8ca953ca7eb8bb86",
+      "title": "Dragonfly"
+    }
+  }
+]
