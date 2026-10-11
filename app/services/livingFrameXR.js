@@ -60,14 +60,14 @@ export function createLivingFrameXR(gl,source){
   get stats(){return {drawCalls:entries.length,triangles:entries.reduce((n,e)=>n+e.count/3,0)};},
   update(){source.updateMatrixWorld(true);},
   prepareNext(){return preservingState(()=>{if(prepared<nodes.length)prepareNode(nodes[prepared++]);return prepared===nodes.length;});},
-  draw(view,worldMatrix){if(prepared!==nodes.length)return;preservingState(()=>{
+  draw(view,worldMatrix,opacity=1){if(prepared!==nodes.length || opacity<=0)return;preservingState(()=>{
    gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.disable(gl.CULL_FACE);gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);gl.uniform1i(uniforms.image,0);gl.uniform1i(uniforms.normalImage,1);
    for(const entry of entries){const {node,buffers,index,indexType,count,texture}=entry;if(!node.visible&&entry.parts.length===1)continue;
     vaoApi.bind(entry.vao);
-    const m=node.material;entry.parts.forEach((part,i)=>{entry.palette[i*2]=part.morphTargetInfluences?.[0]||0;entry.palette[i*2+1]=part.morphTargetInfluences?.[1]||0;});gl.uniform2fv(uniforms.weights,entry.palette);gl.uniform3f(uniforms.colour,m.color.r,m.color.g,m.color.b);gl.uniform1f(uniforms.opacity,m.opacity);gl.uniform1f(uniforms.roughness,m.roughness??.8);gl.uniform1f(uniforms.textured,texture?1:0);gl.bindTexture(gl.TEXTURE_2D,texture);
+    const m=node.material;entry.parts.forEach((part,i)=>{entry.palette[i*2]=part.morphTargetInfluences?.[0]||0;entry.palette[i*2+1]=part.morphTargetInfluences?.[1]||0;});gl.uniform2fv(uniforms.weights,entry.palette);gl.uniform3f(uniforms.colour,m.color.r,m.color.g,m.color.b);gl.uniform1f(uniforms.opacity,m.opacity*opacity);gl.uniform1f(uniforms.roughness,m.roughness??.8);gl.uniform1f(uniforms.textured,texture?1:0);gl.bindTexture(gl.TEXTURE_2D,texture);
     gl.uniform1f(uniforms.surfaceKind,currentGraphicsQuality()==='low'?0:livingFrameSurfaceKind(m.name));gl.uniform1f(uniforms.normalMapped,currentGraphicsQuality()!=='low'&&entry.normalTexture?1:0);gl.uniform2fv(uniforms.normalScale,[m.normalScale?.x??1,m.normalScale?.y??1]);gl.activeTexture(gl.TEXTURE0+1);gl.bindTexture(gl.TEXTURE_2D,entry.normalTexture);gl.activeTexture(gl.TEXTURE0);
     const matrix=entry.moving?worldMatrix.clone().multiply(node.matrixWorld):worldMatrix;gl.uniformMatrix4fv(uniforms.model,false,matrix.elements);
-    if(m.transparent){gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);gl.depthMask(!m.transparent&&m.depthWrite!==false);
+    if(m.transparent || opacity<1){gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);gl.depthMask(opacity>=1&&!m.transparent&&m.depthWrite!==false);
     if(index){gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,index);gl.drawElements(gl.TRIANGLES,count,indexType,0);}else gl.drawArrays(gl.TRIANGLES,0,count);
    }
   });},

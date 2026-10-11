@@ -23,8 +23,8 @@ export function prepareLivingFrameModel(quality=getSpatialVisualSettings().livin
 // Text never waits for this controller. Its ready flag swaps the canvas rim
 // only when the selected model can draw; failures leave the fallback usable.
 export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()=>{}}={}){
- let quality='off',entry=null,scene=null,mixer=null,xr=null,gl=null,desktop=null,disposeMaterials=null,generation=0,destroyed=false,lastTime=-1,lastDraw=-Infinity,visible=false,error=null,failedQuality=null;
- const drop=(keep=quality)=>{xr?.destroy();xr=null;if(scene){mixer?.stopAllAction();mixer?.uncacheRoot(scene);}disposeMaterials?.();disposeMaterials=null;if(entry)entry.users--;entry=null;scene=null;mixer=null;lastTime=-1;trim(keep);};
+ let quality='off',entry=null,scene=null,mixer=null,xr=null,gl=null,desktop=null,disposeMaterials=null,generation=0,destroyed=false,lastTime=-1,lastDraw=-Infinity,visible=false,revealStartedAt=null,revealInstant=false,error=null,failedQuality=null;
+ const drop=(keep=quality)=>{revealStartedAt=null;xr?.destroy();xr=null;if(scene){mixer?.stopAllAction();mixer?.uncacheRoot(scene);}disposeMaterials?.();disposeMaterials=null;if(entry)entry.users--;entry=null;scene=null;mixer=null;lastTime=-1;trim(keep);};
  async function select(next){
   if(destroyed||next===quality)return;
   quality=next;const token=++generation;error=null;failedQuality=null;
@@ -39,10 +39,10 @@ export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()
  }
  const api={select,attachDesktop,
   setDesktopDetail(close){if(!desktop)return;const roots=close==='roots';desktop.detail=Boolean(close);desktop.camera.zoom=roots?4:close?8:1;desktop.camera.position.x=roots?0:close ? .62 : 0;desktop.camera.position.y=roots?-1.23:close ? .65 : 0;desktop.camera.updateProjectionMatrix();desktop.width=0;lastDraw=-Infinity;},
-  get ready(){return Boolean(scene&&quality!=='off'&&(!gl||xr?.ready));},get quality(){return quality;},get error(){return error;},get scene(){return scene;},get growthTime(){return lastTime;},get renderStats(){return xr?.stats||null;},
-  setContext(context){if(gl===context)return;xr?.destroy();gl=context;xr=gl&&scene?createLivingFrameXR(gl,scene):null;onChange();},
+  get ready(){return Boolean(scene&&quality!=='off'&&(!gl||xr?.ready));},get entranceReady(){return api.ready && (!gl || revealInstant || revealStartedAt!==null && performance.now()-revealStartedAt>=1200);},get quality(){return quality;},get error(){return error;},get scene(){return scene;},get growthTime(){return lastTime;},get renderStats(){return xr?.stats||null;},
+  setContext(context){if(gl===context)return;revealStartedAt=null;xr?.destroy();gl=context;xr=gl&&scene?createLivingFrameXR(gl,scene):null;onChange();},
   update(elapsed,{show=true,desktopShow=show,reduced=false,frameToken=elapsed}={}){
-   const next=currentLivingFrameQuality();if(next!==quality)void select(next);visible=show;
+   const next=currentLivingFrameQuality();if(next!==quality)void select(next);visible=show;revealInstant=reduced;
    if(!scene)return;
    const duration=LIVING_FRAME_GROWTH_DURATION_MS/1000,seconds=reduced?duration:Math.max(0,Math.min(duration,elapsed/1000)),time=quality==='sd'?Math.floor(seconds*15)/15:Math.floor(seconds*30)/30;
    const changed=time!==lastTime;if(changed){mixer.setTime(time*SOURCE_GROWTH_SECONDS/duration);xr?.update();lastTime=time;}
@@ -54,7 +54,7 @@ export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()
    const frameHeight=getSpatialVisualSettings().livingFrameHeight||0,heightChanged=desktop.heightOffset!==frameHeight;desktop.heightOffset=frameHeight;desktop.group.position.y=-.016+frameHeight;
    if(changed||resized||heightChanged||lastDraw<0){desktop.renderer.render(desktop.world,desktop.camera);lastDraw=frameToken;}
   },
-  drawXR(view,anchorMatrix){if(!visible||!api.ready||!xr)return;const matrix=new THREE.Matrix4().fromArray(anchorMatrix);matrix.multiply(new THREE.Matrix4().makeTranslation(0,0,.012));xr.draw(view,matrix);},
+  drawXR(view,anchorMatrix){if(!visible||!api.ready||!xr)return;const matrix=new THREE.Matrix4().fromArray(anchorMatrix);matrix.multiply(new THREE.Matrix4().makeTranslation(0,0,.012));revealStartedAt ??= performance.now();const t=revealInstant?1:Math.min(1,(performance.now()-revealStartedAt)/1200);xr.draw(view,matrix,t*t*(3-2*t));},
   retry(){if(!failedQuality)return Promise.resolve();const next=quality;quality='off';return select(next);},
   destroy(){if(destroyed)return;destroyed=true;++generation;quality='off';drop(getSpatialVisualSettings().livingFrameQuality);if(desktop){desktop.renderer.dispose();desktop.canvas.remove();desktop=null;}}
  };

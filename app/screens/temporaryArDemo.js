@@ -432,6 +432,7 @@ let butterflyCompanions=[];
 let ambientBeeAvoidanceTime=[];
 let ambientEncounterSeed=Math.floor(Math.random()*10000);
 let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientBeeCount=1,ambientBeeScreens=new Set(),ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientBeeReturn=[],ambientBeeFlowerVisits=[],ambientLastPaint=0;
+let ambientBeeRevealAt=NaN,ambientBeeWaitAt=NaN;
 let rainV2Canvas=null,rainV2LastPaint=0;
 let demoRainIntensity=RAIN_QUALITIES[currentRainQuality()].intensity;
 let demoRainStyle=RAIN_QUALITIES[currentRainQuality()].style;
@@ -618,7 +619,7 @@ function clearSessionState() {
     livingFrameModel?.destroy();livingFrameModel=null;demoLivingFramePreviewClock=null;
     arWelcomeLayer?.remove();arWelcomeLayer=null;arWelcomeCanvas=null;limHiddenCells=new Set();limExpandedCells=new Set();limExpandedAt=new Map();limPointerKey='';limPointerId=null;limInputSource=null;limInputSuppressSource=null;
     for(const insect of butterflyCompanions){insect.model?.destroy();insect.canvas?.remove();}butterflyCompanions=[];
-    ambientBeeModel?.destroy();ambientBeeModel=null;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFrame=null;ambientEncounterOrigin=null;ambientBeeAvoidance=[];ambientBeeReturn=[];ambientBeeFlowerVisits=[];ambientBeeAvoidanceTime=[];ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
+    ambientBeeModel?.destroy();ambientBeeModel=null;ambientBeeRevealAt=NaN;ambientBeeWaitAt=NaN;if(ambientBeeSpriteTexture)gl?.deleteTexture(ambientBeeSpriteTexture);ambientBeeSpriteTexture=null;ambientBeeSpriteUploadedAt=-Infinity;ambientCanvas=null;ambientBeesStartedAt=NaN;ambientWorldAnchor=null;ambientWorldFrame=null;ambientEncounterOrigin=null;ambientBeeAvoidance=[];ambientBeeReturn=[];ambientBeeFlowerVisits=[];ambientBeeAvoidanceTime=[];ambientLastPaint=0;rainV2Canvas=null;rainV2LastPaint=0;
     limPanelDiagnosticRecorded=false;
     boardTypingTimer = null;
     boardTypingWatchdogTimer = null;
@@ -6024,6 +6025,17 @@ function blendInsectWithFlower(position,visit,visitor){
 function drawSpatialAmbientLife(view){
     // Never display a different bee while the animated model is loading.
     if(!getSpatialVisualSettings().insects || !ambientBeeModel?.ready || !viewerMatrix || !Number.isFinite(ambientBeesStartedAt))return;
+    if(welcomePractice?.active || xrRecoveryStatus!=='ready')return;
+    const entranceTime=arWelcomeClock.elapsed;
+    if(!Number.isFinite(ambientBeeRevealAt)){
+        if(!Number.isFinite(ambientBeeWaitAt))ambientBeeWaitAt=entranceTime;
+        const rimPending=getSpatialVisualSettings().livingFrame!==false && !livingFrameModel?.error && !livingFrameModel?.entranceReady;
+        if(rimPending && entranceTime-ambientBeeWaitAt<6000)return;
+        ambientBeeRevealAt=entranceTime+900;ambientBeesStartedAt=ambientBeeRevealAt;
+    }
+    const entranceT=Math.min(1,Math.max(0,(entranceTime-ambientBeeRevealAt)/1500));
+    if(entranceT<=0)return;
+    const entranceOpacity=entranceT*entranceT*(3-2*entranceT);
     if(!ambientWorldAnchor){
         introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
         ambientWorldFrame=introWorldAnchor || new Float32Array(viewerMatrix);
@@ -6034,7 +6046,7 @@ function drawSpatialAmbientLife(view){
     const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     for(let index=0;index<ambientBeeCount;index++){
         const bee=demoBeePose(arWelcomeClock.elapsed,ambientBeesStartedAt,index,{count:ambientBeeCount,attention:'control',encounters:!reducedMotion && !arWelcomeIntroPending && demoOrientationStep<0,encounterSeed:ambientEncounterSeed});
-        if(!bee)continue;
+        if(!bee)continue;bee.opacity*=entranceOpacity;
         // The ambient anchor is established from the current viewer pose above.
         // Referencing the old `base` name here threw on every immersive frame as
         // soon as the Meet a Plant Orb step enabled the bees. Because the frame
