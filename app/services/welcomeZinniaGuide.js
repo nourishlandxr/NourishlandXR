@@ -1,0 +1,73 @@
+import * as THREE from '../assets/fruit-window/vendor/three.module.js';
+import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
+import {mergeGeometries} from '../assets/fruit-window/vendor/BufferGeometryUtils.js';
+
+// Recorded narration drives the mouth; task state drives gaze and gestures.
+// No speech synthesis, timers advancing lessons, or new interface.
+export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=>{},load=url=>new GLTFLoader().loadAsync(url)}={}){
+    const holder=new THREE.Group();holder.name='ZinniaWelcomeGuide';holder.visible=true;root.add(holder);
+    let model=null,mixer=null,disposed=false,ready=false,age=0,phase='',level=0,rewardAge=10,ack=null,ackAge=10,smileNow=.45;
+    const parts={},petals=[],target=new THREE.Vector3(),worldTarget=new THREE.Vector3(),local=new THREE.Vector3();
+    const wrapper=node=>{const pivot=new THREE.Group();pivot.position.copy(node.position);node.parent.add(pivot);pivot.add(node);node.position.set(0,0,0);return pivot;};
+    function dispose(object){object.traverse(n=>{n.geometry?.dispose();for(const material of [n.material].flat().filter(Boolean))material.dispose();});}
+    const loading=load(new URL('../assets/welcome-practice/zinnia.glb',import.meta.url).href).then(gltf=>{
+        if(disposed){dispose(gltf.scene);return;}
+        model=gltf.scene;model.name='Zinnia';model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),centre=box.getCenter(new THREE.Vector3());model.position.sub(new THREE.Vector3(centre.x,box.min.y,centre.z));model.scale.setScalar(.42/size.y);model.position.multiplyScalar(.42/size.y);holder.add(model);
+        model.traverse(node=>{if(['Head_nod_root','Body_sway_root','Leaf_arm_L','Leaf_arm_R','Mouth_speech','Eye_L_expression','Eye_R_expression','Eyebrow_L','Eyebrow_R'].includes(node.name))parts[node.name]=node;});
+        const head=parts.Head_nod_root;
+        // Bake individual petal poses into material batches. Keep irregular
+        // shapes and colours, with subtle group motion instead of 80 draw calls.
+        if(head){model.updateMatrixWorld(true);const inverse=head.matrixWorld.clone().invert(),groups=new Map(),remove=[];
+            model.traverse(node=>{if(!node.isMesh || !/^Petal_\d/.test(node.name))return;const geometry=node.geometry.clone();geometry.morphAttributes={};geometry.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inverse,node.matrixWorld));const key=node.material.uuid;if(!groups.has(key))groups.set(key,{material:node.material,geometries:[]});groups.get(key).geometries.push(geometry);remove.push(node);});
+            for(const {material,geometries} of groups.values()){const geometry=mergeGeometries(geometries);if(geometry){const mesh=new THREE.Mesh(geometry,material);mesh.name='ZinniaPetalBatch';head.add(mesh);petals.push(mesh);}geometries.forEach(g=>g.dispose());}
+            for(const node of remove){node.removeFromParent();node.geometry.dispose();}
+        }
+        const mouth=parts.Mouth_speech;
+        if(mouth){const geometry=mouth.geometry,base=geometry.attributes.position,open=base.clone();let xmin=Infinity,xmax=-Infinity;for(let i=0;i<base.count;i++){xmin=Math.min(xmin,base.getX(i));xmax=Math.max(xmax,base.getX(i));}
+            // Expand the shallow mouth ribbon into a soft oval, not a smile
+            // line oscillating independently of the recording.
+            const centre=(xmin+xmax)/2,half=(xmax-xmin)/2;
+            for(let i=0;i<base.count;i++){const u=(base.getX(i)-centre)/half,sign=i%2?1:-1;open.setY(i,base.getY(i)+sign*.035*Math.sqrt(Math.max(0,1-u*u)));}
+            if(geometry.morphTargetsRelative)for(let i=0;i<base.count;i++)open.setXYZ(i,open.getX(i)-base.getX(i),open.getY(i)-base.getY(i),open.getZ(i)-base.getZ(i));
+            const index=geometry.morphAttributes.position.length;geometry.morphAttributes.position.push(open);mouth.morphTargetDictionary.Open=index;mouth.morphTargetInfluences.push(0);
+        }
+        // Petal animation tracks were baked above; other authored motion stays.
+        mixer=new THREE.AnimationMixer(model);for(const clip of gltf.animations){const filtered=clip.clone();filtered.tracks=filtered.tracks.filter(track=>!/^Petal_\d/.test(track.name));mixer.clipAction(filtered).play();}
+        for(const name of ['Head_nod_root','Body_sway_root','Leaf_arm_L','Leaf_arm_R'])if(parts[name])parts[name].userData.guidePivot=wrapper(parts[name]);
+        ready=true;onAssets();
+    }).catch(error=>{if(!disposed)onError(error);});
+    function acknowledge(kind='yes'){ack=kind;ackAge=0;}
+    function celebrate(){rewardAge=0;acknowledge('yes');}
+    function update(dt,{lesson,target:taskTarget,viewer,success=false}={}){
+        // The tutorial owns visibility and its white silhouette reveal.
+        if(!ready || disposed)return;
+        if(!holder.visible){age=0;level=0;phase=lesson;return;}
+        dt=Math.max(0,Math.min(.06,dt));age+=dt;rewardAge+=dt;ackAge+=dt;mixer.update(dt);
+        if(lesson!==phase){phase=lesson;rewardAge=10;ackAge=10;if(lesson==='zinnia')acknowledge('yes');}
+        // Preserve the authored shape; the reveal fades materials rather than scaling it.
+        const paused=voice?.status().paused,raw=voice?.speechLevel?.() || 0;
+        level=paused?0:THREE.MathUtils.damp(level,raw,raw>level?24:14,dt);
+        const celebrating=rewardAge<2.4;
+        const task=taskTarget && !celebrating && lesson!=='zinnia' && lesson!=='hands' && lesson!=='explore';
+        holder.updateWorldMatrix(true,true);
+        if(task)worldTarget.copy(taskTarget).applyMatrix4(root.matrixWorld);
+        else if(viewer)worldTarget.set(viewer[12],viewer[13],viewer[14]);
+        else worldTarget.set(0,1.5,1).applyMatrix4(root.matrixWorld);
+        const head=parts.Head_nod_root?.userData.guidePivot;
+        if(head){local.copy(worldTarget);head.parent.worldToLocal(local).sub(head.position);let yaw=THREE.MathUtils.clamp(Math.atan2(local.x,local.z),-.8,.8),pitch=THREE.MathUtils.clamp(Math.atan2(local.y,Math.hypot(local.x,local.z)),-.42,.42);
+            if(ackAge<1.8){const fade=Math.min(1,ackAge*6)*Math.max(0,Math.min(1,(1.8-ackAge)*5)),wave=Math.sin(ackAge*Math.PI*3.4)*fade;if(ack==='no')yaw+=wave*.32;else pitch+=wave*.23;}
+            target.set(-pitch,yaw,level*.025*Math.sin(age*3));const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(target.x,target.y,target.z));head.quaternion.slerp(q,1-Math.exp(-8*dt));
+        }
+        const body=parts.Body_sway_root?.userData.guidePivot;if(body)body.rotation.z=Math.sin(age*2.1)*level*.025+(lesson==='zinnia'?Math.sin(age*3)*.035:0);
+        for(const [i,petal] of petals.entries())petal.rotation.x=Math.sin(age*1.6+i*.8)*.007*(.4+level);
+        smileNow=THREE.MathUtils.damp(smileNow,(celebrating || success || lesson==='zinnia')?1:.45,8,dt);
+        for(const name of ['Eye_L_expression','Eye_R_expression','Eyebrow_L','Eyebrow_R','Mouth_speech']){const node=parts[name];if(!node)continue;const map=node.morphTargetDictionary||{};for(const [key,value] of [['Smile',smileNow],['Sad',0],['Open',level]])if(map[key]!==undefined)node.morphTargetInfluences[map[key]]=value;}
+        for(const side of ['L','R']){const pivot=parts['Leaf_arm_'+side]?.userData.guidePivot;if(!pivot)continue;const q=new THREE.Quaternion(),sign=side==='L'?-1:1;
+            if(celebrating){const fade=Math.min(1,rewardAge*3)*Math.max(0,Math.min(1,(2.4-rewardAge)*3)),angle=(1.05+.34*Math.sin(rewardAge*Math.PI*5))*fade;q.setFromEuler(new THREE.Euler(0,side==='L'?angle:-angle,-sign*.2*fade));}
+            else if(task){local.copy(worldTarget);pivot.parent.worldToLocal(local).sub(pivot.position);const selected=taskTarget.x>=holder.position.x?'R':'L';if(side===selected)q.setFromUnitVectors(new THREE.Vector3(sign,.1,.2).normalize(),local.normalize());}
+            else if(lesson==='zinnia')q.setFromEuler(new THREE.Euler(0,-sign*.25,sign*(.32+.06*Math.sin(age*3))));
+            pivot.quaternion.slerp(q,1-Math.exp(-7*dt));
+        }
+    }
+    return {holder,loading,update,celebrate,acknowledge,snapshot:()=>({ready,visible:holder.visible,visibleAge:age,phase,speaking:level>.02,speechLevel:level,celebrating:rewardAge<2.4}),destroy(){disposed=true;mixer?.stopAllAction();}};
+}

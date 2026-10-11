@@ -11,7 +11,7 @@ import {WELCOME_FRUIT_ASSETS,WELCOME_INITIAL_FRUITS} from './welcomePracticeFrui
 import {createWelcomePracticeTable} from './welcomePracticeTable.js';
 import {createWelcomeFlightLesson} from './welcomeFlightLesson.js';
 import {createWelcomeBayberryCluster} from './welcomeBayberryCluster.js';
-import {createZinniaCharacter,animateZinniaCharacter} from './zinniaCharacter.js';
+import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} from './zinniaCharacter.js';
 import {createWelcomeObjectReveal} from './welcomeObjectReveal.js';
 import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 
@@ -37,17 +37,15 @@ function createDragonfly(){
 
 // The scene/state are shared by native WebXR and the desktop visual preview.
 // The anchor stays in the world; moving one's head never moves the table.
-export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=>{},onFeedback=()=>{},onAssets=()=>{},embedded=false,onSelect=()=>false}={}){
+export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=>{},onFeedback=()=>{},onAssets=()=>{},embedded=false,onSelect=()=>false,loadZinnia}={}){
     const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);root.visible=false;
     const controllerGuide=createWelcomeControllerGuide(scene,{onAssets});
     const tableParts=createWelcomePracticeTable(root),table=tableParts.group,stand=tableParts.stand,foot=tableParts.foot;
     // Reserve a quiet physical home for the separately authored Zinnia character.
     const zinniaPot=new THREE.Group();zinniaPot.name='Zinnia pot · character mount';zinniaPot.position.set(.02,0,-.28);root.add(zinniaPot);
-    const potMaterial=new THREE.MeshStandardMaterial({color:'#65775b',roughness:.92});
-    const pot=new THREE.Mesh(new THREE.CylinderGeometry(.065,.045,.095,18),potMaterial);pot.position.y=.0475;zinniaPot.add(pot);
-    const soil=new THREE.Mesh(new THREE.CylinderGeometry(.059,.059,.006,18),new THREE.MeshStandardMaterial({color:'#3c382d',roughness:1}));soil.position.y=.094;zinniaPot.add(soil);
-    const zinniaMount=new THREE.Group();zinniaMount.name='Zinnia character attachment';zinniaMount.position.y=.097;zinniaPot.add(zinniaMount);
-    const zinniaCharacter=createZinniaCharacter();zinniaMount.add(zinniaCharacter);
+    const zinniaMount=new THREE.Group();zinniaMount.name='Authored Zinnia attachment';zinniaPot.add(zinniaMount);
+    let zinniaReveal=null;
+    const zinniaCharacter=createZinniaCharacter({load:loadZinnia,onReady:()=>{if(disposed)return;zinniaReveal?.removeGlow();zinniaReveal=createWelcomeObjectReveal(zinniaPot);zinniaReveal?.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);onAssets();lastSignature='';if(active)paint();},onError:()=>{if(!disposed){lastSignature='';if(active)paint();}}});zinniaMount.add(zinniaCharacter);
     const homes=[[0,.22],[-.22,.24],[.26,.25],[-.50,.27],[-.26,-.02],[.16,.05],[.47,.28]];
     const bodies=WELCOME_INITIAL_FRUITS.map((id,i)=>createPracticeBody(id,{x:homes[i][0],z:homes[i][1],radius:WELCOME_FRUIT_ASSETS[id].extent*.4}));
     const practiceFruits=bodies.slice();
@@ -57,8 +55,8 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         const half=body.halfSize;placeholder.scale.set(half.x,half.y,half.z);group.add(placeholder);
     }
     const props=createWelcomePracticeProps(root,bodies.slice(),{onCollect:body=>onFeedback('collect',body.interactionSource || lastActionSource)});bodies.push(props.body);objects.set(props.body.id,props.remote);
-    const tableReveal=createWelcomeObjectReveal(table),zinniaReveal=createWelcomeObjectReveal(zinniaPot),basketReveal=createWelcomeObjectReveal(props.basket);
-    tableReveal.update(-1);zinniaReveal.update(-1);basketReveal.update(-1);
+    const tableReveal=createWelcomeObjectReveal(table),basketReveal=createWelcomeObjectReveal(props.basket);zinniaPot.visible=false;
+    tableReveal.update(-1);zinniaReveal?.update(-1);basketReveal.update(-1);
     const garden=createWelcomePlantPractice(root,{onAssets});props.addHarvest(garden.harvestBodies);bodies.push(...garden.bodies);for(const [id,object] of garden.objects)objects.set(id,object);
     const dragon=createDragonfly();dragon.group.scale.setScalar(.8);root.add(dragon.group);
     const flight=createWelcomeFlightLesson(root,dragon,tableParts.landing,{onFeedback});
@@ -82,11 +80,11 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     const gloveOpacity=()=>phase()==='gloves'?THREE.MathUtils.smoothstep(elapsed-stepStarted,1.2,3.4):['fruit'].includes(phase())?1:0;
     const cue=id=>WELCOME_PRACTICE_RESPONSES.find(value=>value.id===id);
     const spokenLesson=()=>lesson().silent?null:{...lesson(),recorded:true};
-    const comfortVisible=()=>Boolean(frameLoadError) || index>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='comfort');
+    const comfortVisible=()=>Boolean(frameLoadError) || zinniaCharacter.userData.zinnia.status==='error' || index>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='comfort');
     const textOpacity=()=>phase()==='frame' && !frameLoadError?0:THREE.MathUtils.smoothstep(elapsed-stepStarted,0,1.2);
-    const currentCaption=()=>phase()==='frame' && frameLoadError?'The 3D Living Frame could not load. Use Adjust, then Frame SD or HD, to retry.':phase()==='harvest'?lesson().caption+' '+props.snapshot().harvestCount+' of 3.':phase()==='fruit'?(props.full?'All fruit gathered. ':'Pick any fruit and release it into the basket. ')+props.snapshot().collected.length+' of '+practiceFruits.length+'.':phase()==='fly'?(remoteSource?flight.cue+' Trigger: forward. Grip: back. Stick: turn and height.':lesson().caption):phase()==='hands' && handsPresent?'Your movements become visible hands. Gently touch thumb and index finger together.':lesson().caption;
+    const currentCaption=()=>['face','zinnia-reveal','zinnia'].includes(phase()) && zinniaCharacter.userData.zinnia.status==='error'?'Zinnia’s model could not load. Check your connection and restart the tutorial.':phase()==='frame' && frameLoadError?'The 3D Living Frame could not load. Use Adjust, then Frame SD or HD, to retry.':phase()==='harvest'?lesson().caption+' '+props.snapshot().harvestCount+' of 3.':phase()==='fruit'?(props.full?'All fruit gathered. ':'Pick any fruit and release it into the basket. ')+props.snapshot().collected.length+' of '+practiceFruits.length+'.':phase()==='fly'?(remoteSource?flight.cue+' Trigger: forward. Grip: back. Stick: turn and height.':lesson().caption):phase()==='hands' && handsPresent?'Your movements become visible hands. Gently touch thumb and index finger together.':lesson().caption;
     const exitCopy=()=>exitSkipped?'Of course. Let’s move into the main experience. You can return to the practice whenever you like.':'You’re ready. Let’s move into the main experience.';
-    function snapshot(){return {active,exiting,exitOpacity,lastPickedFruit,phase:phase(),index,caption:exiting?exitCopy():currentCaption(),title:exiting?'At your pace':lesson().title,handsPresent,held:[...activeGrabs.values()].map(g=>g.body.id),comfortVisible:comfortVisible(),textOpacity:textOpacity(),voice:{...voice?.status(),paused:tutorialPaused || Boolean(voice?.status().paused)},assets:fruitAssets,flight:flight.snapshot(),nextFruit:props.nextFruit,garden:garden.snapshot(),basket:props.snapshot(),completed:successAt!==null,controllerGuide:controllerGuide.snapshot()};}
+    function snapshot(){return {active,exiting,exitOpacity,lastPickedFruit,phase:phase(),index,caption:exiting?exitCopy():currentCaption(),title:exiting?'At your pace':lesson().title,handsPresent,held:[...activeGrabs.values()].map(g=>g.body.id),comfortVisible:comfortVisible(),textOpacity:textOpacity(),voice:{...voice?.status(),paused:tutorialPaused || Boolean(voice?.status().paused)},assets:fruitAssets,zinniaAsset:zinniaCharacter.userData.zinnia.status,flight:flight.snapshot(),nextFruit:props.nextFruit,garden:garden.snapshot(),basket:props.snapshot(),completed:successAt!==null,controllerGuide:controllerGuide.snapshot()};}
     function nextAllowed(){return !(voice?.status().playing || voice?.status().paused || tutorialPaused) && phase()==='explore';}
     function paint(){
         const v=voice?.status() || {playing:false,muted:true};
@@ -102,7 +100,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     }
     function setLesson(value){releaseAll(false);index=value;stepStarted=elapsed;narrationFinishedAt=null;
         if(phase()==='table-reveal')reveals.table=elapsed;if(phase()==='zinnia-reveal')reveals.zinnia=elapsed;if(phase()==='basket-reveal')reveals.basket=elapsed;pointed=false;orangeGrabbed=false;orangeReleased=false;fruitGrabbed=false;fruitReleased=false;dragonDistance=0;dragonReleased=false;handStable=0;lastActionSource=null;wasPouring=false;if(phase()==='packet'){garden.reset();garden.bodies.forEach(resetPracticeBody);}successCuePlayed=false;gloveTried=false;successAt=null;lastSignature='';if(phase()==='fly')flight.reset();if(phase()==='gloves')gloveRevealPlayed=false;void voice?.speak(spokenLesson());paint();}
-    function start(viewer,floor){if(disposed)return;active=true;exiting=false;tutorialPaused=false;exitOpacity=1;fadeStarted=null;lastPickedFruit=null;props.reset();reveals.table=reveals.zinnia=reveals.basket=null;tableReveal.update(-1);zinniaReveal.update(-1);basketReveal.update(-1);for(const mesh of objects.values())mesh.visible=false;dragon.group.visible=false;elapsed=0;stepStarted=0;if(viewer)anchor(viewer,floor);setLesson(0);}
+    function start(viewer,floor){if(disposed)return;active=true;exiting=false;tutorialPaused=false;exitOpacity=1;fadeStarted=null;lastPickedFruit=null;props.reset();reveals.table=reveals.zinnia=reveals.basket=null;tableReveal.update(-1);zinniaReveal?.update(-1);basketReveal.update(-1);for(const mesh of objects.values())mesh.visible=false;dragon.group.visible=false;elapsed=0;stepStarted=0;if(viewer)anchor(viewer,floor);setLesson(0);}
     function anchor(viewer,floor=viewer[13]-1.65){if(anchored || !viewer)return;const forward=new THREE.Vector3(-viewer[8],0,-viewer[10]).normalize();if(forward.lengthSq()<.1)forward.set(0,0,-1);tableHeight=Math.max(.58,Math.min(.88,viewer[13]-.65-floor))+tableHeightOffset;root.position.set(viewer[12]+forward.x*.75,floor+tableHeight,viewer[14]+forward.z*.75);root.quaternion.setFromAxisAngle(up,Math.atan2(-forward.x,-forward.z));stand.scale.y=tableHeight-.04;stand.position.y=-tableHeight/2-.012;foot.position.y=-tableHeight+.012;root.updateMatrixWorld(true);anchored=true;}
     function setTableHeightOffset(value){const next=Math.max(-.2,Math.min(.25,value)),delta=next-tableHeightOffset;tableHeightOffset=next;if(!anchored)return;releaseAll(false);root.position.y+=delta;tableHeight+=delta;stand.scale.y=tableHeight-.04;stand.position.y=-tableHeight/2-.012;foot.position.y=-tableHeight+.012;root.updateMatrixWorld(true);}
     function localPose(matrix){return new THREE.Matrix4().multiplyMatrices(worldInverse,new THREE.Matrix4().fromArray(matrix));}
@@ -137,7 +135,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     function releaseAll(throwing=false){remoteSource=null;remoteArmed=false;for(const source of [...activeGrabs.keys()])release(source,throwing);dragonOwner=null;dragonManual=false;dragonVelocity.set(0,0,0);}
     const fruitAssets=Object.fromEntries(WELCOME_INITIAL_FRUITS.map(id=>[id,'loading']));
     const loader=new GLTFLoader();
-    const loading=Promise.all(practiceFruits.map(async body=>{
+    const fruitLoading=Promise.all(practiceFruits.map(async body=>{
         try{const gltf=await loader.loadAsync(new URL(WELCOME_FRUIT_ASSETS[body.id].url,import.meta.url).href);if(disposed){disposeTree(gltf.scene);return;}
             const model=body.id==='bayberry-cluster'?createWelcomeBayberryCluster(gltf.scene):gltf.scene;model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),extent=WELCOME_FRUIT_ASSETS[body.id].extent,factor=extent/Math.max(size.x,size.y,size.z);
             const normalized=new THREE.Group();normalized.scale.setScalar(factor);normalized.position.copy(center).multiplyScalar(-factor);normalized.add(model);
@@ -145,6 +143,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
             body.halfSize={x:Math.max(.01,size.x*factor/2),y:Math.max(.012,size.y*factor/2),z:Math.max(.01,size.z*factor/2)};body.radius=Math.max(body.halfSize.x,body.halfSize.y,body.halfSize.z);resetPracticeBody(body);fruitAssets[body.id]='ready';
         }catch(error){fruitAssets[body.id]='fallback';console.warn('Practice fruit:',body.id,error.message);}
     })).then(()=>{if(!disposed)onAssets();});
+    const loading=Promise.all([fruitLoading,zinniaCharacter.userData.zinnia.ready]);
     function update(dt,{viewer,floor,hands=[],controllers=[],inputs=[],frameReady=true,frameError=null}={}){
         if(!active || disposed)return;dt=!exiting && (tutorialPaused || voice?.status().paused)?0:Math.min(.06,Math.max(0,dt));elapsed+=dt;frameLoadError=phase()==='frame'?frameError:null;anchor(viewer,floor);if(!anchored)return;
         if(exiting){if(fadeStarted===null && elapsed-exitStarted>2.5 && (!voice?.status().playing || elapsed-exitStarted>24)){voice?.stop();fadeStarted=elapsed;}if(fadeStarted!==null){const t=Math.min(1,(elapsed-fadeStarted)/1.8);exitOpacity=1-t*t*(3-2*t);if(t>=1){active=false;root.visible=false;onChange(snapshot());onComplete({skipped:exitSkipped});return;}}paint();return;}
@@ -152,8 +151,8 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         const handsAllowed=handsEnabled();hands=handsAllowed?hands:[];inputs=inputs.filter(input=>!input.source.hand || handsAllowed);handsPresent=hands.some(e=>e.state?.tracked);handStable=handsPresent?handStable+dt:0;
         const age=elapsed-stepStarted;
         tableReveal.update(reveals.table===null?-1:elapsed-reveals.table);
-        zinniaReveal.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);
-        animateZinniaCharacter(zinniaCharacter,elapsed,Boolean(voice?.status().playing));
+        zinniaReveal?.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);
+        animateZinniaCharacter(zinniaCharacter,elapsed,Boolean(voice?.status().playing),{lesson:phase(),viewer,speechLevel:voice?.speechLevel?.() || 0,target:bodies.find(b=>b.id===(phase()==='grab'?'orange':phase()==='fruit'?'basket':phase()))?.position,success:successAt!==null});
         const orangeAppear=phase()==='grab'?THREE.MathUtils.smoothstep(age,0,1.8):1;
         objects.get('orange').scale.setScalar(Math.max(.001,orangeAppear));
         for(const source of [...inputEdges.keys()])if(!inputs.some(i=>i.source===source)){release(source,false);inputEdges.delete(source);}
@@ -182,18 +181,18 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
             if(speaking)narrationFinishedAt=null;else if(narrationFinishedAt===null)narrationFinishedAt=elapsed;
             const readTime=voice?.status().muted || !voice?.status().available?Math.max(5,(lesson().spoken || '').split(/\s+/).length/2.6):0;
             const ready=phase()!=='frame' || frameReady;
-            const assetsReady=phase()!=='practice-ready' || fruitAssets.orange!=='loading';
+            const assetsReady=(phase()!=='practice-ready' || fruitAssets.orange!=='loading') && (phase()!=='face' || zinniaCharacter.userData.zinnia.status==='ready');
             if(ready && assetsReady && !speaking && age>Math.max(lesson().hold || 2,readTime) && elapsed-narrationFinishedAt>(lesson().silent?0:2))setLesson(index+1);
         }
         if(phase()==='gloves' && age>.8 && !gloveRevealPlayed && controllers.length){gloveRevealPlayed=true;for(const input of controllers)onFeedback('transform',input.source);}
         if(phase()==='gloves' && age>4.5 && controllers.some(i=>i.down))gloveTried=true;
         const success=phase()==='grab'?orangeReleased:phase()==='gloves'?gloveTried:phase()==='fruit'?props.full:phase()==='fly'?flight.complete:phase()==='hands'?handStable>1.2 && inputs.some(input=>input.source.hand && input.trigger):phase()==='packet'?garden.opened:phase()==='seed'?garden.planted:phase()==='water'?garden.watered:phase()==='grow'?garden.grown:phase()==='harvest'?props.harvestComplete:false;
-        if(success){if(successAt===null){successAt=elapsed;onFeedback('lesson',lastActionSource);}
+        if(success){if(successAt===null){successAt=elapsed;zinniaCharacter.userData.zinnia.guide.celebrate();onFeedback('lesson',lastActionSource);}
             if(!successCuePlayed && elapsed-successAt>.45 && !voice?.status().playing && !voice?.status().paused && !tutorialPaused){successCuePlayed=true;successAt=elapsed;const id=phase()==='hands'?'hands-ready':lesson().id+'-done';void voice?.speak(cue(id)?{...cue(id),recorded:true}:null);}
             if(successCuePlayed && elapsed-successAt>1.2 && !voice?.status().playing && !voice?.status().paused && !tutorialPaused)setLesson(index+1);
         }
         revealHalos.forEach((halo,i)=>{const input=controllers[i],t=age-.8;halo.visible=phase()==='gloves' && Boolean(input) && t>=0 && t<2.8;if(halo.visible){halo.position.setFromMatrixPosition(new THREE.Matrix4().fromArray(input.matrix));halo.scale.setScalar(1+t*.55);halo.material.opacity=.22*(1-t/2.8);}});
         controllerGuide.update(dt,lesson().automatic || handsEnabled()?[]:phase()==='fly' && heldRemote?[heldRemote]:controllers,lesson().id,viewer,successAt!==null,1-gloveOpacity());paint();
     }
-    return {scene,root,bodies,objects,dragon,loading,start,update,hit,select,button,snapshot,releaseAll,isHolding:source=>activeGrabs.has(source) || dragonOwner===source,abort,setTableHeightOffset,zinniaMount,takeZinniaCharacter(){zinniaReveal.removeGlow();zinniaCharacter.removeFromParent();return zinniaCharacter;},get exitOpacity(){return exitOpacity;},get exiting(){return exiting;},get active(){return active;},get phase(){return lesson().id;},get tableHeight(){return tableHeight;},get controllerHandsVisible(){return active && gloveOpacity()>0;},get controllerHandOpacity(){return gloveOpacity();},get handsEnabled(){return handsEnabled();},get trackedHandOpacity(){return !handsEnabled()?0:phase()==='hands'?THREE.MathUtils.smoothstep(handStable,.4,2.4):1;},get hands(){return handsPresent;},previewLesson(id){const next=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id===id);if(next>=0){reveals.table=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='table-reveal')?elapsed-4:null;reveals.zinnia=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='zinnia-reveal')?elapsed-4:null;reveals.basket=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='basket-reveal')?elapsed-4:null;setLesson(next);garden.previewPhase(id);}},rebase(matrix){releaseAll(false);root.applyMatrix4(new THREE.Matrix4().fromArray(matrix));root.updateMatrixWorld(true);},resetObjects(){releaseAll(false);props.reset();bodies.forEach(resetPracticeBody);if(phase()==='seed')garden.reset();},destroy({stopVoice=true}={}){disposed=true;active=false;if(stopVoice)voice?.stop();releaseAll(false);controllerGuide.destroy();garden.destroy();disposeTree(scene);}};
+    return {scene,root,bodies,objects,dragon,loading,start,update,hit,select,button,snapshot,releaseAll,isHolding:source=>activeGrabs.has(source) || dragonOwner===source,abort,setTableHeightOffset,zinniaMount,takeZinniaCharacter(){zinniaReveal?.removeGlow();zinniaCharacter.removeFromParent();return zinniaCharacter;},get exitOpacity(){return exitOpacity;},get exiting(){return exiting;},get active(){return active;},get phase(){return lesson().id;},get tableHeight(){return tableHeight;},get controllerHandsVisible(){return active && gloveOpacity()>0;},get controllerHandOpacity(){return gloveOpacity();},get handsEnabled(){return handsEnabled();},get trackedHandOpacity(){return !handsEnabled()?0:phase()==='hands'?THREE.MathUtils.smoothstep(handStable,.4,2.4):1;},get hands(){return handsPresent;},previewLesson(id){const next=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id===id);if(next>=0){reveals.table=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='table-reveal')?elapsed-4:null;reveals.zinnia=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='zinnia-reveal')?elapsed-4:null;reveals.basket=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='basket-reveal')?elapsed-4:null;setLesson(next);garden.previewPhase(id);}},rebase(matrix){releaseAll(false);root.applyMatrix4(new THREE.Matrix4().fromArray(matrix));root.updateMatrixWorld(true);},resetObjects(){releaseAll(false);props.reset();bodies.forEach(resetPracticeBody);if(phase()==='seed')garden.reset();},destroy({stopVoice=true}={}){disposed=true;active=false;if(stopVoice)voice?.stop();releaseAll(false);controllerGuide.destroy();garden.destroy();if(zinniaCharacter.parent)disposeZinniaCharacter(zinniaCharacter);disposeTree(scene);}};
 }

@@ -18,3 +18,7 @@ Strawberry — RISD Nature Lab. [Original model](https://sketchfab.com/3d-models
 The seed packet picture is the strawberry reference image supplied by the project owner. `runtime-models.json` records original hashes and derivative sizes. The procedural dragonfly generator is retained for the fallback model.
 
 The welcome collection includes lightweight derivatives of the existing Fruit Discovery Window carambola, African peach, mamey sapote and Chinese bayberry assets. `tropical-runtime-models.json` records the source paths and budgets. Five shared bayberry instances, a procedural cut stem and leaves form one grabbable sprig. Updated controller and flight guidance uses the same approved Zinnia voice with a slight 3 percent pace reduction.
+
+## Zinnia character
+
+The authored prototype 06 organic-face model is restored from the “Fix living frame wheel alignment” chat, including varied pastel petals, attached leaf hands, the refined stem and expressive eye and mouth morphs. `zinnia.glb` is byte-for-byte identical to `zinnia-prototype/organic-face/zinnia-organic-face.glb`. Source fingerprint: `zinnia-source.json`. The animation integration retains authored motion and adds narration-driven expressions, task gaze, pointing and celebration.

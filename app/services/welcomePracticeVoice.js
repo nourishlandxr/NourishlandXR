@@ -5,6 +5,7 @@ export function setWelcomeNarrationSettings(change){const next={...getWelcomeNar
 export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded=()=>{},assetBase=new URL('../assets/welcome-practice/voice/',import.meta.url),initialId='arrival',maxCached=8,fetchCache='no-cache'}={}){
     const Context=globalThis.AudioContext || globalThis.webkitAudioContext;
     let context=null,gain=null,echoGain=null,current=null,buffer=null,offset=0,startedAt=0,generation=0,muted=!getWelcomeNarrationSettings().enabled,playing=false,paused=false,disposed=false,lesson=null;
+    let analyser=null,wave=null;
     const cache=new Map(),abort=new AbortController();
     const status=()=>({muted,playing,paused,available:Boolean(context),lesson:lesson?.id || null});
     const changed=()=>onChange(status());
@@ -19,7 +20,8 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         if(token!==generation || disposed || muted || paused || !buffer)return;
         if(context.state!=='running'){playing=false;paused=true;changed();return;}
         if(offset>=buffer.duration){playing=false;buffer=null;changed();return;}
-        current=context.createBufferSource();current.buffer=buffer;current.playbackRate.value=1;current.connect(gain);startedAt=context.currentTime;
+        if(!analyser && context.createAnalyser){analyser=context.createAnalyser();analyser.fftSize=256;wave=new Float32Array(analyser.fftSize);analyser.connect(gain);}
+        current=context.createBufferSource();current.buffer=buffer;current.playbackRate.value=1;current.connect(analyser || gain);startedAt=context.currentTime;
         const source=current;source.onended=()=>{if(token!==generation || current!==source)return;source.disconnect();current=null;buffer=null;offset=0;playing=false;changed();onEnded();};
         playing=true;source.start(0,offset);changed();
     }
@@ -49,5 +51,6 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
     }
     function syncSettings(){const settings=getWelcomeNarrationSettings(),wasMuted=muted;muted=!settings.enabled;if(gain){gain.gain.setTargetAtTime(settings.volume,context.currentTime,.025);echoGain.gain.setTargetAtTime(settings.echo,context.currentTime,.025);}if(muted)stop();else if(wasMuted && lesson){unlock();void speak(lesson);}changed();}
     globalThis.addEventListener?.('nlxr-narration-change',syncSettings);
-    return {unlock,speak,stop,pause,resume,status,preload:(id=initialId)=>muted?null:load(id),replay(){unlock();if(lesson)void speak(lesson);},toggleMute(){setWelcomeNarrationSettings({enabled:muted});},destroy(){disposed=true;globalThis.removeEventListener?.('nlxr-narration-change',syncSettings);stop();abort.abort();cache.clear();context?.close()?.catch(()=>{});context=null;}};
+    function speechLevel(){if(!playing || paused || muted || !current || !analyser || context?.state!=='running')return 0;analyser.getFloatTimeDomainData(wave);let energy=0;for(const value of wave)energy+=value*value;return Math.min(1,Math.max(0,(Math.sqrt(energy/wave.length)-.008)*7));}
+    return {unlock,speak,stop,pause,resume,status,speechLevel,preload:(id=initialId)=>muted?null:load(id),replay(){unlock();if(lesson)void speak(lesson);},toggleMute(){setWelcomeNarrationSettings({enabled:muted});},destroy(){disposed=true;globalThis.removeEventListener?.('nlxr-narration-change',syncSettings);stop();abort.abort();cache.clear();analyser?.disconnect();context?.close()?.catch(()=>{});context=null;}};
 }

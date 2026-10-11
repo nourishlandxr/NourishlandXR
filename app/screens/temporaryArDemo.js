@@ -5069,8 +5069,7 @@ function setupRenderer() {
         onPanelOwns:source=>infoPanel?.getHeldInputSource()===source || Boolean(infoPanel?.isHandInteracting(source)),
         onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray));},onHit:welcomePracticeFrameHit,
         onComplete:({aborted=false}={})=>{welcomePracticeVoice?.destroy();welcomePracticeVoice=null;if(infoPanel)infoPanel.welcomeComfortVisible=false;infoPanel?.suspend(true);infoPanel?.setComfortContext(null);infoPanel?.setOpacity(1);infoPanel?.setIntroduction(false);welcomeComfort=null;welcomePracticeCompleted=true;
-            zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch();
-            zinniaFramePerch.adoptCharacter(welcomePractice?.stage.takeZinniaCharacter());
+            zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({character:welcomePractice?.stage.takeZinniaCharacter()});
             zinniaFramePerch.attach(gl);if(!aborted)zinniaFramePerch.show();welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome({returning:!aborted});
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy({stopVoice:false});welcomePractice=null;welcomePracticeDisposeTimer=null;},750);
         }

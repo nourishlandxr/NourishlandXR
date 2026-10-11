@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import {GLTFLoader} from '../app/assets/fruit-window/vendor/GLTFLoader.js';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {WELCOME_PRACTICE_LESSONS as lessons,WELCOME_PRACTICE_RESPONSES as responses} from '../app/services/welcomePracticeContent.js';
 import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';
@@ -46,7 +47,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
     let stage;
     try{
         const spoken=[],voice={status:()=>({playing:false,paused:false,muted:true}),speak:clip=>{if(clip)spoken.push(clip);},stop(){},unlock(){},pause(){},resume(){}};
-        stage=createWelcomePracticeScene({voice,embedded:true});await stage.loading;
+        stage=createWelcomePracticeScene({voice,embedded:true,loadZinnia:async()=>{const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}});await stage.loading;
         const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
         const tick=(seconds,extra={})=>{for(let i=0;i<Math.ceil(seconds/.05);i++)stage.update(.05,{viewer,floor:0,...extra});};
         stage.start(viewer,0);tick(10,{frameReady:false});assert.equal(stage.phase,'frame');assert.equal(stage.objects.get('orange').visible,false);assert.equal(stage.snapshot().comfortVisible,false);
@@ -54,7 +55,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         tick(.1,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,0);
         tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/Hi, my name is Zinnia/);assert.equal(spoken.at(-1).recorded,true);
         stage.previewLesson('table-reveal');tick(1);assert.equal(stage.objects.get('orange').visible,false);assert.equal(stage.zinniaMount.parent.visible,false);
-        stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.ok(stage.zinniaMount.children[0].userData.zinnia);
+        stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.status,'ready');assert.ok(stage.zinniaMount.getObjectByName('Eye_L_expression'));assert.ok(stage.zinniaMount.getObjectByName('Pot'));
         stage.previewLesson('comfort');assert.equal(stage.snapshot().comfortVisible,true);stage.button('pause');tick(60);assert.equal(stage.phase,'comfort');assert.equal(stage.snapshot().voice.paused,true);stage.button('pause');
         stage.previewLesson('grab');tick(2);
         const orange=stage.bodies.find(b=>b.id==='orange'),source={handedness:'right'},position=new THREE.Vector3(orange.position.x,orange.position.y,orange.position.z).applyMatrix4(stage.root.matrixWorld);
@@ -63,7 +64,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
         const lifted=[...pose];lifted[13]+=.12;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});tick(.1,{inputs:[{source,matrix:lifted,down:false}]});assert.equal(stage.snapshot().completed,true);
         tick(3);assert.equal(stage.phase,'gloves');
-        let disposed=false;const character=stage.takeZinniaCharacter();character.children[0].geometry.addEventListener('dispose',()=>disposed=true);stage.destroy();stage=null;assert.equal(disposed,false);
+        let disposed=false;const character=stage.takeZinniaCharacter();character.getObjectByName('Pot').geometry.addEventListener('dispose',()=>disposed=true);stage.destroy();stage=null;assert.equal(disposed,false);
     }finally{stage?.destroy();globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.Image=oldImage;console.warn=oldWarn;}
 });
 
