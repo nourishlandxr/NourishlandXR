@@ -172,11 +172,12 @@ export function mountDemoBeeModel(canvas,{sprite=false,gl=null}={}){
             renderer.render(scene,camera);
             return canvas;
         },
-        draw(elapsed,startedAt,reducedMotion=false,{attention='screen',encounters=true,encounterSeed=0}={}){
+        draw(elapsed,startedAt,reducedMotion=false,{attention='screen',encounters=true,encounterSeed=0,count=BEE_COUNT}={}){
             if(!renderer || !ready || !Number.isFinite(startedAt)){canvas.style.visibility='hidden';return;}
             const delta=Number.isFinite(lastElapsed)?Math.max(0,Math.min(.15,(elapsed-lastElapsed)/1000)):0;
             let nearestDepth=-1,anyFlyby=false;
             for(const [index,item] of bees.entries()){
+            if(index>=count){item.wrapper.visible=false;continue;}
             const bee=item,pose=demoBeePose(elapsed,startedAt,index,{attention,encounters:!reducedMotion && encounters,encounterSeed});if(!pose){bee.wrapper.visible=false;continue;}bee.wrapper.visible=true;
             const width=window.innerWidth,height=window.innerHeight;if(!width||!height)return;
             if(canvas.width!==Math.round(width*renderer.getPixelRatio()) || canvas.height!==Math.round(height*renderer.getPixelRatio())){renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();}

@@ -82,6 +82,7 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
     }
     function begin(source,frame){
         if(!enabled() || !canUse(source) || held.has(source))return held.has(source);
+        if(held.size)return false; // One owner carries the map; a second hand cannot steal it.
         const value=sample(source,frame);if(!value)return false;let contact=value.position,remote=false,anchor=null;
         if(!livingMapGripContact(contact,origin(),rotation()) && !source.hand){
             const pose=frame?.getPose(source.targetRaySpace,space);if(!pose)return false;
@@ -99,12 +100,12 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
         // Translation carries the contact. Wrist rotation must not swing a
         // distant ray-length offset around the controller like a lever.
         const local=anchor || livingMapHandleAnchor(livingMapGripContact(contact,origin(),rotation()));
-        held.set(source,{offset,anchor:local,side:Math.sign(local.x)});onGrab(source);return true;
+        held.set(source,{offset,anchor:local,side:0,position:vector(value.position),origin:vector(origin()),rotation:quaternion(rotation()),orientation:value.orientation?.clone(),turn:0,depth:0});onGrab(source);return true;
     }
     function release(source){if(!held.has(source))return false;held.delete(source);gesture.reset();suppressed.set(source,performance.now()+400);return true;}
     function reset(){gesture.reset();held.clear();lastUpdate=null;}
     return {
-        get active(){return gesture.active;},owns:source=>held.has(source),
+        get active(){return held.size>0;},owns:source=>held.has(source),
         get heldHandles(){return [...held.values()].map(grip=>grip.side);},
         contact(source){const grip=held.get(source),center=origin();return grip && center?grip.anchor.clone().applyQuaternion(quaternion(rotation())).add(vector(center)):null;},
         reset,
@@ -126,14 +127,21 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
                 if(!value.pressed){release(source);continue;}
                 const grip=held.get(source);if(!grip)continue;
                 const position=vector(value.position).add(grip.offset);
-                if(!gesture.active && position.distanceTo(vector(origin()))>1.1){release(source);continue;}
                 samples.push({...value,position,source,handedness:source.handedness});
             }
             for(const source of held.keys())if(!samples.some(s=>s.source===source))release(source);
             const now=frame.predictedDisplayTime ?? performance.now(),dt=lastUpdate===null?16:Math.max(1,now-lastUpdate);lastUpdate=now;
-            const next=gesture.update(samples,origin(),rotation(),joystickAdjustment(samples,dt));if(next){
+            const carrying=samples[0],grip=carrying && held.get(carrying.source);
+            if(grip){
+                const axes=carrying.source.gamepad?.axes || [],start=axes.length>=4?2:0,seconds=Math.min(50,dt)/1000;
+                grip.turn+=stickAxis(axes[start])*seconds*1.1;grip.depth-=stickAxis(axes[start+1])*seconds*.55;
+                const next=grip.rotation.clone();
+                if(grip.orientation && carrying.orientation)next.premultiply(carrying.orientation.clone().multiply(grip.orientation.clone().invert()));
+                next.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),grip.turn));
+                const bounded=limitLivingMapTilt(next);
+                const carried=grip.origin.clone().add(vector(carrying.position).sub(grip.offset).sub(grip.position)).addScaledVector(vector(carrying.forward || {x:0,y:0,z:-1}),grip.depth);
                 const blend=responseMs>0?1-Math.exp(-dt/responseMs):1;
-                onMove(vector(origin()).lerp(gesture.position,blend));onRotate(quaternion(rotation()).slerp(next,blend));
+                onMove(vector(origin()).lerp(carried,blend));onRotate(quaternion(rotation()).slerp(bounded,blend));
             }
         },
         destroy(){abort?.abort();reset();suppressed.clear();session=null;}

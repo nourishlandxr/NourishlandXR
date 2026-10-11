@@ -249,7 +249,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Explore, learn and plan",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
-        "hint": "Hold both edge grips to move the landscape. Left joystick turns and tilts; right joystick rolls and moves it nearer or farther. Release either grip to leave it in place. Place Totems onto the pulsing circles: entrance, open forest, then swales.",
+        "hint": "Aim at the central map grip and squeeze to carry the landscape with one hand. Move your hand to reposition it; use the joystick to turn it or adjust distance. Release to leave it in place. Place Totems onto the pulsing circles: entrance, open forest, then swales.",
         "art": null
     },
     {

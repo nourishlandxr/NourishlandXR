@@ -269,7 +269,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     return {
         canvas,schedule,scene,guidance,totemLabel,routes,visitors,
         update:(elapsed,reduced)=>update(elapsed,reduced,false),
-        setHeldHandles(sides=[]){handles.forEach((handle,index)=>{handle.children[0].material=sides.includes(index?1:-1)?heldHandle:restingHandle;});},
+        setHeldHandles(sides=[]){handles.forEach(handle=>{handle.children[0].material=sides.length?heldHandle:restingHandle;});},
         rotate(delta){rotation.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),-delta));settledPaint=false;lastPaint=-Infinity;},
         setRotation(value){if(rotation.angleTo(value)<1e-6)return;rotation.copy(value);settledPaint=false;lastPaint=-Infinity;},
         project(item,rect){
