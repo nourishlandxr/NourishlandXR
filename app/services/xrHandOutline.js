@@ -31,7 +31,11 @@ export function createXRHandOutline(gl){
         const geometry=Object.entries({p:'POSITION',n:'NORMAL',joints:'JOINTS_0',weights:'WEIGHTS_0'}).map(([name,key])=>{const data=accessorData(gltf,primitive.attributes[key]);return {location:attributes[name],buffer:buffer(gl.ARRAY_BUFFER,new Float32Array(data.data)),size:data.components};});
         const indices=accessorData(gltf,primitive.indices).data;
         const bind=Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16).invert());
-        rigs.set(side,{geometry,index:buffer(gl.ELEMENT_ARRAY_BUFFER,indices),count:indices.length,type:indices.BYTES_PER_ELEMENT===4?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,names:skin.joints.map(id=>gltf.json.nodes[id].name),inverse:Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16)),bind,matrices:new Float32Array(25*16),matrix:new THREE.Matrix4(),sample:null});
+        const names=skin.joints.map(id=>gltf.json.nodes[id].name),wristIndex=names.indexOf('wrist'),parents=skin.joints.map(id=>{const parent=gltf.json.nodes.findIndex(node=>node.children?.includes(id));return skin.joints.indexOf(parent);});
+        const position=i=>new THREE.Vector3().setFromMatrixPosition(bind[i]),wrist=position(wristIndex),index=position(names.indexOf('index-finger-phalanx-proximal')).sub(wrist),pinky=position(names.indexOf('pinky-finger-phalanx-proximal')).sub(wrist);
+        const palm=new THREE.Vector3().crossVectors(index,pinky).normalize().multiplyScalar(side==='left'?-1:1);
+        const flexAxes=names.map((name,i)=>{const child=parents.findIndex(parent=>parent===i);if(child<0)return new THREE.Vector3(1,0,0);const direction=position(child).sub(position(i)).normalize(),axis=new THREE.Vector3().crossVectors(direction,palm).normalize();return axis.transformDirection(bind[i].clone().invert());});
+        rigs.set(side,{geometry,index:buffer(gl.ELEMENT_ARRAY_BUFFER,indices),count:indices.length,type:indices.BYTES_PER_ELEMENT===4?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,names,wristIndex,parents,flexAxes,inverse:Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16)),bind,matrices:new Float32Array(25*16),matrix:new THREE.Matrix4(),sample:null});
     }).catch(error=>{if(!disposed)console.warn('Hand outline:',error.message);});
     return {
         draw(view,entries,{filled=false,controllers=[],controllerOpacity=1,trackedOpacity=1}={}){
@@ -47,12 +51,13 @@ export function createXRHandOutline(gl){
                 const rig=rigs.get(source.handedness),sample=controller || state;
                 if(rig.sample!==sample){
                     if(controller){
-                        const wrist=new THREE.Vector3().setFromMatrixPosition(rig.bind[0]),base=new THREE.Matrix4().fromArray(controller.matrix).multiply(new THREE.Matrix4().makeRotationX(Math.PI/2)).multiply(new THREE.Matrix4().makeTranslation(-wrist.x,-wrist.y,-wrist.z)),posed=[];
-                        rig.names.forEach((name,i)=>{const finger=name.split('-')[0],previous=i>0 && rig.names[i-1].startsWith(finger+'-')?i-1:0;
-                            let world;if(i===0)world=rig.bind[i].clone();else {const relative=rig.bind[previous].clone().invert().multiply(rig.bind[i]);world=(posed[previous] || rig.bind[previous]).clone().multiply(relative);
-                                const amount=name.includes('proximal')?.45:name.includes('intermediate')?.4:name.includes('distal')?.2:0,curl=finger==='thumb'?controller.grip*.25:finger==='index'?Number(controller.trigger):controller.grip;if(amount)world.multiply(new THREE.Matrix4().makeRotationX(amount*curl));}
-                            posed[i]=world;rig.matrix.copy(base).multiply(world).multiply(rig.inverse[i]).toArray(rig.matrices,i*16);
-                        });
+                        const wrist=new THREE.Vector3().setFromMatrixPosition(rig.bind[rig.wristIndex]),base=new THREE.Matrix4().fromArray(controller.matrix).multiply(new THREE.Matrix4().makeRotationX(Math.PI/2)).multiply(new THREE.Matrix4().makeTranslation(-wrist.x,-wrist.y,-wrist.z)),posed=[];
+                        const poseJoint=i=>{if(posed[i])return posed[i];const parent=rig.parents[i],name=rig.names[i],finger=name.split('-')[0];
+                            const world=parent<0?rig.bind[i].clone():poseJoint(parent).clone().multiply(rig.bind[parent].clone().invert().multiply(rig.bind[i]));
+                            const amount=name.includes('proximal')?.65:name.includes('intermediate')?.70:name.includes('distal')?.38:0,curl=THREE.MathUtils.clamp(finger==='thumb'?(controller.grip || 0)*.25:finger==='index'?Number(controller.trigger):controller.grip || 0,0,1);
+                            if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],amount*curl));posed[i]=world;return world;
+                        };
+                        rig.names.forEach((name,i)=>rig.matrix.copy(base).multiply(poseJoint(i)).multiply(rig.inverse[i]).toArray(rig.matrices,i*16));
                     }else rig.names.forEach((name,i)=>{rig.matrix.fromArray(state.joints.get(name).matrix).multiply(rig.inverse[i]).toArray(rig.matrices,i*16);});rig.sample=sample;
                 }
                 gl.uniformMatrix4fv(locations['bones[0]'],false,rig.matrices);gl.uniform1f(locations.opacity,controller?controllerOpacity:(state.pinch?.95:.9)*state.visualConfidence*trackedOpacity);gl.uniform3f(locations.fillColour,...(controller?[.52,.64,.49]:[.93,.91,.84]));

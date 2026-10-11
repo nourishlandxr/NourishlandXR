@@ -25,10 +25,10 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
         referenceSpace.addEventListener?.('reset',event=>{if(event.transform?.inverse?.matrix)stage.rebase(event.transform.inverse.matrix);else {stage.releaseAll(false);onChange?.({...stage.snapshot(),trackingReset:true});}},{signal:abort.signal});
     }
     function update(frame,time,viewer,floor,trackedHands){
-        if(disposed || !stage.active)return;const dt=lastTime===null?0:(time-lastTime)/1000;lastTime=time;hands=trackedHands;inputs=[];controllers=[];
+        if(disposed || !stage.active)return;const dt=lastTime===null?0:(time-lastTime)/1000;lastTime=time;hands=stage.handsEnabled?(trackedHands || []):[];inputs=[];controllers=[];
         for(const source of session?.inputSources || []){
             let pose=null,ray=null;try{pose=frame.getPose(source.gripSpace || source.targetRaySpace,space);ray=controllerRayFromPose(frame.getPose(source.targetRaySpace,space),source.handedness);}catch{}
-            if(source.hand){const state=hands.find(h=>h.source===source)?.state,wrist=state?.rawJoints.get('wrist'),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');
+            if(source.hand && !stage.handsEnabled)continue;if(source.hand){const state=hands.find(h=>h.source===source)?.state,wrist=state?.rawJoints.get('wrist'),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');
                 if(!state?.tracked || !wrist || !index || !thumb){inputs.push({source,matrix:null});continue;}
                 const m=new THREE.Matrix4().fromArray(wrist.matrix),p=new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),q=new THREE.Quaternion().setFromRotationMatrix(m);
                 const tips=['middle-finger-tip','ring-finger-tip','pinky-finger-tip'].map(name=>state.rawJoints.get(name)).filter(Boolean),curl=tips.length===3?tips.reduce((sum,t)=>sum+Math.hypot(t.x-wrist.x,t.y-wrist.y,t.z-wrist.z),0)/3:1;

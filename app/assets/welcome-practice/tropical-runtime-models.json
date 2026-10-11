@@ -1,0 +1,46 @@
+[
+  {
+    "id": "carambola",
+    "source": "carambola-bayberry/carambola_ripe.glb",
+    "originalTriangles": 31950,
+    "triangles": 4227,
+    "bytes": 255360,
+    "sourceAsset": {
+      "generator": "glTF-Transform v4.5.1",
+      "version": "2.0"
+    }
+  },
+  {
+    "id": "african-peach",
+    "source": "mamey-african/african_peach_ripe.glb",
+    "originalTriangles": 30218,
+    "triangles": 5692,
+    "bytes": 479012,
+    "sourceAsset": {
+      "generator": "glTF-Transform v4.5.1",
+      "version": "2.0"
+    }
+  },
+  {
+    "id": "mamey-sapote",
+    "source": "mamey-african/mamey_sapote_ripe.glb",
+    "originalTriangles": 23220,
+    "triangles": 4504,
+    "bytes": 279612,
+    "sourceAsset": {
+      "generator": "glTF-Transform v4.5.1",
+      "version": "2.0"
+    }
+  },
+  {
+    "id": "bayberry",
+    "source": "carambola-bayberry/chinese_bayberry_ripe.glb",
+    "originalTriangles": 38780,
+    "triangles": 2680,
+    "bytes": 275272,
+    "sourceAsset": {
+      "generator": "glTF-Transform v4.5.1",
+      "version": "2.0"
+    }
+  }
+]

@@ -5013,7 +5013,7 @@ function setupRenderer() {
     // The interaction toy now has a purpose on the welcome table. The loose
     // Hero Dice no longer competes with the plant/Control panel journey.
     if(welcomeTutorialEnabled() && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,
-        onFeedback:(kind,source)=>{const reward=['lesson','plant','collect','open','harvest'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
+        onFeedback:(kind,source)=>{if(kind==='transform'){demoFeedback.sound('practice-reward');if(source)demoFeedback.pulse(source,.8,180);return;}const reward=['lesson','plant','collect','open','harvest','ring','land'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
         onChange:state=>{introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Use controllers':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
         onSelect:(ray,source)=>{const hit=welcomePracticeFrameHit(ray);if(!hit)return false;welcomePractice?.stage.button(hit.id,source);return true;},onHit:welcomePracticeFrameHit,
         onComplete:()=>{welcomePracticeCompleted=true;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome();
@@ -5436,9 +5436,9 @@ function drawIntroNoteContent(ctx) {
     if(welcomePractice?.active){
         const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=1;ctx.textAlign='center';ctx.textBaseline='middle';
         ctx.fillStyle='#f8efdc';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;ctx.fillText('NOURISHLAND XR',700,285,880);
-        ctx.fillStyle='#fffaf0';const bottom=drawDemoHeading(ctx,state.title,700,370,900);
+        ctx.fillStyle='#fffaf0';const bottom=drawDemoHeading(ctx,state.title,700,370,900);ctx.textAlign='center';
         ctx.font=`500 35px ${DEMO_PRESENTATION_FONT}`;wrappedTextureLines(ctx,state.caption,830).slice(0,4).forEach((line,i)=>ctx.fillText(line,700,bottom+110+i*48));
-        for(const button of welcomePracticeFrameButtons(state)){ctx.fillStyle='rgba(232,223,201,.94)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,26);ctx.fill();ctx.fillStyle='#405348';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;ctx.fillText(button.label,button.x+button.width/2,button.y+button.height/2,button.width-20);}
+        for(const button of welcomePracticeFrameButtons(state)){ctx.fillStyle='rgba(255,248,230,.08)';ctx.strokeStyle='rgba(255,248,230,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,26);ctx.fill();ctx.stroke();ctx.fillStyle='#fff8e6';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;ctx.fillText(button.label,button.x+button.width/2,button.y+button.height/2,button.width-20);}
         ctx.restore();return;
     }
 
@@ -5704,7 +5704,7 @@ function introWorldAnchorFromViewer(matrix) {
 function welcomePracticeFrameButtons(state){
     const buttons=[{id:'pause',label:state.voice?.paused?'Resume':'Pause',x:340,y:800,width:220,height:66},{id:'replay',label:'Hear again',x:590,y:800,width:220,height:66}];
     if(!state.voice?.playing && !state.voice?.paused && ['hands','explore'].includes(state.phase))buttons.push({id:'next',label:state.phase==='hands'?'Controllers':'Continue',x:840,y:800,width:220,height:66});
-    return buttons;
+    const total=buttons.reduce((sum,b)=>sum+b.width,0)+(buttons.length-1)*24;let x=700-total/2;for(const b of buttons){b.x=x;x+=b.width+24;}return buttons;
 }
 function welcomePracticeFrameHit(ray){
     if(!welcomePractice?.active || !introWorldAnchor)return null;

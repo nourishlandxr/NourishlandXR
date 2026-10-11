@@ -1,6 +1,8 @@
 // Four lightweight rigid bodies, with a circular support surface and floor.
 // Fixed substeps and bounded throw speeds keep gravity stable in XR.
-export const PRACTICE_TABLE_RADIUS=.55;
+export const PRACTICE_TABLE_RADIUS=.9;
+export const PRACTICE_TABLE_HALF_WIDTH=.78,PRACTICE_TABLE_HALF_DEPTH=.45;
+export const onPracticeTable=(x,z,margin=0)=>Math.abs(x)<PRACTICE_TABLE_HALF_WIDTH-margin && Math.abs(z)<PRACTICE_TABLE_HALF_DEPTH-margin;
 export function createPracticeBody(id,{x=0,z=0,radius=.055,halfSize=null,bounce=.2}={}){
     const half=halfSize || {x:radius,y:radius,z:radius};
     return {id,position:{x,y:half.y+.025,z},rotation:{x:0,y:0,z:0,w:1},velocity:{x:0,y:0,z:0},angular:{x:0,y:0,z:0},halfSize:{...half},radius,bounce,held:false,visible:id==='ball',floorTime:0,home:{x,z},support:half.y};
@@ -23,7 +25,7 @@ export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{}}={}){
     while(remaining>0){const s=Math.min(1/120,remaining);remaining-=s;
         for(const b of bodies){if(!b.visible || b.held || b.basketed || b.anchored)continue;const p=b.position,v=b.velocity;const previousY=p.y;
             v.y-=9.81*s;p.x+=v.x*s;p.y+=v.y*s;p.z+=v.z*s;turn(b,s);b.support=practiceSupport(b);
-            const onTable=Math.hypot(p.x,p.z)<PRACTICE_TABLE_RADIUS-Math.min(.035,b.radius*.45) && previousY-b.support>=-.012;
+            const onTable=onPracticeTable(p.x,p.z,Math.min(.035,b.radius*.45)) && previousY-b.support>=-.012;
             const surface=onTable?0:floor;
             if(p.y-b.support<surface){p.y=surface+b.support;if(v.y<-.8)onImpact(b,-v.y);v.y=Math.abs(v.y)>.45?-v.y*b.bounce:0;
                 const damping=Math.exp(-(onTable?4.5:6)*s);v.x*=damping;v.z*=damping;b.angular.x*=damping;b.angular.y*=damping;b.angular.z*=damping;
