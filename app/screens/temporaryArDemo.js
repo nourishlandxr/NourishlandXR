@@ -68,7 +68,7 @@ function updateSpatialLivingMap(now){
     const flatPreview=appRoot?.querySelector('[data-demo-living-map]');if(flatPreview)flatPreview.hidden=reveal.preview<=0;
     if(reveal.appear>0 && demoMapNarrationCount!==placedCount){
         clearDemoNarration({preserveAction:true});demoMapNarrationCount=placedCount;
-        introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));demoProjectVoice?.speak(introBoardBody);
+        introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.speak(introBoardBody);
         introBoardParagraphFadeStartedAt=now;introBoardParagraphFadeTimes=[now];introBoardTextureDirty=true;
         const text=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
         if(text){text.innerHTML='<p class="is-revealed"></p>';const paragraph=text.querySelector('p');paragraph.textContent=introBoardVisibleBody;paragraph.style.cssText='opacity:0;transition:opacity 1.2s ease';requestAnimationFrame(()=>{if(paragraph.isConnected)paragraph.style.opacity='1';});}
