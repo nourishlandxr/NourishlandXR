@@ -10,7 +10,7 @@ export function createWelcomePracticeProps(root,fruits){
     for(const y of [.014,.038,.08]){const band=new THREE.Mesh(new THREE.TorusGeometry(y===.08?.145:y===.014?.13:.138,.003,6,36),trim);band.rotation.x=Math.PI/2;band.position.y=y;basket.add(band);}
     const handle=new THREE.Mesh(new THREE.TorusGeometry(.145,.0045,6,32,Math.PI),trim);handle.position.y=.081;handle.rotation.y=Math.PI/2;basket.add(handle);
     const slots={orange:{x:.15,z:-.09},lime:{x:.26,z:-.09},banana:{x:.2,z:-.18}},collected=new Set();
-    const remoteBody=createPracticeBody('remote',{x:-.22,z:.16,radius:.1,halfSize:{x:.095,y:.024,z:.063},bounce:.06}),remote=new THREE.Group();root.add(remote);
+    const remoteBody=createPracticeBody('remote',{x:-.30,z:-.15,radius:.1,halfSize:{x:.095,y:.024,z:.063},bounce:.06}),remote=new THREE.Group();root.add(remote);
     const shellMat=new THREE.MeshStandardMaterial({color:'#e5dfcf',roughness:.7}),controlMat=new THREE.MeshBasicMaterial({color:'#597b80'}),accent=new THREE.MeshBasicMaterial({color:'#e9bb73'});
     const shell=new THREE.Mesh(new THREE.BoxGeometry(.19,.045,.126,3,1,3),shellMat);remote.add(shell);
     const sticks=[];for(const side of [-1,1]){const socket=new THREE.Mesh(new THREE.CylinderGeometry(.023,.023,.005,20),controlMat);socket.position.set(side*.048,.026,.008);remote.add(socket);const pivot=new THREE.Group();pivot.position.copy(socket.position);remote.add(pivot);const stem=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,.016,8),controlMat);stem.position.y=.008;pivot.add(stem);const cap=new THREE.Mesh(new THREE.SphereGeometry(.008,12,8),accent);cap.position.y=.017;cap.scale.y=.4;pivot.add(cap);sticks.push(pivot);}

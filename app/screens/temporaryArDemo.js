@@ -917,8 +917,8 @@ function skipDemoMapWaits(){
     if(elapsed<ready)demoLivingMapStartedAt=now-ready;
     updateSpatialLivingMap(now);return true;
 }
-function skipCurrentDemoStep() {
-    if(welcomePractice?.active){welcomePractice.stage.button('pause');return true;}
+function skipCurrentDemoStep(practice=null) {
+    if(practice?.active){practice.stage.button('pause');return true;}
     if(demoHeldIndex>=0 || demoWebModeOpen || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return false;
     demoFastSkipActive=true;
     try{
@@ -4809,10 +4809,10 @@ function renderInterface(simulated) {
     });
     liveTagButton.addEventListener('click', event => event.stopPropagation());
     const holdCleanups = [
-        bindHoldToConfirmButton(skipButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: () => skipCurrentDemoStep() }),
+        bindHoldToConfirmButton(skipButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: () => skipCurrentDemoStep(welcomePractice) }),
         bindHoldToConfirmButton(exitButton, { duration: DEMO_PLANT_ORB_HOLD_DELAY_MS, onComplete: requestDemoClose })
     ];
-    const skipKey=event=>{if(event.key?.toLowerCase()!=='y' || event.repeat || event.ctrlKey || event.altKey || event.metaKey || event.target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;if(skipCurrentDemoStep())event.preventDefault();};
+    const skipKey=event=>{if(event.key?.toLowerCase()!=='y' || event.repeat || event.ctrlKey || event.altKey || event.metaKey || event.target?.closest?.('input,textarea,select,[contenteditable="true"]'))return;if(skipCurrentDemoStep(welcomePractice))event.preventDefault();};
     window.addEventListener('keydown',skipKey);holdCleanups.push(()=>window.removeEventListener('keydown',skipKey));
     demoHoldButtonCleanup = () => holdCleanups.forEach(cleanup => cleanup());
     const reflowDemoViewport = () => {
@@ -5671,8 +5671,8 @@ function welcomePracticeFrameButtons(state){
 function welcomePracticeFrameHit(ray){
     if(!welcomePractice?.active || !introWorldAnchor)return null;
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,2500,2100,false,ray);if(!hit)return null;
-    const x=hit.pixelX-WELCOME_PANEL_DRAW_OFFSET.x,y=hit.pixelY-WELCOME_PANEL_DRAW_OFFSET.y;
-    const button=welcomePracticeFrameButtons(welcomePractice.stage.snapshot()).find(b=>x>=b.x && x<=b.x+b.width && y>=b.y && y<=b.y+b.height);return button?{...hit,kind:'button',id:button.id,worldPoint:hit.point || hit.position}:null;
+    // Frame controls use full texture bounds; LIMO cells keep their own coordinates.
+    const button=welcomePracticeFrameButtons(welcomePractice.stage.snapshot()).find(b=>{const left=b.x+WELCOME_PANEL_DRAW_OFFSET.x,top=b.y+WELCOME_PANEL_DRAW_OFFSET.y;return hit.pixelX>=left && hit.pixelX<=left+b.width && hit.pixelY>=top && hit.pixelY<=top+b.height;});return button?{...hit,kind:'button',id:button.id,worldPoint:hit.point || hit.position}:null;
 }
 function drawWelcomePracticeFrame(view){
     gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);const p=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);drawIntroSpatial(view);gl.depthMask(true);
@@ -6478,7 +6478,7 @@ async function startImmersive() {
         const arSession = await requestImmersiveArSession(appRoot,{targetFrameRate:getSpatialVisualSettings().refreshRate});
         session = arSession.session;
         demoControllerYSkipTracker = createControllerYSkipTracker(() => {
-            if (skipCurrentDemoStep()) suppressSessionSelectUntil = performance.now() + 450;
+            if (skipCurrentDemoStep(welcomePractice)) suppressSessionSelectUntil = performance.now() + 450;
         });
         limDiagnostic('AR session start',{mode:arSession.mode || 'immersive-ar',domOverlay:Boolean(arSession.domOverlay),...limDeviceContext('xr-pointer')});
         bindLimSessionInteractions(session);
