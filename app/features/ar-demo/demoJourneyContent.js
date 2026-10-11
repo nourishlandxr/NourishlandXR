@@ -139,7 +139,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.11",
         "act": "Compare profiles",
         "title": "Place another Plant Orb",
-        "main": "Place a plain Orb beside Pigeon Pea. Then choose a rainforest plant for it in the Control Panel or the nearby chooser.",
+        "main": "Place a plain Orb beside Pigeon Pea. Then choose a plant for it using the buttons inside the Living Frame.",
         "panel": "Existing placement controls; media closed.",
         "hint": "Place the second Orb, then choose its plant.",
         "art": null
@@ -148,7 +148,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.12",
         "act": "Compare profiles",
         "title": "Thousands of plants. Thousands of stories.",
-        "main": "Imagine choosing from thousands of plants, each with its own story of food, ecology and place. These Elements turn a landscape into a world of discovery. Try Blue Quandong, Finger Lime or Lemon Myrtle now. Your choice gives this Orb its own plant information.",
+        "main": "Imagine choosing from thousands of plants, each with its own story of food, ecology and place. These Elements turn a landscape into a world of discovery. Try Carambola, Vetiver grass, African Peach, Mamey Sapote, Blue Quandong, Finger Lime or Lemon Myrtle. Your choice gives this Orb its own plant information.",
         "panel": "Selected plant information only; Curiosity remains standard.",
         "hint": "Choose a plant to continue.",
         "art": null

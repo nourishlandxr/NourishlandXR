@@ -170,6 +170,18 @@ export function createGroundArrowPathGeometry(start, end, options = {}) {
     return new Float32Array(vertices);
 }
 
+// Soft travelling ribbons suggest a direction without arrowheads.
+export function createGroundFlowGeometry(start,end,{time=0,reduced=false,width=.016,trail=false}={}){
+ if(!start || !end)return new Float32Array();
+ const dx=end.x-start.x,dz=end.z-start.z,distance=Math.hypot(dx,dz);if(!Number.isFinite(distance) || distance<.001)return new Float32Array();
+ const vertices=[],point=t=>({x:start.x+dx*t,y:start.y+(end.y-start.y)*t+.004,z:start.z+dz*t});
+ if(trail)pushGroundRibbon(vertices,point(0),point(1),width*.5);
+ else for(let offset=-.8+((reduced?0:time*.12)%.8);offset<distance;offset+=.8){
+  for(let i=0;i<12;i++){const a=Math.max(0,offset+i*.026),b=Math.min(distance,offset+(i+1)*.026);if(b<=a)continue;const soft=Math.sin((i+.5)/12*Math.PI);pushGroundRibbon(vertices,point(a/distance),point(b/distance),width*(.3+.7*soft));}
+ }
+ return new Float32Array(vertices);
+}
+
 export function createSpatialTetherRenderer(gl) {
     const vertexShader = compileShader(gl, gl.VERTEX_SHADER, `
         attribute vec3 position;
@@ -234,7 +246,7 @@ export function drawSpatialTether(gl, renderer, view, start, end, options = {}) 
 
 export function drawSpatialGroundArrowPath(gl, renderer, view, start, end, options = {}) {
     if (!renderer || !view?.projectionMatrix || !view?.transform?.inverse?.matrix || !start || !end) return;
-    const vertices = createGroundArrowPathGeometry(start, end, options);
+    const vertices = options.flow?createGroundFlowGeometry(start,end,options):createGroundArrowPathGeometry(start, end, options);
     if (!vertices.length) return;
     gl.useProgram(renderer.program);
     gl.bindBuffer(gl.ARRAY_BUFFER, renderer.buffer);

@@ -52,7 +52,7 @@ test('Totem header exposes zone counts and undirected cards stay centred',()=>{
     assert.deepEqual(cards[0].stats.map(stat=>stat.value),[2,1,1]);
     assert.match(totemCardsMarkup(cards),/nlxr-totem-stats/);
     const surfaces=totemCardSurfaces({x:0,y:0,z:-2},{x:1,z:0},cards,'',{signsVisible:true,faded:false,bodyHalfWidth:.2,bodyHalfDepth:.14});
-    assert.equal(surfaces.find(surface=>surface.card.id==='area')?.card.boardStyle,'header-compact');
+    assert.equal(surfaces.find(surface=>surface.card.id==='area')?.card.boardStyle,'header-lettering');
     assert.ok(surfaces.filter(surface=>surface.card.boardStyle==='attached-sign').every(surface=>surface.center.x===0));
 });
 
@@ -123,6 +123,6 @@ test('Totem compact glass heading is above the body and clear of the Signs contr
   const signs=surfaces.find(s=>s.card.id==='__signs'),title=surfaces.find(s=>s.boardStyle==='header');
   assert.ok(title.center.y-title.height/2>signs.center.y+signs.height/2+.01);
   assert.ok(title.center.y-title.height/2>2*bodyHalfHeight);
-  assert.equal(title.card.freeText,false);assert.equal(title.card.glassOpacity,.94);
+  assert.equal(title.card.freeText,true);assert.equal(title.card.glassOpacity,undefined);assert.equal(title.card.title,title.card.title.toUpperCase());
  }
 });

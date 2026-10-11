@@ -8,13 +8,13 @@ import {createLivingMapGripInput} from '../app/services/demoLivingMapGrip.js';
 import {LIVING_MAP_WORLD_SCALE as SCALE} from '../app/services/demoLivingMapReveal.js';
 
 const origin=new THREE.Vector3(0,1,-1),identity=new THREE.Quaternion();
-test('only the raised central grip accepts contact, including a turned and tilted tray',()=>{
+test('only the timber ring accepts contact, including a turned and tilted tray',()=>{
  const turn=new THREE.Quaternion().setFromEuler(new THREE.Euler(.2,.8,.1,'YXZ'));
  for(const side of [-1,1])for(const rotation of [identity,turn]){
   const point=new THREE.Vector3(0,.03,LIVING_MAP_HANDLE_Z*SCALE).applyQuaternion(rotation).add(origin);
   assert.ok(livingMapHandleContact(point,origin,rotation));
  }
- for(const point of [[0,0,0],[.3,0,0],[0,0,.2],[.5,0,.2],[.5,.2,0]]){
+ for(const point of [[0,0,0],[.3,0,0],[0,0,.2],[.4,0,.2],[.5,.2,0]]){
   assert.equal(livingMapHandleContact(new THREE.Vector3(...point).add(origin),origin,identity),null,'map interior and former broad rim band cannot capture');
  }
 });
@@ -29,16 +29,16 @@ test('rays can grab raised handles from the side without intersecting the plate 
  assert.equal(livingMapHandleRayHit({origin:origin.clone().add(new THREE.Vector3(0,.5,0)),direction:{x:0,y:-1,z:0}},origin,identity),null);
  assert.equal(livingMapHandleRayHit({origin:origin.clone().add(new THREE.Vector3(4,.035,0)),direction:{x:-1,y:0,z:0}},origin,identity),null);
 });
-test('one raised ribbed grip reuses geometry and keeps a visibly open space underneath',()=>{
+test('a round timber grip ring shares two smooth geometries',()=>{
  const geometries=new Set(),materials=new Map();
  const handles=createLivingMapHandles({geometry:value=>{geometries.add(value);return value;},mesh:(geo,color,x,y,z,sx,sy,sz,parent)=>{
   if(!materials.has(color))materials.set(color,new THREE.MeshBasicMaterial({color}));
   const node=new THREE.Mesh(geo,materials.get(color));node.position.set(x,y,z);node.scale.set(sx,sy,sz);parent.add(node);return node;
  }});
- assert.equal(geometries.size,3);assert.equal(handles.length,1);
- assert.equal(handles[0].position.z,LIVING_MAP_HANDLE_Z);
- assert.equal(handles[0].children.length,8,'one raised bar, two feet and five ribs');
- const bar=handles[0].children[0];bar.geometry.computeBoundingBox();assert.ok(bar.geometry.boundingBox.max.y>.42);
+ assert.equal(geometries.size,2);assert.equal(handles.length,1);
+ assert.equal(handles[0].position.z,0);
+ assert.equal(handles[0].children.length,2,'one continuous wooden ring and a fine inlay');
+ const bar=handles[0].children[0];bar.geometry.computeBoundingBox();assert.ok(bar.geometry.boundingBox.max.y>6.5);
  geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());
 });
 test('held laser contacts stay on the same handle through aim changes, carrying and release',()=>{
@@ -46,7 +46,7 @@ test('held laser contacts stay on the same handle through aim changes, carrying 
  let position=origin.clone(),rotation=identity.clone(),yaw=0,shift=0;
  const frame={getPose:key=>{
   const q=key===source.targetRaySpace?new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/4,yaw,0)):identity;
-  const p=new THREE.Vector3(0,1.5,-.13+shift);
+  const p=new THREE.Vector3(0,1.5,.05675+shift);
   return {transform:{matrix:new THREE.Matrix4().compose(p,q,new THREE.Vector3(1,1,1)).elements}};
  }};
  const input=createLivingMapGripInput({enabled:()=>true,origin:()=>position,rotation:()=>rotation,onRotate:()=>{}});input.bind(session,space);

@@ -1602,12 +1602,12 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 const horizontal=Math.hypot(pose.normal.x,pose.normal.z)||1,normal={x:pose.normal.x/horizontal,y:0,z:pose.normal.z/horizontal};
                 const mediaSurface=source?{...source,normal,right:{x:normal.z,y:0,z:-normal.x},up:{x:0,y:1,z:0}}:null;
                 if(!mediaSurface)return null;
-                const across=(side==='left'?-1:1)*mediaWidth/2,up=mediaWidth*.76/2;
+                const across=(side==='left'?-1:1)*mediaWidth*.36,up=mediaWidth*.76/2;
                 return {...mediaSurface,center:{x:mediaSurface.center.x+mediaSurface.right.x*across+mediaSurface.up.x*up,y:mediaSurface.center.y+mediaSurface.right.y*across+mediaSurface.up.y*up,z:mediaSurface.center.z+mediaSurface.right.z*across+mediaSurface.up.z*up}};
             }
             const {mainWidth,mainHeight}=spatialDimensions();
             // Feet sit on the extreme top-right edge, outside companion faces.
-            const across=(side==='left'?-1:1)*mainWidth/2;
+            const across=(side==='left'?-1:1)*mainWidth*.36;
             return {...pose,center:{x:pose.center.x+pose.right.x*across+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*across+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*across+pose.up.z*mainHeight/2}};
         },
         bindSession(session,referenceSpace){removeXrControls();fruitSession=session;fruitSpace=referenceSpace;fruitWindow?.bindSession(session,referenceSpace);handReferenceSpace=referenceSpace;const handle=event=>{

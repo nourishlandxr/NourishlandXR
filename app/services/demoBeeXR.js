@@ -96,10 +96,13 @@ export function createBeeXRRenderer(gl,model,bitmap){
             gl.uniform1f(uniforms.pitch,pose.pitch || 0);gl.uniform1f(uniforms.bank,pose.bank || 0);
             gl.uniform1f(uniforms.opacity,pose.opacity);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,colour);gl.uniform1i(uniforms.colour,0);
             gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,cached.bones);gl.uniform1i(uniforms.bones,1);
-            gl.enable(gl.DEPTH_TEST);if(pose.opacity<.999){gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);gl.depthMask(pose.opacity>=.999);
-            gl.uniform1f(uniforms.solid,1);gl.drawElements(gl.TRIANGLES,bodyIndexCount,gl.UNSIGNED_SHORT,0);
+            // Write an opaque body before translucent wings, including entrances.
+            // A blended body without depth exposed rear-facing eyes and inner surfaces.
+            gl.enable(gl.DEPTH_TEST);gl.depthMask(true);gl.disable(gl.BLEND);gl.disable(gl.CULL_FACE);
+            gl.uniform1f(uniforms.opacity,1);gl.uniform1f(uniforms.solid,1);
+            gl.drawElements(gl.TRIANGLES,bodyIndexCount,gl.UNSIGNED_SHORT,0);
             if(wingIndexCount){
-                gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.uniform1f(uniforms.solid,0);
+                gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);gl.uniform1f(uniforms.opacity,pose.opacity);gl.uniform1f(uniforms.solid,0);
                 gl.drawElements(gl.TRIANGLES,wingIndexCount,gl.UNSIGNED_SHORT,bodyIndexCount*Uint16Array.BYTES_PER_ELEMENT);
             }
             gl.depthMask(true);gl.enable(gl.DEPTH_TEST);gl.disable(gl.BLEND);gl.activeTexture(gl.TEXTURE0);

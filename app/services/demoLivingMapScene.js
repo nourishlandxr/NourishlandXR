@@ -28,14 +28,14 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         const node = new THREE.Mesh(geo, material(color)); node.position.set(x, y, z); node.scale.set(sx, sy, sz); parent.add(node); return node;
     };
     const detail=createLivingMapDetailKit({geometry,mesh,material});
-    mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#66573e', 0, -.23, 0, 6.3, .4, 4.2);
-    mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#61714a', 0, -.025, 0, 6.25, .05, 4.15);
-    const edge=mesh(geometry(new THREE.TorusGeometry(1,.012,6,64)),'#bac894',0,-.01,0,6.2,4.12,1);edge.rotation.x=-Math.PI/2;
-    const handles=model.interactive?createLivingMapHandles({geometry,mesh}):[];
+    mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#66573e', 0, -.23, 0, 6.3, .4, 6.3);
+    mesh(geometry(new THREE.CylinderGeometry(1, 1, 1, 64)), '#61714a', 0, -.025, 0, 6.25, .05, 6.25);
+    const edge=mesh(geometry(new THREE.TorusGeometry(1,.012,6,64)),'#bac894',0,-.01,0,6.2,6.2,1);edge.rotation.x=-Math.PI/2;
+    const handles=createLivingMapHandles({geometry,mesh});
     handles.forEach(handle=>scene.add(handle));
     const scenery = new THREE.Group();scene.add(scenery);scenery.visible=false;scenery.name='Living Map shared scenery';
     const soil=new THREE.Group();soil.name='Living Map shared terrain';scene.add(soil);detail.terrain(soil,model);
-    for(const [y,r,h,c] of [[-.16,6.29,.035,'#8a7955'],[-.30,6.30,.025,'#514a39']])mesh(geometry(new THREE.CylinderGeometry(1,1,1,64)),c,0,y,0,r,h,4.195,soil);
+    for(const [y,r,h,c] of [[-.16,6.29,.035,'#8a7955'],[-.30,6.30,.025,'#514a39']])mesh(geometry(new THREE.CylinderGeometry(1,1,1,64)),c,0,y,0,r,h,r,soil);
     // Shared geometry for small planting clusters and tree canopies.
     const shrub = new THREE.InstancedMesh(sphere, material('#455e3b'), 65);
     const transform = new THREE.Object3D(); let planted = 0;
@@ -89,15 +89,15 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             const orbMaterial=new THREE.MeshPhongMaterial({color:'#bed8a3',transparent:true,opacity:.24,shininess:65,depthWrite:false});materials.set('orb'+index,orbMaterial);
             orb=new THREE.Mesh(sphere,orbMaterial);orb.position.y=.4;orb.scale.setScalar(.38);group.add(orb);
         } else if(item.type === 'zone') {
-            const data=createTotemSculptureGeometry(24,16,'botanical'),shape=geometry(new THREE.BufferGeometry()),positions=[],normals=[],uvs=[];
-            for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));uvs.push(...data.vertices.slice(i+6,i+8));}
-            shape.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));shape.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));shape.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));shape.setIndex(new THREE.BufferAttribute(data.indices,1));
-            const timber=new THREE.MeshLambertMaterial({color:'#795f41',map:timberTexture});materials.set('totem-timber'+index,timber);
+            const data=createTotemSculptureGeometry(32,20,item.totemStyle || 'botanical'),shape=geometry(new THREE.BufferGeometry()),positions=[],normals=[],uvs=[],colours=[];
+            for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));uvs.push(...data.vertices.slice(i+6,i+8));const tint=new THREE.Color(data.vertices[i+7]>1?(item.totemStyle==='sun'?'#ecc276':'#c2b4ef'):'#ffffff');colours.push(tint.r,tint.g,tint.b);}
+            shape.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));shape.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));shape.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));shape.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));shape.setIndex(new THREE.BufferAttribute(data.indices,1));
+            const timber=new THREE.MeshLambertMaterial({color:item.totemStyle==='sun' || item.totemStyle==='moon'?'#e0d1b5':'#795f41',vertexColors:true,map:item.totemStyle==='sun' || item.totemStyle==='moon'?null:timberTexture});materials.set('totem-timber'+index,timber);
             const post=new THREE.Mesh(shape,timber);post.position.y=1.35;post.scale.set(.095,1.35,.075);group.add(post);
             const glass=new THREE.MeshPhongMaterial({color:'#bfe0d6',transparent:true,opacity:.48,shininess:85,depthWrite:false});materials.set('totem-glass'+index,glass);
-            const collar=new THREE.Mesh(cylinder,glass);collar.position.y=2.53125;collar.scale.set(.073,.3375,.073);group.add(collar);
+            const collar=new THREE.Mesh(cylinder,glass);collar.position.y=2.53125;collar.scale.set(.073,.3375,.073);collar.visible=!item.totemStyle || item.totemStyle==='botanical';group.add(collar);
             const tip=new THREE.MeshPhongMaterial({color:'#a5db8d',emissive:'#a5db8d',emissiveIntensity:.3,transparent:true,opacity:.25,depthWrite:false,shininess:50});materials.set('totem-tip'+index,tip);
-            beacon=new THREE.Mesh(cylinder,tip);beacon.position.y=2.673;beacon.scale.set(.064,.03,.064);group.add(beacon);
+            beacon=new THREE.Mesh(cylinder,tip);beacon.position.y=2.673;beacon.scale.set(.064,.03,.064);beacon.visible=!item.totemStyle || item.totemStyle==='botanical';group.add(beacon);
         } else {
             const note=mesh(geometry(new THREE.BoxGeometry(1,1,1)),'#d5bd84',0,.24,0,.16,.2,.055,group);note.rotation.y=.35;
         }
@@ -233,7 +233,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 camera.zoom=1;camera.updateProjectionMatrix();camera.updateMatrixWorld();
                 let extentX=0,extentY=0;
                 const fitPoint=(px,py,pz)=>{projected.set(px,py,pz).project(camera);extentX=Math.max(extentX,Math.abs(projected.x));extentY=Math.max(extentY,Math.abs(projected.y));};
-                for(let i=0;i<32;i++){const angle=i*Math.PI/16;fitPoint(Math.cos(angle)*6.3,.05,Math.sin(angle)*4.2);fitPoint(Math.cos(angle)*6.3,-.43,Math.sin(angle)*4.2);}
+                for(let i=0;i<32;i++){const angle=i*Math.PI/16;fitPoint(Math.cos(angle)*6.3,.05,Math.sin(angle)*6.3);fitPoint(Math.cos(angle)*6.3,-.43,Math.sin(angle)*6.3);}
                 // Include the tallest context trees in the final composition.
                 if(progress.scenery>0)for(const [px,pz,size] of contextTrees)fitPoint(px,size*1.9*progress.scenery,pz);
                 camera.zoom=Math.min(.97/extentX,.95/extentY);camera.updateProjectionMatrix();

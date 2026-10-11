@@ -1,69 +1,32 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {LIVING_MAP_WORLD_SCALE as SCALE} from './demoLivingMapReveal.js';
-
-// Shared dimensions keep the visible raised handles and their capture areas
-// together. Totem targets remain round and lie inside the landscape.
+// The rounded timber ring and its pickup surface share dimensions.
 export const LIVING_MAP_HANDLE_X=0;
-export const LIVING_MAP_HANDLE_Z=4.35;
-export const LIVING_MAP_HANDLE_POINTS=Object.freeze([
-    [0,.10,-.58],[0,.36,-.42],[0,.42,0],[0,.36,.42],[0,.10,.58]
-]);
-const curve=new THREE.CatmullRomCurve3(LIVING_MAP_HANDLE_POINTS.map(p=>new THREE.Vector3(...p)));
-const handleSegments=Array.from({length:17},(_,i)=>curve.getPoint(i/16).multiplyScalar(SCALE));
-const handleLines=handleSegments.slice(1).map((point,i)=>new THREE.Line3(handleSegments[i],point));
-const half=new THREE.Vector3(.18,.23,.66).multiplyScalar(SCALE);
-const q=rotation=>new THREE.Quaternion(rotation?.x || 0,rotation?.y || 0,rotation?.z || 0,rotation?.w ?? 1).normalize();
-const v=point=>new THREE.Vector3(point.x,point.y,point.z);
-const valid=point=>point && [point.x,point.y,point.z].every(Number.isFinite);
-function inHandle(local,padding){
-    const dx=Math.abs(local.x)-LIVING_MAP_HANDLE_X*SCALE;
-    return Math.abs(dx)<=half.x+padding && Math.abs(local.y-.26*SCALE)<=half.y+padding && Math.abs(local.z-LIVING_MAP_HANDLE_Z*SCALE)<=half.z+padding;
-}
+export const LIVING_MAP_HANDLE_Z=6.55;
+const radius=LIVING_MAP_HANDLE_Z*SCALE,tube=.24*SCALE,height=.04*SCALE;
+const q=r=>new THREE.Quaternion(r?.x || 0,r?.y || 0,r?.z || 0,r?.w ?? 1).normalize();
+const v=p=>new THREE.Vector3(p.x,p.y,p.z);
+const valid=p=>p && [p.x,p.y,p.z].every(Number.isFinite);
 export function livingMapHandleContact(point,origin,rotation){
-    if(!valid(point) || !valid(origin))return null;
-    const local=v(point).sub(v(origin)).applyQuaternion(q(rotation).invert());
-    return inHandle(local,.04)?local:null;
+ if(!valid(point) || !valid(origin))return null;
+ const local=v(point).sub(v(origin)).applyQuaternion(q(rotation).invert());
+ return Math.hypot(Math.hypot(local.x,local.z)-radius,local.y-height)<=tube+.04?local:null;
 }
-// Snap a forgiving capture to the actual bar, so the held beam visibly ends
-// on the handle rather than hovering beside its larger capture area.
-export function livingMapHandleAnchor(local){
-    const center=Math.sign(local.x)*LIVING_MAP_HANDLE_X*SCALE;
-    const relative=local.clone();relative.x-=center;relative.z-=LIVING_MAP_HANDLE_Z*SCALE;
-    const nearest=new THREE.Vector3(),point=new THREE.Vector3();let distance=Infinity;
-    for(const line of handleLines){
-        line.closestPointToPoint(relative,true,point);
-        const squared=point.distanceToSquared(relative);if(squared<distance){nearest.copy(point);distance=squared;}
-    }
-    const normal=relative.clone().sub(nearest);if(normal.lengthSq()<1e-8)normal.set(0,1,0);else normal.normalize();
-    return nearest.addScaledVector(normal,.08*SCALE).add(new THREE.Vector3(center,0,LIVING_MAP_HANDLE_Z*SCALE));
-}
+export function livingMapHandleAnchor(local){const length=Math.hypot(local.x,local.z)||1;return new THREE.Vector3(local.x/length*radius,height+tube,local.z/length*radius);}
 export function livingMapHandleRayHit(ray,origin,rotation){
-    if(!valid(ray?.origin) || !valid(ray?.direction) || !valid(origin))return null;
-    const inverse=q(rotation).invert(),direction=v(ray.direction);if(direction.lengthSq()<1e-8)return null;
-    const localRay=new THREE.Ray(v(ray.origin).sub(v(origin)).applyQuaternion(inverse),direction.normalize().applyQuaternion(inverse));
-    let result=null;
-    for(const side of [0]){
-        const center=new THREE.Vector3(0,.26*SCALE,LIVING_MAP_HANDLE_Z*SCALE),size=half.clone().addScalar(.045);
-        const contact=localRay.intersectBox(new THREE.Box3(center.clone().sub(size),center.clone().add(size)),new THREE.Vector3());
-        if(!contact)continue;
-        const distance=contact.distanceTo(localRay.origin);if(distance>3 || result && distance>=result.distance)continue;
-        const local=livingMapHandleAnchor(contact),point=local.clone().applyQuaternion(q(rotation)).add(v(origin));
-        result={side,local,point,distance};
-    }
-    return result;
+ if(!valid(ray?.origin) || !valid(ray?.direction) || !valid(origin))return null;
+ const inverse=q(rotation).invert(),direction=v(ray.direction);if(direction.lengthSq()<1e-8)return null;
+ const cast=new THREE.Ray(v(ray.origin).sub(v(origin)).applyQuaternion(inverse),direction.normalize().applyQuaternion(inverse));let result=null;
+ for(let i=0;i<64;i++){
+  const angle=i*Math.PI/32,center=new THREE.Vector3(Math.sin(angle)*radius,height,Math.cos(angle)*radius);
+  const hit=cast.intersectSphere(new THREE.Sphere(center,tube+.035),new THREE.Vector3());if(!hit)continue;
+  const distance=hit.distanceTo(cast.origin);if(distance>3 || result && distance>=result.distance)continue;
+  const local=livingMapHandleAnchor(hit),point=local.clone().applyQuaternion(q(rotation)).add(v(origin));result={side:0,local,point,distance};
+ }return result;
 }
 export function createLivingMapHandles({geometry,mesh}){
-    const bar=geometry(new THREE.TubeGeometry(curve,16,.08,6,false));
-    const foot=geometry(new THREE.CylinderGeometry(1,1,1,8));
-    const rib=geometry(new THREE.TorusGeometry(.087,.018,4,8));
-    return [0].map(side=>{
-        const group=new THREE.Group();group.name='Central map grip';group.position.z=LIVING_MAP_HANDLE_Z;
-        mesh(bar,'#91b8b1',0,0,0,1,1,1,group);
-        for(const z of [-.58,.58])mesh(foot,'#607c76',0,.07,z,.16,.13,.16,group);
-        for(let i=0;i<5;i++){
-            const t=.28+i*.11,p=curve.getPointAt(t),node=mesh(rib,'#c6dfd5',p.x,p.y,p.z,1,1,1,group);
-            node.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),curve.getTangentAt(t));
-        }
-        return group;
-    });
+ const ring=new THREE.Group();ring.name='Rounded timber grip ring';
+ const bar=mesh(geometry(new THREE.TorusGeometry(LIVING_MAP_HANDLE_Z,.24,12,96)),'#a78154',0,.04,0,1,1,1,ring);bar.rotation.x=-Math.PI/2;
+ const inlay=mesh(geometry(new THREE.TorusGeometry(LIVING_MAP_HANDLE_Z,.018,6,96)),'#d1bd91',0,.28,0,1,1,1,ring);inlay.rotation.x=-Math.PI/2;
+ return [ring];
 }

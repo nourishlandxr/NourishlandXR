@@ -9,9 +9,9 @@ export function createDemoLivingMapConcept({interactive=false}={}) {
     if(interactive){
         const landscape=createDemoLivingMapConcept().landscape;
         const zones=[
-            {id:'map-entry',name:'Totem 1',type:'zone',x:0,z:2.65},
-            {id:'map-forest',name:'Totem 2',type:'zone',x:2.85,z:0},
-            {id:'map-swales',name:'Totem 3',type:'zone',x:-2.85,z:1.65}
+            {id:'map-entry',name:'Totem 1',totemStyle:'botanical',type:'zone',x:0,z:2.65},
+            {id:'map-forest',name:'Totem 2',totemStyle:'sun',type:'zone',x:2.85,z:0},
+            {id:'map-swales',name:'Totem 3',totemStyle:'moon',type:'zone',x:-2.85,z:1.65}
         ];
         const plants=[[1.6,-1.7],[3.35,-1.8],[4.7,.65]].map(([x,z],i)=>({id:`map-orb-${i}`,type:'plant',name:'',x,z,tree:true,areaId:zones[1].id}));
         return {concept:true,interactive:true,items:[...zones,...plants],landscape,
@@ -20,7 +20,7 @@ export function createDemoLivingMapConcept({interactive=false}={}) {
             links:[[zones[0],zones[1]],[zones[1],zones[2]]]};
     }
     const zone = (id, name, x) => ({ id, name, type: 'zone', x, z: 0, linked: true });
-    const first = zone('map-area-1', 'Totem 1', -2.85), second = zone('map-area-2', 'Totem 2', 2.85);
+    const first = zone('map-area-1', 'Totem 1', -2.85), second = {...zone('map-area-2', 'Totem 2', 2.85),totemStyle:'sun'};
     const plants = [
         [-4.45, -.85], [-3.1, -1.12], [-1.7, -.78],
         [1.6, -1.7], [3.35, -1.8], [4.7, .65]

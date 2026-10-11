@@ -8,7 +8,7 @@ const VERTEX_ATTRIBUTES=Object.freeze([['position',0,3],['normal',12,3],['uv',24
 export function totemSculpturePoint(t, angle, style='carved') {
     if(style==='basic' || style==='organic'){
         const radius=.43+.075*Math.exp(-t*28)+.018*Math.cos(t*Math.PI*2);
-        return [Math.cos(angle)*radius,t*2-1,Math.sin(angle)*radius];
+        return [Math.cos(angle)*radius,t*2-1,Math.min(Math.sin(angle)*radius,radius*.91)];
     }
     const form=SPATIAL_OBJECT_VISUALS.totem[style] || SPATIAL_OBJECT_VISUALS.totem.carved;
     const twist = form.twist * Math.sin(t * Math.PI - .6);
@@ -65,8 +65,8 @@ export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='
             }else{
                 const latitude=row/rows*Math.PI-Math.PI/2,c=Math.cos(latitude),s=Math.sin(latitude);
                 const ribs=1+.014*Math.cos(a*8)*c*c;
-                p=[Math.cos(a)*c*2.05*ribs,1.29+s*.31,Math.sin(a)*c*2.6*ribs];
-                n=[Math.cos(a)*c/2.05,s/.31,Math.sin(a)*c/2.6];
+                p=[Math.cos(a)*c*2.05*ribs,1.17+s*.145,Math.sin(a)*c*2.6*ribs];
+                n=[Math.cos(a)*c/2.05,s/.145,Math.sin(a)*c/2.6];
             }
             const length=Math.hypot(...n);vertices.push(...p,...n.map(value=>value/length),column/radial,1.1+row/rows*.8);
             if(row<rows && column<radial){const i=start+row*(radial+1)+column;indices.push(i,i+radial+1,i+1,i+1,i+radial+1,i+radial+2);}

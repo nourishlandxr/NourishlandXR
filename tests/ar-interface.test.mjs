@@ -1357,7 +1357,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /An Area keeps them organised/);
     assert.match(source, /const id=moringa\?'ELEMENTS 1\.12':'ELEMENTS 1\.6'/);
     assert.doesNotMatch(source, /profile provides in-depth information about \$\{plantName\}/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Try Blue Quandong, Finger Lime or Lemon Myrtle/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Try Carambola, Vetiver grass, African Peach, Mamey Sapote, Blue Quandong, Finger Lime or Lemon Myrtle/);
     assert.doesNotMatch(source, /Create Plant Profile|Create Moringa profile/);
     assert.match(source, /record\.awaitingProfileReveal = true/);
     assert.doesNotMatch(source, /keeps its colour as it becomes a Plant marker/);
@@ -1667,7 +1667,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(immersiveSelectHandler, /selectDemoPlantAtPointer\(\)/);
     assert.match(immersiveSelectHandler, /selectDemoProfileCell\(\)[\s\S]*selectDemoPlantAtPointer\(\)/);
     assert.doesNotMatch(source, /target\.record\.demoType === 'plant' && target\.record\.demoExpanded\) return false/);
-    assert.match(source, /const profile=demoInfoTarget\(\);\s*const target = demoRecordAtPointer\(\) \|\| \(profile\?\.target/);
+    assert.match(source, /const profile=demoInfoTarget\(\),target=nearby \|\| demoRecordAtPointer\(\) \|\| \(profile\?\.target/);
     assert.doesNotMatch(source, /if \(actionTarget\?\.demoType === 'note'\) return;/);
     assert.match(source, /session\.addEventListener\('squeezestart',[\s\S]*beginControllerDemoHold\(null,event.frame\)/);
     assert.doesNotMatch(source, /const currentIndex = keys\.indexOf\(record\.demoActiveBranch\)/);
@@ -1710,7 +1710,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const noteScale = noteSign \? record\.demoAmbientNeighbour/);
     assert.match(styles, /\.tryit-sim-marker-note:not\(\.is-expanded\) \{ width:min\(72vw,210px\); height:82px;/);
     assert.match(source, /groundBaseY = pairedDemoTotemGroundY\(\)/);
-    assert.match(source, /y:groundBaseY\+initialDemoTotemHalfHeight\(groundBaseY\)/);
+    assert.match(source, /y:groundBaseY\+halfHeight/);
     assert.match(read('app/screens/arMode.js'), /function totemRotationDegreesForPosition\(position, viewer = latestViewerMatrix\)/);
     assert.match(read('app/screens/arMode.js'), /type === 'area_checkpoint' \? totemRotationDegreesForPosition\(position\) : 0/);
     assert.match(source, /type: type === 'note' \? 'note' : 'plant'/);

@@ -22,8 +22,8 @@ export function butterflySocialPoint(position,peer,social){
 export function butterflyPanelPerch(perch,variant){
     if(!perch)return null;
     if(perch.cellEdge){
-        const across=(variant.side==='left'?-1:1)*perch.width*(.08+Math.min(3,variant.slot)*.045),rise=perch.height*.5+.015;
-        return {...perch,center:{x:perch.center.x+perch.right.x*across+perch.up.x*rise+perch.normal.x*.03,y:perch.center.y+perch.right.y*across+perch.up.y*rise+perch.normal.y*.03,z:perch.center.z+perch.right.z*across+perch.up.z*rise+perch.normal.z*.03}};
+        const across=(variant.side==='left'?-1:1)*perch.width*(.08+Math.min(3,variant.slot)*.045),rise=perch.height*.5+.002;
+        return {...perch,center:{x:perch.center.x+perch.right.x*across+perch.up.x*rise+perch.normal.x*.003,y:perch.center.y+perch.right.y*across+perch.up.y*rise+perch.normal.y*.003,z:perch.center.z+perch.right.z*across+perch.up.z*rise+perch.normal.z*.003}};
     }
     const across=(variant.side==='left'?1:-1)*variant.slot*.07;
     return {...perch,center:{x:perch.center.x+perch.right.x*across,y:perch.center.y+perch.right.y*across,z:perch.center.z+perch.right.z*across}};

@@ -14,9 +14,9 @@ test('contact covers native outer leaves and front flowers, including side appro
 });
 test('every butterfly colour perches above the PIMO cell edge, never across its centre',()=>{
  const surface={...pose,width:.32,height:.36,cellEdge:true};
- for(const insect of BUTTERFLY_VARIANTS){const point=butterflyPanelPerch(surface,insect).center;assert.ok(point.y>surface.height/2);assert.ok(Math.abs(point.x)<surface.width/4);assert.equal(point.z,.03);}
+ for(const insect of BUTTERFLY_VARIANTS){const point=butterflyPanelPerch(surface,insect).center;assert.ok(point.y>surface.height/2);assert.ok(Math.abs(point.x)<surface.width/4);assert.equal(point.z,.003);}
  const rotated={...surface,right:{x:0,y:0,z:-1},normal:{x:1,y:0,z:0}};
- const point=butterflyPanelPerch(rotated,BUTTERFLY_VARIANTS.find(v=>v.id==='purple')).center;assert.equal(point.x,.03);assert.ok(point.y>.18);
+ const point=butterflyPanelPerch(rotated,BUTTERFLY_VARIANTS.find(v=>v.id==='purple')).center;assert.equal(point.x,.003);assert.ok(point.y>.18);
 });
 test('VIEW is always offered immediately below Controls on the main left rail',()=>{
  const buttons=panelOpenerControls();const controls=buttons.findIndex(b=>b.action==='Explorer');assert.equal(buttons[controls+1].action,'View');assert.equal(buttons[controls+1].x,18);assert.equal(buttons[controls+1].y,buttons[controls].y+62);

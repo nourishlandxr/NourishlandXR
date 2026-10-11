@@ -112,7 +112,7 @@ export function createLivingMapDetailKit({geometry,mesh,material}) {
         for(let i=0;i<22;i++){const a=i*2.39996,x=Math.cos(a)*(2.9+i%5*.5),z=Math.sin(a)*(1.6+i%4*.32);
             if(Math.abs(x)<1.0 || (x/6)**2+(z/3.85)**2>.94 || model.items.some(p=>Math.hypot(p.x-x,p.z-z)<.65))continue;
             ground(parent,x,z,.22+(i%3)*.08,.14+(i%2)*.07,['#82965b','#687e4a','#90a265'][i%3],.047);}
-        for(let i=0;i<28;i++){const a=i*Math.PI/14,x=6.1*Math.cos(a),z=4.02*Math.sin(a);
+        for(let i=0;i<28;i++){const a=i*Math.PI/14,x=6.1*Math.cos(a),z=6.1*Math.sin(a);
             if(i%3===0)mesh(ball,'#a39471',x,-.02,z,.12,.055,.10,parent);}
     }
     function swales(parent,rows,soil=parent){

@@ -11,7 +11,7 @@ export function livingMapReveal(elapsed,reduced=false){
 }
 export const LIVING_MAP_WORLD_SCALE=.085;
 export const LIVING_MAP_SURFACE_HALF_WIDTH=6.3*LIVING_MAP_WORLD_SCALE;
-export const LIVING_MAP_SURFACE_HALF_DEPTH=4.2*LIVING_MAP_WORLD_SCALE;
+export const LIVING_MAP_SURFACE_HALF_DEPTH=6.3*LIVING_MAP_WORLD_SCALE;
 // The loose miniature must be pickable from the side as well as the front.
 export function livingMapTotemRayHit(ray,center,radius=null){
     if(!ray?.origin || !ray.direction || !center)return null;
@@ -37,7 +37,7 @@ export function livingMapRayPoint(ray,origin,rotation=0){
     const distance=new THREE.Vector3(surface.x,surface.y,surface.z).sub(start).dot(normal)/denominator;
     if(distance<0 || distance>4)return null;
     const point=start.addScaledVector(direction,distance),local=point.clone().sub(new THREE.Vector3(origin.x,origin.y,origin.z)).applyQuaternion(livingMapRotation(rotation).invert()).multiplyScalar(1/LIVING_MAP_WORLD_SCALE);
-    if((local.x/6.3)**2+(local.z/4.2)**2>1)return null;
+    if((local.x/6.3)**2+(local.z/6.3)**2>1)return null;
     return {x:point.x,y:point.y,z:point.z};
 }
 export function livingMapWorldDropAccepted(point,target){

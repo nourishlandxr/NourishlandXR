@@ -83,7 +83,7 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
                 const axes=carrying.source.gamepad?.axes || [],start=axes.length>=4?2:0,seconds=Math.min(50,dt)/1000;
                 grip.turn+=stickAxis(axes[start])*seconds*1.1;grip.depth-=stickAxis(axes[start+1])*seconds*.55;
                 const next=grip.rotation.clone();
-                if(grip.orientation && carrying.orientation)next.premultiply(carrying.orientation.clone().multiply(grip.orientation.clone().invert()));
+                // Controller carrying preserves orientation; only the joystick turns the map.
                 next.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),grip.turn));
                 const bounded=limitLivingMapTilt(next);
                 const carried=grip.origin.clone().add(vector(carrying.position).sub(grip.offset).sub(grip.position)).addScaledVector(vector(carrying.forward || {x:0,y:0,z:-1}),grip.depth);

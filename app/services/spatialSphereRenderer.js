@@ -320,8 +320,8 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         const now=options.time ?? performance.now()/1000,key=options.animationKey || position,target=options.pimoOpen===true || options.knowledge?.state==='expanded'?1:0;
         const state=renderer.livingStates.get(key) || {at:now,opening:target};
         if(state.at!==now){const dt=Math.min(.1,Math.max(0,now-state.at));state.opening+=(target-state.opening)*(1-Math.exp(-dt/ .32));state.at=now;}renderer.livingStates.set(key,state);
-        const soft=authoredColor.map((c,i)=>c*.48+[.88,.87,.80][i]*.52);
-        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.94,{orbModel:'basic',color:authoredColor,alpha:.98,roughness:.8,emissive:.04,rotationY:options.rotationY || 0,coreGlow:.03+state.opening*(.15+.08*(.5+.5*Math.sin(now*2.8))),opacity:options.opacity});
+        const soft=authoredColor.map((c,i)=>c*.72+[.88,.87,.80][i]*.28);
+        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.94,{orbModel:'basic',color:authoredColor,alpha:.98,roughness:.8,emissive:.18,rotationY:options.rotationY || 0,coreGlow:.12+state.opening*(.15+.08*(.5+.5*Math.sin(now*2.8))),opacity:options.opacity});
         drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:'living',color:soft,alpha:.98,roughness:.72,emissive:moving?.18:targeted?.12:.04,rotationY:options.rotationY || 0,opening:state.opening,opacity:options.opacity});
         gl.enable(gl.CULL_FACE);return;
     }
