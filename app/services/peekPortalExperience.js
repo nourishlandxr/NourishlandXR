@@ -1,14 +1,13 @@
 import * as THREE from '../vendor/three.module.min.js';
-import {createTreePeekStudy} from './treePeekStudy.js?v=0.9475';
+import {createSunGardenPeekStudy} from './sunGardenPeekStudy.js';
 import {getSpatialVisualSettings} from './spatialVisualSettings.js';
-import {createFoodForestWorld} from './foodForestStudy.js';
 import {createDemoLivingMapXR} from './demoLivingMapXR.js';
 import {prepareLivingFrameModel} from './livingFrameModel.js';
 
 // Preloaded test scene, shared by desktop and the existing native XR session.
 let sharedNativeContext=null;
-export function createPeekPortalExperience({variant=1}={}){
- const portal=variant===2?createTreePeekStudy():createFoodForestWorld({allowEntry:true,radius:.89}),scene=new THREE.Scene();scene.add(portal.root,new THREE.HemisphereLight(0xe6f0ec,0x3f5034,2));
+export function createPeekPortalExperience(){
+ const portal=createSunGardenPeekStudy({allowEntry:true,radius:.89}),scene=new THREE.Scene();scene.add(portal.root,new THREE.HemisphereLight(0xffeace,0x203f37,2));
  const key=new THREE.DirectionalLight(0xffe7c2,2);key.position.set(-4,8,3);scene.add(key);
  let animationTime=0;
  function animate(){const now=performance.now();if(animationTime)portal.advanceAnimation((now-animationTime)/1000);animationTime=now;}
@@ -31,7 +30,7 @@ export function createPeekPortalExperience({variant=1}={}){
   gl.stencilMask(0);gl.stencilOp(gl.KEEP,gl.KEEP,gl.KEEP);native.draw(view,zero,identity,opacity);
   gl.disable(gl.STENCIL_TEST);gl.stencilMask(255);frameModel?.drawXR(view,anchor.elements);if(stencilEnabled)gl.enable(gl.STENCIL_TEST);
  }
- async function openDesktop(container,exit){await ready;if(destroyed)return;begin(new THREE.Matrix4().makeTranslation(0,1.6+(getSpatialVisualSettings().livingFrameHeight||0),-1.8).elements,exit);mount=document.createElement('div');mount.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#172126;opacity:0;transition:opacity .5s';mount.innerHTML='<button style="position:absolute;top:14px;left:14px;z-index:2;padding:12px">Back to scene</button>';container.append(mount);mount.querySelector('button').onclick=close;
+ async function openDesktop(container,exit,{continueLabel='Back to scene'}={}){await ready;if(destroyed)return;begin(new THREE.Matrix4().makeTranslation(0,1.6+(getSpatialVisualSettings().livingFrameHeight||0),-1.8).elements,exit);mount=document.createElement('div');mount.style.cssText='position:fixed;inset:0;z-index:2147483646;background:#172126;opacity:0;transition:opacity .5s';mount.innerHTML='<button style="position:absolute;top:14px;left:14px;z-index:2;padding:12px">Back to scene</button>';container.append(mount);mount.querySelector('button').textContent=continueLabel;mount.querySelector('button').onclick=close;
   desktop=new THREE.WebGLRenderer({antialias:true,alpha:true,stencil:true});desktop.localClippingEnabled=true;desktop.setClearColor(0x172126,1);desktop.setPixelRatio(Math.min(devicePixelRatio,1.5));mount.append(desktop.domElement);portal.root.matrixAutoUpdate=true;portal.root.position.set(0,1.6+(getSpatialVisualSettings().livingFrameHeight||0),-1.8);portal.root.rotation.set(0,0,0);let depth=0,yaw=0,pitch=0;
   desktop.domElement.onwheel=e=>{e.preventDefault();depth=Math.max(0,Math.min(4.3,depth-e.deltaY*.004));};let drag=null;desktop.domElement.onpointerdown=e=>{drag=[e.clientX,e.clientY];desktop.domElement.setPointerCapture(e.pointerId);};desktop.domElement.onpointermove=e=>{if(!drag)return;yaw-=(e.clientX-drag[0])*.004;pitch=Math.max(-1.3,Math.min(1.3,pitch-(e.clientY-drag[1])*.004));drag=[e.clientX,e.clientY];};desktop.domElement.onpointerup=()=>drag=null;
   const hint=document.createElement('p');hint.style.cssText='position:absolute;bottom:8px;left:20px;color:white';hint.textContent='Scroll to move through the frame · drag to look around';mount.append(hint);

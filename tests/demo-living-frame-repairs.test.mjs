@@ -13,7 +13,7 @@ test('Continue stays hidden through narration and the final reading time, then a
   appRoot:{querySelector:selector=>selector==='[data-tryit-intro-continue]'?button:null},
   ambientBeeScreens:new Set(),ambientBeeCount:1,BEE_COUNT:4,
   demoSlideHistoryReplay:true,clearDemoNarration:noop,demoNarrationRevision:1,infoPanel:null,
-  guidedDemoStep:()=>null,DEMO_TUTORIAL_STEPS:{GUIDED:'guided',PIM:'pim'},demoLivingMapScene:null,
+  guidedDemoStep:()=>null,DEMO_TUTORIAL_STEPS:{GUIDED:'guided',PIM:'pim'},demoLivingMapScene:null,clearDemoZinniaDiscovery:noop,
   useSharedWelcomeBoard:noop,setDemoTutorialStep:noop,demoLocalizedText:value=>value,DEMO_QUICK_ACCESS_COPY:{},
   nextDemoSlideCode:()=> 'SPACE 1.1',rememberDemoSlide:noop,clearTimeout:noop,
   setTimeout:callback=>{timers.push(callback);return timers.length;},revealIntroBoardNextGuide:noop,

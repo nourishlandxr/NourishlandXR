@@ -266,7 +266,7 @@ test('plant identity imagery flows through PIM into both shared Demo and Creator
     assert.match(preview, /export function demoPlantMedia\(record\)/);
     assert.match(demo, /return showDemoPlantPhoto\(record\)/);
     assert.match(demo, /focusPlant\(record,demoOrbKnowledge\(record\)\.document,plantMedia\)/);
-    const conversion=demo.slice(demo.indexOf('function guidePlantConversion'),demo.indexOf('function showSceneContinue'));
+    const conversion=demo.slice(demo.indexOf('function guidePlantConversion'),demo.indexOf('function showDemoNativePlantChooser'));
     assert.doesNotMatch(conversion,/focusPlant\(/);
     assert.match(creator, /infoPanel\?\.focusPlant\(record,creatorKnowledgeDocument\(record\)\)/);
     assert.match(styles, /\.nlxr-plant-preview img\s*\{[^}]*object-fit:contain/);

@@ -14,12 +14,12 @@ test('VIEW owns visibility and PEEK; the welcome and main action rail have no pe
  const controls=panelViewControls([{id:'plant',label:'ORBS',selected:false}]);
  assert.equal(controls.find(item=>item.action==='Utility:visibility:plant').label,'Show');
  for(const id of ['plant','zone','note'])assert.ok(controls.some(item=>item.action==='Utility:visibility:'+id));
- assert.equal(controls.find(item=>item.action==='Utility:peek-3d').label,'PEEK 1');
+ assert.equal(controls.find(item=>item.action==='Utility:peek-3d').label,'PEEK 3D');
  const demo=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8'),launch=readFileSync(new URL('../app/screens/launch.js',import.meta.url),'utf8');
  assert.doesNotMatch(launch,/openLivingPaintingTest/);
  assert.doesNotMatch(demo,/actions.push\(\{id:'peek-3d'/);
- assert.match(demo,/openDemoPeek\(action==='peek-3d-2'\?2:1\)/);
- assert.equal(controls.find(item=>item.action==='Utility:peek-3d-2').label,'PEEK 2');
+ assert.match(demo,/if\(action==='peek-3d'\)\{void openDemoPeek\(\);return;\}/);
+ assert.equal(controls.some(item=>item.action==='Utility:peek-3d-2'),false);
  assert.match(demo,/if\(livingPeekActive && livingPeekPose\)/);
  assert.match(demo,/livingPeekPinches/);
 });
@@ -46,7 +46,7 @@ test('rim clearance includes outer petals and catches sideways flight through th
 
 test('Peek choices share one bounded row and shake reactions vary per butterfly',()=>{
  const choices=panelViewControls().filter(item=>item.settingGroup==='peek');
- assert.deepEqual(choices.map(item=>item.label),['PEEK 1','PEEK 2','OFF']);
+ assert.deepEqual(choices.map(item=>item.label),['PEEK 3D','OFF']);
  assert.equal(new Set(choices.map(item=>item.y)).size,1);
  for(let i=1;i<choices.length;i++)assert.ok(choices[i].x>=choices[i-1].x+choices[i-1].width);
  const home={id:'p',center:{x:0,y:1,z:-1},right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}},moved={...home,center:{x:.04,y:1,z:-1}};

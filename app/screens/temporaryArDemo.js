@@ -2,24 +2,22 @@ import {createLimoSpatialExperience} from '../services/limoSpatialExperience.js'
 import {createLivingFrameModel} from '../services/livingFrameModel.js';
 import {createPeekPortalExperience} from '../services/peekPortalExperience.js';
 let demoPeekPortal=null,demoViewOpen=false,demoPeekPending=false;
-let demoPeekVariant=1;
-async function openDemoPeek(variant=1){
+async function openDemoPeek({onComplete=null,continueLabel='Back to scene'}={}){
     if(demoPeekPending||demoPeekPortal?.active)return;
-    if(variant!==demoPeekVariant){demoPeekPortal?.destroy();demoPeekPortal=null;demoPeekVariant=variant;}
     demoPeekPending=true;
-    demoPeekPortal ||= createPeekPortalExperience({variant:demoPeekVariant});
+    demoPeekPortal ||= createPeekPortalExperience();
     const preparedPortal=demoPeekPortal;
     await preparedPortal.ready;
     if(demoPeekPortal!==preparedPortal)return;
     demoPeekPending=false;
     if(!appRoot?.isConnected)return;
-    const restore=()=>{document.querySelector('[data-peek-return]')?.remove();appRoot.style.opacity='1';appRoot.style.pointerEvents='';syncDemoPanelActions();};
-    if(simulatedMode){appRoot.style.transition='opacity .35s';appRoot.style.opacity='0';appRoot.style.pointerEvents='none';setTimeout(()=>{if(appRoot?.isConnected)void demoPeekPortal.openDesktop(document.body,restore);},350);}
+    const restore=()=>{document.querySelector('[data-peek-return]')?.remove();appRoot.style.opacity='1';appRoot.style.pointerEvents='';syncDemoPanelActions();onComplete?.();};
+    if(simulatedMode){appRoot.style.transition='opacity .35s';appRoot.style.opacity='0';appRoot.style.pointerEvents='none';setTimeout(()=>{if(appRoot?.isConnected)void demoPeekPortal.openDesktop(document.body,restore,{continueLabel});},350);}
     else{
         const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
         demoPeekPortal.begin(livingFramePose(board).matrix,restore);
         appRoot.style.transition='opacity .35s';appRoot.style.opacity='0';appRoot.style.pointerEvents='none';
-        const button=document.createElement('button');button.textContent='Back to scene';button.dataset.peekReturn='';button.style.cssText='position:fixed;bottom:18px;left:18px;z-index:2147483646;padding:12px';document.body.append(button);button.onclick=()=>{button.remove();demoPeekPortal.close();};
+        const button=document.createElement('button');button.textContent=continueLabel;button.dataset.peekReturn='';button.style.cssText='position:fixed;bottom:18px;left:18px;z-index:2147483646;padding:12px';document.body.append(button);button.onclick=()=>{button.remove();demoPeekPortal.close();};
     }
 }
 import {createLivingFramePeekXR} from '../services/livingFramePeekXR.js';
@@ -771,7 +769,7 @@ function demoControlIsVisible(selector) {
 function demoPanelActions() {
     if(demoViewOpen)return [
         ...demoVisibilityFooter(demoSeenElements,demoHiddenElements).filter(item=>item.id!=='control').map(item=>({id:'visibility:'+item.id,label:(item.selected?'Hide ':'Show ')+item.label})),
-        {id:'peek-3d',label:'PEEK 3D 1'},{id:'peek-3d-2',label:'PEEK 3D 2'},{id:'view-close',label:'Back to controls'}
+        {id:'peek-3d',label:'PEEK 3D'},{id:'peek-off',label:'OFF'},{id:'view-close',label:'Back to controls'}
     ];
     if(demoExitLifecycle.state===DEMO_EXIT_STATES.ENDING)return [
         {id:'close-confirm',label:'Closing…',primary:true,disabled:true}
@@ -878,7 +876,7 @@ async function openLivingPeek(){
 function handleDemoPanelAction(action) {
     if(action==='peek-off'){demoPeekPortal?.close();closeLivingPeek();return;}
     if(action==='view'||action==='view-close'){demoViewOpen=action==='view';syncDemoPanelActions();return;}
-    if(action==='peek-3d'||action==='peek-3d-2'){void openDemoPeek(action==='peek-3d-2'?2:1);return;}
+    if(action==='peek-3d'){void openDemoPeek();return;}
     if(action.startsWith('visibility:')){
         const type=action.slice(11);
         if(demoHiddenElements.has(type))demoHiddenElements.delete(type);else demoHiddenElements.add(type);
@@ -2273,7 +2271,7 @@ function paintSimulatedRainV2(now){
 function showDemoCalmWelcome({returning=false}={}){
     clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
     arWelcomeOpeningActive=false;arWelcomeIntroPending=true;limMeshVisible=false;
-    showIntroBoard('Welcome to NourishlandXR',(returning?'Hello again. I’m over here—let’s see what this place could become.\n\n':'')+'We hope you are in a calm place, with plenty of clear space around you.\n\nGet comfortable. Relax your shoulders, keep your movements gentle, and take your time.\n\nWhen you feel ready, let’s imagine what this space could become.','Continue',()=>showArWelcomeShowcase({calmWelcome:false}),{stepLabel:'WELCOME 0.1',dynamicCopy:true,spokenSummary:returning?'Hello again. I’m over here—let’s see what this place could become.':undefined,nextGuide:'Continue when you feel comfortable.'});
+    showIntroBoard('Welcome to NourishlandXR',(returning?'Hello again. I’m over here—let’s see what this place could become.\n\n':'')+'We hope you are in a calm place, with plenty of clear space around you.\n\nGet comfortable. Relax your shoulders, keep your movements gentle, and take your time.\n\nWhen you feel ready, look through the Living Frame. Move closer gently and discover the world beyond it.','Look through the frame',()=>{clearDemoNarration();void openDemoPeek({continueLabel:'Continue to IMAGINE',onComplete:()=>showArWelcomeShowcase({calmWelcome:false})});},{stepLabel:'WELCOME 0.1',dynamicCopy:true,spokenSummary:returning?'Hello again. I’m over here—let’s see what this place could become.':undefined,nextGuide:'Continue when you feel comfortable.'});
 }
 function showArWelcomeShowcase() {
     const {calmWelcome=true}=arguments[0] || {};
@@ -6581,7 +6579,7 @@ async function startImmersive() {
         if (!gl) throw new Error('WebGL unavailable');
         await gl.makeXRCompatible();
         session.updateRenderState({ baseLayer: new XRWebGLLayer(session, gl, { alpha: transparentSession, antialias: true, stencil:true }) });
-        demoPeekPortal ||= createPeekPortalExperience({variant:demoPeekVariant});await demoPeekPortal.ready;demoPeekPortal.setContext(gl);
+        demoPeekPortal ||= createPeekPortalExperience();await demoPeekPortal.ready;demoPeekPortal.setContext(gl);
         session.addEventListener('select',event=>{if(!demoPeekPortal?.active)return;event.stopImmediatePropagation();event.preventDefault();appRoot?.querySelector('[data-peek-return]')?.remove();demoPeekPortal.close();},{capture:true});
         try { referenceSpace = await session.requestReferenceSpace('local-floor');referenceSpaceHasFloor=true; } catch { referenceSpace = await session.requestReferenceSpace('local');referenceSpaceHasFloor=false; }
         try {
