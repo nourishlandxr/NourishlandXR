@@ -28,6 +28,12 @@ body { background:var(--v2-paper); }
 .v2-hero { display:grid; grid-template-columns:1.2fr 1fr; align-items:center; gap:48px; padding:24px 0 48px; }
 .v2-botanical { width:100%; max-height:430px; }
 .v2-actions { display:flex; gap:12px; flex-wrap:wrap; margin:24px 0; }
+.nlxr-welcome-tutorial {display:flex;align-items:center;gap:12px;max-width:100%;margin:14px 0;padding:10px 12px;border:1px solid rgba(91,117,93,.25);border-radius:14px;background:rgba(239,245,232,.65);cursor:pointer;color:#405740;}
+.nlxr-welcome-tutorial input {flex:0 0 auto;width:22px;height:22px;margin:0;accent-color:#627f61;}
+.nlxr-welcome-tutorial span {display:grid;gap:3px;min-width:0;}
+.nlxr-welcome-tutorial strong {font-size:14px;font-weight:600;}
+.nlxr-welcome-tutorial small {font-size:12px;line-height:1.4;}
+.nlxr-welcome-tutorial:focus-within {outline:2px solid #627f61;outline-offset:3px;}
 #app .v2-primary,#app .v2-secondary { border-radius:99px; padding:13px 24px; background:var(--v2-leaf); color:#fffef8; border:1px solid var(--v2-leaf); font-weight:600; text-decoration:none; display:inline-flex; align-items:center; justify-content:center; }
 #app .v2-secondary { background:var(--v2-surface); color:var(--v2-ink); border-color:var(--v2-line); }
 .v2-intro-grid,.v2-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:18px; }

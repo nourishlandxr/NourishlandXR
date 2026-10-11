@@ -18,7 +18,7 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{}}={}){
         if(!context)return null;
         if(!cache.has(id)){
             const request=new AbortController(),cancel=()=>request.abort(),timer=setTimeout(cancel,5000);abort.signal.addEventListener('abort',cancel,{once:true});
-            cache.set(id,fetch(new URL('../assets/welcome-practice/voice/'+id+'.mp3',import.meta.url),{signal:request.signal}).then(r=>{if(!r.ok)throw Error('Welcome audio unavailable');return r.arrayBuffer();}).then(bytes=>context?.decodeAudioData(bytes)).catch(()=>{cache.delete(id);return null;}).finally(()=>{clearTimeout(timer);abort.signal.removeEventListener('abort',cancel);}));
+            cache.set(id,fetch(new URL('../assets/welcome-practice/voice/'+id+'.mp3',import.meta.url),{signal:request.signal,cache:'no-cache'}).then(r=>{if(!r.ok)throw Error('Welcome audio unavailable');return r.arrayBuffer();}).then(bytes=>context?.decodeAudioData(bytes)).catch(()=>{cache.delete(id);return null;}).finally(()=>{clearTimeout(timer);abort.signal.removeEventListener('abort',cancel);}));
         }
         return cache.get(id);
     }

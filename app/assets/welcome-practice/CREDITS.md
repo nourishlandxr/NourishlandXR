@@ -1,5 +1,7 @@
 # Welcome practice fruit
 
+Controller guides use the official `@webxr-input-profiles/assets` 1.0.20 Quest Touch Plus and Oculus Touch v3 models and profiles from [Immersive Web input profiles](https://github.com/immersive-web/webxr-input-profiles/tree/main/packages/assets), under the [bundled MIT license](controllers/LICENSE.md). Their component transforms align highlights and pressed animations with grip-space poses. Unsupported profiles retain captions and input practice without guessed button locations.
+
 Models supplied by the project owner. Original files remain unchanged.
 
 - Cara Cara Orange — inciprocal. [Original model](https://sketchfab.com/3d-models/cara-cara-orange-ad325912dc614f1596d2dad2d64524eb). Original metadata: Sketchfab Standard license. Tabletop derivative uses reduced texture resolution.

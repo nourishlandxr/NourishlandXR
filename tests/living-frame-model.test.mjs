@@ -17,13 +17,13 @@ test('close detail adds leaf veins and physical bump without mutating the cached
  const shader={uniforms:{},vertexShader:'#include <uv_vertex>\n#include <project_vertex>',fragmentShader:'#include <color_fragment>\n#include <normal_fragment_maps>'};material.onBeforeCompile(shader);assert.equal(shader.uniforms.lfSurface.value,1);assert.match(shader.vertexShader,/lfUv=uv/);assert.match(shader.fragmentShader,/diffuseColor.rgb\*=lfDetailColour/);assert.match(shader.fragmentShader,/normal=lfBump/);dispose();
 });
 
-test('SD and HD stretch the growth sequence to three minutes and hold the finished frame',async()=>{
+test('SD and HD stretch the growth sequence to fifteen minutes and hold the finished frame',async()=>{
  const previous=getSpatialVisualSettings();
- try{assert.equal(LIVING_FRAME_GROWTH_DURATION_MS,180000);for(const tier of ['sd','hd']){
+ try{assert.equal(LIVING_FRAME_GROWTH_DURATION_MS,900000);for(const tier of ['sd','hd']){
   setSpatialVisualSettings({livingFrameQuality:tier});const asset=entry();asset.asset.animations=[new THREE.AnimationClip('growth',60,[new THREE.NumberKeyframeTrack('leaves.morphTargetInfluences[0]',[0,60],[0,1])])];
   const model=createLivingFrameModel({load:async()=>asset});await model.select(tier);
-  for(const [elapsed,weight] of [[0,0],[60000,1/3],[90000,.5],[180000,1],[300000,1]]){model.update(elapsed);assert.ok(Math.abs(model.scene.children[0].morphTargetInfluences[0]-weight)<1e-6);assert.equal(model.growthTime,Math.min(elapsed/1000,180));}
-  model.update(0,{reduced:true});assert.equal(model.growthTime,180);assert.equal(model.scene.children[0].morphTargetInfluences[0],1);model.destroy();
+  for(const [elapsed,weight] of [[0,0],[300000,1/3],[450000,.5],[900000,1],[1200000,1]]){model.update(elapsed);assert.ok(Math.abs(model.scene.children[0].morphTargetInfluences[0]-weight)<1e-6);assert.equal(model.growthTime,Math.min(elapsed/1000,900));}
+  model.update(0,{reduced:true});assert.equal(model.growthTime,900);assert.equal(model.scene.children[0].morphTargetInfluences[0],1);model.destroy();
  }}finally{setSpatialVisualSettings(previous);}
 });
 

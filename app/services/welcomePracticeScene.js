@@ -2,6 +2,8 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {WELCOME_PRACTICE_LESSONS,WELCOME_PRACTICE_RESPONSES} from './welcomePracticeContent.js';
 import {PRACTICE_TABLE_RADIUS,createPracticeBody,resetPracticeBody,stepPracticeBodies} from './welcomePracticePhysics.js';
+import {createWelcomeControllerGuide} from './welcomeControllerGuide.js';
+import {createWelcomePlantPractice} from './welcomePlantPractice.js';
 
 const one=new THREE.Vector3(1,1,1),up=new THREE.Vector3(0,1,0);
 const serial=v=>({x:v.x,y:v.y,z:v.z});
@@ -27,6 +29,7 @@ function createDragonfly(){
 // The anchor stays in the world; moving one's head never moves the table.
 export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=>{},onFeedback=()=>{},onAssets=()=>{}}={}){
     const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);
+    const controllerGuide=createWelcomeControllerGuide(scene,{onAssets});
     const table=new THREE.Group();root.add(table);
     const top=new THREE.Mesh(new THREE.CylinderGeometry(PRACTICE_TABLE_RADIUS,PRACTICE_TABLE_RADIUS-.008,.024,64),tableSurface('#c8d4c0',.32));top.position.y=-.012;table.add(top);
     const rim=new THREE.Mesh(new THREE.TorusGeometry(PRACTICE_TABLE_RADIUS-.009,.004,6,64),glass('#9db59a',.86));rim.rotation.x=Math.PI/2;rim.position.y=.003;table.add(rim);
@@ -40,20 +43,21 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         const half=body.halfSize;placeholder.scale.set(half.x,half.y,half.z);group.add(placeholder);
         if(body.id==='ball'){const band=new THREE.Mesh(new THREE.TorusGeometry(body.radius*1.004,.0018,5,48),glass('#f4f2dc'));band.rotation.x=.34;group.add(band);}
     }
+    const garden=createWelcomePlantPractice(root);bodies.push(...garden.bodies);for(const [id,object] of garden.objects)objects.set(id,object);
     const dragon=createDragonfly();root.add(dragon.group);
     const plate=textPlate(1400,350,.98,.245);plate.mesh.position.set(0,.48,-.41);root.add(plate.mesh);
     const buttons=new Map();
-    for(const [id,x] of [['replay',-.36],['mute',-.12],['skip',.12],['next',.36]]){const p=textPlate(360,100,.222,.062);p.mesh.position.set(x,.288,-.41);root.add(p.mesh);buttons.set(id,{...p,x,y:.288,width:.222,height:.062,enabled:true});}
+    for(const [id,x] of [['replay',-.24],['mute',0],['next',.24]]){const p=textPlate(360,100,.222,.062);p.mesh.position.set(x,.288,-.41);root.add(p.mesh);buttons.set(id,{...p,x,y:.288,width:.222,height:.062,enabled:true});}
     let active=false,disposed=false,anchored=false,index=0,elapsed=0,stepStarted=0,tableHeight=.8,lastSignature='',lastImpact=-Infinity;
     let pointed=false,ballGrabbed=false,ballReleased=false,fruitGrabbed=false,fruitReleased=false,dragonDistance=0,dragonReleased=false,handsPresent=false,handStable=0,successAt=null;
-    let dragonOwner=null,dragonOffset=null,dragonVelocity=new THREE.Vector3(),dragonManual=false,dragonPhase=Math.random()*Math.PI*2,successCuePlayed=false;
+    let dragonOwner=null,dragonOffset=null,dragonVelocity=new THREE.Vector3(),dragonManual=false,dragonPhase=Math.random()*Math.PI*2,successCuePlayed=false,lastActionSource=null,wasPouring=false;
     const activeGrabs=new Map(),inputEdges=new Map(),point=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),worldInverse=new THREE.Matrix4(),pendingEvents=new Set();
     const lesson=()=>WELCOME_PRACTICE_LESSONS[index];
     const cue=id=>WELCOME_PRACTICE_RESPONSES.find(value=>value.id===id);
     const spokenLesson=()=>index===3 && handsPresent?cue('fly-hands'):index===4 && handsPresent?cue('hands-ready'):lesson();
-    const currentCaption=()=>index===4 && handsPresent?'There are your hands. Reach towards the fruit.':index===3 && handsPresent?'Pinch near the dragonfly. Move your hand, then release.':lesson().caption;
-    function snapshot(){return {active,phase:lesson().id,index,caption:currentCaption(),title:lesson().title,handsPresent,held:[...activeGrabs.values()].map(g=>g.body.id),voice:voice?.status(),assets:fruitAssets};}
-    function nextAllowed(){return !(voice?.status().playing) && (index===4 || index===6);}
+    const currentCaption=()=>index===4 && handsPresent?'There are your hands. Reach towards the fruit.':index===3 && handsPresent?'Pinch near the dragonfly. Move your hand, then release.':index===1 && handsPresent?'Point at the ball. Pinch your thumb and index finger.':index===2 && handsPresent?'Pinch near the ball. Lift it, then open your fingers.':lesson().caption;
+    function snapshot(){return {active,phase:lesson().id,index,caption:currentCaption(),title:lesson().title,handsPresent,held:[...activeGrabs.values()].map(g=>g.body.id),voice:voice?.status(),assets:fruitAssets,garden:garden.snapshot(),completed:successAt!==null,controllerGuide:controllerGuide.snapshot()};}
+    function nextAllowed(){return !(voice?.status().playing) && (index===4 || index===9);}
     function paint(){
         const v=voice?.status() || {playing:false,muted:true};
         const label=index===4?'Use controllers':'Continue';
@@ -61,12 +65,12 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         const signature=[index,caption,v.playing,v.muted,nextAllowed(),handsPresent].join('|');if(signature===lastSignature)return;lastSignature=signature;
         plate.paint(ctx=>{ctx.fillStyle='rgba(242,240,228,.92)';ctx.beginPath();ctx.roundRect(2,2,1396,346,65);ctx.fill();ctx.strokeStyle='rgba(147,168,146,.7)';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#637763';ctx.font='500 27px system-ui';ctx.textAlign='center';ctx.fillText('NOURISHLAND XR  ·  WELCOME 0.1',700,63);ctx.fillStyle='#304334';ctx.font='500 59px system-ui';ctx.fillText(lesson().title,700,147,1310);ctx.font='34px system-ui';ctx.fillStyle='#485c49';
             const words=caption.split(' '),lines=[''];for(const word of words){const i=lines.length-1;if(ctx.measureText(lines[i]+word).width>1280)lines.push(word+' ');else lines[i]+=word+' ';}lines.slice(0,2).forEach((line,i)=>ctx.fillText(line.trim(),700,223+i*47));});
-        for(const [id,p] of buttons){p.enabled=id==='next'?nextAllowed():id==='skip' || Boolean(voice);p.mesh.visible=p.enabled;
-            p.paint(ctx=>{ctx.fillStyle=id==='next'?'#677f65':'rgba(236,239,225,.92)';ctx.beginPath();ctx.roundRect(2,2,356,96,43);ctx.fill();ctx.fillStyle=id==='next'?'#fff9e9':'#405740';ctx.font='500 28px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(id==='replay'?'Hear again':id==='mute'?(v.muted?'Voice off':'Voice on'):id==='skip'?'Skip practice':label,180,50,338);});
+        for(const [id,p] of buttons){p.enabled=id==='next'?nextAllowed():Boolean(voice);p.mesh.visible=p.enabled;
+            p.paint(ctx=>{ctx.fillStyle=id==='next'?'#677f65':'rgba(236,239,225,.92)';ctx.beginPath();ctx.roundRect(2,2,356,96,43);ctx.fill();ctx.fillStyle=id==='next'?'#fff9e9':'#405740';ctx.font='500 28px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(id==='replay'?'Hear again':id==='mute'?(v.muted?'Voice off':'Voice on'):label,180,50,338);});
         }
         onChange(snapshot());
     }
-    function setLesson(value){index=value;stepStarted=elapsed;successCuePlayed=index===4 && handsPresent;successAt=successCuePlayed?elapsed:null;lastSignature='';if(index===3){dragon.group.position.set(-.22,.25,-.1);dragonVelocity.set(0,0,0);}void voice?.speak(spokenLesson());paint();}
+    function setLesson(value){releaseAll(false);index=value;stepStarted=elapsed;pointed=false;ballGrabbed=false;ballReleased=false;fruitGrabbed=false;fruitReleased=false;dragonDistance=0;dragonReleased=false;handStable=0;lastActionSource=null;wasPouring=false;if(index===6){garden.reset();garden.bodies.forEach(resetPracticeBody);}successCuePlayed=index===4 && handsPresent;successAt=successCuePlayed?elapsed:null;lastSignature='';if(index===3){dragon.group.position.set(-.22,.25,-.1);dragonVelocity.set(0,0,0);}void voice?.speak(spokenLesson());paint();}
     function start(viewer,floor){if(disposed)return;active=true;elapsed=0;stepStarted=0;if(viewer)anchor(viewer,floor);setLesson(0);}
     function anchor(viewer,floor=viewer[13]-1.65){if(anchored || !viewer)return;const forward=new THREE.Vector3(-viewer[8],0,-viewer[10]).normalize();if(forward.lengthSq()<.1)forward.set(0,0,-1);tableHeight=Math.max(.5,Math.min(1.02,viewer[13]-.65-floor));root.position.set(viewer[12]+forward.x*.75,floor+tableHeight,viewer[14]+forward.z*.75);root.quaternion.setFromAxisAngle(up,Math.atan2(-forward.x,-forward.z));stand.scale.y=tableHeight-.04;stand.position.y=-tableHeight/2-.012;foot.position.y=-tableHeight+.012;root.updateMatrixWorld(true);anchored=true;}
     function localPose(matrix){return new THREE.Matrix4().multiplyMatrices(worldInverse,new THREE.Matrix4().fromArray(matrix));}
@@ -82,24 +86,24 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         if(best){best.worldPoint=best.point.clone().applyMatrix4(root.matrixWorld);return best;}return null;
     }
     function finish(){if(!active)return;active=false;voice?.stop();releaseAll(false);dragonOwner=null;root.visible=false;onChange(snapshot());onComplete();}
-    function button(id){voice?.unlock();if(id==='skip')finish();else if(id==='replay')void voice?.speak(spokenLesson());else if(id==='mute')voice?.toggleMute();else if(id==='next' && nextAllowed()){if(index===4)setLesson(5);else finish();}paint();}
+    function button(id){voice?.unlock();if(id==='replay')void voice?.speak(spokenLesson());else if(id==='mute')voice?.toggleMute();else if(id==='next' && nextAllowed()){if(index===4)setLesson(5);else finish();}paint();}
     function select(ray,source){if(!active)return false;voice?.unlock();const target=hit(ray);if(!target)return false;if(target.kind==='button'){button(target.id);return true;}
-        if(target.kind==='body' && index===1 && target.body.id==='ball'){const direction=localRay(ray).direction;target.body.velocity={x:direction.x*.3,y:.2,z:direction.z*.3};pointed=true;onFeedback('point',source);return true;}return false;
+        if(target.kind==='body' && index===1 && target.body.id==='ball'){const direction=localRay(ray).direction;target.body.velocity={x:direction.x*.3,y:.2,z:direction.z*.3};pointed=true;lastActionSource=source;onFeedback('point',source);return true;}return false;
     }
     function grab(source,pose){if(index<2 || activeGrabs.has(source))return;pose.decompose(point,rotation,scale);
         const occupied=new Set([...activeGrabs.values()].map(g=>g.body));
-        const candidate=bodies.filter(b=>b.visible && !occupied.has(b) && (index>=5 || b.id==='ball')).map(b=>({body:b,d:point.distanceTo(new THREE.Vector3(b.position.x,b.position.y,b.position.z))})).filter(c=>c.d<c.body.radius+.055).sort((a,b)=>a.d-b.d)[0];
-        if(candidate){const b=candidate.body,bodyMatrix=new THREE.Matrix4().compose(new THREE.Vector3(b.position.x,b.position.y,b.position.z),new THREE.Quaternion(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w),one);activeGrabs.set(source,{body:b,offset:pose.clone().invert().multiply(bodyMatrix),samples:[]});b.held=true;Object.assign(b.velocity,{x:0,y:0,z:0});Object.assign(b.angular,{x:0,y:0,z:0});if(b.id==='ball')ballGrabbed=true;else fruitGrabbed=true;onFeedback('grab',source);return;}
+        const candidate=bodies.filter(b=>b.visible && !occupied.has(b) && (index===9 || index===5 && ['ball','orange','lime','banana'].includes(b.id) || index===6 && b.id==='seed' || index>=7 && index<=8 && b.id==='watering-can' || index>=2 && index<5 && b.id==='ball')).map(b=>({body:b,d:point.distanceTo(new THREE.Vector3(b.position.x,b.position.y,b.position.z))})).filter(c=>c.d<c.body.radius+.055).sort((a,b)=>a.d-b.d)[0];
+        if(candidate){const b=candidate.body,bodyMatrix=new THREE.Matrix4().compose(new THREE.Vector3(b.position.x,b.position.y,b.position.z),new THREE.Quaternion(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w),one);activeGrabs.set(source,{body:b,offset:pose.clone().invert().multiply(bodyMatrix),samples:[],start:new THREE.Vector3(b.position.x,b.position.y,b.position.z),moved:0});b.held=true;Object.assign(b.velocity,{x:0,y:0,z:0});Object.assign(b.angular,{x:0,y:0,z:0});if(b.id==='ball')ballGrabbed=true;else fruitGrabbed=true;onFeedback('grab',source);return;}
         if(index>=3 && !dragonOwner && point.distanceTo(dragon.group.position)<.13 && source.hand){dragonOwner=source;dragonOffset=dragon.group.position.clone().sub(point);}
     }
     function release(source,throwing=true){const g=activeGrabs.get(source);if(g){const b=g.body,last=g.samples.at(-1),first=g.samples.find(s=>last.time-s.time<=.12);if(throwing && last && first && last.time-first.time>.008){const v=last.p.clone().sub(first.p).divideScalar(last.time-first.time).clampLength(0,3.2);Object.assign(b.velocity,serial(v));const q=last.q.clone().multiply(first.q.clone().invert());if(q.w<0)q.set(-q.x,-q.y,-q.z,-q.w);const angle=2*Math.acos(Math.max(-1,Math.min(1,q.w))),a=new THREE.Vector3(q.x,q.y,q.z).normalize().multiplyScalar(Math.min(8,angle/(last.time-first.time)));Object.assign(b.angular,serial(a));}
-            b.held=false;activeGrabs.delete(source);if(throwing){if(b.id==='ball' && ballGrabbed)ballReleased=true;else if(b.id!=='ball' && fruitGrabbed)fruitReleased=true;}onFeedback('release',source);}
+            b.held=false;activeGrabs.delete(source);if(throwing){lastActionSource=source;if(g.moved>.06){if(index===2 && b.id==='ball' && ballGrabbed)ballReleased=true;else if(index===5 && b.id!=='ball' && fruitGrabbed)fruitReleased=true;}if((index===6 || index===9) && garden.plant(b)){Object.assign(b.velocity,{x:0,y:0,z:0});onFeedback('plant',source);}}onFeedback('release',source);}
         if(dragonOwner===source){dragonOwner=null;dragonManual=false;if(throwing && dragonDistance>.08)dragonReleased=true;}
     }
     function releaseAll(throwing=false){for(const source of [...activeGrabs.keys()])release(source,throwing);dragonOwner=null;dragonManual=false;dragonVelocity.set(0,0,0);}
     const fruitAssets={orange:'loading',lime:'loading',banana:'loading'};
     const loader=new GLTFLoader();
-    const loading=Promise.all(bodies.slice(1).map(async body=>{
+    const loading=Promise.all(bodies.slice(1,4).map(async body=>{
         try{const gltf=await loader.loadAsync(new URL('../assets/welcome-practice/'+body.id+'.glb',import.meta.url).href);if(disposed){disposeTree(gltf.scene);return;}
             const model=gltf.scene;model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),extent=body.id==='banana'?.19:body.id==='lime'?.088:.108,factor=extent/Math.max(size.x,size.y,size.z);
             const normalized=new THREE.Group();normalized.scale.setScalar(factor);normalized.position.copy(center).multiplyScalar(-factor);normalized.add(model);
@@ -115,18 +119,22 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         const consumed=new Set();
         for(const input of inputs){const {source,matrix,ray,down,trigger}=input,previous=inputEdges.get(source);
             if(!matrix){release(source,false);inputEdges.delete(source);continue;}const pose=localPose(matrix);
+            const stickActive=Boolean(trigger && source.gamepad?.axes?.some((value,i)=>i>=(source.gamepad.axes.length>=4?2:0) && Math.abs(value)>.18));
+            if(previous && (down && !previous.down && [2,5,6,7].includes(index) || index===3 && (trigger && !previous.trigger || stickActive && !previous.stickActive))){lastActionSource=source;onFeedback('control',source);}
             if(down && previous?.down===false)grab(source,pose);else if(!down)release(source,true);
             if(trigger && previous?.trigger===false && source.hand && !activeGrabs.has(source) && dragonOwner!==source){if(select(ray,source))consumed.add(source);}
-            const g=activeGrabs.get(source);if(g){const m=pose.clone().multiply(g.offset),p=new THREE.Vector3(),q=new THREE.Quaternion();m.decompose(p,q,scale);if(g.body.position.y>=g.body.support-.015 && Math.hypot(p.x,p.z)<PRACTICE_TABLE_RADIUS)p.y=Math.max(g.body.support,p.y);Object.assign(g.body.position,serial(p));Object.assign(g.body.rotation,{x:q.x,y:q.y,z:q.z,w:q.w});g.samples.push({time:elapsed,p:p.clone(),q:q.clone()});g.samples=g.samples.filter(s=>elapsed-s.time<.18);}
+            const g=activeGrabs.get(source);if(g){const m=pose.clone().multiply(g.offset),p=new THREE.Vector3(),q=new THREE.Quaternion();m.decompose(p,q,scale);if(g.body.position.y>=g.body.support-.015 && Math.hypot(p.x,p.z)<PRACTICE_TABLE_RADIUS)p.y=Math.max(g.body.support,p.y);g.moved=Math.max(g.moved,p.distanceTo(g.start));Object.assign(g.body.position,serial(p));Object.assign(g.body.rotation,{x:q.x,y:q.y,z:q.z,w:q.w});g.samples.push({time:elapsed,p:p.clone(),q:q.clone()});g.samples=g.samples.filter(s=>elapsed-s.time<.18);}
             if(source.hand && index>=3 && dragonOwner===source){pose.decompose(point,rotation,scale);const desired=point.clone().add(dragonOffset),before=dragon.group.position.clone();dragon.group.position.lerp(desired,1-Math.exp(-dt*16));dragonDistance+=before.distanceTo(dragon.group.position);dragonManual=true;}
             // Near finger contact makes audio controls available without rays.
             if(input.tip){const tip=new THREE.Vector3(input.tip.x,input.tip.y,input.tip.z).applyMatrix4(worldInverse),poke=Math.abs(tip.z+.41)<.027;const b=[...buttons].find(([,v])=>v.enabled && Math.abs(tip.x-v.x)<v.width/2 && Math.abs(tip.y-v.y)<v.height/2);const id=poke && b?b[0]:null;if(id && previous?.poke!==id && !down && !g)button(id);input.poke=id;}
-            inputEdges.set(source,{down:Boolean(down),trigger:Boolean(trigger),poke:input.poke});
+            inputEdges.set(source,{down:Boolean(down),trigger:Boolean(trigger),stickActive,poke:input.poke});
         }
+        garden.update(dt,lesson().id);if(garden.pouring && !wasPouring)onFeedback('water',lastActionSource);wasPouring=garden.pouring;
+        for(const b of bodies){if(b.id==='ball')b.visible=index<6 || index===9;else if(['orange','lime','banana'].includes(b.id))b.visible=index===5 || index===9;}
         stepPracticeBodies(bodies,dt,{floor:-tableHeight,onImpact:(body,speed)=>{if(elapsed-lastImpact>.18){lastImpact=elapsed;onFeedback('impact',null,Math.min(1,speed/3));}}});
-        for(const b of bodies){b.visible=b.id==='ball' || index>=5;const mesh=objects.get(b.id);mesh.visible=b.visible;mesh.position.set(b.position.x,b.position.y,b.position.z);mesh.quaternion.set(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w);}
-        dragon.group.visible=index>=3;
-        if(index>=3){const pilot=controllers.find(i=>i.trigger && i.source.gamepad?.axes?.length>=2 && !activeGrabs.has(i.source) && !consumed.has(i.source));
+        for(const b of bodies){const mesh=objects.get(b.id);mesh.visible=b.visible;mesh.position.set(b.position.x,b.position.y,b.position.z);mesh.quaternion.set(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w);}
+        dragon.group.visible=index>=3 && index<6 || index===9;
+        if(dragon.group.visible){const pilot=controllers.find(i=>i.trigger && i.source.gamepad?.axes?.length>=2 && !activeGrabs.has(i.source) && !consumed.has(i.source));
             if(pilot && !dragonOwner){dragonManual=true;const axes=pilot.source.gamepad.axes,offset=axes.length>=4?2:0,dead=value=>Math.abs(value)<.18?0:Math.sign(value)*(Math.abs(value)-.18)/.82;
                 const desired=new THREE.Vector3(dead(axes[offset])*.35,0,dead(axes[offset+1])*.35);dragonVelocity.lerp(desired,1-Math.exp(-dt*7));const delta=dragonVelocity.clone().multiplyScalar(dt);dragon.group.position.add(delta);dragonDistance+=delta.length();
             }else if(!dragonOwner){if(dragonManual && dragonDistance>.08)dragonReleased=true;dragonManual=false;const t=elapsed+dragonPhase,target=new THREE.Vector3(Math.sin(t*.64)*.29,.27+Math.sin(t*.87)*.055,-.05+Math.cos(t*.53)*.23);const desired=target.sub(dragon.group.position).multiplyScalar(.8).clampLength(0,.2);dragonVelocity.lerp(desired,1-Math.exp(-dt*2.2));dragon.group.position.addScaledVector(dragonVelocity,dt);}
@@ -134,12 +142,12 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
             if(dragonVelocity.lengthSq()>.0001)dragon.group.rotation.y=Math.atan2(-dragonVelocity.x,-dragonVelocity.z);dragon.wings.forEach(({pivot,side,front})=>{pivot.rotation.z=side*(.06+Math.sin(elapsed*2*Math.PI*28+front*.36)*.28);});
         }
         if(index===0 && elapsed-stepStarted>3 && !voice?.status().playing)setLesson(1);
-        const success=index===1?pointed:index===2?ballReleased:index===3?dragonReleased:index===4?handStable>.65:index===5?fruitReleased:false;
-        if(success){if(successAt===null)successAt=elapsed;
-            if(!successCuePlayed && elapsed-successAt>.45){successCuePlayed=true;successAt=elapsed;const id=index===4?'hands-ready':lesson().id+'-done';void voice?.speak(cue(id));}
+        const success=index===1?pointed:index===2?ballReleased:index===3?dragonReleased:index===4?handStable>.65:index===5?fruitReleased:index===6?garden.planted:index===7?garden.watered:index===8?garden.grown:false;
+        if(success){if(successAt===null){successAt=elapsed;onFeedback('lesson',lastActionSource);}
+            if(!successCuePlayed && elapsed-successAt>.45 && (index!==8 || !voice?.status().playing)){successCuePlayed=true;successAt=elapsed;const id=index===4?'hands-ready':lesson().id+'-done';void voice?.speak(cue(id));}
             if(successCuePlayed && elapsed-successAt>.8 && !voice?.status().playing)setLesson(index+1);
         }
-        paint();scene.updateMatrixWorld(true);
+        controllerGuide.update(dt,controllers,lesson().id,viewer,successAt!==null);paint();scene.updateMatrixWorld(true);
     }
-    return {scene,root,bodies,objects,dragon,loading,start,update,hit,select,button,snapshot,releaseAll,get active(){return active;},get phase(){return lesson().id;},get tableHeight(){return tableHeight;},get controllerHandsVisible(){return active && index>=2;},get hands(){return handsPresent;},previewLesson(id){const next=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id===id);if(next>=0){releaseAll(false);setLesson(next);}},rebase(matrix){releaseAll(false);root.applyMatrix4(new THREE.Matrix4().fromArray(matrix));root.updateMatrixWorld(true);},resetObjects(){releaseAll(false);bodies.forEach(resetPracticeBody);},destroy(){disposed=true;active=false;voice?.stop();releaseAll(false);disposeTree(scene);}};
+    return {scene,root,bodies,objects,dragon,loading,start,update,hit,select,button,snapshot,releaseAll,abort:finish,get active(){return active;},get phase(){return lesson().id;},get tableHeight(){return tableHeight;},get controllerHandsVisible(){return active && (index===4 || index===9);},get hands(){return handsPresent;},previewLesson(id){const next=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id===id);if(next>=0){setLesson(next);garden.previewPhase(id);}},rebase(matrix){releaseAll(false);root.applyMatrix4(new THREE.Matrix4().fromArray(matrix));root.updateMatrixWorld(true);},resetObjects(){releaseAll(false);bodies.forEach(resetPracticeBody);if(index===6)garden.reset();},destroy(){disposed=true;active=false;voice?.stop();releaseAll(false);controllerGuide.destroy();disposeTree(scene);}};
 }

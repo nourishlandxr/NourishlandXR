@@ -1,5 +1,6 @@
 import {arPreparationControlsMarkup,bindArPreparationControls} from './arPreparationControls.js';
 import { botanicalTextureMarkup, bindBotanicalTexture } from './botanicalTexture.js';
+import {welcomeTutorialToggleMarkup,bindWelcomeTutorialToggle} from './welcomeTutorialSettings.js';
 
 const CAMERA_SAFETY_ACK_KEY = 'nourishlandxr.camera-safety-ack.v1';
 const AR_INTRO_PREPARATION_SKIP_KEY = 'nourishlandxr.ar-introduction-preparation-skip.v1';
@@ -62,7 +63,7 @@ export function renderArSafetyScreen(app, { onContinue, onCancel } = {}) {
     app.querySelector('[data-ar-safety-cancel]')?.addEventListener('click', () => onCancel?.());
 }
 
-export function renderArIntroductionPreparation(app, { onContinue, onCancel, simpleDesktop=false } = {}) {
+export function renderArIntroductionPreparation(app, { onContinue, onCancel, simpleDesktop=false, welcomeTutorial=false } = {}) {
     if (!app) return;
     app.innerHTML = `<div class="screen ar-safety-screen ar-introduction-preparation" data-ar-introduction-preparation>
         <section class="panel ar-safety-card ar-introduction-preparation-card ar-preparation-panel">
@@ -72,6 +73,7 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel, sim
                 <div><span aria-hidden="true">◎</span><p><strong>Clear space</strong><small>Stay aware of people and obstacles. On a spatial device, stay within your boundary.</small></p></div>
                 <div><span aria-hidden="true">⌾</span><p><strong>${simpleDesktop?'Explore at your pace':'Camera and tracking'}</strong><small>${simpleDesktop?'Use your mouse to select information. You can leave at any time.':'Your browser may request access when you start AR. Hold your phone securely.'}</small></p></div>
             </div>
+            ${welcomeTutorial?welcomeTutorialToggleMarkup():''}
             ${arPreparationControlsMarkup({simpleDesktop,compactSettings:true})}
             <div class="ar-preparation-footer"><p class="meta">Preparation is remembered on this browser.</p>
             <p role="status" data-ar-entry-status hidden></p>
@@ -79,6 +81,7 @@ export function renderArIntroductionPreparation(app, { onContinue, onCancel, sim
         </section>
     </div>`;
     bindBotanicalTexture(app);
+    if(welcomeTutorial)bindWelcomeTutorialToggle(app);
     bindArPreparationControls(app,app.querySelector('[data-ar-introduction-continue]'),{nearFuture:!simpleDesktop,simpleDesktop});
     app.querySelector('[data-ar-introduction-continue]')?.addEventListener('click', async event => {
         const button = event.currentTarget;

@@ -4,7 +4,7 @@ import {createLivingFrameXR} from './livingFrameXR.js';
 import {getSpatialVisualSettings,currentLivingFrameQuality} from './spatialVisualSettings.js';
 import {refineLivingFrameMaterials} from './livingFrameSurface.js';
 
-export const LIVING_FRAME_GROWTH_DURATION_MS=180000;
+export const LIVING_FRAME_GROWTH_DURATION_MS=15*60*1000;
 const SOURCE_GROWTH_SECONDS=60;
 
 const assets=new Map(),pending=new Map();
