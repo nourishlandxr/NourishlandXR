@@ -21,7 +21,7 @@ function turn(body,dt){
 export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{}}={}){
     let remaining=Math.max(0,Math.min(.08,dt));
     while(remaining>0){const s=Math.min(1/120,remaining);remaining-=s;
-        for(const b of bodies){if(!b.visible || b.held)continue;const p=b.position,v=b.velocity;const previousY=p.y;
+        for(const b of bodies){if(!b.visible || b.held || b.basketed)continue;const p=b.position,v=b.velocity;const previousY=p.y;
             v.y-=9.81*s;p.x+=v.x*s;p.y+=v.y*s;p.z+=v.z*s;turn(b,s);b.support=practiceSupport(b);
             const onTable=Math.hypot(p.x,p.z)<PRACTICE_TABLE_RADIUS-Math.min(.035,b.radius*.45) && previousY-b.support>=-.012;
             const surface=onTable?0:floor;
@@ -34,7 +34,7 @@ export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{}}={}){
             if(b.floorTime>5 || Math.hypot(p.x,p.z)>3.5 || p.y<floor-1)resetPracticeBody(b);
         }
         for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
-            const a=bodies[i],b=bodies[j];if(!a.visible || !b.visible || a.held || b.held)continue;
+            const a=bodies[i],b=bodies[j];if(!a.visible || !b.visible || a.held || b.held || a.basketed || b.basketed)continue;
             const dx=b.position.x-a.position.x,dy=b.position.y-a.position.y,dz=b.position.z-a.position.z,d=Math.hypot(dx,dy,dz),r=a.radius+b.radius;
             if(d>=r || d<.00001)continue;const nx=dx/d,ny=dy/d,nz=dz/d,penetration=(r-d)*.5;
             a.position.x-=nx*penetration;a.position.y-=ny*penetration;a.position.z-=nz*penetration;b.position.x+=nx*penetration;b.position.y+=ny*penetration;b.position.z+=nz*penetration;

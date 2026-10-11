@@ -9,7 +9,7 @@ export function createDemoFeedback({resetSettings=false}={}) {
     let narrating=false;
     const save=()=>{try{globalThis.localStorage?.setItem('nxr-demo-sound',JSON.stringify(levels));}catch{}};
     if(resetSettings)save();
-    function setNarrating(value){narrating=Boolean(value);if(music)music.volume=levels.music*(narrating?.2:1);}
+    function setNarrating(value){narrating=Boolean(value);if(music)music.volume=levels.music*(narrating?.7:1);}
     function setHaptics(enabled){
         levels.haptics=Boolean(enabled);
         if(!levels.haptics)for(const source of pulsing)pulse(source,0,1);
@@ -18,7 +18,7 @@ export function createDemoFeedback({resetSettings=false}={}) {
     function setVolume(kind,value){
         if(!['music','fx'].includes(kind) || !Number.isFinite(value))return;
         levels[kind]=Math.max(0,Math.min(1,value));
-        if(music)music.volume=levels.music*(narrating?.2:1);
+        if(music)music.volume=levels.music*(narrating?.7:1);
         if(fxGain)fxGain.gain.setTargetAtTime(levels.fx,context.currentTime,.025);
         save();
     }
@@ -35,7 +35,7 @@ export function createDemoFeedback({resetSettings=false}={}) {
     function start() {
         if(destroyed)return;
         // HTMLAudio streams the album; never decode its full duration into RAM.
-        if(!music){music=new Audio(new URL('../assets/demo-wet-land.mp3',import.meta.url).href);music.preload='metadata';music.loop=true;music.volume=levels.music*(narrating?.2:1);}
+        if(!music){music=new Audio(new URL('../assets/demo-wet-land.mp3',import.meta.url).href);music.preload='metadata';music.loop=true;music.volume=levels.music*(narrating?.7:1);}
         music.play()?.catch(()=>{});
         const AudioContext=globalThis.AudioContext || globalThis.webkitAudioContext;
         try {if(!context && AudioContext){context=new AudioContext();fxGain=context.createGain();fxGain.gain.value=levels.fx;fxGain.connect(context.destination);}context?.resume()?.catch(()=>{});}catch{}

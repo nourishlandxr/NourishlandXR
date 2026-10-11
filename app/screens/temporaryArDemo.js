@@ -127,7 +127,7 @@ import { createSpatialTotemCards, drawSpatialTotemButtons, drawSpatialTotemPlaqu
 const resolveOrbKnowledge = createPlantKnowledgeResolver();
 import {drawArWelcomePanel,WELCOME_RIM_MOTION,WELCOME_SHAPE} from '../services/arWelcomePanel.js';
 import { livingFrameFlowerSites, WELCOME_ROOT_MILESTONES, WELCOME_ROOT_REFRESH_MS, advanceWelcomeRootProgress, welcomeRootsNeedRefresh } from '../services/arWelcomeRoots.js';
-import {createWelcomePresentationClock,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
+import {createWelcomePresentationClock,WELCOME_PANEL_DRAW_OFFSET,AR_WELCOME_SHOWCASE_DURATION,AR_WELCOME_OPENING_MS,AR_WELCOME_REDUCED_OPENING_MS,drawArWelcomeShowcase,createArWelcomeClusters,welcomeExperienceFrames,welcomeCellAtPoint,welcomeRelationshipFor,welcomeRevealIsAnimating} from '../services/arWelcomeShowcase.js';
 /**
  * TRY IT NOW — a deliberately small, self-contained AR placement demo.
  * It never opens a dashboard or a draggable window before placement.
@@ -918,6 +918,7 @@ function skipDemoMapWaits(){
     updateSpatialLivingMap(now);return true;
 }
 function skipCurrentDemoStep() {
+    if(welcomePractice?.active){welcomePractice.stage.button('pause');return true;}
     if(demoHeldIndex>=0 || demoWebModeOpen || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return false;
     demoFastSkipActive=true;
     try{
@@ -2467,7 +2468,7 @@ function showArWelcomeShowcase() {
         syncDemoPanelActions();
     };
     const unlockWelcome=()=>{
-        if(!arWelcomeShowcaseActive || !arWelcomeIntroPending)return;
+        if(!arWelcomeShowcaseActive || !arWelcomeIntroPending || welcomePractice?.active)return;
         if(introBoardStep==='INTRO 1.2')return; // Only its current action may advance this slide.
         if(!arWelcomeOpeningActive && !openingTyping && welcomeAutoAdvanceReady(arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches)){
             advanceWelcome();return;
@@ -2477,16 +2478,8 @@ function showArWelcomeShowcase() {
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     setGuide(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
     if(welcomePractice && !welcomePracticeCompleted){
-        // Stage 0.1 owns both input and rendering until the visitor is ready.
-        // Keep the existing opening clock paused so its narration cannot race.
-        appRoot.querySelector('.tryit-demo')?.setAttribute('data-welcome-practice','true');
-        welcomePracticeOverlay=document.createElement('section');welcomePracticeOverlay.className='tryit-practice-caption';
-        welcomePracticeOverlay.setAttribute('aria-label','Welcome practice');
-        welcomePracticeOverlay.innerHTML='<p data-practice-title></p><p data-practice-caption aria-live="polite"></p><nav aria-label="Practice controls"><button type="button" data-practice-action="replay">Hear again</button><button type="button" data-practice-action="mute">Voice on</button><button type="button" data-practice-action="next" hidden>Continue</button><button type="button" data-practice-exit>Close</button></nav>';
-        if(!welcomePracticeVoice)for(const action of ['replay','mute'])welcomePracticeOverlay.querySelector('[data-practice-action="'+action+'"]').hidden=true;
-        for(const button of welcomePracticeOverlay.querySelectorAll('[data-practice-action]')){button.addEventListener('beforexrselect',event=>event.preventDefault());button.addEventListener('click',()=>welcomePractice?.stage.button(button.dataset.practiceAction));}
-        welcomePracticeOverlay.querySelector('[data-practice-exit]').addEventListener('click',returnToWelcome);
-        appRoot.querySelector('.tryit-demo').append(welcomePracticeOverlay);
+        clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
+        arWelcomeOpeningActive=false;introOpeningCopySkipped=true;limMeshVisible=false;
         welcomePractice.start(viewerMatrix,calibratedDemoGroundY());
     }
 }
@@ -4757,7 +4750,7 @@ function renderInterface(simulated) {
         const modelCanvas=document.createElement('canvas');modelCanvas.className='tryit-ambient-model';modelCanvas.style.visibility='hidden';modelCanvas.setAttribute('aria-hidden','true');modelCanvas.dataset.demoBeeModel='';
         appRoot.querySelector('.tryit-stage')?.prepend(modelCanvas);
         const loadBees=()=>import('../services/demoBeeModel.js').then(({mountDemoBeeModel})=>{if(modelCanvas.isConnected)ambientBeeModel=mountDemoBeeModel(modelCanvas,{gl:simulated?null:gl});}).catch(error=>console.warn('Bee model unavailable:',error));
-        if(welcomePractice && !welcomePracticeCompleted)welcomePracticeAmbientStart=loadBees;else void loadBees();
+        void loadBees();
     }
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
@@ -4986,9 +4979,10 @@ function setupRenderer() {
     // The interaction toy now has a purpose on the welcome table. The loose
     // Hero Dice no longer competes with the plant/Control panel journey.
     if(welcomeTutorialEnabled() && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,
-        onFeedback:(kind,source)=>{const reward=kind==='lesson' || kind==='plant';demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
-        onChange:state=>{if(!welcomePracticeOverlay)return;welcomePracticeOverlay.querySelector('[data-practice-title]').textContent=state.title;welcomePracticeOverlay.querySelector('[data-practice-caption]').textContent=state.caption;const next=welcomePracticeOverlay.querySelector('[data-practice-action="next"]');next.hidden=Boolean(state.voice?.playing || !['hands','explore'].includes(state.phase));next.textContent=state.phase==='hands'?'Use controllers':'Continue';welcomePracticeOverlay.querySelector('[data-practice-action="mute"]').textContent=state.voice?.muted?'Voice off':'Voice on';},
-        onComplete:()=>{welcomePracticeCompleted=true;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;welcomePracticeAmbientStart?.();welcomePracticeAmbientStart=null;
+        onFeedback:(kind,source)=>{const reward=kind==='lesson' || kind==='plant';demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
+        onChange:state=>{introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Use controllers':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
+        onSelect:(ray,source)=>{const hit=welcomePracticeFrameHit(ray);if(!hit)return false;welcomePractice?.stage.button(hit.id,source);return true;},onHit:welcomePracticeFrameHit,
+        onComplete:()=>{welcomePracticeCompleted=true;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=false;arWelcomeOpeningActive=false;runArWelcomeTutorial(0);
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeDisposeTimer=null;},750);
         }
     });
@@ -5402,6 +5396,15 @@ function introVisibleCopy(){
     return introBoardVisibleBody;
 }
 function drawIntroNoteContent(ctx) {
+    if(welcomePractice?.active){
+        const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=1;ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillStyle='#f8efdc';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;ctx.fillText('NOURISHLAND XR',700,285,880);
+        ctx.fillStyle='#fffaf0';const bottom=drawDemoHeading(ctx,state.title,700,370,900);
+        ctx.font=`500 35px ${DEMO_PRESENTATION_FONT}`;wrappedTextureLines(ctx,state.caption,830).slice(0,4).forEach((line,i)=>ctx.fillText(line,700,bottom+110+i*48));
+        for(const button of welcomePracticeFrameButtons(state)){ctx.fillStyle='rgba(232,223,201,.94)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,26);ctx.fill();ctx.fillStyle='#405348';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;ctx.fillText(button.label,button.x+button.width/2,button.y+button.height/2,button.width-20);}
+        ctx.restore();return;
+    }
+
     if(demoLimo && !arWelcomeIntroPending && !arWelcomeOpeningActive && selectedLimCell && !learningModule && !nativeConnectionState && introBoardStep!=='UTILITY 1.1'){
         const content=demoLimo.content();
         ctx.save();ctx.globalAlpha=1;ctx.textAlign='center';ctx.textBaseline='middle';
@@ -5658,6 +5661,21 @@ function introWorldAnchorFromViewer(matrix) {
         -forward.x, 0, -forward.z, 0,
         Number(matrix[12]) || 0, Number(matrix[13]) || 0, Number(matrix[14]) || 0, 1
     ]);
+}
+
+function welcomePracticeFrameButtons(state){
+    const buttons=[{id:'pause',label:state.voice?.paused?'Resume':'Pause',x:340,y:800,width:220,height:66},{id:'replay',label:'Hear again',x:590,y:800,width:220,height:66}];
+    if(!state.voice?.playing && !state.voice?.paused && ['hands','explore'].includes(state.phase))buttons.push({id:'next',label:state.phase==='hands'?'Controllers':'Continue',x:840,y:800,width:220,height:66});
+    return buttons;
+}
+function welcomePracticeFrameHit(ray){
+    if(!welcomePractice?.active || !introWorldAnchor)return null;
+    const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,2500,2100,false,ray);if(!hit)return null;
+    const x=hit.pixelX-WELCOME_PANEL_DRAW_OFFSET.x,y=hit.pixelY-WELCOME_PANEL_DRAW_OFFSET.y;
+    const button=welcomePracticeFrameButtons(welcomePractice.stage.snapshot()).find(b=>x>=b.x && x<=b.x+b.width && y>=b.y && y<=b.y+b.height);return button?{...hit,kind:'button',id:button.id,worldPoint:hit.point || hit.position}:null;
+}
+function drawWelcomePracticeFrame(view){
+    gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);const p=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);drawIntroSpatial(view);gl.depthMask(true);
 }
 
 function drawIntroSpatial(view) {
@@ -6025,7 +6043,7 @@ function blendInsectWithFlower(position,visit,visitor){
 function drawSpatialAmbientLife(view){
     // Never display a different bee while the animated model is loading.
     if(!getSpatialVisualSettings().insects || !ambientBeeModel?.ready || !viewerMatrix || !Number.isFinite(ambientBeesStartedAt))return;
-    if(welcomePractice?.active || xrRecoveryStatus!=='ready')return;
+    if(xrRecoveryStatus!=='ready')return;
     const entranceTime=arWelcomeClock.elapsed;
     if(!Number.isFinite(ambientBeeRevealAt)){
         if(!Number.isFinite(ambientBeeWaitAt))ambientBeeWaitAt=entranceTime;
@@ -6673,11 +6691,11 @@ async function startImmersive() {
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
             if(welcomePractice?.active){
-                arWelcomeClock.tick(Date.now(),false);
+                arWelcomeClock.tick(Date.now(),session.visibilityState!=='hidden');
                 runXrFrameStep('welcome practice input',()=>welcomePractice.update(frame,_time,viewerMatrix,calibratedDemoGroundY(),latestTrackedHandStates));
                 const practiceLayer=frame.session.renderState.baseLayer;
                 if(practiceLayer && pose){gl.bindFramebuffer(gl.FRAMEBUFFER,practiceLayer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
-                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
+                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
                     gl.disable(gl.SCISSOR_TEST);markXrFirstContentRendered();
                 }
                 if(xrRecoveryStatus==='failed')welcomePractice.stage.abort();
@@ -6780,7 +6798,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
     demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});demoFeedbackLastTick=-Infinity;demoFeedback.start();
-    if(welcomeTutorialEnabled()){welcomePracticeVoice=createWelcomePracticeVoice({enabled:true});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
+    if(welcomeTutorialEnabled()){welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing)});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = livingMapPreviewRecords || refinementPreview ? false : await startImmersive();
