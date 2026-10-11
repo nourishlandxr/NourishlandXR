@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NLXR · Nature controller</title>
+<style>body{margin:0;background:#192720;color:#e2e8da;font:16px system-ui}header{position:relative;padding:24px 30px 0;max-width:430px}h1{font-size:30px;margin:8px 0}p{color:#b5c5b3;line-height:1.5}canvas{width:100vw;height:65vh;min-height:360px;display:block}button{background:#426349;color:#fff;border:1px solid #8fa885;border-radius:12px;padding:12px;cursor:pointer}small{display:block;margin-top:16px;color:#b5c5b3}</style>
+<header><small>NOURISHLAND XR · FUNCTIONAL 3D PREVIEW</small><h1>Nature controller</h1><p>A rounded wooden palm grip, moss-green buttons, a thumbstick on the thumb deck, front index trigger and side grip. Drag to turn the model.</p><button id="spin">Pause rotation</button><small>Virtual tutorial prop. Real controller highlighting retains the device’s official geometry.</small></header><canvas id="view"></canvas>
+<script type="module">
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createWelcomeNatureController} from '../app/services/welcomeNatureController.js';
+const canvas=document.querySelector('#view'),renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(32,1,.01,10);camera.position.set(.27,.27,.36);camera.lookAt(0,0,0);scene.add(new THREE.HemisphereLight('#edf1df','#343324',2));const light=new THREE.DirectionalLight('#f1d6ac',2);light.position.set(.3,.5,.3);scene.add(light);
+const model=createWelcomeNatureController();scene.add(model.group);model.group.rotation.z=-.32;let spin=true,drag=false,lastX=0,lastY=0,last=0;
+document.querySelector('#spin').onclick=event=>{spin=!spin;event.target.textContent=spin?'Pause rotation':'Rotate model';};
+canvas.onpointerdown=event=>{drag=true;lastX=event.clientX;lastY=event.clientY;canvas.setPointerCapture(event.pointerId);};canvas.onpointerup=canvas.onpointercancel=()=>drag=false;canvas.onpointermove=event=>{if(!drag)return;model.group.rotation.y+=(event.clientX-lastX)*.01;model.group.rotation.x+=(event.clientY-lastY)*.01;lastX=event.clientX;lastY=event.clientY;};
+function resize(){const height=Math.max(360,innerHeight*.65);renderer.setSize(innerWidth,height,false);camera.aspect=innerWidth/height;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();
+function frame(time){requestAnimationFrame(frame);if(document.hidden || time-last<33)return;const dt=Math.min(.06,(time-last)/1000);last=time;if(spin && !drag)model.group.rotation.y+=dt*.24;renderer.render(scene,camera);}requestAnimationFrame(frame);
+</script></html>

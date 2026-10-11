@@ -1,4 +1,5 @@
 import http from 'http';
+import {handleZinniaVoice} from './zinniaVoiceServer.mjs';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -960,6 +961,7 @@ function handleApi(req, res) {
     }
 
     const visitor = isVisitorRequest(url);
+    if(handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isAllowedOrigin}))return true;
 
     if (pathname === '/api/auth/session' && req.method === 'GET') {
         return sendJson(res, 200, { authenticated: hasCreatorSession(req), required: production && !creatorAuthDisabled, authDisabled: creatorAuthDisabled });

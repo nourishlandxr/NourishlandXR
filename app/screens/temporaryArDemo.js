@@ -30,9 +30,11 @@ import {butterflyElementVisit} from '../services/butterflyElementVisit.js';
 import {LIMO_CELL_BY_ID,limoRouteId} from '../services/limoProjectLearning.js';
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {createDemoParagraphSequence} from '../services/demoParagraphSequence.js';
-import {DEMO_NATIVE_PLANTS,NATIVE_PLANT_CHOOSER_COPY,chooseDemoNativePlant} from '../services/demoNativePlants.js';
-import {DEMO_PLANT_CHOICES,chooseDemoPlant,demoPlantOrbColor,livingFramePlantButtons,drawLivingFramePlantChoices} from '../services/demoPlantChoices.js';
+import {demoPlantOrbColor} from '../services/demoPlantChoices.js';
+import {ZINNIA_PLANT_COPY,applyZinniaNote,createZinniaPlantDiscovery,applyDiscoveredPlant,zinniaPlantButtons,drawZinniaPlantDiscovery,mountZinniaPlantDiscovery} from '../services/zinniaPlantDiscovery.js';
 let demoFramePlantChoiceOrbId='';
+let demoZinniaDiscovery=null,demoZinniaView=null;
+let demoZinniaNoteDraft=null;
 import {orbPinchPoint,openPalmUnderOrb} from '../services/demoOrbHands.js';
 let demoPalmOrb=null,demoPalmStartedAt=0,demoPalmCooldownUntil=0;
 import {mountDemoNativePlantChooser} from '../services/demoNativePlantChooser.js';
@@ -106,10 +108,13 @@ import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRender
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
 import {createWelcomePracticeXR} from '../services/welcomePracticeXR.js';
 import {createWelcomePracticeVoice} from '../services/welcomePracticeVoice.js';
+import {createWelcomeComfortOptions,welcomePracticeVisualGuide} from '../services/welcomeComfortOptions.js';
+import {createZinniaFramePerch} from '../services/zinniaFramePerch.js';
 import {createProjectNarration} from '../services/projectNarration.js';
 let demoProjectVoice=null;
 import {welcomeTutorialEnabled,setWelcomeTutorialEnabled} from '../services/welcomeTutorialSettings.js';
 let welcomePractice=null,welcomePracticeVoice=null,welcomePracticeCompleted=false;
+let welcomeComfort=null,zinniaFramePerch=null,welcomeComfortGuideKey='';
 let welcomePracticeOverlay=null,welcomePracticeAmbientStart=null,welcomePracticeDisposeTimer=null;
 let knowledgeRenderer=null,heroDiceToy=null;
 import {INSECT_VISUALS,beeFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
@@ -565,7 +570,10 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    demoZinniaNoteDraft=null;
+    clearDemoZinniaDiscovery();
     demoProjectVoice?.destroy();demoProjectVoice=null;
+    welcomeComfort=null;welcomeComfortGuideKey='';zinniaFramePerch?.destroy();zinniaFramePerch=null;
     welcomePractice?.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeCompleted=false;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;welcomePracticeAmbientStart=null;
     clearTimeout(welcomePracticeDisposeTimer);welcomePracticeDisposeTimer=null;
     ++livingPeekGeneration;livingPeekConsumedSources=new WeakMap();closeLivingPeek();livingPeek?.destroy();livingPeek=null;livingPeekPose=null;
@@ -1001,6 +1009,7 @@ function demoTextTypingDelay(text, visibleLength) {
 
 function showDemoAction(nextStage) {
     if(nextStage==='note' && markers.some(record=>record.demoType==='note')){showSpatialGardenSummary();return;}
+    if(nextStage==='note' && !demoZinniaNoteDraft){showDemoZinniaNote();return;}
     armDemoPlacement(nextStage,{explained:true});
 }
 
@@ -1560,7 +1569,7 @@ function clearDemoNarration({preserveAction=false}={}) {
 }
 
 function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
-    if(options.historyPhase!=='chooser'){demoFramePlantChoiceOrbId='';appRoot?.querySelector('.living-frame-plant-choices')?.remove();appRoot?.querySelectorAll?.('[data-frame-plant-choice]')?.forEach(button=>button.remove());}
+    if(options.historyPhase!=='chooser'){clearDemoZinniaDiscovery();demoFramePlantChoiceOrbId='';appRoot?.querySelector('.living-frame-plant-choices')?.remove();appRoot?.querySelectorAll?.('[data-frame-plant-choice]')?.forEach(button=>button.remove());}
     const beeScreen=options.stepLabel || title;
     if(!ambientBeeScreens.has(beeScreen)){ambientBeeScreens.add(beeScreen);ambientBeeCount=Math.min(BEE_COUNT,Math.max(1,ambientBeeScreens.size));}
     if(!demoSlideHistoryReplay)captureCurrentDemoSlide();
@@ -1757,7 +1766,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     setGuide('');
     syncDemoStageControls(options);
     if(options.stepLabel==='UTILITY 1.1')spawnDemoMapTotem();
-    if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.speak(bodyText);
+    if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.speak(options.spokenSummary || bodyText,{highlight:Boolean(options.spokenSummary)});
 }
 
 function syncDemoStageControls(options={}){
@@ -1870,11 +1879,11 @@ function showPersistentPimPrompt(record) {
     const step=guidedDemoStep(id);
     const tag=first && record.knowledgeExplorer?.mode==='tag';
     const button='Continue';
-    showIntroBoard(record.demoNativeChoice?'Your rainforest plant':step.title,tag?'Tag gives you a compact identity for this plant. Continue to unfold its Curiosity cells.':record.demoNativeChoice?'Your chosen plant now has its own PIMO. Explore its information, or continue to add a sample Note.':step.main,button,()=>{
+    showIntroBoard(record.demoNativeChoice?record.name:step.title,tag?'Tag gives you a compact identity for this plant. Continue to unfold its Curiosity cells.':record.demoNativeChoice?'Your chosen plant now has its own photograph and starter Plant cells. Explore its information, or continue to add a sample Note.':step.main,button,()=>{
         if(tag){record.demoPimoLesson='curiosity';knowledgeExplorerAction(record,'KnowledgeMode:curiosity');infoPanel?.refreshExplorer({mode:'curiosity'});knowledgeRenderer?.clear(record);refreshDemoPimProfile(record);showPersistentPimPrompt(record);}
         else continueAfterDemoPim(record);
     },{
-        tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,nextGuide:step.hint,deferContinueUntilCopyReady:true
+        tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:id,dynamicCopy:Boolean(record.demoNativeChoice),nextGuide:record.demoNativeChoice?'Select a Plant cell to explore, or Continue to leave a Note.':step.hint,deferContinueUntilCopyReady:true
     });
 }
 
@@ -2261,13 +2270,19 @@ function paintSimulatedRainV2(now){
     paintDemoRainV2Preview(context,width,height,demoRainV2Field(now,progress,{mobile:navigator.maxTouchPoints>0}));
 }
 
-function showDemoCalmWelcome(){
+function showDemoCalmWelcome({returning=false}={}){
     clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
     arWelcomeOpeningActive=false;arWelcomeIntroPending=true;limMeshVisible=false;
-    showIntroBoard('Welcome to NourishlandXR','We hope you are in a calm place, with plenty of clear space around you.\n\nGet comfortable. Relax your shoulders, keep your movements gentle, and take your time.\n\nWhen you feel ready, let’s imagine what this space could become.','Continue',()=>showArWelcomeShowcase({calmWelcome:false}),{stepLabel:'WELCOME 0.1',dynamicCopy:true,nextGuide:'Continue when you feel comfortable.'});
+    showIntroBoard('Welcome to NourishlandXR',(returning?'Hello again. I’m over here—let’s see what this place could become.\n\n':'')+'We hope you are in a calm place, with plenty of clear space around you.\n\nGet comfortable. Relax your shoulders, keep your movements gentle, and take your time.\n\nWhen you feel ready, let’s imagine what this space could become.','Continue',()=>showArWelcomeShowcase({calmWelcome:false}),{stepLabel:'WELCOME 0.1',dynamicCopy:true,spokenSummary:returning?'Hello again. I’m over here—let’s see what this place could become.':undefined,nextGuide:'Continue when you feel comfortable.'});
 }
 function showArWelcomeShowcase() {
     const {calmWelcome=true}=arguments[0] || {};
+    if(!calmWelcome && arWelcomeLayer && livingFrameModel){
+        clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
+        arWelcomeIntroPending=false;arWelcomeOpeningActive=false;introOpeningCopySkipped=true;limMeshVisible=false;
+        showIntroBoard('Imagine a place to learn',DEMO_QUICK_ACCESS_COPY['INTRO 1.2'],'Let’s start',()=>runArWelcomeTutorial(0),{stepLabel:'INTRO 1.2',dynamicCopy:true,nextGuide:'Continue when you are ready.'});
+        introBoardTextureDirty=true;syncDemoPanelActions();return;
+    }
     arWelcomeLayer?.remove();arWelcomeLayer=null;ambientBeeModel?.destroy();ambientBeeModel=null;
 
     introOpeningCopySkipped=false;
@@ -2434,11 +2449,10 @@ function showArWelcomeShowcase() {
         layer.append(cell);
     }
     appRoot.querySelector('.tryit-stage').append(layer);
-    livingFrameModel?.destroy();
-    livingFrameModel=createLivingFrameModel({onChange:()=>{introBoardTextureDirty=true;if(simulatedMode)paintWelcomeLayer(performance.now());}});
+    livingFrameModel ||= createLivingFrameModel({onChange:()=>{introBoardTextureDirty=true;if(simulatedMode)paintWelcomeLayer(performance.now());}});
     if(simulatedMode){const artwork=document.createElement('canvas');artwork.dataset.livingFrame='true';artwork.setAttribute('aria-hidden','true');layer.append(artwork);try{livingFrameModel.attachDesktop(artwork);}catch(error){artwork.remove();console.warn('Living Frame desktop fallback:',error.message);}}
     else livingFrameModel.setContext(gl);
-    void livingFrameModel.select(getSpatialVisualSettings().livingFrameQuality);
+    if(!livingFrameModel.ready)void livingFrameModel.select(getSpatialVisualSettings().livingFrameQuality);
     bindLimCellInteractions();
     let last=-Infinity,lastState='';
     const frame=now=>{
@@ -2501,7 +2515,10 @@ function showArWelcomeShowcase() {
     if(welcomePractice && !welcomePracticeCompleted){
         clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
         arWelcomeOpeningActive=false;introOpeningCopySkipped=true;limMeshVisible=false;
+        welcomeComfort=createWelcomeComfortOptions({stage:welcomePractice.stage,onVisualChange:()=>{introBoardTextureDirty=true;},onChange:syncWelcomeComfortOptions});
+        infoPanel?.recenter();infoPanel?.suspend(false);infoPanel?.setIntroduction(true);
         welcomePractice.start(viewerMatrix,calibratedDemoGroundY());
+        syncWelcomeComfortOptions();
     }else if(calmWelcome)showDemoCalmWelcome();
     else demoProjectVoice?.speak(introBoardBody);
 }
@@ -2596,7 +2613,6 @@ function guidePlantConversion(record) {
     if(record.tutorialStage==='plant2'){
         record.name='Plant Orb';record.demoNativeChoicePending=true;record.demoInteractive=true;record.demoPlacementHighlight=false;
         appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden','');
-        showIntroBoard('Thousands of plants. Thousands of stories.',NATIVE_PLANT_CHOOSER_COPY,'',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Choose a plant in the Living Frame.'});
         refreshDemoRecord(record);showDemoNativePlantChooser(record);return;
     }
     const moringa = record.tutorialStage === 'plant2';
@@ -2641,24 +2657,50 @@ function guidePlantConversion(record) {
 }
 
 function showDemoNativePlantChooser(orb){
-    showIntroBoard('Choose a plant','Give your Orb its own living story.','',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Select a plant in the Living Frame.'});
+    if(demoFramePlantChoiceOrbId===orb.id && demoZinniaDiscovery)return;
+    clearDemoZinniaDiscovery();
+    showIntroBoard('Ask Zinnia',ZINNIA_PLANT_COPY,'',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Tap Speak, choose a plant or variety, then confirm.'});
     demoFramePlantChoiceOrbId=orb.id;introBoardTextureDirty=true;
-    arWelcomeLayer?.querySelectorAll('[data-frame-plant-choice]').forEach(button=>button.remove());
-    if(simulatedMode && arWelcomeLayer)for(const plant of livingFramePlantButtons()){const button=document.createElement('button');button.type='button';button.dataset.framePlantChoice=plant.id;button.setAttribute('aria-label',plant.name);button.style.cssText=`position:absolute;left:${(plant.x+550)/25}%;top:${(plant.y+510)/21}%;width:${plant.width/25}%;height:${plant.height/21}%;padding:0;min-width:0;min-height:0;border:0;background:transparent;box-shadow:none;color:transparent;z-index:8;cursor:pointer;pointer-events:auto`;button.onclick=()=>selectDemoNativePlant({demoNativeChooserFor:orb.id},plant.id);arWelcomeLayer.append(button);}
-    const board=appRoot?.querySelector('[data-tryit-guided-choice]');if(board){const grid=document.createElement('div');grid.className='living-frame-plant-choices';
-    for(const plant of DEMO_PLANT_CHOICES){const button=document.createElement('button');button.type='button';button.textContent=plant.symbol+' '+plant.name;button.style.borderColor=plant.colour;button.onclick=()=>selectDemoNativePlant({demoNativeChooserFor:orb.id},plant.id);grid.append(button);}board.append(grid);}
+    demoZinniaDiscovery=createZinniaPlantDiscovery({onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);const input=arWelcomeLayer?.querySelector('[data-zinnia-plant-input]');if(input){input.value=state.query;input.disabled=['loading','searching','listening'].includes(state.phase);}syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onSpeak:()=>demoProjectVoice?.stop(),onReady:profile=>selectDemoNativePlant({demoNativeChooserFor:orb.id},profile)});
+    const board=appRoot?.querySelector('[data-tryit-guided-choice]');
+    if(board && !simulatedMode){demoZinniaView=mountZinniaPlantDiscovery(board,demoZinniaDiscovery);demoZinniaView.render(demoZinniaDiscovery.state());}
+    syncDemoZinniaButtons(demoZinniaDiscovery.state());
 }
-function selectDemoNativePlant(chooser,id){
-    const orb=markers.find(item=>item.id===chooser.demoNativeChooserFor);if(!chooseDemoPlant(orb,id))return;
-    demoFramePlantChoiceOrbId='';appRoot?.querySelector('.living-frame-plant-choices')?.remove();appRoot?.querySelectorAll?.('[data-frame-plant-choice]')?.forEach(button=>button.remove());introBoardTextureDirty=true;
+function showDemoZinniaNote(record=null){
+    clearDemoZinniaDiscovery();
+    showIntroBoard('Create a Note with Zinnia','Tell me what you want written. We will check your words together, then choose a colour.','',null,{stepLabel:'ELEMENTS · Custom Note',historyPhase:'chooser',dynamicCopy:true});
+    demoFramePlantChoiceOrbId='zinnia-note';introBoardTextureDirty=true;
+    demoZinniaDiscovery=createZinniaPlantDiscovery({mode:'note',onSpeak:()=>demoProjectVoice?.stop(),onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onReady:draft=>{
+        demoFramePlantChoiceOrbId='';appRoot?.querySelectorAll('[data-frame-plant-choice]').forEach(button=>button.remove());demoZinniaView?.destroy();demoZinniaView=null;finishIntroBoard();
+        if(record){applyZinniaNote(record,draft);refreshDemoRecord(record);updateSimulatedMarkers();openDemoNoteExperience(record);}
+        else{demoZinniaNoteDraft=draft;armDemoPlacement('note',{explained:true});}
+    }});
+    const board=appRoot?.querySelector('[data-tryit-guided-choice]');
+    if(board && !simulatedMode){demoZinniaView=mountZinniaPlantDiscovery(board,demoZinniaDiscovery);demoZinniaView.render(demoZinniaDiscovery.state());}
+    syncDemoZinniaButtons(demoZinniaDiscovery.state());
+}
+function syncDemoZinniaButtons(state){
+    if(!simulatedMode || !arWelcomeLayer)return;
+    arWelcomeLayer.querySelectorAll('[data-frame-plant-choice]').forEach(button=>button.remove());
+    for(const choice of zinniaPlantButtons(state)){
+        const button=document.createElement('button');button.type='button';button.dataset.framePlantChoice=choice.action;button.setAttribute('aria-label',choice.label);
+        button.style.cssText=`position:absolute;left:${(choice.x+550)/25}%;top:${(choice.y+510)/21}%;width:${choice.width/25}%;height:${choice.height/21}%;padding:0;min-width:0;min-height:0;border:0;background:transparent;box-shadow:none;color:transparent;z-index:8;cursor:pointer;pointer-events:auto`;
+        button.onclick=()=>demoZinniaDiscovery?.activate(choice.action);arWelcomeLayer.append(button);
+    }
+}
+function clearDemoZinniaDiscovery(){demoZinniaDiscovery?.destroy();demoZinniaDiscovery=null;demoZinniaView?.destroy();demoZinniaView=null;arWelcomeLayer?.querySelector('[data-zinnia-plant-input]')?.remove();globalThis.speechSynthesis?.cancel();}
+function selectDemoNativePlant(chooser,profile){
+    const orb=markers.find(item=>item.id===chooser.demoNativeChooserFor);if(!applyDiscoveredPlant(orb,profile))return;
+    demoFramePlantChoiceOrbId='';arWelcomeLayer?.querySelector('[data-zinnia-plant-input]')?.remove();appRoot?.querySelector('.living-frame-plant-choices')?.remove();appRoot?.querySelectorAll?.('[data-frame-plant-choice]')?.forEach(button=>button.remove());introBoardTextureDirty=true;
     knowledgeRenderer?.clear(orb);refreshDemoRecord(orb);updateSimulatedMarkers();toggleDemoPlantProfile(orb);
+    infoPanel?.focusPlant(orb,resolvePlantPim(profile));infoPanel?.setMediaCollapsed(false);
 }
 function demoFramePlantChoiceHit(ray=latestControllerRay){
     if(!demoFramePlantChoiceOrbId || !introWorldAnchor)return null;
     const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,2500,2100,false,ray);if(!hit)return null;
-    const choice=livingFramePlantButtons().find(b=>hit.pixelX>=b.x+550 && hit.pixelX<=b.x+550+b.width && hit.pixelY>=b.y+510 && hit.pixelY<=b.y+510+b.height);return choice?{...hit,choice}:null;
+    const choice=zinniaPlantButtons(demoZinniaDiscovery?.state() || {}).find(b=>hit.pixelX>=b.x+550 && hit.pixelX<=b.x+550+b.width && hit.pixelY>=b.y+510 && hit.pixelY<=b.y+510+b.height);return choice?{...hit,choice}:null;
 }
-function activateDemoFramePlantChoice(ray=latestControllerRay){const hit=demoFramePlantChoiceHit(ray);if(!hit)return false;selectDemoNativePlant({demoNativeChooserFor:demoFramePlantChoiceOrbId},hit.choice.id);return true;}
+function activateDemoFramePlantChoice(ray=latestControllerRay){const hit=demoFramePlantChoiceHit(ray);if(!hit)return false;demoZinniaDiscovery?.activate(hit.choice.action);return true;}
 
 function showSceneContinue(label, onContinue, stepLabel) {
     const step=guidedDemoStep(stepLabel);
@@ -3398,7 +3440,7 @@ function armDemoPlacement(type, {explained=false}={}) {
     if (label) label.textContent = type === 'plant' ? 'Place Orb' : type === 'plant2' ? 'Place Orb' : type === 'totem' ? 'Place Totem' : 'Place Note';
     place?.setAttribute('aria-label', type === 'plant'
         ? 'Place the Pigeon Pea Plant Orb'
-        : type === 'plant2' ? 'Place the Moringa Plant Orb' : type === 'totem' ? 'Place the My area Totem' : 'Place a Note');
+        : type === 'plant2' ? 'Place your second Plant Orb' : type === 'totem' ? 'Place the My area Totem' : 'Place a Note');
     setGuide(['plant', 'plant2'].includes(type)
         ? 'Look around slowly. The centre aim will appear when you are ready.'
         : type==='totem'?'Aim the upright preview where the Totem should stand. Use the thumbstick to adjust depth.':'Take in the space before choosing the next position.');
@@ -3414,7 +3456,7 @@ function armDemoPlacement(type, {explained=false}={}) {
     const [title, introduction] = introductions[type];
     const mediaKey=type==='totem'?'totem':type==='note'?'note':'orb';
     showDemoTutorialMedia(mediaKey);
-    if(type==='note')infoPanel?.setContextualHint('The prepared message describes the two sample profiles.');
+    if(type==='note')infoPanel?.setContextualHint(demoZinniaNoteDraft?'Your confirmed words and colour are ready. Choose where your Note belongs.':'Record an observation for this place.');
     const startPlacement = () => {
         suppressSessionSelectUntil = performance.now() + 700;
         finishIntroBoard();
@@ -3423,7 +3465,7 @@ function armDemoPlacement(type, {explained=false}={}) {
         const placementCopy = type === 'plant'
             ? {title:guidedDemoStep('ELEMENTS 1.5').title,body:DEMO_GUIDED_COPY['ELEMENTS 1.5'],next:`Aim at a clear spot in front of you, then ${questTriggerPlacement?'press the controller trigger':'press the aiming circle'} to place the sample Orb. Use the right joystick to adjust distance.`}
             : type === 'plant2'
-                ? {title:'Place Moringa',body:DEMO_GUIDED_COPY['ELEMENTS 1.11'],next:'Place Moringa beside Pigeon Pea.'}
+                ? {title:'Place your second Plant Orb',body:DEMO_GUIDED_COPY['ELEMENTS 1.11'],next:'Place an Orb beside Pigeon Pea, then ask Zinnia for its plant.'}
                 : type==='totem'
                     ? {title:'Place My area Totem',body:'A Totem gives an Area a clear welcome point for its signs and local information.',next:'Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.'}
                     : {title:'Leave a Note',body:DEMO_GUIDED_COPY['ELEMENTS 1.16'],next:questTriggerPlacement?'Choose a location and press the trigger to place the Note.':'Choose a location and tap the aiming circle to place the Note.'};
@@ -4507,9 +4549,10 @@ function deleteDemoNote(record){
     const index=markers.indexOf(record);if(index>=0)markers.splice(index,1);if(!markers.some(item=>item.demoType==='note'))demoHiddenElements.add('note');updateSimulatedMarkers();syncDemoPanelActions();infoPanel?.restore();infoPanel?.showLearning({title:'Notes',body:'Use the Notes button to create a new Note.',mesh:'note'});infoPanel?.setObjectContext({title:'Controls · Notes',linkedName:'Notes',actions:[{id:'new-note',label:'+ Note'}],onAction:()=>createDemoNote()});infoPanel?.setExplorerOpen(true);
 }
 function focusDemoNoteControls(record){
-    if(record.demoNativeChooserFor){infoPanel?.restore();infoPanel?.showLearning({title:'Choose a plant',body:NATIVE_PLANT_CHOOSER_COPY,mesh:'note'});infoPanel?.setObjectContext({title:'Controls · Plant Orb',linkedName:'Choose a plant',hint:'Choose a rainforest plant for your second Orb.',actions:DEMO_NATIVE_PLANTS.map(plant=>({id:plant.id,label:plant.name})),onAction:id=>selectDemoNativePlant(record,id)});infoPanel?.setExplorerOpen(true);return true;}
+    if(record.demoNativeChooserFor){const orb=markers.find(item=>item.id===record.demoNativeChooserFor);if(orb)showDemoNativePlantChooser(orb);return true;}
     infoPanel?.restore();infoPanel?.showLearning({title:record.name,body:record.description || record.notes,mesh:'note'});
-    infoPanel?.setObjectContext({title:'Controls · Note',linkedName:record.name,hint:'Grip a Note card to move it. Stick left/right turns it; up/down adjusts distance. The corner button minimizes the Note.',actions:[{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'},...(record.demoNoteSelectedCard?[{id:'delete-selected',label:'Delete',description:'Delete the held Note card.'}]:[])],onAction:id=>{
+    infoPanel?.setObjectContext({title:'Controls · Note',linkedName:record.name,hint:'Grip a Note card to move it. Stick left/right turns it; up/down adjusts distance. The corner button minimizes the Note.',actions:[{id:'dictate',label:'Speak to Zinnia'},{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'},...(record.demoNoteSelectedCard?[{id:'delete-selected',label:'Delete',description:'Delete the held Note card.'}]:[])],onAction:id=>{
+        if(id==='dictate'){showDemoZinniaNote(record);return;}
         if(id==='collapse' || id==='reopen'){const view=demoPlacedNoteViews.get(String(record.id)) || demoPlacedNoteDomViews.get(String(record.id));if(view)view.workspace.action(id);else if(demoKnowledgeRoot?.dataset.noteRecord===String(record.id))demoKnowledgeWorkspace?.action(id);else{record.demoNoteCollapsed=id==='collapse';openDemoNoteExperience(record,false);}return;}
         if(id==='delete-selected'){if(record.demoNoteSelectedCard==='main'){deleteDemoNote(record);return;}const selected=record.demoNoteSelectedCard;delete record.demoNoteSelectedCard;openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.('delete:'+selected);return;}
         if(id==='new-note'){
@@ -4671,6 +4714,7 @@ function placeMarker() {
         } : {})
     };
     if (markers.length) marker = relateMinimalMarkers(marker, markers[0]?.id || 'demo-plant', 'part-of-story');
+    if(type==='note' && demoZinniaNoteDraft){applyZinniaNote(marker,demoZinniaNoteDraft);demoZinniaNoteDraft=null;}
     marker.texture = createMarkerTexture(marker);
     markers.push(marker);
     if(type==='plant')completeDemoInteractionTask('place');
@@ -5021,10 +5065,13 @@ function setupRenderer() {
     // Hero Dice no longer competes with the plant/Control panel journey.
     if(welcomeTutorialEnabled() && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,
         onFeedback:(kind,source)=>{if(kind==='transform'){demoFeedback.sound('practice-reward');if(source)demoFeedback.pulse(source,.8,180);return;}const reward=['lesson','plant','collect','open','harvest','ring','land'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
-        onChange:state=>{introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Use controllers':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
-        onSelect:(ray,source)=>{const hit=welcomePracticeFrameHit(ray);if(!hit)return false;welcomePractice?.stage.button(hit.id,source);return true;},onHit:welcomePracticeFrameHit,
-        onComplete:()=>{welcomePracticeVoice?.stop();welcomePracticeCompleted=true;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome();
-            const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeDisposeTimer=null;},750);
+        onChange:state=>{syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
+        onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray));},onHit:welcomePracticeFrameHit,
+        onComplete:({aborted=false}={})=>{welcomePracticeVoice?.destroy();welcomePracticeVoice=null;infoPanel?.suspend(true);infoPanel?.setComfortContext(null);infoPanel?.setOpacity(1);infoPanel?.setIntroduction(false);welcomeComfort=null;welcomePracticeCompleted=true;
+            zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch();
+            for(const child of [...(welcomePractice?.stage.zinniaMount.children || [])])zinniaFramePerch.characterMount.add(child);
+            zinniaFramePerch.attach(gl);if(!aborted)zinniaFramePerch.show();welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome({returning:!aborted});
+            const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy({stopVoice:false});welcomePractice=null;welcomePracticeDisposeTimer=null;},750);
         }
     });
 }
@@ -5445,7 +5492,6 @@ function drawIntroNoteContent(ctx) {
         ctx.fillStyle='#f8efdc';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;ctx.fillText('NOURISHLAND XR',700,285,880);
         ctx.fillStyle='#fffaf0';const bottom=drawDemoHeading(ctx,state.title,700,370,900);ctx.textAlign='center';
         ctx.font=`500 35px ${DEMO_PRESENTATION_FONT}`;wrappedTextureLines(ctx,state.caption,830).slice(0,4).forEach((line,i)=>ctx.fillText(line,700,bottom+110+i*48));
-        for(const button of welcomePracticeFrameButtons(state)){ctx.fillStyle='rgba(255,248,230,.08)';ctx.strokeStyle='rgba(255,248,230,.55)';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,26);ctx.fill();ctx.stroke();ctx.fillStyle='#fff8e6';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;ctx.fillText(button.label,button.x+button.width/2,button.y+button.height/2,button.width-20);}
         ctx.restore();return;
     }
 
@@ -5458,7 +5504,7 @@ function drawIntroNoteContent(ctx) {
         ctx.fillStyle='#c3d8c1';wrappedTextureLines(ctx,content.limo.summary,880).slice(0,2).forEach((line,index)=>ctx.fillText(line,700,565+index*32));
         ctx.font='500 22px system-ui';ctx.fillText('Connect ideas · explore an example · observe this place',700,650,880);ctx.restore();return;
     }
-    if(demoFramePlantChoiceOrbId){drawLivingFramePlantChoices(ctx,()=>{introBoardTextureDirty=true;});return;}
+    if(demoFramePlantChoiceOrbId && demoZinniaDiscovery){drawZinniaPlantDiscovery(ctx,demoZinniaDiscovery.state());return;}
     // The glass/rim fades in first. Text appears once at its final white value.
     if(arWelcomeOpeningActive && !introOpeningCopySkipped && arWelcomeClock.elapsed<900)return;
     ctx.globalAlpha=1;
@@ -5708,16 +5754,15 @@ function introWorldAnchorFromViewer(matrix) {
     ]);
 }
 
-function welcomePracticeFrameButtons(state){
-    const buttons=[{id:'pause',label:state.voice?.paused?'Resume':'Pause',x:340,y:800,width:220,height:66},{id:'replay',label:'Hear again',x:590,y:800,width:220,height:66}];
-    if(!state.voice?.playing && !state.voice?.paused && ['hands','explore'].includes(state.phase))buttons.push({id:'next',label:state.phase==='hands'?'Controllers':'Continue',x:840,y:800,width:220,height:66});
-    const total=buttons.reduce((sum,b)=>sum+b.width,0)+(buttons.length-1)*24;let x=700-total/2;for(const b of buttons){b.x=x;x+=b.width+24;}return buttons;
+function syncWelcomeComfortOptions(state=welcomePractice?.stage.snapshot()){
+    if(!welcomeComfort || !state || !infoPanel)return;
+    infoPanel.setComfortContext(welcomeComfort.context());
+    const guide=welcomePracticeVisualGuide(state),key=guide.image+'|'+guide.caption;
+    if(key!==welcomeComfortGuideKey){welcomeComfortGuideKey=key;infoPanel.showLearning({title:'',body:'',image:guide.image,imageCaption:guide.caption});}
 }
 function welcomePracticeFrameHit(ray){
-    if(!welcomePractice?.active || !introWorldAnchor)return null;
-    const hit=welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,2500,2100,false,ray);if(!hit)return null;
-    // Frame controls use full texture bounds; LIMO cells keep their own coordinates.
-    const button=welcomePracticeFrameButtons(welcomePractice.stage.snapshot()).find(b=>{const left=b.x+WELCOME_PANEL_DRAW_OFFSET.x,top=b.y+WELCOME_PANEL_DRAW_OFFSET.y;return hit.pixelX>=left && hit.pixelX<=left+b.width && hit.pixelY>=top && hit.pixelY<=top+b.height;});return button?{...hit,kind:'button',id:button.id,worldPoint:hit.point || hit.position}:null;
+    if(!welcomePractice?.active || welcomePractice.stage.exiting)return null;
+    const hit=infoPanel?.hit(ray);return hit?{...hit,kind:'button',worldPoint:hit.point || hit.position}:null;
 }
 function drawWelcomePracticeFrame(view){
     gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);const p=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);drawIntroSpatial(view);gl.depthMask(true);
@@ -5828,7 +5873,7 @@ function drawIntroSpatial(view) {
         const orbPulse=pointerKind==='aim'?1+.05*Math.sin(performance.now()/380):1;
         if (pointerPosition) {gl.depthMask(false);drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.95*orbPulse, pointerKind==='aim'?.68:1);gl.depthMask(true);}
     }
-    if(livingFrameModel?.ready && arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);livingFrameModel.drawXR(view,livingFramePose(board).matrix);}
+    if(livingFrameModel?.ready && arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);const framePose=livingFramePose(board);livingFrameModel.drawXR(view,framePose.matrix);if(!welcomePractice?.active)zinniaFramePerch?.draw(view,framePose.matrix);}
 }
 
 function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
@@ -6272,7 +6317,7 @@ function drawMarker(view) {
             sphereRenderer,
             view,
             record.position,
-            (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1),
+            (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1) * (record.demoNativeChoice?Math.max(.05,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/700)):1),
             { type: orbType, rotationY:record.rotationY || 0, animationKey:record, pimoOpen:record.demoExpanded, color: orbType==='plant' ? demoPlantOrbColor(record) : material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, placementHighlight:record.demoPlacementHighlight || (orbType==='plant' && !record.demoAmbientNeighbour && orbMentioned),placementAge:performance.now()-(record.demoPlacementHighlightAt || 0), held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
         );
     });
@@ -6738,9 +6783,11 @@ async function startImmersive() {
             if(welcomePractice?.active){
                 arWelcomeClock.tick(Date.now(),session.visibilityState!=='hidden');
                 runXrFrameStep('welcome practice input',()=>welcomePractice.update(frame,_time,viewerMatrix,calibratedDemoGroundY(),latestTrackedHandStates));
+                if(welcomePractice?.active)infoPanel?.setOpacity(welcomePractice.stage.exitOpacity);
+                infoPanel?.update(viewerMatrix,_time,latestControllerRay,frame,source=>welcomePractice?.stage.exiting || welcomePractice?.stage.isHolding(source));
                 const practiceLayer=frame.session.renderState.baseLayer;
                 if(practiceLayer && pose){gl.bindFramebuffer(gl.FRAMEBUFFER,practiceLayer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
-                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
+                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('comfort options render',()=>infoPanel?.draw(view));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
                     gl.disable(gl.SCISSOR_TEST);markXrFirstContentRendered();
                 }
                 if(xrRecoveryStatus==='failed')welcomePractice.stage.abort();

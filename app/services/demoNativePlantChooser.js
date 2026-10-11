@@ -1,8 +1,7 @@
-import {DEMO_NATIVE_PLANTS} from './demoNativePlants.js';
-import {translateApp} from './i18n.js';
+import {createZinniaPlantDiscovery,mountZinniaPlantDiscovery} from './zinniaPlantDiscovery.js';
 export function mountDemoNativePlantChooser(root,record,{onChoose=()=>{}}={}){
-    let destroyed=false;
-    function render(){if(destroyed)return;root.classList.add('note-experience','demo-note-showcase');root.innerHTML='<div class="note-spatial-board is-expanded"><article class="note-anchor"><h2>Choose the next plant</h2><p>Australian rainforest samples</p>'+DEMO_NATIVE_PLANTS.map(plant=>`<button type="button" data-native-plant="${plant.id}">${plant.name}</button>`).join('')+'</article></div>';translateApp(root);}
-    const click=event=>{const button=event.target.closest('[data-native-plant]');if(button && !destroyed)onChoose(button.dataset.nativePlant);};
-    root.addEventListener('click',click);render();return {action:render,close(){},destroy(){destroyed=true;root.removeEventListener('click',click);root.replaceChildren();}};
+    let view;
+    const discovery=createZinniaPlantDiscovery({onChange:state=>view?.render(state),onReady:onChoose});
+    view=mountZinniaPlantDiscovery(root,discovery);view.render(discovery.state());
+    return {action:()=>view.render(discovery.state()),close(){discovery.destroy();view.destroy();},destroy(){discovery.destroy();view.destroy();}};
 }

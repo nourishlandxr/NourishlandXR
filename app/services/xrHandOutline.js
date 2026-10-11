@@ -54,11 +54,12 @@ export function createXRHandOutline(gl){
                         const wrist=new THREE.Vector3().setFromMatrixPosition(rig.bind[rig.wristIndex]),base=new THREE.Matrix4().fromArray(controller.matrix).multiply(new THREE.Matrix4().makeRotationX(Math.PI/2)).multiply(new THREE.Matrix4().makeTranslation(-wrist.x,-wrist.y,-wrist.z)),posed=[];
                         const poseJoint=i=>{if(posed[i])return posed[i];const parent=rig.parents[i],name=rig.names[i],finger=name.split('-')[0];
                             const world=parent<0?rig.bind[i].clone():poseJoint(parent).clone().multiply(rig.bind[parent].clone().invert().multiply(rig.bind[i]));
-                            const amount=name.includes('proximal')?.65:name.includes('intermediate')?.70:name.includes('distal')?.38:0,curl=THREE.MathUtils.clamp(finger==='thumb'?(controller.grip || 0)*.25:finger==='index'?Number(controller.trigger):controller.grip || 0,0,1);
-                            if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],amount*curl));posed[i]=world;return world;
+                            const buttons=controller.source.gamepad?.buttons || [],thumb=Math.max(...buttons.slice(3).map(button=>button.value || (button.pressed?1:0)),0);
+                            const amount=name.includes('proximal')?.85:name.includes('intermediate')?1.05:name.includes('distal')?.65:0,trigger=buttons[0]?.value || Number(controller.trigger),grip=controller.grip || 0,curl=THREE.MathUtils.clamp(finger==='thumb'?Math.max(thumb,grip):finger==='index'?Math.max(trigger*.22,grip*trigger):grip,0,1);
+                            if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],-amount*curl));posed[i]=world;return world;
                         };
                         rig.names.forEach((name,i)=>rig.matrix.copy(base).multiply(poseJoint(i)).multiply(rig.inverse[i]).toArray(rig.matrices,i*16));
-                    }else rig.names.forEach((name,i)=>{rig.matrix.fromArray(state.joints.get(name).matrix).multiply(rig.inverse[i]).toArray(rig.matrices,i*16);});rig.sample=sample;
+                    }else rig.names.forEach((name,i)=>{rig.matrix.fromArray(state.rawJoints.get(name).matrix).multiply(rig.inverse[i]).toArray(rig.matrices,i*16);});rig.sample=sample;
                 }
                 gl.uniformMatrix4fv(locations['bones[0]'],false,rig.matrices);gl.uniform1f(locations.opacity,controller?controllerOpacity:(state.pinch?.95:.9)*state.visualConfidence*trackedOpacity);gl.uniform3f(locations.fillColour,...(controller?[.52,.64,.49]:[.93,.91,.84]));
                 for(const a of rig.geometry){gl.bindBuffer(gl.ARRAY_BUFFER,a.buffer);gl.enableVertexAttribArray(a.location);gl.vertexAttribPointer(a.location,a.size,gl.FLOAT,false,0,0);}

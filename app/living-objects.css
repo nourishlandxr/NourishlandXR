@@ -2589,3 +2589,13 @@ body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],butt
 .nlxr-guide-actions{display:flex;flex-wrap:wrap;gap:8px}
 .nlxr-lower-companion header{cursor:grab;touch-action:none}
 .nlxr-lower-companion[hidden]{display:none!important}
+
+/* Tutorial comfort keeps a stable frame before the full console introduction. */
+.nlxr-info-panel.is-comfort-options { grid-template-columns:1fr; grid-template-rows:62px 1fr; grid-template-areas:"header" "content"; gap:0; width:min(620px,calc(100vw - 28px)); height:410px; padding:0; }
+.nlxr-info-panel.is-comfort-options .nlxr-control-header { grid-area:header; min-height:0; padding:18px 22px; }
+.nlxr-info-panel.is-comfort-options .nlxr-panel-brand { position:static; display:block; font-size:18px; line-height:1.3; color:#eff4e8; }
+.nlxr-info-panel.is-comfort-options > section { grid-area:content; min-height:0; }
+.nlxr-info-panel.is-comfort-options > section > p { color:#cfddca; margin:0 0 16px; }
+.nlxr-info-panel.is-comfort-options button { color:#eef4e6; background:linear-gradient(145deg,#425949,#263b31); border:1px solid #b8cab2a8; font-size:14px; padding:8px; }
+.nlxr-info-panel.is-comfort-options button:disabled { opacity:.4; }
+.nlxr-info-panel.is-comfort-options button[aria-pressed="true"] { border-color:#bce3a3; background:#537055; }

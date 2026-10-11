@@ -24,6 +24,9 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
                 const originalTextures=new Set();for(const material of originalMaterials){for(const value of Object.values(material))if(value?.isTexture)originalTextures.add(value);material.dispose();}for(const texture of originalTextures){texture.image?.close?.();texture.dispose();}
                 for(const [id,component] of Object.entries(data.layouts[hand].components)){
                     const kind=id.replace('xr-standard-','');
+                    // Keep every face button and joystick legible, including
+                    // the controls not highlighted by the current lesson.
+                    model.getObjectByName(component.rootNodeName)?.traverse(node=>{if(node.isMesh){node.material.color.set(['trigger','squeeze'].includes(kind)?'#617455':'#334c3a');}});
                     for(const response of Object.values(component.visualResponses || {})){
                         const value=model.getObjectByName(response.valueNodeName),min=model.getObjectByName(response.minNodeName),max=model.getObjectByName(response.maxNodeName);
                         if(value && min && max && response.valueNodeProperty==='transform')entry.responses.push({value,min,max,property:response.componentProperty,indices:component.gamepadIndices});

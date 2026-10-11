@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <rect width="640" height="480" rx="28" fill="#273d34"/>
+  <g fill="none" stroke="#d9e4c9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M230 375c-24-46-39-75-40-115-1-28 8-41 25-39 13 2 20 20 29 39l11 19-11-135c-3-32 31-35 35-4l16 101 11-125c3-32 37-28 34 5l-3 138 32-107c8-30 40-18 32 13l-28 117 38-71c15-25 41-7 27 19l-37 76c-14 29-15 46-15 68"/>
+    <path d="M209 236c27-29 48-51 76-38 14 7 17 25 6 38l-40 39"/>
+  </g>
+  <circle cx="271" cy="223" r="42" fill="none" stroke="#9eca96" stroke-width="4"/>
+  <g fill="#e9efdd" font-family="system-ui,sans-serif" text-anchor="middle"><text x="320" y="57" font-size="28">Your own hands</text><text x="320" y="436" font-size="24">Touch thumb and index finger gently</text></g>
+</svg>

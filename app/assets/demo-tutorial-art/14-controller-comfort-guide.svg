@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+  <rect width="640" height="480" rx="28" fill="#273d34"/>
+  <g stroke="#d9e4c9" stroke-width="6" stroke-linejoin="round">
+    <path d="M272 129c-62 8-95 49-90 99l27 139c9 48 80 51 96 3l44-129c25-64-14-121-77-112Z" fill="#7b8d68"/>
+    <path d="M301 140c43-19 81 4 77 27l-28 33-21-28Z" fill="#9db38b"/>
+    <rect x="184" y="244" width="27" height="69" rx="8" fill="#9db38b"/>
+    <circle cx="253" cy="185" r="26" fill="#304637"/>
+    <circle cx="309" cy="219" r="17" fill="#304637"/>
+    <circle cx="278" cy="250" r="17" fill="#304637"/>
+    <circle cx="235" cy="256" r="8" fill="#304637"/>
+    <path d="M377 158h65M181 273h-55" fill="none"/>
+  </g>
+  <g fill="#e9efdd" font-family="system-ui,sans-serif"><text x="320" y="57" text-anchor="middle" font-size="28">Keep your controllers in hand</text><text x="445" y="158" font-size="23">Trigger</text><text x="445" y="185" font-size="19">Select</text><text x="69" y="266" font-size="23">Grip</text><text x="69" y="293" font-size="19">Hold</text><text x="320" y="436" text-anchor="middle" font-size="24">The same buttons move your gardening hands</text></g>
+</svg>

@@ -15,7 +15,12 @@ export function createProjectNarration({onChange=()=>{}}={}){
  const voice=createWelcomePracticeVoice({assetBase:new URL('../assets/project-narration/',import.meta.url),initialId:'z-84c48915',maxCached:4,fetchCache:'force-cache',onChange,onEnded:next});
  function next(){if(disposed || !queue.length)return;const id=queue.shift();void voice.speak({id});if(queue[0])void voice.preload(queue[0]);}
  function stop(){queue=[];visibilityPaused=false;voice.stop({forget:true});}
- function speak(text){stop();lastText=text;if(currentNxrLanguage()!=='en')return;queue=projectNarrationClips(text);voice.unlock();next();}
+ function speak(text,{highlight=false}={}){stop();lastText=text;if(currentNxrLanguage()!=='en')return;voice.unlock();
+  const full=normalizeNarrationText(Array.isArray(text)?text.join(' '):text),sentences=full.match(/[^.!?]+[.!?](?:\s|$)|[^.!?]+$/g) || [full];
+  const summary=highlight?full:sentences.slice(0,2).join(' ').trim();
+  if(!summary)return;
+  if(summary!==full || summary.split(/\s+/).length>45){const short=sentences[0].trim();void voice.speak({id:'slide-highlight',spoken:short,spokenOverride:true});return;}
+  queue=projectNarrationClips(summary).slice(0,1);if(queue.length)next();else void voice.speak({id:'slide-highlight',spoken:summary,spokenOverride:true});}
  const visibility=()=>{if(document.hidden){visibilityPaused=voice.status().playing;voice.pause();}else if(visibilityPaused){visibilityPaused=false;voice.resume();}};
  const unlock=()=>voice.unlock();
  const replay=()=>speak(lastText);globalThis.addEventListener('nlxr-narration-replay',replay);

@@ -2,7 +2,7 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 const start=new THREE.Vector3(-.43,.035,-.20);
 export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}}={}){
  const velocity=new THREE.Vector3(),desired=new THREE.Vector3(),delta=new THREE.Vector3();
- const rings=new THREE.Group();root.add(rings);const points=[new THREE.Vector3(-.43,.35,-.72),new THREE.Vector3(.02,.62,-1.02),new THREE.Vector3(.47,.38,-.65)],entries=[];
+ const rings=new THREE.Group();root.add(rings);const points=[new THREE.Vector3(-.43,.35,-.72),new THREE.Vector3(-.05,.45,-1.02),new THREE.Vector3(.36,.42,-.88)],entries=[];
  const geometry=new THREE.TorusGeometry(.17,.006,6,48);let previous=start;
  for(const point of points){const normal=point.clone().sub(previous).normalize(),material=new THREE.MeshBasicMaterial({color:'#ffe1a0',transparent:true,opacity:.28,depthWrite:false}),mesh=new THREE.Mesh(geometry,material);mesh.position.copy(point);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);rings.add(mesh);entries.push({point,normal,mesh});previous=point;}
  let count=0,heading=0,landed=false,airborne=false,landingTime=0,elapsed=0;
@@ -15,7 +15,7 @@ export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}
    heading-=dead(axes[offset])*dt*1.65;const vertical=-dead(axes[offset+1]),speed=(pilot.trigger?1:0)-(pilot.reverse?1:0);
    desired.set(-Math.sin(heading)*speed*.65,vertical*.55,-Math.cos(heading)*speed*.65);
    if(desired.lengthSq()>.001)airborne=true;
-   if(airborne){velocity.lerp(desired,1-Math.exp(-dt*8));delta.copy(velocity).multiplyScalar(dt);position.add(delta);position.x=THREE.MathUtils.clamp(position.x,-1.1,1.1);position.y=THREE.MathUtils.clamp(position.y,.035,1.3);position.z=THREE.MathUtils.clamp(position.z,-1.55,.5);dragon.group.rotation.y=heading;}
+   if(airborne){velocity.lerp(desired,1-Math.exp(-dt*8));delta.copy(velocity).multiplyScalar(dt);position.add(delta);position.x=THREE.MathUtils.clamp(position.x,-3.5,3.5);position.y=THREE.MathUtils.clamp(position.y,.035,2.2);position.z=THREE.MathUtils.clamp(position.z,-3.5,2.5);dragon.group.rotation.y=heading;}
   }else if(!landed && airborne){velocity.multiplyScalar(Math.exp(-dt*5));position.addScaledVector(velocity,dt);}
   else {position.copy(start);velocity.set(0,0,0);}
   if(lesson && airborne && count<entries.length){const entry=entries[count],a=before.clone().sub(entry.point).dot(entry.normal),b=position.clone().sub(entry.point).dot(entry.normal);if(a*b<=0 && Math.abs(a-b)>.0001){const cross=before.clone().lerp(position,a/(a-b));if(cross.distanceTo(entry.point)<.145){count++;onFeedback('ring',pilot?.source);}}}

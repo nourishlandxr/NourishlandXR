@@ -1,0 +1,37 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>NLXR · Comfort and return perch</title>
+<link rel="stylesheet" href="../app/style.css"><link rel="stylesheet" href="../app/pim.css"><link rel="stylesheet" href="../app/product-v2.css"><link rel="stylesheet" href="../app/living-objects.css">
+<style>
+body{margin:0;background:#192820;color:#ecedde;font:15px system-ui}#bar{padding:14px 22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#20372a}#bar button{padding:9px 15px;border:1px solid #7d9681;border-radius:8px;background:#375b41;color:#fff}#bar strong{color:#e7eddb}#bar small{color:#c0cdb9}#scene{display:block;width:100vw;height:65vh}#board{position:absolute;left:50%;top:160px;transform:translateX(-50%);width:290px;text-align:center;pointer-events:none}#board h2{font-size:21px;color:#f1edde}#board p{line-height:1.5;font-size:15px;color:#d0dfc5}#options{position:relative;margin:0 auto 30px;width:min(690px,90vw)}#options .nlxr-info-panel{position:relative;inset:auto;transform:none;width:100%;max-height:none;grid-template-columns:1fr;box-sizing:border-box}#options .nlxr-control-header{grid-column:1 / -1}#options .nlxr-media-wing{display:none}#guide{position:fixed;right:18px;top:95px;width:180px;padding:12px;background:#233b2dee;border:1px solid #617b62;border-radius:12px}#guide img{width:100%;height:145px;object-fit:contain}#guide p{margin:8px 0;font-size:13px}#status{margin-left:auto}#end{display:none;text-align:center;padding:18px}
+</style></head><body>
+<header id="bar"><strong>Comfort options &amp; Zinnia’s return</strong><span id="version"></span><button id="start">Restart practice</button><button data-phase="gloves">Gardening hands</button><button data-phase="hands">Real hands</button><button data-phase="fruit">Fruit table</button><button id="main">Introduce full panel</button><small>Silent desktop layout preview · XR input is checked on the headset.</small><output id="status">Loading</output></header>
+<canvas id="scene"></canvas><section id="board"><h2></h2><p></p></section><aside id="guide"><img alt="Visual guide"><p></p></aside><main id="options"></main><p id="end">Comfort options has faded away. The main Control panel is introduced later.</p>
+<script type="module">
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';
+import {createWelcomeComfortOptions,welcomePracticeVisualGuide} from '../app/services/welcomeComfortOptions.js';
+import {createPimInfoPanel} from '../app/services/pimInfoPanel.js';
+import {createLivingFrameModel} from '../app/services/livingFrameModel.js';
+import {createZinniaFramePerch} from '../app/services/zinniaFramePerch.js';
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+document.querySelector('#version').textContent='V'+BUILD_INFO.version;
+const output=document.querySelector('#status');window.addEventListener('error',e=>output.textContent='ERROR: '+e.message);
+const renderer=new THREE.WebGLRenderer({canvas:document.querySelector('#scene'),alpha:true,antialias:true});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.8;
+const camera=new THREE.PerspectiveCamera(51,1,.01,20);camera.position.set(0,1.6,.15);camera.lookAt(0,1.2,-1.5);
+const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
+const voice={status:()=>({playing:false,muted:true,paused:false}),unlock(){},speak(){},stop(){},pause(){},resume(){},toggleMute(){}};
+let comfort,returned=false,exitMaterialOpacity=new Map(),stage;
+const panel=createPimInfoPanel({root:document.querySelector('#options'),simpleDesktop:true});
+const sync=state=>{if(!comfort)return;panel.setComfortContext(comfort.context());const guide=welcomePracticeVisualGuide(state || stage.snapshot());document.querySelector('#guide img').src=guide.image;document.querySelector('#guide p').textContent=guide.caption;};
+stage=createWelcomePracticeScene({voice,embedded:true,onChange:state=>{document.querySelector('#board h2').textContent=state.title;document.querySelector('#board p').textContent=state.caption;sync(state);output.textContent=state.exiting?'Gently fading…':state.phase;},onComplete:()=>{returned=true;panel.suspend(true);document.querySelector('#guide').hidden=true;document.querySelector('#end').style.display='block';document.querySelector('#board h2').textContent='Hello again';document.querySelector('#board p').textContent='I’m over here—let’s see what this place could become.';perch.scene.visible=true;perch.scene.userData.started=performance.now();output.textContent='Return perch · inside the frame';}});
+const scene=stage.scene;scene.add(new THREE.HemisphereLight('#e5e8d2','#2b3627',2));const sun=new THREE.DirectionalLight('#eddfbd',2);sun.position.set(-2,4,3);scene.add(sun);
+const frameHome=new THREE.Group();frameHome.position.set(0,1.48,-2.0);scene.add(frameHome);
+const frame=createLivingFrameModel({onChange:()=>{if(frame.scene && frameHome.children[0]!==frame.scene){frameHome.clear();frameHome.add(frame.scene);}}});void frame.select('sd');
+const perch=createZinniaFramePerch();perch.root.matrix.makeTranslation(0,1.48,-2);perch.scene.visible=false;scene.add(perch.scene);
+// Small translucent stand-ins show the later Totem clearance, outside the rim.
+const totems=[-1.3,1.3].map(x=>{const mesh=new THREE.Mesh(new THREE.CylinderGeometry(.065,.08,1.3,12),new THREE.MeshStandardMaterial({color:'#60775b',transparent:true,opacity:.18}));mesh.position.set(x,.65,-2);scene.add(mesh);return mesh;});
+function restart(){for(const [material,opacity] of exitMaterialOpacity){material.opacity=opacity;material.transparent=opacity<1;}returned=false;perch.scene.visible=false;document.querySelector('#guide').hidden=false;document.querySelector('#end').style.display='none';panel.suspend(false);panel.setOpacity(1);stage.start(viewer,0);stage.previewLesson('point');comfort=createWelcomeComfortOptions({stage,onVisualChange:()=>{},onChange:()=>sync()});sync();exitMaterialOpacity=new Map();}
+document.querySelector('#start').onclick=restart;for(const button of document.querySelectorAll('[data-phase]'))button.onclick=()=>{if(returned)restart();stage.previewLesson(button.dataset.phase);sync();};
+document.querySelector('#main').onclick=()=>{panel.setComfortContext(null);panel.setOpacity(1);panel.suspend(false);panel.showLearning({title:'Your main Control panel',body:'The familiar style now gives you plant information, image panels, contextual controls and scene visibility.'});output.textContent='Full panel introduced';};
+function resize(){const h=Math.max(360,innerHeight*.65);renderer.setSize(innerWidth,h,false);camera.aspect=innerWidth/h;camera.updateProjectionMatrix();}addEventListener('resize',resize);resize();restart();
+let last=performance.now();function tick(time){requestAnimationFrame(tick);if(document.hidden)return;const dt=Math.min(.06,(time-last)/1000);last=time;frame.update(650000,{show:true,frameToken:time});stage.update(dt,{viewer,floor:0});if(stage.active){panel.setOpacity(stage.exitOpacity);if(stage.exiting){stage.root.traverse(n=>{for(const m of [n.material].flat().filter(Boolean)){if(!exitMaterialOpacity.has(m))exitMaterialOpacity.set(m,m.opacity);m.opacity=exitMaterialOpacity.get(m)*stage.exitOpacity;m.transparent=true;}});}}renderer.render(scene,camera);}requestAnimationFrame(tick);
+</script></body></html>

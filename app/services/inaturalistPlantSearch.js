@@ -6,8 +6,9 @@ let activeController = null;
 
 const text = value => String(value ?? '').trim();
 
-export function buildINaturalistSearchUrl(query, limit = 10) {
+export function buildINaturalistSearchUrl(query, limit = 10, rank = '') {
     const params = new URLSearchParams({ q: text(query), per_page: String(Math.max(1, Math.min(20, Number(limit) || 10))), is_active: 'true' });
+    if(text(rank))params.set('rank',text(rank));
     return `${INAT_SEARCH_BASE}?${params.toString()}`;
 }
 
@@ -54,7 +55,7 @@ export function clearINaturalistPlantSearchCache() {
 export async function searchINaturalistPlants(query, options = {}) {
     const value = text(query);
     if (value.length < MIN_QUERY_LENGTH) return [];
-    const cacheKey = value.toLocaleLowerCase();
+    const cacheKey = [value.toLocaleLowerCase(),text(options.rank),Number(options.limit)||10].join(':');
     if (searchCache.has(cacheKey)) return searchCache.get(cacheKey);
     if (activeController) activeController.abort();
     const controller = new AbortController();
@@ -62,7 +63,7 @@ export async function searchINaturalistPlants(query, options = {}) {
     const fetchImpl = options.fetchImpl || globalThis.fetch;
     if (typeof fetchImpl !== 'function') throw new Error('iNaturalist plant search is unavailable in this browser.');
     try {
-        const response = await fetchImpl(buildINaturalistSearchUrl(value), {
+        const response = await fetchImpl(buildINaturalistSearchUrl(value,options.limit,options.rank), {
             signal: options.signal || controller.signal,
             headers: { Accept: 'application/json' }
         });
