@@ -92,3 +92,14 @@ test('return trigger is consumed through a long hold and cannot activate the res
  fire('selectstart');scope.time=2000;fire('selectend');fire('select');fire('selectstart');
  assert.deepEqual(stopped,['selectstart','selectend','select']);assert.equal(scope.livingPeekActive,false);
 });
+
+
+test('randomized butterfly flights finish exactly at their end timestamp',()=>{
+ const home={id:'home',center:{x:0,y:1,z:-1},right:{x:1,y:0,z:0},normal:{x:0,y:0,z:1}},target={...home,id:'fruit',center:{x:.8,y:1,z:-1}},moved={...home,center:{x:.04,y:1,z:-1}};
+ for(let i=0;i<1000;i++){
+  const insect={seed:i};butterflyElementVisit(insect,home,target,0);const departure=insect.visit.pending.at;butterflyElementVisit(insect,home,target,departure);const end=departure+insect.visit.trip.duration;
+  const landed=butterflyElementVisit(insect,home,target,end);assert.deepEqual(landed.position,target.center);assert.equal(landed.pose.flight,0);assert.equal(insect.visit.trip,null);
+  const startled={seed:i};butterflyElementVisit(startled,home,home,0);butterflyElementVisit(startled,home,moved,32);const flight=startled.visit.startle;
+  const returned=butterflyElementVisit(startled,home,moved,flight.at+flight.duration);assert.deepEqual(returned.position,moved.center);assert.equal(returned.pose.flight,0);assert.equal(startled.visit.startle,null);assert.equal(Boolean(startled.visit.hover),!flight.lands);
+ }
+});

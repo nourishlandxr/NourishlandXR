@@ -22,16 +22,16 @@ export function butterflyElementVisit(insect,home,target,time,reduced=false){
  let position,flight=0,axes=state.perch;
  if(state.startle){const startled=state.startle;
   if(destination.id===state.id)startled.perch=destination;
-  const t=Math.min(1,Math.max(0,(time-startled.at)/startled.duration)),s=ease(t),bend=Math.sin(Math.PI*t),to=startled.perch.center,side=startled.side+Math.sin(t*7+startled.phase)*.04;
+  const t=time>=startled.at+startled.duration?1:Math.max(0,(time-startled.at)/startled.duration),s=ease(t),bend=Math.sin(Math.PI*t),to=startled.perch.center,side=startled.side+Math.sin(t*7+startled.phase)*.04;
   position={x:startled.from.x+(to.x-startled.from.x)*s+startled.perch.normal.x*bend*startled.reach+startled.perch.right.x*bend*side,y:startled.from.y+(to.y-startled.from.y)*s+bend*startled.lift,z:startled.from.z+(to.z-startled.from.z)*s+startled.perch.normal.z*bend*startled.reach+startled.perch.right.z*bend*side};
   flight=Math.min(1,t*14,(1-t)*14);axes=startled.perch;
   if(t===1){position={...to};state.perch=startled.perch;state.startle=null;state.nextExplore=time+22000+Math.random()*35000;if(!startled.lands)state.hover={at:time,until:time+3500+Math.random()*10000,phase:Math.random()*6.28,speed:.7+Math.random()*1.4,reach:.18+Math.random()*.3};}
  }else if(state.trip){const trip=state.trip;
   if(destination.id===trip.id)trip.perch=destination;
-  const t=Math.min(1,Math.max(0,(time-trip.at)/trip.duration)),s=ease(t),bend=Math.sin(Math.PI*t),to=trip.perch.center;
+  const t=time>=trip.at+trip.duration?1:Math.max(0,(time-trip.at)/trip.duration),s=ease(t),bend=Math.sin(Math.PI*t),to=trip.perch.center;
   position={x:trip.from.x+(to.x-trip.from.x)*s+trip.perch.normal.x*bend*.12,y:trip.from.y+(to.y-trip.from.y)*s+bend*.16,z:trip.from.z+(to.z-trip.from.z)*s+trip.perch.normal.z*bend*.12};
   flight=Math.min(1,t*12,(1-t)*12);axes=trip.perch;
-  if(t===1){state.id=trip.id;state.perch=trip.perch;state.trip=null;state.hover=null;state.nextExplore=time+22000+Math.random()*35000;if(!trip.landing && Math.random()<.35)state.hover={at:time,until:time+3000+Math.random()*11000,phase:Math.random()*6.28,speed:.7+Math.random()*1.4,reach:.18+Math.random()*.3};}
+  if(t===1){position={...to};state.id=trip.id;state.perch=trip.perch;state.trip=null;state.hover=null;state.nextExplore=time+22000+Math.random()*35000;if(!trip.landing && Math.random()<.35)state.hover={at:time,until:time+3000+Math.random()*11000,phase:Math.random()*6.28,speed:.7+Math.random()*1.4,reach:.18+Math.random()*.3};}
  }else {
   if(destination.id===state.id)state.perch=destination;axes=state.perch;
   if(!reduced && !state.hover && time>=state.nextExplore){state.hover={at:time,until:time+11000+Math.random()*18000,phase:Math.random()*6.28,speed:.7+Math.random()*1.4,reach:.18+Math.random()*.3};}
