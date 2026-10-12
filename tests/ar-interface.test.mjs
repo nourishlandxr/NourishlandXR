@@ -1219,7 +1219,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialSphere/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'/);
-    assert.match(source, /demoHandMode==='outline' && \(pointerSource\?\.hand \|\| latestTrackedHandStates.length>0\)/);
+    assert.match(source, /pointerSource\?\.targetRayMode === 'screen' \|\| pointerSource\?\.hand/);
     assert.match(source, /function beginControllerDemoHold\(preferredTarget=null,frame=null\)/);
     assert.match(source, /function demoControllerRayForInputEvent\(event\)/);
     assert.match(source, /event\.frame\?\.getPose\?\.\(sourceSpace, referenceSpace\)/);
@@ -1311,7 +1311,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /INTRODUCING AIM/);
     assert.doesNotMatch(source, /CREATE A PLANT ORB|Show aim/);
     assert.match(source, /suppressSessionSelectUntil=performance\.now\(\)\+700;[\s\S]*finishIntroBoard\(\);clearTimeout\(aimRevealTimer\);armDemoPlacement\('plant',\{explained:true\}\)/);
-    assert.match(source, /typingStartDelay = 900/);
+    assert.match(source, /demoParagraphSequence\.start\(\)/);
     assert.match(source, /function demoTextTypingDelay\(text, visibleLength\)/);
     assert.match(styles, /tryit-board-arrive 1\.4s/);
     assert.match(styles, /tryit-board-identity 1\.15s \.25s/);
@@ -1438,8 +1438,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /Let’s start/);
     assert.doesNotMatch(source, /Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
-    assert.match(source, /revealNextParagraph/);
-    assert.match(source, /boardTypingTimer = setTimeout\(revealParagraph, 700\)/);
+    assert.match(source, /createDemoVoiceTextFlow/);
+    assert.match(source, /createDemoVoiceTextFlow\(\{cueForParagraph:demoZinniaCue,paragraphs:\[fullText\]/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /record\.awaitingProfileReveal = true;[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready'\)/);
@@ -1515,10 +1515,10 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /simulatedSceneShifts/);
     assert.match(source, /50 \+ comfortOffsetPercent/);
     assert.doesNotMatch(source, /createIntroTickerTexture|introTickerTexture/);
-    assert.match(source, /introBoardVisibleBody = paragraphs\.slice\(0, paragraphIndex\)\.join/);
-    assert.match(source, /paragraphIndex\+\+/);
+    assert.match(source, /introBoardVisibleBody=paragraphs\.slice\(0,paragraphIndex\)\.join/);
+    assert.match(source, /paragraphIndex=event\.index\+1/);
     assert.match(source, /return 62;/);
-    assert.match(source, /boardTypingTimer = setTimeout\(revealNextParagraph, demoParagraphReadingTime/);
+    assert.match(source, /readingTime:demoParagraphReadingTime,onChange:event/);
     assert.doesNotMatch(source, /boardControlTimer/);
     assert.doesNotMatch(source, /'▌'/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after,[\s\S]*?content:none;/);
@@ -1542,7 +1542,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const reference=demoLocalizedText\(DEMO_QUICK_ACCESS_COPY\['INTRO 1\.2'\]\)/);
     assert.doesNotMatch(source, /introTextPageTransition|resolveIntroTextPage/);
     assert.match(source, /ctx\.globalAlpha=reveal/);
-    assert.match(source, /revealOpeningParagraph,demoParagraphReadingTime/);
+    assert.match(source, /paragraphs:openingParagraphs,voice:demoProjectVoice,readingTime:demoParagraphReadingTime/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
     assert.doesNotMatch(source, /arWelcomeVisionActivated|visionActivated:/);

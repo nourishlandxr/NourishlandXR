@@ -1,4 +1,5 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
+import {welcomeBasketSlot} from './welcomeBasketPacking.js';
 import {createPracticeBody} from './welcomePracticePhysics.js';
 import {createWelcomeNatureController} from './welcomeNatureController.js';
 
@@ -16,13 +17,10 @@ export function createWelcomePracticeProps(root,fruits,{onCollect=()=>{}}={}){
     const remoteBody=createPracticeBody('remote',{x:-.61,z:.13,radius:.068,halfSize:{x:.042,y:.022,z:.068},bounce:.06}),remote=new THREE.Group();root.add(remote);
     const nature=createWelcomeNatureController();remote.add(nature.group);const sticks=[nature.stick],lamp=nature.trigger;
     function place(body){const slot=slots[body.id],p=body.position;if(!slot || body.plantAttached || Math.hypot(p.x-basket.position.x,p.z-basket.position.z)>.22 || p.y<.025 || p.y>.65)return false;if(body.basketed)return false;
-        const radius=Math.max(body.radius,...Object.values(body.halfSize));let best=null;
-        for(let ring=0;ring<3;ring++)for(let i=0;i<(ring?12:1);i++){const angle=i*Math.PI/6,x=ring*.065*Math.cos(angle),z=ring*.065*Math.sin(angle);let y=.018+radius;
-            for(const other of fruits){if(!other.basketed)continue;const prior=slots[other.id],otherRadius=Math.max(other.radius,...Object.values(other.halfSize)),distance=Math.hypot(x-prior.x,z-prior.z),separation=radius+otherRadius+.007;if(distance<separation)y=Math.max(y,prior.y+Math.sqrt(separation*separation-distance*distance));}
-            if(!best || y<best.y)best={x,z,y};}
+        const best=welcomeBasketSlot(body,fruits.filter(other=>other.basketed).map(other=>({body:other,slot:slots[other.id]})),{x:p.x-basket.position.x,z:p.z-basket.position.z});if(!best)return false;
         Object.assign(slot,best);body.basketed=true;collected.add(body.id);snap(body);flash=1;onCollect(body);return true;}
-    function snap(body){const slot=slots[body.id];Object.assign(body.position,{x:basket.position.x+slot.x,y:slot.y || .018+body.halfSize.y,z:basket.position.z+slot.z});Object.assign(body.velocity,{x:0,y:0,z:0});Object.assign(body.rotation,{x:0,y:0,z:0,w:1});}
-    function remove(body){if(!body.basketed)return;body.basketed=false;collected.delete(body.id);}
+    function snap(body){const slot=slots[body.id];Object.assign(body.position,{x:basket.position.x+slot.x,y:slot.y || .018+body.halfSize.y,z:basket.position.z+slot.z});Object.assign(body.velocity,{x:0,y:0,z:0});Object.assign(body.rotation,slot.rotation || {x:0,y:0,z:0,w:1});}
+    function remove(body){if(!body.basketed)return;body.basketed=false;collected.delete(body.id);const packed=[];for(const other of fruits.filter(f=>f.basketed)){const next=welcomeBasketSlot(other,packed,slots[other.id]);if(next){Object.assign(slots[other.id],next);packed.push({body:other,slot:next});snap(other);}}}
     function update(phase,pilot,dt=0,other=null){const gardening=['packet','seed','water','grow','harvest','explore'].includes(phase);basket.position.lerp(gardening?gardenPosition:practicePosition,1-Math.exp(-dt*5));flash=Math.max(0,flash-dt);feedbackRing.visible=flash>0;feedbackMaterial.opacity=flash*.85;feedbackRing.scale.setScalar(1+(1-flash)*.18);basket.visible=['fruit','fly','hands','packet','seed','water','grow','harvest','explore'].includes(phase);remoteBody.visible=['fly','hands','packet','seed','water','grow','harvest','explore'].includes(phase);remote.visible=remoteBody.visible;for(const body of fruits){if((phase==='fruit' && initial.includes(body.id) || ['harvest','explore'].includes(phase) && body.id.startsWith('strawberry-')) && !body.held && !body.basketed && body.velocity.y<=0 && body.position.y<.18)place(body);if(body.basketed)snap(body);}const axes=pilot?.source.gamepad?.axes || [],offset=axes.length>=4?2:0;sticks[0].rotation.z=-(axes[offset] || 0)*.32;sticks[0].rotation.x=(axes[offset+1] || 0)*.32;lamp.scale.setScalar(pilot?.trigger?1.3:1);}
     return {basket,remote,addHarvest(bodies){fruits.push(...bodies);bodies.forEach((b,i)=>slots[b.id]={x:(i-1)*.05,z:i%2?.035:-.025});},get harvestComplete(){return fruits.filter(b=>b.id.startsWith('strawberry-') && collected.has(b.id)).length===3;},body:remoteBody,place,remove,update,get nextFruit(){return initial.find(id=>!collected.has(id));},get full(){return initial.every(id=>collected.has(id));},snapshot:()=>({collected:[...collected],full:initial.every(id=>collected.has(id)),harvestCount:[...collected].filter(id=>id.startsWith('strawberry-')).length}),reset(){collected.clear();for(const body of fruits)body.basketed=false;}};
 }

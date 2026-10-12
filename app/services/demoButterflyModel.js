@@ -100,6 +100,10 @@ function buildButterfly({gltf,bitmap},red=false){
     idle.setEffectiveWeight(1);flying.setEffectiveWeight(0);mixer.setTime(0);idle.setEffectiveTimeScale(0);
     return {wrapper,mixer,idle,flying,nodes,hinges,closed,open,texture,materials,geometries,meshes,bitmap};
 }
+// The optional welcome trial bakes this same rig into renderer-compatible
+// morphs; the live demo's model, cache and interaction state stay independent.
+export async function createDemoButterflyTrialSource(){return buildButterfly(await prepareDemoButterflyModel());}
+
 // Bake the small animated mesh at the existing quality cadence. The same
 // vertices are reused by both eyes; no offscreen sprite or extra XR context.
 function butterflyXRRenderer(gl,model){

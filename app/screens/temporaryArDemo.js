@@ -27,7 +27,7 @@ import {spatialStick,turnSpatialAxes} from '../services/spatialStick.js';
 import {butterflyElementVisit} from '../services/butterflyElementVisit.js';
 import {LIMO_CELL_BY_ID,limoRouteId} from '../services/limoProjectLearning.js';
 import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
-import {createDemoParagraphSequence} from '../services/demoParagraphSequence.js';
+import {createDemoVoiceTextFlow} from '../services/demoVoiceTextFlow.js';
 import {demoPlantOrbColor} from '../services/demoPlantChoices.js';
 import {ZINNIA_PLANT_COPY,applyZinniaNote,createZinniaPlantDiscovery,applyDiscoveredPlant,zinniaPlantButtons,drawZinniaPlantDiscovery,mountZinniaPlantDiscovery} from '../services/zinniaPlantDiscovery.js';
 let demoFramePlantChoiceOrbId='';
@@ -68,7 +68,7 @@ function updateSpatialLivingMap(now){
     const flatPreview=appRoot?.querySelector('[data-demo-living-map]');if(flatPreview)flatPreview.hidden=reveal.preview<=0;
     if(reveal.appear>0 && demoMapNarrationCount!==placedCount){
         clearDemoNarration({preserveAction:true});demoMapNarrationCount=placedCount;
-        introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.speak(introBoardBody);
+        introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));if(typeof demoProjectVoice!=='undefined')narrateDemoFrame(introBoardBody);
         introBoardParagraphFadeStartedAt=now;introBoardParagraphFadeTimes=[now];introBoardTextureDirty=true;
         const text=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
         if(text){text.innerHTML='<p class="is-revealed"></p>';const paragraph=text.querySelector('p');paragraph.textContent=introBoardVisibleBody;paragraph.style.cssText='opacity:0;transition:opacity 1.2s ease';requestAnimationFrame(()=>{if(paragraph.isConnected)paragraph.style.opacity='1';});}
@@ -108,11 +108,13 @@ import {createWelcomePracticeXR} from '../services/welcomePracticeXR.js';
 import {createWelcomePracticeVoice} from '../services/welcomePracticeVoice.js';
 import {createWelcomeComfortOptions,welcomePracticeVisualGuide} from '../services/welcomeComfortOptions.js';
 import {createZinniaFramePerch} from '../services/zinniaFramePerch.js';
+import {createSpatialZinniaVoiceBar,zinniaVoiceBarButtons,activateZinniaVoiceBar} from '../services/spatialZinniaVoiceBar.js';
+import {nearestWelcomePointerHit} from '../services/welcomePointerTarget.js';
 import {createProjectNarration} from '../services/projectNarration.js';
 let demoProjectVoice=null;
 import {welcomeTutorialEnabled,setWelcomeTutorialEnabled} from '../services/welcomeTutorialSettings.js';
 let welcomePractice=null,welcomePracticeVoice=null,welcomePracticeCompleted=false;
-let welcomeComfort=null,zinniaFramePerch=null,welcomeComfortGuideKey='';
+let welcomeComfort=null,zinniaFramePerch=null,welcomeComfortGuideKey='',zinniaVoiceBar=null;
 let welcomePracticeOverlay=null,welcomePracticeAmbientStart=null,welcomePracticeDisposeTimer=null;
 let knowledgeRenderer=null,heroDiceToy=null;
 import {INSECT_VISUALS,beeFlowerVisit,beeCuriosity,keepInsectAboveFloor} from '../services/demoInsectFlight.js';
@@ -570,8 +572,8 @@ function demoPimPanel(record, pose = record?.informationPose) {
 function clearSessionState() {
     demoZinniaNoteDraft=null;
     clearDemoZinniaDiscovery();
-    demoProjectVoice?.destroy();demoProjectVoice=null;
-    welcomeComfort=null;welcomeComfortGuideKey='';zinniaFramePerch?.destroy();zinniaFramePerch=null;
+    demoParagraphSequence?.cancel();demoParagraphSequence=null;demoProjectVoice?.destroy();demoProjectVoice=null;
+    zinniaVoiceBar?.destroy();zinniaVoiceBar=null;welcomeComfort=null;welcomeComfortGuideKey='';zinniaFramePerch?.destroy();zinniaFramePerch=null;
     welcomePractice?.destroy();welcomePractice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;welcomePracticeCompleted=false;welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;welcomePracticeAmbientStart=null;
     clearTimeout(welcomePracticeDisposeTimer);welcomePracticeDisposeTimer=null;
     ++livingPeekGeneration;livingPeekConsumedSources=new WeakMap();closeLivingPeek();livingPeek?.destroy();livingPeek=null;livingPeekPose=null;
@@ -806,6 +808,7 @@ function demoPanelActions() {
 }
 
 function syncDemoPanelActions() {
+    syncDemoVoiceBar();
     const mapPlay=appRoot?.querySelector('[data-demo-map-play]');
     if(mapPlay){const label=demoLivingMapPlayback.playing(performance.now())?'Pause living map':'Play living map';if(mapPlay.textContent!==label)mapPlay.textContent=label;}
     if(!infoPanel)return;
@@ -1458,7 +1461,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
     setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(choiceLabels.length===1?`Use ${choiceLabels[0]} below.`:'Choose an option below.'),{reveal:false});
     if (options.persistent) panel.classList.add('is-persistent-demo-board');
     const fullText = paragraph?.textContent || '';
-    demoProjectVoice?.speak(fullText);
+
     const revealTargets = [...panel.querySelectorAll('button, label, .tryit-guided-grid')];
     const choiceButtons = [...panel.querySelectorAll('[data-demo-choice]')];
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -1512,30 +1515,10 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
             options.onTextComplete?.();
         }
     };
-    const revealParagraph = () => {
-        if(narrationRevision!==demoNarrationRevision)return;
-        if (!typing || !paragraph) return;
-        paragraph.textContent = fullText;
-        paragraph.classList.add('is-revealed');
-        panel.classList.add('is-copy-ready');
-        introBoardVisibleBody = fullText;
-        introBoardTextureDirty = true;
-        boardTypingTimer = setTimeout(finishTyping, 800);
-    };
-    skipDemoNarration = finishTyping;
-    if (typing && !demoFastSkipActive) {
-        paragraph.textContent = '';
-        panel.classList.add('is-typing');
-        boardTypingTimer = setTimeout(revealParagraph, 700);
-    } else {
-        finishTyping();
-    }
-    if (typing) {
-        boardTypingWatchdogTimer = setTimeout(
-            finishTyping,
-            Math.max(DEMO_BOARD_TYPING_SAFETY_MS, 1200 + fullText.length * 90)
-        );
-    }
+    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[fullText],voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:()=>{if(narrationRevision!==demoNarrationRevision)return;if(paragraph)paragraph.textContent=fullText;introBoardVisibleBody=fullText;introBoardTextureDirty=true;},onComplete:finishTyping});
+    skipDemoNarration=()=>demoParagraphSequence?.finish();
+    demoParagraphSequence.start();
+    if(options.persistent || demoFastSkipActive)finishTyping();
     // The board is display-only while it types. Clicking it must not snap the
     // remaining copy into place or consume a marker gesture.
     panel.onclick = null;
@@ -1550,6 +1533,21 @@ const DEMO_QUICK_ACCESS_COPY=Object.freeze({
 });
 
 let demoNarrationRevision=0;
+function demoZinniaCue(text){
+    // Point at the actual object mentioned by the current paragraph.
+    let targetWorld=null;
+    if(/living map|wooden map|map ring/i.test(text))targetWorld=demoLivingMapOrigin;
+    else if(/\b(orb|plant choice|choose a plant)\b/i.test(text))targetWorld=markers.find(record=>record.id===demoFramePlantChoiceOrbId)?.position;
+    else if(/\btotem\b/i.test(text))targetWorld=markers.find(record=>record.demoType==='zone' && !record.demoNarrativeFaded)?.position;
+    else if(/living frame|this frame/i.test(text) && introWorldAnchor)targetWorld=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
+    const intent=/\b(well done|all fruit gathered|you did it)\b/i.test(text)?'celebrate':/\b(hello|welcome|hi there)\b/i.test(text)?'greet':'explain';
+    return {targetWorld,intent};
+}
+function narrateDemoFrame(text){
+    demoParagraphSequence?.cancel();
+    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[String(text || '')],voice:demoProjectVoice});
+    demoParagraphSequence.start();
+}
 function clearDemoNarration({preserveAction=false}={}) {
     if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.stop();
     if(!preserveAction)demoNarrationRevision++;
@@ -1608,7 +1606,6 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     board?.classList.toggle('is-utility-board',Boolean(options.stepLabel?.startsWith('UTILITY ')));
     board?.classList.toggle('is-space-paragraph-sequence',useParagraphSequence);
     rememberDemoSlide({stepLabel:introBoardStep,title:localizedTitle,body:bodyText,buttonLabel,onContinue,options:{...options},kind:'intro'});
-    let typingStartDelay = 900;
     let paragraphIndex = 0;
     let typing = true;
     let completionNotified = false;
@@ -1642,21 +1639,6 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             completionNotified = true;
             options.onTextComplete?.();
         }
-    };
-    const revealNextParagraph = () => {
-        if(narrationRevision!==demoNarrationRevision)return;
-        if (!typing) return;
-        board?.classList.add('is-copy-ready');
-        paragraphIndex++;
-        introBoardParagraphFadeStartedAt=performance.now();introBoardParagraphFadeTimes[paragraphIndex-1]=introBoardParagraphFadeStartedAt;
-        introBoardVisibleBody = paragraphs.slice(0, paragraphIndex).join('\n\n');
-        introBoardTextureDirty = true;
-        paintBoardParagraphs(introBoardVisibleBody);
-        if (paragraphIndex >= paragraphs.length) {
-            boardTypingTimer = setTimeout(finishTyping, demoParagraphReadingTime(paragraphs[paragraphIndex-1]));
-            return;
-        }
-        boardTypingTimer = setTimeout(revealNextParagraph, demoParagraphReadingTime(paragraphs[paragraphIndex-1]));
     };
     const updateSequenceParagraph = event => {
         if(narrationRevision!==demoNarrationRevision)return;
@@ -1720,7 +1702,6 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         board.classList.add('is-persistent-demo-board');
         if (firstArrival) {
             introSceneStartedAt = performance.now();
-            typingStartDelay = 900;
         }
     }
     finalActions?.setAttribute('hidden', '');
@@ -1742,29 +1723,20 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     syncDemoPanelActions();
-    if(useParagraphSequence){
-        demoParagraphSequence=createDemoParagraphSequence({paragraphs,readingTime:demoParagraphReadingTime,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,onChange:updateSequenceParagraph,onComplete:finishSequence});
-        skipDemoNarration=()=>{
-            if(narrationRevision!==demoNarrationRevision)return;
-            demoParagraphSequence?.cancel();
-            demoParagraphSequence=null;
-            updateSequenceParagraph({index:paragraphs.length-1,paragraph:paragraphs.at(-1) || '',phase:'reading',startedAt:-Infinity});
-            finishSequence();
-        };
-        if(demoFastSkipActive)skipDemoNarration();
-        else boardTypingTimer=setTimeout(()=>demoParagraphSequence?.start(),typingStartDelay);
-    }else if(demoFastSkipActive){finishTyping();
-    }else{
-        boardTypingTimer = setTimeout(revealNextParagraph, typingStartDelay);
-        boardTypingWatchdogTimer = setTimeout(
-            finishTyping,
-            Math.max(DEMO_BOARD_TYPING_SAFETY_MS, typingStartDelay + paragraphs.reduce((total,text)=>total+demoParagraphReadingTime(text),0)+2000)
-        );
-    }
+    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs,voice:demoProjectVoice,spokenSummary:options.spokenSummary,readingTime:demoParagraphReadingTime,onChange:event=>{
+        if(narrationRevision!==demoNarrationRevision)return;
+        if(continueButton)continueButton.hidden=true;
+        typing=true;
+        if(useParagraphSequence)updateSequenceParagraph(event);
+        else{paragraphIndex=event.index+1;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=paragraphs.slice(0,paragraphIndex).join('\n\n');introBoardTextureDirty=true;paintBoardParagraphs(introBoardVisibleBody);}
+    },onComplete:useParagraphSequence?finishSequence:finishTyping});
+    skipDemoNarration=()=>demoParagraphSequence?.finish();
+    demoParagraphSequence.start();
+    if(demoFastSkipActive)skipDemoNarration();
     setGuide('');
     syncDemoStageControls(options);
     if(options.stepLabel==='UTILITY 1.1')spawnDemoMapTotem();
-    if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.speak(options.spokenSummary || bodyText,{highlight:Boolean(options.spokenSummary)});
+
 }
 
 function syncDemoStageControls(options={}){
@@ -1836,7 +1808,7 @@ function showDemoSlideFromHistory(index){
             else slide.onContinue?.();
         },{...slide.options,stepLabel:slide.stepLabel,historyReplay:true});
     }else if(slide.kind==='welcome' || slide.kind==='placement'){
-        introSceneActive=true;introBoardVisible=true;introBoardTitle=slide.title;introBoardBody=slide.body;introBoardVisibleBody=slide.body;introBoardStep=slide.stepLabel;introBoardTextureDirty=true;useSharedWelcomeBoard(true);demoProjectVoice?.speak(slide.body);
+        introSceneActive=true;introBoardVisible=true;introBoardTitle=slide.title;introBoardBody=slide.body;introBoardVisibleBody=slide.body;introBoardStep=slide.stepLabel;introBoardTextureDirty=true;useSharedWelcomeBoard(true);narrateDemoFrame(slide.body);
         const board=appRoot?.querySelector('[data-tryit-guided-choice]');
         if(board){board.innerHTML=`<small>${demoIntroLabel()}</small><h2>${slide.title}</h2><div class="tryit-board-text-window"><p class="is-revealed">${slide.body}</p></div>`;board.hidden=false;board.classList.add('is-copy-ready','is-persistent-demo-board');}
         const button=appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -1978,7 +1950,7 @@ function paintLearningModuleBoard(){
     clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);skipDemoNarration=null;
     const board=learningModuleBoard(),step=learningModule.steps[learningModuleStep];
     introBoardStep=`LEARNING 2.${learningModuleStep+1}`;
-    introBoardTitle=board.title;introBoardBody=board.body;demoProjectVoice?.speak(board.body);introBoardVisibleBody=board.body;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;
+    introBoardTitle=board.title;introBoardBody=board.body;narrateDemoFrame(board.body);introBoardVisibleBody=board.body;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;
     const panel=appRoot?.querySelector('[data-tryit-guided-choice]');if(panel){panel.innerHTML=`<small>${introBoardStep}</small><h2>${board.title}</h2><div class="tryit-board-text-window"><p>${board.body.replace(/\n\n/g,'</p><p>')}</p></div>`;prepareTutorialBoard(panel);panel.classList.remove('is-typing');panel.classList.add('is-copy-ready','is-persistent-demo-board','is-lim-shared-surface');}
     setIntroBoardNextGuide(step?`Select ${limLearningContent(step.cellId).title} to continue. To finish, open Tools in the Control panel and choose End learning.` :'Open Tools in the Control panel and choose End learning to return to the demo.');
     infoPanel?.setLearningModules(board,{open:true});
@@ -2170,7 +2142,7 @@ function bindLimSessionInteractions(arSession) {
         demoLivingMapGrip?.reset();if(demoLivingMapOrigin){rebaseXrPoint(demoLivingMapOrigin,matrix);setDemoLivingMapRotation(livingMapRotation(Math.atan2(matrix[8],matrix[10])).multiply(livingMapRotation(demoLivingMapOrientation)),{fullRotation:true});}
         for(const record of markers)if(record.demoMapHome)rebaseXrPoint(record.demoMapHome,matrix);
         for(const insect of butterflyCompanions){rebaseXrPoint(insect.position,matrix);rebaseXrPoint(insect.handPosition,matrix);rebaseXrPose(insect.flightAnchor,matrix);if(insect.visit){rebaseXrPoint(insect.visit.position,matrix);rebaseXrPose(insect.visit.perch,matrix);if(insect.visit.trip){rebaseXrPoint(insect.visit.trip.from,matrix);rebaseXrPose(insect.visit.trip.perch,matrix);}}}
-        if(Number.isFinite(groundYEstimate))groundYEstimate+=matrix[13];infoPanel?.rebase(matrix);heroDiceToy?.rebase(matrix);hitMatrix=null;introBoardTextureDirty=true;
+        if(Number.isFinite(groundYEstimate))groundYEstimate+=matrix[13];infoPanel?.rebase(matrix);heroDiceToy?.rebase(matrix);zinniaVoiceBar?.rebase(matrix);hitMatrix=null;introBoardTextureDirty=true;
     };
     referenceSpace?.addEventListener('reset',reset);
     arSession.addEventListener('selectstart',selectStart,true);arSession.addEventListener('selectend',selectEnd,true);arSession.addEventListener('select',select,true);arSession.addEventListener('visibilitychange',visibility);
@@ -2371,23 +2343,15 @@ function showArWelcomeShowcase() {
         const readyButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(readyButton){readyButton.hidden=false;readyButton.disabled=false;}
         syncDemoPanelActions();
     };
-    const revealOpeningParagraph=()=>{
-        if(!openingTyping || !arWelcomeShowcaseActive)return;
-        openingParagraphIndex++;
-        introBoardParagraphFadeStartedAt=performance.now();introBoardParagraphFadeTimes[openingParagraphIndex-1]=introBoardParagraphFadeStartedAt;
-        introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;
-        if(openingParagraphIndex>=openingParagraphs.length){boardTypingTimer=setTimeout(finishOpeningCopy,demoParagraphReadingTime(openingParagraphs[openingParagraphIndex-1]));return;}
-        boardTypingTimer=setTimeout(revealOpeningParagraph,demoParagraphReadingTime(openingParagraphs[openingParagraphIndex-1]));
-    };
     const beginOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive)return;
         if(introBoardStep==='INTRO 1.2'){finishOpeningCopy();return;}
-        clearTimeout(boardTypingTimer);clearTimeout(boardTypingWatchdogTimer);
+        clearDemoNarration();
         if(!Number.isFinite(ambientBeesStartedAt))ambientBeesStartedAt=arWelcomeClock.elapsed;
         arWelcomeOpeningActive=false;arWelcomeSettleStage=true;arWelcomeSettleStartedAt=arWelcomeClock.elapsed;limMeshVisible=false;
         introBoardStep='INTRO 1.2';
         introBoardTitle=demoLocalizedText(guidedDemoStep('INTRO 1.2').title);
-        introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);demoProjectVoice?.speak(introBoardBody);
+        introBoardBody=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']);
         introBoardVisibleBody='';introBoardParagraphFadeTimes=[];introTextureUploadedAt=-Infinity;introBoardTextureDirty=true;
         const continueOpeningCopy=event=>{event?.stopImmediatePropagation?.();if(openingTyping || introBoardStep!=='INTRO 1.2')return;suppressSessionSelectUntil=performance.now()+700;openingTyping=false;clearDemoNarration();const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=true;button.onclick=null;}clearTimeout(arWelcomeUnlockTimer);arWelcomeIntroPending=false;arWelcomeSettleStage=false;runArWelcomeTutorial(0);};
         rememberDemoSlide({stepLabel:'INTRO 1.2',title:introBoardTitle,body:introBoardBody,buttonLabel:'Let’s start',onContinue:continueOpeningCopy,kind:'welcome'});
@@ -2402,13 +2366,14 @@ function showArWelcomeShowcase() {
         syncDemoPanelActions();
         panel.classList.add('is-typing');paintOpeningCopy('');
         if(demoFastSkipActive)finishOpeningCopy();
-        else boardTypingTimer=setTimeout(revealOpeningParagraph,700);
+        else{demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{openingTyping=true;openingParagraphIndex=event.index+1;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:finishOpeningCopy});demoParagraphSequence.start();}
     };
     rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitingButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(waitingButton){waitingButton.hidden=true;waitingButton.disabled=false;waitingButton.textContent='Continue';waitingButton.onclick=()=>{if(waitingButton.hidden)return;suppressSessionSelectUntil=performance.now()+700;clearDemoNarration();beginOpeningCopy();};}syncDemoPanelActions();
     const waitForOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
-        if(arWelcomeClock.elapsed>=arWelcomeOpeningDuration){
+        if(arWelcomeClock.elapsed>=DEMO_WELCOME_TITLE_HOLD_MS && !demoParagraphSequence){demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{introOpeningCopySkipped=false;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,event.index+1).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:()=>{introBoardTextureDirty=true;const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.onclick=beginOpeningCopy;}syncDemoPanelActions();}});demoParagraphSequence.start();}
+        if(demoParagraphSequence?.snapshot().completed){
             introBoardVisibleBody=introBoardBody;introBoardTextureDirty=true;
             const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;
         }
@@ -2417,11 +2382,11 @@ function showArWelcomeShowcase() {
     boardTypingTimer=setTimeout(waitForOpeningCopy,100);
     skipDemoNarration=()=>{
         if(arWelcomeOpeningActive){
-            introOpeningCopySkipped=true;introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
+            demoParagraphSequence?.finish();introOpeningCopySkipped=true;introBoardVisibleBody=introBoardBody;paintOpeningCopy(introBoardBody);introBoardTextureDirty=true;
             clearTimeout(boardTypingTimer);clearTimeout(arWelcomeUnlockTimer);
             const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;
         }
-        finishOpeningCopy();
+        if(demoParagraphSequence)demoParagraphSequence.finish();else finishOpeningCopy();
     };
     const layer=document.createElement('div');layer.className='tryit-live-welcome';arWelcomeLayer=layer;
     layer.innerHTML='<canvas width="2500" height="2100" role="img" aria-label="NourishlandXR introduction. Discover how plant knowledge becomes a mapped, understandable and connected place."></canvas><button type="button" class="tryit-welcome-more" data-welcome-more>Click for more</button>';
@@ -2519,7 +2484,7 @@ function showArWelcomeShowcase() {
         welcomePractice.start(viewerMatrix,calibratedDemoGroundY());
         syncWelcomeComfortOptions();
     }else if(calmWelcome)showDemoCalmWelcome();
-    else demoProjectVoice?.speak(introBoardBody);
+    else narrateDemoFrame(introBoardBody);
 }
 
 // Use the same billboard geometry for ray hits and texture drawing.
@@ -2670,15 +2635,18 @@ function showDemoZinniaNote(record=null){
     showIntroBoard('Create a Note with Zinnia','Tell me what you want written. We will check your words together, then choose a colour.','',null,{stepLabel:'ELEMENTS · Custom Note',historyPhase:'chooser',dynamicCopy:true});
     demoFramePlantChoiceOrbId='zinnia-note';introBoardTextureDirty=true;
     demoZinniaDiscovery=createZinniaPlantDiscovery({mode:'note',onSpeak:()=>demoProjectVoice?.stop(),onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onReady:draft=>{
+        clearDemoZinniaDiscovery();
         demoFramePlantChoiceOrbId='';appRoot?.querySelectorAll('[data-frame-plant-choice]').forEach(button=>button.remove());demoZinniaView?.destroy();demoZinniaView=null;finishIntroBoard();
         if(record){applyZinniaNote(record,draft);refreshDemoRecord(record);updateSimulatedMarkers();openDemoNoteExperience(record);}
         else{demoZinniaNoteDraft=draft;armDemoPlacement('note',{explained:true});}
+        syncDemoVoiceBar();return true;
     }});
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');
     if(board && !simulatedMode){demoZinniaView=mountZinniaPlantDiscovery(board,demoZinniaDiscovery);demoZinniaView.render(demoZinniaDiscovery.state());}
     syncDemoZinniaButtons(demoZinniaDiscovery.state());
 }
 function syncDemoZinniaButtons(state){
+    syncDemoVoiceBar();
     if(!simulatedMode || !arWelcomeLayer)return;
     arWelcomeLayer.querySelectorAll('[data-frame-plant-choice]').forEach(button=>button.remove());
     for(const choice of zinniaPlantButtons(state)){
@@ -2687,12 +2655,23 @@ function syncDemoZinniaButtons(state){
         button.onclick=()=>demoZinniaDiscovery?.activate(choice.action);arWelcomeLayer.append(button);
     }
 }
-function clearDemoZinniaDiscovery(){demoZinniaDiscovery?.destroy();demoZinniaDiscovery=null;demoZinniaView?.destroy();demoZinniaView=null;arWelcomeLayer?.querySelector('[data-zinnia-plant-input]')?.remove();globalThis.speechSynthesis?.cancel();}
+function syncDemoVoiceBar(){
+    if(!appRoot)return;
+    let bar=appRoot.querySelector('[data-zinnia-voice-bar]');
+    if(!bar){bar=document.createElement('nav');bar.dataset.zinniaVoiceBar='';bar.setAttribute('aria-label','Zinnia voice controls');bar.style.cssText='position:fixed;left:16px;bottom:18px;display:flex;gap:6px;padding:8px;background:#203d30ee;border:1px solid #91ad91;border-radius:24px;z-index:50;pointer-events:auto';appRoot.append(bar);}
+    bar.hidden=Boolean(session && !simulatedMode);bar.style.display=bar.hidden?'none':'flex';bar.replaceChildren();
+    const choices=zinniaVoiceBarButtons({conversation:Boolean(demoZinniaDiscovery)});if(demoZinniaDiscovery)choices.push({id:'cancel',label:'Cancel'});
+    for(const choice of choices){const button=document.createElement('button');button.type='button';button.textContent=choice.label;button.disabled=Boolean(choice.disabled);button.style.cssText='border:0;border-radius:18px;padding:9px 12px;background:#42654a;color:#f2f4dd;font:14px system-ui';button.onclick=()=>{activateZinniaVoiceBar(choice.id,demoZinniaDiscovery);syncDemoVoiceBar();};bar.append(button);}
+}
+function clearDemoZinniaDiscovery(){demoZinniaDiscovery?.destroy();demoZinniaDiscovery=null;demoZinniaView?.destroy();demoZinniaView=null;arWelcomeLayer?.querySelector('[data-zinnia-plant-input]')?.remove();}
 function selectDemoNativePlant(chooser,profile){
     const orb=markers.find(item=>item.id===chooser.demoNativeChooserFor);if(!applyDiscoveredPlant(orb,profile))return;
+    clearDemoZinniaDiscovery();
     demoFramePlantChoiceOrbId='';arWelcomeLayer?.querySelector('[data-zinnia-plant-input]')?.remove();appRoot?.querySelector('.living-frame-plant-choices')?.remove();appRoot?.querySelectorAll?.('[data-frame-plant-choice]')?.forEach(button=>button.remove());introBoardTextureDirty=true;
     knowledgeRenderer?.clear(orb);refreshDemoRecord(orb);updateSimulatedMarkers();toggleDemoPlantProfile(orb);
     infoPanel?.focusPlant(orb,resolvePlantPim(profile));infoPanel?.setMediaCollapsed(false);
+    syncDemoVoiceBar();
+    return true;
 }
 function demoFramePlantChoiceHit(ray=latestControllerRay){
     if(!demoFramePlantChoiceOrbId || !introWorldAnchor)return null;
@@ -3470,7 +3449,7 @@ function armDemoPlacement(type, {explained=false}={}) {
                     : {title:'Leave a Note',body:DEMO_GUIDED_COPY['ELEMENTS 1.16'],next:questTriggerPlacement?'Choose a location and press the trigger to place the Note.':'Choose a location and tap the aiming circle to place the Note.'};
         introBoardStep=type==='plant'?'ELEMENTS 1.5':type==='plant2'?'ELEMENTS 1.11':type==='note'?'ELEMENTS 1.16':'ELEMENTS 1.24';
         introBoardTitle=placementCopy.title;
-        introBoardBody=placementCopy.body;demoProjectVoice?.speak(placementCopy.body);
+        introBoardBody=placementCopy.body;narrateDemoFrame(placementCopy.body);
         introBoardVisibleBody=placementCopy.body;
         rememberDemoSlide({stepLabel:introBoardStep,title:placementCopy.title,body:placementCopy.body,buttonLabel:'',onContinue:null,options:{nextGuide:placementCopy.next},kind:'placement'});
         introBoardTextureDirty=true;
@@ -5035,6 +5014,7 @@ function setupRenderer() {
     // Totem cards share the Totem's placement heading. They must not turn with
     // the viewer after the buttons have been aimed during placement.
     totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false,ray:()=>latestControllerRay});
+    zinniaVoiceBar=createSpatialZinniaVoiceBar(gl,{getConversation:()=>demoZinniaDiscovery,isInputOccupied:source=>welcomePractice?.stage.isHolding(source) || demoGrabInputSource===source && demoHeldIndex>=0 || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || infoPanel?.isHandInteracting(source),ray:()=>latestControllerRay,onAction:()=>introBoardTextureDirty=true});
     tetherRenderer = createSpatialTetherRenderer(gl);
     try{handOutlineRenderer=createXRHandOutline(gl);}catch(error){console.warn('Hand outline unavailable:',error.message);}
     nearHandInteraction=createHandSurfaceInteraction({
@@ -5062,12 +5042,12 @@ function setupRenderer() {
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
     // The interaction toy now has a purpose on the welcome table. The loose
     // Hero Dice no longer competes with the plant/Control panel journey.
-    if(welcomeTutorialEnabled() && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,
+    if(welcomeTutorialEnabled() && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getTrialPanelPose:()=>infoPanel?.spatialPose,
         onFeedback:(kind,source)=>{if(kind==='transform'){demoFeedback.sound('practice-reward');if(source)demoFeedback.pulse(source,.8,180);return;}const reward=['lesson','plant','collect','open','harvest','ring','land'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
         onChange:state=>{syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
         isFrameReady:()=>Boolean(livingFrameModel?.entranceReady),getFrameError:()=>livingFrameModel?.error,
         onPanelOwns:source=>infoPanel?.getHeldInputSource()===source || Boolean(infoPanel?.isHandInteracting(source)),
-        onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray));},onHit:welcomePracticeFrameHit,
+        onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;const target=nearestWelcomePointerHit(ray,welcomePracticeFrameHit(ray),welcomePractice?.stage.hit(ray));if(target?.kind==='voice-bar')return Boolean(zinniaVoiceBar?.select(ray));if(target?.kind!=='panel')return false;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray));},onHit:welcomePracticeFrameHit,
         onComplete:({aborted=false}={})=>{welcomePracticeVoice?.destroy();welcomePracticeVoice=null;if(infoPanel)infoPanel.welcomeComfortVisible=false;infoPanel?.suspend(true);infoPanel?.setComfortContext(null);infoPanel?.setOpacity(1);infoPanel?.setIntroduction(false);welcomeComfort=null;welcomePracticeCompleted=true;
             zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({character:welcomePractice?.stage.takeZinniaCharacter()});
             zinniaFramePerch.attach(gl);if(!aborted)zinniaFramePerch.show();welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome({returning:!aborted});
@@ -5100,6 +5080,7 @@ function updateDemoControllerRay(frame,time=performance.now()) {
     latestTrackedHandStates = sources.filter(source => source.hand)
         .map(source => ({ source, state: handTrackingState(frame, source, referenceSpace) }))
         .filter(entry => entry.state?.tracked);
+    zinniaVoiceBar?.updateHands(latestTrackedHandStates,performance.now());
     for(const {source,state} of latestTrackedHandStates)if(!state.pinch && livingPeekConsumedSources.get(source)==='hand')livingPeekConsumedSources.delete(source);
     demoPointerRays=latestTrackedHandStates.filter(entry=>entry.state.pointer).map(entry=>({source:entry.source,ray:entry.state.pointer}));
     for(const source of sources.filter(source=>!source.hand && source.targetRayMode==='tracked-pointer')){
@@ -5220,6 +5201,7 @@ function pollDemoHandPinch() {
     const pinching = Boolean(latestHandState.pinch);
     const source=latestTrackedHandStates.find(entry=>entry.state===latestHandState)?.source;
     if(livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || infoPanel?.getHeldInputSource()===source || infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPinchActive=pinching;return;}
+    if(pinching && !handPinchActive && zinniaVoiceBar?.select(latestControllerRay)){handPinchActive=true;return;}
     if (pinching && !handPinchActive && activateDemoFramePlantChoice()) {handPinchActive=true;return;}
     if (pinching && !handPinchActive) {
         const contact=orbPinchPoint(latestHandState);if(contact && markers.some(r=>r.demoType==='plant' && r.position && Math.hypot(r.position.x-contact.x,r.position.y-contact.y,r.position.z-contact.z)<.16) && beginHandDemoGrab(source)){handPinchActive=true;return;}
@@ -5560,13 +5542,13 @@ function drawIntroNoteContent(ctx) {
                 ctx.fillStyle='#fff';ctx.textBaseline='top';
                 const layout=fitIntroBodyLayout(ctx,demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']),contentWidth,bodyHeight,true);
                 ctx.font=`600 ${layout.fontSize}px ${DEMO_PRESENTATION_FONT}`;
-                const count=introOpeningCopySkipped || window.matchMedia('(prefers-reduced-motion: reduce)').matches?layout.paragraphLines.length:layout.paragraphLines.filter((lines,index)=>openingElapsed>=DEMO_WELCOME_TITLE_HOLD_MS+layout.paragraphLines.slice(0,index).reduce((total,prior)=>total+demoParagraphReadingTime(prior.join(' ')),0)).length;
+                const count=introOpeningCopySkipped?layout.paragraphLines.length:introBoardVisibleBody.split('\n\n').filter(Boolean).length;
                 const windowLayout=introReadingWindow(layout,count,bodyHeight);
                 const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;let y=bodyTop;
                 for(const [index,lines] of layout.paragraphLines.entries()){
                     if(index<windowLayout.first || index>=windowLayout.end)continue;
                     const previous=layout.paragraphLines.slice(0,index).map(lines=>lines.join(' '));
-                    const age=introOpeningCopySkipped?Infinity:openingElapsed-DEMO_WELCOME_TITLE_HOLD_MS-previous.reduce((total,text)=>total+demoParagraphReadingTime(text),0);
+                    const age=introOpeningCopySkipped?Infinity:performance.now()-(introBoardParagraphFadeTimes[index] ?? performance.now());
                     ctx.save();ctx.globalAlpha=reducedMotion?1:Math.max(0,Math.min(1,age/1100));
                     for(const line of lines){ctx.fillText(line,contentCenter,y);y+=layout.lineHeight;}ctx.restore();y+=layout.paragraphGap;
                 }
@@ -5766,7 +5748,9 @@ function syncWelcomeComfortOptions(state=welcomePractice?.stage.snapshot()){
 }
 function welcomePracticeFrameHit(ray){
     if(!welcomePractice?.active || welcomePractice.stage.exiting)return null;
-    const hit=infoPanel?.hit(ray);return hit?{...hit,kind:'button',worldPoint:hit.point || hit.position}:null;
+    const panel=infoPanel?.hit(ray),rim=demoLivingFrameRimHit(ray);
+    const hit=nearestDemoXrTarget([panel?{...panel,kind:'panel'}:null,rim,zinniaVoiceBar?.hit(ray)]);
+    return hit?{...hit,worldPoint:{x:ray.origin.x+ray.direction.x*hit.distance,y:ray.origin.y+ray.direction.y*hit.distance,z:ray.origin.z+ray.direction.z*hit.distance}}:null;
 }
 function drawWelcomePracticeFrame(view){
     gl.useProgram(program);gl.bindBuffer(gl.ARRAY_BUFFER,buffer);const p=gl.getAttribLocation(program,'p'),uv=gl.getAttribLocation(program,'uv');gl.enableVertexAttribArray(p);gl.vertexAttribPointer(p,3,gl.FLOAT,false,20,0);gl.enableVertexAttribArray(uv);gl.vertexAttribPointer(uv,2,gl.FLOAT,false,20,12);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);drawIntroSpatial(view);gl.depthMask(true);
@@ -6500,7 +6484,7 @@ function drawDemoInputPointer(view,pointerSource) {
     // Android exposes taps as a WebXR `screen` ray. It remains available for
     // hit testing, but the Quest laser/contact sphere must only be rendered
     // for tracked spatial input.
-    if (!latestControllerRay || pointerSource?.targetRayMode === 'screen' || (demoHandMode==='outline' && (pointerSource?.hand || latestTrackedHandStates.length>0))) return;
+    if (!latestControllerRay || pointerSource?.targetRayMode === 'screen' || pointerSource?.hand) return;
     const { origin, direction } = latestControllerRay;
     const start = {
         x: origin.x + direction.x * XR_LASER_POINTER_CONFIG.startOffset,
@@ -6541,7 +6525,7 @@ function drawDemoInputPointer(view,pointerSource) {
     const mapSurface=mapPoint ? {point:mapPoint,distance:Math.hypot(mapPoint.x-origin.x,mapPoint.y-origin.y,mapPoint.z-origin.z)} : null;
     if(mapDragging && !mapSurface)return;
     // Butterflies can be caught along the ray, but never clamp the laser tip.
-    const surface = mapDragging?mapSurface:[demoFramePlantChoiceHit(),demoLivingFrameRimHit(),limSurface,controlSurface,greenSurface,placementSurface,handleSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = mapDragging?mapSurface:[zinniaVoiceBar?.hit(latestControllerRay),demoFramePlantChoiceHit(),demoLivingFrameRimHit(),limSurface,controlSurface,greenSurface,placementSurface,handleSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.
@@ -6650,6 +6634,7 @@ async function startImmersive() {
             if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
             if(xrRecoveryStatus==='failed'){returnToWelcome();return;}
             captureDemoInputEventRay(event);
+            if(zinniaVoiceBar?.select(latestControllerRay))return;
             if(resolveDemoCellTarget()?.kind==='living-frame-rim')return;
             if(butterflyTriggerSources.has(event.inputSource)){butterflyTriggerSources.delete(event.inputSource);return;}
             // The dedicated LIM listener normally consumes this event first.
@@ -6764,7 +6749,7 @@ async function startImmersive() {
             if (pose) runXrFrameStep('viewer transform',()=>{
                 viewerMatrix = Float32Array.from(pose.transform.matrix);
                 latestDemoView = pose.views?.[0] || null;
-                lastViewerPoseAt = _time;
+                lastViewerPoseAt = _time;zinniaVoiceBar?.update(viewerMatrix);
             });
             if(livingPeekActive && livingPeekPose){
                 beginHandTrackingFrame(frame,_time);
@@ -6791,7 +6776,7 @@ async function startImmersive() {
                 infoPanel?.update(viewerMatrix,_time,latestControllerRay,frame,source=>welcomePractice?.stage.exiting || welcomePractice?.stage.isHolding(source));
                 const practiceLayer=frame.session.renderState.baseLayer;
                 if(practiceLayer && pose){gl.bindFramebuffer(gl.FRAMEBUFFER,practiceLayer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
-                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('comfort options render',()=>infoPanel?.draw(view));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
+                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('comfort options render',()=>infoPanel?.draw(view));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));runXrFrameStep('Zinnia voice bar',()=>zinniaVoiceBar?.draw(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
                     gl.disable(gl.SCISSOR_TEST);markXrFirstContentRendered();
                 }
                 if(xrRecoveryStatus==='failed')welcomePractice.stage.abort();
@@ -6850,7 +6835,7 @@ async function startImmersive() {
                 runXrFrameStep('Control panel render',()=>infoPanel?.draw(view));
                 runXrFrameStep('floor dice render',()=>heroDiceToy?.draw(view));
                 runXrFrameStep('butterfly render',()=>drawSpatialButterfly(view));
-                runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));
+                runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));runXrFrameStep('Zinnia voice bar',()=>zinniaVoiceBar?.draw(view));
                 runXrFrameStep('pointer render',()=>drawDemoControllerPointer(view));
                 if(demoPeekPortal?.active)runXrFrameStep('Peek transition',()=>demoPeekPortal.drawNative(gl,view,livingFrameModel,viewerMatrix));
                 if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));

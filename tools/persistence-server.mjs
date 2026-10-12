@@ -133,7 +133,7 @@ function writeJson(filePath, data) {
     fs.renameSync(tempPath, filePath);
 }
 
-const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library']);
+const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library', 'zinnia']);
 
 function normalizeApiPath(pathname) {
     if (pathname === '/xr-api') return '/api';

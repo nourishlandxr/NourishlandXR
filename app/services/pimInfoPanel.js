@@ -29,6 +29,7 @@ const PANEL_GRAB_HOLD_MS = 800;
 const PANEL_GRAB_CANCEL_DISTANCE_PX = 14;
 
 // This is a reading projection, never a second store of plant knowledge.
+function publishPanelVoiceContext(content){if(!content?.title && !content?.body)return;globalThis.dispatchEvent?.(new CustomEvent('nlxr-zinnia-context',{detail:{title:content.title || '',body:typeof content.body==='string'?content.body:''}}));}
 export function pimInfoContent(document, path) {
     const node = document?.nodes?.find(item => item.id === path || item.path === path);
     if (!node) return null;
@@ -1426,7 +1427,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         return candidates[0] || null;
     }
     function dockSpatialMedia(side){mediaDockSide=side || 'top';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
-    const api={element,
+    const api={element,get spatialPose(){return pose?{...pose,width:spatialDimensions().mainWidth}:null;},
         setComfortContext(value){if(Boolean(comfortContext)!==Boolean(value)){previewHint='';hoveredAction='';hoveredDescription='';hoveredPanelId='';}comfortContext=value;hidden=false;settingsOpen=viewOpen=guidesOpen=false;explorerClosed=true;railCollapsed=false;mediaDockSide=value?'right':'top';element.classList.remove('is-opening-compact');if(value){settingsElement.hidden=explorerElement.hidden=viewElement.hidden=guidesElement.hidden=true;}render(true);},
         setOpacity(value=1){panelOpacity=Math.max(0,Math.min(1,value));element.style.opacity=String(panelOpacity);},
         setRayFilter(value){rayFilter=typeof value==='function'?value:()=>true;},
@@ -1444,6 +1445,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         },
         clearPlant(nextRecord){if(knowledgeRecord===nextRecord)knowledgeRecord=null;if(record!==nextRecord){renderExplorer();return false;}record=null;identity=null;selection=null;mediaCollapsed=true;loadPanelImage('');page=0;render(true);return true;},
         showLearning(content){
+            publishPanelVoiceContext(content);
             const retainedMedia=content?.retainImage?(previewMedia() || visibleMedia):null;
             objectContext=null;contextHint='';
             if(!content?.keepExplorerContext)knowledgeRecord=null;
@@ -1510,9 +1512,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=selectedContent;identity={plant:document.identity?.commonName || document.identity?.scientificName || 'Plant',scientific:document.identity?.scientificName || '',media:nextMedia,hint:String(media?.hint || previousHint || '')};
             mediaCollapsed=!nextMedia?.image;mediaTouched=false;
             loadPanelImage(nextMedia?.image || '');
-            tab='Details';page=savedContext.mode==='explore'?nextRecord.explorerMolecule?.readingPage || 0:savedContext.readingPage || 0;render(true);
+            tab='Details';page=savedContext.mode==='explore'?nextRecord.explorerMolecule?.readingPage || 0:savedContext.readingPage || 0;render(true);publishPanelVoiceContext({title:identity.plant,body:document.identity?.identityStatement || identity.hint});
         },
-        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;fruitControlsActive=false;objectContext=null;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String((cellMedia?.image || cellMedia?.url || cellMedia?.src) ? next.title : document.identity?.commonName || '')}:previous;record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);return true;},
+        select(nextRecord,document,path){const next=pimInfoContent(document,path);if(!next)return false;fruitControlsActive=false;objectContext=null;const sameRecord=record===nextRecord,previous=sameRecord?identity?.media:null,previousHint=sameRecord?identity?.hint:'';const cellMedia=next.media;const image=cellMedia?.image || cellMedia?.url || cellMedia?.src || document?.identity?.image;const media=image?{image:String(image),alt:String(cellMedia?.alt || document.identity?.imageAlt || document.identity?.commonName || document.identity?.scientificName || 'Plant'),caption:String((cellMedia?.image || cellMedia?.url || cellMedia?.src) ? next.title : document.identity?.commonName || '')}:previous;record=nextRecord;knowledgeRecord=nextRecord;knowledgeDocument=document;selection=next;identity={plant:next.plant,scientific:document.identity?.scientificName || '',media,hint:previousHint};loadPanelImage(media?.image || '');mediaCollapsed=!media?.image;mediaTouched=false;tab='Details';hidden=false;page=0;render(true);publishPanelVoiceContext(next);return true;},
         refresh(nextRecord,document){if(record===nextRecord && selection)api.select(record,document,selection.id);},
         suspend(value){element.style.visibility=value?'hidden':'';detached=Boolean(value);renderSettings();if(!value){updateReading();updatePathway();}},
         attach(gl){fruitGl=gl;fruitWindow?.attach(gl);renderer?.destroy();renderer=createSpatialTotemCards(gl,{canvas,surfaces:(_position,_viewRight,cards)=>{

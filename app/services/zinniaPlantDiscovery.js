@@ -127,7 +127,7 @@ export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpe
     async function confirm(){
         if(mode==='note'){
             if(state.phase==='confirm-note'){emit({phase:'color'});say('What colour would you like? Green, blue, amber, or rose.');return;}
-            if(state.phase==='confirm-color'){emit({phase:'ready'});onReady({text:draft,color:state.color});void voice.speak('Your Note is ready. You can place it and move it to the right spot.');return;}return;
+            if(state.phase==='confirm-color'){emit({phase:'ready'});const presented=onReady({text:draft,color:state.color});if(presented!==true && !disposed)void voice.speak('Your Note is ready. You can place it and move it to the right spot.');return;}return;
         }
         if(state.phase!=='confirm' || !selected)return;
         controller?.abort();controller=new AbortController();const token=++generation,signal=controller.signal;emit({phase:'loading'});say('I’ll prepare the photograph and Plant cells for '+selected.commonName+'.');
@@ -144,8 +144,11 @@ export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpe
             if(disposed || token!==generation)return;
             const profile=selected.source==='daleys'?daleysProfile(photo):discoveredPlantProfile(photo,await summaryFor(photo,signal));
             if(photo.photoKind==='species reference'){profile.pim.identity.imageCaption+=' · species reference, not this cultivar';profile.pim.sources.push({id:'photo',title:'Species reference photograph',url:photo.photoSourceUrl});}
-            emit({phase:'ready'});onReady(profile);
-            void voice.speak('Here is a photograph of '+profile.common_name+'. '+profile.pim.identity.identityStatement.slice(0,350)+' Your Plant cells are ready.');
+            emit({phase:'ready'});
+            // A host that opens the next Frame owns its narration. Speaking
+            // again here would cancel that flow and strand its Continue action.
+            const presented=onReady(profile);
+            if(presented!==true && !disposed)void voice.speak('Here is a photograph of '+profile.common_name+'. '+profile.pim.identity.identityStatement.slice(0,350)+' Your Plant cells are ready.');
         }catch(error){if(!disposed && token===generation){emit({phase:'confirm'});say(signal.aborted?'Loading took too long. Please try again.':error.message);}}
         finally{clearTimeout(timeout);}
     }
@@ -179,9 +182,9 @@ export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpe
         activate(action){if(action==='voice')void voice.listen();else if(action==='done')voice.finish();else if(action==='confirm')void confirm();else if(action==='retry'){emit({phase:'idle',query:'',results:[]});say(mode==='note'?'What would you like written?':'Which plant would you like?');}else if(action==='back')showResults();else if(action==='more'){page=(page+1)%Math.ceil(catalogue.length/3);showResults();}else if(action==='cancel')void receive('cancel');else if(action.startsWith('result:'))select(Number(action.split(':')[1]));else if(action.startsWith('color:'))chooseColor(action.slice(6));},
         destroy(){disposed=true;generation++;controller?.abort();voice.destroy();}};return api;
 }
-export function zinniaPlantButtons(state){
+export function zinniaPlantButtons(state,{voiceControls=false}={}){
     const busy=['loading','searching','ready','cancelled'].includes(state.phase);
-    const choices=busy?(['loading','searching'].includes(state.phase)?[{action:'cancel',label:'Cancel'}]:[]):[{action:'voice',label:'Speak'},{action:'done',label:'Done speaking'},{action:'cancel',label:'Cancel'}];
+    const choices=voiceControls?(busy?(['loading','searching'].includes(state.phase)?[{action:'cancel',label:'Cancel'}]:[]):[{action:'voice',label:'Speak'},{action:'done',label:'Done speaking'},{action:'cancel',label:'Cancel'}]):[];
     if(['confirm','confirm-note','confirm-color'].includes(state.phase))choices.push({action:'confirm',label:'Yes, confirm'},{action:state.mode==='note'?'retry':'back',label:'No, change it'});
     if(state.phase==='color' || state.phase==='confirm-color')for(const color of Object.keys(ZINNIA_NOTE_COLORS))choices.push({action:'color:'+color,label:color});
     if(state.phase==='results'){state.results.forEach((item,index)=>choices.push({action:'result:'+index,label:(index+1)+'. '+(item.commonName || item.scientificName)}));if(state.hasMore)choices.push({action:'more',label:'More varieties'});}
@@ -192,7 +195,7 @@ export function drawZinniaPlantDiscovery(ctx,state){
     ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#f3faf5';ctx.font='600 44px Manrope, sans-serif';ctx.fillText(state.mode==='note'?'Create a Note with Zinnia':'Create an Orb with Zinnia',700,350,980);
     ctx.font='400 25px sans-serif';ctx.fillStyle='#cfddd4';canvasLines(ctx,state.voiceMessage || state.message,700,408,880,34,4);
     for(const button of zinniaPlantButtons(state)){ctx.fillStyle=button.action.startsWith('color:')?ZINNIA_NOTE_COLORS[button.action.slice(6)]:'#23493a';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,14);ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#83ba9b';ctx.stroke();ctx.fillStyle=button.action.startsWith('color:')?'#17362b':'#f5faf7';ctx.font='500 24px sans-serif';ctx.fillText(button.label,button.x+button.width/2,button.y+button.height/2,button.width-20);}
-    ctx.font='400 19px sans-serif';ctx.fillStyle='#b9cdbf';ctx.fillText('Tap Speak for each reply · confirm before saving · AI-generated voice',700,1140,980);ctx.restore();
+    ctx.font='400 19px sans-serif';ctx.fillStyle='#b9cdbf';ctx.fillText('Use the microphone bar at lower left · confirm before saving · AI-generated voice',700,1140,980);ctx.restore();
 }
 export function mountZinniaPlantDiscovery(root,discovery){
     const panel=document.createElement('section');panel.className='living-frame-plant-choices zinnia-plant-discovery';panel.style.cssText='position:relative;display:grid;gap:12px;max-width:600px;margin:18px auto;padding:18px;background:#16362be8;border:1px solid #89b59d;border-radius:18px;color:#eef8f2;pointer-events:auto';

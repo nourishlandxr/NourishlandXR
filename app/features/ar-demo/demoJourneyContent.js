@@ -139,7 +139,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.11",
         "act": "Compare profiles",
         "title": "Place another Plant Orb",
-        "main": "Place a plain Orb beside Pigeon Pea. Then tell Zinnia a common or scientific plant name using voice or the keyboard in the Living Frame.",
+        "main": "Place a plain Orb beside Pigeon Pea. Then tell Zinnia a common or scientific plant name using the microphone, or enter the name in the Living Frame.",
         "panel": "Existing placement controls; media closed.",
         "hint": "Place the second Orb, then choose its plant.",
         "art": null

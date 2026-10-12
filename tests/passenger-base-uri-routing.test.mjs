@@ -92,6 +92,20 @@ after(() => {
     fs.rmSync(workspaceDir, { recursive: true, force: true });
 });
 
+for(const requestPath of ['/api/zinnia/capabilities','/xr-api/zinnia/capabilities','/zinnia/capabilities']){
+    test(`public voice capabilities survives Passenger routing: ${requestPath}`,async()=>{
+        const response=await fetch(`${baseUrl}${requestPath}`);
+        assert.equal(response.status,200);
+        assert.equal(typeof (await response.json()).enabled,'boolean');
+    });
+}
+
+test('stripped voice POST reaches the opted-in voice handler, not Creator authentication',async()=>{
+    const response=await fetch(`${baseUrl}/zinnia/transcribe`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+    assert.equal(response.status,503);
+    assert.match((await response.json()).error,/not configured/);
+});
+
 for (const requestPath of [
     '/xr-api/projects/Hillyards/sites?view=visitor',
     '/projects/Hillyards/sites?view=visitor'

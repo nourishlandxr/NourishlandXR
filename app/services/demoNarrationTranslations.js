@@ -3,6 +3,7 @@
 // No identifiers, handlers, source content or persistence data are translated here.
 import {DEMO_OPENING_TRANSLATIONS} from './demoOpeningTranslations.js';
 const narration = [
+    ['Place a plain Orb beside Pigeon Pea. Then tell Zinnia a common or scientific plant name using the microphone, or enter the name in the Living Frame.', 'Coloque um Orbe simples ao lado do feijão-guandu. Depois diga à Zinnia um nome comum ou científico de uma planta pelo microfone, ou escreva o nome na Moldura Viva.', 'Plaats een lege Orb naast de duivenerwt. Vertel Zinnia daarna via de microfoon een gewone of wetenschappelijke plantennaam, of voer de naam in het Living Frame in.'],
     ...DEMO_OPENING_TRANSLATIONS,
     // demoJourneyContent.js: every title, main, panel, hint and act.
     ['Introduce the tool', 'Apresentar a ferramenta', 'De tool voorstellen'],

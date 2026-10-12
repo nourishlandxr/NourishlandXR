@@ -34,5 +34,5 @@ test('laser meets the Living Frame rim from either side while its central apertu
  const turned={...frame,right:{x:0,y:0,z:-1},normal:{x:1,y:0,z:0}};
  assert.ok(livingFrameRimHit({origin:{x:2,y:1,z:-2.9},direction:{x:-1,y:0,z:0}},turned));
  const demo=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
- assert.match(demo,/\[demoFramePlantChoiceHit\(\),demoLivingFrameRimHit\(\),limSurface/);assert.match(demo,/pressedCell\?\.kind==='living-frame-rim'/);
+ assert.match(demo,/demoFramePlantChoiceHit\(\),demoLivingFrameRimHit\(\),limSurface/);assert.match(demo,/pressedCell\?\.kind==='living-frame-rim'/);
 });

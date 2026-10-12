@@ -33,7 +33,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
     gl.attachShader(program,compile(gl.VERTEX_SHADER,detailed?surfaceShader(FRUIT_SURFACE_VERTEX):`attribute vec3 p,n,c,ic;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;uniform mat4 projection,view,model;uniform float instanced;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}vec3 normal=normalize(mat3(model)*norm);light=.68+.32*max(0.,dot(normal,normalize(vec3(-.3,.8,.5))));v=uv;tint=pow(max(c*(instanced>.5?ic:vec3(1.)),vec3(0.)),vec3(.4545));gl_Position=projection*view*model*point;}`));
     gl.attachShader(program,compile(gl.FRAGMENT_SHADER,detailed?surfaceShader(FRUIT_SURFACE_FRAGMENT,true):`precision mediump float;uniform vec3 colour;uniform float alpha,textured;uniform sampler2D image;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 c=vec4(colour*tint,1.);if(textured>.5)c*=texture2D(image,v);if(c.a*alpha<.01)discard;gl_FragColor=vec4(c.rgb*light,c.a*alpha);}`));
     gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
-    const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image','instanced','normalView','normalImage','normalMapped','normalScale','roughImage','roughMapped','roughness','unlit'].map(k=>[k,gl.getUniformLocation(program,k)]));
+    const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image','instanced','normalView','normalImage','normalMapped','normalScale','roughImage','roughMapped','roughness','metalness','unlit'].map(k=>[k,gl.getUniformLocation(program,k)]));
     const attributes=['p','n','uv','c'].map(k=>gl.getAttribLocation(program,k));
     const matrixAttributes=['i0','i1','i2','i3'].map(k=>gl.getAttribLocation(program,k));
     const instanceColourAttribute=gl.getAttribLocation(program,'ic');
@@ -115,7 +115,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             surfaceMatrix.multiplyMatrices(eyeMatrix,matrix);surfaceNormal.getNormalMatrix(surfaceMatrix);
             gl.uniformMatrix3fv(uniforms.normalView,false,surfaceNormal.elements);
             gl.uniform1f(uniforms.normalMapped,detail&&material.normalMap?1:0);gl.uniform2f(uniforms.normalScale,material.normalScale?.x ?? 1,material.normalScale?.y ?? 1);
-            gl.uniform1f(uniforms.roughMapped,detail&&material.roughnessMap?1:0);gl.uniform1f(uniforms.roughness,material.roughness ?? .7);gl.uniform1f(uniforms.unlit,material.isMeshBasicMaterial?1:0);
+            gl.uniform1f(uniforms.roughMapped,detail&&material.roughnessMap?1:0);gl.uniform1f(uniforms.roughness,material.roughness ?? .7);gl.uniform1f(uniforms.metalness,material.metalness ?? 0);gl.uniform1f(uniforms.unlit,material.isMeshBasicMaterial?1:0);
             if(detail){bindSurfaceMap(material.normalMap,1,uniforms.normalImage);bindSurfaceMap(material.roughnessMap,2,uniforms.roughImage);}
             gl.activeTexture(gl.TEXTURE0);
         }
@@ -164,7 +164,7 @@ varying vec3 pointView,normalV,tint;varying vec2 v;
 void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}
 vec4 pv=view*model*point;pointView=pv.xyz;normalV=normalize(normalView*norm);v=uv;tint=c*(instanced>.5?ic:vec3(1.));gl_Position=projection*pv;}`;
 const FRUIT_SURFACE_FRAGMENT=`precision highp float;
-uniform vec3 colour;uniform vec2 normalScale;uniform float alpha,textured,normalMapped,roughMapped,roughness,unlit;
+uniform vec3 colour;uniform vec2 normalScale;uniform float alpha,textured,normalMapped,roughMapped,roughness,metalness,unlit;
 uniform sampler2D image,normalImage,roughImage;varying vec3 pointView,normalV,tint;varying vec2 v;
 void main(){vec4 texel=vec4(1.);if(textured>.5)texel=texture2D(image,v);if(texel.a*alpha<.01)discard;
 vec3 albedo=colour*tint*pow(max(texel.rgb,vec3(0.)),vec3(2.2));vec3 N=normalize(normalV)*(gl_FrontFacing?1.:-1.);
@@ -175,5 +175,5 @@ float r=roughness;if(roughMapped>.5)r*=texture2D(roughImage,v).g;r=clamp(r,.18,1
 vec3 L=normalize(vec3(-.45,.72,.55)),V=normalize(-pointView),H=normalize(L+V);
 float diffuse=max(dot(N,L),0.),fill=max(dot(N,normalize(vec3(.6,.1,.7))),0.);
 float shininess=mix(150.,8.,r*r);float spec=pow(max(dot(N,H),0.),shininess)*(.055+.13*(1.-r))*diffuse;
-vec3 lit=albedo*(.64+.68*diffuse+.20*fill)+vec3(spec);if(unlit>.5)lit=albedo;
+vec3 lit=albedo*(.64+.68*diffuse+.20*fill)*(1.-metalness*.35)+mix(vec3(spec),albedo*spec*7.,metalness);if(unlit>.5)lit=albedo;
 gl_FragColor=vec4(pow(max(lit,vec3(0.)),vec3(1./2.2)),texel.a*alpha);}`;

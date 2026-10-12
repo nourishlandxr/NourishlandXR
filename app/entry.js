@@ -9,3 +9,5 @@ if (['desktop', 'field', 'spatial'].includes(params.get('workspace')) && params.
 } else {
     await import('./main.js');
 }
+const {mountProjectVoiceGuide}=await import('./services/projectVoiceGuide.js');
+mountProjectVoiceGuide(document.getElementById('app'));
