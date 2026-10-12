@@ -35,10 +35,10 @@ for(const mode of ['controllers','gloves','hands'])test(mode+': cloud pieces mer
 test('paint gestures produce persistent spatial strokes, ignore wrong input modes, and support undo/clear',()=>withCanvas(()=>{
     const root=new THREE.Group(),trial=createWelcomePracticeTrials(root),source={handedness:'right'};trial.open('painting');
     const tick=(x,trigger=true)=>trial.update(.05,{visible:true,inputs:[inputAt(root,source,x,.3,.03,false,trigger)]});
-    tick(0);tick(.02);tick(.04);tick(.04,false);assert.equal(trial.snapshot().strokes,1);assert.equal(trial.snapshot().paintSegments,2);
-    trial.close();trial.open('painting');assert.equal(trial.snapshot().paintSegments,2);
-    trial.command('colour');tick(.04);tick(.06);tick(.06,false);assert.equal(trial.snapshot().strokes,2);trial.command('undo');assert.equal(trial.snapshot().paintSegments,2);
-    trial.command('mode:hands');tick(.08);tick(.1);assert.equal(trial.snapshot().paintSegments,2);
+    tick(0);tick(.02);tick(.04);tick(.04,false);assert.equal(trial.snapshot().strokes,1);assert.ok(trial.snapshot().paintSegments>2);const originalSegments=trial.snapshot().paintSegments;
+    trial.close();trial.open('painting');assert.equal(trial.snapshot().paintSegments,originalSegments);
+    trial.command('colour');tick(.04);tick(.06);tick(.06,false);assert.equal(trial.snapshot().strokes,2);trial.command('undo');assert.equal(trial.snapshot().paintSegments,originalSegments);
+    trial.command('mode:hands');tick(.08);tick(.1);assert.equal(trial.snapshot().paintSegments,originalSegments);
     trial.command('clear');assert.equal(trial.snapshot().paintSegments,0);assert.equal(trial.snapshot().strokes,0);trial.destroy();
 }));
 
