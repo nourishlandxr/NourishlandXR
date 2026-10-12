@@ -82,8 +82,8 @@ test('voice controls live below and left of the viewer, outside Living Frame cho
     const pose=zinniaVoiceBarPose(new THREE.Matrix4().makeTranslation(0,1.6,0).elements);
     assert.ok(pose.center.x<-.4 && pose.center.y<1.3 && pose.center.z<-.8);
     assert.ok(zinniaVoiceBarButtons({conversation:true}).some(button=>button.id==='voice'));
-    assert.equal(zinniaPlantButtons({phase:'idle'}).length,0);
-    assert.deepEqual(zinniaPlantButtons({phase:'confirm'}).map(button=>button.action),['confirm','back']);
+    assert.deepEqual(zinniaPlantButtons({phase:'idle'}).map(button=>button.action),['sample']);
+    assert.deepEqual(zinniaPlantButtons({phase:'confirm'}).map(button=>button.action),['sample','confirm','back']);
 });
 
 test('real narration playback finishes every clip and a new narrator cancels the old sequence',async()=>{

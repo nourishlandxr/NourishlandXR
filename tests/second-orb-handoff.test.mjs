@@ -47,3 +47,25 @@ test('saving a hosted Note leaves the next placement narration in control',async
         assert.equal(placementActive,true);assert.equal(cancelledPlacement,false);
     }finally{discovery.destroy();globalThis.document=savedDocument;globalThis.AudioContext=savedContext;}
 });
+
+test('sample Orb and Note complete with all network requests blocked',async()=>{
+    const savedDocument=globalThis.document,savedFetch=globalThis.fetch;
+    globalThis.document=new EventTarget();
+    globalThis.fetch=()=>{throw new Error('Network unavailable');};
+    let profile,note;
+    const plant=createZinniaPlantDiscovery({onReady:value=>{profile=value;return true;}});
+    const discovery=createZinniaPlantDiscovery({mode:'note',onReady:value=>{note=value;return true;}});
+    try{
+        plant.activate('sample');
+        assert.equal(profile.common_name,'Moringa Tree');
+        assert.ok(profile.pim.identity.image.endsWith('moringa-oleifera.jpg'));
+        const orb={tutorialStage:'plant2',demoNativeChoicePending:true};
+        assert.equal(applyDiscoveredPlant(orb,profile),true);
+        assert.equal(orb.demoNativeChoicePending,false);
+        discovery.activate('sample');
+        assert.equal(discovery.state().phase,'color');
+        discovery.activate('color:blue');await discovery.confirm();
+        assert.deepEqual(note,{text:'Observe the leaves and soil here.',color:'blue'});
+        assert.equal(discovery.state().phase,'ready');
+    }finally{plant.destroy();discovery.destroy();globalThis.document=savedDocument;globalThis.fetch=savedFetch;}
+});

@@ -2623,7 +2623,7 @@ function guidePlantConversion(record) {
 function showDemoNativePlantChooser(orb){
     if(demoFramePlantChoiceOrbId===orb.id && demoZinniaDiscovery)return;
     clearDemoZinniaDiscovery();
-    showIntroBoard('Ask Zinnia',ZINNIA_PLANT_COPY,'',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Tap Speak, choose a plant or variety, then confirm.'});
+    showIntroBoard('Ask Zinnia',ZINNIA_PLANT_COPY,'',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Choose Moringa, or use Speak to find another plant.'});
     demoFramePlantChoiceOrbId=orb.id;introBoardTextureDirty=true;
     demoZinniaDiscovery=createZinniaPlantDiscovery({onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);const input=arWelcomeLayer?.querySelector('[data-zinnia-plant-input]');if(input){input.value=state.query;input.disabled=['loading','searching','listening'].includes(state.phase);}syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onSpeak:()=>demoProjectVoice?.stop(),onReady:profile=>selectDemoNativePlant({demoNativeChooserFor:orb.id},profile)});
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');
