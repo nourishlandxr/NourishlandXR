@@ -20,9 +20,10 @@ export function animateZinniaCharacter(root,time,speaking=false,options={}){
     state.speechLevel=options.speechLevel??(speaking?.35:0);
     if(options.targetWorld){root.updateWorldMatrix(true,true);options={...options,target:root.worldToLocal(new THREE.Vector3(options.targetWorld.x,options.targetWorld.y,options.targetWorld.z))};}
     const previous=state.touch.snapshot().reaction;
-    const reaction=state.touch.update(state.paused?0:dt,zinniaContacts(root,options.inputs));
+    const contacts=zinniaContacts(root,options.inputs,{includeHover:true});
+    const reaction=state.touch.update(state.paused?0:dt,contacts);
     if(reaction==='tickle' && previous!=='tickle' && !speaking)playZinniaGiggle();
-    state.guide.update(state.paused?0:dt,{lesson:'explore',...options,reaction,focused:Boolean(options.focused || speaking)});
+    state.guide.update(state.paused?0:dt,{lesson:'explore',...options,reaction,focused:Boolean(options.focused || speaking || contacts.length)});
 }
 export function disposeZinniaCharacter(root){
     const state=root?.userData.zinnia;if(state){state.disposed=true;state.guide?.destroy();state.touch?.reset();globalThis.document?.removeEventListener?.('pointerdown',state.unlockAudio);}

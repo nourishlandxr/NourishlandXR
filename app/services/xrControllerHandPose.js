@@ -40,7 +40,7 @@ export function controllerHandJointPoses(rig,controller){
         const world=parent<0?rig.bind[i].clone():poseJoint(parent).clone().multiply(rig.bind[parent].clone().invert().multiply(rig.bind[i]));
         const amount=name.includes('proximal')?.85:name.includes('intermediate')?1.05:name.includes('distal')?.65:0;
         const curl=finger==='thumb'?Math.max(thumb*.7,grip*.65):finger==='index'?trigger:grip;
-        if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],-amount*curl));
+        if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],amount*curl));
         return posed[i]=world;
     };
     return rig.names.map((name,i)=>poseJoint(i));

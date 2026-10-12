@@ -1,3 +1,8 @@
+import {DEMO_CHAPTERS} from '../services/demoChapters.js';
+let demoStartChapter=null,demoChaptersOpen=false;
+import {WELCOME_PRACTICE_LESSONS} from '../services/welcomePracticeContent.js';
+import {requireDeveloperLabSession,developerToolsEnabled} from '../services/developerLabAccess.js';
+import {livingMapPreviewRecords as developerLabRecords} from '../services/developerLabFixtures.js';
 import {createLimoSpatialExperience} from '../services/limoSpatialExperience.js';
 import {createLivingFrameModel} from '../services/livingFrameModel.js';
 import {createPeekPortalExperience} from '../services/peekPortalExperience.js';
@@ -114,6 +119,7 @@ import {createProjectNarration} from '../services/projectNarration.js';
 let demoProjectVoice=null;
 import {welcomeTutorialEnabled,setWelcomeTutorialEnabled} from '../services/welcomeTutorialSettings.js';
 let welcomePractice=null,welcomePracticeVoice=null,welcomePracticeCompleted=false;
+let developerLab=null,developerLabReturn=false;
 let welcomeComfort=null,zinniaFramePerch=null,welcomeComfortGuideKey='',zinniaVoiceBar=null;
 let welcomePracticeOverlay=null,welcomePracticeAmbientStart=null,welcomePracticeDisposeTimer=null;
 let knowledgeRenderer=null,heroDiceToy=null;
@@ -711,7 +717,7 @@ const demoExitLifecycle=createDemoExitLifecycle({
     getSession:()=>session,
     detachSession:owned=>{if(session===owned)session=null;},
     cleanup:()=>clearSessionState(),
-    navigate:()=>window.renderLaunchScreen(),
+    navigate:()=>{const returnLab=developerLab || developerLabReturn;developerLab=null;developerLabReturn=false;if(returnLab)window.openDeveloperLab?.();else window.renderLaunchScreen();},
     onStateChange:next=>{
         if(next===DEMO_EXIT_STATES.CONFIRMING){
             cancelDemoInteractionState('close-confirmation');
@@ -734,6 +740,7 @@ function requestDemoClose(){return demoExitLifecycle.request();}
 function cancelDemoClose(){return demoExitLifecycle.cancel();}
 function confirmDemoClose(){return demoExitLifecycle.confirm();}
 function returnToWelcome(){if(demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE)demoExitLifecycle.request();return demoExitLifecycle.confirm();}
+function openLabFromDemo(){developerLabReturn=true;return returnToWelcome();}
 function restartWelcomeTutorial(){setWelcomeTutorialEnabled(true);return returnToWelcome();}
 
 function setGuide(message) {
@@ -769,9 +776,11 @@ function demoControlIsVisible(selector) {
 }
 
 function demoPanelActions() {
+    if(demoChaptersOpen)return [...DEMO_CHAPTERS.map(chapter=>({id:'chapter:'+chapter.id,label:chapter.title})),{id:'chapters-close',label:'Back to controls'}];
+    if(developerLab && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE)return [{id:'lab-reset',label:'Reset station'},{id:'lab-voice',label:'Replay Zinnia voice'},{id:'lab-unload',label:'Unload / Developer Lab'}];
     if(demoViewOpen)return [
         ...demoVisibilityFooter(demoSeenElements,demoHiddenElements).filter(item=>item.id!=='control').map(item=>({id:'visibility:'+item.id,label:(item.selected?'Hide ':'Show ')+item.label})),
-        {id:'peek-3d',label:'PEEK 3D'},{id:'peek-off',label:'OFF'},{id:'view-close',label:'Back to controls'}
+        {id:'peek-3d',label:'PEEK 3D'},{id:'peek-off',label:'OFF'},{id:'chapters',label:'Demo chapters'},{id:'view-close',label:'Back to controls'}
     ];
     if(demoExitLifecycle.state===DEMO_EXIT_STATES.ENDING)return [
         {id:'close-confirm',label:'Closing…',primary:true,disabled:true}
@@ -877,6 +886,9 @@ async function openLivingPeek(){
 }
 
 function handleDemoPanelAction(action) {
+    if(action==='chapters'||action==='chapters-close'){demoChaptersOpen=action==='chapters';syncDemoPanelActions();return;}
+    if(action.startsWith('chapter:')){demoChaptersOpen=false;activateDemoChapter(action.slice(8));return;}
+    if(developerLab && action==='lab-reset'){activateDeveloperStation();return;}if(developerLab && action==='lab-unload'){returnToWelcome();return;}if(developerLab && action==='lab-voice'){const voice=welcomePracticeVoice || demoProjectVoice;voice?.unlock();if(welcomePracticeVoice)void voice.speak(WELCOME_PRACTICE_LESSONS.find(lesson=>lesson.id===(developerLab.activity==='water'?'water':'zinnia')));else demoProjectVoice?.replay();return;}
     if(action==='peek-off'){demoPeekPortal?.close();closeLivingPeek();return;}
     if(action==='view'||action==='view-close'){demoViewOpen=action==='view';syncDemoPanelActions();return;}
     if(action==='peek-3d'){void openDemoPeek();return;}
@@ -1550,6 +1562,7 @@ function narrateDemoFrame(text){
 }
 function clearDemoNarration({preserveAction=false}={}) {
     if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.stop();
+    if(!welcomePractice?.active)welcomePracticeVoice?.stop();
     if(!preserveAction)demoNarrationRevision++;
     clearTimeout(boardTypingTimer);
     clearTimeout(boardTypingWatchdogTimer);
@@ -2245,6 +2258,7 @@ function showDemoCalmWelcome({returning=false}={}){
     clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
     arWelcomeOpeningActive=false;arWelcomeIntroPending=true;limMeshVisible=false;
     showIntroBoard('Welcome to NourishlandXR',(returning?'Hello again. I’m over here—let’s see what this place could become.\n\n':'')+'We hope you are in a calm place, with plenty of clear space around you.\n\nGet comfortable. Relax your shoulders, keep your movements gentle, and take your time.\n\nWhen you feel ready, look through the Living Frame. Move closer gently and discover the world beyond it.','Look through the frame',()=>{clearDemoNarration();void openDemoPeek({continueLabel:'Continue to IMAGINE',onComplete:()=>showArWelcomeShowcase({calmWelcome:false})});},{stepLabel:'WELCOME 0.1',dynamicCopy:true,spokenSummary:returning?'Hello again. I’m over here—let’s see what this place could become.':undefined,nextGuide:'Continue when you feel comfortable.'});
+    if(!returning){demoParagraphSequence?.cancel();demoParagraphSequence=null;demoProjectVoice?.stop();welcomePracticeVoice?.unlock();void welcomePracticeVoice?.speak({...WELCOME_PRACTICE_LESSONS.find(item=>item.id==='arrival'),recorded:true});}
 }
 function showArWelcomeShowcase() {
     const {calmWelcome=true}=arguments[0] || {};
@@ -2477,6 +2491,8 @@ function showArWelcomeShowcase() {
     };
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     setGuide(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
+    if(developerLab){activateDeveloperStation();return;}
+    if(demoStartChapter && demoStartChapter!=='tutorial'){const chapter=demoStartChapter;demoStartChapter=null;activateDemoChapter(chapter);return;}
     if(welcomePractice && !welcomePracticeCompleted){
         clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
         arWelcomeOpeningActive=false;introOpeningCopySkipped=true;limMeshVisible=false;
@@ -4819,7 +4835,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    demoLimo?.close({notify:false});demoLimo=null;demoLimoReturn=null;infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,onRestartTutorial:restartWelcomeTutorial,inputOccupied:source=>welcomePractice?.stage.isHolding(source) || livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{if(welcomePractice?.active)return false;captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onLimoAction:openDemoLimo,limoAvailable:()=>demoLimoUnlocked,onUtilityAction:handleDemoPanelAction});
+    demoLimo?.close({notify:false});demoLimo=null;demoLimoReturn=null;infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,onRestartTutorial:restartWelcomeTutorial,onDeveloperLab:developerToolsEnabled()?openLabFromDemo:null,inputOccupied:source=>welcomePractice?.stage.isHolding(source) || livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{if(welcomePractice?.active)return false;captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:()=>{demoFeedback?.sound('menu');pulseDemoHaptics(demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onLimoAction:openDemoLimo,limoAvailable:()=>demoLimoUnlocked,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of BUTTERFLY_VARIANTS){
@@ -5045,13 +5061,14 @@ function setupRenderer() {
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
     // The interaction toy now has a purpose on the welcome table. The loose
     // Hero Dice no longer competes with the plant/Control panel journey.
-    if(welcomeTutorialEnabled() && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getTrialPanelPose:()=>infoPanel?.spatialPose,
+    if((developerLab?.id==='toys' || !developerLab && welcomeTutorialEnabled()) && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getTrialPanelPose:()=>infoPanel?.spatialPose,
         onFeedback:(kind,source)=>{if(kind==='transform'){demoFeedback.sound('practice-reward');if(source)demoFeedback.pulse(source,.8,180);return;}const reward=['lesson','plant','collect','open','harvest','ring','land'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
         onChange:state=>{syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
         isFrameReady:()=>Boolean(livingFrameModel?.entranceReady),getFrameError:()=>livingFrameModel?.error,
         onPanelOwns:source=>infoPanel?.getHeldInputSource()===source || Boolean(infoPanel?.isHandInteracting(source)),
         onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;const target=nearestWelcomePointerHit(ray,welcomePracticeFrameHit(ray),welcomePractice?.stage.hit(ray));if(target?.kind==='voice-bar')return Boolean(zinniaVoiceBar?.select(ray));if(target?.kind!=='panel')return false;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray));},onHit:welcomePracticeFrameHit,
-        onComplete:({aborted=false}={})=>{welcomePracticeVoice?.destroy();welcomePracticeVoice=null;if(infoPanel)infoPanel.welcomeComfortVisible=false;infoPanel?.suspend(true);infoPanel?.setComfortContext(null);infoPanel?.setOpacity(1);infoPanel?.setIntroduction(false);welcomeComfort=null;welcomePracticeCompleted=true;
+        onComplete:({aborted=false}={})=>{
+            if(developerLab){queueMicrotask(activateDeveloperStation);return;}welcomePracticeVoice?.destroy();welcomePracticeVoice=null;if(infoPanel)infoPanel.welcomeComfortVisible=false;infoPanel?.suspend(true);infoPanel?.setComfortContext(null);infoPanel?.setOpacity(1);infoPanel?.setIntroduction(false);welcomeComfort=null;welcomePracticeCompleted=true;
             zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({character:welcomePractice?.stage.takeZinniaCharacter(),getVoice:()=>demoProjectVoice});
             zinniaFramePerch.attach(gl);if(!aborted)zinniaFramePerch.show();welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome({returning:!aborted});
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy({stopVoice:false});welcomePractice=null;welcomePracticeDisposeTimer=null;},750);
@@ -5866,7 +5883,13 @@ function drawIntroSpatial(view) {
         const orbPulse=pointerKind==='aim'?1+.05*Math.sin(performance.now()/380):1;
         if (pointerPosition) {gl.depthMask(false);drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.95*orbPulse, pointerKind==='aim'?.68:1);gl.depthMask(true);}
     }
-    if(livingFrameModel?.ready && arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);const framePose=livingFramePose(board);livingFrameModel.drawXR(view,framePose.matrix);if(!welcomePractice?.active)zinniaFramePerch?.draw(view,framePose.matrix,introFrameToken,[...latestTrackedHandStates.filter(entry=>entry.state?.tracked).map(entry=>({source:entry.source,tip:entry.state.rawJoints.get('index-finger-tip')})),...demoPointerRays.filter(entry=>!entry.source?.hand).map(entry=>({source:entry.source,ray:entry.ray,trigger:Boolean(entry.source?.gamepad?.buttons?.[0]?.pressed)}))],viewerMatrix);}
+    if(arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);const framePose=livingFramePose(board);livingFrameModel?.drawXR(view,framePose.matrix);drawDemoZinnia(view,framePose.matrix);}
+}
+
+function drawDemoZinnia(view,frameMatrix){
+    if(welcomePractice?.active)return;
+    const inputs=[...latestTrackedHandStates.filter(entry=>entry.state?.tracked).map(entry=>({source:entry.source,tip:entry.state.rawJoints.get('index-finger-tip')})),...demoPointerRays.filter(entry=>!entry.source?.hand).map(entry=>({source:entry.source,ray:entry.ray,trigger:Boolean(entry.source?.gamepad?.buttons?.[0]?.pressed)}))];
+    zinniaFramePerch?.draw(view,frameMatrix,introFrameToken,inputs,viewerMatrix);
 }
 
 function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
@@ -6560,6 +6583,8 @@ async function startImmersive() {
         allowArScreenRotation();
         const arSession = await requestImmersiveArSession(appRoot,{targetFrameRate:getSpatialVisualSettings().refreshRate});
         session = arSession.session;
+        demoProjectVoice?.unlock();welcomePracticeVoice?.unlock();
+        session.addEventListener('selectstart',()=>{demoProjectVoice?.unlock();welcomePracticeVoice?.unlock();},{capture:true});
         demoControllerYSkipTracker = createControllerYSkipTracker(() => {
             if (skipCurrentDemoStep(welcomePractice)) suppressSessionSelectUntil = performance.now() + 450;
         });
@@ -6762,7 +6787,7 @@ async function startImmersive() {
                 for(const source of session.inputSources){if(!source.hand)continue;const state=handTrackingState(frame,source,referenceSpace);const previous=livingPeekPinches.get(source);livingPeekPinches.set(source,Boolean(state?.pinch));if(state?.pinch && previous===false){livingPeekConsumedSources.set(source,'hand');closeLivingPeek();livingPeekSuppressUntil=performance.now()+600;break;}}
                 const layer=frame.session.renderState.baseLayer;
                 if(layer&&pose){gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
-                    for(const view of pose.views){const viewport=layer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);livingPeek.draw(view,livingPeekPose);livingFrameModel?.drawXR(view,livingPeekPose.matrix);}
+                    for(const view of pose.views){const viewport=layer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);livingPeek.draw(view,livingPeekPose);livingFrameModel?.drawXR(view,livingPeekPose.matrix);drawDemoZinnia(view,livingPeekPose.matrix);}
                     gl.disable(gl.SCISSOR_TEST);
                 }
                 if(measureXrFrame)demoPerformance.frameComplete(performance.now()-cpuStarted);
@@ -6833,7 +6858,7 @@ async function startImmersive() {
                 gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.scissor(viewport.x, viewport.y, viewport.width, viewport.height);
                 gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-                if(demoPeekPortal?.replacesScene){runXrFrameStep('Peek portal render',()=>demoPeekPortal.drawNative(gl,view,livingFrameModel,viewerMatrix));renderedContent=true;continue;}
+                if(demoPeekPortal?.replacesScene){runXrFrameStep('Peek portal render',()=>{demoPeekPortal.drawNative(gl,view,livingFrameModel,viewerMatrix);drawDemoZinnia(view,demoPeekPortal.anchorMatrix);});renderedContent=true;continue;}
                 // The welcome is already prepared. Show recovery only after a failure.
                 runXrFrameStep('rain render',()=>drawSpatialRain(view, _time));
                 if(runXrFrameStep('marker render',()=>drawMarker(view)))renderedContent=true;
@@ -6874,23 +6899,25 @@ export function openTemporaryArDemoWindow(app) {
     });
 }
 
-export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null, refinementPreview = null, livingFramePreviewClock:framePreviewClock = null } = {}) {
+export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null, refinementPreview = null, livingFramePreviewClock:framePreviewClock = null, developerStation=null,chapter=null } = {}) {
     // Development fixtures may inspect XR, but public desktop entry is a book.
-    if(!livingMapPreviewRecords && !refinementPreview && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
+    if((!chapter || chapter==='tutorial') && !developerStation && !livingMapPreviewRecords && !refinementPreview && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
     appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
+    developerLab=developerStation;demoStartChapter=chapter;demoChaptersOpen=false;if(chapter)setWelcomeTutorialEnabled(chapter==='tutorial');
     demoPeekPortal=createPeekPortalExperience();
     if(!livingMapPreviewRecords && !refinementPreview)resetSpatialVisualSettings();
-    demoCellOpacity=getSpatialVisualSettings().cellOpacity;demoHandMode=getSpatialVisualSettings().handMode;
+    demoCellOpacity=getSpatialVisualSettings().cellOpacity;demoHandMode=developerLab?.input==='controllers'?'pointer':'outline';if(!developerLab)demoHandMode=getSpatialVisualSettings().handMode;
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
     demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});
     demoProjectVoice=createProjectNarration({onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
-    if(welcomeTutorialEnabled()){welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
+    {welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
-    const immersive = livingMapPreviewRecords || refinementPreview ? false : await startImmersive();
+    const immersive = livingMapPreviewRecords || refinementPreview || developerLab && !developerLab.xr ? false : await startImmersive();
+    if(!immersive && developerLab?.xr){clearSessionState();developerLab=null;await window.openDeveloperLab();const status=app.querySelector('[data-status]');if(status)status.textContent='XR could not start. Use a compatible headset, or load the desktop preview.';return;}
     if (!immersive) {
         renderInterface(true);
         viewerMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
@@ -6911,4 +6938,54 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
             else showDemoLivingMap();
         }
     }
+}
+
+export async function startDeveloperDemoStation(app,options){
+    await requireDeveloperLabSession();
+    if(!['map','zinnia','pimo','limo','toys'].includes(options?.id))throw Error('Unknown developer station.');
+    if(options.xr && (!navigator.xr || !window.isSecureContext))throw Error('Quest / XR needs a compatible headset. Use Load desktop preview here.');
+    return startTemporaryArDemo(app,{developerStation:options});
+}
+function activateDeveloperStation(){
+    if(!developerLab)return;
+    clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
+    arWelcomeIntroPending=false;arWelcomeOpeningActive=false;arWelcomeSettleStage=false;introOpeningCopySkipped=true;placementReady=false;
+    infoPanel?.restore();infoPanel?.suspend(false);infoPanel?.setGuided(false);infoPanel?.setIntroduction(false);
+    const pose=viewerMatrix || new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,1.6,0,1]);introWorldAnchor ||= introWorldAnchorFromViewer(pose);
+    const id=developerLab.id;
+    if(id==='toys' && welcomePractice){
+        welcomePractice.stage.trials.close();welcomePractice.start(pose,calibratedDemoGroundY());welcomePractice.stage.previewLesson(['painting','garden','butterflies'].includes(developerLab.activity)?'grab':developerLab.activity);
+        if(['painting','garden','butterflies'].includes(developerLab.activity)){welcomePractice.stage.trials.open(developerLab.activity);welcomePractice.stage.trials.command('mode:'+developerLab.input);}
+        else welcomePractice.stage.setInputMode(developerLab.input);
+        welcomeComfort=createWelcomeComfortOptions({stage:welcomePractice.stage,onVisualChange:()=>{introBoardTextureDirty=true;},onChange:syncWelcomeComfortOptions});syncWelcomeComfortOptions();
+    }else{
+        for(const record of markers){knowledgeRenderer?.clear(record);if(record.texture)gl?.deleteTexture(record.texture);}markers=[];
+        const records=developerLabRecords(),selected=id==='pimo'?records.filter(r=>r.id==='demo-pigeon-pea' || r.demoPlantPreset==='pigeon-pea').slice(0,1):id==='map' || developerLab.context?records:[];
+        for(const [i,record] of selected.entries()){record.texture=createMarkerTexture(record);if(id==='pimo'){record.position=introLocalPosition(introWorldAnchor,[0,-.55,-1.6]);record.simulatedAnchor={x:50,y:55};record.demoProfileInteracted=true;}markers.push(record);}
+        updateSimulatedMarkers();
+        if(id==='map'){disposeSpatialLivingMap();showDemoLivingMap();startDemoLivingMapActivity();}
+        else if(id==='pimo'){limMeshVisible=false;introBoardVisible=developerLab.context;const plant=markers.find(r=>r.demoType==='plant');if(plant){toggleDemoPlantProfile(plant);showDemoInfo(plant,'');}}
+        else if(id==='limo'){demoLimoUnlocked=true;showLimoArchetypes();void openDemoLimo();}
+        else if(id==='zinnia'){showIntroBoard('Zinnia · Developer Lab','Replay the voice, inspect expressions and move around the porch.','',()=>{},{stepLabel:'DEVELOPER ZINNIA',dynamicCopy:true,keepPanel:true});narrateDemoFrame("Here I am. A little flower to keep you company.");}
+    }
+    const skip=appRoot?.querySelector('[data-tryit-skip]');if(skip)skip.hidden=true;
+    const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(continueButton)continueButton.hidden=true;
+    if(!appRoot.querySelector('[data-lab-station-controls]')){const toolbar=document.createElement('nav');toolbar.dataset.labStationControls='';toolbar.style.cssText='position:fixed;top:8px;left:8px;z-index:10000;background:#173028;color:#eef3dc;padding:8px;border-radius:12px;display:flex;gap:8px;flex-wrap:wrap';for(const [text,action] of [['Reset station','lab-reset'],['Replay voice','lab-voice'],['Unload / Lab','lab-unload']]){const button=document.createElement('button');button.textContent=text;button.onclick=()=>handleDemoPanelAction(action);toolbar.append(button);}appRoot.append(toolbar);}
+    syncDemoPanelActions();paintWelcomeLayer(performance.now());
+}
+
+function activateDemoChapter(id){
+ if(!DEMO_CHAPTERS.some(chapter=>chapter.id===id))return;
+ demoPeekPortal?.close();closeLivingPeek();clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
+ arWelcomeIntroPending=false;arWelcomeOpeningActive=false;arWelcomeSettleStage=false;placementReady=false;
+ infoPanel?.restore();infoPanel?.suspend(false);infoPanel?.setIntroduction(false);syncDemoPanelActions();
+ if(id==='tutorial'){if(welcomePractice){welcomePracticeCompleted=false;welcomePractice.start(viewerMatrix,calibratedDemoGroundY());syncWelcomeComfortOptions();}else {setWelcomeTutorialEnabled(true);returnToWelcome();}return;}
+ if(id==='introduction'){showDemoCalmWelcome();return;}
+ if(id==='space'){runArWelcomeTutorial(0);return;}
+ if(id==='end'){showDemoClosingMessage();return;}
+ for(const record of markers){knowledgeRenderer?.clear(record);if(record.texture)gl?.deleteTexture(record.texture);}markers=[];
+ for(const record of developerLabRecords()){record.texture=createMarkerTexture(record);markers.push(record);}updateSimulatedMarkers();
+ if(id==='plants'){const plant=markers.find(record=>record.demoType==='plant');if(plant){plant.position=introLocalPosition(introWorldAnchor,[0,-.55,-1.6]);plant.demoProfileInteracted=true;toggleDemoPlantProfile(plant);showDemoInfo(plant,'');}return;}
+ if(id==='map'){showDemoLivingMap();return;}
+ if(id==='learning'){demoLimoUnlocked=true;showLimoArchetypes();}
 }

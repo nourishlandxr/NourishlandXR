@@ -10,8 +10,8 @@ export const WELCOME_PRACTICE_LESSONS=Object.freeze([
     {id:'zinnia',automatic:true,title:'Hello again',caption:"A little flower to keep you company.",spoken:"Here I am. A little flower to keep you company."},
     {id:'comfort',automatic:true,silent:true,hold:1.5,title:'At your pace',caption:"Pause and sound controls are beside you. Grip the panel to move it.",spoken:""},
     {id:'living-frame',automatic:true,title:'Our Living Frame',caption:"Look here for a reminder.",spoken:"You can look back here whenever you'd like a reminder."},
-    {id:'practice-ready',automatic:true,silent:true,hold:.8,title:'One small step at a time',caption:"Start with the orange.",spoken:""},
-    {id:'grab',title:'Pick up and observe',caption:"Hold the side grip to lift the orange. Turn it, then release.",spoken:"Here is an orange. Reach towards it, then hold the side grip with your middle finger.\n\nLift it gently. Take a look around it, and turn it in your hand.\n\nWhen you're ready, release the grip to put it down. I'll wait for you."},
+    {id:'practice-ready',automatic:true,silent:true,hold:.8,title:'One small step at a time',caption:"Choose a fruit that catches your eye.",spoken:""},
+    {id:'grab',title:'Pick up and observe',caption:"Choose any fruit. Hold the side grip to lift it. Turn it, then release.",spoken:"Choose a fruit that catches your eye. Reach towards it, then hold the side grip with your middle finger.\n\nLift it gently. Take a look around it, and turn it in your hand.\n\nWhen you're ready, release the grip to put it down. I'll wait for you."},
     {id:'gloves',title:'Your virtual gardening hands',caption:"Squeeze the grip and watch your fingers.",spoken:"Gently squeeze the grip. See how the fingers follow?"},
     {id:'basket',automatic:true,title:'A home for our fruit',caption:"A basket for our discoveries.",spoken:"Let's bring in a basket for our fruit."},
     {id:'basket-reveal',automatic:true,silent:true,hold:4.5,title:'A basket for our discoveries',caption:'',spoken:''},
@@ -31,12 +31,13 @@ export const WELCOME_PRACTICE_RESPONSES=Object.freeze([
     {id:'grab-done',spoken:'There you go.'},
     {id:'fly-done',spoken:"A lovely landing. Our dragonfly can rest here while we try your own hands."},
     {id:'hands-ready',spoken:"There they are. Your own hands can take part. Let's use them to grow strawberries."},
-    {id:'fruit-done',spoken:"Everything is in the basket. Nicely done. Let's meet our flying companion."},
+    {id:'fruit-done',spoken:"Your fruit is in the basket. Nicely done. Let's meet our flying companion."},
     {id:'packet-done',spoken:"There we go. Let's plant one of these tiny seeds."},
     {id:'seed-done',spoken:"The seed is in its new home. Let's give it a little water."},
     {id:'water-done',spoken:"That's enough. Watch the soil."},
     {id:'grow-done',spoken:"There are your ripe strawberries. Let's pick them."},
     {id:'harvest-done',spoken:"All three are in your basket. From a tiny seed to a harvest. You've completed a whole cycle."},
     {id:'fly-hands',spoken:'This one seems curious about you. Pinch close to the dragonfly and move your hand to guide it. Open your fingers, and it will find its own way again.'},
-    {id:'practice-exit',spoken:'Of course. Let’s move into the main experience. You can return to the practice whenever you like.'}
+    {id:'practice-complete',spoken:'You’re ready. Let’s continue with the NourishlandXR main demo.'},
+    {id:'practice-exit',spoken:'You chose to end the tutorial. You can always come back here later. Let’s continue with the NourishlandXR main demo.'}
 ]);

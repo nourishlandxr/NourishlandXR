@@ -20,7 +20,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
     function bind(value,referenceSpace){unbind();session=value;space=referenceSpace;abort=new AbortController();
         for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,event=>{
             if(!stage.active){if(performance.now()<(suppressed.get(event.inputSource) || 0)){event.stopImmediatePropagation();event.preventDefault?.();}return;}
-            const source=event.inputSource;if(type==='selectstart')unlockZinniaTouchAudio();
+            const source=event.inputSource;if(type==='selectstart'){unlockZinniaTouchAudio();voice?.unlock();}
             // Let the standard panel listener receive grip, move and release.
             // Keep ownership through release so it cannot also grab a fruit.
             if(panelRouting.routeToPanel(source,eventRay(event))){

@@ -107,5 +107,5 @@ export function createSunGardenPeekStudy({radius=.89,allowEntry=true}={}){
  const portal=createOpening({world,plane,ownedGeometry,ownedMaterials,allowEntry,radius,release:()=>textures.forEach(t=>t.dispose())});
  return {...portal,ready,advanceAnimation(dt){time+=Math.min(dt,.05);core.rotation.z=time*.025;core.scale.setScalar(1+Math.sin(time*.45)*.008);
  sunDisk.material.color.setRGB(1,.87+Math.sin(time*.6)*.018,.65+Math.sin(time*.6)*.025);
- shimmer.forEach((strokes,i)=>{strokes.rotation.z=time*(i%2?-.018:.012)*(1+i*.3);strokes.scale.setScalar(1+Math.sin(time*.55+i*2)*.022);strokes.material.color.setHSL(.105,.65,.77+Math.sin(time*.8+i*2)*.055);});},get inside(){return portal.inside;}};
+ shimmer.forEach((strokes,i)=>{strokes.rotation.z=time*(i%2?-.018:.012)*(1+i*.3);strokes.scale.setScalar(1+Math.sin(time*.55+i*2)*.022);strokes.material.color.setHSL(.105,.65,.77+Math.sin(time*.8+i*2)*.055);});},get inside(){return portal.inside;},get unmasked(){return portal.unmasked;}};
 }

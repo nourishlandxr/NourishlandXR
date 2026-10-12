@@ -1251,6 +1251,7 @@ export function renderPlatformComingSoon(app, feature, returnTo = 'creator') {
                 <div class="setting-row"><div><strong>Visual quality</strong><p>Balanced automatically for this device.</p></div><span class="setting-value">Automatic</span></div>
                 <div class="setting-row"><div><strong>Hints and instructions</strong><p>Show guidance while creating and exploring.</p></div><label class="toggle-label"><input type="checkbox" ${settings.hints ? 'checked' : ''} onchange="window.savePlatformSetting('hints', this.checked)"><span>On</span></label></div>
             </div>
+            <details class="panel"><summary>Advanced</summary><label><input type="checkbox" ${localStorage.getItem('nxr-developer-tools')==='true'?'checked':''} onchange="localStorage.setItem('nxr-developer-tools',String(this.checked))"> Show Developer Lab shortcut on this device</label><p><button type="button" onclick="window.openDeveloperLab()">Open Developer Lab</button></p></details>
             <div class="panel build-information"><h2>Build information</h2><p><strong>Version:</strong> <code>${escapeHtml(BUILD_INFO.version)}</code></p><p><strong>Commit:</strong> <code>${escapeHtml(BUILD_INFO.commit)}</code></p><p><strong>Built:</strong> ${escapeHtml(BUILD_INFO.builtAt)}</p><p><strong>Target:</strong> ${escapeHtml(BUILD_INFO.target)}</p></div>${botanicalTextureMarkup('settings')}</div>`;
         bindBotanicalTexture(app);
         return;

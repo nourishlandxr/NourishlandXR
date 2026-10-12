@@ -7,9 +7,10 @@ export function createZinniaTouchReactions(){
         if(dt<=0)return reaction;
         remaining=Math.max(0,remaining-dt);cooldown=Math.max(0,cooldown-dt);if(!remaining)reaction=null;
         const present=new Set();let candidate=null;
-        for(const {source,point,head=false} of contacts){
+        for(const {source,point,head=false,pressed} of contacts){
+            if(pressed===false)continue;
             present.add(source);const old=histories.get(source),p=new THREE.Vector3(point.x,point.y,point.z);
-            if(!old){histories.set(source,{p,age:0,distance:0,turns:0,sign:0});continue;}
+            if(!old){histories.set(source,{p,age:0,distance:0,turns:0,sign:0});if(pressed)candidate=head?'pat':'tickle';continue;}
             const delta=p.clone().sub(old.p),distance=delta.length(),speed=distance/dt;old.p.copy(p);
             // Discontinuous tracking samples are reacquisitions, not rough touch.
             if(distance>.18){old.age=old.distance=old.turns=0;continue;}
@@ -26,7 +27,7 @@ export function createZinniaTouchReactions(){
     },reset(){histories.clear();reaction=null;remaining=cooldown=0;},snapshot:()=>({reaction,remaining})};
 }
 
-export function zinniaContacts(root,inputs=[]){
+export function zinniaContacts(root,inputs=[],{includeHover=false}={}){
     if(!root.userData.zinnia || root.userData.zinnia.status!=='ready')return [];
     for(let node=root;node;node=node.parent)if(!node.visible)return [];
     root.updateWorldMatrix(true,true);
@@ -34,8 +35,8 @@ export function zinniaContacts(root,inputs=[]){
     for(const input of inputs){
         let point=null;
         if(input.tip){const tip=new THREE.Vector3(input.tip.x,input.tip.y,input.tip.z);if(box.distanceToPoint(tip)<.018)point=tip;}
-        else if((input.trigger || input.down) && input.ray?.origin && input.ray.direction){caster.set(new THREE.Vector3().copy(input.ray.origin),new THREE.Vector3().copy(input.ray.direction).normalize());caster.far=2.5;point=caster.intersectObject(root,true)[0]?.point;}
-        if(point){const local=root.worldToLocal(point.clone());contacts.push({source:input.source,point:local,head:point.y>box.min.y+height*.86});}
+        else if((includeHover || input.trigger || input.down) && input.ray?.origin && input.ray.direction){caster.set(new THREE.Vector3().copy(input.ray.origin),new THREE.Vector3().copy(input.ray.direction).normalize());caster.far=8;point=caster.intersectObject(root,true)[0]?.point;}
+        if(point){const local=root.worldToLocal(point.clone());contacts.push({source:input.source,point:local,pressed:input.tip?undefined:Boolean(input.trigger || input.down),pressed:input.tip?undefined:Boolean(input.trigger || input.down),head:point.y>box.min.y+height*.86});}
     }
     return contacts;
 }

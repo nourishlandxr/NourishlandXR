@@ -170,6 +170,8 @@ async function bootstrap() {
     try {
         if (new URLSearchParams(location.search).has('reset-workers')) await unregisterServiceWorkersForTesting();
         const params = new URLSearchParams(window.location.search);
+        if(params.has('chapters')){await window.openDemoChapters();return;}
+        if(params.get('dev')==='lab'){await window.openDeveloperLab();return;}
         // Explicit development test only. Normal demo/visitor routes are unchanged.
         if (params.get('test') === 'living-painting') {
             setExperienceRole('launch');
@@ -1038,6 +1040,10 @@ window.renderVisitorLocationIntro=(id,creator=false,preview=false)=>creator||pre
 window.renderFieldGuide=(id,creator=false)=>creator?legacyFieldGuide(id,true):window.openVisitor('plants',decodeMainValue(id));
 window.renderBrowseContent=(id,creator=false)=>creator?legacyBrowse(id,true):window.openVisitor('plants',decodeMainValue(id));
 if(!history.state?.nourishlandView) replaceViewHistory('welcome');
+
+window.openDemoChapters=async()=>{cancelVisitorExperience();const url=new URL(location.href);url.search='';url.searchParams.set('chapters','1');history.replaceState({nourishlandView:'chapters'},'',url);const {renderDemoChapters}=await import('./screens/demoChapters.js');return renderDemoChapters(app);};
+window.openDeveloperLab=async()=>{cancelVisitorExperience();const url=new URL(location.href);url.search='';url.searchParams.set('dev','lab');history.replaceState({nourishlandView:'developer-lab'},'',url);const {renderDeveloperLab}=await import('./screens/developerLab.js');return renderDeveloperLab(app);};
+
 if (!window.__nxrSkipBootstrap) bootstrap();
 
 // Creator camera entry is independent of immersive AR capability.

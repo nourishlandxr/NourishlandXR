@@ -27,7 +27,7 @@ export function mountProjectVoiceGuide(root){
     buttons.pause.onclick=()=>voice.status().paused?voice.resume():voice.pause();
     buttons.mute.onclick=()=>{setWelcomeNarrationSettings({enabled:!getWelcomeNarrationSettings().enabled});sync();};
     document.body.append(bar);
-    function sync(){const screen=root.querySelector('.screen') || root.querySelector('main') || root.firstElementChild,demo=Boolean(root.querySelector('.tryit-demo'));
+    function sync(){const screen=root.querySelector('.screen') || root.querySelector('main') || root.firstElementChild,demo=Boolean(root.querySelector('.tryit-demo,.v2-welcome,[data-dev-lab],.demo-chapters'));
         const heading=screen?.querySelector('h1')?.textContent || '';
         if(screen!==currentScreen || demo!==inDemo || heading!==screenHeading){clearTimeout(introTimer);voice.stop();contextual=null;lastSignature='';releaseContext?.();releaseContext=null;currentScreen=screen;inDemo=demo;screenHeading=heading;}
         bar.hidden=demo || Boolean(root.querySelector('.ar-mode,[data-ar-overlay]'));bar.style.display=bar.hidden?'none':'flex';

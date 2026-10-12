@@ -209,7 +209,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='outline',spatialScale=1,performanceSettings=null,infoOpacity=.38,cellOpacity=.42,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,languageOpen=false,demoSound=null,tutorialAvailable=false}={}){
+export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='outline',spatialScale=1,performanceSettings=null,infoOpacity=.38,cellOpacity=.42,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,languageOpen=false,demoSound=null,tutorialAvailable=false,developerLabAvailable=false}={}){
     const choice=(action,label,group,title,y,x=540,width=404)=>({action,label,ariaLabel:title || label,settingGroup:group,settingLabel:title,x,y,width,height:58});
     const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
     const includeLanguage=simpleDesktop || typeof document!=='undefined';
@@ -240,7 +240,8 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         {...choice('LivingFrame',LIVING_FRAME_QUALITIES[getSpatialVisualSettings().livingFrameQuality].label,'living-frame','Living Frame artwork',488,56,888),settingLabel:'',height:50},
 
         slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight,-1,1,.05,570),
-        ...(tutorialAvailable?[{...choice('RestartTutorial','Restart tutorial','tutorial','',786,56,888),height:46}]:[]),
+        ...(developerLabAvailable?[{...choice('DeveloperLab','Developer Lab','developer','',786,tutorialAvailable?496:56,tutorialAvailable?448:888),height:46}]:[]),
+        ...(tutorialAvailable?[{...choice('RestartTutorial','Restart tutorial','tutorial','',786,56,developerLabAvailable?420:888),height:46}]:[]),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
         {...navigation,y:720,width:420},choice('SettingsHelp','Help','help','',720,496,448),close];
 }
@@ -322,7 +323,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onRestartTutorial=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onRestartTutorial=null,onDeveloperLab=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
     let rayFilter=()=>true;
     let comfortContext=null,panelOpacity=1,panelIntroductionAt=null;
@@ -525,6 +526,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='NarrationReplay'){globalThis.dispatchEvent?.(new Event('nlxr-narration-replay'));return;}
         if(action==='Narration'){setWelcomeNarrationSettings({enabled:!getWelcomeNarrationSettings().enabled});renderSettings();return;}
         if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
+        if(action==='DeveloperLab'){onDeveloperLab?.();return;}
         if(action==='RestartTutorial'){settingsOpen=false;renderSettings();onRestartTutorial?.();return;}
         if(action==='Previous')page=0;
         if(action==='Next')page=Math.min(pages().length-1,page+1);
@@ -631,7 +633,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         panel.addEventListener('pointermove',event=>{if(!drag || drag.pointer!==event.pointerId)return;lowerDomPositions[id]={left:Math.max(8,Math.min(innerWidth-panel.offsetWidth-8,event.clientX-drag.x)),top:Math.max(8,Math.min(innerHeight-90,event.clientY-drag.y))};renderLowerCompanions();});
         panel.addEventListener('pointerup',()=>{drag=null;});panel.addEventListener('pointercancel',()=>{drag=null;});
     }
-    const settingsControls=()=>panelSettingsControls({simpleDesktop,headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,cellOpacity:meshCellOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,languageOpen,demoSound:demoSound?.volumes(),tutorialAvailable:typeof onRestartTutorial==='function'});
+    const settingsControls=()=>panelSettingsControls({simpleDesktop,headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,cellOpacity:meshCellOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,languageOpen,demoSound:demoSound?.volumes(),tutorialAvailable:typeof onRestartTutorial==='function',developerLabAvailable:typeof onDeveloperLab==='function'});
     function renderSettings(){
         renderExplorer();
         syncPanelOpenerButtons();
