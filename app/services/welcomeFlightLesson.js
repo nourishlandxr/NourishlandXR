@@ -2,7 +2,7 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 const start=new THREE.Vector3(-.43,.035,-.20);
 export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}}={}){
  const velocity=new THREE.Vector3(),desired=new THREE.Vector3(),delta=new THREE.Vector3();
- const rings=new THREE.Group();root.add(rings);const points=[new THREE.Vector3(-.43,.35,-.72),new THREE.Vector3(-.05,.45,-1.02),new THREE.Vector3(.36,.42,-.88)],entries=[];
+ const rings=new THREE.Group();rings.visible=false;root.add(rings);const points=[new THREE.Vector3(-.43,.35,-.72),new THREE.Vector3(-.05,.45,-1.02),new THREE.Vector3(.36,.42,-.88)],entries=[];
  const geometry=new THREE.TorusGeometry(.17,.006,6,48);let previous=start;
  for(const point of points){const normal=point.clone().sub(previous).normalize(),material=new THREE.MeshBasicMaterial({color:'#ffe1a0',transparent:true,opacity:.28,depthWrite:false}),mesh=new THREE.Mesh(geometry,material);mesh.position.copy(point);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);rings.add(mesh);entries.push({point,normal,mesh});previous=point;}
  let count=0,heading=0,landed=false,airborne=false,landingTime=0,elapsed=0;

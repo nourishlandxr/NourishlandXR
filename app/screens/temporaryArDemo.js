@@ -2231,6 +2231,7 @@ function paintWelcomeLayer(now) {
 }
 
 function paintDemoAmbientLife(now){
+    if(welcomePractice?.active){ambientBeeModel?.hide?.();return;}
     paintDemoButterfly(now);
     if(now-ambientLastPaint<33)return;
     ambientLastPaint=now;
@@ -6153,6 +6154,7 @@ function blendInsectWithFlower(position,visit,visitor){
 }
 
 function drawSpatialAmbientLife(view){
+    if(welcomePractice?.active)return;
     // Never display a different bee while the animated model is loading.
     if(!getSpatialVisualSettings().insects || !ambientBeeModel?.ready || !viewerMatrix || !Number.isFinite(ambientBeesStartedAt))return;
     if(xrRecoveryStatus!=='ready')return;

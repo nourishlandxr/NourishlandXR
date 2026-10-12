@@ -87,7 +87,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         for(const child of trialVisibility.keys())child.visible=false;tableReveal.update(4);lastSignature='';
     },onClose:()=>{for(const [child,visible] of trialVisibility || [])child.visible=visible;trialVisibility=null;inputEdges.clear();if(!trialVoiceWasPaused && !tutorialPaused)voice?.resume();lastSignature='';paint();}});
     const fruitHighlight=new THREE.Mesh(new THREE.TorusGeometry(.07,.0035,6,40),new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.8,depthWrite:false}));fruitHighlight.rotation.x=Math.PI/2;root.add(fruitHighlight);
-    const revealHalos=[-1,1].map(()=>{const halo=new THREE.Mesh(new THREE.SphereGeometry(.07,16,10),new THREE.MeshBasicMaterial({color:'#ffe7b2',transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));scene.add(halo);return halo;});
+    const revealHalos=[-1,1].map(()=>{const halo=new THREE.Mesh(new THREE.SphereGeometry(.07,16,10),new THREE.MeshBasicMaterial({color:'#ffe7b2',transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}));halo.visible=false;scene.add(halo);return halo;});
     let inputOverride=null;
     const handsEnabled=()=>inputOverride?inputOverride==='hands':trials.active?trials.mode==='hands':['hands','paint-pot','packet','seed','water','grow','harvest','explore'].includes(phase());
     const lesson=()=>WELCOME_PRACTICE_LESSONS[index];
