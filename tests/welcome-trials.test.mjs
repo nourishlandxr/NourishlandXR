@@ -65,3 +65,17 @@ test('the actual demo butterfly rig bakes finite independent wing morphs for bot
         let moved=false;for(const mesh of insects[0].children){const base=mesh.geometry.attributes.position.array,morph=mesh.geometry.morphAttributes.position[0].array;assert.equal(base.length,morph.length);assert.ok(base.every(Number.isFinite));assert.ok(morph.every(Number.isFinite));moved ||= base.some((n,i)=>Math.abs(n-morph[i])>.001);}assert.equal(moved,true);
     }finally{globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.createImageBitmap=oldBitmap;}
 });
+
+test('runtime palette selects colours directly and drags brush width through controller rays',()=>withCanvas(()=>{
+ const root=new THREE.Group(),trial=createWelcomePracticeTrials(root),source={handedness:'right'};
+ trial.open('painting');trial.update(0,{visible:true});
+ trial.command('colour:7');assert.equal(trial.snapshot().paint.colour,7);
+ for(const brush of ['water','vine','earth','firefly']){trial.command('brush:'+brush);assert.equal(trial.snapshot().paint.brush,brush);}
+ trial.command('width:0.014');assert.equal(trial.snapshot().paint.width,.014);
+ trial.command('width:NaN');assert.equal(trial.snapshot().paint.width,.014);
+ // Width is the seventh two-column row, with its track inside the square.
+ const rayAt=x=>{root.updateMatrixWorld(true);const p=new THREE.Vector3((x/900-.5)*.46,(.5-((140+6*50+23)/900))*.46,0).applyMatrix4(trial.panel.matrixWorld);return {origin:{x:p.x,y:p.y,z:p.z+.2},direction:{x:0,y:0,z:-1}};};
+ const matrix=new THREE.Matrix4().makeTranslation(0,.3,0).elements;
+ for(const x of [80,370]){const ray=rayAt(x),target=trial.hit(ray);assert.match(target.id,/^width:/);trial.update(.016,{visible:true,inputs:[{source,matrix,ray,trigger:true}]});}
+ assert.ok(trial.snapshot().paint.width>.015);assert.equal(trial.snapshot().strokes,0,'panel drags do not paint');trial.destroy();
+}));

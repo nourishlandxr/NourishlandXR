@@ -1,8 +1,8 @@
-// Build info — manual version bump.
+// Build info â€” manual version bump.
 // Increment VERSION for every edit/commit so the welcome screen always
 // shows the latest deployed version.
 
-const VERSION = '0.9557';
+const VERSION = '0.9558';
 
 export const BUILD_INFO = Object.freeze({
     version: VERSION,
@@ -11,4 +11,4 @@ export const BUILD_INFO = Object.freeze({
     target: 'development'
 });
 
-console.log(`[Build] ${BUILD_INFO.version} — ${BUILD_INFO.builtAt}`);
+console.log(`[Build] ${BUILD_INFO.version} â€” ${BUILD_INFO.builtAt}`);

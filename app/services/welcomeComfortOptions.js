@@ -28,11 +28,11 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         else if(id==='reset')stage.resetObjects();
         else if(id.startsWith('input:'))stage.setInputMode(id.slice(6));
         else if(id==='paint-tools')stage.trials.active==='painting'?stage.trials.close():stage.trials.open('painting');
-        else if(id.startsWith('brush:'))(stage.trials.paint || stage.paint).setBrush(id.slice(6));
-        else if(id==='paint:undo')(stage.trials.paint || stage.paint).undo();
-        else if(id==='paint:clear')(stage.trials.paint || stage.paint).clear();
-        else if(id==='paint:fine')(stage.trials.paint || stage.paint).setWidth(.002);
-        else if(id==='paint:bold')(stage.trials.paint || stage.paint).setWidth(.01);
+        else if(id.startsWith('brush:'))(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setBrush(id.slice(6));
+        else if(id==='paint:undo')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).undo();
+        else if(id==='paint:clear')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).clear();
+        else if(id==='paint:fine')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setWidth(.002);
+        else if(id==='paint:bold')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setWidth(.01);
         else if(id==='adjust')expanded=!expanded;
         else if(['quieter','louder'].includes(id))setWelcomeNarrationSettings({volume:getWelcomeNarrationSettings().volume+(id==='quieter'?-.15:.15)});
         else if(id.startsWith('graphics:')){setSpatialVisualSettings({graphicsQuality:id.slice(9)});onVisualChange();}
