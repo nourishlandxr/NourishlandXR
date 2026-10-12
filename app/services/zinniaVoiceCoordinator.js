@@ -10,7 +10,7 @@ export function forgetZinniaVoice(owner){releaseZinniaVoice(owner);if(last===own
 export function isLastZinniaVoice(owner){return last===owner;}
 export function zinniaVoiceState(){return active?.status() || context?.status?.() || {playing:false,paused:false,listening:false};}
 export function zinniaCharacterCue(){return {...context?.characterCue,paused:Boolean(context?.status?.().paused)};}
-export function zinniaSpeechLevel(){return active?.speechLevel?.() || 0;}
+export function zinniaSpeechLevel(){return (active || context)?.speechLevel?.() || 0;}
 export function replayZinniaVoice(){if(context)context.replay();else last?.replay?.();}
 export function pauseZinniaVoice(){if(active?.pause)active.pause();else context?.pause?.();}
 export function resumeZinniaVoice(){if(active?.resume)active.resume();else context?.resume?.();}

@@ -5,6 +5,23 @@ import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {GLTFLoader} from '../app/assets/fruit-window/vendor/GLTFLoader.js';
 import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} from '../app/services/zinniaCharacter.js';
 import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
+import {createZinniaFramePerch,ZINNIA_FRAME_PERCH} from '../app/services/zinniaFramePerch.js';
+
+test('actual demo perch faces outward and follows its narration without a coordinator owner',async()=>{
+    const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
+    const character=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await character.userData.zinnia.ready;
+    let paused=false,playing=true;
+    const perch=createZinniaFramePerch({character,getVoice:()=>({status:()=>({playing,paused}),speechLevel:()=>playing?.4:0})});
+    const pose=new THREE.Matrix4().makeTranslation(0,1.4,-2).elements,view={transform:{matrix:new THREE.Matrix4().makeTranslation(0,1.6,0).elements}};
+    try{
+        assert.equal(perch.characterMount.rotation.y,0);assert.ok(ZINNIA_FRAME_PERCH.z>.215);
+        for(let t=0;t<1200;t+=30)perch.update(view,pose,t);
+        assert.ok(character.userData.zinnia.guide.snapshot().mouthOpen>.5);
+        assert.ok(character.userData.zinnia.guide.snapshot().eyeSmile<.1);
+        const head=character.getObjectByName('Head_nod_root');const facing=new THREE.Vector3(0,0,1).transformDirection(head.matrixWorld);assert.ok(facing.z>.8);
+        paused=true;playing=false;perch.update(view,pose,1230);assert.equal(character.userData.zinnia.speechLevel,0);
+    }finally{perch.destroy();}
+});
 
 test('Zinnia points at a world target through a rotated mount, holds on pause and reacts once per cue',async()=>{
     const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
