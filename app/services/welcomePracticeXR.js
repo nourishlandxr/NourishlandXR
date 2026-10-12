@@ -1,3 +1,4 @@
+import {createSpatialTetherRenderer,drawSpatialTether,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {unlockZinniaTouchAudio} from './zinniaTouchReactions.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createWelcomePracticeScene} from './welcomePracticeScene.js';
@@ -9,7 +10,7 @@ import {nearestWelcomePointerHit} from './welcomePointerTarget.js';
 
 export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null}={}){
     let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false;
-    const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap();
+    const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
     const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose});
     const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:ray=>{
         const hit=nearestWelcomePointerHit(ray,onHit?.(ray),stage.hit(ray));return hit?.kind==='panel' && directPanelPress(null,ray,hit)?hit:null;
@@ -60,5 +61,10 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
     return {stage,bind,update,get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
         draw(view,handRenderer){if(!stage.active)return;const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);
             handRenderer?.draw(view,hands,{filled:true,controllers:stage.controllerHandsVisible?controllers:[],controllerOpacity:stage.controllerHandOpacity*opacity,trackedOpacity:stage.trackedHandOpacity*opacity});
-        },destroy({stopVoice=true}={}){if(disposed)return;disposed=true;unbind();stage.destroy({stopVoice});pendingRenderer?.destroy();pendingRenderer=null;renderer?.destroy();renderer=null;hands=[];controllers=[];inputs=[];}};
+            if(stage.controllerLasersVisible)for(const input of inputs){
+                if(input.source.hand || !input.ray || stage.exiting || stage.trials.active==='painting' || stage.phase==='brush' || stage.isBrushHeld(input.source))continue;
+                const hit=nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray)),r=input.ray,end=hit?.worldPoint || {x:r.origin.x+r.direction.x*1.25,y:r.origin.y+r.direction.y*1.25,z:r.origin.z+r.direction.z*1.25};
+                drawSpatialTether(gl,pointer,view,r.origin,end,{width:.0018,curve:0,lift:0,segments:4,color:[.8,.9,.79,.6*opacity]});
+            }
+        },destroy({stopVoice=true}={}){if(disposed)return;disposed=true;unbind();stage.destroy({stopVoice});pendingRenderer?.destroy();pendingRenderer=null;renderer?.destroy();renderer=null;destroySpatialTetherRenderer(gl,pointer);hands=[];controllers=[];inputs=[];}};
 }

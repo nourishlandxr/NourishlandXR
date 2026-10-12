@@ -18,3 +18,25 @@ export function trackedPalmPoint(joints){
 export function directPanelPress(source,ray,target,type='selectstart'){
     return Boolean(!source?.hand && !type.startsWith('squeeze') && ray && target?.button && !target.button.disabled && Number.isFinite(target.distance) && target.distance>=0 && target.distance<=.15);
 }
+
+export function createDirectPanelGesture({now=()=>performance.now()}={}){
+    const presses=new WeakMap();
+    return {update(source,ray,target,type){
+        const valid=directPanelPress(source,ray,target,type),previous=presses.get(source);
+        const matches=valid && previous?.action===target.button.action && previous?.card===target.card?.id && now()-previous.time<1800;
+        if(type==='selectstart'){
+            presses.delete(source);
+            if(valid)presses.set(source,{action:target.button.action,card:target.card?.id,time:now(),released:false});
+            return {accepted:valid,activate:false};
+        }
+        if(type==='selectend'){
+            if(matches)previous.released=true;else presses.delete(source);
+            return {accepted:Boolean(matches),activate:false};
+        }
+        if(type==='select'){
+            presses.delete(source);
+            return {accepted:Boolean(matches),activate:Boolean(matches && previous.released)};
+        }
+        return {accepted:false,activate:false};
+    },reset(source){if(source)presses.delete(source);}};
+}

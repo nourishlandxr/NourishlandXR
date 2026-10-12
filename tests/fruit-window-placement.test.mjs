@@ -4,6 +4,20 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {FruitDiscoveryAsset} from '../app/assets/fruit-window/discovery-runtime.js';
+import {fruitWindowVisibleBounds,fruitHandPose} from '../app/services/fruitWindowExperience.js';
+import {fruitInsidePalm} from '../app/services/xrDirectInteraction.js';
+
+test('Fruit Window XR pickup uses palm contact with real mesh bounds, without a ray fallback',()=>{
+ const source=readFileSync(new URL('../app/services/fruitWindowExperience.js',import.meta.url),'utf8');
+ const start=source.indexOf('    function handFruitHit('),end=source.indexOf('    function beginHandFruit(',start);
+ const content=new THREE.Group(),fruit=new THREE.Mesh(new THREE.SphereGeometry(.04),new THREE.MeshBasicMaterial());content.add(fruit);content.updateMatrixWorld(true);
+ const context={THREE,fruitInsidePalm,fruitWindowVisibleBounds,visible:()=>true,content,asset:{canPick:true,detachedParts:[],pickableRigs:new Map([[fruit,{}]])},localSourcePose:t=>({position:new THREE.Vector3(...t.position),quaternion:new THREE.Quaternion()})};
+ const hit=vm.runInNewContext(source.slice(start,end)+';handFruitHit',context);
+ assert.equal(hit({position:[.13,0,0]}),null);assert.equal(hit({position:[.02,0,0]}).object,fruit);
+ const joints=new Map([['wrist',{matrix:new THREE.Matrix4().elements}]]);for(const f of ['index','middle','ring','pinky'])for(const j of ['metacarpal','phalanx-proximal'])joints.set(f+'-finger-'+j,{x:.1,y:.2,z:.3});
+ const pose=fruitHandPose({tracked:true,rawJoints:joints});assert.ok(pose.position.distanceTo(new THREE.Vector3(.1,.2,.3))<1e-8);
+ const begin=source.slice(end,source.indexOf('\n    ',end+35));assert.doesNotMatch(begin,/state\.pointer|cast\(/);
+});
 test('Fruit Window laser contacts follow translated and rotated geometry and reject misses',()=>{
  const source=readFileSync(new URL('../app/services/fruitWindowExperience.js',import.meta.url),'utf8');
  const method=source.slice(source.indexOf('        hit(ray){'),source.indexOf('        canAction(name)'));

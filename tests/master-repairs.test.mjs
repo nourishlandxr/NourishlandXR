@@ -37,13 +37,14 @@ test('hidden cutaways do not shrink the displayed plant and the deeper box fits 
  const scale=fruitWindowFit(size);assert.equal(scale,.57);assert.ok(size.z*scale<=.26);assert.ok(scale>.09/size.z*1.8);
 });
 
-test('joint-only hands supply a fingertip pickup pose, retain pinch hysteresis and release',()=>{
+test('joint-only hands supply a stable palm pickup pose, retain pinch hysteresis and release',()=>{
  const points=new Map([['wrist',{x:0,y:1,z:0}],['thumb-tip',{x:.01,y:1,z:-.3}],['index-finger-tip',{x:0,y:1,z:-.3}]]),source={hand:points,handedness:'left'};
+ for(const f of ['index','middle','ring','pinky'])for(const j of ['metacarpal','phalanx-proximal'])points.set(f+'-finger-'+j,{x:.005,y:1,z:-.12});
  const space={},frame={getJointPose(point){return {transform:{matrix:new THREE.Matrix4().makeTranslation(point.x,point.y,point.z).elements},radius:.008};}};
- beginHandTrackingFrame(frame,100);let state=handTrackingState(frame,source,space),pose=fruitHandPose(state);assert.equal(state.pinch,true);assert.ok(pose.position.distanceTo(new THREE.Vector3(.005,1,-.3))<1e-6);
+ beginHandTrackingFrame(frame,100);let state=handTrackingState(frame,source,space),pose=fruitHandPose(state);assert.equal(state.pinch,true);assert.ok(pose.position.distanceTo(new THREE.Vector3(.005,1,-.12))<1e-6);
  points.get('thumb-tip').x=.035;beginHandTrackingFrame(frame,116);state=handTrackingState(frame,source,space);assert.equal(state.pinch,true);
  points.get('thumb-tip').x=.06;beginHandTrackingFrame(frame,132);state=handTrackingState(frame,source,space);assert.equal(state.pinch,false);
- points.delete('index-finger-tip');beginHandTrackingFrame(frame,148);assert.equal(fruitHandPose(handTrackingState(frame,source,space)),null);
+ points.delete('index-finger-metacarpal');beginHandTrackingFrame(frame,148);assert.equal(fruitHandPose(handTrackingState(frame,source,space)),null);
 });
 
 test('persistent 90 Hz misses reduce scene cost and recover to supported 72 Hz without requiring FPS display',async()=>{

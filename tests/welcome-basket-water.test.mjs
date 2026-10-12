@@ -40,6 +40,8 @@ test('watering follows nozzle to soil, tolerates edge jitter and rejects invalid
     const stream=welcomeWaterStream(origin,direction,pot);assert.ok(stream);
     assert.deepEqual(welcomeWaterDrop(stream,0),origin);
     const end=welcomeWaterDrop(stream,1);assert.ok(Math.abs(end.y-.086)<1e-9);assert.ok(end.x>origin.x);
+    const raised=welcomeWaterStream({...origin,y:origin.y+.25},direction,{...pot,y:.25});assert.ok(raised);
+    assert.ok(Math.abs(welcomeWaterDrop(raised,1).y-.336)<1e-9,'water lands on soil in a lifted pot');
     assert.equal(welcomeWaterStream(origin,{x:0,y:.1,z:0},pot),null);
     assert.equal(welcomeWaterStream({...origin,x:NaN},direction,pot),null);
     assert.equal(welcomeWaterStream({...origin,x:.5},direction,pot),null);

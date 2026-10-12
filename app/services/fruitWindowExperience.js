@@ -1,3 +1,4 @@
+import {fruitInsidePalm,trackedPalmPoint} from './xrDirectInteraction.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {OrbitControls} from '../assets/fruit-window/vendor/OrbitControls.js';
@@ -19,9 +20,9 @@ export function fruitWindowVisibleBounds(root,box=new THREE.Box3()){
 }
 export function fruitHandPose(state){
  if(!state?.tracked)return null;
- const index=state.rawJoints.get('index-finger-tip'),thumb=state.rawJoints.get('thumb-tip'),wrist=state.rawJoints.get('wrist');
- if(!index||!thumb||!wrist)return null;
- const position=new THREE.Vector3((index.x+thumb.x)/2,(index.y+thumb.y)/2,(index.z+thumb.z)/2),quaternion=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(wrist.matrix));
+ const position=trackedPalmPoint(state.rawJoints),wrist=state.rawJoints.get('wrist');
+ if(!position||!wrist)return null;
+ const quaternion=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(wrist.matrix));
  return {position,orientation:quaternion,matrix:new THREE.Matrix4().compose(position,quaternion,new THREE.Vector3(1,1,1)).elements};
 }
 
@@ -149,14 +150,14 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     }
     function handFruitHit(transform){
         if(!asset?.canPick||!transform)return null;
-        content.updateMatrixWorld(true);const point=localSourcePose(transform).position,box=new THREE.Box3(),candidates=asset.detachedParts.length?asset.detachedParts:[...asset.pickableRigs.keys()];
+        content.updateMatrixWorld(true);const pose=localSourcePose(transform),point=pose.position,palm=new THREE.Matrix4().compose(point,pose.quaternion,new THREE.Vector3(1,1,1)),box=new THREE.Box3(),candidates=asset.detachedParts.length?asset.detachedParts:[...asset.pickableRigs.keys()];
         let nearest=null,distance=Infinity;
-        for(const fruit of candidates){if(!visible(fruit))continue;fruitWindowVisibleBounds(fruit,box);const d=box.distanceToPoint(point);if(d<.045&&d<distance){nearest={object:fruit,point:point.clone(),distance:d};distance=d;}}
+        for(const fruit of candidates){if(!visible(fruit))continue;fruitWindowVisibleBounds(fruit,box);const d=box.distanceToPoint(point);if(fruitInsidePalm(palm,box.getCenter(new THREE.Vector3()))&&d<distance){nearest={object:fruit,point:point.clone(),distance:d};distance=d;}}
         return nearest;
     }
     function beginHandFruit(source,state){
         const transform=fruitHandPose(state);if(!transform)return false;
-        const hit=handFruitHit(transform)||(state.pointer?cast(localRay(state.pointer)).find(hit=>botanicalHit(hit)==='fruit'):null);
+        const hit=handFruitHit(transform);
         if(!hit||!pickHit(hit))return false;
         const held=fruitHold.begin(source,hitFruit(hit),localSourcePose(transform),performance.now());if(held){selections.add(source);modelDirty=true;syncButtons();}return held;
     }
@@ -301,7 +302,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
                 }
                 for(const source of handPinches.keys())if(!sources.includes(source))handPinches.delete(source);
                 for(const source of [...fruitHold.holds.keys()]){
-                let transform=null;try{transform=source.hand?fruitHandPose(handTrackingState(xrFrame,source,space)):xrFrame.getPose(source.targetRaySpace,space)?.transform;}catch{}
+                let transform=null;try{transform=source.hand?fruitHandPose(handTrackingState(xrFrame,source,space)):xrFrame.getPose(source.gripSpace||source.targetRaySpace,space)?.transform;}catch{}
                 const released=source.hand?!handTrackingState(xrFrame,source,space)?.pinch:source.gamepad?.buttons?.[0]?.pressed===false;
                 if(!sources.includes(source)||released||!transform){fruitHold.release(source);continue;}
                 const axes=source.gamepad?.axes||[],vertical=Number(axes.length>=4?axes[3]:axes[1])||0,amount=Math.max(0,(Math.abs(vertical)-.18)/.82);
@@ -321,7 +322,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
             if(event.type==='squeezestart'){
                 let transform=null,grip=null;try{transform=event.frame?.getPose(source.targetRaySpace,space)?.transform;grip=event.frame?.getPose(source.gripSpace||source.targetRaySpace,space)?.transform.position;}catch{}
                 if(!transform||!grip)return false;const m=transform.matrix,ray={origin:{x:m[12],y:m[13],z:m[14]},direction:{x:-m[8],y:-m[9],z:-m[10]}},handle=handleAt(ray);
-                const pressed=Boolean(handle&&grips.press(source,handle.userData.gripSide,grip));if(pressed)magnetized=false;return pressed;
+                const pressed=Boolean(handle&&vector(grip).distanceTo(handle.getWorldPosition(new THREE.Vector3()).applyQuaternion(anchor.quaternion).add(anchor.position))<.065&&grips.press(source,handle.userData.gripSide,grip));if(pressed)magnetized=false;return pressed;
             }
             if(grips.owns(source))return true;
             if(event.type==='selectstart'){
@@ -330,7 +331,8 @@ export function createFruitWindowExperience({root=document.body,identity={},show
                 const hit=hits.find(hit=>botanicalHit(hit));
                 if(fruitHold.source!==null && botanicalHit(hit)==='play'){selections.add(source);return true;}
                 if(botanicalHit(hit)==='play'){action('play');selections.add(source);return true;}
-                if(botanicalHit(hit)==='fruit'&&pickHit(hit)){fruitHold.begin(source,hitFruit(hit),localSourcePose(transform),performance.now());selections.add(source);syncButtons();return true;}
+                const palmTransform=event.frame?.getPose(source.gripSpace||source.targetRaySpace,space)?.transform,palmHit=handFruitHit(palmTransform);
+                if(palmHit&&pickHit(palmHit)){fruitHold.begin(source,hitFruit(palmHit),localSourcePose(palmTransform),performance.now());selections.add(source);syncButtons();return true;}
             }
             return false;
         },

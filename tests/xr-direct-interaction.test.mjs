@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import vm from 'node:vm';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
-import {fruitInsidePalm,trackedPalmPoint,directPanelPress} from '../app/services/xrDirectInteraction.js';
+import {fruitInsidePalm,trackedPalmPoint,directPanelPress,createDirectPanelGesture} from '../app/services/xrDirectInteraction.js';
 import {handIndexCanPoke,createHandPokeTracker} from '../app/services/handPoke.js';
 
 test('palm contact follows wrist rotation, and ignores fingertip motion',()=>{
@@ -18,6 +20,44 @@ test('panel accepts nearby controller buttons, rejects distant rays, hands, grip
     const source={},ray={},target={distance:.08,button:{action:'Pause'}};
     assert.equal(directPanelPress(source,ray,target),true);
     for(const [s,t,type] of [[source,{...target,distance:1},'selectstart'],[{hand:{}},target,'selectstart'],[source,target,'squeezestart'],[source,{distance:.08},'selectstart'],[source,{...target,button:{disabled:true}},'selectstart']])assert.equal(directPanelPress(s,ray,t,type),false);
+});
+
+test('nearby panel activation requires pressing and releasing the same button',()=>{
+    let time=0;const gesture=createDirectPanelGesture({now:()=>time}),source={},ray={},target={distance:.08,card:{id:'control'},button:{action:'Pause'}};
+    const fire=(type,t=target)=>gesture.update(source,ray,t,type);
+    assert.equal(fire('select').activate,false);
+    fire('selectstart');assert.equal(fire('select').activate,false,'no release');
+    fire('selectstart');fire('selectend',{...target,button:{action:'Next'}});assert.equal(fire('select').activate,false,'different button');
+    fire('selectstart');fire('selectend');assert.equal(fire('select').activate,true);assert.equal(fire('select').activate,false,'duplicate');
+    fire('selectstart');time=2000;fire('selectend');assert.equal(fire('select').activate,false,'stale gesture');
+});
+
+test('actual panel XR handler ignores grip, distant selection and hand pinch; nearby button presses once',()=>{
+    const source=fs.readFileSync(new URL('../app/services/pimInfoPanel.js',import.meta.url),'utf8');
+    const start=source.indexOf('const handle=event=>{',source.indexOf('bindSession(session,referenceSpace)'));
+    const handler=source.slice(start,source.indexOf(';const visibility=',start));
+    const actions=[],controller={targetRaySpace:{}},target={distance:.08,card:{id:'control'},button:{action:'Pause'}},matrix=new THREE.Matrix4().makeTranslation(0,1.2,-.9).elements;
+    const scope=vm.createContext({directInteractionOnly:()=>true,fruitWindow:null,inputOccupied:()=>false,referenceSpace:{},directPanelGesture:createDirectPanelGesture(),rayFilter:()=>true,hit:()=>scope.target,target,targetButtonAtRay:t=>t?.button || null,act:a=>actions.push(a),slideAtTarget(){},sliderGrab:null,spatialMove:null,spatialGrabPending:null,panelGestureSource:null,finishingMoveSource:null,finishingSliderSource:null,event:null});
+    const handle=vm.runInContext(handler+';handle',scope);
+    const fire=(type,inputSource=controller)=>handle({type,inputSource,frame:{getPose:()=>({transform:{matrix}})},stopImmediatePropagation(){}});
+    fire('squeezestart');fire('selectstart',{hand:{}});fire('select');assert.deepEqual(actions,[]);
+    scope.target={...target,distance:1};fire('selectstart');fire('selectend');fire('select');assert.deepEqual(actions,[]);
+    scope.target=target;fire('selectstart');fire('selectend');fire('select');fire('select');assert.deepEqual(actions,['Pause']);
+    assert.equal(scope.spatialMove,null);assert.equal(scope.spatialGrabPending,null);
+});
+
+test('actual welcome renderer keeps controller lasers but excludes gloves, hands and brushes',()=>{
+    const source=fs.readFileSync(new URL('../app/services/welcomePracticeXR.js',import.meta.url),'utf8'),start=source.indexOf('draw(view,handRenderer){'),end=source.indexOf('        },destroy',start);
+    let lines=0,brush=false;const stage={active:true,exitOpacity:1,controllerLasersVisible:true,controllerHandsVisible:false,trials:{active:null},phase:'fruit',isBrushHeld:()=>brush,hit:()=>null};
+    const controller={source:{},ray:{origin:{x:0,y:1,z:0},direction:{x:0,y:0,z:-1}}};
+    const context={stage,revealTime:2,renderer:null,anchor:{},hands:[],controllers:[],inputs:[controller],onHit:()=>null,nearestWelcomePointerHit:()=>null,drawSpatialTether:()=>lines++,gl:{},pointer:{}};
+    const draw=vm.runInNewContext('({'+source.slice(start,end)+'}}).draw',context);
+    draw({});assert.equal(lines,1);
+    stage.controllerLasersVisible=false;draw({});assert.equal(lines,1);
+    stage.controllerLasersVisible=true;brush=true;draw({});assert.equal(lines,1);
+    brush=false;stage.phase='brush';draw({});assert.equal(lines,1);
+    stage.phase='fruit';stage.trials.active='painting';draw({});assert.equal(lines,1);
+    stage.trials.active=null;controller.source.hand={};draw({});assert.equal(lines,1);
 });
 
 test('open hands cannot poke; pointing with the other fingers curled can',()=>{

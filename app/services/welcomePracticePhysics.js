@@ -13,7 +13,7 @@ export function practiceSupport(body){
     // World y row of the orientation matrix; oriented box support distance.
     return Math.abs(2*(x*y+z*w))*h.x+Math.abs(1-2*(x*x+z*z))*h.y+Math.abs(2*(y*z-x*w))*h.z;
 }
-export function resetPracticeBody(body){Object.assign(body.position,{x:body.home.x,y:body.halfSize.y+.04,z:body.home.z});Object.assign(body.velocity,{x:0,y:0,z:0});Object.assign(body.angular,{x:0,y:0,z:0});Object.assign(body.rotation,{x:0,y:0,z:0,w:1});body.floorTime=0;body.held=false;}
+export function resetPracticeBody(body){Object.assign(body.position,{x:body.home.x,y:body.home.y ?? body.halfSize.y+.04,z:body.home.z});Object.assign(body.velocity,{x:0,y:0,z:0});Object.assign(body.angular,{x:0,y:0,z:0});Object.assign(body.rotation,{x:0,y:0,z:0,w:1});body.floorTime=0;body.held=false;}
 function turn(body,dt){
     const a=body.angular,speed=Math.hypot(a.x,a.y,a.z);if(speed<.002)return;
     const angle=Math.min(10,speed)*dt*.5,s=Math.sin(angle)/speed,ax=a.x*s,ay=a.y*s,az=a.z*s,aw=Math.cos(angle),q=body.rotation;
