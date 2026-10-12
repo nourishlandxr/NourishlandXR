@@ -15,7 +15,7 @@ test('soft landing order introduces the frame, voice, table, face, comfort, then
     assert.deepEqual(lessons.slice(0,17).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','comfort','living-frame','brush','basket','basket-reveal','practice-ready','grab','gloves','fruit']);
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
-    for(const clip of [...lessons,...responses].filter(c=>c.spoken))assert.ok(fs.statSync(new URL('../app/assets/welcome-practice/voice/'+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
+    for(const clip of [...lessons,...responses].filter(c=>c.spoken && !c.liveVoice))assert.ok(fs.statSync(new URL('../app/assets/welcome-practice/voice/'+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
 });
 
 test('white silhouette precedes the solid object and follows adjusted geometry',()=>{
