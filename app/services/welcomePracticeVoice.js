@@ -6,27 +6,27 @@ export function setWelcomeNarrationSettings(change){const next={...getWelcomeNar
 export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded=()=>{},onInterrupt=()=>{},onReplay,assetBase=new URL('../assets/welcome-practice/voice/',import.meta.url),initialId='arrival',maxCached=8,fetchCache='no-cache'}={}){
     const Context=globalThis.AudioContext || globalThis.webkitAudioContext;
     let context=null,gain=null,echoGain=null,current=null,buffer=null,offset=0,startedAt=0,generation=0,muted=!getWelcomeNarrationSettings().enabled,playing=false,paused=false,disposed=false,lesson=null;
-    let analyser=null,wave=null,fallbackSpeaking=false,fallbackQueued=false;
+    let analyser=null,wave=null,fallbackSpeaking=false,fallbackQueued=false,awaitingAudioUnlock=false;
     const cache=new Map(),abort=new AbortController();
     const status=()=>({muted,playing,paused,available:Boolean(context),lesson:lesson?.id || null});
     const changed=()=>onChange(status());
     function unlock(){
         if(!enabled || disposed || !Context)return;
-        try{if(!context){context=new Context();gain=context.createGain();const delay=context.createDelay(.2),limiter=context.createDynamicsCompressor();echoGain=context.createGain();delay.delayTime.value=.09;limiter.threshold.value=-2;limiter.knee.value=0;limiter.ratio.value=20;gain.connect(limiter);gain.connect(delay);delay.connect(echoGain);echoGain.connect(limiter);limiter.connect(context.destination);syncSettings();}context.resume()?.catch(()=>{});}catch{context=null;}
+        try{if(!context){context=new Context();gain=context.createGain();const delay=context.createDelay(.2),limiter=context.createDynamicsCompressor();echoGain=context.createGain();delay.delayTime.value=.09;limiter.threshold.value=-2;limiter.knee.value=0;limiter.ratio.value=20;gain.connect(limiter);gain.connect(delay);delay.connect(echoGain);echoGain.connect(limiter);limiter.connect(context.destination);syncSettings();}const unlocking=context.resume();unlocking?.then(()=>{if(awaitingAudioUnlock && !disposed && !muted && buffer && context?.state==='running'){awaitingAudioUnlock=false;paused=false;playBuffer(generation);}}).catch(()=>{});}catch{context=null;}
     }
     function detach(){if(!current)return;current.onended=null;try{current.stop();}catch{}current.disconnect();current=null;}
-    function stop({forget=false}={}){if(forget)lesson=null;generation++;detach();if(fallbackQueued)globalThis.speechSynthesis?.cancel();fallbackSpeaking=false;fallbackQueued=false;buffer=null;offset=0;playing=false;paused=false;releaseZinniaVoice(owner);changed();}
-    function pause(){if(disposed || paused || !playing)return;if(current && buffer)offset=Math.min(buffer.duration,offset+Math.max(0,(context.currentTime-startedAt)));else globalThis.speechSynthesis?.pause();detach();playing=false;paused=true;changed();}
+    function stop({forget=false}={}){awaitingAudioUnlock=false;if(forget)lesson=null;generation++;detach();if(fallbackQueued)globalThis.speechSynthesis?.cancel();fallbackSpeaking=false;fallbackQueued=false;buffer=null;offset=0;playing=false;paused=false;releaseZinniaVoice(owner);changed();}
+    function pause(){awaitingAudioUnlock=false;if(disposed || paused || !playing)return;if(current && buffer)offset=Math.min(buffer.duration,offset+Math.max(0,(context.currentTime-startedAt)));else globalThis.speechSynthesis?.pause();detach();playing=false;paused=true;changed();}
     function playBuffer(token){
         if(token!==generation || disposed || muted || paused || !buffer)return;
-        if(context.state!=='running'){playing=false;paused=true;changed();return;}
+        if(context.state!=='running'){awaitingAudioUnlock=true;playing=false;paused=true;changed();return;}
         if(offset>=buffer.duration){playing=false;buffer=null;changed();return;}
         if(!analyser && context.createAnalyser){analyser=context.createAnalyser();analyser.fftSize=256;wave=new Float32Array(analyser.fftSize);analyser.connect(gain);}
         current=context.createBufferSource();current.buffer=buffer;current.playbackRate.value=1;current.connect(analyser || gain);startedAt=context.currentTime;
         const source=current;source.onended=()=>{if(token!==generation || current!==source)return;source.disconnect();current=null;buffer=null;offset=0;playing=false;releaseZinniaVoice(owner);changed();onEnded();};
         playing=true;source.start(0,offset);changed();
     }
-    function resume(){if(disposed || muted || !paused)return;paused=false;playing=true;const token=generation;changed();unlock();if(buffer)Promise.resolve(context.resume()).then(()=>playBuffer(token)).catch(()=>{playing=false;paused=true;changed();});else globalThis.speechSynthesis?.resume();}
+    function resume(){awaitingAudioUnlock=false;if(disposed || muted || !paused)return;paused=false;playing=true;const token=generation;changed();unlock();if(buffer)Promise.resolve(context.resume()).then(()=>playBuffer(token)).catch(()=>{playing=false;paused=true;changed();});else globalThis.speechSynthesis?.resume();}
     async function load(id){
         if(!context)return null;
         if(!cache.has(id)){

@@ -108,7 +108,7 @@ import {createWelcomePracticeXR} from '../services/welcomePracticeXR.js';
 import {createWelcomePracticeVoice} from '../services/welcomePracticeVoice.js';
 import {createWelcomeComfortOptions,welcomePracticeVisualGuide} from '../services/welcomeComfortOptions.js';
 import {createZinniaFramePerch} from '../services/zinniaFramePerch.js';
-import {createSpatialZinniaVoiceBar,zinniaVoiceBarButtons,activateZinniaVoiceBar} from '../services/spatialZinniaVoiceBar.js';
+import {zinniaVoiceBarButtons,activateZinniaVoiceBar} from '../services/spatialZinniaVoiceBar.js';
 import {nearestWelcomePointerHit} from '../services/welcomePointerTarget.js';
 import {createProjectNarration} from '../services/projectNarration.js';
 let demoProjectVoice=null;
@@ -2109,6 +2109,7 @@ function bindLimCellInteractions() {
 function bindLimSessionInteractions(arSession) {
     if(!arSession || !limActivation)return;
     const selectStart=event=>{
+        demoProjectVoice?.unlock();welcomePracticeVoice?.unlock();
         if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE){event.stopImmediatePropagation?.();return;}
         if(!['screen','tracked-pointer'].includes(event.inputSource?.targetRayMode))return;
         captureDemoInputEventRay(event);
@@ -5014,7 +5015,9 @@ function setupRenderer() {
     // Totem cards share the Totem's placement heading. They must not turn with
     // the viewer after the buttons have been aimed during placement.
     totemCardsRenderer = createSpatialTotemCards(gl,{faceTotemToViewer:false,ray:()=>latestControllerRay});
-    zinniaVoiceBar=createSpatialZinniaVoiceBar(gl,{getConversation:()=>demoZinniaDiscovery,isInputOccupied:source=>welcomePractice?.stage.isHolding(source) || demoGrabInputSource===source && demoHeldIndex>=0 || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || infoPanel?.isHandInteracting(source),ray:()=>latestControllerRay,onAction:()=>introBoardTextureDirty=true});
+    // Speech controls live in the movable Control panel and contextual Frame.
+    // The separate floating bar obscured the Quest view.
+    zinniaVoiceBar?.destroy();zinniaVoiceBar=null;
     tetherRenderer = createSpatialTetherRenderer(gl);
     try{handOutlineRenderer=createXRHandOutline(gl);}catch(error){console.warn('Hand outline unavailable:',error.message);}
     nearHandInteraction=createHandSurfaceInteraction({
@@ -5054,6 +5057,8 @@ function setupRenderer() {
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy({stopVoice:false});welcomePractice=null;welcomePracticeDisposeTimer=null;},750);
         }
     });
+    // Direct demo entry still needs the living guide when practice is disabled.
+    if(!welcomePractice){zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({getVoice:()=>demoProjectVoice});zinniaFramePerch.attach(gl);zinniaFramePerch.show();}
 }
 
 function demoControllerInputSource() {
@@ -6680,6 +6685,7 @@ async function startImmersive() {
             progress:({record,target},amount)=>{record.pimPressPath=(target.node || target).path;record.pimPressProgress=amount;queueDemoPimTextureRefresh(record);}
         });
         session.addEventListener('selectstart', event => {
+            demoProjectVoice?.unlock();welcomePracticeVoice?.unlock();
             if(event.inputSource?.hand)return;
             if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
             captureDemoInputEventRay(event);

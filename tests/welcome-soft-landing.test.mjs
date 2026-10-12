@@ -110,3 +110,10 @@ test('fixed narration uses its bundled recording at natural speed and resumes at
     const voice=createWelcomePracticeVoice();
     try{voice.unlock();await voice.speak({...lessons.find(l=>l.id==='arrival'),recorded:true});assert.match(requested,/arrival\.mp3$/);assert.equal(source.playbackRate.value,1);context.currentTime=3;voice.pause();voice.resume();await Promise.resolve();await Promise.resolve();assert.equal(source.offset,3);assert.equal(source.playbackRate.value,1);}finally{voice.destroy();globalThis.AudioContext=oldContext;globalThis.fetch=oldFetch;}
 });
+
+test('demo narration recovers an audio-blocked clip on unlock but preserves an intentional pause',async()=>{
+ const oldContext=globalThis.AudioContext,oldFetch=globalThis.fetch;let context,starts=0,allowResume=false;
+ class Context{constructor(){context=this;this.currentTime=0;this.state='suspended';this.destination={};}resume(){if(allowResume)this.state='running';return Promise.resolve();}close(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({duration:20});}createGain(){return {connect(){},gain:{setTargetAtTime(){}}};}createDelay(){return {connect(){},delayTime:{}};}createDynamicsCompressor(){return {connect(){},threshold:{},knee:{},ratio:{}};}createBufferSource(){return {connect(){},disconnect(){},stop(){},playbackRate:{},start(){starts++;}};}}
+ globalThis.AudioContext=Context;globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>new ArrayBuffer(1)});const voice=createWelcomePracticeVoice();
+ try{voice.unlock();await voice.speak({id:'arrival',recorded:true});assert.equal(voice.status().paused,true);assert.equal(starts,0);allowResume=true;voice.unlock();await Promise.resolve();assert.equal(voice.status().playing,true);assert.equal(voice.status().paused,false);assert.equal(starts,1);context.currentTime=3;voice.pause();voice.unlock();await Promise.resolve();assert.equal(voice.status().paused,true);assert.equal(starts,1);voice.resume();await Promise.resolve();await Promise.resolve();assert.equal(starts,2);}finally{voice.destroy();globalThis.AudioContext=oldContext;globalThis.fetch=oldFetch;}
+});
