@@ -12,7 +12,7 @@ import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js'
 import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.js';
 
 test('soft landing order introduces the frame, voice, table, face, comfort, then hands',()=>{
-    assert.deepEqual(lessons.slice(0,20).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','controls-trigger','controls-grip','controls-stick','comfort','living-frame','brush','basket','basket-reveal','practice-ready','grab','gloves','fruit']);
+    assert.deepEqual(lessons.slice(0,21).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','comfort','living-frame','visitor-intro','controls-trigger','controls-grip','controls-stick','brush','basket','basket-reveal','practice-ready','grab','gloves','fruit']);
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
     for(const clip of [...lessons,...responses].filter(c=>c.spoken && !c.liveVoice))assert.ok(fs.statSync(new URL('../app/assets/welcome-practice/voice/'+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);

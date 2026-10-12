@@ -114,7 +114,8 @@ import {createWelcomePracticeXR} from '../services/welcomePracticeXR.js';
 import {createWelcomePracticeVoice} from '../services/welcomePracticeVoice.js';
 import {createWelcomeComfortOptions,welcomePracticeVisualGuide} from '../services/welcomeComfortOptions.js';
 import {createZinniaFramePerch} from '../services/zinniaFramePerch.js';
-import {zinniaVoiceBarButtons,activateZinniaVoiceBar} from '../services/spatialZinniaVoiceBar.js';
+import {getZinniaVisitor,resetZinniaVisitor} from '../services/zinniaVisitorSession.js';
+import {createSpatialZinniaVoiceBar,zinniaVoiceBarButtons,activateZinniaVoiceBar} from '../services/spatialZinniaVoiceBar.js';
 import {nearestWelcomePointerHit} from '../services/welcomePointerTarget.js';
 import {createProjectNarration} from '../services/projectNarration.js';
 let demoProjectVoice=null;
@@ -740,7 +741,7 @@ function cancelDemoInteractionState(reason='cancelled'){
 function requestDemoClose(){return demoExitLifecycle.request();}
 function cancelDemoClose(){return demoExitLifecycle.cancel();}
 function confirmDemoClose(){return demoExitLifecycle.confirm();}
-function returnToWelcome(){if(demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE)demoExitLifecycle.request();return demoExitLifecycle.confirm();}
+function returnToWelcome(){resetZinniaVisitor();if(demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE)demoExitLifecycle.request();return demoExitLifecycle.confirm();}
 function openLabFromDemo(){developerLabReturn=true;return returnToWelcome();}
 function restartWelcomeTutorial(){setWelcomeTutorialEnabled(true);return returnToWelcome();}
 
@@ -2259,7 +2260,8 @@ function showDemoCalmWelcome({returning=welcomePracticeCompleted}={}){
     clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
     arWelcomeOpeningActive=false;arWelcomeIntroPending=true;limMeshVisible=false;
     const introduction=returning?'Hello again. I’m over here—let’s see what this place could become.':"Hi, my name is Zinnia. I’ll be your guide here in Nourishland XR.\n\nLet me introduce myself properly. Here I am—a little flower with a face, to keep you company.";
-    const body=introduction+'\n\nGet comfortable and leave a little clear space around you. There is no hurry.\n\nWhen you feel ready, look through the Living Frame. Move closer gently and discover the world beyond it.';
+    const greeting=returning && getZinniaVisitor().name?introduction.replace('Hello again.','Hello again, '+getZinniaVisitor().name+'.'):introduction;
+    const body=greeting+'\n\nGet comfortable and leave a little clear space around you. There is no hurry.\n\nWhen you feel ready, look through the Living Frame. Move closer gently and discover the world beyond it.';
     showIntroBoard(returning?'Welcome to NourishlandXR':'Meet Zinnia',body,'Look through the frame',()=>{clearDemoNarration();void openDemoPeek({continueLabel:'Continue to IMAGINE',onComplete:()=>showArWelcomeShowcase({calmWelcome:false})});},{stepLabel:'WELCOME 0.1',dynamicCopy:true,nextGuide:'Continue when you feel comfortable.'});
 }
 function showArWelcomeShowcase() {
@@ -2679,8 +2681,8 @@ function syncDemoVoiceBar(){
     let bar=appRoot.querySelector('[data-zinnia-voice-bar]');
     if(!bar){bar=document.createElement('nav');bar.dataset.zinniaVoiceBar='';bar.setAttribute('aria-label','Zinnia voice controls');bar.style.cssText='position:fixed;left:16px;bottom:18px;display:flex;gap:6px;padding:8px;background:#203d30ee;border:1px solid #91ad91;border-radius:24px;z-index:50;pointer-events:auto';appRoot.append(bar);}
     bar.hidden=Boolean(session && !simulatedMode);bar.style.display=bar.hidden?'none':'flex';bar.replaceChildren();
-    const choices=zinniaVoiceBarButtons({conversation:Boolean(demoZinniaDiscovery)});if(demoZinniaDiscovery)choices.push({id:'cancel',label:'Cancel'});
-    for(const choice of choices){const button=document.createElement('button');button.type='button';button.textContent=choice.label;button.disabled=Boolean(choice.disabled);button.style.cssText='border:0;border-radius:18px;padding:9px 12px;background:#42654a;color:#f2f4dd;font:14px system-ui';button.onclick=()=>{activateZinniaVoiceBar(choice.id,demoZinniaDiscovery);syncDemoVoiceBar();};bar.append(button);}
+    const conversation=welcomePractice?.stage.conversation || demoZinniaDiscovery;const choices=zinniaVoiceBarButtons({conversation:Boolean(conversation)});if(conversation)choices.push(...(conversation.buttons?.() || []),{id:'cancel',label:conversation.buttons?'Continue':'Cancel'});
+    for(const choice of choices){const button=document.createElement('button');button.type='button';button.textContent=choice.label;button.disabled=Boolean(choice.disabled);button.style.cssText='border:0;border-radius:18px;padding:9px 12px;background:#42654a;color:#f2f4dd;font:14px system-ui';button.onclick=()=>{activateZinniaVoiceBar(choice.id,conversation);syncDemoVoiceBar();};bar.append(button);}
 }
 function clearDemoZinniaDiscovery(){demoZinniaDiscovery?.destroy();demoZinniaDiscovery=null;demoZinniaView?.destroy();demoZinniaView=null;arWelcomeLayer?.querySelector('[data-zinnia-plant-input]')?.remove();}
 function selectDemoNativePlant(chooser,profile){
@@ -5065,7 +5067,7 @@ function setupRenderer() {
     // Hero Dice no longer competes with the plant/Control panel journey.
     if((developerLab?.id==='toys' || !developerLab && welcomeTutorialEnabled()) && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getTrialPanelPose:()=>infoPanel?.spatialPose,
         onFeedback:(kind,source)=>{if(kind==='transform'){demoFeedback.sound('practice-reward');if(source)demoFeedback.pulse(source,.8,180);return;}const reward=['lesson','plant','collect','open','harvest','ring','land'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
-        onChange:state=>{syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
+        onChange:state=>{syncDemoVoiceBar();syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
         isFrameReady:()=>Boolean(livingFrameModel?.entranceReady),getFrameError:()=>livingFrameModel?.error,
         onPanelOwns:source=>infoPanel?.getHeldInputSource()===source || Boolean(infoPanel?.isHandInteracting(source)),
         onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;const target=nearestWelcomePointerHit(ray,welcomePracticeFrameHit(ray),welcomePractice?.stage.hit(ray));if(target?.kind==='voice-bar')return Boolean(zinniaVoiceBar?.select(ray));if(target?.kind!=='panel' || !directPanelPress(source,ray,target))return false;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray));},onHit:welcomePracticeFrameHit,
@@ -5076,6 +5078,7 @@ function setupRenderer() {
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy({stopVoice:false});welcomePractice=null;welcomePracticeDisposeTimer=null;},750);
         }
     });
+    zinniaVoiceBar=createSpatialZinniaVoiceBar(gl,{getConversation:()=>welcomePractice?.stage.conversation || demoZinniaDiscovery,isInputOccupied:source=>welcomePractice?.stage.isHolding(source) || false,ray:()=>latestControllerRay});
     // Direct demo entry still needs the living guide when practice is disabled.
     if(!welcomePractice){zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({getVoice:()=>demoProjectVoice});zinniaFramePerch.attach(gl);zinniaFramePerch.show(performance.now(),{immediate:true});}
 }
@@ -6909,7 +6912,7 @@ export function openTemporaryArDemoWindow(app) {
 export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null, refinementPreview = null, livingFramePreviewClock:framePreviewClock = null, developerStation=null,chapter=null } = {}) {
     // Development fixtures may inspect XR, but public desktop entry is a book.
     if((!chapter || chapter==='tutorial') && !developerStation && !livingMapPreviewRecords && !refinementPreview && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
-    appRoot = app;
+    resetZinniaVisitor();appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
     developerLab=developerStation;demoStartChapter=chapter;demoChaptersOpen=false;if(chapter)setWelcomeTutorialEnabled(chapter==='tutorial');
