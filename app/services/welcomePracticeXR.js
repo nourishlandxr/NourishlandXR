@@ -54,7 +54,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
         }
         stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError()});revealTime+=Math.max(0,Math.min(.1,dt));
         if(!renderer || rebuild){rebuild=false;renderer?.destroy();renderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true});}
-        if(stage.handsEnabled)controllers=[];
+        if(stage.handsEnabled && !stage.controllerHandsVisible)controllers=[];
         renderer.update();renderer.prepareNext();
     }
     return {stage,bind,update,get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},

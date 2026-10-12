@@ -64,6 +64,20 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
         const lifted=[...pose];lifted[13]+=.12;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});tick(.1,{inputs:[{source,matrix:lifted,down:false}]});assert.equal(stage.snapshot().completed,true);
         tick(3);assert.equal(stage.phase,'gloves');
+        for(const hand of [false,true]){
+            stage.previewLesson('water');tick(.1);
+            const can=stage.bodies.find(b=>b.id==='watering-can'),source=hand?{handedness:'right',hand:{}}:{handedness:'right'};
+            const grip=new THREE.Vector3(can.gripPoint.x,can.gripPoint.y,can.gripPoint.z);
+            const start=grip.clone().applyQuaternion(new THREE.Quaternion(can.rotation.x,can.rotation.y,can.rotation.z,can.rotation.w)).add(new THREE.Vector3(can.position.x,can.position.y,can.position.z));
+            const worldPose=(p,q=new THREE.Quaternion())=>stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().compose(p,q,new THREE.Vector3(1,1,1))).elements;
+            tick(.1,{inputs:[{source,matrix:worldPose(start,new THREE.Quaternion(can.rotation.x,can.rotation.y,can.rotation.z,can.rotation.w)),down:true}]});assert.equal(stage.isHolding(source),true);
+            const q=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-1.1),tip=new THREE.Vector3(.101,.037,0).multiplyScalar(1.18).applyQuaternion(q);
+            const centre=new THREE.Vector3(-tip.x-.009,.24,-.08),hold=centre.clone().add(grip.clone().applyQuaternion(q));
+            tick(1.35,{inputs:[{source,matrix:worldPose(hold,q),down:true}]});
+            const attached=new THREE.Vector3(can.position.x,can.position.y,can.position.z).add(grip.clone().applyQuaternion(new THREE.Quaternion(can.rotation.x,can.rotation.y,can.rotation.z,can.rotation.w)));
+            assert.ok(attached.distanceTo(hold)<1e-6,'handle remains attached while pouring');assert.equal(stage.snapshot().completed,true);
+            tick(.1,{inputs:[{source,matrix:worldPose(hold,q),down:false}]});assert.equal(stage.isHolding(source),false);
+        }
         // Picking up the RC transmitter from the side snaps it to grip space.
         stage.previewLesson('fly');tick(.1);
         const remote=stage.bodies.find(b=>b.id==='remote');
@@ -75,11 +89,11 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         assert.ok(heldPoint.distanceTo(new THREE.Vector3().setFromMatrixPosition(remotePose))<1e-6);
         const heldQuaternion=new THREE.Quaternion(remote.rotation.x,remote.rotation.y,remote.rotation.z,remote.rotation.w).premultiply(stage.root.quaternion);
         assert.ok(heldQuaternion.angleTo(new THREE.Quaternion().setFromRotationMatrix(remotePose))<1e-6);
-        stage.releaseAll(false);stage.previewLesson('water');tick(.1);
+        stage.releaseAll(false);stage.resetObjects();stage.previewLesson('water');tick(.1);
         const can=stage.bodies.find(b=>b.id==='watering-can'),hand={hand:{},handedness:'right'};
         const canPoint=new THREE.Vector3(can.position.x,can.position.y,can.position.z).applyMatrix4(stage.root.matrixWorld);
         tick(.05,{inputs:[{source:hand,matrix:new THREE.Matrix4().makeTranslation(canPoint.x,canPoint.y,canPoint.z).elements,down:true}]});assert.equal(stage.isHolding(hand),true);
-        const pourPose=new THREE.Matrix4().compose(new THREE.Vector3(-.079,.36,-.08),new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-1.1),new THREE.Vector3(1,1,1)).premultiply(stage.root.matrixWorld);
+        const pourRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-1.1),pourGrip=new THREE.Vector3(can.gripPoint.x,can.gripPoint.y,can.gripPoint.z).applyQuaternion(pourRotation).add(new THREE.Vector3(-.079,.36,-.08));const pourPose=new THREE.Matrix4().compose(pourGrip,pourRotation,new THREE.Vector3(1,1,1)).premultiply(stage.root.matrixWorld);
         tick(.6,{inputs:[{source:hand,matrix:pourPose.elements,down:true}]});assert.equal(stage.snapshot().garden.pouring,true);assert.ok(stage.snapshot().garden.water>.4);
         const canMesh=stage.objects.get('watering-can');assert.equal(canMesh.scale.x,1.18);assert.ok(canMesh.children.some(mesh=>mesh.material?.metalness>.8));
         const segments=stage.root.children.filter(mesh=>mesh.name==='Water stream segment');assert.equal(segments.length,12);assert.equal(segments.every(mesh=>mesh.visible && mesh.scale.y>0),true);assert.equal(new Set(segments.map(mesh=>mesh.geometry)).size,1);assert.ok(stage.root.children.some(mesh=>mesh.name==='Water soil ripple' && mesh.visible));
