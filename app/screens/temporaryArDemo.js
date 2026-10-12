@@ -1562,7 +1562,7 @@ function narrateDemoFrame(text){
 }
 function clearDemoNarration({preserveAction=false}={}) {
     if(typeof demoProjectVoice!=='undefined')demoProjectVoice?.stop();
-    if(!welcomePractice?.active)welcomePracticeVoice?.stop();
+    if(typeof welcomePracticeVoice!=='undefined' && (typeof welcomePractice==='undefined' || !welcomePractice?.active))welcomePracticeVoice?.stop();
     if(!preserveAction)demoNarrationRevision++;
     clearTimeout(boardTypingTimer);
     clearTimeout(boardTypingWatchdogTimer);
@@ -6577,6 +6577,10 @@ function drawDemoInputPointer(view,pointerSource) {
 
 }
 
+function bindDemoAudioUnlock(arSession){
+    arSession.addEventListener('selectstart',()=>{demoProjectVoice?.unlock();welcomePracticeVoice?.unlock();},{capture:true});
+}
+
 async function startImmersive() {
     if (!navigator.xr || !window.isSecureContext) return false;
     try {
@@ -6584,7 +6588,7 @@ async function startImmersive() {
         const arSession = await requestImmersiveArSession(appRoot,{targetFrameRate:getSpatialVisualSettings().refreshRate});
         session = arSession.session;
         demoProjectVoice?.unlock();welcomePracticeVoice?.unlock();
-        session.addEventListener('selectstart',()=>{demoProjectVoice?.unlock();welcomePracticeVoice?.unlock();},{capture:true});
+        bindDemoAudioUnlock(session);
         demoControllerYSkipTracker = createControllerYSkipTracker(() => {
             if (skipCurrentDemoStep(welcomePractice)) suppressSessionSelectUntil = performance.now() + 450;
         });
