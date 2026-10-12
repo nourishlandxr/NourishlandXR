@@ -6930,7 +6930,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
     demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});
-    demoProjectVoice=createProjectNarration({onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
+    demoProjectVoice=createProjectNarration({demo:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
     {welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();

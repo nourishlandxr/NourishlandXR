@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Zinnia · Demo audio review</title>
+<style>
+body{margin:0;background:#182f28;color:#e9efdf;font:17px/1.6 system-ui}main{max-width:850px;margin:auto;padding:32px}h1{line-height:1.2}header{position:sticky;top:0;background:#182f28;padding:12px 0}article{background:#284b3d;border-radius:18px;padding:22px;margin:18px 0}h2{font-size:19px;margin:0}audio{display:block;width:100%;margin-top:15px}p{margin:10px 0}small{color:#b7cdbb}
+</style>
+<main><header><h1>Zinnia · Main demo audio</h1><p id="status">Loading recording bank…</p><small>Listen in order. Check pronunciation, natural pace and the pause before each next idea. Only one recording plays at a time.</small></header><section id="clips"></section></main>
+<script type="module">
+import {DEMO_NARRATION_BANK as bank} from '../app/services/demoNarrationBank.js';
+import {DEMO_GUIDED_STEPS} from '../app/features/ar-demo/demoJourneyContent.js';
+import {normalizeNarrationText} from '../app/services/projectNarration.js';
+const status=document.querySelector('#status'),clips=document.querySelector('#clips');
+if(!bank){status.textContent='Recording is still underway. Refresh once the complete bank is ready.';}else{
+status.textContent=bank.clips.length+' recorded clips · '+bank.voice+' · '+bank.model;
+for(const step of DEMO_GUIDED_STEPS){const article=document.createElement('article'),heading=document.createElement('h2');heading.textContent=step.id+' · '+step.title;article.append(heading);
+for(const part of step.main.split(/\n\n+/)){const text=normalizeNarrationText(part),entry=Object.entries(bank.catalog).find(([,clip])=>clip.text===text),p=document.createElement('p');p.textContent=part;article.append(p);if(entry){const player=document.createElement('audio');player.controls=true;player.preload='none';player.src=new URL('../app/'+bank.base+entry[1].file,import.meta.url);player.setAttribute('aria-label',step.id+' narration');player.addEventListener('play',()=>{for(const other of clips.querySelectorAll('audio'))if(other!==player)other.pause();});article.append(player);}}
+clips.append(article);}}
+</script></html>

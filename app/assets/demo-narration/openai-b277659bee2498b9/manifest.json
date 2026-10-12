@@ -1,0 +1,280 @@
+{
+  "provider": "OpenAI",
+  "voice": "coral",
+  "model": "gpt-4o-mini-tts",
+  "base": "assets/demo-narration/openai-b277659bee2498b9/",
+  "clips": [
+    "z-84c48915",
+    "z-d6a2af1d",
+    "z-d7d734b5",
+    "z-8d2349e0",
+    "z-2cbb8d89",
+    "z-e4dbbf5f",
+    "z-1dcecc46",
+    "z-65387f2d",
+    "z-c324440a",
+    "z-f6c3eb3d",
+    "z-5a2e81b0",
+    "z-5821b46c",
+    "z-762b9553",
+    "z-ca59112e",
+    "z-4b0b29a8",
+    "z-a0073c57",
+    "z-c59d1767",
+    "z-556d341c",
+    "z-3d53b765",
+    "z-f522c40f",
+    "z-3f964faa",
+    "z-12b9427",
+    "z-611f0251",
+    "z-ad0cba25",
+    "z-6c50f472",
+    "z-2a5ffcd5",
+    "z-16ac44cf",
+    "z-b4ad2a0",
+    "z-2ef70c65",
+    "z-32775640",
+    "z-8b56d804",
+    "z-e5d54508",
+    "z-e1083a96",
+    "z-8d027f1",
+    "z-c4db4fcb",
+    "z-c275b0ed",
+    "z-93d5e1b3",
+    "z-6867ae26",
+    "z-2a08e078",
+    "z-a1a0649d",
+    "z-b99d8c0",
+    "z-fad645e9",
+    "z-8f91c867",
+    "z-65d1b609",
+    "z-f4ca701e",
+    "z-1145ace4",
+    "z-3649692b",
+    "z-3909fb41",
+    "z-fed0aed",
+    "z-6026cc40",
+    "z-a17fb6c3",
+    "z-b2dbf266",
+    "z-1ffe23b1",
+    "z-342f22bb"
+  ],
+  "catalog": {
+    "z-84c48915": {
+      "text": "A leaf catching the light. An insect moving between flowers. The shade beneath a tree.",
+      "file": "z-84c48915.mp3"
+    },
+    "z-d6a2af1d": {
+      "text": "Small things can invite us to pause and look closer.",
+      "file": "z-d6a2af1d.mp3"
+    },
+    "z-d7d734b5": {
+      "text": "What catches your attention? What would you like to understand?",
+      "file": "z-d7d734b5.mp3"
+    },
+    "z-8d2349e0": {
+      "text": "Technology shapes where we place our attention. What if it helped us notice more of the living world?",
+      "file": "z-8d2349e0.mp3"
+    },
+    "z-2cbb8d89": {
+      "text": "NourishlandXR is a tool for exploring and learning through real places. Augmented reality brings digital information into your surroundings.",
+      "file": "z-2cbb8d89.mp3"
+    },
+    "z-e4dbbf5f": {
+      "text": "Follow a question, share an observation, or explore a planting possibility , then look back at the place with another layer of understanding.",
+      "file": "z-e4dbbf5f.mp3"
+    },
+    "z-1dcecc46": {
+      "text": "This demo uses prepared examples in the space around you. The Living Frame guides you through them.",
+      "file": "z-1dcecc46.mp3"
+    },
+    "z-65387f2d": {
+      "text": "Your Control Panel keeps selected information and useful tools close by.",
+      "file": "z-65387f2d.mp3"
+    },
+    "z-c324440a": {
+      "text": "Take your time. Continue when you are ready, and use Back to revisit a step.",
+      "file": "z-c324440a.mp3"
+    },
+    "z-f6c3eb3d": {
+      "text": "A garden can become an outdoor classroom. A walk can reveal connections between plants, wildlife and the people who care for a place.",
+      "file": "z-f6c3eb3d.mp3"
+    },
+    "z-5a2e81b0": {
+      "text": "Plant Orbs open plant information. Notes hold observations and messages. Areas and Totems help people find their way.",
+      "file": "z-5a2e81b0.mp3"
+    },
+    "z-5821b46c": {
+      "text": "Learning Pathways connect discoveries with questions and activities. Together, these tools let a place grow with shared knowledge.",
+      "file": "z-5821b46c.mp3"
+    },
+    "z-762b9553": {
+      "text": "Give your first discovery a location.",
+      "file": "z-762b9553.mp3"
+    },
+    "z-ca59112e": {
+      "text": "Choose an open space and place a Plant Orb. This spatial tag connects what you learn to a position in your surroundings.",
+      "file": "z-ca59112e.mp3"
+    },
+    "z-4b0b29a8": {
+      "text": "Place the first Plant Orb in a comfortable spot in front of you. In a real place, its Orb would sit beside the plant.",
+      "file": "z-4b0b29a8.mp3"
+    },
+    "z-a0073c57": {
+      "text": "Your Orb is placed. This sample represents Pigeon Pea, a shrub grown for food and its useful roles in a garden.",
+      "file": "z-a0073c57.mp3"
+    },
+    "z-c59d1767": {
+      "text": "Select the Orb to open its Tag, then unfold Curiosity to follow its connected information.",
+      "file": "z-c59d1767.mp3"
+    },
+    "z-556d341c": {
+      "text": "Tag gives you the plant's identity at a glance. Continue to unfold Curiosity and discover the connected information cells.",
+      "file": "z-556d341c.mp3"
+    },
+    "z-3d53b765": {
+      "text": "There are many ways to get to know a plant. You might wonder how it grows, what it can provide, how it supports other life, or why it suits a particular place.",
+      "file": "z-3d53b765.mp3"
+    },
+    "z-f522c40f": {
+      "text": "Let's follow one of those questions and see where it leads.",
+      "file": "z-f522c40f.mp3"
+    },
+    "z-3f964faa": {
+      "text": "Select Culinary to discover the food examples.",
+      "file": "z-3f964faa.mp3"
+    },
+    "z-12b9427": {
+      "text": "Select Fresh peas to see one way Pigeon Pea can be used.",
+      "file": "z-12b9427.mp3"
+    },
+    "z-611f0251": {
+      "text": "You can keep exploring, or take a closer look at the related image.",
+      "file": "z-611f0251.mp3"
+    },
+    "z-ad0cba25": {
+      "text": "Want a closer look? The Image panel shows the image connected to your selection. Its label and the Control panel label are highlighted so you can find them. Use the Image button on the Control panel to show or hide the picture.",
+      "file": "z-ad0cba25.mp3"
+    },
+    "z-6c50f472": {
+      "text": "You have explored Tag, Curiosity and the Fruit Discovery Window. Your Orbs are now tucked away to make room for the next step.",
+      "file": "z-6c50f472.mp3"
+    },
+    "z-2a5ffcd5": {
+      "text": "The Control Panel footer brings elements back when you want them. Green outlines mean visible; red outlines mean hidden. Notes and Totems join this row as you meet them.",
+      "file": "z-2a5ffcd5.mp3"
+    },
+    "z-16ac44cf": {
+      "text": "Controls opens the options for the object you select. Fruit Discovery Window has its own simple controls.",
+      "file": "z-16ac44cf.mp3"
+    },
+    "z-b4ad2a0": {
+      "text": "Every plant brings a different story. Place another Orb beside Pigeon Pea, then ask Zinnia to find a plant you want to explore.",
+      "file": "z-b4ad2a0.mp3"
+    },
+    "z-2ef70c65": {
+      "text": "Place a plain Orb beside Pigeon Pea. Then tell Zinnia a common or scientific plant name using the microphone, or enter the name in the Living Frame.",
+      "file": "z-2ef70c65.mp3"
+    },
+    "z-32775640": {
+      "text": "Thousands of plants. Thousands of living stories. Ask Zinnia to find a plant you are curious about. Confirm its species, see a reference photograph, and explore starter Plant cells built from available information. These Elements can grow as more knowledge is added.",
+      "file": "z-32775640.mp3"
+    },
+    "z-8b56d804": {
+      "text": "A plant profile tells part of a story. A Note lets someone leave an observation, a reminder or a message for another person to discover later.",
+      "file": "z-8b56d804.mp3"
+    },
+    "z-e5d54508": {
+      "text": "Place this example Note beside the plants. In a real place, you could leave a seasonal observation or a useful message for the next visitor.",
+      "file": "z-e5d54508.mp3"
+    },
+    "z-e1083a96": {
+      "text": "Select the Note to read it. Someone visiting later can discover the message where it belongs.",
+      "file": "z-e1083a96.mp3"
+    },
+    "z-8d027f1": {
+      "text": "So far, we have explored plants, knowledge and a local message.",
+      "file": "z-8d027f1.mp3"
+    },
+    "z-c4db4fcb": {
+      "text": "In a real place, these pieces can grow together.",
+      "file": "z-c4db4fcb.mp3"
+    },
+    "z-c275b0ed": {
+      "text": "An Area keeps them organised, with a Totem as its welcome point.",
+      "file": "z-c275b0ed.mp3"
+    },
+    "z-93d5e1b3": {
+      "text": "This Totem belongs to My area. Its signs help visitors find the plants and messages that belong here.",
+      "file": "z-93d5e1b3.mp3"
+    },
+    "z-6867ae26": {
+      "text": "The Totem names the Area. Its signs point toward nearby plants and Notes, giving visitors a way to find what they want to explore.",
+      "file": "z-6867ae26.mp3"
+    },
+    "z-2a08e078": {
+      "text": "A larger place can hold several Areas, each with its own stories. Add Second Area to see how visitors can find their way between them.",
+      "file": "z-2a08e078.mp3"
+    },
+    "z-a1a0649d": {
+      "text": "Connect the Totems so each Area can point toward the other. Their plants and messages remain connected to their own locations.",
+      "file": "z-a1a0649d.mp3"
+    },
+    "z-b99d8c0": {
+      "text": "Select the Second Area sign on My area. Its arrow points toward the destination, helping you see where to go next.",
+      "file": "z-b99d8c0.mp3"
+    },
+    "z-fad645e9": {
+      "text": "Plants, observations and directions can become part of one connected place. Next, see how this can support exploring, learning and planning on any land.",
+      "file": "z-fad645e9.mp3"
+    },
+    "z-8f91c867": {
+      "text": "Plants, Notes and Areas can connect knowledge to any land , from school gardens and university campuses to farms and public landscapes.",
+      "file": "z-8f91c867.mp3"
+    },
+    "z-65d1b609": {
+      "text": "Explore what could grow here before anything is planted.",
+      "file": "z-65d1b609.mp3"
+    },
+    "z-f4ca701e": {
+      "text": "Compare what to plant, the light, water, soil and climate each plant needs, and what it can provide , food, shade, habitat or support for the soil.",
+      "file": "z-f4ca701e.mp3"
+    },
+    "z-1145ace4": {
+      "text": "Visitors, teachers and students can use these questions to learn about a place. People planning a planting can use that knowledge to make informed choices.",
+      "file": "z-1145ace4.mp3"
+    },
+    "z-3649692b": {
+      "text": "Want to see how this can become a learning experience? Open Learning Pathways, or choose Finish without learning example in the Control Panel.",
+      "file": "z-3649692b.mp3"
+    },
+    "z-3909fb41": {
+      "text": "Explore a starting question, then connect two related LIMO cells. A new discovery opens between their ideas and can connect again to develop a deeper story.",
+      "file": "z-3909fb41.mp3"
+    },
+    "z-fed0aed": {
+      "text": "Connect Sun & shade with Plants & forest layers to reveal Who shades whom? Then connect that discovery with First steps & later roles.",
+      "file": "z-fed0aed.mp3"
+    },
+    "z-6026cc40": {
+      "text": "Select Uses in Pigeon Pea to choose the information for this learning example.",
+      "file": "z-6026cc40.mp3"
+    },
+    "z-a17fb6c3": {
+      "text": "Hold Uses and Making until the connection completes.",
+      "file": "z-a17fb6c3.mp3"
+    },
+    "z-b2dbf266": {
+      "text": "A teacher could ask which plant part is used and what preparation is recorded. The connected plant detail gives learners a source to return to.",
+      "file": "z-b2dbf266.mp3"
+    },
+    "z-1ffe23b1": {
+      "text": "You have explored a small example. In a real place, plants, observations and local knowledge can grow together over time, creating something others can explore, learn from and contribute to.",
+      "file": "z-1ffe23b1.mp3"
+    },
+    "z-342f22bb": {
+      "text": "Return to the welcome screen to discover a separate real garden project.",
+      "file": "z-342f22bb.mp3"
+    }
+  }
+}
