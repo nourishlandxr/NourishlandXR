@@ -11,10 +11,22 @@ export function createWelcomeStrawberryPlant(){
     const leafGeometry=new THREE.BufferGeometry();leafGeometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));leafGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(uv,2));leafGeometry.setIndex(indices);leafGeometry.computeVertexNormals();
     const cylinder=new THREE.CylinderGeometry(1,1,1,7),round=new THREE.SphereGeometry(1,10,7);
     function stalk(parent,a,b,r=.0015){const mesh=new THREE.Mesh(cylinder,stemMaterial),direction=b.clone().sub(a);mesh.position.copy(a).add(b).multiplyScalar(.5);mesh.scale.set(r,direction.length(),r);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());parent.add(mesh);return mesh;}
-    for(let set=0;set<5;set++){const angle=set*2.399,junction=new THREE.Vector3(Math.cos(angle)*.02,.033+(set%3)*.009,Math.sin(angle)*.02);stalk(foliage,new THREE.Vector3(0,0,0),junction);for(const spread of [-.85,0,.85]){const leaf=new THREE.Mesh(leafGeometry,green);leaf.position.copy(junction);leaf.rotation.y=-angle-spread;leaf.rotation.z=.24+(set%2)*.16;leaf.rotation.x=(set%2?.18:-.18);leaf.scale.setScalar((spread===0?1.12:.88)+(set%3)*.08);foliage.add(leaf);}}
+    const leafSets=[];
+    for(let set=0;set<11;set++){
+        const rosette=new THREE.Group();foliage.add(rosette);leafSets.push(rosette);
+        const angle=set*2.399,radius=set<3?.012:.022+(set%3)*.006,junction=new THREE.Vector3(Math.cos(angle)*radius,.032+(set%4)*.007,Math.sin(angle)*radius);
+        stalk(rosette,new THREE.Vector3(0,0,0),junction);
+        for(const spread of [-.85,0,.85]){const leaf=new THREE.Mesh(leafGeometry,green);leaf.position.copy(junction);leaf.rotation.y=-angle-spread;leaf.rotation.z=.18+(set%3)*.10;leaf.rotation.x=(set%2?.14:-.14);leaf.scale.setScalar((spread===0?1.15:.93)+(set%3)*.07);rosette.add(leaf);}
+    }
     for(const [x,y,z] of [[-.048,.135,-.025],[.045,.105,.04]]){const centre=new THREE.Vector3(x,y,z);stalk(flowers,new THREE.Vector3(0,.02,0),centre,.0012);const flower=new THREE.Group();flower.position.copy(centre);flowers.add(flower);for(let i=0;i<5;i++){const angle=i*Math.PI*2/5,petal=new THREE.Mesh(round,white);petal.position.set(Math.cos(angle)*.011,.001,Math.sin(angle)*.011);petal.scale.set(.011,.003,.008);petal.rotation.y=-angle;flower.add(petal);const sepal=new THREE.Mesh(round,green);sepal.position.set(Math.cos(angle)*.009,-.003,Math.sin(angle)*.009);sepal.scale.set(.012,.0015,.003);sepal.rotation.y=-angle;flower.add(sepal);}const core=new THREE.Mesh(round,yellow);core.scale.set(.006,.0035,.006);core.position.y=.003;flower.add(core);for(let i=0;i<10;i++){const angle=i*Math.PI/5,anther=new THREE.Mesh(round,yellow);anther.position.set(Math.cos(angle)*.006,.006,Math.sin(angle)*.006);anther.scale.setScalar(.0011);flower.add(anther);}}
-    const fruitPositions=[new THREE.Vector3(-.096,.024,.02),new THREE.Vector3(.096,.026,.035),new THREE.Vector3(.018,.027,.096)];
+    const fruitPositions=[new THREE.Vector3(-.125,.032,.035),new THREE.Vector3(.125,.034,.045),new THREE.Vector3(.015,.034,.13)];
     for(const p of fruitPositions){const points=[new THREE.Vector3(0,.04,0),new THREE.Vector3(p.x*.55,.10,p.z*.55),p.clone().add(new THREE.Vector3(0,.029,0))],curve=new THREE.CatmullRomCurve3(points);stems.add(new THREE.Mesh(new THREE.TubeGeometry(curve,8,.0012,5,false),stemMaterial));}
-    function update(progress,time){const leaf=Math.min(1,progress*2.2),bloom=Math.max(0,Math.min(1,(progress-.32)/.32));foliage.scale.setScalar(.04+.96*THREE.MathUtils.smoothstep(leaf,0,1));flowers.visible=bloom>0;flowers.scale.setScalar(Math.max(.001,bloom));stems.visible=progress>.62;foliage.rotation.y=Math.sin(time*.6)*.015;}
+    function update(progress,time){
+        const leaf=THREE.MathUtils.smoothstep(progress,0,.78),bloom=THREE.MathUtils.smoothstep(progress,.42,.67);
+        foliage.scale.setScalar(.10+.90*leaf);
+        leafSets.forEach((rosette,i)=>rosette.scale.setScalar(Math.max(.003,THREE.MathUtils.smoothstep(progress,i<3?0:.08+(i-3)*.035,.45+i*.025))));
+        flowers.visible=bloom>0;flowers.scale.setScalar(Math.max(.001,bloom));stems.visible=progress>.66;
+        foliage.rotation.y=Math.sin(time*.6)*.015;
+    }
     return {group,fruitPositions,update};
 }

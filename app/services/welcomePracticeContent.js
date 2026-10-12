@@ -10,24 +10,27 @@ export const WELCOME_PRACTICE_LESSONS=Object.freeze([
     {id:'zinnia',automatic:true,title:'Hello again',caption:"A little flower to keep you company.",spoken:"Here I am. A little flower to keep you company."},
     {id:'comfort',automatic:true,silent:true,hold:1.5,title:'At your pace',caption:"Pause and sound controls are beside you. Grip the panel to move it.",spoken:""},
     {id:'living-frame',automatic:true,title:'Our Living Frame',caption:"Look here for a reminder.",spoken:"You can look back here whenever you'd like a reminder."},
+    {id:'brush',title:'A little magic brush',caption:'Lift the brush with grip. Hold trigger to paint a small stroke, then let go to rest it on the table.',spoken:'Pick up our magic brush. Try a little stroke in the air, then rest it on the table.'},
     {id:'basket',automatic:true,title:'A home for our fruit',caption:"A basket for our discoveries.",spoken:"Our fruit is waiting in the bowl. Choose any one you like."},
     {id:'basket-reveal',automatic:true,silent:true,hold:1.4,title:'A basket for our discoveries',caption:'',spoken:''},
     {id:'practice-ready',automatic:true,silent:true,hold:.8,title:'One small step at a time',caption:"Choose a fruit that catches your eye.",spoken:""},
     {id:'grab',title:'Pick up and observe',caption:"Choose any fruit. Hold the side grip to lift it. Turn it, then place it on the plate.",spoken:"Pick any fruit from the bowl. Hold the side grip to lift it. Take a look, then put it on the plate."},
     {id:'gloves',title:'Your virtual gardening hands',caption:"Squeeze the grip and watch your fingers.",spoken:"Gently squeeze the grip. See how the fingers follow?"},
-    {id:'fruit',title:'See what is inside',caption:"Pick another fruit. Hold grip and press trigger to open supported fruit. Place it on the plate.",spoken:"Want to try another? Some fruits open so you can see inside. Put your discoveries on the plate."},
+    {id:'fruit',title:'See what is inside',caption:"Pick another fruit. Hold fruit in one hand. Sweep the glowing brush across it with trigger held; release trigger to open. Place it on the plate.",spoken:"Want to try another? Hold the fruit in one hand and sweep our brush across it with the other. Let go of the trigger to see inside. Put your discoveries on the plate."},
     {id:'fly',title:'A little flying companion',caption:"Pick up the remote, then release the grip. Trigger forward; grip back. Stick turns and changes height.",spoken:'Pick up the remote. Try flying through the glowing rings, then return to the table. The board shows the controls.'},
     {id:'hands',title:'Now try your real hands',caption:"Place both controllers somewhere safe. Raise your hands, look closely, then gently pinch.",spoken:'Put both controllers somewhere safe. Bring your hands into view. Gently touch your thumb and index finger together.'},
-    {id:'packet',title:'A packet of possibilities',caption:'Pick up the strawberry packet. Pinch the seal with your other hand.',spoken:'Hold the strawberry packet in one hand. Pinch its seal with your other hand to open it.'},
+    {id:'paint-pot',liveVoice:true,spokenOverride:true,title:'Make this pot yours',caption:'Pinch a colour swatch, then lift the spray brush. Aim at the pot and pinch to spray.',spoken:'Let’s make this pot yours. Pick up the spray brush, point it at the pot, and gently pinch to give it some colour.'},
+    {id:'packet',liveVoice:true,spokenOverride:true,title:'A packet of possibilities',caption:'Pick up the strawberry packet. Pinch the seal with your other hand.',spoken:'We don’t have any strawberries yet. Let’s grow some.\n\nHold the strawberry packet in one hand. Pinch its seal with your other hand to open it.'},
     {id:'seed',title:'One tiny strawberry seed',caption:'Pinch the tiny seed inside its highlight. Lift it over the soil and release.',spoken:'Pinch a tiny seed, bring it over the soil, then let go.'},
     {id:'water',title:'Give it some water',caption:'Grab the can. Hold its spout above the soil and tilt it down.',spoken:"Now pick up the watering can. Bring its spout over the soil and gently tilt it down. Keep it there for a moment as the water falls. You're helping something grow."},
-    {id:'grow',title:'A strawberry plant grows',caption:'Leaves, flowers, then fruit. This practice speeds up a much longer living cycle.',spoken:"Look closely. First come groups of three leaves, with little teeth along their edges. Then white flowers with yellow centres. And now, strawberries. We're speeding up a much longer living cycle so you can see it here. A real plant needs time, care, and pollination."},
+    {id:'grow',liveVoice:true,spokenOverride:true,title:'A strawberry plant grows',caption:'Leaves, flowers, then fruit. This practice speeds up a much longer living cycle.',spoken:"Our strawberry plant is filling out. Look for groups of three leaves, then white flowers and little green berries. Let’s give them time to ripen. A real plant grows much more slowly and needs care and pollination."},
     {id:'harvest',title:'Harvest what you grew',caption:"Pick the three ripe strawberries. Release each one into the basket.",spoken:"Your strawberries are ready. Gently pick each ripe berry from the plant. Bring it over the basket and let go. Try all three."},
     {id:'explore',title:'Make yourself at home',caption:'Play a little. Continue when you feel ready.',spoken:"Make yourself at home. Take as long as you like with the fruit and dragonfly. When you feel ready, we'll explore what you can do with Nourishland."}
 ]);
 
 // Only acknowledge a first successful action, with room for silence afterwards.
 export const WELCOME_PRACTICE_RESPONSES=Object.freeze([
+    {id:'brush-done',spoken:'Keep it nearby. Our brush can open fruit too.'},
     {id:'grab-done',spoken:'There you go.'},
     {id:'fly-done',spoken:"A lovely landing. Our dragonfly can rest here while we try your own hands."},
     {id:'hands-ready',spoken:"There they are. Your own hands can take part. Let's use them to grow strawberries."},

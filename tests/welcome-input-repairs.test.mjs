@@ -24,6 +24,19 @@ function rigFor(side){
 const position=(poses,rig,name)=>new THREE.Vector3().setFromMatrixPosition(poses[rig.names.indexOf(name)]);
 const input=(trigger,grip)=>({source:{gamepad:{buttons:[{value:trigger},{value:grip}]}}});
 
+test('both authored thumbs oppose toward the palm instead of bending away sideways',()=>{
+    for(const side of ['left','right']){
+        const rig=rigFor(side),open=controllerHandJointPoses(rig,input(0,0)),closed=controllerHandJointPoses(rig,input(1,1)),centre=new THREE.Vector3();
+        for(const finger of ['index','middle','ring','pinky'])for(const joint of ['metacarpal','phalanx-proximal'])centre.add(position(open,rig,finger+'-finger-'+joint));
+        centre.multiplyScalar(1/8);
+        assert.ok(position(closed,rig,'thumb-tip').distanceTo(centre)<position(open,rig,'thumb-tip').distanceTo(centre)-.008,side);
+        for(const name of ['thumb-metacarpal','thumb-phalanx-proximal','thumb-phalanx-distal','thumb-tip']){
+            const i=rig.names.indexOf(name),parent=rig.parents[i];
+            assert.ok(Math.abs(position(open,rig,name).distanceTo(new THREE.Vector3().setFromMatrixPosition(open[parent]))-position(closed,rig,name).distanceTo(new THREE.Vector3().setFromMatrixPosition(closed[parent])))<1e-7);
+        }
+    }
+});
+
 test('released virtual fingers return to open despite touch and residual button values',()=>{
     for(const side of ['left','right']){
         const rig=rigFor(side),open=controllerHandJointPoses(rig,input(0,0));

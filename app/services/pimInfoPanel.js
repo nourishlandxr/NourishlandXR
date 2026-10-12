@@ -1,3 +1,4 @@
+import {directPanelPress} from './xrDirectInteraction.js';
 import {lowerCompanionLayout} from './lowerCompanionLayout.js';
 import {getWelcomeNarrationSettings,setWelcomeNarrationSettings} from './welcomePracticeVoice.js';
 import {limoSpatialControls,drawLimoSpatialControls,drawLimoSpatialReading} from './limoSpatialPresentation.js';
@@ -323,7 +324,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onRestartTutorial=null,onDeveloperLab=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, directInteractionOnly = () => false, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onRestartTutorial=null,onDeveloperLab=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
     let rayFilter=()=>true;
     let comfortContext=null,panelOpacity=1,panelIntroductionAt=null;
@@ -1317,7 +1318,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         let hover=null;
         for(const source of sources){
             const state=handTrackingState(frame,source,handReferenceSpace),poke=handPokes.get(source) || createHandPokeTracker();handPokes.set(source,poke);
-            if(!state?.tracked || typeof blocked==='function' && blocked(source)){poke.reset();continue;}
+            if(!state?.tracked || inputOccupied(source) || typeof blocked==='function' && blocked(source)){poke.reset();continue;}
             for(const point of state.rawJoints.values()){
                 const target=renderer.hitPoint(point,{front:.045,back:.018});if(!target)continue;
                 handContacts.set(source,true);const button=targetButtonAtRay(target);
@@ -1622,6 +1623,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         getHeldInputSource(){return spatialMove?.source || spatialGrabPending?.source || sliderGrab?.source || null;},
         getFruitPerchPose(side='right'){return fruitVisible && fruitControlsActive?fruitWindow?.getPerchPose(side):null;},
         getFruitGripContact(source){return fruitWindow?.gripContact(source) || null;},
+        hitButton(ray){const target=hit(ray);return target?{...target,button:targetButtonAtRay(target)}:null;},
+        hitButton(ray){const target=hit(ray);return target?{...target,button:targetButtonAtRay(target)}:null;},
         activate(ray){if(fruitWindow?.activate(ray)){fruitControlsActive=true;explorerClosed=false;renderExplorer();return true;}const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
         isHandInteracting(source){return Boolean(source && (fruitWindow?.owns(source)||handContacts.get(source)));},
         hitPoint(point){return !pose || !renderer || detached?null:renderer.hitPoint(point,{front:.045,back:.025});},
@@ -1651,6 +1654,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             return {...pose,center:{x:pose.center.x+pose.right.x*across+pose.up.x*mainHeight/2,y:pose.center.y+pose.right.y*across+pose.up.y*mainHeight/2,z:pose.center.z+pose.right.z*across+pose.up.z*mainHeight/2}};
         },
         bindSession(session,referenceSpace){removeXrControls();fruitSession=session;fruitSpace=referenceSpace;fruitWindow?.bindSession(session,referenceSpace);handReferenceSpace=referenceSpace;const handle=event=>{
+            if(directInteractionOnly() && (event.inputSource?.hand || event.type.startsWith('squeeze')))return;
             if((fruitWindow?.owns(event.inputSource)||!inputOccupied(event.inputSource))&&fruitWindow?.handleEvent(event)){if(event.type==='selectstart'){fruitControlsActive=true;explorerClosed=false;renderExplorer();}event.stopImmediatePropagation();return;}
             const grip=event.type.startsWith('squeeze'),type=grip?(event.type==='squeezestart'?'selectstart':'selectend'):event.type;
             if(grip && event.inputSource?.hand)return;
@@ -1686,7 +1690,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(!handRay && !transform)return;
             const ray=handRay || {origin:{x:transform[12],y:transform[13],z:transform[14]},direction:{x:-transform[8],y:-transform[9],z:-transform[10]}};
             if(!rayFilter(ray))return;
-            const target=hit(ray);if(!target){if(type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
+            const target=hit(ray);if(directInteractionOnly() && !directPanelPress(event.inputSource,ray,target?{...target,button:targetButtonAtRay(target)}:null,event.type)){if(type==='selectend'){sliderGrab=null;panelGestureSource=null;}return;}if(!target){if(type==='selectend' && panelGestureSource===event.inputSource){panelGestureSource=null;event.stopImmediatePropagation();}return;}
             event.stopImmediatePropagation();
             const button=grip?null:targetButtonAtRay(target);
             if(!event.inputSource?.hand && !grip && !button)return;

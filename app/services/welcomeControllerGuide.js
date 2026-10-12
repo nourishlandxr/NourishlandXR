@@ -2,8 +2,8 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 
 const supported=['meta-quest-touch-plus','oculus-touch-v3'];
-const actions={point:['trigger'],grab:['squeeze'],gloves:['squeeze'],fly:['trigger','squeeze','thumbstick'],fruit:['squeeze'],packet:['squeeze','trigger'],seed:['squeeze'],harvest:['squeeze'],water:['squeeze'],trial:['squeeze','trigger']};
-const labels={point:'Index finger · trigger',grab:'Middle finger · grip',gloves:'Gently squeeze your grip',fly:'Trigger forward · grip back · stick turns / height',fruit:'Middle finger · grip',packet:'Hold grip · press trigger to open',seed:'Middle finger · grip',harvest:'Pick · release into the basket',water:'Hold grip · tilt the can',trial:'Grip to hold · trigger to act'};
+const actions={brush:['squeeze','trigger'],point:['trigger'],grab:['squeeze'],gloves:['squeeze'],fly:['trigger','squeeze','thumbstick'],fruit:['squeeze','trigger'],packet:['squeeze','trigger'],seed:['squeeze'],harvest:['squeeze'],water:['squeeze'],trial:['squeeze','trigger']};
+const labels={brush:'Grip to hold � trigger to paint',point:'Index finger · trigger',grab:'Middle finger · grip',gloves:'Gently squeeze your grip',fly:'Trigger forward · grip back · stick turns / height',fruit:'Middle finger · grip',packet:'Hold grip · press trigger to open',seed:'Middle finger · grip',harvest:'Pick · release into the basket',water:'Hold grip · tilt the can',trial:'Grip to hold · trigger to act'};
 
 // Official, grip-space-aligned controller assets; never put a guessed button
 // location on an unsupported controller. These assets are bundled for offline XR.

@@ -14,9 +14,15 @@ export function controllerHandFlexAxes(names,parents,bind,wristIndex,side){
     // These assets mirror X while keeping the finger order in Z. Orient the
     // palm normal explicitly so both hands close toward their own palm.
     const palm=new THREE.Vector3().crossVectors(index,pinky).normalize().multiplyScalar(side==='left'?-1:1);
+    const centre=new THREE.Vector3();
+    for(const finger of ['index','middle','ring','pinky'])for(const joint of ['metacarpal','phalanx-proximal'])centre.add(position(names.indexOf(finger+'-finger-'+joint)));
+    centre.multiplyScalar(1/8);
     return names.map((name,i)=>{
         const child=parents.findIndex(parent=>parent===i);if(child<0)return new THREE.Vector3(1,0,0);
         const direction=position(child).sub(position(i)).normalize();
+        // The thumb opposes across the palm. Reusing the fingers' flexion
+        // plane sends its mirrored, angled chain sideways away from the grasp.
+        if(name.startsWith('thumb-'))return new THREE.Vector3().crossVectors(direction,centre.clone().sub(position(child))).normalize().transformDirection(bind[i].clone().invert());
         return new THREE.Vector3().crossVectors(direction,palm).normalize().transformDirection(bind[i].clone().invert());
     });
 }
@@ -38,7 +44,7 @@ export function controllerHandJointPoses(rig,controller){
         if(posed[i])return posed[i];
         const parent=rig.parents[i],name=rig.names[i],finger=name.split('-')[0];
         const world=parent<0?rig.bind[i].clone():poseJoint(parent).clone().multiply(rig.bind[parent].clone().invert().multiply(rig.bind[i]));
-        const amount=name.includes('proximal')?.85:name.includes('intermediate')?1.05:name.includes('distal')?.65:0;
+        const amount=finger==='thumb'?(name.includes('metacarpal')?.35:name.includes('proximal')?.75:name.includes('distal')?.55:0):name.includes('proximal')?.85:name.includes('intermediate')?1.05:name.includes('distal')?.65:0;
         const curl=finger==='thumb'?Math.max(thumb*.7,grip*.65):finger==='index'?trigger:grip;
         if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],amount*curl));
         return posed[i]=world;

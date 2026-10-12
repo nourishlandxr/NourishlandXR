@@ -12,7 +12,7 @@ import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js'
 import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.js';
 
 test('soft landing order introduces the frame, voice, table, face, comfort, then hands',()=>{
-    assert.deepEqual(lessons.slice(0,16).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','comfort','living-frame','basket','basket-reveal','practice-ready','grab','gloves','fruit']);
+    assert.deepEqual(lessons.slice(0,17).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','comfort','living-frame','brush','basket','basket-reveal','practice-ready','grab','gloves','fruit']);
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
     for(const clip of [...lessons,...responses].filter(c=>c.spoken))assert.ok(fs.statSync(new URL('../app/assets/welcome-practice/voice/'+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
@@ -61,7 +61,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         const orange=stage.bodies.find(b=>b.id==='peach'),source={handedness:'right'},position=new THREE.Vector3(orange.position.x,orange.position.y,orange.position.z).applyMatrix4(stage.root.matrixWorld);
         const ray={origin:{x:position.x,y:position.y,z:position.z+.2},direction:{x:0,y:0,z:-1}},before={...orange.velocity};assert.equal(stage.select(ray,source),false);assert.deepEqual(orange.velocity,before);
         const pose=new THREE.Matrix4().makeTranslation(position.x,position.y,position.z).elements;
-        tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
+        tick(.05,{inputs:[{source,matrix:pose,down:false}]});tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
         const lifted=[...pose];lifted[13]+=.12;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});const platePose=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.27,.18,.19)).elements;tick(.1,{inputs:[{source,matrix:platePose,down:true}]});tick(.1,{inputs:[{source,matrix:platePose,down:false}]});assert.equal(stage.snapshot().completed,true);
         tick(3);assert.equal(stage.phase,'gloves');
         for(const hand of [false,true]){
