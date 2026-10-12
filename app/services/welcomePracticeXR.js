@@ -8,7 +8,7 @@ import {createWelcomeInputRouting} from './welcomeInputRouting.js';
 import {nearestWelcomePointerHit} from './welcomePointerTarget.js';
 
 export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null}={}){
-    let renderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false;
+    let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false;
     const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),handGripModes=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
     const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose});
     const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:ray=>{
@@ -53,9 +53,10 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
             }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0)};inputs.push(input);if(input.matrix)controllers.push(input);}
         }
         stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError()});revealTime+=Math.max(0,Math.min(.1,dt));
-        if(!renderer || rebuild){rebuild=false;renderer?.destroy();renderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true});}
+        if((!renderer && !pendingRenderer) || rebuild){rebuild=false;pendingRenderer?.destroy();pendingRenderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,progressive:true});}
+        if(pendingRenderer){const ready=pendingRenderer.prepareNext();if(ready){pendingRenderer.update();renderer?.destroy();renderer=pendingRenderer;pendingRenderer=null;}}
         if(stage.handsEnabled && !stage.controllerHandsVisible)controllers=[];
-        renderer.update();renderer.prepareNext();
+        renderer?.update();renderer?.prepareNext();
     }
     return {stage,bind,update,get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
         draw(view,handRenderer){if(!stage.active)return;const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);
@@ -64,5 +65,5 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 const r=input.ray,end=hit?.worldPoint || {x:r.origin.x+r.direction.x*1.25,y:r.origin.y+r.direction.y*1.25,z:r.origin.z+r.direction.z*1.25};
                 drawSpatialTether(gl,pointer,view,r.origin,end,{width:.0018,curve:0,lift:0,segments:4,color:[.8,.9,.79,.6*opacity]});
             }
-        },destroy({stopVoice=true}={}){if(disposed)return;disposed=true;unbind();stage.destroy({stopVoice});renderer?.destroy();renderer=null;destroySpatialTetherRenderer(gl,pointer);hands=[];controllers=[];inputs=[];}};
+        },destroy({stopVoice=true}={}){if(disposed)return;disposed=true;unbind();stage.destroy({stopVoice});pendingRenderer?.destroy();pendingRenderer=null;renderer?.destroy();renderer=null;destroySpatialTetherRenderer(gl,pointer);hands=[];controllers=[];inputs=[];}};
 }

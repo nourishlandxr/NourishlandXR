@@ -3,12 +3,13 @@ import {createDemoLivingMapXR} from './demoLivingMapXR.js';
 
 // Split multi-material GLB meshes and apply their animated morphs once per
 // update. The session renderer then draws the same geometry for both eyes.
-export function createFruitWindowXR(gl,source,{alphaCompositing=false}={}){
+export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressive=false}={}){
     const scene=new THREE.Scene(),entries=[],sharedGeometry=new Map(),batches=[];
-    source.traverse(node=>{
-        if(!node.isMesh)return;
+    const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
+    const nodes=[];source.traverse(node=>{if(node.isMesh)nodes.push(node);});
+    function* convert(){for(const node of nodes){
         if(node.isInstancedMesh){
-            const mesh=new THREE.InstancedMesh(node.geometry.clone(),node.material,node.instanceMatrix.count);mesh.instanceMatrix=node.instanceMatrix;mesh.instanceColor=node.instanceColor;mesh.count=node.count;mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;mesh.userData.livingMapDynamic=true;scene.add(mesh);entries.push({node,mesh,base:{},morph:{},instanced:true});return;
+            const mesh=new THREE.InstancedMesh(node.geometry.clone(),node.material,node.instanceMatrix.count);mesh.instanceMatrix=node.instanceMatrix;mesh.instanceColor=node.instanceColor;mesh.count=node.count;mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;mesh.userData.livingMapDynamic=true;scene.add(mesh);entries.push({node,mesh,base:{},morph:{},instanced:true});yield;continue;
         }
         const data=node.geometry.index?node.geometry.toNonIndexed():node.geometry.clone();
         const groups=Array.isArray(node.material)?data.groups:[{start:0,count:data.attributes.position.count,materialIndex:0}];
@@ -28,7 +29,9 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false}={}){
             entries.push({node,mesh,base,morph,relative:data.morphTargetsRelative,weights:null});
         }
         data.dispose();
-    });
+        yield;
+    }
+
     // Repeated leaves and supporting pods share geometry/materials. Submit
     // their poses as instances instead of a separate draw for every leaflet.
     const groups=new Map();
@@ -37,10 +40,14 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false}={}){
         const mesh=new THREE.InstancedMesh(group[0].mesh.geometry,group[0].mesh.material,group.length);mesh.userData.livingMapDynamic=true;mesh.frustumCulled=false;scene.add(mesh);batches.push(mesh);
         group.forEach((entry,index)=>{scene.remove(entry.mesh);entry.batch=mesh;entry.instanceIndex=index;entry.lastMatrix=new THREE.Matrix4();});
     }
-    const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
-    const renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true,fadeTransform:false,maxTextureSize:1024,detailMaps:false,alphaCompositing});
+    renderer=createDemoLivingMapXR(gl,scene,{worldScale:1,surfaceDetail:true,fadeTransform:false,maxTextureSize:1024,detailMaps:false,alphaCompositing});
+    }
+    let renderer=null,disposed=false;const conversion=convert();
+    function prepareConversion(){const started=performance.now();let result;do{result=conversion.next();}while(!result.done && (!progressive || performance.now()-started<2));return result.done;}
+    if(!progressive)prepareConversion();
     return {
-        get stats(){return {...renderer.stats,sourceMeshes:entries.length,instanceBatches:batches.length};},
+        get ready(){return Boolean(renderer);},
+        get stats(){return {...renderer?.stats,sourceMeshes:entries.length,instanceBatches:batches.length};},
         update(){
             source.updateMatrixWorld(true);
             for(const mesh of batches){mesh.visible=false;mesh.userData.poseChanged=false;}
@@ -64,8 +71,8 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false}={}){
             for(const mesh of batches)if(mesh.userData.poseChanged)mesh.instanceMatrix.needsUpdate=true;
             scene.updateMatrixWorld(true);
         },
-        draw(view,anchor,opacity=1){renderer.draw(view,anchor.position,anchor.quaternion,opacity);},
-        prepareNext(){return renderer.prepareNext();},
-        destroy(){renderer.destroy();for(const batch of batches)batch.dispose();for(const entry of entries)if(entry.instanced)entry.mesh.dispose();for(const geometry of new Set(entries.map(entry=>entry.mesh.geometry)))geometry.dispose();sharedGeometry.clear();}
+        draw(view,anchor,opacity=1){renderer?.draw(view,anchor.position,anchor.quaternion,opacity);},
+        prepareNext(){if(disposed)return false;if(!renderer){if(!prepareConversion())return false;}if(!progressive)return renderer.prepareNext();const started=performance.now();let ready;do{ready=renderer.prepareNext();}while(!ready && performance.now()-started<2);return ready;},
+        destroy(){disposed=true;conversion.return();renderer?.destroy();for(const batch of batches)batch.dispose();for(const entry of entries)if(entry.instanced)entry.mesh.dispose();for(const geometry of new Set(entries.map(entry=>entry.mesh.geometry)))geometry.dispose();sharedGeometry.clear();}
     };
 }

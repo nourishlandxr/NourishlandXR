@@ -8,7 +8,7 @@ const finite=p=>p && [p.x,p.y,p.z].every(Number.isFinite);
 export function createSpatialPaintV2({capacity=8192,onChange=()=>{}}={}){
     const root=new THREE.Group();root.name='Spatial Paint V2';
     const material=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.65,metalness:0});
-    const tubeGeometry=new THREE.CylinderGeometry(1,1,1,20,1,true),capGeometry=new THREE.SphereGeometry(1,12,8);
+    const tubeGeometry=new THREE.CylinderGeometry(1,1,1,16,1,true),capGeometry=new THREE.SphereGeometry(1,12,6);
     const tubes=new THREE.InstancedMesh(tubeGeometry,material,capacity),caps=new THREE.InstancedMesh(capGeometry,material,capacity);
     for(const node of [tubes,caps]){node.count=0;node.frustumCulled=false;node.userData.livingMapDynamic=true;node.instanceMatrix.setUsage(THREE.DynamicDrawUsage);node.setColorAt(0,new THREE.Color('#ffffff'));root.add(node);}
     const strokes=[],redo=[],active=new Map(),up=new THREE.Vector3(0,1,0),matrix=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),colourValue=new THREE.Color();
@@ -24,7 +24,7 @@ export function createSpatialPaintV2({capacity=8192,onChange=()=>{}}={}){
         stroke.points.push({x:point.x,y:point.y,z:point.z});for(const node of [tubes,caps]){node.instanceMatrix.needsUpdate=true;node.instanceColor.needsUpdate=true;}return true;
     }
     function sample(stroke,start,control,end){
-        const length=start.distanceTo(control)+control.distanceTo(end),steps=Math.max(1,Math.ceil(length/Math.max(.001,stroke.width*.45)));
+        const length=start.distanceTo(control)+control.distanceTo(end),steps=Math.max(1,Math.ceil(length/Math.max(.0015,stroke.width*.75)));
         for(let i=1;i<=steps;i++){const t=i/steps,p=start.clone().multiplyScalar((1-t)**2).addScaledVector(control,2*(1-t)*t).addScaledVector(end,t*t);if(!emit(stroke,p))break;}
     }
     function begin(source,p){if(disposed || !finite(p) || active.has(source))return null;
