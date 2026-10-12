@@ -7,8 +7,8 @@ export function zinniaVoiceBarPose(viewer){
     const center={x:viewer[12]-right.x*.52-up.x*.31-normal.x*.9,y:viewer[13]-right.y*.52-up.y*.31-normal.y*.9,z:viewer[14]-right.z*.52-up.z*.31-normal.z*.9};
     return {center,right,up,normal};
 }
-export function zinniaVoiceBarButtons({conversation=false,paused=zinniaVoiceState().paused,enabled=getWelcomeNarrationSettings().enabled}={}){
-    return [{id:'voice',label:'Mic',disabled:!conversation},{id:'done',label:'Done',disabled:!conversation},{id:'pause',label:paused?'Resume':'Pause'},{id:'replay',label:'Replay'},{id:'mute',label:enabled?'Mute':'Unmute'}];
+export function zinniaVoiceBarButtons({conversation=false,paused=zinniaVoiceState().paused,enabled=getWelcomeNarrationSettings().enabled,listening=zinniaVoiceState().listening}={}){
+    return [{id:listening?'done':'voice',label:listening?'Finish listening':'Microphone',icon:listening?'stop':'mic',active:listening,disabled:!conversation},{id:'pause',label:paused?'Resume':'Pause',icon:paused?'play':'pause'},{id:'replay',label:'Replay',icon:'replay'},{id:'mute',label:enabled?'Mute':'Unmute',icon:enabled?'sound':'muted',active:!enabled}];
 }
 export function activateZinniaVoiceBar(action,conversation){
     if(action==='voice' || action==='done')conversation?.activate(action);
@@ -20,12 +20,26 @@ export function activateZinniaVoiceBar(action,conversation){
 export function createSpatialZinniaVoiceBar(gl,{getConversation=()=>null,isInputOccupied=()=>false,onAction=()=>{},ray=()=>null}={}){
     let pose=null,surfaces=[],disposed=false;const pokes=new Map();
     const renderer=createSpatialTotemCards(gl,{surfaces:()=>surfaces,ray,canvas:card=>{
-        const canvas=document.createElement('canvas');canvas.width=256;canvas.height=128;const ctx=canvas.getContext('2d');
-        ctx.fillStyle=card.disabled?'#23332dc9':'#244638f2';ctx.beginPath();ctx.roundRect(4,4,248,120,26);ctx.fill();ctx.strokeStyle=card.disabled?'#56685b':'#96baa0';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle=card.disabled?'#8e9c90':'#f2f4dd';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='500 37px system-ui';ctx.fillText(card.title,128,66,230);return canvas;
+        const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;const ctx=canvas.getContext('2d');
+        ctx.fillStyle=card.active?'#62d8bc':card.disabled?'#202825b8':'#172421ef';ctx.beginPath();ctx.arc(64,64,58,0,Math.PI*2);ctx.fill();
+        ctx.strokeStyle=card.active?'#b3ffea':'#6d8c8070';ctx.lineWidth=2;ctx.stroke();
+        ctx.strokeStyle=ctx.fillStyle=card.disabled?'#718179':card.active?'#102c24':'#f0f6f3';ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round';
+        const line=(points)=>{ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.stroke();};
+        const icon=card.icon;
+        if(icon==='mic'){ctx.beginPath();ctx.roundRect(54,32,20,43,10);ctx.fill();ctx.beginPath();ctx.arc(64,65,22,0,Math.PI);ctx.stroke();line([[64,87],[64,98]]);line([[52,98],[76,98]]);}
+        else if(icon==='stop'){ctx.fillRect(45,45,38,38);}
+        else if(icon==='pause'){ctx.fillRect(44,39,13,50);ctx.fillRect(71,39,13,50);}
+        else if(icon==='play'){ctx.beginPath();ctx.moveTo(48,37);ctx.lineTo(88,64);ctx.lineTo(48,91);ctx.closePath();ctx.fill();}
+        else if(icon==='replay'){ctx.beginPath();ctx.arc(65,66,27,-Math.PI*.3,Math.PI*1.4);ctx.stroke();line([[42,34],[43,54],[62,49]]);}
+        else if(icon==='sound' || icon==='muted'){ctx.beginPath();ctx.moveTo(33,54);ctx.lineTo(47,54);ctx.lineTo(64,40);ctx.lineTo(64,88);ctx.lineTo(47,74);ctx.lineTo(33,74);ctx.closePath();ctx.fill();if(icon==='sound'){ctx.beginPath();ctx.arc(66,64,23,-.7,.7);ctx.stroke();ctx.beginPath();ctx.arc(66,64,36,-.7,.7);ctx.stroke();}else line([[34,95],[94,33]]);}
+        else if(card.id==='confirm')line([[39,65],[56,82],[91,44]]);
+        else if(card.id==='retry'){ctx.beginPath();ctx.arc(65,66,27,-Math.PI*.3,Math.PI*1.4);ctx.stroke();line([[42,34],[43,54],[62,49]]);}
+        else line([[45,45],[83,83]]),line([[83,45],[45,83]]);
+        return canvas;
     }});
     function update(viewer){if(disposed || !viewer)return;pose ||= zinniaVoiceBarPose(viewer);
         const conversation=getConversation(),buttons=zinniaVoiceBarButtons({conversation:Boolean(conversation)});if(conversation)buttons.push(...(conversation.buttons?.() || []),{id:'cancel',label:conversation.buttons?'Skip':'Cancel'});
-        surfaces=buttons.map((button,index)=>{const offset=(index-(buttons.length-1)/2)*.108;return {card:{id:button.id,title:button.label,disabled:button.disabled,fadeDuration:0},center:{x:pose.center.x+pose.right.x*offset,y:pose.center.y+pose.right.y*offset,z:pose.center.z+pose.right.z*offset},right:pose.right,up:pose.up,normal:pose.normal,width:.10,height:.065};});
+        surfaces=buttons.map((button,index)=>{const offset=(index-(buttons.length-1)/2)*.078;return {card:{id:button.id,title:button.label,disabled:button.disabled,icon:button.icon,active:button.active,fadeDuration:0},center:{x:pose.center.x+pose.right.x*offset,y:pose.center.y+pose.right.y*offset,z:pose.center.z+pose.right.z*offset},right:pose.right,up:pose.up,normal:pose.normal,width:.07,height:.07};});
     }
     function activate(target){if(!target)return false;if(!target.card.disabled){activateZinniaVoiceBar(target.card.id,getConversation());onAction(target.card.id);}return true;}
     return {update,get surfaces(){return surfaces;},reset(){pose=null;pokes.clear();},
