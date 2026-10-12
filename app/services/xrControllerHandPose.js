@@ -23,9 +23,16 @@ export function controllerHandFlexAxes(names,parents,bind,wristIndex,side){
 
 export function controllerHandJointPoses(rig,controller){
     const buttons=controller.source.gamepad?.buttons || [];
-    const trigger=THREE.MathUtils.clamp(buttons[0]?.value??Number(Boolean(controller.trigger)),0,1);
-    const grip=THREE.MathUtils.clamp(buttons[1]?.value??controller.grip??0,0,1);
-    const thumb=Math.max(...buttons.slice(3).map(button=>button.value || Number(Boolean(button.touched || button.pressed))),0);
+    // Capacitive contact and residual analogue values are not a closed hand.
+    // Release returns exactly to the authored open pose on this frame.
+    const pressure=(button,fallback=0)=>{
+        if(button?.pressed===false)return 0;
+        const value=Number(button?.value??(button?.pressed?1:fallback));
+        return THREE.MathUtils.clamp(Number.isFinite(value)?value:0,0,1);
+    };
+    const trigger=pressure(buttons[0],Number(Boolean(controller.trigger)));
+    const grip=pressure(buttons[1],controller.down===false?0:controller.grip??Number(Boolean(controller.down)));
+    const thumb=Math.max(...buttons.slice(3).map(button=>pressure(button)),0);
     const posed=[];
     const poseJoint=i=>{
         if(posed[i])return posed[i];

@@ -24,6 +24,16 @@ function rigFor(side){
 const position=(poses,rig,name)=>new THREE.Vector3().setFromMatrixPosition(poses[rig.names.indexOf(name)]);
 const input=(trigger,grip)=>({source:{gamepad:{buttons:[{value:trigger},{value:grip}]}}});
 
+test('released virtual fingers return to open despite touch and residual button values',()=>{
+    for(const side of ['left','right']){
+        const rig=rigFor(side),open=controllerHandJointPoses(rig,input(0,0));
+        const released={source:{gamepad:{buttons:[{value:.25,pressed:false,touched:true},{value:.35,pressed:false,touched:true},{},{value:1,pressed:false,touched:true}]}}};
+        controllerHandJointPoses(rig,{source:{gamepad:{buttons:[{value:1,pressed:true},{value:1,pressed:true}]}}});
+        const poses=controllerHandJointPoses(rig,released);
+        poses.forEach((pose,i)=>assert.ok(pose.elements.every((value,j)=>Math.abs(value-open[i].elements[j])<1e-8),rig.names[i]));
+    }
+});
+
 test('actual hand skeletons curl toward mirrored palms and preserve finger lengths',()=>{
     const movements=[];
     for(const side of ['left','right']){
