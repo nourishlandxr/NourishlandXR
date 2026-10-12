@@ -40,10 +40,9 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         stop();lesson=value;if(!value || muted || disposed || !context){changed();return;}claimZinniaVoice(owner);
         if(!value.recorded && (value.spokenOverride || value.id?.startsWith('fruit-name-'))){
             const token=generation,text=value.spoken;playing=true;changed();
-            const base=globalThis.NOURISHLAND_CONFIG?.apiBase || (globalThis.location?.pathname.startsWith('/xr/')?'/xr-api':'/api');
-            try{const response=await fetch(base+'/zinnia/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Speech unavailable');const bytes=await response.arrayBuffer();if(token!==generation || disposed)return;const decoded=await context.decodeAudioData(bytes);if(token===generation){buffer=decoded;playBuffer(token);}return;}catch{}
-            if(token!==generation || disposed)return;
-            if(globalThis.SpeechSynthesisUtterance && globalThis.speechSynthesis){const utterance=new SpeechSynthesisUtterance(text);utterance.lang=globalThis.document?.documentElement?.lang || 'en-AU';utterance.rate=.9;utterance.volume=Math.min(1,getWelcomeNarrationSettings().volume);utterance.onstart=()=>{if(token===generation)fallbackSpeaking=true;};utterance.onend=utterance.onerror=()=>{if(token!==generation)return;fallbackSpeaking=false;fallbackQueued=false;playing=false;releaseZinniaVoice(owner);changed();onEnded();};fallbackQueued=true;speechSynthesis.speak(utterance);if(paused)speechSynthesis.pause();return;}
+            // Tutorial voice is the authored Ava recording. Never substitute Coral
+            // or a device-selected voice for an unrecorded personalised line.
+            // The scene keeps the line on its board until its recording is ready.
             playing=false;releaseZinniaVoice(owner);changed();onEnded();return;
         }
         const token=generation;playing=true;changed();const loaded=await load(value.id);
