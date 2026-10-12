@@ -1,9 +1,10 @@
+import {WELCOME_NARRATION_BANK} from './welcomeNarrationBank.js';
 // Recorded Zinnia narration; pause keeps the decoded clip and its position.
 import {claimZinniaVoice,releaseZinniaVoice,forgetZinniaVoice,isLastZinniaVoice} from './zinniaVoiceCoordinator.js';
 const settingsKey='nlxr.welcome-narration.v1';
 export function getWelcomeNarrationSettings(){try{return {enabled:true,volume:1.24,echo:.03,...JSON.parse(globalThis.localStorage?.getItem(settingsKey) || '{}')};}catch{return {enabled:true,volume:1.24,echo:.03};}}
 export function setWelcomeNarrationSettings(change){const next={...getWelcomeNarrationSettings(),...change};next.enabled=next.enabled!==false;next.volume=Math.max(0,Math.min(2,Number(next.volume)||0));next.echo=Math.max(0,Math.min(.1,Number(next.echo)||0));try{globalThis.localStorage?.setItem(settingsKey,JSON.stringify(next));}catch{}globalThis.dispatchEvent?.(new Event('nlxr-narration-change'));return next;}
-export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded=()=>{},onInterrupt=()=>{},onReplay,assetBase=new URL('../assets/welcome-practice/voice/',import.meta.url),initialId='arrival',maxCached=8,fetchCache='no-cache'}={}){
+export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded=()=>{},onInterrupt=()=>{},onReplay,assetBase=new URL(WELCOME_NARRATION_BANK?'../'+WELCOME_NARRATION_BANK.base:'../assets/welcome-practice/voice/',import.meta.url),initialId='arrival',maxCached=8,fetchCache='no-cache'}={}){
     const Context=globalThis.AudioContext || globalThis.webkitAudioContext;
     let context=null,gain=null,echoGain=null,current=null,buffer=null,offset=0,startedAt=0,generation=0,muted=!getWelcomeNarrationSettings().enabled,playing=false,paused=false,disposed=false,lesson=null;
     let analyser=null,wave=null,fallbackSpeaking=false,fallbackQueued=false,awaitingAudioUnlock=false;
@@ -40,9 +41,13 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         stop();lesson=value;if(!value || muted || disposed || !context){changed();return;}claimZinniaVoice(owner);
         if(!value.recorded && (value.spokenOverride || value.id?.startsWith('fruit-name-'))){
             const token=generation,text=value.spoken;playing=true;changed();
-            // Tutorial voice is the authored Ava recording. Never substitute Coral
-            // or a device-selected voice for an unrecorded personalised line.
-            // The scene keeps the line on its board until its recording is ready.
+            // Live replies are enabled only when the whole tutorial uses Coral.
+            // Never fall back to a device voice or mix it with the old Ava bank.
+            if(WELCOME_NARRATION_BANK?.voice==='coral'){
+                const base=globalThis.NOURISHLAND_CONFIG?.apiBase || (globalThis.location?.pathname.startsWith('/xr/')?'/xr-api':'/api');
+                try{const response=await fetch(base+'/zinnia/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:AbortSignal.timeout(10000)});if(!response.ok)throw Error('Speech unavailable');const bytes=await response.arrayBuffer();if(token!==generation || disposed)return;const decoded=await context.decodeAudioData(bytes);if(token===generation){buffer=decoded;playBuffer(token);}return;}catch{}
+            }
+            if(token!==generation || disposed)return;
             playing=false;releaseZinniaVoice(owner);changed();onEnded();return;
         }
         const token=generation;playing=true;changed();const loaded=await load(value.id);

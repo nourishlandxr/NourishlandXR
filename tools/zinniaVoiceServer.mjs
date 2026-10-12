@@ -26,7 +26,7 @@ export function handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isA
                 body=new FormData();body.append('file',new Blob([buffer],{type:mime}),'voice.'+extension);body.append('model','gpt-4o-mini-transcribe');body.append('language','en');body.append('prompt','Plant names, cultivars, Zinnia, Daleys.');endpoint='transcriptions';
             }else{
                 const text=String(data.text || '').trim();if(!text || text.length>1200)return sendJson(res,400,{error:'Speech text is too long or empty.'});
-                headers['Content-Type']='application/json';body=JSON.stringify({model:'gpt-4o-mini-tts',voice:'coral',input:text,instructions:'Warm, concise garden guide. Speak clearly in Australian English.',response_format:'mp3'});endpoint='speech';
+                headers['Content-Type']='application/json';body=JSON.stringify({model:'gpt-4o-mini-tts',voice:'coral',input:text,instructions:'Warm, concise garden guide. Speak clearly in Australian English. Keep a calm, unhurried pace. Leave a gentle pause between sentences. No exaggerated acting.',response_format:'mp3'});endpoint='speech';
             }
             const response=await fetch('https://api.openai.com/v1/audio/'+endpoint,{method:'POST',headers,body,signal:AbortSignal.timeout(25000)});
             if(!response.ok)return sendJson(res,response.status===429?429:502,{error:'Voice provider unavailable. Please retry.'});
