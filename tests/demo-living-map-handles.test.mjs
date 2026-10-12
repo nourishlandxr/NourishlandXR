@@ -65,5 +65,5 @@ test('production pointer draws the held hook beam instead of hiding it or retarg
  const endpoint={x:.5,y:1,z:-1},draws=[],scope=vm.createContext({infoPanel:null,demoHeldIndex:-1,tetherRenderer:{},latestControllerRay:{origin:{x:0,y:1.5,z:0},direction:{x:0,y:0,z:-1}},demoHandMode:'pointer',latestTrackedHandStates:[],demoLivingMapGrip:{contact:()=>endpoint},XR_LASER_POINTER_CONFIG:{startOffset:.03},gl:{},view:{},pointerSource:{},drawSpatialTether:(_gl,_r,_v,start,end,options)=>draws.push({start,end,options}),drawSpatialPointerContact:(_gl,_r,_v,end)=>draws.push({end})});
  vm.runInContext(fn+';drawDemoInputPointer(view,pointerSource);',scope);
  assert.equal(draws.length,2);assert.equal(draws[0].end,endpoint);assert.equal(draws[0].options.segments,4);assert.equal(draws[1].end,endpoint);
- scope.demoHandMode='outline';draws.length=0;vm.runInContext('drawDemoInputPointer(view,pointerSource);',scope);assert.equal(draws.length,0,'hand mode has no controller laser');
+ scope.demoHandMode='outline';draws.length=0;vm.runInContext('drawDemoInputPointer(view,pointerSource);',scope);assert.equal(draws.length,2,'physical controller laser remains available in outline hand mode');
 });

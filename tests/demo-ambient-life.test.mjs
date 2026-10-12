@@ -67,13 +67,13 @@ test('bee encounters are deterministic, comfortably timed and continuous at ever
     assert.deepEqual(demoBeeEncounter(nextStart),demoBeeEncounter(nextStart));
 });
 
-test('ambient life is wired into simulated and immersive demo rendering', () => {
+test('ambient drawing remains available without automatically loading bees', () => {
     const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
     const style=readFileSync(new URL('../app/style.css',import.meta.url),'utf8');
     const spatialDraw=source.slice(source.indexOf('function drawSpatialAmbientLife'),source.indexOf('function drawSpatialRain'));
     assert.match(source,/data-demo-ambient/);
-    assert.match(source,/mountDemoBeeModel/);
-    assert.match(source,/mountDemoBeeModel\(modelCanvas,\{gl:simulated\?null:gl\}\)/);
+    assert.doesNotMatch(source,/mountDemoBeeModel/);
+    assert.doesNotMatch(source,/const loadBees=/);
     assert.match(source,/paintDemoAmbientLife\(now\)/);
     assert.match(source,/drawSpatialAmbientLife\(view\)/);
     assert.match(spatialDraw,/ambientBeeModel\?\.drawXR\?\.\(view,position,arWelcomeClock\.elapsed,\{\.\.\.bee,viewer:viewerMatrix\}\)/);

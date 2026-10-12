@@ -12027,3 +12027,7 @@ body:has(.app-surface) {
  .v2-welcome .v2-actions button {min-height:42px;padding:8px 12px;}
  .ar-introduction-preparation .ar-preparation-points {grid-template-columns:1fr;}
 }
+
+/* Main demo copy appears as one clear paragraph, without previewing future text. */
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {opacity:0;visibility:hidden;clip-path:none;transform:none;transition:none;}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p:is(.is-current,.is-revealed) {opacity:1;visibility:visible;clip-path:none;}

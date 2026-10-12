@@ -13,10 +13,10 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
     // reused on tubes: its unused white regions would bleach the branch.
     const wood=new THREE.MeshStandardMaterial({color:'#4c3320',roughness:.92});
     const branch=(points,radius)=>{const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,14,radius,8,false),wood);home.add(mesh);};
-    branch([[.18,-.12,-.34],[.12,-.07,-.20],[.065,-.028,-.08],[0,-.018,.015],[-.095,-.025,.025]],.021);
-    branch([[.11,-.065,-.18],[.045,-.024,-.055],[-.055,-.018,-.045],[-.10,-.028,-.02]],.013);
+    branch([[.10,-.12,-.16],[.12,-.07,-.20],[.065,-.028,-.08],[0,-.018,.015],[-.095,-.025,.025]],.021);
+    branch([[.10,-.12,-.16],[.11,-.065,-.10],[.045,-.024,-.055],[-.055,-.018,-.045],[-.10,-.028,-.02]],.013);
     const characterMount=new THREE.Group();characterMount.name='Authored Zinnia return mount';home.add(characterMount);
-    let character=initialCharacter || createZinniaCharacter();character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);
+    let character=initialCharacter || createZinniaCharacter();character.visible=true;character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);
     let glContext=null,renderer=null,started=null,disposed=false,lastFrame=null,instant=false,rimMaterialId=null;
     function watchCharacter(value){void value.userData.zinnia.ready.then(ready=>{if(!ready || disposed || character!==value)return;renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true}):null;});}
     watchCharacter(character);
@@ -27,11 +27,11 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         const direct=getVoice(),directState=direct?.status?.(),shared=zinniaVoiceState();
         const voice=directState?.playing || directState?.paused?directState:shared,cue=zinniaCharacterCue();
         const speechLevel=voice.paused?0:Math.max(zinniaSpeechLevel(),direct?.speechLevel?.() || 0);
-        animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:voice.playing?'zinnia':'explore',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
+        animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
     }
     return {scene,root,characterMount,update,
         matchRim(frameScene){let material=null;frameScene?.traverse(node=>{for(const candidate of [node.material].flat().filter(Boolean))if(candidate.name==='Brown lower soil')material ||= candidate;});if(!material || material.uuid===rimMaterialId)return;rimMaterialId=material.uuid;wood.copy(material);wood.map=null;wood.color.set('#4c3320');wood.name='Living Frame branch';renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true}):null;},
-        adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
+        adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;character.visible=true;character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
         attach(gl){glContext=gl;renderer?.destroy();renderer=createFruitWindowXR(gl,scene,{alphaCompositing:true});},
         show(time=performance.now(),{immediate=false}={}){started=time;instant=immediate;},
         draw(view,matrix,time=performance.now(),inputs=[],viewer=null){

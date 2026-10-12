@@ -67,7 +67,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
             if(sad)pitch-=.23;else if(tickled)pitch+=Math.sin(age*26)*.075;else if(patted)pitch+=Math.sin(age*6)*.06;
             target.set(-pitch,yaw,tickled?Math.sin(age*22)*.06:level*.025*Math.sin(age*3));const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(target.x,target.y,target.z));head.quaternion.slerp(q,1-Math.exp(-8*dt));
         }
-        const body=parts.Body_sway_root?.userData.guidePivot;if(body)body.rotation.z=Math.sin(age*2.1)*level*.025+(lesson==='zinnia'?Math.sin(age*3)*.035:0);
+        const body=parts.Body_sway_root?.userData.guidePivot;if(body)body.rotation.z=Math.sin(age*2.1)*level*.025+(lesson==='zinnia'?Math.sin(age*3)*.035:lesson==='demo-guide'?Math.sin(age*.8)*.009:0);
         for(const [i,petal] of petals.entries())petal.rotation.x=Math.sin(age*1.6+i*.8)*.007*(.4+level);
         const attentive=focused || Boolean(task) || level>.025 || ['grab','fruit','packet','seed','water','grow','harvest'].includes(lesson);
         const happy=!sad && (celebrating || success || tickled || patted);
