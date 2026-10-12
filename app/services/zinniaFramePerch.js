@@ -22,10 +22,10 @@ export function createZinniaFramePerch({character:initialCharacter=null}={}){
         adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
         attach(gl){glContext=gl;renderer?.destroy();renderer=createFruitWindowXR(gl,scene,{alphaCompositing:true});},
         show(time=performance.now()){started=time;},
-        draw(view,matrix,time=performance.now()){
+        draw(view,matrix,time=performance.now(),inputs=[]){
             if(disposed || started===null || !renderer)return;
             root.matrix.fromArray(matrix);root.updateMatrixWorld(true);
-            const voice=zinniaVoiceState(),cue=zinniaCharacterCue();animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,cue,paused:cue.paused || voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel:zinniaSpeechLevel()});renderer.update();renderer.prepareNext();
+            const voice=zinniaVoiceState(),cue=zinniaCharacterCue();animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,cue,inputs,paused:cue.paused || voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel:zinniaSpeechLevel()});renderer.update();renderer.prepareNext();
             const t=Math.max(0,Math.min(1,(time-started)/1800));renderer.draw(view,anchor,t*t*(3-2*t));
         },
         destroy(){if(disposed)return;disposed=true;disposeZinniaCharacter(character);renderer?.destroy();const geometries=new Set(),materials=new Set();scene.traverse(node=>{if(node.geometry)geometries.add(node.geometry);for(const material of [node.material].flat().filter(Boolean))materials.add(material);});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}

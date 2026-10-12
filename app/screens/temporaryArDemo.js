@@ -5861,7 +5861,7 @@ function drawIntroSpatial(view) {
         const orbPulse=pointerKind==='aim'?1+.05*Math.sin(performance.now()/380):1;
         if (pointerPosition) {gl.depthMask(false);drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.95*orbPulse, pointerKind==='aim'?.68:1);gl.depthMask(true);}
     }
-    if(livingFrameModel?.ready && arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);const framePose=livingFramePose(board);livingFrameModel.drawXR(view,framePose.matrix);if(!welcomePractice?.active)zinniaFramePerch?.draw(view,framePose.matrix);}
+    if(livingFrameModel?.ready && arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);const framePose=livingFramePose(board);livingFrameModel.drawXR(view,framePose.matrix);if(!welcomePractice?.active)zinniaFramePerch?.draw(view,framePose.matrix,performance.now(),[...latestTrackedHandStates.filter(entry=>entry.state?.tracked).map(entry=>({source:entry.source,tip:entry.state.rawJoints.get('index-finger-tip')})),...demoPointerRays.filter(entry=>!entry.source?.hand).map(entry=>({source:entry.source,ray:entry.ray,trigger:Boolean(entry.source?.gamepad?.buttons?.[0]?.pressed)}))]);}
 }
 
 function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {

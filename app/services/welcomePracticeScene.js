@@ -165,7 +165,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         const age=elapsed-stepStarted;
         tableReveal.update(reveals.table===null?-1:elapsed-reveals.table);
         zinniaReveal?.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);
-        animateZinniaCharacter(zinniaCharacter,elapsed,Boolean(voice?.status().playing),{lesson:phase(),viewer,speechLevel:voice?.speechLevel?.() || 0,targetWorld:practiceZinniaTarget(),paused:tutorialPaused || Boolean(voice?.status().paused),cue:{id:phase()+':'+presentationRevision+':'+(successAt!==null),intent:successAt!==null?'celebrate':phase()==='zinnia'?'greet':'explain'},success:successAt!==null});
+        animateZinniaCharacter(zinniaCharacter,elapsed,Boolean(voice?.status().playing),{lesson:phase(),viewer,inputs:inputs.filter(input=>!activeGrabs.has(input.source)),speechLevel:voice?.speechLevel?.() || 0,targetWorld:practiceZinniaTarget(),paused:tutorialPaused || Boolean(voice?.status().paused),cue:{id:phase()+':'+presentationRevision+':'+(successAt!==null),intent:successAt!==null?'celebrate':phase()==='zinnia'?'greet':'explain'},success:successAt!==null});
         const orangeAppear=phase()==='grab'?THREE.MathUtils.smoothstep(age,0,1.8):1;
         objects.get('orange').scale.setScalar(Math.max(.001,orangeAppear));
         for(const source of [...inputEdges.keys()])if(!inputs.some(i=>i.source===source)){release(source,false);inputEdges.delete(source);}
