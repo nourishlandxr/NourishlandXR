@@ -57,6 +57,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
                 if(entry.batch){const pose=mesh.visible?node.matrixWorld:hiddenMatrix;if(!entry.lastMatrix.equals(pose)){entry.batch.setMatrixAt(entry.instanceIndex,pose);entry.lastMatrix.copy(pose);entry.batch.userData.poseChanged=true;}entry.batch.visible ||= mesh.visible;}
                 else mesh.matrix.copy(node.matrixWorld);
                 if(entry.instanced){mesh.count=node.count;mesh.instanceColor=node.instanceColor;continue;}
+                if(!mesh.visible)continue;
                 const weights=node.morphTargetInfluences;
                 if(weights&&(!entry.weights||weights.some((value,i)=>value!==entry.weights[i]))){
                     for(const name of ['position','normal']){

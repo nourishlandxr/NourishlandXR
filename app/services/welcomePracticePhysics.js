@@ -1,7 +1,7 @@
 // Four lightweight rigid bodies, with a circular support surface and floor.
 // Fixed substeps and bounded throw speeds keep gravity stable in XR.
 export const PRACTICE_TABLE_RADIUS=.9;
-export const PRACTICE_TABLE_HALF_WIDTH=.78,PRACTICE_TABLE_HALF_DEPTH=.45;
+export const PRACTICE_TABLE_HALF_WIDTH=.95,PRACTICE_TABLE_HALF_DEPTH=.45;
 export const onPracticeTable=(x,z,margin=0)=>Math.abs(x)<PRACTICE_TABLE_HALF_WIDTH-margin && Math.abs(z)<PRACTICE_TABLE_HALF_DEPTH-margin;
 export function createPracticeBody(id,{x=0,z=0,radius=.055,halfSize=null,bounce=.2}={}){
     const half=halfSize || {x:radius,y:radius,z:radius};
@@ -20,11 +20,20 @@ function turn(body,dt){
     const x=aw*q.x+ax*q.w+ay*q.z-az*q.y,y=aw*q.y-ax*q.z+ay*q.w+az*q.x,z=aw*q.z+ax*q.y-ay*q.x+az*q.w,w=aw*q.w-ax*q.x-ay*q.y-az*q.z,l=Math.hypot(x,y,z,w);
     Object.assign(q,{x:x/l,y:y/l,z:z/l,w:w/l});
 }
-export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{}}={}){
+export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{},constrainMovement=null}={}){
     let remaining=Math.max(0,Math.min(.08,dt));
     while(remaining>0){const s=Math.min(1/120,remaining);remaining-=s;
         for(const b of bodies){if(!b.visible || b.held || b.basketed || b.anchored)continue;const p=b.position,v=b.velocity;const previousY=p.y;
-            v.y-=9.81*s;p.x+=v.x*s;p.y+=v.y*s;p.z+=v.z*s;turn(b,s);b.support=practiceSupport(b);
+            const before=constrainMovement?{...p}:null;
+            v.y-=9.81*s;p.x+=v.x*s;p.y+=v.y*s;p.z+=v.z*s;
+            if(constrainMovement){const x=p.x,z=p.z;constrainMovement(b,p,before);if(p.x!==x)v.x=0;if(p.z!==z)v.z=0;}
+            turn(b,s);b.support=practiceSupport(b);
+            // The low timber rim catches resting pieces without trapping lifted objects.
+            if(previousY-b.support>=-.012 && p.y-b.support<.035){
+                const x=PRACTICE_TABLE_HALF_WIDTH-b.radius-.015,z=PRACTICE_TABLE_HALF_DEPTH-b.radius-.015;
+                if(Math.abs(p.x)>x && Math.abs(p.x)<PRACTICE_TABLE_HALF_WIDTH+b.radius && Math.abs(p.z)<PRACTICE_TABLE_HALF_DEPTH){p.x=Math.sign(p.x)*x;v.x=0;}
+                if(Math.abs(p.z)>z && Math.abs(p.z)<PRACTICE_TABLE_HALF_DEPTH+b.radius && Math.abs(p.x)<PRACTICE_TABLE_HALF_WIDTH){p.z=Math.sign(p.z)*z;v.z=0;}
+            }
             const onTable=onPracticeTable(p.x,p.z,Math.min(.035,b.radius*.45)) && previousY-b.support>=-.012;
             const surface=onTable?0:floor;
             if(p.y-b.support<surface){p.y=surface+b.support;if(v.y<-.8)onImpact(b,-v.y);v.y=Math.abs(v.y)>.45?-v.y*b.bounce:0;

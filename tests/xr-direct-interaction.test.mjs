@@ -53,9 +53,9 @@ test('actual welcome renderer keeps controller lasers but excludes gloves, hands
     const context={stage,revealTime:2,renderer:null,anchor:{},hands:[],controllers:[],inputs:[controller],onHit:()=>null,nearestWelcomePointerHit:()=>null,drawSpatialTether:()=>lines++,gl:{},pointer:{}};
     const draw=vm.runInNewContext('({'+source.slice(start,end)+'}}).draw',context);
     draw({});assert.equal(lines,1);
-    stage.controllerLasersVisible=false;draw({});assert.equal(lines,1);
+    stage.controllerLasersVisible=false;draw({});assert.equal(lines,1);stage.controllerLasersVisible=true;
     stage.controllerLasersVisible=true;brush=true;draw({});assert.equal(lines,1);
-    brush=false;stage.phase='brush';draw({});assert.equal(lines,1);
+    brush=false;stage.phase='brush';stage.controllerLasersVisible=false;draw({});assert.equal(lines,1);stage.controllerLasersVisible=true;
     stage.phase='fruit';stage.trials.active='painting';draw({});assert.equal(lines,1);
     stage.trials.active=null;controller.source.hand={};draw({});assert.equal(lines,1);
 });

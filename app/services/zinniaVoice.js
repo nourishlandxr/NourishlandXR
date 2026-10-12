@@ -4,10 +4,10 @@ import {claimZinniaVoice,releaseZinniaVoice,forgetZinniaVoice} from './zinniaVoi
 export function zinniaApiBase(){return globalThis.NOURISHLAND_CONFIG?.apiBase || (globalThis.location?.pathname.startsWith('/xr/')?'/xr-api':'/api');}
 // One microphone owner across Orbs and Notes. Audio stays in memory only.
 export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{}}={}){
-    let stream,recorder,recognition,timer,disposed=false,epoch=0,request,capabilities,listening=false;
+    let stream,recorder,recognition,timer,meter,meterTimer,disposed=false,epoch=0,request,capabilities,listening=false;
     const narrator=createWelcomePracticeVoice({onInterrupt:()=>{listening=false;}});
     const status=message=>{if(!disposed)onStatus(message);};
-    function release({keepOwner=false}={}){clearTimeout(timer);stream?.getTracks().forEach(track=>track.stop());stream=null;recorder=null;listening=false;if(!keepOwner)releaseZinniaVoice(owner);}
+    function release({keepOwner=false}={}){clearTimeout(timer);clearInterval(meterTimer);meterTimer=null;void meter?.close().catch(()=>{});meter=null;stream?.getTracks().forEach(track=>track.stop());stream=null;recorder=null;listening=false;if(!keepOwner)releaseZinniaVoice(owner);}
     function cancel(){epoch++;request?.abort();if(recorder?.state==='recording'){recorder.onstop=null;recorder.stop();}release();recognition?.abort();recognition=null;narrator.stop();}
     async function capability(){if(capabilities?.enabled)return capabilities;try{const response=await fetch(zinniaApiBase()+'/zinnia/capabilities',{signal:AbortSignal.timeout(4000),cache:'no-store'});const data=response.ok?await response.json():{enabled:false};if(data.enabled)capabilities=data;return data;}catch{return {enabled:false};}}
     async function listen(){
@@ -31,7 +31,10 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{}}
                         const data=await response.json();if(!response.ok)throw new Error(data.error || 'Voice service unavailable.');if(!disposed && token===epoch){if(data.text?.trim())onText(data.text.trim());else status('I did not catch that. Tap Speak and try again.');}
                     }catch(error){capabilities=null;if(!disposed && token===epoch)status(error.name==='AbortError'?'Voice request timed out. Tap Speak to reconnect.':'Zinnia could not finish that recording. Tap Speak to reconnect and try again.');}finally{if(token===epoch)releaseZinniaVoice(owner);}
                 };
-                recorder.start();timer=setTimeout(()=>finish(),20000);status('Listening… Tap Done when you finish (20 seconds maximum).');
+                recorder.start();timer=setTimeout(()=>finish(),12000);
+                const AudioContext=globalThis.AudioContext || globalThis.webkitAudioContext;
+                if(AudioContext){meter=new AudioContext();const analyser=meter.createAnalyser();analyser.fftSize=512;meter.createMediaStreamSource(stream).connect(analyser);const samples=new Uint8Array(analyser.fftSize);let heard=false,lastSound=performance.now();void meter.resume();meterTimer=setInterval(()=>{analyser.getByteTimeDomainData(samples);const rms=Math.sqrt(samples.reduce((sum,x)=>sum+((x-128)/128)**2,0)/samples.length);if(rms>.018){heard=true;lastSound=performance.now();}if(heard && performance.now()-lastSound>1100){clearInterval(meterTimer);finish();}},100);}
+                status('Listening… Speak naturally; I’ll listen for the end of your sentence.');
             }catch{release();status('Microphone access was not granted. Tap Speak to retry.');}
             return;
         }

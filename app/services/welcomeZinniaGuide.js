@@ -30,7 +30,10 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
             for(const [name,width,height] of [['Open',1,.065],['Round',.65,.082],['Wide',1.22,.035],['Narrow',.46,.065],['Closed',.9,.004]]){const shape=base.clone();
                 for(let i=0;i<base.count;i++){const u=(base.getX(i)-centre)/half,sign=i%2?-1:1;shape.setXYZ(i,centre+(base.getX(i)-centre)*width,base.getY(i),sign*height*Math.sqrt(Math.max(0,1-u*u)));}
                 if(geometry.morphTargetsRelative)for(let i=0;i<base.count;i++)shape.setXYZ(i,shape.getX(i)-base.getX(i),shape.getY(i)-base.getY(i),shape.getZ(i)-base.getZ(i));
-                const index=geometry.morphAttributes.position.length;geometry.morphAttributes.position.push(shape);mouth.morphTargetDictionary[name]=index;mouth.morphTargetInfluences.push(0);
+                const index=geometry.morphAttributes.position.length;geometry.morphAttributes.position.push(shape);
+                // Three requires matching channels for every added morph target.
+                if(geometry.morphAttributes.normal){const normal=geometry.attributes.normal.clone();if(geometry.morphTargetsRelative)normal.array.fill(0);geometry.morphAttributes.normal.push(normal);}
+                mouth.morphTargetDictionary[name]=index;mouth.morphTargetInfluences.push(0);
             }
         }
         for(const name of ['Eye_L_expression','Eye_R_expression']){const eye=parts[name];if(!eye)continue;const highlight=new THREE.Mesh(new THREE.SphereGeometry(.009,8,6),new THREE.MeshBasicMaterial({color:'#fff8dd'}));highlight.name='Zinnia eye catchlight';highlight.position.set(-.017,-.006,-.006);eye.add(highlight);eye.userData.catchlight=highlight;}

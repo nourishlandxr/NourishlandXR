@@ -3,7 +3,7 @@ import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 
 const supported=['meta-quest-touch-plus','oculus-touch-v3'];
 const actions={'controls-trigger':['trigger'],'controls-grip':['squeeze'],'controls-stick':['thumbstick'],brush:['squeeze','trigger'],point:['trigger'],grab:['squeeze'],gloves:['squeeze'],fly:['trigger','squeeze','thumbstick'],fruit:['squeeze','trigger'],packet:['squeeze','trigger'],seed:['squeeze'],harvest:['squeeze'],water:['squeeze'],trial:['squeeze','trigger']};
-const labels={'controls-trigger':'Press both triggers','controls-grip':'Squeeze both grips','controls-stick':'Circle both thumbsticks',brush:'Grip to hold � trigger to paint',point:'Index finger · trigger',grab:'Middle finger · grip',gloves:'Gently squeeze your grip',fly:'Trigger forward · grip back · stick turns / height',fruit:'Middle finger · grip',packet:'Hold grip · press trigger to open',seed:'Middle finger · grip',harvest:'Pick · release into the basket',water:'Hold grip · tilt the can',trial:'Grip to hold · trigger to act'};
+const labels={'controls-trigger':'Press both triggers','controls-grip':'Squeeze both grips','controls-stick':'Circle both thumbsticks',brush:'Grip to hold · trigger to paint',point:'Index finger · trigger',grab:'Middle finger · grip',gloves:'Gently squeeze your grip',fly:'Trigger forward · grip back · stick turns / height',fruit:'Middle finger · grip',packet:'Hold grip · press trigger to open',seed:'Middle finger · grip',harvest:'Pick · release into the basket',water:'Hold grip · tilt the can',trial:'Grip to hold · trigger to act'};
 
 // Official, grip-space-aligned controller assets; never put a guessed button
 // location on an unsupported controller. These assets are bundled for offline XR.
@@ -20,7 +20,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             .then(([data,gltf])=>{
                 if(disposed){disposeModel(gltf.scene);return;}
                 const model=gltf.scene;group.add(model);
-                const originalMaterials=new Set();model.traverse(node=>{if(node.isMesh){for(const material of [node.material].flat())originalMaterials.add(material);node.material=new THREE.MeshBasicMaterial({color:'#eee7d8',transparent:false,opacity:1,depthWrite:true});}});
+                const originalMaterials=new Set();model.traverse(node=>{if(node.isMesh){for(const material of [node.material].flat())originalMaterials.add(material);node.material=new THREE.MeshBasicMaterial({color:'#526454',transparent:false,opacity:1,depthWrite:true});}});
                 const originalTextures=new Set();for(const material of originalMaterials){for(const value of Object.values(material))if(value?.isTexture)originalTextures.add(value);material.dispose();}for(const texture of originalTextures){texture.image?.close?.();texture.dispose();}
                 for(const [id,component] of Object.entries(data.layouts[hand].components)){
                     const kind=id.replace('xr-standard-','');
@@ -37,7 +37,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
                     for(const mesh of meshes){const glow=new THREE.Mesh(mesh.geometry,pending),confirmation=new THREE.Mesh(mesh.geometry,pressed),halo=new THREE.Mesh(mesh.geometry,new THREE.MeshBasicMaterial({color:'#ffdca0',transparent:true,opacity:.24,depthWrite:false}));halo.scale.setScalar(1.3);halo.visible=false;halo.renderOrder=4;mesh.add(halo);for(const overlay of [glow,confirmation]){overlay.scale.setScalar(1.16);overlay.visible=false;overlay.renderOrder=5;mesh.add(overlay);}entry.highlights.push({kind,glow,confirmation,halo});}
                 }
                 const canvas=document.createElement('canvas');canvas.width=700;canvas.height=150;
-                const texture=new THREE.CanvasTexture(canvas),label=new THREE.Mesh(new THREE.PlaneGeometry(.145,.031),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));
+                const texture=new THREE.CanvasTexture(canvas),label=new THREE.Mesh(new THREE.PlaneGeometry(.115,.024),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false}));
                 label.position.set(hand==='left'?-.16:.16,.025,0);label.renderOrder=8;group.add(label);const link=new THREE.Mesh(new THREE.CylinderGeometry(.00055,.00055,1,5),new THREE.MeshBasicMaterial({color:'#9ea995',transparent:true,opacity:.55,depthWrite:false}));link.name='Controller label connector';group.add(link);Object.assign(entry,{canvas,texture,label,link,ready:true});onAssets();
             }).catch(error=>{entry.failed=true;console.warn('Welcome controller guide:',error.message);});
         return entry;
@@ -63,7 +63,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             if(viewer){
                 const controllerQ=new THREE.Quaternion().setFromRotationMatrix(entry.group.matrix),viewQ=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(viewer));
                 // Labels stay outside the hands in viewer space, even as wrists turn.
-                const offset=new THREE.Vector3(hand==='left'?-.16:.16,.025,.025).applyQuaternion(viewQ).applyQuaternion(controllerQ.clone().invert());
+                const offset=new THREE.Vector3(hand==='left'?-.10:.10,-.055,.025).applyQuaternion(viewQ).applyQuaternion(controllerQ.clone().invert());
                 entry.label.position.copy(offset);entry.label.quaternion.copy(controllerQ.invert().multiply(viewQ));
                 const end=offset.clone().multiplyScalar(.52),start=new THREE.Vector3(0,.018,0),direction=end.clone().sub(start);entry.link.position.copy(start).add(end).multiplyScalar(.5);entry.link.scale.y=direction.length();entry.link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
             }

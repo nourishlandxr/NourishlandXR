@@ -10,7 +10,7 @@ export const WELCOME_PRACTICE_LESSONS=Object.freeze([
     {id:'zinnia',automatic:true,title:'Hello again',caption:"A little flower to keep you company.",spoken:"Here I am. A little flower to keep you company."},
     {id:'comfort',automatic:true,silent:true,hold:1.5,title:'At your pace',caption:"Pause and sound controls are beside you. Grip the panel to move it.",spoken:""},
     {id:'living-frame',automatic:true,title:'Our Living Frame',caption:"Look here for a reminder.",spoken:"You can look back here whenever you'd like a reminder."},
-    {id:'visitor-intro',title:'Let’s get to know you',caption:'What should I call you? Tap Mic, say your name, then tap Done.',spoken:'Before we play, what should I call you?'},
+    {id:'visitor-intro',title:'Let’s get to know you',caption:'What should I call you? You can answer aloud, or continue.',spoken:'Before we play, what should I call you?'},
     {id:'controls-trigger',title:'Try both triggers',caption:'Press the index trigger on each controller.',spoken:'Press the trigger with each index finger.'},
     {id:'controls-grip',title:'Try both grips',caption:'Squeeze the side grip on each controller.',spoken:'Now squeeze both side grips.'},
     {id:'controls-stick',title:'A turn with your thumbs',caption:'Circle each thumbstick with your thumb.',spoken:'Give each thumbstick a little circle with your thumb.'},

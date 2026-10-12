@@ -996,12 +996,12 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(comfortContext){
             if(detached)return;
             const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
-            element.replaceChildren();element.classList.remove('is-hidden');element.setAttribute('aria-label','Comfort options');
+            element.replaceChildren();element.classList.remove('is-hidden');element.setAttribute('aria-label',comfortContext.title || 'Control panel');
             const header=document.createElement('header');header.className='nlxr-control-header';
-            const brand=document.createElement('strong');brand.className='nlxr-panel-brand';brand.textContent='COMFORT OPTIONS';header.append(brand);element.append(header);
+            const brand=document.createElement('strong');brand.className='nlxr-panel-brand';brand.textContent=(comfortContext.title || 'Control panel').toUpperCase();header.append(brand);element.append(header);
             const content=document.createElement('section');content.style.cssText='grid-column:1 / -1;padding:20px;';
             const hint=document.createElement('p');hint.textContent=comfortContext.subtitle;content.append(hint);
-            const actions=document.createElement('nav');actions.setAttribute('aria-label','Comfort options');actions.style.cssText='display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;height:270px;grid-template-rows:repeat(5,44px);';
+            const actions=document.createElement('nav');actions.setAttribute('aria-label',comfortContext.title || 'Control panel');actions.style.cssText='display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;height:270px;grid-template-rows:repeat(5,44px);';
             for(const item of controls()){const button=makeButton(item);button.style.cssText='border-radius:10px;min-height:44px;';if(['Comfort:skip','Comfort:next'].includes(item.action)){button.style.gridColumn='span 2';button.style.gridRow='5';}if(item.selected)button.setAttribute('aria-pressed','true');actions.append(button);}content.append(actions);element.append(content);
             if(showPlantPreview() && !mediaCollapsed)element.append(createMediaWing());
             element.classList.toggle('has-media',showPlantPreview() && !mediaCollapsed);
@@ -1131,7 +1131,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.comfort){
-            ctx.fillStyle='#f2f2e7';ctx.font='750 36px Manrope, system-ui';ctx.fillText('Comfort options',30,30,850);
+            ctx.fillStyle='#f2f2e7';ctx.font='750 36px Manrope, system-ui';ctx.fillText(comfortContext.title || 'Control panel',30,30,850);
             ctx.fillStyle='#cbd8ca';ctx.font='500 25px system-ui';ctx.fillText(card.comfort.subtitle,30,78,940);
             if(card.comfort.expanded){ctx.fillText('Voice and graphics',30,208);ctx.fillText('Living Frame',30,308);ctx.fillText('Table height',30,408);}
             else{ctx.font='500 29px system-ui';ctx.fillText('1  Controllers',45,270);ctx.fillText('2  Gardening hands',45,330);ctx.fillText('3  Your own hands',45,390);}
@@ -1409,7 +1409,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function settingsDockPose(){return spatialMediaDockPose(!mediaCollapsed && mediaDockSide==='left'?'top':'left');}
     function settingsNearDock(){const dock=settingsDockPose();return Boolean(dock && settingsPose && Math.hypot(settingsPose.center.x-dock.center.x,settingsPose.center.y-dock.center.y,settingsPose.center.z-dock.center.z)<.24);}
     function finishSettingsDock(){if(settingsNearDock()){settingsPose=null;settingsElement.classList.add('is-magnetized');}}
-    function spatialDimensions(){if(comfortContext)return {mainWidth:.60*spatialScale,mainHeight:.42*spatialScale,mediaWidth:.32*spatialScale};return {mainWidth:(hidden ? .22 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .22 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
+    function spatialDimensions(){if(comfortContext)return {mainWidth:.60*spatialScale,mainHeight:.60*spatialScale,mediaWidth:.32*spatialScale};return {mainWidth:(hidden ? .22 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .22 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
     function spatialMediaDockPose(side){
         if(!pose)return null;
         const {mainWidth,mainHeight,mediaWidth}=spatialDimensions(),mediaHeight=mainHeight,gap=.035;
@@ -1431,7 +1431,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         return candidates[0] || null;
     }
     function dockSpatialMedia(side){mediaDockSide=side || 'top';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
-    const api={element,get spatialPose(){return pose?{...pose,width:spatialDimensions().mainWidth}:null;},
+    const api={element,get spatialPose(){return pose?{...pose,width:spatialDimensions().mainWidth,height:spatialDimensions().mainHeight}:null;},
         setComfortContext(value){if(Boolean(comfortContext)!==Boolean(value)){previewHint='';hoveredAction='';hoveredDescription='';hoveredPanelId='';}comfortContext=value;hidden=false;settingsOpen=viewOpen=guidesOpen=false;explorerClosed=true;railCollapsed=false;mediaDockSide=value?'right':'top';element.classList.remove('is-opening-compact');if(value){settingsElement.hidden=explorerElement.hidden=viewElement.hidden=guidesElement.hidden=true;}render(true);},
         setOpacity(value=1){panelOpacity=Math.max(0,Math.min(1,value));element.style.opacity=String(panelOpacity);},
         setRayFilter(value){rayFilter=typeof value==='function'?value:()=>true;},
