@@ -6,7 +6,7 @@ import {mergeGeometries} from '../assets/fruit-window/vendor/BufferGeometryUtils
 // No speech synthesis, timers advancing lessons, or new interface.
 export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=>{},load=url=>new GLTFLoader().loadAsync(url)}={}){
     const holder=new THREE.Group();holder.name='ZinniaWelcomeGuide';holder.visible=true;root.add(holder);
-    let model=null,mixer=null,disposed=false,ready=false,age=0,phase='',level=0,rewardAge=10,ack=null,ackAge=10,smileNow=.45,eyeSmile=.65,mouthOpen=0,mouthRound=0,blink=0,cueId=null,cueIntent='explain';
+    let model=null,mixer=null,disposed=false,ready=false,age=0,phase='',level=0,rewardAge=10,ack=null,ackAge=10,smileNow=.45,eyeSmile=.65,mouthOpen=0,mouthRound=0,mouthWide=0,mouthNarrow=0,mouthClosed=0,blink=0,cueId=null,cueIntent='explain';
     const parts={},petals=[],target=new THREE.Vector3(),worldTarget=new THREE.Vector3(),local=new THREE.Vector3();
     const wrapper=node=>{const pivot=new THREE.Group();pivot.position.copy(node.position);node.parent.add(pivot);pivot.add(node);node.position.set(0,0,0);return pivot;};
     function dispose(object){object.traverse(n=>{n.geometry?.dispose();for(const material of [n.material].flat().filter(Boolean))material.dispose();});}
@@ -27,7 +27,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
             // This authored face lies in local X/Z: local Y is depth.
             // Open and rounded vowels must expand across the face, not into it.
             const centre=(xmin+xmax)/2,half=(xmax-xmin)/2;
-            for(const [name,width,height] of [['Open',1,.065],['Round',.65,.082]]){const shape=base.clone();
+            for(const [name,width,height] of [['Open',1,.065],['Round',.65,.082],['Wide',1.22,.035],['Narrow',.46,.065],['Closed',.9,.004]]){const shape=base.clone();
                 for(let i=0;i<base.count;i++){const u=(base.getX(i)-centre)/half,sign=i%2?-1:1;shape.setXYZ(i,centre+(base.getX(i)-centre)*width,base.getY(i),sign*height*Math.sqrt(Math.max(0,1-u*u)));}
                 if(geometry.morphTargetsRelative)for(let i=0;i<base.count;i++)shape.setXYZ(i,shape.getX(i)-base.getX(i),shape.getY(i)-base.getY(i),shape.getZ(i)-base.getZ(i));
                 const index=geometry.morphAttributes.position.length;geometry.morphAttributes.position.push(shape);mouth.morphTargetDictionary[name]=index;mouth.morphTargetInfluences.push(0);
@@ -71,11 +71,17 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         eyeSmile=THREE.MathUtils.damp(eyeSmile,sad?0:happy?.9:attentive?0:.65,10,dt);
         const blinkTime=age%4.7;blink=blinkTime>4.43?Math.sin((blinkTime-4.43)/.27*Math.PI):0;
         mouthOpen=THREE.MathUtils.clamp(level*2.4,0,1);mouthRound=THREE.MathUtils.smoothstep(level,.22,.65)*.8;
+        // Audio energy controls openness; syllable motion varies the vowel silhouette.
+        const voiced=level>.025,syllable=(Math.sin(age*11)+Math.sin(age*17.3)*.35)*.5;
+        mouthWide=voiced?mouthOpen*(.18+.14*(syllable+1)):.0;
+        mouthNarrow=voiced?mouthOpen*Math.max(0,-syllable)*.35:0;
+        mouthClosed=voiced?Math.max(0,1-mouthOpen)*.55:0;
+        mouthRound=voiced?THREE.MathUtils.clamp(mouthRound*(.7+.3*Math.sin(age*8.1)),.04,.8):0;
         if(tickled && level<.025)mouthOpen=.3+.25*Math.max(0,Math.sin(age*26));
         smileNow=THREE.MathUtils.damp(smileNow,sad?0:happy?1:mouthOpen>.02?.12:attentive?.3:.75,8,dt);
         for(const name of ['Eye_L_expression','Eye_R_expression']){const eye=parts[name];if(!eye)continue;const map=eye.morphTargetDictionary;eye.morphTargetInfluences[map.Smile]=eyeSmile*(1-blink);eye.morphTargetInfluences[map.Sad]=sad?.8:0;eye.morphTargetInfluences[map.Blink]=blink;eye.userData.catchlight.visible=eyeSmile<.4 && blink<.5;}
         for(const name of ['Eyebrow_L','Eyebrow_R']){const brow=parts[name];if(!brow)continue;brow.morphTargetInfluences[brow.morphTargetDictionary.Smile]=sad?0:attentive?.2+mouthOpen*.25:smileNow*.5;brow.morphTargetInfluences[brow.morphTargetDictionary.Sad]=sad?.85:0;}
-        const mouth=parts.Mouth_speech;if(mouth){const map=mouth.morphTargetDictionary;for(const [key,value] of [['Smile',smileNow*(1-mouthOpen)],['Sad',sad?.85:0],['Open',mouthOpen*(1-mouthRound)],['Round',mouthOpen*mouthRound]])mouth.morphTargetInfluences[map[key]]=value;}
+        const mouth=parts.Mouth_speech;if(mouth){const map=mouth.morphTargetDictionary;for(const [key,value] of [['Smile',smileNow*(1-mouthOpen)],['Sad',sad?.85:0],['Open',mouthOpen*(1-mouthRound)],['Round',mouthOpen*mouthRound],['Wide',mouthWide],['Narrow',mouthNarrow],['Closed',mouthClosed]])mouth.morphTargetInfluences[map[key]]=value;}
         for(const side of ['L','R']){const pivot=parts['Leaf_arm_'+side]?.userData.guidePivot;if(!pivot)continue;const q=new THREE.Quaternion(),sign=side==='L'?-1:1;
             if(sad)q.setFromEuler(new THREE.Euler(.18,-sign*.3,sign*.22));
             else if(celebrating){const fade=Math.min(1,rewardAge*3)*Math.max(0,Math.min(1,(2.4-rewardAge)*3)),angle=(1.05+.34*Math.sin(rewardAge*Math.PI*5))*fade;q.setFromEuler(new THREE.Euler(0,side==='L'?angle:-angle,-sign*.2*fade));}
@@ -85,5 +91,5 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
             pivot.quaternion.slerp(q,1-Math.exp(-7*dt));
         }
     }
-    return {holder,loading,update,celebrate,acknowledge,snapshot:()=>({ready,visible:holder.visible,visibleAge:age,phase,cueId,cueIntent,speaking:level>.02,speechLevel:level,eyeSmile,mouthOpen,mouthRound,blink,celebrating:rewardAge<2.4}),destroy(){disposed=true;mixer?.stopAllAction();}};
+    return {holder,loading,update,celebrate,acknowledge,snapshot:()=>({ready,visible:holder.visible,visibleAge:age,phase,cueId,cueIntent,speaking:level>.02,speechLevel:level,eyeSmile,mouthOpen,mouthRound,mouthWide,mouthNarrow,mouthClosed,blink,celebrating:rewardAge<2.4}),destroy(){disposed=true;mixer?.stopAllAction();}};
 }

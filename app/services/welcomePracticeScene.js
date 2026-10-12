@@ -11,6 +11,7 @@ import {WELCOME_FRUIT_ASSETS,WELCOME_INITIAL_FRUITS} from './welcomePracticeFrui
 
 import {createWelcomePracticeTable} from './welcomePracticeTable.js';
 import {createWelcomeFlightLesson} from './welcomeFlightLesson.js';
+import {createWelcomeControlWarmup} from './welcomeControlWarmup.js';
 import {createTutorialMagicBrush} from './tutorialMagicBrush.js';
 import {prepareTutorialFruit,tutorialFruitPrompt} from './tutorialFruitInteraction.js';
 import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} from './zinniaCharacter.js';
@@ -51,6 +52,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     const zinniaCharacter=createZinniaCharacter({load:loadZinnia,onReady:()=>{if(disposed)return;zinniaReveal?.removeGlow();zinniaReveal=createWelcomeObjectReveal(zinniaPot);zinniaReveal?.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);onAssets();lastSignature='';if(active)paint();},onError:()=>{if(!disposed){lastSignature='';if(active)paint();}}});zinniaMount.add(zinniaCharacter);
     const homes=[[0,.22],[-.22,.24],[.26,.25],[-.50,.27],[-.26,-.02],[.16,.05],[.47,.28]];
     const bodies=WELCOME_INITIAL_FRUITS.map((id,i)=>createPracticeBody(id,{x:homes[i][0],z:homes[i][1],radius:WELCOME_FRUIT_ASSETS[id].extent*.4}));
+    const controlWarmup=createWelcomeControlWarmup();
     const practiceFruits=bodies.slice();
     const magicBrush=createTutorialMagicBrush(root,{onAssets});bodies.push(magicBrush.body);
     const objects=new Map([[magicBrush.body.id,magicBrush.group]]);
@@ -108,7 +110,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         }
         plate.mesh.material.opacity=textOpacity();plate.mesh.visible=!embedded && phase()!=='frame';onChange(snapshot());
     }
-    function setLesson(value){presentationRevision++;releaseAll(false);index=value;stepStarted=elapsed;narrationFinishedAt=null;
+    function setLesson(value){controlWarmup.reset();presentationRevision++;releaseAll(false);index=value;stepStarted=elapsed;narrationFinishedAt=null;
         fruitMessage='';fruitCue=null;if(['basket-reveal','grab','fruit'].includes(phase()))props.stockBasket();if(phase()==='table-reveal')reveals.table=elapsed;if(phase()==='zinnia-reveal')reveals.zinnia=elapsed;if(phase()==='basket-reveal')reveals.basket=elapsed;pointed=false;orangeGrabbed=false;orangeReleased=false;fruitGrabbed=false;fruitReleased=false;dragonDistance=0;dragonReleased=false;handStable=0;lastActionSource=null;wasPouring=false;if(phase()==='packet'){garden.reset();garden.bodies.forEach(resetPracticeBody);}successCuePlayed=false;gloveTried=false;successAt=null;lastSignature='';if(phase()==='fly')flight.reset();if(phase()==='gloves')gloveRevealPlayed=false;void voice?.speak(spokenLesson());paint();}
     function start(viewer,floor){if(disposed)return;trials.close();active=true;exiting=false;tutorialPaused=false;exitOpacity=1;fadeStarted=null;lastPickedFruit=null;for(const variants of fruitVariants.values()){variants.opened=false;variants.whole.visible=true;if(variants.half)variants.half.visible=false;}for(const part of fruitParts.values())part.visible=false;magicBrush.reset();props.reset();garden.reset({station:true});reveals.table=reveals.zinnia=reveals.basket=null;tableReveal.update(-1);zinniaReveal?.update(-1);basketReveal.update(-1);for(const mesh of objects.values())mesh.visible=false;dragon.group.visible=false;elapsed=0;stepStarted=0;if(viewer)anchor(viewer,floor);setLesson(0);}
     function anchor(viewer,floor=viewer[13]-1.65){if(anchored || !viewer)return;const forward=new THREE.Vector3(-viewer[8],0,-viewer[10]).normalize();if(forward.lengthSq()<.1)forward.set(0,0,-1);tableHeight=Math.max(.58,Math.min(.88,viewer[13]-.65-floor))+tableHeightOffset;root.position.set(viewer[12]+forward.x*.75,floor+tableHeight,viewer[14]+forward.z*.75);root.quaternion.setFromAxisAngle(up,Math.atan2(-forward.x,-forward.z));stand.scale.y=tableHeight-.04;stand.position.y=-tableHeight/2-.012;foot.position.y=-tableHeight+.012;root.updateMatrixWorld(true);anchored=true;}
@@ -213,7 +215,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         }
         if(phase()==='gloves' && age>.8 && !gloveRevealPlayed && controllers.length){gloveRevealPlayed=true;for(const input of controllers)onFeedback('transform',input.source);}
         if(phase()==='gloves' && age>4.5 && controllers.some(i=>i.down))gloveTried=true;
-        const success=phase()==='brush'?magicBrush.snapshot().painted && magicBrush.snapshot().docked:phase()==='grab'?orangeReleased && props.snapshot().plated.length>0:phase()==='gloves'?gloveTried:phase()==='fruit'?new Set(props.snapshot().plated.map(id=>id.split(':')[0])).size>=2:phase()==='fly'?flight.complete:phase()==='hands'?handStable>1.2 && inputs.some(input=>input.source.hand && input.trigger):phase()==='paint-pot'?garden.painted:phase()==='packet'?garden.opened:phase()==='seed'?garden.planted:phase()==='water'?garden.watered:phase()==='grow'?garden.grown:phase()==='harvest'?props.harvestComplete:false;
+        const success=phase().startsWith('controls-')?dt>0 && controlWarmup.update(phase(),inputs):phase()==='brush'?magicBrush.snapshot().painted && magicBrush.snapshot().docked:phase()==='grab'?orangeReleased && props.snapshot().plated.length>0:phase()==='gloves'?gloveTried:phase()==='fruit'?new Set(props.snapshot().plated.map(id=>id.split(':')[0])).size>=2:phase()==='fly'?flight.complete:phase()==='hands'?handStable>1.2 && inputs.some(input=>input.source.hand && input.trigger):phase()==='paint-pot'?garden.painted:phase()==='packet'?garden.opened:phase()==='seed'?garden.planted:phase()==='water'?garden.watered:phase()==='grow'?garden.grown:phase()==='harvest'?props.harvestComplete:false;
         if(success){if(successAt===null){successAt=elapsed;zinniaCharacter.userData.zinnia.guide.celebrate();onFeedback('lesson',lastActionSource);}
             if(!successCuePlayed && elapsed-successAt>.45 && !voice?.status().playing && !voice?.status().paused && !tutorialPaused){successCuePlayed=true;successAt=elapsed;const id=phase()==='hands'?'hands-ready':lesson().id+'-done';void voice?.speak(cue(id)?{...cue(id),recorded:true}:null);}
             if(successCuePlayed && elapsed-successAt>1.2 && !voice?.status().playing && !voice?.status().paused && !tutorialPaused)setLesson(index+1);

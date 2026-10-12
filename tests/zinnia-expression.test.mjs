@@ -64,8 +64,10 @@ test('actual Zinnia opens focused eyes and speech morphs open across the face ra
         const delta=mouth.geometry.morphAttributes.position[map.Open],rotation=new THREE.Matrix4().makeRotationFromQuaternion(mouth.quaternion);let vertical=0,depth=0;
         for(let i=0;i<delta.count;i++){const p=new THREE.Vector3(delta.getX(i),delta.getY(i),delta.getZ(i)).applyMatrix4(rotation);vertical=Math.max(vertical,Math.abs(p.y));depth=Math.max(depth,Math.abs(p.z));}
         assert.ok(vertical>.04);assert.ok(depth<.00001);
-        tick({speechLevel:.65});assert.ok(mouth.morphTargetInfluences[map.Round]>.7);
-        tick({speechLevel:0});assert.ok(mouth.morphTargetInfluences[map.Open]<.0001);assert.ok(mouth.morphTargetInfluences[map.Round]<.0001);
+        assert.ok(mouth.morphTargetInfluences[map.Wide]>.05);assert.ok(Number.isInteger(map.Narrow));assert.ok(Number.isInteger(map.Closed));
+        const wide=mouth.morphTargetInfluences[map.Wide];tick({speechLevel:.35});assert.ok(Math.abs(mouth.morphTargetInfluences[map.Wide]-wide)>.01,'constant audio energy still varies the vowel shape');
+        tick({speechLevel:.65});assert.ok(mouth.morphTargetInfluences[map.Round]>.3);
+        tick({speechLevel:0});assert.ok(mouth.morphTargetInfluences[map.Open]<.0001);assert.ok(mouth.morphTargetInfluences[map.Round]<.0001);assert.equal(mouth.morphTargetInfluences[map.Wide],0);assert.equal(mouth.morphTargetInfluences[map.Narrow],0);
         let sawBlink=false;for(let i=0;i<180;i++){time+=.03;animateZinniaCharacter(root,time,false,{focused:true,speechLevel:0});sawBlink ||= eye.morphTargetInfluences[eye.morphTargetDictionary.Blink]>.8;}assert.equal(sawBlink,true);
     }finally{disposeZinniaCharacter(root);}
 });
