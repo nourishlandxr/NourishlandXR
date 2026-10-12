@@ -1,11 +1,12 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 export const MARKING_BRUSHES=Object.freeze({earth:{label:'Earth marks',colour:6,purpose:'Label pots, outline beds and draw symbols.'},water:{label:'Water lines',colour:3,purpose:'Show the direction water moves along your line.'},vine:{label:'Vine lines',colour:0,purpose:'Connect plants or ideas with a leafy line.'},firefly:{label:'Firefly paths',colour:2,purpose:'Guide visitors with softly travelling lights.'}});
-export function createMarkingEffects(root,{capacity=384}={}){
+export function createMarkingEffects(root,{capacity=384,eager=false}={}){
  const leafGeometry=new THREE.BufferGeometry();leafGeometry.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0,-.012,.014,0,0,.038,0,0,0,0,0,.038,0,.012,.014,0],3));leafGeometry.computeVertexNormals();
  const leafMaterial=new THREE.MeshStandardMaterial({color:'#85b48b',side:THREE.DoubleSide,roughness:1}),lightMaterial=new THREE.MeshBasicMaterial({color:'#ffffff'}),lightGeometry=new THREE.SphereGeometry(1,8,4);
  const leaves=new THREE.InstancedMesh(leafGeometry,leafMaterial,capacity),lights=new THREE.InstancedMesh(lightGeometry,lightMaterial,capacity);
  for(const mesh of [leaves,lights]){mesh.count=0;mesh.frustumCulled=false;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.userData.livingMapDynamic=true;}lights.setColorAt(0,new THREE.Color());
  const paths=[];let attached=false,last=-Infinity;const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),rotation=new THREE.Quaternion();
+ if(eager){root.add(leaves,lights);attached=true;}
  function at(path,d){const {points,lengths,length}=path;if(length===0)return position.copy(points[0]);d=Math.max(0,Math.min(length,d));let lo=0,hi=lengths.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(lengths[mid]<d)lo=mid;else hi=mid;}return position.copy(points[lo]).lerp(points[hi],(d-lengths[lo])/Math.max(.000001,lengths[hi]-lengths[lo]));}
  function rebuild(strokes){paths.length=0;leaves.count=lights.count=0;last=-Infinity;
   for(const stroke of strokes){if(!['water','vine','firefly'].includes(stroke.brush))continue;if(!attached){root.add(leaves,lights);attached=true;}const points=stroke.points.map(p=>new THREE.Vector3(p.x,p.y,p.z)),lengths=[0];for(let i=1;i<points.length;i++)lengths.push(lengths[i-1]+points[i].distanceTo(points[i-1]));const path={points,lengths,length:lengths.at(-1),width:stroke.width,brush:stroke.brush,colour:stroke.colour};

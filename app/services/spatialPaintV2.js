@@ -6,14 +6,14 @@ export const PAINT_V2_WIDTHS=[.002,.005,.01];
 const finite=p=>p && [p.x,p.y,p.z].every(Number.isFinite);
 // Shared by the demo and Creator. Rounded, resampled strokes use two GPU
 // instance batches, regardless of colour or the number of finished strokes.
-export function createSpatialPaintV2({capacity=8192,onChange=()=>{}}={}){
+export function createSpatialPaintV2({capacity=8192,onChange=()=>{},markings=false}={}){
     const root=new THREE.Group();root.name='Spatial Paint V2';
     const material=new THREE.MeshStandardMaterial({color:'#ffffff',roughness:.65,metalness:0});
     const tubeGeometry=new THREE.CylinderGeometry(1,1,1,16,1,true),capGeometry=new THREE.SphereGeometry(1,12,6);
     const tubes=new THREE.InstancedMesh(tubeGeometry,material,capacity),caps=new THREE.InstancedMesh(capGeometry,material,capacity);
     for(const node of [tubes,caps]){node.count=0;node.frustumCulled=false;node.userData.livingMapDynamic=true;node.instanceMatrix.setUsage(THREE.DynamicDrawUsage);node.setColorAt(0,new THREE.Color('#ffffff'));root.add(node);}
     const strokes=[],redo=[],active=new Map(),up=new THREE.Vector3(0,1,0),matrix=new THREE.Matrix4(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),colourValue=new THREE.Color();
-    const effects=createMarkingEffects(root);
+    const effects=createMarkingEffects(root,{eager:markings});
     let brush='plain',motion=true,colour=0,width=.005,limited=false,disposed=false;
     const snapshot=()=>({version:2,strokes:strokes.length,segments:tubes.count,points:caps.count,colour,width,brush,motion,effects:effects.snapshot(),canUndo:strokes.length>0,canRedo:redo.length>0,limited});
     function changed(){onChange(snapshot());}
