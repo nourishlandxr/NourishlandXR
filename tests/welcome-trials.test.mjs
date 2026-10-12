@@ -48,7 +48,7 @@ test('opening, switching and closing trials preserves the guided lesson, props a
     try{
         stage=createWelcomePracticeScene({voice,embedded:true,loadZinnia:async()=>{const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}});await stage.loading;
         const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('grab');stage.update(.05,{viewer,floor:0});
-        const orange=stage.objects.get('orange'),position=orange.position.clone();assert.equal(orange.visible,true);
+        const orange=stage.objects.get('peach'),position=orange.position.clone();assert.equal(orange.visible,true);
         stage.trials.open('garden');assert.equal(orange.visible,false);for(let i=0;i<800;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.phase,'grab');assert.equal(stage.snapshot().completed,false);
         stage.trials.command('mode:gloves');assert.equal(stage.controllerHandsVisible,true);assert.equal(stage.handsEnabled,false);
         stage.trials.command('mode:hands');assert.equal(stage.handsEnabled,true);assert.equal(stage.trackedHandOpacity,1);

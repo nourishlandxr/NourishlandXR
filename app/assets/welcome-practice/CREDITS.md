@@ -22,3 +22,20 @@ The welcome collection includes lightweight derivatives of the existing Fruit Di
 ## Zinnia character
 
 The authored prototype 06 organic-face model is restored from the “Fix living frame wheel alignment” chat, including varied pastel petals, attached leaf hands, the refined stem and expressive eye and mouth morphs. `zinnia.glb` is byte-for-byte identical to `zinnia-prototype/organic-face/zinnia-organic-face.glb`. Source fingerprint: `zinnia-source.json`. The animation integration retains authored motion and adds narration-driven expressions, task gaze, pointing and celebration.
+
+## Photorealistic fruit tutorial collection
+
+Whole and cut derivatives were extracted from owner-supplied `apples.glb`, `figs.glb`, `pomegranate.glb`, `mango__cut_half_mango_fruit.glb`, `peach_pack (1).glb`, and `220903yangtao-averrhoa_carambola-2in1.glb`. Original downloads are preserved. Geometry is simplified; textures use WebP at a maximum 1024-pixel edge. Older specular/glossiness materials are converted for the runtime. `fruit-collection/manifest.json` lists derivative file sizes.
+
+Peach Pack — sligocreatures. [Original model](https://sketchfab.com/3d-models/peach-pack-f174ed3f656145cdac16ba95f30c176f). [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Whole/half extraction and texture/geometry optimisation are adaptations. Commercial use requires separate permission. Apple and fig also carry CC BY-NC 4.0 licences. The embedded source metadata supplies authorship and licences for all six packs:
+
+The updated basket/grab/fruit dialogue and short fruit reactions are bundled AI-generated OpenAI Coral recordings. They are generated once and played locally, without per-play speech API calls.
+
+### Embedded source attribution
+
+- Peach Pack — sligocreatures (https://sketchfab.com/sligocreatures). [Source](https://sketchfab.com/3d-models/peach-pack-f174ed3f656145cdac16ba95f30c176f). CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/). Whole/cut extraction, material conversion, geometry simplification and texture resizing.
+- Figs — sligocreatures (https://sketchfab.com/sligocreatures). [Source](https://sketchfab.com/3d-models/figs-aaa548686dfd4cfe956d13e4468770b0). CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/). Whole/cut extraction, material conversion, geometry simplification and texture resizing.
+- Mango & Cut Half Mango Fruit — Kami Rapacz (https://sketchfab.com/kuroderuta). [Source](https://sketchfab.com/3d-models/mango-cut-half-mango-fruit-6407b7f81f7c4c4aa443c850cc997b44). CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/). Whole/cut extraction, material conversion, geometry simplification and texture resizing.
+- Pomegranate — sligocreatures (https://sketchfab.com/sligocreatures). [Source](https://sketchfab.com/3d-models/pomegranate-bccffb5cc08b4d65b0bbf99222701830). CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/). Whole/cut extraction, material conversion, geometry simplification and texture resizing.
+- Apples — sligocreatures (https://sketchfab.com/sligocreatures). [Source](https://sketchfab.com/3d-models/apples-ab57497427ea481ca09ee2acea4c76f2). CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/). Whole/cut extraction, material conversion, geometry simplification and texture resizing.
+- 220903yangtao-Averrhoa carambola-2in1 — Andykk (https://sketchfab.com/andykwok91011). [Source](https://sketchfab.com/3d-models/220903yangtao-averrhoa-carambola-2in1-49fca165aa2646e4a90c0c4a1a1cb149). CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/). Whole/cut extraction, material conversion, geometry simplification and texture resizing.

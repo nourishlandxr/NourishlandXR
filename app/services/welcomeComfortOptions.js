@@ -33,10 +33,4 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
     return {context,act};
 }
 
-export function welcomePracticeVisualGuide(state){
-    const fruit=state.lastPickedFruit,photos={'african-peach':'african-peach',carambola:'carambola','mamey-sapote':'mamey-sapote','bayberry-cluster':'chinese-bayberry'};
-    const illustrations={orange:'15-orange-guide.svg',lime:'16-lime-guide.svg',banana:'17-banana-guide.svg'};
-    if(['fruit','explore'].includes(state.phase) && illustrations[fruit])return {image:new URL('../assets/demo-tutorial-art/'+illustrations[fruit],import.meta.url).href,caption:WELCOME_FRUIT_ASSETS[fruit].label+' · illustration'};
-    if(['fruit','harvest','explore'].includes(state.phase) && photos[fruit])return {image:new URL('../assets/fruit-window/photos/'+photos[fruit]+'.png',import.meta.url).href,caption:WELCOME_FRUIT_ASSETS[fruit].label};
-    return {image:'',caption:''};
-}
+export function welcomePracticeVisualGuide(){return {image:'',caption:''};}

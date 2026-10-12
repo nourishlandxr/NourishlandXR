@@ -1,0 +1,134 @@
+[
+  {
+    "id": "peach",
+    "variant": "whole",
+    "file": "peach.glb",
+    "bytes": 1216112,
+    "sourceFile": "peach_pack (1).glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)",
+    "source": "https://sketchfab.com/3d-models/peach-pack-f174ed3f656145cdac16ba95f30c176f",
+    "title": "Peach Pack"
+  },
+  {
+    "id": "peach",
+    "variant": "half",
+    "file": "peach-half.glb",
+    "bytes": 1346204,
+    "sourceFile": "peach_pack (1).glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)",
+    "source": "https://sketchfab.com/3d-models/peach-pack-f174ed3f656145cdac16ba95f30c176f",
+    "title": "Peach Pack"
+  },
+  {
+    "id": "fig",
+    "variant": "whole",
+    "file": "fig.glb",
+    "bytes": 430328,
+    "sourceFile": "figs.glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)",
+    "source": "https://sketchfab.com/3d-models/figs-aaa548686dfd4cfe956d13e4468770b0",
+    "title": "Figs"
+  },
+  {
+    "id": "fig",
+    "variant": "half",
+    "file": "fig-half.glb",
+    "bytes": 696520,
+    "sourceFile": "figs.glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)",
+    "source": "https://sketchfab.com/3d-models/figs-aaa548686dfd4cfe956d13e4468770b0",
+    "title": "Figs"
+  },
+  {
+    "id": "mango",
+    "variant": "whole",
+    "file": "mango.glb",
+    "bytes": 1324624,
+    "sourceFile": "mango__cut_half_mango_fruit.glb",
+    "author": "Kami Rapacz (https://sketchfab.com/kuroderuta)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/mango-cut-half-mango-fruit-6407b7f81f7c4c4aa443c850cc997b44",
+    "title": "Mango & Cut Half Mango Fruit"
+  },
+  {
+    "id": "mango",
+    "variant": "half",
+    "file": "mango-half.glb",
+    "bytes": 995760,
+    "sourceFile": "mango__cut_half_mango_fruit.glb",
+    "author": "Kami Rapacz (https://sketchfab.com/kuroderuta)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/mango-cut-half-mango-fruit-6407b7f81f7c4c4aa443c850cc997b44",
+    "title": "Mango & Cut Half Mango Fruit"
+  },
+  {
+    "id": "pomegranate",
+    "variant": "whole",
+    "file": "pomegranate.glb",
+    "bytes": 173404,
+    "sourceFile": "pomegranate.glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/pomegranate-bccffb5cc08b4d65b0bbf99222701830",
+    "title": "Pomegranate"
+  },
+  {
+    "id": "pomegranate",
+    "variant": "half",
+    "file": "pomegranate-half.glb",
+    "bytes": 413108,
+    "sourceFile": "pomegranate.glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/pomegranate-bccffb5cc08b4d65b0bbf99222701830",
+    "title": "Pomegranate"
+  },
+  {
+    "id": "apple",
+    "variant": "whole",
+    "file": "apple.glb",
+    "bytes": 324428,
+    "sourceFile": "apples.glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)",
+    "source": "https://sketchfab.com/3d-models/apples-ab57497427ea481ca09ee2acea4c76f2",
+    "title": "Apples"
+  },
+  {
+    "id": "apple",
+    "variant": "half",
+    "file": "apple-half.glb",
+    "bytes": 656368,
+    "sourceFile": "apples.glb",
+    "author": "sligocreatures (https://sketchfab.com/sligocreatures)",
+    "license": "CC-BY-NC-4.0 (http://creativecommons.org/licenses/by-nc/4.0/)",
+    "source": "https://sketchfab.com/3d-models/apples-ab57497427ea481ca09ee2acea4c76f2",
+    "title": "Apples"
+  },
+  {
+    "id": "carambola",
+    "variant": "whole",
+    "file": "carambola.glb",
+    "bytes": 405704,
+    "sourceFile": "220903yangtao-averrhoa_carambola-2in1.glb",
+    "author": "Andykk (https://sketchfab.com/andykwok91011)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/220903yangtao-averrhoa-carambola-2in1-49fca165aa2646e4a90c0c4a1a1cb149",
+    "title": "220903yangtao-Averrhoa carambola-2in1"
+  },
+  {
+    "id": "carambola",
+    "variant": "half",
+    "file": "carambola-half.glb",
+    "bytes": 289652,
+    "sourceFile": "220903yangtao-averrhoa_carambola-2in1.glb",
+    "author": "Andykk (https://sketchfab.com/andykwok91011)",
+    "license": "CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)",
+    "source": "https://sketchfab.com/3d-models/220903yangtao-averrhoa-carambola-2in1-49fca165aa2646e4a90c0c4a1a1cb149",
+    "title": "220903yangtao-Averrhoa carambola-2in1"
+  }
+]

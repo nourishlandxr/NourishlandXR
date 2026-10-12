@@ -13,7 +13,7 @@ test('real fruit dimensions fit inside the basket, rest on its base and settle a
     const ctx=new Proxy({},{get:()=>()=>{}});globalThis.document={createElement:()=>({getContext:()=>ctx})};
     try{
         const bodies=[];
-        for(const id of WELCOME_INITIAL_FRUITS){const info=WELCOME_FRUIT_ASSETS[id],bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/'+id.replace('bayberry-cluster','bayberry')+'.glb',import.meta.url));
+        for(const id of WELCOME_INITIAL_FRUITS){const info=WELCOME_FRUIT_ASSETS[id],bytes=fs.readFileSync(new URL(info.url,new URL('../app/services/welcomePracticeFruitAssets.js',import.meta.url)));
             const loader=new GLTFLoader();loader.register(parser=>{parser.loadTexture=async()=>null;return {name:'test-geometry-only'};});const gltf=await loader.parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');
             const size=new THREE.Box3().setFromObject(gltf.scene).getSize(new THREE.Vector3()),factor=info.extent/Math.max(size.x,size.y,size.z);
             bodies.push(createPracticeBody(id,{halfSize:{x:Math.max(.01,size.x*factor/2),y:Math.max(.012,size.y*factor/2),z:Math.max(.01,size.z*factor/2)}}));
