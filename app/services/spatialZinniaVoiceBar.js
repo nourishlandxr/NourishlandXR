@@ -2,10 +2,9 @@ import {createSpatialTotemCards,hitTotemSurface,hitTotemPoint} from './spatialTo
 import {createHandPokeTracker,handIndexCanPoke} from './handPoke.js';
 import {zinniaVoiceState,replayZinniaVoice,pauseZinniaVoice,resumeZinniaVoice} from './zinniaVoiceCoordinator.js';
 import {getWelcomeNarrationSettings,setWelcomeNarrationSettings} from './welcomePracticeVoice.js';
-
 export function zinniaVoiceBarPose(viewer){
     const right={x:viewer[0],y:viewer[1],z:viewer[2]},up={x:viewer[4],y:viewer[5],z:viewer[6]},normal={x:viewer[8],y:viewer[9],z:viewer[10]};
-    const center={x:viewer[12]-right.x*.52-up.x*.42-normal.x*.9,y:viewer[13]-right.y*.52-up.y*.42-normal.y*.9,z:viewer[14]-right.z*.52-up.z*.42-normal.z*.9};
+    const center={x:viewer[12]-right.x*.52-up.x*.31-normal.x*.9,y:viewer[13]-right.y*.52-up.y*.31-normal.y*.9,z:viewer[14]-right.z*.52-up.z*.31-normal.z*.9};
     return {center,right,up,normal};
 }
 export function zinniaVoiceBarButtons({conversation=false,paused=zinniaVoiceState().paused,enabled=getWelcomeNarrationSettings().enabled}={}){
@@ -16,7 +15,7 @@ export function activateZinniaVoiceBar(action,conversation){
     else if(action==='pause')zinniaVoiceState().paused?resumeZinniaVoice():pauseZinniaVoice();
     else if(action==='replay')replayZinniaVoice();
     else if(action==='mute')setWelcomeNarrationSettings({enabled:!getWelcomeNarrationSettings().enabled});
-    else if(action==='cancel')conversation?.activate('cancel');
+    else if(['cancel','confirm','retry'].includes(action))conversation?.activate(action);
 }
 export function createSpatialZinniaVoiceBar(gl,{getConversation=()=>null,isInputOccupied=()=>false,onAction=()=>{},ray=()=>null}={}){
     let pose=null,surfaces=[],disposed=false;const pokes=new Map();
@@ -25,7 +24,7 @@ export function createSpatialZinniaVoiceBar(gl,{getConversation=()=>null,isInput
         ctx.fillStyle=card.disabled?'#23332dc9':'#244638f2';ctx.beginPath();ctx.roundRect(4,4,248,120,26);ctx.fill();ctx.strokeStyle=card.disabled?'#56685b':'#96baa0';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle=card.disabled?'#8e9c90':'#f2f4dd';ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='500 37px system-ui';ctx.fillText(card.title,128,66,230);return canvas;
     }});
     function update(viewer){if(disposed || !viewer)return;pose ||= zinniaVoiceBarPose(viewer);
-        const conversation=getConversation(),buttons=zinniaVoiceBarButtons({conversation:Boolean(conversation)});if(conversation)buttons.push({id:'cancel',label:'Cancel'});
+        const conversation=getConversation(),buttons=zinniaVoiceBarButtons({conversation:Boolean(conversation)});if(conversation)buttons.push(...(conversation.buttons?.() || []),{id:'cancel',label:conversation.buttons?'Skip':'Cancel'});
         surfaces=buttons.map((button,index)=>{const offset=(index-(buttons.length-1)/2)*.108;return {card:{id:button.id,title:button.label,disabled:button.disabled,fadeDuration:0},center:{x:pose.center.x+pose.right.x*offset,y:pose.center.y+pose.right.y*offset,z:pose.center.z+pose.right.z*offset},right:pose.right,up:pose.up,normal:pose.normal,width:.10,height:.065};});
     }
     function activate(target){if(!target)return false;if(!target.card.disabled){activateZinniaVoiceBar(target.card.id,getConversation());onAction(target.card.id);}return true;}

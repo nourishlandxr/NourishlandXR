@@ -24,7 +24,7 @@ import {BUILD_INFO} from '../../services/buildInfo.js';
 for(const lesson of WELCOME_PRACTICE_LESSONS){const option=document.createElement('option');option.value=lesson.id;option.textContent=lesson.title || 'Living Frame loading';document.querySelector('#lesson').append(option);}
 document.querySelector('#version').textContent='V'+BUILD_INFO.version+' · local preview';
 const canvas=document.querySelector('#scene'),gl=canvas.getContext('webgl',{antialias:true,alpha:true});
-const handRenderer=createXRHandOutline(gl),voiceBar=createSpatialZinniaVoiceBar(gl);
+const handRenderer=createXRHandOutline(gl),voiceBar=createSpatialZinniaVoiceBar(gl,{getConversation:()=>stage.conversation});
 const poseControls=document.createElement('div');poseControls.style.cssText='display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 24px';
 poseControls.innerHTML='<label><input type="checkbox" id="show-hands"> Compare virtual hands with controllers</label><label>Grip <input id="grip-curl" type="range" min="0" max="1" step=".01" value="0"></label><label>Index trigger <input id="trigger-curl" type="range" min="0" max="1" step=".01" value="0"></label>';
 document.querySelector('header').after(poseControls);
