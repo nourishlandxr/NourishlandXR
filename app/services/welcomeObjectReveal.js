@@ -5,7 +5,7 @@ export function createWelcomeObjectReveal(object,{duration=3.6,glowStrength=1}={
     const shell=new THREE.Group();shell.name=object.name+' white arrival glow';object.add(shell);
     const materials=new Map(),copies=[],glow=new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide});
     object.updateMatrixWorld(true);const inverse=object.matrixWorld.clone().invert(),meshes=[];
-    object.traverse(node=>{if(node.isMesh)meshes.push(node);});
+    object.traverse(node=>{if(node.isMesh && !node.userData.skipArrivalGlow)meshes.push(node);});
     for(const node of meshes){for(const mat of [node.material].flat())if(mat && !materials.has(mat))materials.set(mat,{opacity:mat.opacity,transparent:mat.transparent,depthWrite:mat.depthWrite});
         const copy=new THREE.Mesh(node.geometry,glow);copy.matrixAutoUpdate=false;copy.matrix.multiplyMatrices(inverse,node.matrixWorld);shell.add(copy);copies.push({copy,node});}
     let complete=false;

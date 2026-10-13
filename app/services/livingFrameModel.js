@@ -57,7 +57,7 @@ export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()
    const frameHeight=getSpatialVisualSettings().livingFrameHeight||0,heightChanged=desktop.heightOffset!==frameHeight;desktop.heightOffset=frameHeight;desktop.group.position.y=-.016+frameHeight;
    if(changed||resized||heightChanged||lastDraw<0){desktop.renderer.render(desktop.world,desktop.camera);lastDraw=frameToken;}
   },
-  drawXR(view,anchorMatrix){if(!visible||!api.ready||!xr)return;const matrix=new THREE.Matrix4().fromArray(anchorMatrix);matrix.multiply(new THREE.Matrix4().makeTranslation(0,0,.012));revealStartedAt ??= performance.now();const t=revealInstant?1:Math.min(1,(performance.now()-revealStartedAt)/1200);xr.draw(view,matrix,t*t*(3-2*t));},
+  drawXR(view,anchorMatrix,{opacity=null}={}){if(!visible||!api.ready||!xr)return;const matrix=new THREE.Matrix4().fromArray(anchorMatrix);matrix.multiply(new THREE.Matrix4().makeTranslation(0,0,.012));revealStartedAt ??= performance.now();const t=revealInstant?1:Math.min(1,(performance.now()-revealStartedAt)/1200);xr.draw(view,matrix,opacity===null?t*t*(3-2*t):opacity);},
   retry(){if(!failedQuality)return Promise.resolve();const next=quality;quality='off';return select(next);},
   destroy(){if(destroyed)return;destroyed=true;++generation;quality='off';drop(getSpatialVisualSettings().livingFrameQuality);if(desktop){desktop.renderer.dispose();desktop.canvas.remove();desktop=null;}}
  };

@@ -1,5 +1,6 @@
 import http from 'http';
 import {handleZinniaVoice} from './zinniaVoiceServer.mjs';
+import {handleZinniaPreview} from './zinniaPreviewProxy.mjs';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -961,6 +962,7 @@ function handleApi(req, res) {
     }
 
     const visitor = isVisitorRequest(url);
+    if(handleZinniaPreview(req,res,pathname,{enabled:process.argv.includes('--hosted-voice-preview'),production,sendJson,readRequestJson}))return true;
     if(handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isAllowedOrigin}))return true;
 
     if (pathname === '/api/auth/session' && req.method === 'GET') {

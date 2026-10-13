@@ -68,3 +68,15 @@ No new audio assets are generated for this refinement.
 - Batch all 89 petal meshes, including the 14 Honey petals previously missed. Prepared Zinnia now has 31 meshes rather than 43, and 5 morph meshes rather than 19.
 - Skip character bounds work for inactive controller pointers. Add damped body lean and broader head gaze, retaining expressive facial morphs.
 - Headset frame-time and natural hand calibration remain acceptance checks, not measured claims.
+
+## Review adjustments: welcome, headings and microphone
+
+- Prepare the Living Frame and reading screen, then fade both together using one presentation opacity.
+- Welcome to NourishlandXR comes first; pause before introducing Your hands tutorial.
+- Complete the table and Zinnia spawns before their speech; skip redundant reveal slides and duplicate headings. Keep captions present while audio is being fetched.
+- Disable the table silhouette glow, including its round pedestal copy.
+- Restore microphone and finish buttons in every visitor conversation phase; provide a viewer-relative voice bar when no panel pose exists.
+- Preview has visible microphone, finish, confirmation, correction and skip controls.
+- For local voice tests, launch node tools/persistence-server.mjs --hosted-voice-preview. The opt-in loopback-only bridge uses the existing hosted voice routes, without copying keys. Normal local server mode and production stay unchanged.
+
+- Circle flash: initialise both the fruit highlight and dragonfly landing marker hidden before the first renderer build, and exclude the landing marker from arrival glow copies. The fruit plate still arrives with the fruit activity.

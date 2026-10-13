@@ -47,3 +47,11 @@ test('tutorial does not cancel a microphone recording or transcription at its 20
     try{dialog.begin();const baseline=cancelled;handlers.onStatus('Listening…',{listening:true});dialog.update(21,{ready:true});assert.equal(dialog.state().phase,'name');assert.equal(cancelled,baseline);handlers.onStatus('Understanding your words…',{processing:true});dialog.update(10,{ready:true});assert.equal(dialog.state().phase,'name');assert.equal(cancelled,baseline);handlers.onText('My name is Sam');assert.equal(dialog.state().phase,'confirm');assert.equal(dialog.state().candidate,'Sam');}
     finally{dialog.destroy();}
 });
+
+
+test('finish during the connection check cancels capture before microphone access',async()=>{
+ const saved=globalThis.fetch,descriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator');let resolve,captures=0;const states=[];globalThis.fetch=()=>new Promise(done=>resolve=done);Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getUserMedia:async()=>{captures++;throw Error('must not capture');}}}});
+ const voice=createZinniaVoice({createNarrator:()=>({stop(){},destroy(){},status:()=>({playing:false})}),onStatus:(_message,state)=>states.push(state)});
+ try{const pending=voice.listen();voice.finish();resolve({ok:true,json:async()=>({enabled:true})});await pending;assert.equal(captures,0);assert.equal(states.at(-1).listening,false);}
+ finally{voice.destroy();globalThis.fetch=saved;if(descriptor)Object.defineProperty(globalThis,'navigator',descriptor);else delete globalThis.navigator;}
+});

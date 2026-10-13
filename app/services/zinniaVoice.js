@@ -18,6 +18,7 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},
             try{
                 const capturedStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
                 if(disposed || token!==epoch){capturedStream.getTracks().forEach(track=>track.stop());return;}
+                try{globalThis.sessionStorage?.setItem('nlxr.mic.ready','true');}catch{}
                 stream=capturedStream;if(!stream.getAudioTracks?.().some(track=>track.readyState!=='ended'))throw new Error('No active microphone track.');
                 const mime=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'].find(value=>MediaRecorder.isTypeSupported(value));
                 recorder=new MediaRecorder(stream,{...(mime?{mimeType:mime}:{}),audioBitsPerSecond:32000});const chunks=[];
@@ -52,7 +53,7 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},
         recognition.onend=()=>{if(token!==epoch)return;release();recognition=null;};
         try{recognition.start();status('');timer=setTimeout(()=>finish(),20000);}catch{release();status('Could not start the microphone. Tap Speak to retry.');}
     }
-    function finish(){clearTimeout(timer);if(recorder?.state==='recording')recorder.stop();recognition?.stop();}
+    function finish(){clearTimeout(timer);if(recorder?.state==='recording')recorder.stop();else if(recognition)recognition.stop();else if(listening){cancel();status('Listening stopped. Choose the microphone when you’re ready.');}}
     async function speak(text){
         if(!getWelcomeNarrationSettings().enabled || disposed)return;
         cancel();onSpeak();narrator.unlock();const completed=new Promise(resolve=>{speechDone=resolve;});await narrator.speak({id:'zinnia-dialogue',spoken:String(text).slice(0,1200),spokenOverride:true});if(!narrator.status().playing && !narrator.status().paused)completeSpeech(true);return completed;

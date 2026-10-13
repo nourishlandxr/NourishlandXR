@@ -54,8 +54,8 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         const tick=(seconds,extra={})=>{for(let i=0;i<Math.ceil(seconds/.05);i++)stage.update(.05,{viewer,floor:0,...extra});};
         stage.start(viewer,0);tick(10,{frameReady:false});assert.equal(stage.phase,'frame');assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.snapshot().comfortVisible,false);
         assert.equal(stage.zinniaMount.parent.visible,false);
-        tick(.1,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,0);
-        tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/Welcome to Nourishland XR/);assert.equal(spoken.at(-1).recorded,false);
+        tick(.1,{frameReady:true});assert.equal(stage.phase,'frame');assert.ok(stage.snapshot().frameOpacity<1);tick(1.3,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,0);
+        tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/This hands tutorial/);assert.equal(spoken.at(-1).recorded,false);
         stage.previewLesson('table-reveal');tick(.1);assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.zinniaMount.parent.visible,false);
         stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.status,'ready');assert.ok(stage.zinniaMount.getObjectByName('Eye_L_expression'));assert.ok(stage.zinniaMount.getObjectByName('Pot'));
         stage.previewLesson('comfort');assert.equal(stage.snapshot().comfortVisible,true);stage.button('pause');tick(60);assert.equal(stage.phase,'comfort');assert.equal(stage.snapshot().voice.paused,true);stage.button('pause');

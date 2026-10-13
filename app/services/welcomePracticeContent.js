@@ -1,12 +1,12 @@
 // Stage 0.1 teaches input before the existing guided plant journey.
 export const WELCOME_PRACTICE_LESSONS=Object.freeze([
     {id:'frame',automatic:true,silent:true,title:'',caption:'',spoken:''},
-    {id:'title',automatic:true,silent:true,hold:4,title:'Nourishland XR hands tutorial',caption:'',spoken:''},
-    {id:'arrival',liveVoice:true,automatic:true,title:'Before we begin',caption:'Settle in with a controller in each hand.',spoken:'Welcome to Nourishland XR. Settle in, seated or standing, and check that your hands have room to move. We’ll discover one control at a time.'},
+    {id:'title',automatic:true,silent:true,hold:4,title:'Welcome to NourishlandXR',caption:'',spoken:''},
+    {id:'arrival',liveVoice:true,automatic:true,afterPause:1.5,title:'Your hands tutorial',caption:'Settle in with a controller in each hand.',spoken:'This hands tutorial gives you time to practise. Settle in, seated or standing, and check that your hands have room to move. We’ll discover one control at a time.'},
     {id:'table',liveVoice:true,automatic:true,title:'Your practice table',caption:'Watch your table come into place.',spoken:'Here’s your practice table. Watch it come into place, then we’ll meet Zinnia.'},
-    {id:'table-reveal',automatic:true,silent:true,hold:.3,title:'Your practice table',caption:'',spoken:''},
+    {id:'table-reveal',automatic:true,silent:true,hold:.3,title:'',caption:'',spoken:''},
     {id:'face',liveVoice:true,automatic:true,title:'Meet Zinnia',caption:'Zinnia is joining you at the table.',spoken:'I’m Zinnia. Let me join you at the table.'},
-    {id:'zinnia-reveal',automatic:true,silent:true,hold:4.5,recorded:false,title:'Meet Zinnia',caption:'',spoken:''},
+    {id:'zinnia-reveal',automatic:true,silent:true,hold:4.5,recorded:false,title:'',caption:'',spoken:''},
     {id:'zinnia',automatic:true,title:'Let’s begin',caption:'We’ll try each activity together.',spoken:'Here I am. I’ll explain each activity as we go. There’s no rush—you’ll have time to try things for yourself.'},
     {id:'living-frame',automatic:true,silent:true,hold:6,title:'Meet your Living Frame',caption:'This is your Living Frame. Watch its leaves and flowers — there’s life in this little guide. It will show one activity at a time.',spoken:''},
     {id:'controls-intro',liveVoice:true,automatic:true,hold:3,title:'Getting to know your controllers',caption:'Hold one controller in each hand. Find the trigger, side grip, and thumbstick.',spoken:'We’ll try one button at a time. First press it, then I’ll explain what it does.'},

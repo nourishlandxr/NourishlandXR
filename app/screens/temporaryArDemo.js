@@ -5089,7 +5089,7 @@ function setupRenderer() {
     if((developerLab?.id==='toys' || !developerLab && welcomeTutorialEnabled()) && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getTrialPanelPose:()=>infoPanel?.spatialPose,getFramePose:()=>{if(!introWorldAnchor)return null;const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);return livingFramePose(billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor));},
         onToolMenu:()=>welcomeComfort?.act("controller-toggle"),onFeedback:(kind,source,intensity)=>playWelcomePracticeFeedback(demoFeedback,kind,source,intensity),
         onChange:state=>{syncDemoVoiceBar();syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
-        isFrameReady:()=>Boolean(livingFrameModel?.entranceReady),getFrameError:()=>livingFrameModel?.error,
+        isFrameReady:()=>Boolean(livingFrameModel?.ready),getFrameError:()=>livingFrameModel?.error,
         onPanelOwns:source=>infoPanel?.getHeldInputSource()===source || Boolean(infoPanel?.isHandInteracting(source)),
         onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;const target=nearestWelcomePointerHit(ray,welcomePracticeFrameHit(ray),welcomePractice?.stage.hit(ray));if(target?.kind==='voice-bar')return Boolean(zinniaVoiceBar?.select(ray));if(target?.kind!=='panel' || source?.hand && !directPanelPress(source,ray,target))return false;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray,source));},onHit:welcomePracticeFrameHit,
         onComplete:({aborted=false}={})=>{
@@ -5519,7 +5519,7 @@ function introVisibleCopy(){
 }
 function drawIntroNoteContent(ctx) {
     if(welcomePractice?.active){
-        const state=welcomePractice.stage.snapshot();if(state.phase==='frame' && !state.comfortVisible)return;ctx.save();ctx.globalAlpha=state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
+        const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=['frame','title','arrival'].includes(state.phase)?1:state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
         // The lesson title carries the introduction; avoid repeating the brand above it.
         if(state.activityFocus){ctx.fillStyle='#fffaf0';ctx.font=`500 39px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,830);lines.forEach((line,i)=>ctx.fillText(line,700,530+(i-(lines.length-1)/2)*54));ctx.restore();return;}
         ctx.fillStyle='#fffaf0';const bottom=drawDemoHeading(ctx,state.title,700,370,900);ctx.textAlign='center';
@@ -5876,7 +5876,7 @@ function drawIntroSpatial(view) {
             introLocalPosition(introWorldAnchor, AR_PHONE_COMFORT.boardPosition),
             AR_PHONE_COMFORT.boardScale[0] * (arWelcomeShowcaseActive ? 2500/1400 : 1),
             AR_PHONE_COMFORT.boardScale[1] * (arWelcomeShowcaseActive ? 2100/1080 : 1),
-            arWelcomeShowcaseActive ? 1 : easedNote
+            welcomePractice?.active?welcomePractice.stage.snapshot().frameOpacity:arWelcomeShowcaseActive ? 1 : easedNote
         );
     }
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
@@ -5910,7 +5910,7 @@ function drawIntroSpatial(view) {
         const orbPulse=pointerKind==='aim'?1+.05*Math.sin(performance.now()/380):1;
         if (pointerPosition) {gl.depthMask(false);drawTexture(introPointerTexture, pointerPosition, demoStage==='totem'?.72:demoStage==='note'?.72:.38*orbPulse, demoStage==='totem'?3.2:demoStage==='note'?1.4:.95*orbPulse, pointerKind==='aim'?.68:1);gl.depthMask(true);}
     }
-    if(arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);const framePose=livingFramePose(board);livingFrameModel?.drawXR(view,framePose.matrix);drawDemoZinnia(view,framePose.matrix);}
+    if(arWelcomeSharedBoard && introBoardVisible){const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);const framePose=livingFramePose(board);livingFrameModel?.drawXR(view,framePose.matrix,welcomePractice?.active?{opacity:welcomePractice.stage.snapshot().frameOpacity}:{});drawDemoZinnia(view,framePose.matrix);}
 }
 
 function drawDemoZinnia(view,frameMatrix){
