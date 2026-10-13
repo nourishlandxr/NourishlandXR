@@ -20,7 +20,9 @@ export function animateZinniaCharacter(root,time,speaking=false,options={}){
     state.speechLevel=options.speechLevel??(speaking?.35:0);
     if(options.targetWorld){root.updateWorldMatrix(true,true);options={...options,target:root.worldToLocal(new THREE.Vector3(options.targetWorld.x,options.targetWorld.y,options.targetWorld.z))};}
     const previous=state.touch.snapshot().reaction;
-    const contacts=zinniaContacts(root,options.inputs,{includeHover:true});
+    // Ray contacts only matter while the user presses a controller. Hover
+    // raycasts here used to traverse Zinnia's full model on every XR frame.
+    const contacts=zinniaContacts(root,options.inputs);
     const reaction=state.touch.update(state.paused?0:dt,contacts);
     if(reaction==='tickle' && previous!=='tickle' && !speaking)playZinniaGiggle();
     state.guide.update(state.paused?0:dt,{lesson:'explore',...options,reaction,focused:Boolean(options.focused || speaking || contacts.length)});

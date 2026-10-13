@@ -2,7 +2,6 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} from './zinniaCharacter.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
 import {zinniaVoiceState,zinniaSpeechLevel,zinniaCharacterCue} from './zinniaVoiceCoordinator.js';
-import {createMeshPointerContact} from './xrMeshPointerContact.js';
 
 // Kept inside the frame silhouette. Totems occupy the space beside the frame.
 // Keep the branch root close to the lower-right edge of the native rim. The
@@ -10,7 +9,6 @@ import {createMeshPointerContact} from './xrMeshPointerContact.js';
 // inside the rim volume while the perch itself stays in front of the frame.
 export const ZINNIA_FRAME_PERCH=Object.freeze({x:.91,y:-.18,z:.32,width:.19,depth:.16});
 export function createZinniaFramePerch({character:initialCharacter=null,getVoice=()=>null}={}){
-    const meshPointerContact=createMeshPointerContact();
     const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);root.matrixAutoUpdate=false;
     const home=new THREE.Group();home.position.set(ZINNIA_FRAME_PERCH.x,ZINNIA_FRAME_PERCH.y,ZINNIA_FRAME_PERCH.z);root.add(home);
     // Curved branch grows inward from the right rim, under the pot.
@@ -22,7 +20,7 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
     branch([[.10,-.12,-.16],[.11,-.065,-.10],[.045,-.024,-.055],[-.055,-.018,-.045],[-.10,-.028,-.02]],.013);
     const characterMount=new THREE.Group();characterMount.name='Authored Zinnia return mount';home.add(characterMount);
     let character=initialCharacter || createZinniaCharacter();character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);
-    let glContext=null,renderer=null,started=null,disposed=false,lastFrame=null,instant=false,rimMaterialId=null;
+    let glContext=null,renderer=null,started=null,disposed=false,lastFrame=null,instant=false,rimMaterialId=null,hitBounds=null,boundsFrame=null;
     function watchCharacter(value){void value.userData.zinnia.ready.then(ready=>{if(!ready || disposed || character!==value)return;renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true}):null;});}
     watchCharacter(character);
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}};
@@ -38,9 +36,24 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
     }
     return {scene,root,characterMount,update,
-        hit(ray,matrix){if(disposed || started===null || !renderer)return null;if(matrix){root.matrix.fromArray(matrix);root.updateMatrixWorld(true);}return meshPointerContact(ray,characterMount,{kind:'zinnia',frameToken:character.userData.zinnia?.time ?? lastFrame});},
+        hit(ray,matrix){
+            if(disposed || started===null || !renderer || !ray?.origin || !ray.direction)return null;
+            if(matrix){root.matrix.fromArray(matrix);root.updateMatrixWorld(true);}
+            if(!hitBounds || matrix && (!boundsFrame || matrix.some((value,index)=>Math.abs(value-boundsFrame[index])>1e-5))){
+                characterMount.updateWorldMatrix(true,true);
+                hitBounds=new THREE.Box3().setFromObject(characterMount).applyMatrix4(root.matrixWorld.clone().invert()).expandByScalar(.045);
+                boundsFrame=matrix?Array.from(matrix):Array.from(root.matrix.elements);
+            }
+            // A compact collider is enough for selecting the whole character.
+            // Triangle-testing 125k vertices for a hover target every XR frame
+            // caused a visible hitch whenever the viewer moved across Zinnia.
+            const inverse=root.matrixWorld.clone().invert(),localRay=new THREE.Ray(new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z).normalize()).applyMatrix4(inverse),localPoint=localRay.intersectBox(hitBounds,new THREE.Vector3());
+            if(!localPoint)return null;
+            const point=localPoint.applyMatrix4(root.matrixWorld),distance=point.distanceTo(new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z));
+            return {kind:'zinnia',id:'zinnia',distance,point,worldPoint:point};
+        },
         matchRim(frameScene){let material=null;frameScene?.traverse(node=>{for(const candidate of [node.material].flat().filter(Boolean))if(candidate.name==='Brown lower soil')material ||= candidate;});if(!material || material.uuid===rimMaterialId)return;rimMaterialId=material.uuid;wood.copy(material);wood.map=null;wood.color.set('#4c3320');wood.name='Living Frame branch';renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true}):null;},
-        adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
+        adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;hitBounds=null;boundsFrame=null;character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
         attach(gl){glContext=gl;renderer?.destroy();renderer=createFruitWindowXR(gl,scene,{alphaCompositing:true});},
         show(time=performance.now(),{immediate=false}={}){started=time;instant=immediate;},
         draw(view,matrix,time=performance.now(),inputs=[],viewer=null){
