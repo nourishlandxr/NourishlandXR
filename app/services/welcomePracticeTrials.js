@@ -4,17 +4,18 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createLivingMapDetailKit} from './demoLivingMapDetail.js';
 import {loadTrialButterflies} from './welcomeTrialButterflies.js';
 import {createWelcomeTrialState,WELCOME_TRIALS,TRIAL_PLANT_CARDS} from './welcomeTrialState.js';
+import {createWelcomeOptionalGame} from './welcomeOptionalGames.js';
 
 const colours=['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff'];
 const v=()=>new THREE.Vector3();
 export function trialTerrainHeight(x,z){return .012+.10*Math.exp(-((x+.105)**2+(z+.11)**2)/.006)+.055*Math.exp(-((x-.13)**2+(z+.09)**2)/.004);}
-export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},onClose=()=>{},onFeedback=()=>{},getPanelPose=()=>null}={}){
+export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},onClose=()=>{},onFeedback=()=>{},getPanelPose=()=>null,wristControls=false}={}){
     const state=createWelcomeTrialState(),layer=new THREE.Group(),panel=new THREE.Group();root.add(layer,panel);layer.name='Optional welcome trials';layer.visible=false;panel.name='Welcome trial list';panel.visible=false;
     const canvas=document.createElement('canvas');canvas.width=900;canvas.height=900;
     const texture=new THREE.CanvasTexture(canvas),panelMesh=new THREE.Mesh(new THREE.PlaneGeometry(.24,.24),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));panel.add(panelMesh);panelMesh.renderOrder=25;panel.position.set(-.91,.49,-.12);
     const sphere=new THREE.SphereGeometry(1,12,8),cylinder=new THREE.CylinderGeometry(1,1,1,6),materials=new Map(),groups=new Map(),edges=new Map(),holds=new Map();
     let rows=[],signature='',disposed=false,time=0,cup=null,cloud=null,disk=null,deck=[],wisps=[],rain=[],insects=[],plantSlots=[],paint=null,paintTip=null,diskDocked=true,strokeBySource=new Map(),paintPage='brush',ticBoard=null,ticMarks=[],ticCells=Array(9).fill(null),ticStatus='Your turn. Choose a square.';
-    const consumedSelects=new WeakSet();
+    const consumedSelects=new WeakSet(),games=new Map();
     const geometry=g=>g;
     const material=colour=>{if(!materials.has(colour))materials.set(colour,new THREE.MeshStandardMaterial({color:colour,roughness:.8}));return materials.get(colour);};
     const mesh=(geo,colour,x=0,y=0,z=0,sx=1,sy=sx,sz=sx,parent=layer)=>{const node=new THREE.Mesh(geo,material(colour));node.position.set(x,y,z);node.scale.set(sx,sy,sz);parent.add(node);return node;};
@@ -28,6 +29,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
     function cloudShape(parent,radius,opacity){const group=new THREE.Group();parent.add(group);const mat=new THREE.MeshStandardMaterial({color:'#eaf4f7',roughness:1,transparent:true,opacity,depthWrite:false});for(const [x,y,z,s] of [[0,0,0,1],[-.65,-.1,0,.75],[.65,-.06,0,.8],[-.15,.45,-.16,.8],[.1,-.2,.35,.65]]){const n=new THREE.Mesh(sphere,mat);n.position.set(x*radius,y*radius,z*radius);n.scale.setScalar(s*radius);group.add(n);}return group;}
     function build(id){
         if(groups.has(id))return;const group=new THREE.Group();group.name='Trial '+id;layer.add(group);groups.set(id,group);
+        if(['dragonfly','strawberry'].includes(id))games.set(id,createWelcomeOptionalGame(id,group,{onAssets,onFeedback}));
         if(id==='butterflies'){
             cup=new THREE.Group();cup.position.set(0,.068,.06);group.add(cup);
             const shell=new THREE.Mesh(new THREE.CylinderGeometry(.048,.068,.13,32,1,true),material('#c9e0d0'));cup.add(shell);mesh(new THREE.CylinderGeometry(.048,.048,.006,32),'#c9e0d0',0,.067,0,1,1,1,cup);
@@ -69,7 +71,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         onAssets();
     }
     function disposeModels(models){const geometries=new Set(),mats=new Set(),maps=new Set();for(const model of models)model.traverse(n=>{if(n.geometry)geometries.add(n.geometry);if(n.material){mats.add(n.material);if(n.material.map)maps.add(n.material.map);}});geometries.forEach(g=>g.dispose());mats.forEach(m=>m.dispose());maps.forEach(t=>t.dispose());}
-    function open(id){if(!state.open(id))return false;releaseAll();build(id);layer.visible=true;for(const [key,group] of groups)group.visible=key===id;onOpen();signature='';return true;}
+    function open(id){if(!WELCOME_TRIALS.some(trial=>trial.id===id))return false;releaseAll();state.open(id);build(id);layer.visible=true;for(const [key,group] of groups)group.visible=key===id;onOpen();signature='';return true;}
     function close(){if(!state.active)return;releaseAll();state.close();layer.visible=false;onClose();signature='';}
     function command(id){
         if(id.startsWith('open:'))return open(id.slice(5));
@@ -99,6 +101,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
     function ticWinner(cells){for(const [a,b,c] of [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]])if(cells[a]&&cells[a]===cells[b]&&cells[a]===cells[c])return cells[a];return null;}
     function nextTicMove(cells,mark){for(let i=0;i<9;i++)if(!cells[i]){const trial=cells.slice();trial[i]=mark;if(ticWinner(trial)===mark)return i;}return null;}
     function resetVisuals(){
+        games.get(state.active)?.reset();
         if(state.active==='butterflies' && cup){cup.position.set(0,.068,.06);insects.forEach(insect=>{insect.visible=false;insect.userData.emerged=false;});}
         if(state.active==='garden'){cloud.position.set(-.04,.39,.06);wisps.forEach(w=>{w.used=false;w.mesh.visible=true;w.mesh.position.copy(w.home);});deck.forEach(c=>{c.mesh.position.copy(c.home);c.seeded=false;c.face.visible=true;c.seed.visible=false;});diskDocked=true;disk.position.set(.08,.06,.02);disk.quaternion.identity();plantSlots.forEach(p=>p.mesh.visible=false);}
         if(state.active==='painting'){paint?.clear();strokeBySource.clear();}
@@ -123,9 +126,9 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         const hints=snap.active==='butterflies'?['Lift the cup to release butterflies.','Close both fists: invite them to land.','Open your hands to let them fly.']:snap.active==='garden'?['Grab wisps; bring them into the cloud.','Hold a card; trigger / pinch to make a seed.','Release seeds onto the disk.','Cloud: grip + trigger, or close your fist.','Squeeze above planted seeds to grow them.']:snap.active==='painting'?[MARKING_BRUSHES[snap.brush]?.purpose || 'Make a marking in space.','Trigger / pinch to draw; release to finish.','Water · Vine · Earth · Firefly']:snap.active==='tic-tac-toe'?[ticStatus,'Aim at a square and press trigger, or pinch.','You play X. Zinnia plays O.']:['Optional play and practice.','The guided tutorial stays unchanged.'];
         ctx.fillStyle='#d0dfc4';ctx.font='25px system-ui';hints.forEach((line,i)=>ctx.fillText(line,35,780+i*30,830));if(error){ctx.fillStyle='#ffc7a5';ctx.fillText(error,35,885,830);}texture.needsUpdate=true;
     }
-    function panelPoint(point){panel.updateWorldMatrix(true,false);const p=point.clone().applyMatrix4(panel.matrixWorld.clone().invert());if(Math.abs(p.x)>.12 || Math.abs(p.y)>.12 || Math.abs(p.z)>.035)return null;const x=(.5+p.x/.24)*900,y=(.5-p.y/.24)*900;const row=rows.find(row=>x>=row.left && x<=row.right && y>=row.top && y<=row.bottom);return row?.slider?'width:'+(.001+.019*THREE.MathUtils.clamp((x-row.left-22)/(row.right-row.left-44),0,1)):row?.id || null;}
+    function panelPoint(point){if(!panel.visible)return null;panel.updateWorldMatrix(true,false);const p=point.clone().applyMatrix4(panel.matrixWorld.clone().invert());if(Math.abs(p.x)>.12 || Math.abs(p.y)>.12 || Math.abs(p.z)>.035)return null;const x=(.5+p.x/.24)*900,y=(.5-p.y/.24)*900;const row=rows.find(row=>x>=row.left && x<=row.right && y>=row.top && y<=row.bottom);return row?.slider?'width:'+(.001+.019*THREE.MathUtils.clamp((x-row.left-22)/(row.right-row.left-44),0,1)):row?.id || null;}
     function hit(ray){
-        if(!panel.visible || !ray?.origin || !ray.direction)return null;root.updateMatrixWorld(true);const r=new THREE.Ray(v().copy(ray.origin),v().copy(ray.direction).normalize()),local=r.clone().applyMatrix4(root.matrixWorld.clone().invert());let best=null;
+        if(!state.active || !ray?.origin || !ray.direction)return null;root.updateMatrixWorld(true);const r=new THREE.Ray(v().copy(ray.origin),v().copy(ray.direction).normalize()),local=r.clone().applyMatrix4(root.matrixWorld.clone().invert());let best=null;
         const pick=(p,value)=>{if(!p)return;const worldPoint=p.clone().applyMatrix4(root.matrixWorld),distance=worldPoint.distanceTo(r.origin);if(!best || distance<best.distance)best={...value,point:p,worldPoint,distance};};
         const pr=r.clone().applyMatrix4(panel.matrixWorld.clone().invert()),p=pr.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),0),v());if(p){const world=p.clone().applyMatrix4(panel.matrixWorld),id=panelPoint(world);if(id)pick(world.applyMatrix4(root.matrixWorld.clone().invert()),{kind:'trial-control',id});}
         if(state.active)for(const target of targets()){if(!target.mesh.visible)continue;const radius=target.radius,p=local.intersectSphere(new THREE.Sphere(target.mesh.position,radius),v());pick(p,{kind:'trial-object',trialTarget:target});}
@@ -133,11 +136,11 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         if(state.active==='tic-tac-toe'&&ticBoard){const boardRay=r.clone().applyMatrix4(ticBoard.matrixWorld.clone().invert()),cellPoint=boardRay.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),-.023),v());if(cellPoint&&Math.abs(cellPoint.x)<.17&&Math.abs(cellPoint.z)<.17){const col=Math.max(0,Math.min(2,Math.floor((cellPoint.x+.17)/(.34/3)))),row=Math.max(0,Math.min(2,Math.floor((cellPoint.z+.17)/(.34/3)))),rootPoint=cellPoint.clone().applyMatrix4(ticBoard.matrixWorld).applyMatrix4(root.matrixWorld.clone().invert());pick(rootPoint,{kind:'trial-control',id:'cell:'+(row*3+col)});}}
         return best;
     }
-    function targets(){if(state.active==='butterflies')return [{id:'cup',mesh:cup,radius:.085}];if(state.active==='garden')return [{id:'cloud',mesh:cloud,radius:.11},...wisps.filter(w=>!w.used).map((w,i)=>({id:'wisp:'+i,mesh:w.mesh,radius:.055,wisp:w})),...deck.map(c=>({id:'card:'+c.card.id,mesh:c.mesh,radius:.09,card:c}))];return [];}
-    function release(source,plantOnRelease=true){const held=holds.get(source);if(!held)return;holds.delete(source);if(held.target.card?.seeded){const card=held.target.card,diskPoint=disk.worldToLocal(root.localToWorld(card.mesh.position.clone()));if(plantOnRelease && Math.hypot(diskPoint.x,diskPoint.z)<.27 && diskPoint.y>-.04 && diskPoint.y<trialTerrainHeight(diskPoint.x,diskPoint.z)+.15){state.plant(card.card.id,diskPoint.x,diskPoint.z);onFeedback('plant',source);}card.mesh.position.copy(card.home);card.face.visible=true;card.seed.visible=false;card.seeded=false;}if(held.target.id==='cup')cup.position.y=Math.max(.068,cup.position.y);}
+    function targets(){if(games.has(state.active))return games.get(state.active).targets();if(state.active==='butterflies')return [{id:'cup',mesh:cup,radius:.085}];if(state.active==='garden')return [{id:'cloud',mesh:cloud,radius:.11},...wisps.filter(w=>!w.used).map((w,i)=>({id:'wisp:'+i,mesh:w.mesh,radius:.055,wisp:w})),...deck.map(c=>({id:'card:'+c.card.id,mesh:c.mesh,radius:.09,card:c}))];return [];}
+    function release(source,plantOnRelease=true){const held=holds.get(source);if(!held)return;holds.delete(source);games.get(state.active)?.released(held.target,plantOnRelease,source);if(held.target.card?.seeded){const card=held.target.card,diskPoint=disk.worldToLocal(root.localToWorld(card.mesh.position.clone()));if(plantOnRelease && Math.hypot(diskPoint.x,diskPoint.z)<.27 && diskPoint.y>-.04 && diskPoint.y<trialTerrainHeight(diskPoint.x,diskPoint.z)+.15){state.plant(card.card.id,diskPoint.x,diskPoint.z);onFeedback('plant',source);}card.mesh.position.copy(card.home);card.face.visible=true;card.seed.visible=false;card.seeded=false;}if(held.target.id==='cup')cup.position.y=Math.max(.068,cup.position.y);}
     function releaseAll(){for(const source of [...holds.keys()])release(source,false);edges.clear();strokeBySource.clear();paint?.endAll();}
     function update(dt,{inputs=[],visible=false,panelPose=null,paused=false}={}){
-        panel.visible=visible && Boolean(state.active);drawPanel();panel.scale.setScalar(state.active==='painting'?1:.46/.24);if(state.active!=='painting' && (panelPose || getPanelPose())){
+        panel.visible=visible && Boolean(state.active) && !games.has(state.active) && !wristControls;drawPanel();panel.scale.setScalar(state.active==='painting'?1:.46/.24);if(state.active!=='painting' && (panelPose || getPanelPose())){
             const pose=panelPose || getPanelPose();if(pose?.center && pose.right && pose.up && pose.normal){const center=v().copy(pose.center).addScaledVector(pose.right,-((pose.width || .60)/2+.28));const m=new THREE.Matrix4().makeBasis(v().copy(pose.right),v().copy(pose.up),v().copy(pose.normal));m.setPosition(center);m.premultiply(root.matrixWorld.clone().invert());m.decompose(panel.position,panel.quaternion,panel.scale);panel.scale.setScalar(.46/.24);}
         }
         if(!state.active)return;dt=paused?0:Math.min(.06,Math.max(0,dt));time+=dt;const inverse=root.matrixWorld.clone().invert();
@@ -164,13 +167,14 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             if(input.down && !previous.down && !held && state.active!=='painting'){
                 const occupied=new Set([...holds.values()].map(h=>h.target.mesh));const candidate=targets().filter(t=>t.mesh.visible && !occupied.has(t.mesh)).map(t=>({target:t,d:point.distanceTo(t.mesh.position)})).filter(t=>t.d<t.target.radius+.045).sort((a,b)=>a.d-b.d)[0];
                 const target=candidate?.target || (state.mode==='controllers' && rayHit?.kind==='trial-object' && !occupied.has(rayHit.trialTarget.mesh)?rayHit.trialTarget:null);
-                if(target){held={target,offset:target.mesh.position.clone().sub(point)};holds.set(source,held);onFeedback('grab',source);}
+                if(target){const quaternion=new THREE.Quaternion().setFromRotationMatrix(pose),inverseQ=quaternion.clone().invert();held={target,offset:target.mesh.position.clone().sub(point),rotation:inverseQ.clone().multiply(target.mesh.quaternion),localOffset:target.mesh.position.clone().sub(point).applyQuaternion(inverseQ)};if(target.body?.gripPoint)held.localOffset.set(-target.body.gripPoint.x,-target.body.gripPoint.y,-target.body.gripPoint.z).applyQuaternion(held.rotation);holds.set(source,held);games.get(state.active)?.picked(target);onFeedback('grab',source);}
             }
             if(held && !input.down){release(source);held=null;}
-            if(held){held.target.mesh.position.copy(point).add(held.offset);if(held.target.id==='cup' && cup.position.y>.17)state.releaseButterflies();
+            if(held){if(games.has(state.active)){const quaternion=new THREE.Quaternion().setFromRotationMatrix(pose),position=point.clone().add(held.localOffset.clone().applyQuaternion(quaternion));quaternion.multiply(held.rotation);games.get(state.active).moved(held.target,position,quaternion);}else held.target.mesh.position.copy(point).add(held.offset);if(held.target.id==='cup' && cup.position.y>.17)state.releaseButterflies();
                 if(held.target.wisp && held.target.mesh.position.distanceTo(cloud.position)<.12){if(state.merge()){held.target.wisp.used=true;held.target.mesh.visible=false;holds.delete(source);onFeedback('collect',source);}}
                 const card=held.target.card;if(card && !card.seeded && (source.hand?input.trigger && !previous.trigger || eligible.some(other=>other.source!==source && other.trigger && v().setFromMatrixPosition(new THREE.Matrix4().fromArray(other.matrix).premultiply(inverse)).distanceTo(card.mesh.position)<.12):input.trigger && !previous.trigger)){card.seeded=true;card.face.visible=false;card.seed.visible=true;onFeedback('open',source);}
             }
+            games.get(state.active)?.act(input,held,previous,eligible,inverse);
             if(state.active==='painting'){
                 const paintPoint=input.tip?v().copy(input.tip).applyMatrix4(inverse):v().set(0,0,-.08).applyMatrix4(pose);
                 if(input===tipInput){paintTip.visible=true;paintTip.position.copy(paintPoint);paintTip.material.color.set(PAINT_V2_COLOURS[paint.snapshot().colour]);}
@@ -194,8 +198,9 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             plantSlots.forEach((slot,i)=>{const plant=state.plants[i];slot.mesh.visible=Boolean(plant);if(!plant)return;slot.mesh.position.set(plant.x,trialTerrainHeight(plant.x,plant.z),plant.z);slot.mesh.scale.setScalar(plant.growth);slot.forms.forEach((f,j)=>f.visible=TRIAL_PLANT_CARDS[j].id===plant.card);});
             rain.forEach(({mesh:drop,phase},i)=>{drop.visible=squeezing;if(!squeezing)return;const fall=(time*1.8+phase)%1,angle=i*2.4,r=(.025+i%5*.008)*size;drop.position.set(cloud.position.x+Math.cos(angle)*r,cloud.position.y-fall*Math.max(.06,cloud.position.y-.035),cloud.position.z+Math.sin(angle)*r);});
         }
+        games.get(state.active)?.update(dt,eligible,[...holds]);
         if(state.active==='painting')paint.update(time);
         drawPanel();
     }
-    return {get paint(){return paint;},state,layer,panel,open,close,command,update,hit,releaseAll,consumeSelect(source){if(source)consumedSelects.add(source);},isHolding:source=>holds.has(source) || strokeBySource.has(source),get active(){return state.active;},get mode(){return state.mode;},snapshot:()=>({...state.snapshot(),butterflyAssets:insects.length?'ready':groups.get('butterflies')?.userData.error?'error':'loading',diskDocked,paintSegments:paint?.snapshot().segments || 0,strokes:paint?.snapshot().strokes || 0,paint:paint?.snapshot()}),destroy(){disposed=true;releaseAll();paint?.destroy();}};
+    return {get paint(){return paint;},state,layer,panel,open,close,command,update,hit,releaseAll,consumeSelect(source){if(source)consumedSelects.add(source);},isHolding:source=>holds.has(source) || strokeBySource.has(source),get active(){return state.active;},get mode(){return state.mode;},snapshot:()=>({...state.snapshot(),butterflyAssets:insects.length?'ready':groups.get('butterflies')?.userData.error?'error':'loading',diskDocked,paintSegments:paint?.snapshot().segments || 0,strokes:paint?.snapshot().strokes || 0,paint:paint?.snapshot(),game:games.get(state.active)?.snapshot(),gameHint:games.get(state.active)?.hints()[0]}),destroy(){disposed=true;releaseAll();paint?.destroy();for(const game of games.values())game.destroy();}};
 }

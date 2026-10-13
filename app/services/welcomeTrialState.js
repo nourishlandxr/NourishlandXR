@@ -1,5 +1,7 @@
 // Trial progress is independent of the guided lesson and can be revisited.
 export const WELCOME_TRIALS=Object.freeze([
+    {id:'dragonfly',label:'Dragonfly Flight'},
+    {id:'strawberry',label:'Strawberry Planting'},
     {id:'butterflies',label:'Butterfly cup'},
     {id:'garden',label:'Cloud + Living Disk'},
     {id:'painting',label:'Paint in space'},

@@ -20,13 +20,9 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             .then(([data,gltf])=>{
                 if(disposed){disposeModel(gltf.scene);return;}
                 const model=gltf.scene;group.add(model);
-                const originalMaterials=new Set();model.traverse(node=>{if(node.isMesh){for(const material of [node.material].flat())originalMaterials.add(material);node.material=new THREE.MeshBasicMaterial({color:'#526454',transparent:false,opacity:1,depthWrite:true});}});
-                const originalTextures=new Set();for(const material of originalMaterials){for(const value of Object.values(material))if(value?.isTexture)originalTextures.add(value);material.dispose();}for(const texture of originalTextures){texture.image?.close?.();texture.dispose();}
+                // Preserve the hardware model's textures, finish and button legends.
                 for(const [id,component] of Object.entries(data.layouts[hand].components)){
                     const kind=id.replace('xr-standard-','');
-                    // Keep every face button and joystick legible, including
-                    // the controls not highlighted by the current lesson.
-                    model.getObjectByName(component.rootNodeName)?.traverse(node=>{if(node.isMesh){node.material.color.set(['trigger','squeeze'].includes(kind)?'#617455':'#334c3a');}});
                     for(const response of Object.values(component.visualResponses || {})){
                         const value=model.getObjectByName(response.valueNodeName),min=model.getObjectByName(response.minNodeName),max=model.getObjectByName(response.maxNodeName);
                         if(value && min && max && response.valueNodeProperty==='transform')entry.responses.push({value,min,max,property:response.componentProperty,indices:component.gamepadIndices});
@@ -49,8 +45,9 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             if(input.source.hand || !input.matrix)continue;
             const profile=(input.source.profiles || []).find(id=>supported.includes(id)),hand=input.source.handedness;
             if(!profile || !['left','right'].includes(hand))continue;
-            const entry=load(profile,hand);if(!entry.ready || !requested.length || opacity<.01)continue;
-            entry.group.visible=true;entry.group.matrix.fromArray(input.matrix);entry.group.traverse(node=>{for(const m of [node.material].flat().filter(Boolean)){m.userData.baseOpacity??=m.opacity;m.opacity=m.userData.baseOpacity*opacity;m.transparent=m.opacity<1;m.depthWrite=m.opacity>=1;}});
+            const entry=load(profile,hand);if(!entry.ready || opacity<.01)continue;
+            entry.group.visible=true;entry.group.matrix.fromArray(input.matrix);entry.group.traverse(node=>{for(const m of [node.material].flat().filter(Boolean)){m.userData.controllerBase??={opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite};const base=m.userData.controllerBase;m.opacity=base.opacity*opacity;m.transparent=base.transparent || opacity<1;m.depthWrite=base.depthWrite && opacity>=1;}});
+            entry.label.visible=entry.link.visible=requested.length>0;
             for(const r of entry.responses){const gamepad=input.source.gamepad;let value=gamepad?.buttons[r.indices.button]?.value || 0;
                 if(r.property==='xAxis' || r.property==='yAxis')value=((gamepad?.axes[r.indices[r.property]] || 0)+1)/2;
                 if(r.property==='button' && r.indices.button===0)value=Math.max(value,input.trigger?1:0);
@@ -58,7 +55,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
                 value=THREE.MathUtils.clamp(value,0,1);r.value.position.lerpVectors(r.min.position,r.max.position,value);r.value.quaternion.slerpQuaternions(r.min.quaternion,r.max.quaternion,value);
             }
             for(const {kind,glow,confirmation,halo} of entry.highlights){const down=kind==='trigger'?input.trigger:kind==='squeeze'?input.down:input.source.gamepad?.axes?.some((a,i)=>i>=2 && Math.abs(a)>.18),required=requested.includes(kind),confirmed=Boolean(down || complete);halo.visible=required;halo.scale.setScalar(1.3+.035*Math.sin(elapsed*3));glow.visible=required && !confirmed;confirmation.visible=required && confirmed;glow.scale.setScalar(1.16+.025*Math.sin(elapsed*4));confirmation.scale.setScalar(1.1);}
-            const text=complete?'That’s it!':labels[phase];if(entry.text!==text){entry.text=text;const ctx=entry.canvas.getContext('2d');ctx.clearRect(0,0,700,150);ctx.fillStyle='rgba(39,57,47,.90)';ctx.beginPath();ctx.roundRect(2,2,696,146,16);ctx.fill();ctx.fillStyle='#e0e5d5';ctx.font='500 42px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+            const text=complete?'That’s it!':labels[phase];if(requested.length && entry.text!==text){entry.text=text;const ctx=entry.canvas.getContext('2d');ctx.clearRect(0,0,700,150);ctx.fillStyle='rgba(39,57,47,.90)';ctx.beginPath();ctx.roundRect(2,2,696,146,16);ctx.fill();ctx.fillStyle='#e0e5d5';ctx.font='500 42px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
                 const lines=phase==='fly' && !complete?['Trigger forward · grip back','Stick turns / height']:[text];lines.forEach((line,i)=>ctx.fillText(line,350,75+(i-(lines.length-1)/2)*50,660));entry.texture.needsUpdate=true;}
             if(viewer){
                 const controllerQ=new THREE.Quaternion().setFromRotationMatrix(entry.group.matrix),viewQ=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(viewer));

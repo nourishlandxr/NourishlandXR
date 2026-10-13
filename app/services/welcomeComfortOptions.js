@@ -1,56 +1,73 @@
 import {getSpatialVisualSettings,setSpatialVisualSettings} from './spatialVisualSettings.js';
 import {getWelcomeNarrationSettings,setWelcomeNarrationSettings} from './welcomePracticeVoice.js';
-import {WELCOME_FRUIT_ASSETS} from './welcomePracticeFruitAssets.js';
+import {WELCOME_TRIALS} from './welcomeTrialState.js';
+import {MARKING_BRUSHES} from './creatorMarkingBrushes.js';
+import {PAINT_V2_COLOURS} from './spatialPaintV2.js';
 
-// A tutorial presentation of the existing panel. No project or plant actions.
+// Six familiar actions on the forearm. Expanded tools stay beside the dock.
 export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChange=()=>{}}={}){
-    let expanded=false,paintPage='brush';
-    const button=(id,label,x,y,width=220,extra={})=>({action:'Comfort:'+id,label,x,y,width,height:66,kind:'utility',...extra});
+    let page='home';
+    const paint=()=>stage.trials.active==='painting'?stage.trials.paint:stage.paint;
+    const item=(id,label,icon,extra={})=>({action:'Comfort:'+id,label,ariaLabel:label,description:label,icon,kind:'utility',...extra});
     function context(){
-        const state=stage.snapshot(),visual=getSpatialVisualSettings(),audio=getWelcomeNarrationSettings(),voice=state.voice || {};
-        const disabled=state.exiting;
-        const painting=state.phase==='brush' || state.trials?.active==='painting';
-        const paint=stage.trials.active==='painting'?stage.trials.paint:stage.paint;
-        const drawing=paint?.snapshot?.() || {};
-        const icon=(id,label,symbol,x,y,extra={})=>button(id,symbol,x,y,112,{height:80,ariaLabel:label,description:label,...extra});
-        const items=painting?[
-            ...[['brush','Brushes','B'],['colour','Colours','C'],['tools','Tools','⚙']].map(([id,label,symbol],i)=>icon('paint-page:'+id,label,symbol,50+i*300,50,{selected:paintPage===id})),
-            ...(paintPage==='brush'?['earth','water','vine','firefly'].map((name,i)=>icon('brush:'+name,name[0].toUpperCase()+name.slice(1)+' brush',['▧','≈','❧','✧'][i],50+i*225,180,{selected:drawing.brush===name})):paintPage==='colour'?['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff','#263b32','#ed795c','#b39add'].map((colour,i)=>icon('paint:colour:'+i,'Colour '+(i+1),'■',50+(i%4)*225,170+Math.floor(i/4)*105,{color:colour,selected:drawing.colour===i})): [icon('paint:undo','Undo','↶',50,175),icon('paint:clear','Clear drawing','⌫',275,175),icon('paint:fine','Fine stroke','╱',500,175,{selected:drawing.width<=.002}),icon('paint:bold','Bold stroke','▰',725,175,{selected:drawing.width>=.01})])
-        ]:[icon('paint-tools','Brush tools','✎',30,112),icon('adjust',expanded?'Close settings':'Settings','⚙',850,112)];
-        if(painting && state.trials?.active==='painting')items.push(icon('paint-tools','Close brush practice','×',850,26,{width:80,height:60}));
-        if(!painting && !expanded){items.push(...['controllers','gloves','hands'].map((mode,i)=>button('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],30+i*320,240,300)),button('reset','Reset objects',30,340,460));}else if(!painting && expanded){
-            items.push(icon('quieter','Quieter voice','−',30,240),icon('louder','Louder voice','+',270,240),button('graphics:auto','Auto',510,240,140,{selected:visual.graphicsQuality==='auto'}),button('graphics:low','SD',665,240,140,{selected:visual.graphicsQuality==='low'}),button('graphics:high','HD',820,240,150,{selected:visual.graphicsQuality==='high'}));
-            items.push(button('frame:lower','Frame ↓',30,340),button('frame:higher','Frame ↑',270,340),button('frame:sd','Frame SD',510,340),button('frame:hd','Frame HD',750,340));
-            items.push(button('table:lower','Table ↓',30,440),button('table:higher','Table ↑',270,440));
+        const state=stage.snapshot(),voice=state.voice || {},visual=getSpatialVisualSettings(),audio=getWelcomeNarrationSettings(),drawing=paint()?.snapshot?.() || {};
+        const expanded=page!=='home',width=expanded?.28:.12,height=Math.round((expanded?.19:.11)/width*1000);
+        const items=[item('paint-tools','Brush tools','brush',{selected:page.startsWith('paint')}),item('games','Games','games',{selected:page==='games'}),item('input','Input mode','hand',{selected:page==='input'}),item('audio','Audio','audio',{selected:page==='audio'}),item('adjust','Comfort settings','settings',{selected:page==='settings'}),item('tutorial','Tutorial actions','lesson',{selected:page==='tutorial'})];
+        const dockCenter=expanded?-.08:0;
+        items.forEach((button,i)=>{
+            const x=dockCenter+(i%3-1)*.04,y=(.5-Math.floor(i/3))*.044,size=.034;
+            Object.assign(button,{x:(.5+(x-size/2)/width)*1000,y:height/2-(y+size/2)/width*1000,width:size/width*1000,height:size/width*1000,dock:true});
+        });
+        const titles={games:'Games',input:'Input',audio:'Audio',settings:'Comfort',tutorial:'Tutorial','paint-brush':'Marking brushes','paint-colour':'Colour','paint-options':'Brush settings'};
+        const options=[];
+        if(expanded)options.push(item('home','Close tools','close',{header:true,x:884,y:18,width:92,height:92}));
+        if(page==='games')options.push(...WELCOME_TRIALS.map(trial=>item('game:'+trial.id,trial.label,null,{selected:state.trials?.active===trial.id,text:true})));
+        if(page==='input')options.push(...['controllers','gloves','hands'].map((mode,i)=>item('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],['controller','hand','hand'][i],{selected:(state.trials?.active?stage.trials.mode:state.inputMode)===mode,text:true})));
+        if(page==='audio')options.push(item('pause',voice.paused?'Resume narration':'Pause narration',voice.paused?'play':'pause',{selected:voice.paused}),item('replay','Repeat narration','repeat'),item('mute',voice.muted?'Unmute voice':'Mute voice',voice.muted?'mute':'audio',{selected:voice.muted}),item('volume','Voice volume','audio',{kind:'slider',value:audio.volume,min:0,max:1,step:.05,text:true}));
+        if(page==='settings')options.push(item('graphics:auto','Automatic',null,{text:true,selected:visual.graphicsQuality==='auto'}),item('graphics:low','SD',null,{text:true,selected:visual.graphicsQuality==='low'}),item('graphics:high','HD',null,{text:true,selected:visual.graphicsQuality==='high'}),item('frame:lower','Lower Living Frame','down'),item('frame:higher','Raise Living Frame','up'),item('table:lower','Lower table','down'),item('table:higher','Raise table','up'));
+        if(page==='tutorial')options.push(item('reset','Reset objects','repeat'),item('skip','End tutorial',null,{text:true,primary:true}),item('next','Continue to demo',null,{text:true,disabled:state.phase!=='explore' || voice.playing || voice.paused}));
+        if(page==='paint-brush'){
+            const choices=[...Object.entries(MARKING_BRUSHES).map(([id,brush])=>item('brush:'+id,brush.label,id,{selected:drawing.brush===id})),item('paint-page:colour','Colours','colour'),item('paint-page:options','Brush settings','settings'),item('paint:undo','Undo stroke','undo',{disabled:!drawing.canUndo})];
+            choices.forEach((button,i)=>{const angle=-Math.PI/2+i*Math.PI/4;Object.assign(button,{radial:{x:735,y:355,inner:105,outer:245,start:angle-Math.PI/8,end:angle+Math.PI/8},x:735+175*Math.cos(angle)-50,y:355+175*Math.sin(angle)-50,width:100,height:100});});
+            options.push(...choices);
         }
-        items.push(button('skip','Skip tutorial',30,painting?414:584,460,{primary:true}),button('next','Continue',510,painting?414:584,460,{disabled:disabled || voice.playing || voice.paused || state.phase!=='explore'}));
-        for(const item of items)item.disabled ||= disabled;
-        const columns=4,rows=Math.ceil(items.length/columns),height=painting?560:700,cellHeight=(height-54)/Math.max(1,rows);
-        items.forEach((item,index)=>{item.x=20+(index%columns)*240;item.y=24+Math.floor(index/columns)*cellHeight;item.width=200;item.height=Math.max(72,cellHeight-8);item.description ||= item.ariaLabel || item.label;item.ariaLabel ||= item.label;});
-        return {painting,height,title:'Wrist controls',subtitle:'Raise your left wrist to reach controls.',expanded,items,onAction:act};
+        if(page==='paint-colour')options.push(...PAINT_V2_COLOURS.map((colour,i)=>item('paint:colour:'+i,['Mint','Rose','Gold','Blue','White','Charcoal','Coral','Lavender'][i],'colour',{color:colour,selected:drawing.colour===i})),item('paint-page:brush','Back to brushes','back'));
+        if(page==='paint-options')options.push(item('paint-width','Stroke width','brush',{kind:'slider',value:drawing.width || .005,min:.001,max:.02,step:.001,text:true}),item('paint:undo','Undo','undo',{disabled:!drawing.canUndo}),item('paint:redo','Redo','redo',{disabled:!drawing.canRedo}),item('paint:motion','Animate markings','motion',{selected:drawing.motion}),item('paint:clear','Clear drawing','clear'),item('paint-page:brush','Back to brushes','back'));
+        const grid=options.filter(button=>!button.header && !button.radial),columns=page==='settings' || page==='paint-colour'?3:2;
+        grid.forEach((button,i)=>{const cell=500/columns,row=page==='games'?128:page==='settings'?150:128;Object.assign(button,{x:480+i%columns*cell,y:128+Math.floor(i/columns)*row,width:cell-18,height:110});});
+        if(state.trials?.active && expanded && page!=='paint-brush')options.push(item('game-reset','Reset activity','repeat',{x:42,y:height-150,width:120,height:120}),item('game-close','Return to tutorial','back',{x:210,y:height-150,width:120,height:120}));
+        items.push(...options);for(const button of items)button.disabled=Boolean(button.disabled || state.exiting);
+        return {wrist:true,page,expanded,painting:page.startsWith('paint'),width,height,dockCenter,title:titles[page] || 'Wrist controls',subtitle:state.trials?.gameHint || '',items,onAction:act,onValue:setValue};
+    }
+    function setValue(id,value){
+        if(stage.snapshot().exiting || !Number.isFinite(value))return;
+        if(id==='volume')setWelcomeNarrationSettings({volume:Math.max(0,Math.min(1,value))});
+        if(id==='paint-width')paint()?.setWidth(Math.max(.001,Math.min(.02,value)));
+        onChange();
     }
     function act(id){
         if(stage.snapshot().exiting)return;
-        if(['pause','replay','mute','skip','next'].includes(id))stage.button(id);
+        if(id==='home')page='home';
+        else if(['games','input','audio','tutorial','adjust'].includes(id)){const next=id==='adjust'?'settings':id;page=page===next?'home':next;}
+        else if(id==='paint-tools'){if(stage.snapshot().phase!=='brush' && stage.trials.active!=='painting')stage.trials.open('painting');page=page.startsWith('paint')?'home':'paint-brush';}
+        else if(id.startsWith('paint-page:'))page='paint-'+id.slice(11);
+        else if(id.startsWith('game:')){stage.trials.open(id.slice(5));page='home';}
+        else if(id==='game-reset')stage.trials.command('reset');
+        else if(id==='game-close'){stage.trials.close();page='home';}
+        else if(['pause','replay','mute','skip','next'].includes(id))stage.button(id);
         else if(id==='reset')stage.resetObjects();
         else if(id.startsWith('input:'))stage.setInputMode(id.slice(6));
-        else if(id.startsWith('paint-page:'))paintPage=id.slice(11);
-        else if(id==='paint-tools')stage.trials.active==='painting'?stage.trials.close():stage.trials.open('painting');
-        else if(id.startsWith('brush:'))(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setBrush(id.slice(6));
-        else if(id.startsWith('paint:colour:'))(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setColour(Number(id.slice(13)));
-        else if(id==='paint:undo')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).undo();
-        else if(id==='paint:clear')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).clear();
-        else if(id==='paint:fine')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setWidth(.002);
-        else if(id==='paint:bold')(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setWidth(.01);
-        else if(id==='adjust')expanded=!expanded;
-        else if(['quieter','louder'].includes(id))setWelcomeNarrationSettings({volume:getWelcomeNarrationSettings().volume+(id==='quieter'?-.15:.15)});
+        else if(id.startsWith('brush:'))paint()?.setBrush(id.slice(6));
+        else if(id.startsWith('paint:colour:'))paint()?.setColour(Number(id.slice(13)));
+        else if(id==='paint:undo')paint()?.undo();
+        else if(id==='paint:redo')paint()?.redo();
+        else if(id==='paint:clear')paint()?.clear();
+        else if(id==='paint:motion')paint()?.setMotion(!paint().snapshot().motion);
         else if(id.startsWith('graphics:')){setSpatialVisualSettings({graphicsQuality:id.slice(9)});onVisualChange();}
-        else if(['frame:sd','frame:hd'].includes(id)){setSpatialVisualSettings({livingFrameQuality:id.slice(6)});onVisualChange();}
         else if(id.startsWith('frame:')){setSpatialVisualSettings({livingFrameHeight:getSpatialVisualSettings().livingFrameHeight+(id.endsWith('higher')?.05:-.05)});onVisualChange();}
         else if(id.startsWith('table:')){const value=setSpatialVisualSettings({practiceTableHeight:getSpatialVisualSettings().practiceTableHeight+(id.endsWith('higher')?.05:-.05)});stage.setTableHeightOffset(value.practiceTableHeight);}
         onChange();
     }
-    return {context,act};
+    return {context,act,setValue};
 }
-
 export function welcomePracticeVisualGuide(){return {image:'',caption:''};}

@@ -10,7 +10,9 @@ export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}
  function update(dt,phase,pilot){
   elapsed+=dt;const lesson=phase==='fly',available=['fly','hands','packet','seed','water','grow','harvest','explore'].includes(phase);dragon.group.visible=available;rings.visible=lesson && count<entries.length;
   const before=dragon.group.position.clone(),position=dragon.group.position;
-  if(pilot && !landed){
+  if(pilot?.position && !landed){
+   velocity.copy(pilot.position).sub(position).divideScalar(Math.max(.001,dt));position.copy(pilot.position);airborne=true;
+  }else if(pilot && !landed){
    const axes=pilot.source.gamepad?.axes || [],offset=axes.length>=4?2:0,dead=v=>Math.abs(v || 0)<.16?0:Math.sign(v)*(Math.abs(v)-.16)/.84;
    heading-=dead(axes[offset])*dt*1.65;const vertical=-dead(axes[offset+1]),speed=(pilot.trigger?1:0)-(pilot.reverse?1:0);
    desired.set(-Math.sin(heading)*speed*.65,vertical*.55,-Math.cos(heading)*speed*.65);

@@ -20,6 +20,7 @@ import { handTrackingState } from './xrPointer.js';
 import {fruitWindowSpecies,FRUIT_WINDOW_LIBRARY} from './fruitWindowInteraction.js';
 import { createHandPokeTracker,handIndexCanPoke } from './handPoke.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
+import {drawWelcomeWristMenu,drawWristIcon,wristButtonAt,welcomeWristPose} from './welcomeWristMenu.js';
 
 export const INFO_HELP = `Aim at an object to highlight it. Press a plant cell once to read or expand its information here. Select a Plant Orb to explore information connected to that plant.
 
@@ -459,7 +460,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const spatialHeight=()=>phoneAR?900:headset?700:620;
     const spatialControls=()=>comfortContext?controls():spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
     function act(action){
-        if(action.startsWith('Comfort:')){const item=controls().find(item=>item.action===action);if(!item || item.disabled)return;comfortContext?.onAction(action.slice(8));return;}
+        if(action.startsWith('Comfort:')){const item=controls().find(item=>item.action===action);if(!item || item.disabled)return;onInteract(action);comfortContext?.onAction(action.slice(8));return;}
         if(action==='LanguageMenu'){languageOpen=!languageOpen;graphicsOpen=false;soundOpen=false;render(true);return;}
         if(action.startsWith('Language:')){setNxrLanguage(action.slice(9));render(true);return;}
         if(action.startsWith('OpenSource:'))return;
@@ -564,6 +565,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         render();
     }
     function setSliderValue(action,value){
+        if(action.startsWith('Comfort:')){comfortContext?.onValue?.(action.slice(8),value);return;}
         if(action==='MusicVolume' || action==='FxVolume')demoSound?.setVolume(action==='MusicVolume'?'music':'fx',value);
         if(action==='NarrationVolume')setWelcomeNarrationSettings({volume:value});
         if(action==='InfoOpacity'){value=Math.round(value*20)/20;if(value===infoOpacity)return;infoOpacity=value;setSpatialVisualSettings({infoOpacity});element.style.setProperty('--nlxr-info-opacity',String(infoOpacity));settingsElement.style.setProperty('--nlxr-info-opacity',String(infoOpacity));onInfoOpacity(infoOpacity);}
@@ -1004,8 +1006,15 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             const brand=document.createElement('strong');brand.className='nlxr-panel-brand';brand.textContent=(comfortContext.title || 'Control panel').toUpperCase();header.append(brand);element.append(header);
             const content=document.createElement('section');content.style.cssText='grid-column:1 / -1;padding:20px;';
             const hint=document.createElement('p');hint.textContent=comfortContext.subtitle;content.append(hint);
-            const actions=document.createElement('nav');actions.setAttribute('aria-label',comfortContext.title || 'Control panel');actions.style.cssText='display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;grid-auto-rows:minmax(48px,auto);';
-            for(const item of controls()){const button=makeButton(item);button.style.cssText='border-radius:10px;min-height:48px;';if(item.ariaLabel)button.style.fontSize='28px';if(item.color)button.style.color=item.color;if(['Comfort:skip','Comfort:next'].includes(item.action)){button.style.gridColumn='span 2';button.style.gridRow=comfortContext.painting?'5':'auto';}if(item.selected!==undefined)button.setAttribute('aria-pressed',String(item.selected));actions.append(button);}content.append(actions);element.append(content);
+            const actions=document.createElement('nav');actions.setAttribute('aria-label',comfortContext.title || 'Wrist controls');actions.style.cssText='display:grid;grid-template-columns:repeat(3,minmax(56px,1fr));gap:10px;';
+            const detail=document.createElement('nav');detail.setAttribute('aria-label','Wrist tools');detail.style.cssText='display:grid;grid-template-columns:repeat(2,minmax(72px,1fr));gap:10px;';
+            for(const item of controls()){
+                let control;
+                if(item.kind==='slider'){control=document.createElement('label');control.textContent=item.label;const slider=document.createElement('input');slider.type='range';slider.min=item.min;slider.max=item.max;slider.step=item.step;slider.value=item.value;slider.setAttribute('aria-label',item.ariaLabel);slider.disabled=item.disabled;slider.addEventListener('input',()=>setSliderValue(item.action,Number(slider.value)));control.append(slider);}
+                else {control=makeButton(item);control.style.cssText='border-radius:10px;min-height:56px;';control.title=item.ariaLabel;if(!item.text){const icon=document.createElement('canvas');icon.width=icon.height=64;icon.style.cssText='width:32px;height:32px;';icon.setAttribute('aria-hidden','true');const context=icon.getContext('2d');context.fillStyle=item.color || '#d4e9dc';if(item.color)context.fillRect(12,12,40,40);else drawWristIcon(context,item.icon,32,32,42);control.replaceChildren(icon);}if(item.selected!==undefined)control.setAttribute('aria-pressed',String(item.selected));}
+                (item.dock?actions:detail).append(control);
+            }
+            content.append(actions);if(comfortContext.expanded)content.append(detail);element.append(content);
             if(showPlantPreview() && !mediaCollapsed)element.append(createMediaWing());
             element.classList.toggle('has-media',showPlantPreview() && !mediaCollapsed);
             if(focused)element.querySelector('[data-info-action="'+focused+'"]')?.focus({preventScroll:true});return;
@@ -1133,12 +1142,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         ctx.lineWidth=card.grabState==='held'?8:card.grabState?5:4;
         ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
-        if(card.comfort){
-            ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='rgba(17,35,32,.90)';ctx.beginPath();ctx.roundRect(48,12,904,c.height-24,100);ctx.fill();ctx.strokeStyle='rgba(126,215,192,.78)';ctx.lineWidth=8;ctx.stroke();
-            const glyph=button=>({'input:controllers':'⌖','input:gloves':'◉','input:hands':'✋',reset:'↺',skip:'↗',next:'✓','paint-tools':'✎',adjust:'⚙',quieter:'−',louder:'+','graphics:auto':'A','graphics:low':'SD','graphics:high':'HD','frame:lower':'↓','frame:higher':'↑','frame:sd':'S','frame:hd':'H','table:lower':'↓','table:higher':'↑','paint:undo':'↶','paint:clear':'⌫','paint:fine':'╱','paint:bold':'▰'}[button.action] || button.label || '•');
-            for(const button of card.controls){ctx.globalAlpha=button.disabled?.36:1;const aimed=card.hoverAction===button.action;ctx.fillStyle=button.selected?'rgba(114,190,164,.72)':aimed?'rgba(186,231,215,.38)':'rgba(218,237,224,.16)';ctx.strokeStyle=button.selected?'#e5ffe7':aimed?'#d8fff4':'rgba(217,236,226,.55)';ctx.lineWidth=button.selected?8:4;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,36);ctx.fill();ctx.stroke();if(button.color){ctx.fillStyle=button.color;ctx.fillRect(button.x+button.width/2-34,button.y+button.height/2-34,68,68);}else{ctx.fillStyle='#f2f7ed';ctx.font='700 86px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(glyph(button),button.x+button.width/2,button.y+button.height/2,button.width-20);}if(button.selected){ctx.font='700 28px system-ui';ctx.fillStyle='#f2f7ed';ctx.textAlign='center';ctx.fillText('✓',button.x+button.width-22,button.y+22);}}
-            ctx.globalAlpha=1;if(card.hoverHint){ctx.fillStyle='rgba(10,24,22,.92)';ctx.beginPath();ctx.roundRect(250,c.height-68,500,48,16);ctx.fill();ctx.fillStyle='#f2f7ed';ctx.font='600 26px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(card.hoverHint,500,c.height-44,460);}return c;
-        }
+        if(card.comfort){drawWelcomeWristMenu(ctx,card);return c;}
         if(card.explorer && card.limo){drawLimoSpatialControls(ctx,card);return c;}
         if(card.explorer){
             ctx.fillStyle='#edf3e4';ctx.font='700 30px Manrope, system-ui';ctx.fillText('Controls',24,12,180);ctx.font='500 20px Manrope, system-ui';ctx.fillStyle='#cfdfd9';ctx.fillText(card.linkedLabel || card.question,230,15,600);
@@ -1311,6 +1315,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(!target?.width || !target.height)return null;
         const x=(target.localX/target.width+.5)*1000,logicalHeight=target.card?.hidden?1000:target.card?.height || spatialHeight();
         const y=(.5-target.localY/target.height)*logicalHeight;
+        if(comfortContext && target.card?.id==='control')return wristButtonAt(controlsForTarget(target),x,y);
         return controlsForTarget(target).find(item=>x>=item.x && x<=item.x+item.width && y>=item.y && y<=item.y+item.height) || null;
     };
     function updateHandContacts(frame,time,blocked=false){
@@ -1411,7 +1416,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function settingsDockPose(){return spatialMediaDockPose(!mediaCollapsed && mediaDockSide==='left'?'top':'left');}
     function settingsNearDock(){const dock=settingsDockPose();return Boolean(dock && settingsPose && Math.hypot(settingsPose.center.x-dock.center.x,settingsPose.center.y-dock.center.y,settingsPose.center.z-dock.center.z)<.24);}
     function finishSettingsDock(){if(settingsNearDock()){settingsPose=null;settingsElement.classList.add('is-magnetized');}}
-    function spatialDimensions(){if(comfortContext){const mainWidth=.23*spatialScale;return {mainWidth,mainHeight:mainWidth*(comfortContext.height || 700)/1000,mediaWidth:.32*spatialScale};}return {mainWidth:(hidden ? .22 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .22 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
+    function spatialDimensions(){if(comfortContext){const mainWidth=comfortContext.width || .12;return {mainWidth,mainHeight:mainWidth*(comfortContext.height || 700)/1000,mediaWidth:.32*spatialScale};}return {mainWidth:(hidden ? .22 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .22 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
     function spatialMediaDockPose(side){
         if(!pose)return null;
         const {mainWidth,mainHeight,mediaWidth}=spatialDimensions(),mediaHeight=mainHeight,gap=.035;
@@ -1551,8 +1556,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 if(leftHand && handReferenceSpace){const state=handTrackingState(xrFrame,leftHand,handReferenceSpace),wristJoint=state?.rawJoints.get('wrist'),knuckle=state?.rawJoints.get('index-finger-metacarpal');wristMatrix=state?.tracked?wristJoint?.matrix:null;if(wristJoint && knuckle)forearmDirection=new THREE.Vector3(wristJoint.x-knuckle.x,wristJoint.y-knuckle.y,wristJoint.z-knuckle.z).normalize();}
                 if(!wristMatrix && leftController && handReferenceSpace){try{wristMatrix=xrFrame.getPose(leftController.gripSpace,handReferenceSpace)?.transform.matrix || null;}catch{wristMatrix=null;}}
                 if(!wristMatrix){pose=null;lastTime=time;return;}
-                const wrist=new THREE.Matrix4().fromArray(wristMatrix),rotation=new THREE.Quaternion().setFromRotationMatrix(wrist).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0))),right=new THREE.Vector3(1,0,0).applyQuaternion(rotation),up=new THREE.Vector3(0,1,0).applyQuaternion(rotation),normal=new THREE.Vector3(0,0,1).applyQuaternion(rotation),center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(forearmDirection || up,.035);
-                next={center:{x:center.x,y:center.y,z:center.z},right:{x:right.x,y:right.y,z:right.z},up:{x:up.x,y:up.y,z:up.z},normal:{x:normal.x,y:normal.y,z:normal.z},anchorHeading:{x:right.x,y:right.y,z:right.z},width:.22,height:.20};
+                next=welcomeWristPose(wristMatrix,comfortContext,forearmDirection);
             }
             if(!next)return;heading=next.anchorHeading;if(comfortContext && headset){pose=next;firstPlacement=false;spatialMove=null;spatialGrabPending=null;}
             const grab=sliderGrab || spatialMove || spatialGrabPending;
