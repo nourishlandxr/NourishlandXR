@@ -32,7 +32,7 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         if(!context)return null;
         if(!cache.has(id)){
             if(cache.size>=maxCached)cache.delete(cache.keys().next().value);
-            const request=new AbortController(),cancel=()=>request.abort(),timer=setTimeout(cancel,8000);abort.signal.addEventListener('abort',cancel,{once:true});
+            const request=new AbortController(),cancel=()=>request.abort(),timer=setTimeout(cancel,20000);abort.signal.addEventListener('abort',cancel,{once:true});
             cache.set(id,fetch(new URL(id+'.mp3',assetBase),{signal:request.signal,cache:fetchCache}).then(r=>{if(!r.ok)throw Error('Welcome audio unavailable');return r.arrayBuffer();}).then(bytes=>context?.decodeAudioData(bytes)).catch(()=>{cache.delete(id);return null;}).finally(()=>{clearTimeout(timer);abort.signal.removeEventListener('abort',cancel);}));
         }
         return cache.get(id);

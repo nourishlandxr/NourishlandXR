@@ -7,6 +7,26 @@ import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} fro
 import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
 import {createZinniaFramePerch,ZINNIA_FRAME_PERCH} from '../app/services/zinniaFramePerch.js';
 
+test('demo character resets a previous lesson clock and uploads facial morphs through the XR renderer',async()=>{
+    const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
+    const character=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await character.userData.zinnia.ready;
+    character.userData.zinnia.time=10000;character.userData.zinnia.paused=true;character.userData.zinnia.guide.holder.visible=false;
+    const oldDocument=globalThis.document,calls=[],attributes=['p','n','uv','c','i0','i1','i2','i3','ic'];globalThis.document={createElement:()=>({})};
+    const gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getExtension:()=>null,getParameter:()=>1024,getAttribLocation:(_p,name)=>attributes.indexOf(name),getUniformLocation:(_p,name)=>name},{get(target,key){if(key in target)return target[key];if(key===key.toUpperCase())return key;if(key.startsWith('create'))return ()=>({});return (...args)=>calls.push([key]);}});
+    const perch=createZinniaFramePerch({character,getVoice:()=>({status:()=>({playing:true,paused:false}),speechLevel:()=>.4})});
+    try{
+        assert.equal(character.userData.zinnia.time,null);assert.equal(character.userData.zinnia.guide.holder.visible,true);
+        perch.attach(gl);perch.show(0,{immediate:true});
+        const identity=new THREE.Matrix4().elements,pose=new THREE.Matrix4().makeTranslation(0,1.4,-2).elements,viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
+        const view={projectionMatrix:identity,transform:{matrix:viewer,inverse:{matrix:new THREE.Matrix4().fromArray(viewer).invert().elements}}};
+        for(let t=0;t<1000;t+=30){perch.draw(view,pose,t,[],viewer);perch.draw(view,pose,t,[],viewer);}
+        assert.ok(character.userData.zinnia.guide.snapshot().mouthOpen>.5);
+        assert.ok(character.userData.zinnia.guide.snapshot().visibleAge>.8);
+        assert.ok(calls.some(call=>call[0]==='bufferSubData'),'animated face reaches GPU buffers');
+        assert.ok(calls.some(call=>call[0]==='drawArrays'),'character is drawn in XR');
+    }finally{perch.destroy();globalThis.document=oldDocument;}
+});
+
 test('actual demo perch faces outward and follows its narration without a coordinator owner',async()=>{
     const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
     const character=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await character.userData.zinnia.ready;

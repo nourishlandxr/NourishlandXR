@@ -1603,7 +1603,6 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     const paragraphs = (quickAccessCopy ? [quickAccessCopy] : Array.isArray(body) ? body : [body])
         .flatMap(value=>String(value || '').split(/\n\n+/))
         .map(value => demoLocalizedText(String(value || '').trim()))
-        .flatMap(value=>{const parts=[];let part='';for(const word of value.split(/\s+/)){if(part && (part+' '+word).length>180){parts.push(part);part=word;}else part+=(part?' ':'')+word;}if(part)parts.push(part);return parts;})
         .filter(Boolean);
     const bodyText = paragraphs.join('\n\n');
     const useParagraphSequence=options.paragraphSequence==='single-centered';
@@ -1740,7 +1739,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     syncDemoPanelActions();
-    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs,voice:demoProjectVoice,spokenSummary:options.spokenSummary,readingTime:demoParagraphReadingTime,onChange:event=>{
+    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs,voice:demoProjectVoice,spokenSummary:options.spokenSummary || (quickAccessCopy?guidedDemoStep(options.stepLabel)?.main:undefined),readingTime:demoParagraphReadingTime,onChange:event=>{
         if(narrationRevision!==demoNarrationRevision)return;
         if(continueButton)continueButton.hidden=true;
         typing=true;
@@ -5068,8 +5067,8 @@ function setupRenderer() {
         onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;const target=nearestWelcomePointerHit(ray,welcomePracticeFrameHit(ray),welcomePractice?.stage.hit(ray));if(target?.kind==='voice-bar')return Boolean(zinniaVoiceBar?.select(ray));if(target?.kind!=='panel' || source?.hand && !directPanelPress(source,ray,target))return false;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray));},onHit:welcomePracticeFrameHit,
         onComplete:({aborted=false}={})=>{
             if(developerLab){queueMicrotask(activateDeveloperStation);return;}welcomePracticeVoice?.destroy();welcomePracticeVoice=null;if(infoPanel)infoPanel.welcomeComfortVisible=false;infoPanel?.suspend(true);infoPanel?.setComfortContext(null);infoPanel?.setOpacity(1);infoPanel?.setIntroduction(false);welcomeComfort=null;welcomePracticeCompleted=true;
-            zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({character:welcomePractice?.stage.takeZinniaCharacter(),getVoice:()=>demoProjectVoice});
-            zinniaFramePerch.attach(gl);if(!aborted)zinniaFramePerch.show();welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome({returning:!aborted});
+            zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({getVoice:()=>demoProjectVoice});
+            zinniaFramePerch.attach(gl);zinniaFramePerch.show();welcomePracticeOverlay?.remove();welcomePracticeOverlay=null;appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-welcome-practice');arWelcomeClock.tick(Date.now(),false);suppressSessionSelectUntil=performance.now()+700;introBoardTextureDirty=true;arWelcomeIntroPending=true;arWelcomeOpeningActive=false;showDemoCalmWelcome({returning:!aborted});
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy({stopVoice:false});welcomePractice=null;welcomePracticeDisposeTimer=null;},750);
         }
     });

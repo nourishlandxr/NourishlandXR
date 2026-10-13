@@ -19,3 +19,12 @@ test('tutorial, demo and live speech use the same refined OpenAI delivery',()=>{
 test('demo paragraphs preserve complete saved recordings rather than shortened live fragments',()=>{
  for(const clip of Object.values(demo.catalog))assert.equal(spokenFrameLead(clip.text),clip.text);
 });
+
+test('demo presentation retains recording boundaries and independent animation ownership',()=>{
+ const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+ const board=source.slice(source.indexOf('function showIntroBoard('),source.indexOf('function syncDemoStageControls('));
+ assert.doesNotMatch(board,/length>180/);
+ assert.match(board,/quickAccessCopy\?guidedDemoStep\(options.stepLabel\)\?\.main/);
+ assert.doesNotMatch(source,/createZinniaFramePerch\(\{character:welcomePractice/);
+ assert.match(source,/zinniaFramePerch\.attach\(gl\);zinniaFramePerch\.show\(\)/);
+});
