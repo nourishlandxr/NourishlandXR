@@ -16,5 +16,12 @@ export function createWelcomePracticeTable(root){
  const foot=new THREE.Mesh(new THREE.CylinderGeometry(.22,.25,.03,32),material);group.add(foot);
  const landing=new THREE.Mesh(new THREE.TorusGeometry(.11,.003,6,40),new THREE.MeshBasicMaterial({color:'#9caa83',transparent:true,opacity:.35,depthWrite:false}));landing.rotation.x=Math.PI/2;landing.position.set(-.43,.005,-.20);group.add(landing);
  const revealMaterials=[top.material,material];
- return {group,stand,foot,landing,revealMaterials};
+ function setHeight(height){
+  // Keep the whole pedestal beneath the underside, including during reveal.
+  const underside=-.038,footTop=-height+.030;
+  stand.scale.y=Math.max(.05,underside-footTop);stand.position.y=(underside+footTop)/2;
+  foot.position.y=-height+.015;
+ }
+ setHeight(.8);
+ return {group,stand,foot,landing,revealMaterials,setHeight};
 }

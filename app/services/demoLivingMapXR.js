@@ -127,13 +127,14 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         }
         const transparent=material.transparent || opacity<.999;
         if(transparent){gl.enable(gl.BLEND);if(alphaCompositing)gl.blendFuncSeparate(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA,gl.ONE,gl.ONE_MINUS_SRC_ALPHA);else gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);}else gl.disable(gl.BLEND);
-        gl.depthMask(detailed ? material.depthWrite!==false && (!material.transparent || material.userData?.occludesInsects===true) : !transparent);gl.disable(gl.CULL_FACE);
+        gl.depthMask(detailed ? material.depthWrite!==false && (!material.transparent || material.userData?.occludesInsects===true) : !transparent);if(material.userData?.frontFaceOnly){gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);}else gl.disable(gl.CULL_FACE);
         const start=batch?0:node.geometry.drawRange.start,count=batch?node.count*batch.verticesPerInstance:Math.min(entry.count-start,node.geometry.drawRange.count);
         if(count>0){if(gpu)instancing.draw(gl.TRIANGLES,start,count,node.count);else gl.drawArrays(node.isLineSegments?gl.LINES:node.isLine?gl.LINE_STRIP:gl.TRIANGLES,start,count);}
         if(gpu){for(const attribute of matrixAttributes){instancing.divisor(attribute,0);gl.disableVertexAttribArray(attribute);}instancing.divisor(instanceColourAttribute,0);gl.disableVertexAttribArray(instanceColourAttribute);instancing.divisor(attributes[3],0);}
     }
     return {
         get stats(){const visible=renderNodes.filter(node=>{for(let parent=node;parent;parent=parent.parent)if(!parent.visible)return false;return true;});return {drawCalls:visible.length,triangles:visible.reduce((sum,node)=>sum+(node.geometry.index?.count||node.geometry.attributes.position.count)/3*(node.isInstancedMesh?node.count:1),0)};},
+        get ready(){return prepareIndex>=renderNodes.length;},
         prepareNext(){
             // One mesh per frame during the reading interval, including meshes
             // that appear only after placement. Both eyes share these buffers.

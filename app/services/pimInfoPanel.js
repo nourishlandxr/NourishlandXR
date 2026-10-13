@@ -1438,7 +1438,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         return candidates[0] || null;
     }
     function dockSpatialMedia(side){mediaDockSide=side || 'top';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
-    const api={element,get spatialPose(){return pose?{...pose,width:spatialDimensions().mainWidth,height:spatialDimensions().mainHeight}:null;},
+    const api={element,get presentationReady(){const image=previewMedia()?.image;return (!fruitVisible || Boolean(fruitWindow?.performanceSnapshot().ready)) && (!image || mediaCollapsed || Boolean(mediaImage && mediaImageSource===image));},get spatialPose(){return pose?{...pose,width:spatialDimensions().mainWidth,height:spatialDimensions().mainHeight}:null;},
         setComfortContext(value){if(Boolean(comfortContext)!==Boolean(value)){previewHint='';hoveredAction='';hoveredDescription='';hoveredPanelId='';}comfortContext=value;element.hidden=Boolean(value && headset);hidden=false;settingsOpen=viewOpen=guidesOpen=false;explorerClosed=true;railCollapsed=false;spatialMove=null;spatialGrabPending=null;mediaDockSide=value?'right':'top';element.classList.remove('is-opening-compact');if(value){settingsElement.hidden=explorerElement.hidden=viewElement.hidden=guidesElement.hidden=true;}render(true);},
         setOpacity(value=1){panelOpacity=Math.max(0,Math.min(1,value));element.style.opacity=String(panelOpacity);},
         setRayFilter(value){rayFilter=typeof value==='function'?value:()=>true;},

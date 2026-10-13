@@ -77,13 +77,13 @@ test('voice retries capability discovery after a temporary disconnect',async()=>
     try{await voice.listen();await voice.listen();assert.equal(calls,2);}finally{voice.destroy();globalThis.fetch=oldFetch;globalThis.SpeechRecognition=oldRecognition;globalThis.webkitSpeechRecognition=oldWebkit;}
 });
 
-test('hand palm stays in controller grip space as the index finger lifts',()=>{
+test('hand palm follows a mirrored holding offset while the index finger lifts',()=>{
     for(const side of ['left','right']){
         const rig=rigFor(side),controller=new THREE.Matrix4().makeRotationY(.9);controller.setPosition(.4,1.4,-.3);
         const base=controllerHandGripMatrix(rig,controller.elements),palm=new THREE.Vector3();
         for(const finger of ['index','middle','ring','pinky'])for(const joint of ['metacarpal','phalanx-proximal'])palm.add(position(rig.bind,rig,finger+'-finger-'+joint));
         palm.multiplyScalar(1/8).applyMatrix4(base);
-        assert.ok(palm.distanceTo(new THREE.Vector3().setFromMatrixPosition(controller))<1e-7);
+        assert.ok(palm.distanceTo(new THREE.Vector3(side==='left'?-.025:.025,-.012,.035).applyMatrix4(controller))<1e-7);
         const raised=controllerHandJointPoses(rig,input(0,1)),closed=controllerHandJointPoses(rig,input(1,1));
         assert.ok(position(raised,rig,'wrist').distanceTo(position(closed,rig,'wrist'))<1e-8);
     }

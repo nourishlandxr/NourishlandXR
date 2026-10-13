@@ -23,3 +23,11 @@ test('an unavailable audio device leaves the Frame readable and able to continue
     const flow=createDemoVoiceTextFlow({paragraphs:['A readable explanation.'],voice,readingTime:()=>1000,setTimer:callback=>{timeout=callback;return 1;},clearTimer(){},onComplete:()=>completed++});
     try{flow.start();assert.equal(flow.snapshot().paragraph,'A readable explanation.');assert.equal(completed,0);timeout();assert.equal(completed,1);}finally{flow.cancel();voice.destroy();globalThis.document=previous;globalThis.AudioContext=previousContext;}
 });
+
+test('demo audio and reading time wait for visual readiness, and cancelling removes the wait',()=>{
+    let time=0,ready=false,id=0,completed=0,played=0;const timers=new Map(),changes=[];
+    const create=()=>createDemoVoiceTextFlow({paragraphs:['Look at this loaded object.'],voice:{speak(_text,options){played++;options.onComplete();}},isReady:()=>ready,readingTime:()=>500,now:()=>time,setTimer:(f,delay)=>{timers.set(++id,{f,at:time+delay});return id;},clearTimer:id=>timers.delete(id),onChange:event=>changes.push(event),onComplete:()=>completed++});
+    const tick=ms=>{time+=ms;for(const [key,timer]of [...timers])if(timer.at<=time){timers.delete(key);timer.f();}};
+    const first=create();first.start();tick(10000);assert.equal(played,0);assert.equal(changes.length,0);assert.equal(completed,0);first.cancel();ready=true;tick(1000);assert.equal(played,0);assert.equal(timers.size,0);
+    const second=create();ready=false;second.start();tick(10000);assert.equal(played,0);ready=true;tick(100);assert.equal(played,1);assert.equal(completed,0);tick(500);assert.equal(completed,1);second.cancel();
+});

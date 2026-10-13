@@ -35,7 +35,7 @@ export function createXRHandOutline(gl){
         const names=skin.joints.map(id=>gltf.json.nodes[id].name),wristIndex=names.indexOf('wrist'),parents=controllerHandParents(names);
         const wrist=new THREE.Vector3().setFromMatrixPosition(bind[wristIndex]),tip=new THREE.Vector3().setFromMatrixPosition(bind[names.indexOf('middle-finger-tip')]),axis=tip.clone().sub(wrist),length=axis.length();axis.normalize();const magicPlane=[axis.x/length,axis.y/length,axis.z/length,-wrist.dot(axis)/length];
         const flexAxes=controllerHandFlexAxes(names,parents,bind,wristIndex,side);
-        rigs.set(side,{geometry,index:buffer(gl.ELEMENT_ARRAY_BUFFER,indices),count:indices.length,type:indices.BYTES_PER_ELEMENT===4?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,names,wristIndex,parents,flexAxes,magicPlane,inverse:Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16)),bind,matrices:new Float32Array(25*16),matrix:new THREE.Matrix4(),sample:null});
+        rigs.set(side,{side,geometry,index:buffer(gl.ELEMENT_ARRAY_BUFFER,indices),count:indices.length,type:indices.BYTES_PER_ELEMENT===4?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,names,wristIndex,parents,flexAxes,magicPlane,inverse:Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16)),bind,matrices:new Float32Array(25*16),matrix:new THREE.Matrix4(),sample:null});
     }).catch(error=>{if(!disposed)console.warn('Hand outline:',error.message);});
     return {
         get ready(){return rigs.has('left') && rigs.has('right');},

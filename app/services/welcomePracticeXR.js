@@ -10,7 +10,7 @@ import {createWelcomeInputRouting} from './welcomeInputRouting.js';
 import {nearestWelcomePointerHit} from './welcomePointerTarget.js';
 
 export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onToolMenu=()=>{},onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null,getFramePose=()=>null}={}){
-    let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false,nativeHandsReady=false;
+    let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false,nativeHandsReady=false,rendererRevision=-1,pendingRevision=-1;
     const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
     const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onToolMenu,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose});
     const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:ray=>{
@@ -53,9 +53,9 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 inputs.push({source,matrix:new THREE.Matrix4().compose(gripPoint,q,new THREE.Vector3(1,1,1)).elements,ray:state.pointer,tip:index,fist,down:Boolean(state.pinch || fist),trigger:Boolean(state.pinch),uiBlocked});
             }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0),uiBlocked};inputs.push(input);if(input.matrix)controllers.push(input);}
         }
-        stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError(),handsReady:nativeHandsReady});revealTime+=Math.max(0,Math.min(.1,dt));
-        if(!pendingRenderer && (!renderer || rebuild)){rebuild=false;pendingRenderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,progressive:true,welcomeMagic:true,visibleParentsOnly:true});}
-        if(pendingRenderer){const ready=pendingRenderer.prepareNext();if(ready){pendingRenderer.update();renderer?.destroy();renderer=pendingRenderer;pendingRenderer=null;}}
+        stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError(),handsReady:nativeHandsReady,presentationReady:Boolean(renderer && !pendingRenderer && !rebuild),renderRevision:rendererRevision});revealTime+=Math.max(0,Math.min(.1,dt));
+        if(!pendingRenderer && (!renderer || rebuild)){rebuild=false;pendingRevision=stage.snapshot().sceneRevision;pendingRenderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,progressive:true,welcomeMagic:true,visibleParentsOnly:true});}
+        if(pendingRenderer){const ready=pendingRenderer.prepareNext();if(ready){pendingRenderer.update();renderer?.destroy();renderer=pendingRenderer;rendererRevision=pendingRevision;pendingRenderer=null;}}
         // Keep controller poses available while the visitor puts them down.
         // Tracked hands becoming available never turns off controller access.
         renderer?.update();renderer?.prepareNext();

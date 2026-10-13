@@ -14,7 +14,7 @@ import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.j
 
 test('arrival reveals the table and Zinnia before controllers, then laser, settings, virtual hands and fruit',()=>{
     const before=(a,b)=>assert.ok(lessons.findIndex(l=>l.id===a)<lessons.findIndex(l=>l.id===b),`${a} precedes ${b}`);
-    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','conversation-bridge');before('conversation-bridge','controls-trigger');before('zinnia','controls-grip');before('controls-face-second','laser-intro');before('laser-zinnia','settings-open');before('settings-close','interaction-methods');before('interaction-methods','virtual-hands-reveal');before('virtual-hands-reveal','gloves');before('gloves','basket-reveal');before('grab','brush');before('brush','fruit');
+    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','conversation-bridge');before('conversation-bridge','controls-trigger');before('zinnia','controls-grip');before('controls-face-second','laser-intro');before('settings-close','laser-intro');before('laser-zinnia','comfort');before('settings-close','interaction-methods');before('interaction-methods','virtual-hands-reveal');before('virtual-hands-reveal','gloves');before('gloves','basket-reveal');before('grab','brush');before('brush','fruit');
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
     for(const clip of [...lessons,...responses].filter(c=>c.spoken && !c.liveVoice))assert.ok(fs.statSync(new URL('../app/'+(WELCOME_NARRATION_BANK?.base || 'assets/welcome-practice/voice/')+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);

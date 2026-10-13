@@ -8,7 +8,7 @@ test('subtitles wait for playback and use the pauseable audio clock',()=>{
 });
 test('table is reachable in front of the visitor, separated from the frame',()=>{
  const viewer=[1,0,0,0,0,1,0,0,0,0,1,0,2,1.6,3,1],frame={center:{x:2,y:1.6,z:1}};
- const pose=welcomePracticeTablePose(viewer,frame,.8);assert.equal(pose.x,2);assert.equal(pose.y,.8);assert.ok(Math.abs(pose.z-2.35)<1e-8);
+ const pose=welcomePracticeTablePose(viewer,frame,.8);assert.equal(pose.x,2);assert.equal(pose.y,.8);assert.ok(Math.abs(pose.z-2.15)<1e-8);
 });
 
 

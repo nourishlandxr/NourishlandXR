@@ -1,3 +1,4 @@
+import {spokenPlantQuery,spokenNoteDraft,conversationConfirmation,conversationSkip} from './zinniaConversationInput.js';
 import {searchINaturalistPlants} from './inaturalistPlantSearch.js';
 import {resolvePlantPim} from './pimLegacyAdapter.js';
 import {pimToArKnowledge} from './pimModel.js';
@@ -10,9 +11,7 @@ const plantLabel=value=>clean(value).replace(/[<>"\u0000-\u001f]/g,'');
 const safeUrl=value=>{try{const url=new URL(value);return url.protocol==='https:'?url.href:'';}catch{return '';}};
 export const ZINNIA_PLANT_COPY='Name a plant to create a custom Orb, or choose the Moringa sample. Zinnia listens after her prompt when your microphone is ready.';
 
-function plantQuery(value){
-    return clean(value).replace(/^\s*(?:hey\s+)?zinnia[,:]?\s*/i,'').replace(/^(?:please\s+)?(?:find|show|load|search for|tell me about)\s+(?:me\s+)?(?:a |an |the )?/i,'').replace(/[.!?]+$/,'').slice(0,120);
-}
+const plantQuery=spokenPlantQuery;
 
 async function summaryFor(taxon,signal){
     const page=safeUrl(clean(taxon.rawSourceData?.wikipedia_url).replace(/^http:\/\/en\.wikipedia\.org\//,'https://en.wikipedia.org/'));
@@ -157,19 +156,22 @@ export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpe
     function chooseColor(color){if(mode!=='note' || !['color','confirm-color'].includes(state.phase) || !ZINNIA_NOTE_COLORS[color])return;emit({phase:'confirm-color',color});say('Save your Note in '+color+'? Say yes, or choose another colour.');}
     async function receive(value){
         const text=clean(value).slice(0,2000),lower=text.toLowerCase().replace(/[.!?]+$/,'').trim();
-        if(/^(cancel|stop|never mind)$/.test(lower)){generation++;controller?.abort();voice.cancel();emit({phase:'cancelled',message:'Cancelled. Nothing was saved.'});onCancel();return;}
+        if(conversationSkip(text)){generation++;controller?.abort();voice.cancel();emit({phase:'cancelled',message:'Cancelled. Nothing was saved.'});onCancel();return;}
         if(['loading','searching','ready'].includes(state.phase))return;
         emit({voiceMessage:'',heard:text,listening:false});
         if(mode==='note'){
-            if(state.phase==='idle'){draft=text;emit({phase:'confirm-note',query:text});say('I heard: '+text+'. Is that correct? Say yes to keep it, or no to record it again.');return;}
-            if(/^yes\b|^correct$|^save\b|^confirm$/.test(lower)){void confirm();return;}
-            if(/^no\b|^retry$|^again$/.test(lower)){if(state.phase==='confirm-color'){emit({phase:'color'});say('Choose green, blue, amber, or rose.');}else{emit({phase:'idle',query:''});say('Let’s try again. What should your Note say?');}return;}
-            const color=Object.keys(ZINNIA_NOTE_COLORS).find(name=>new RegExp('\\b'+name+'\\b').test(lower));if(color){chooseColor(color);return;}
-            say('Tap Speak, then say yes, no, or your chosen colour.');return;
+            if(state.phase==='idle'){draft=spokenNoteDraft(text);if(!draft){say('What would you like written in the Note?');return;}emit({phase:'confirm-note',query:draft});say('I heard: '+draft+'. Is that correct? Say yes to keep it, or no to record it again.');return;}
+            if(state.phase==='confirm-note' && /^(?:actually|change|replace|instead|no[, ]+write|it should say)/i.test(text)){draft=spokenNoteDraft(text.replace(/^(?:actually[, ]+|instead[, ]+|no[, ]+|(?:change|replace) (?:it|that|the note) (?:to|with)\s+|it should say\s+)/i,''));emit({query:draft});say('Let’s use: '+draft+'. Shall I save those words?');return;}
+            if(['color','confirm-color'].includes(state.phase)){const color=Object.keys(ZINNIA_NOTE_COLORS).find(name=>new RegExp('\\b'+name+'\\b').test(lower));if(color){chooseColor(color);return;}}
+            if(conversationConfirmation(text)===true){void confirm();return;}
+            if(conversationConfirmation(text)===false || /^(retry|again)$/.test(lower)){if(state.phase==='confirm-color'){emit({phase:'color'});say('Choose green, blue, amber, or rose.');}else{emit({phase:'idle',query:''});say('Let’s try again. What should your Note say?');}return;}
+
+            say('Would you like to keep those words, change the Note, or choose a colour?');return;
+
         }
         if(state.phase==='confirm'){
-            if(/^yes\b|^confirm$|^create\b/.test(lower)){void confirm();return;}
-            if(/^no\b|^back$/.test(lower)){showResults();return;}
+            if(conversationConfirmation(text)===true || /^create\b/.test(lower)){void confirm();return;}
+            if(conversationConfirmation(text)===false || /^back$/.test(lower)){showResults();return;}
         }
         if(state.phase==='results'){
             if(/more|other choices|next/.test(lower)){page=(page+1)%Math.ceil(catalogue.length/3);showResults();return;}

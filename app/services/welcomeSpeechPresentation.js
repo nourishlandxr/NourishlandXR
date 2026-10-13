@@ -25,5 +25,9 @@ export function welcomePracticeTablePose(viewer,frame,height){
     let x=frame?.center.x-viewer[12],z=frame?.center.z-viewer[14];
     if(!Number.isFinite(x) || !Number.isFinite(z) || Math.hypot(x,z)<.1){x=-viewer[8];z=-viewer[10];}
     const length=Math.hypot(x,z) || 1;x/=length;z/=length;
-    return {x:viewer[12]+x*.65,y:height,z:viewer[14]+z*.65,yaw:Math.atan2(-x,-z)};
+    // A little more space from the visitor's body, while keeping the near edge
+    // reachable. Leave clearance behind the tabletop when a frame is nearby.
+    const frameDistance=frame?Math.hypot(frame.center.x-viewer[12],frame.center.z-viewer[14]):Infinity;
+    const distance=Math.max(.65,Math.min(.85,frameDistance-.85));
+    return {x:viewer[12]+x*distance,y:height,z:viewer[14]+z*distance,yaw:Math.atan2(-x,-z)};
 }

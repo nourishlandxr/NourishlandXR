@@ -12,7 +12,7 @@ test('Continue stays hidden through narration and the final reading time, then a
  const button={hidden:false,disabled:true},timers=[];let advanced=0;
  const noop=()=>{},scope=vm.createContext({
   appRoot:{querySelector:selector=>selector==='[data-tryit-intro-continue]'?button:null},
-  createDemoVoiceTextFlow:options=>createDemoVoiceTextFlow({...options,setTimer:callback=>{timers.push(callback);return timers.length;},clearTimer:noop}),demoZinniaCue:()=>null,demoProjectVoice:null,ambientBeeScreens:new Set(),ambientBeeCount:1,BEE_COUNT:4,
+  createDemoVoiceTextFlow:options=>createDemoVoiceTextFlow({...options,setTimer:callback=>{timers.push(callback);return timers.length;},clearTimer:noop}),demoZinniaCue:()=>null,demoNarrationPresentationReady:()=>true,demoProjectVoice:null,ambientBeeScreens:new Set(),ambientBeeCount:1,BEE_COUNT:4,
   boardTypingTimer:null,boardTypingWatchdogTimer:null,demoSlideHistoryReplay:true,clearDemoNarration:noop,demoNarrationRevision:1,infoPanel:null,
   guidedDemoStep:()=>null,DEMO_TUTORIAL_STEPS:{GUIDED:'guided',PIM:'pim'},demoLivingMapScene:null,clearDemoZinniaDiscovery:noop,
   useSharedWelcomeBoard:noop,setDemoTutorialStep:noop,demoLocalizedText:value=>value,DEMO_QUICK_ACCESS_COPY:{},

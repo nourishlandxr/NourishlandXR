@@ -24,6 +24,9 @@ test('demo character resets a previous lesson clock and uploads facial morphs th
         assert.ok(character.userData.zinnia.guide.snapshot().visibleAge>.8);
         assert.ok(calls.some(call=>call[0]==='bufferSubData'),'animated face reaches GPU buffers');
         assert.ok(calls.some(call=>call[0]==='drawArrays'),'character is drawn in XR');
+        const ray={origin:{x:ZINNIA_FRAME_PERCH.x,y:1.4+ZINNIA_FRAME_PERCH.y+.15,z:0},direction:{x:0,y:0,z:-1}};assert.equal(perch.hit(ray,pose)?.kind,'zinnia');
+        const moved=new THREE.Matrix4().makeTranslation(.5,1.4,-2).elements;let boundsPasses=0;const update=perch.characterMount.updateWorldMatrix.bind(perch.characterMount);perch.characterMount.updateWorldMatrix=(...args)=>{boundsPasses++;return update(...args);};
+        assert.equal(perch.hit({...ray,origin:{...ray.origin,x:ray.origin.x+.5}},moved)?.kind,'zinnia');assert.equal(boundsPasses,0,'following frame motion reuses the local collider');
     }finally{perch.destroy();globalThis.document=oldDocument;}
 });
 
@@ -90,4 +93,17 @@ test('actual Zinnia opens focused eyes and speech morphs open across the face ra
         tick({speechLevel:0});assert.ok(mouth.morphTargetInfluences[map.Open]<.0001);assert.ok(mouth.morphTargetInfluences[map.Round]<.0001);assert.equal(mouth.morphTargetInfluences[map.Wide],0);assert.equal(mouth.morphTargetInfluences[map.Narrow],0);
         let sawBlink=false;for(let i=0;i<180;i++){time+=.03;animateZinniaCharacter(root,time,false,{focused:true,speechLevel:0});sawBlink ||= eye.morphTargetInfluences[eye.morphTargetDictionary.Blink]>.8;}assert.equal(sawBlink,true);
     }finally{disposeZinniaCharacter(root);}
+});
+
+
+test('bundled Zinnia batches every petal and separates the saucer while keeping elastic gaze',async()=>{
+ const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
+ const root=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await root.userData.zinnia.ready;
+ try{let meshes=0,morphs=0,unbatched=0;root.traverse(n=>{if(n.isMesh){meshes++;if(n.morphTargetInfluences?.length)morphs++;if(/(?:^|_)petal_\d/i.test(n.name))unbatched++;}});assert.equal(meshes,31);assert.equal(morphs,5);assert.equal(unbatched,0);assert.equal(root.userData.zinnia.guide.snapshot().petalBatches,5);
+ root.updateMatrixWorld(true);const pot=new THREE.Box3().setFromObject(root.getObjectByName('Pot')),dish=new THREE.Box3().setFromObject(root.getObjectByName('Saucer'));assert.ok(dish.max.y<pot.min.y,'saucer no longer intersects the pot');
+ let boundsCalls=0;const update=root.updateWorldMatrix.bind(root);root.updateWorldMatrix=(...args)=>{boundsCalls++;return update(...args);};
+ // An idle controller pointer must not traverse the animated mesh hierarchy.
+ const {zinniaContacts}=await import('../app/services/zinniaTouchReactions.js');assert.deepEqual(zinniaContacts(root,[{source:{},trigger:false,down:false}]),[]);assert.equal(boundsCalls,0);
+ const targetWorld=new THREE.Vector3(.7,.4,.3);for(let i=0;i<90;i++)animateZinniaCharacter(root,i*.03,false,{targetWorld});const state=root.userData.zinnia.guide.snapshot();assert.ok(Math.abs(state.bodyYaw)>.03);assert.ok(Math.abs(state.bodyLean)>.02);
+ }finally{disposeZinniaCharacter(root);}
 });

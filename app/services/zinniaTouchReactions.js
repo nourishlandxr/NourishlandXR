@@ -27,6 +27,7 @@ export function createZinniaTouchReactions(){
 }
 
 export function zinniaContacts(root,inputs=[],{includeHover=false}={}){
+    inputs=inputs.filter(input=>input.tip || includeHover || input.trigger || input.down);
     if(!inputs.length)return [];
     if(!root.userData.zinnia || root.userData.zinnia.status!=='ready')return [];
     for(let node=root;node;node=node.parent)if(!node.visible)return [];

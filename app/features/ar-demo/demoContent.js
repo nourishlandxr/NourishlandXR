@@ -26,7 +26,7 @@ export const DEMO_PANEL_HINTS = Object.freeze([
 ]);
 
 export const WELCOME_BOARD_PARAGRAPHS = Object.freeze([
-    'Welcome to the NourishlandXR demo',
+    'Welcome. Take a moment to look around.',
     'Attach information to objects and locations, then open it where it belongs.'
 ]);
 

@@ -1536,7 +1536,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
             options.onTextComplete?.();
         }
     };
-    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[fullText],voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:()=>{if(narrationRevision!==demoNarrationRevision)return;if(paragraph)paragraph.textContent=fullText;introBoardVisibleBody=fullText;introBoardTextureDirty=true;},onComplete:finishTyping});
+    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[fullText],isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:()=>{if(narrationRevision!==demoNarrationRevision)return;if(paragraph)paragraph.textContent=fullText;introBoardVisibleBody=fullText;introBoardTextureDirty=true;},onComplete:finishTyping});
     skipDemoNarration=()=>demoParagraphSequence?.finish();
     demoParagraphSequence.start();
     if(options.persistent || demoFastSkipActive)finishTyping();
@@ -1564,9 +1564,23 @@ function demoZinniaCue(text){
     const intent=/\b(well done|all fruit gathered|you did it)\b/i.test(text)?'celebrate':/\b(hello|welcome|hi there)\b/i.test(text)?'greet':'explain';
     return {targetWorld,intent};
 }
+// Audio and paragraph progression start only after their visible presentation.
+// Reset/cancel of the flow also cancels its readiness polling on Back/Next.
+let demoPresentationPaintedAt=-Infinity;
+function demoNarrationPresentationReady(text,requestedAt){
+    if(!gl || simulatedMode)return true;
+    if(session?.visibilityState==='hidden')return false;
+    if(!introBoardVisible)return true;
+    if(demoPresentationPaintedAt<requestedAt)return false;
+    if(zinniaFramePerch && !zinniaFramePerch.presentationReady)return false;
+    if(getSpatialVisualSettings().livingFrame!==false && getSpatialVisualSettings().livingFrameQuality!=='off' && !livingFrameModel?.entranceReady)return false;
+    if(introBoardStep==='UTILITY 1.1' && demoLivingMapScene && !demoLivingMapXR?.ready)return false;
+    if(/photograph|reference photo|image panel|fruit discovery window|fruit window/i.test(text) && infoPanel?.presentationReady===false)return false;
+    return true;
+}
 function narrateDemoFrame(text){
     demoParagraphSequence?.cancel();
-    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[String(text || '')],voice:demoProjectVoice});
+    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[String(text || '')],isReady:demoNarrationPresentationReady,voice:demoProjectVoice});
     demoParagraphSequence.start();
 }
 function clearDemoNarration({preserveAction=false}={}) {
@@ -1746,7 +1760,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     syncDemoPanelActions();
-    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs,voice:demoProjectVoice,spokenSummary:options.spokenSummary || (quickAccessCopy?guidedDemoStep(options.stepLabel)?.main:undefined),readingTime:demoParagraphReadingTime,onChange:event=>{
+    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,spokenSummary:options.spokenSummary || (quickAccessCopy?guidedDemoStep(options.stepLabel)?.main:undefined),readingTime:demoParagraphReadingTime,onChange:event=>{
         if(narrationRevision!==demoNarrationRevision)return;
         if(continueButton)continueButton.hidden=true;
         typing=true;
@@ -2397,13 +2411,13 @@ function showArWelcomeShowcase() {
         syncDemoPanelActions();
         panel.classList.add('is-typing');paintOpeningCopy('');
         if(demoFastSkipActive)finishOpeningCopy();
-        else{demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{openingTyping=true;openingParagraphIndex=event.index+1;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:finishOpeningCopy});demoParagraphSequence.start();}
+        else{demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{openingTyping=true;openingParagraphIndex=event.index+1;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:finishOpeningCopy});demoParagraphSequence.start();}
     };
     rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitingButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(waitingButton){waitingButton.hidden=true;waitingButton.disabled=false;waitingButton.textContent='Continue';waitingButton.onclick=()=>{if(waitingButton.hidden)return;suppressSessionSelectUntil=performance.now()+700;clearDemoNarration();beginOpeningCopy();};}syncDemoPanelActions();
     const waitForOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
-        if(arWelcomeClock.elapsed>=DEMO_WELCOME_TITLE_HOLD_MS && !demoParagraphSequence){demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{introOpeningCopySkipped=false;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,event.index+1).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:()=>{introBoardTextureDirty=true;const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.onclick=beginOpeningCopy;}syncDemoPanelActions();}});demoParagraphSequence.start();}
+        if(arWelcomeClock.elapsed>=DEMO_WELCOME_TITLE_HOLD_MS && !demoParagraphSequence){demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{introOpeningCopySkipped=false;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,event.index+1).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:()=>{introBoardTextureDirty=true;const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.onclick=beginOpeningCopy;}syncDemoPanelActions();}});demoParagraphSequence.start();}
         if(demoParagraphSequence?.snapshot().completed){
             introBoardVisibleBody=introBoardBody;introBoardTextureDirty=true;
             const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;
@@ -5506,7 +5520,8 @@ function introVisibleCopy(){
 function drawIntroNoteContent(ctx) {
     if(welcomePractice?.active){
         const state=welcomePractice.stage.snapshot();if(state.phase==='frame' && !state.comfortVisible)return;ctx.save();ctx.globalAlpha=state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.fillStyle='#f8efdc';ctx.font=`500 27px ${DEMO_PRESENTATION_FONT}`;if(state.phase!=='title')ctx.fillText('NOURISHLAND XR',700,285,880);
+        // The lesson title carries the introduction; avoid repeating the brand above it.
+        if(state.activityFocus){ctx.fillStyle='#fffaf0';ctx.font=`500 39px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,830);lines.forEach((line,i)=>ctx.fillText(line,700,530+(i-(lines.length-1)/2)*54));ctx.restore();return;}
         ctx.fillStyle='#fffaf0';const bottom=drawDemoHeading(ctx,state.title,700,370,900);ctx.textAlign='center';
         ctx.font=`500 35px ${DEMO_PRESENTATION_FONT}`;wrappedTextureLines(ctx,state.caption,830).slice(0,4).forEach((line,i)=>ctx.fillText(line,700,bottom+110+i*48));
         ctx.restore();return;
