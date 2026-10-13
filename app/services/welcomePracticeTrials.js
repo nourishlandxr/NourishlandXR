@@ -6,6 +6,7 @@ import {loadTrialButterflies} from './welcomeTrialButterflies.js';
 import {createWelcomeTrialState,WELCOME_TRIALS,TRIAL_PLANT_CARDS} from './welcomeTrialState.js';
 import {createWelcomeOptionalGame} from './welcomeOptionalGames.js';
 import {createSpatialPaintTip} from './spatialPaintTip.js';
+import {NOURISHLAND_PAINT_TIP} from './nourishlandControllerPrototype.js';
 
 const colours=['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff'];
 const v=()=>new THREE.Vector3();
@@ -156,7 +157,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         const tipInput=eligible.find(input=>input.source===paintSource);
         if(state.active==='painting'){const wrist=eligible.find(input=>input.source.handedness==='left') || eligible.find(input=>input.source!==tipInput) || eligible[0];if(wrist){const wristPose=new THREE.Matrix4().fromArray(wrist.matrix).premultiply(inverse);panel.position.setFromMatrixPosition(wristPose);panel.position.y+=.055;panel.quaternion.setFromRotationMatrix(wristPose).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)));}}
         paintTip?.hide();
-        if(state.active==='painting' && getControllerTool()==='paint' && tipInput){const pose=new THREE.Matrix4().fromArray(tipInput.matrix).premultiply(inverse);paintTip.root.position.copy(tipInput.tip?v().copy(tipInput.tip).applyMatrix4(inverse):v().set(0,0,-.095).applyMatrix4(pose));paintTip.root.quaternion.setFromRotationMatrix(pose);paintTip.update(paint.snapshot(),time);}
+        if(state.active==='painting' && getControllerTool()==='paint' && tipInput){const pose=new THREE.Matrix4().fromArray(tipInput.matrix).premultiply(inverse);paintTip.root.position.copy(tipInput.tip?v().copy(tipInput.tip).applyMatrix4(inverse):v().copy(NOURISHLAND_PAINT_TIP).applyMatrix4(pose));paintTip.root.quaternion.setFromRotationMatrix(pose);paintTip.update(paint.snapshot(),time);}
         for(const source of [...holds.keys()])if(!eligible.some(i=>i.source===source))release(source,false);
         for(const source of [...edges.keys()])if(!eligible.some(i=>i.source===source)){edges.delete(source);strokeBySource.delete(source);paint?.end(source);}
         if(paused){releaseAll();drawPanel();return;}
@@ -182,7 +183,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             }
             games.get(state.active)?.act(input,held,previous,eligible,inverse);
             if(state.active==='painting'){
-                const paintPoint=input.tip?v().copy(input.tip).applyMatrix4(inverse):v().set(0,0,-.095).applyMatrix4(pose);
+                const paintPoint=input.tip?v().copy(input.tip).applyMatrix4(inverse):v().copy(NOURISHLAND_PAINT_TIP).applyMatrix4(pose);
                 if(getControllerTool()==='paint' && input===tipInput && input.trigger && !control && !poke){
                     if(!paint.isDrawing(source)){const stroke=paint.begin(source,paintPoint);if(stroke){state.addStroke(stroke);strokeBySource.set(source,stroke);onFeedback('control',source);}}
                     else paint.add(source,paintPoint,dt);

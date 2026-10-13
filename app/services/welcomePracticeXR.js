@@ -8,10 +8,10 @@ import {controllerRayFromPose} from './xrPointer.js';
 import {createWelcomeInputRouting} from './welcomeInputRouting.js';
 import {nearestWelcomePointerHit} from './welcomePointerTarget.js';
 
-export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null,getFramePose=()=>null}={}){
+export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onToolMenu=()=>{},onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null,getFramePose=()=>null}={}){
     let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false;
     const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
-    const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose});
+    const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onToolMenu,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose});
     const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:ray=>{
         const hit=nearestWelcomePointerHit(ray,onHit?.(ray),stage.hit(ray));return hit?.kind==='panel'?hit:null;
     }});

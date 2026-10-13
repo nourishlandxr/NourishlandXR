@@ -1,6 +1,7 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {createWelcomeControllerSkin} from './welcomeControllerSkin.js';
+import {createNourishlandControllerPrototype} from './nourishlandControllerPrototype.js';
 
 const supported=['meta-quest-touch-plus','oculus-touch-v3'];
 const actions={'controls-trigger':['trigger'],'controls-grip':['squeeze'],'controls-stick':['thumbstick'],brush:['squeeze','trigger'],point:['trigger'],grab:['squeeze'],gloves:['squeeze'],fly:['trigger','squeeze','thumbstick'],fruit:['squeeze','trigger'],packet:['squeeze','trigger'],seed:['squeeze'],harvest:['squeeze'],water:['squeeze'],trial:['squeeze','trigger']};
@@ -20,7 +21,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
         Promise.all([fetch(new URL('profile.json',base)).then(r=>{if(!r.ok)throw Error('Controller profile unavailable');return r.json();}),loader.loadAsync(new URL(hand+'.glb',base).href)])
             .then(([data,gltf])=>{
                 if(disposed){disposeModel(gltf.scene);return;}
-                const model=gltf.scene;group.add(model);entry.skin=createWelcomeControllerSkin(model);
+                const model=gltf.scene;group.add(model);entry.model=model;entry.tool='standard';entry.mix=0;entry.skin=createWelcomeControllerSkin(model);
                 // Preserve the hardware model's textures, finish and button legends.
                 for(const [id,component] of Object.entries(data.layouts[hand].components)){
                     const kind=id.replace('xr-standard-','');
@@ -39,7 +40,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             }).catch(error=>{entry.failed=true;console.warn('Welcome controller guide:',error.message);});
         return entry;
     }
-    function update(dt,controllers,phase,viewer,complete=false,opacity=1,tool='standard'){
+    function update(dt,controllers,phase,viewer,complete=false,opacity=1,tool='standard',toolState={}){
         elapsed+=dt;for(const entry of entries.values())entry.group.visible=false;
         const requested=phase.startsWith('controls-')?actions[phase] || []:[];
         for(const input of controllers){
@@ -47,7 +48,23 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             const profile=(input.source.profiles || []).find(id=>supported.includes(id)),hand=input.source.handedness;
             if(!profile || !['left','right'].includes(hand))continue;
             const entry=load(profile,hand);if(!entry.ready || opacity<.01)continue;
-            entry.skin.update(dt,tool);entry.group.visible=true;entry.group.matrix.fromArray(input.matrix);entry.group.traverse(node=>{for(const m of [node.material].flat().filter(Boolean)){m.userData.controllerBase??={opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite};const base=m.userData.controllerBase;m.opacity=base.opacity*opacity;m.transparent=base.transparent || opacity<1;m.depthWrite=base.depthWrite && opacity>=1;}});
+            const nextTool=hand==='right' && ['paint','insect'].includes(tool)?tool:'standard';
+            if(nextTool!=='standard' && !entry.prototype){entry.prototype=createNourishlandControllerPrototype({mode:nextTool,hand});group.add(entry.prototype.group);entry.prototype.tip.visible=false;onAssets();}
+            if(nextTool!==entry.tool){entry.tool=nextTool;if(nextTool!=='standard')entry.prototype.setMode(nextTool);}
+            entry.mix=THREE.MathUtils.clamp(entry.mix+(nextTool==='standard'?-1:1)*dt,0,1);
+            const blend=entry.mix*entry.mix*(3-2*entry.mix);
+            entry.skin.update(dt,'standard');entry.model.visible=blend<.999;
+            if(entry.prototype){
+                entry.prototype.group.visible=blend>.001;entry.prototype.group.scale.setScalar(.9+.1*blend);
+                const axes=input.source.gamepad?.axes || [],axisOffset=axes.length>=4?2:0;
+                entry.prototype.update(elapsed,{trigger:Math.max(input.trigger?1:0,input.source.gamepad?.buttons?.[0]?.value || 0),squeeze:input.grip || (input.down?1:0),stickX:axes[axisOffset] || 0,stickY:axes[axisOffset+1] || 0,buttons:input.source.gamepad?.buttons,flying:toolState.flying===true,speed:toolState.speed || 0});
+                // The scene owns the single paint contact tip and its effects.
+                entry.prototype.tip.visible=false;
+            }
+            entry.group.visible=true;entry.group.matrix.fromArray(input.matrix);
+            const fadeTree=(tree,fade)=>tree.traverse(node=>{for(const m of [node.material].flat().filter(Boolean)){m.userData.controllerBase??={opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite};const base=m.userData.controllerBase;m.opacity=base.opacity*fade;m.transparent=base.transparent || fade<1;m.depthWrite=base.depthWrite && fade>=1;}});
+            fadeTree(entry.model,opacity*(1-blend));if(entry.prototype)fadeTree(entry.prototype.group,opacity*blend);
+            fadeTree(entry.label,opacity);fadeTree(entry.link,opacity);
             entry.label.visible=entry.link.visible=requested.length>0;
             for(const r of entry.responses){const gamepad=input.source.gamepad;let value=gamepad?.buttons[r.indices.button]?.value || 0;
                 if(r.property==='xAxis' || r.property==='yAxis')value=((gamepad?.axes[r.indices[r.property]] || 0)+1)/2;
@@ -68,6 +85,6 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
 
         }
     }
-    return {update,snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;for(const {group,texture,skin} of entries.values()){skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
+    return {update,snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,tool:e.tool || 'standard',highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;for(const {group,texture,skin,prototype} of entries.values()){prototype?.dispose();skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
 }
 function disposeModel(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of [n.material].flat().filter(Boolean)){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>{t.image?.close?.();t.dispose();});}

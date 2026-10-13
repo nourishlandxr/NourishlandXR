@@ -227,7 +227,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
     const rateWidth=(464-12*Math.max(0,rates.length-1))/Math.max(1,rates.length);
     const rateControls=rates.map((rate,index)=>({...choice(rate===safeRate?'RefreshRate':`RefreshRate:${rate}`,`${rate} Hz`,'performance','Refresh rate / FPS',550,56+index*(rateWidth+12),rateWidth),selected:performanceSettings.actual===rate,disabled:performanceSettings.pending && rate>90}));
     if(graphicsOpen)return [navigation,
-        choice('GraphicsQuality',graphicsQuality==='auto'?`Auto · ${resolveGraphicsQuality().toUpperCase().replace('MEDIUM','MED')}`:graphicsQuality.toUpperCase().replace('MEDIUM','MED'),'graphics','Graphics quality',202),
+        ...['auto','low','medium','high'].map((quality,index)=>({...choice('GraphicsQuality:'+quality,['Auto','Low','Med','High'][index],'graphics','Graphics quality',202,56+index*222,210),height:46,selected:graphicsQuality===quality})),
         ...(rainEnabled?[choice('RainQuality',RAIN_QUALITIES[rainQuality]?.label || 'Off','rain','Rain quality',290)]:[]),
         choice('Insects',insects?'On':'Off','insects','Insects',358),
         ...frameControls(446),
@@ -242,7 +242,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
         {...choice('LivingFrame',LIVING_FRAME_QUALITIES[getSpatialVisualSettings().livingFrameQuality].label,'living-frame','Living Frame artwork',488,56,888),settingLabel:'',height:50},
 
-        slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight,-1,1,.05,570),
+        {...slider('LivingFrameHeight','living-frame-height','Frame height',getSpatialVisualSettings().livingFrameHeight,-1,1,.05,570),height:58},
         ...(developerLabAvailable?[{...choice('DeveloperLab','Developer Lab','developer','',786,tutorialAvailable?496:56,tutorialAvailable?448:888),height:46}]:[]),
         ...(tutorialAvailable?[{...choice('RestartTutorial','Restart tutorial','tutorial','',786,56,developerLabAvailable?420:888),height:46}]:[]),
         ...(demoSound?[choice('SoundMenu','Sound ›','sound','',658,56,420)]:[]),...(includeLanguage?[choice('LanguageMenu','Language ›','language','',658,496,448)]:[]),
@@ -543,8 +543,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='Recenter'){heading=null;pose=null;lastTime=0;}
         if(action==='ScaleDown'){spatialScale=Math.max(.85,Math.round((spatialScale-.1)*10)/10);setSpatialVisualSettings({spatialScale});}
         if(action==='ScaleUp'){spatialScale=Math.min(1.2,Math.round((spatialScale+.1)*10)/10);setSpatialVisualSettings({spatialScale});}
-        if(action==='GraphicsQuality'){
-            const values=['auto','low','medium','high'];graphicsQuality=values[(values.indexOf(graphicsQuality)+1)%values.length];
+        if(action==='GraphicsQuality' || action.startsWith('GraphicsQuality:')){
+            const values=['auto','low','medium','high'],requested=action.split(':')[1];graphicsQuality=values.includes(requested)?requested:values[(values.indexOf(graphicsQuality)+1)%values.length];
             rainQuality=setSpatialVisualSettings({graphicsQuality}).rainQuality;
             prepareLivingFrameArtwork(resolveGraphicsQuality(graphicsQuality));
             const rain=RAIN_QUALITIES[rainQuality];onRainIntensity(rain.intensity);onRainStyle(rain.style);onRainQuality(rainQuality);onGraphicsQuality(graphicsQuality);
@@ -1552,7 +1552,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             }
             let next=comfortContext?welcomeComfortPanelPose(matrix,heading,headset,phoneAR):infoPanelPose(matrix,heading,headset,phoneAR);
             if(comfortContext && headset && xrFrame?.session){
-                const sources=Array.from(xrFrame.session.inputSources || []),leftHand=sources.find(source=>source.handedness==='left' && source.hand),leftController=sources.find(source=>source.handedness==='left' && !source.hand && source.gripSpace);let wristMatrix=null,forearmDirection=null;
+                const sources=Array.from(xrFrame.session.inputSources || []),anchorHand=comfortContext.anchorHand || 'left',leftHand=sources.find(source=>source.handedness===anchorHand && source.hand),leftController=sources.find(source=>source.handedness===anchorHand && !source.hand && source.gripSpace);let wristMatrix=null,forearmDirection=null;
                 if(leftHand && handReferenceSpace){const state=handTrackingState(xrFrame,leftHand,handReferenceSpace),wristJoint=state?.rawJoints.get('wrist'),knuckle=state?.rawJoints.get('index-finger-metacarpal');wristMatrix=state?.tracked?wristJoint?.matrix:null;if(wristJoint && knuckle)forearmDirection=new THREE.Vector3(wristJoint.x-knuckle.x,wristJoint.y-knuckle.y,wristJoint.z-knuckle.z).normalize();}
                 if(!wristMatrix && leftController && handReferenceSpace){try{wristMatrix=xrFrame.getPose(leftController.gripSpace,handReferenceSpace)?.transform.matrix || null;}catch{wristMatrix=null;}}
                 if(!wristMatrix){pose=null;lastTime=time;return;}

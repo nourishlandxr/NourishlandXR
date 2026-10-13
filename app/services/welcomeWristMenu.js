@@ -16,7 +16,7 @@ export function welcomeWristPose(matrix,context,forearmDirection=null){
     if(forearmDirection){const along=forearmDirection.clone().negate().addScaledVector(normal,forearmDirection.dot(normal));if(along.lengthSq()>.001)up.copy(along.normalize());}
     const right=new THREE.Vector3().crossVectors(up,normal).normalize();up.crossVectors(normal,right).normalize();
     const offset=context.centerOffset || {x:0,y:0};
-    const center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(up,(forearmDirection?-.11:-.17)+offset.y).addScaledVector(normal,.028).addScaledVector(right,offset.x);
+    const center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(up,(context.controllerMounted?.030:forearmDirection?-.11:-.17)+offset.y).addScaledVector(normal,context.controllerMounted?.055:.028).addScaledVector(right,context.controllerMounted?offset.x-.122:offset.x);
     return {center,right,up,normal,anchorHeading:right,width:context.width || .12,height:(context.width || .12)*context.height/1000};
 }
 

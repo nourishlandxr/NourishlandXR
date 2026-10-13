@@ -27,5 +27,5 @@ export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}
   const flutter=airborne && !landed || Math.sin(elapsed*.9)>.90;
   dragon.wings.forEach(({pivot,side,front})=>{pivot.rotation.z=side*(.06+(flutter?Math.sin(elapsed*2*Math.PI*42+front*.24)*.52:Math.sin(elapsed*1.4)*.035));});
  }
- reset();return {reset,update,get complete(){return landed;},snapshot:()=>({rings:count,total:entries.length,landed,airborne,position:{x:dragon.group.position.x,y:dragon.group.position.y,z:dragon.group.position.z}}),get cue(){return count<entries.length?`Fly through the glowing ring. ${count} of ${entries.length}.`:'Bring the dragonfly back to its marked landing spot. Ease off the controls to land.';}};
+ reset();return {reset,update,get complete(){return landed;},snapshot:()=>({rings:count,total:entries.length,landed,airborne,speed:Math.min(1,velocity.length()/.85),position:{x:dragon.group.position.x,y:dragon.group.position.y,z:dragon.group.position.z}}),get cue(){return count<entries.length?`Fly through the glowing ring. ${count} of ${entries.length}.`:'Bring the dragonfly back to its marked landing spot. Ease off the controls to land.';}};
 }
