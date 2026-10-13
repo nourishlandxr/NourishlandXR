@@ -5,7 +5,10 @@ import {zinniaVoiceState,zinniaSpeechLevel,zinniaCharacterCue} from './zinniaVoi
 import {createMeshPointerContact} from './xrMeshPointerContact.js';
 
 // Kept inside the frame silhouette. Totems occupy the space beside the frame.
-export const ZINNIA_FRAME_PERCH=Object.freeze({x:.88,y:-.18,z:.32,width:.19,depth:.16});
+// Keep the branch root close to the lower-right edge of the native rim. The
+// branch begins at local (+.10,-.12), so this anchor puts that joint just
+// inside the rim volume while the perch itself stays in front of the frame.
+export const ZINNIA_FRAME_PERCH=Object.freeze({x:.91,y:-.18,z:.32,width:.19,depth:.16});
 export function createZinniaFramePerch({character:initialCharacter=null,getVoice=()=>null}={}){
     const meshPointerContact=createMeshPointerContact();
     const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);root.matrixAutoUpdate=false;
