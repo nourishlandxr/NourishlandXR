@@ -25,8 +25,11 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         if(disposed)return;
         root.matrix.fromArray(matrix);root.updateMatrixWorld(true);
         const direct=getVoice(),directState=direct?.status?.(),shared=zinniaVoiceState();
-        const voice=directState || shared,cue=zinniaCharacterCue();
-        const speechLevel=voice.paused?0:Math.max(zinniaSpeechLevel(),direct?.speechLevel?.() || 0);
+        // A custom plant/Note conversation temporarily owns Zinnia's voice
+        // while the demo narration instance remains alive but idle.
+        const sharedActive=Boolean(shared.playing || shared.paused || shared.listening);
+        const voice=sharedActive?shared:(directState || shared),cue=zinniaCharacterCue();
+        const speechLevel=voice.paused?0:Math.max(sharedActive?zinniaSpeechLevel():0,direct?.speechLevel?.() || 0);
         animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
     }
     return {scene,root,characterMount,update,

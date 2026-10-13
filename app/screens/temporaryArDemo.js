@@ -4669,6 +4669,9 @@ function plantInformationPose(record) {
 function placeMarker() {
     if (!placementReady || marker || markers.length >= DEMO_SEQUENCE.length || markers.some(record => record.tutorialStage === demoStage)) return;
     const type = demoStage;
+    // A newly placed Note should be visible even if the visitor previously
+    // hid Notes from the demo controls.
+    if(type==='note')demoHiddenElements.delete('note');
     const position = type==='totem' ? totemPlacementPosition() : placementPosition();
     if (!position) {
         setGuide('Move your phone briefly, then tap the circle again.');

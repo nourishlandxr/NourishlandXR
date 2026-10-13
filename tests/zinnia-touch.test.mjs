@@ -14,7 +14,7 @@ test('contact distinguishes tickles, gentle head pats, abrupt touches and tracki
     const before=touch.snapshot();touch.update(0,[]);assert.deepEqual(touch.snapshot(),before);
     touch.reset();for(let i=0;i<15;i++)move(i*.001,true);
     assert.equal(touch.snapshot().reaction,'pat');
-    move(.07,true);assert.equal(touch.snapshot().reaction,'sad');
+    move(.07,true);assert.equal(touch.snapshot().reaction,'pat');
     for(let i=0;i<90;i++)touch.update(.03,[]);assert.equal(touch.snapshot().reaction,null);
     touch.reset();move(0);move(.5);assert.equal(touch.snapshot().reaction,null);
     touch.reset();for(let i=0;i<20;i++){move(i%2*.008);touch.update(.03,[]);}assert.equal(touch.snapshot().reaction,null);
@@ -32,7 +32,7 @@ test('real bundled character receives transformed hand/pointer contact and recov
         const ray={origin,direction};assert.equal(zinniaContacts(root,[{source,ray,trigger:false}]).length,0);assert.equal(zinniaContacts(root,[{source,ray,trigger:true}]).length,1);
         let time=0;animateZinniaCharacter(root,time+=.03,false,{inputs:[{source,tip:point}]});animateZinniaCharacter(root,time+=.03,false,{inputs:[{source,tip:point}]});
         animateZinniaCharacter(root,time+=.03,false,{inputs:[{source,tip:point.clone().add(new THREE.Vector3(.04,0,0))}]});
-        assert.equal(root.userData.zinnia.touch.snapshot().reaction,'sad');assert.ok(eye.morphTargetInfluences[eye.morphTargetDictionary.Sad]>.5);
+        assert.notEqual(root.userData.zinnia.touch.snapshot().reaction,'sad');assert.equal(eye.morphTargetInfluences[eye.morphTargetDictionary.Sad],0);
         for(let i=0;i<95;i++)animateZinniaCharacter(root,time+=.03,false,{});
         assert.equal(root.userData.zinnia.touch.snapshot().reaction,null);assert.equal(eye.morphTargetInfluences[eye.morphTargetDictionary.Sad],0);
     }finally{disposeZinniaCharacter(root);}

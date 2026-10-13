@@ -73,9 +73,12 @@ test('runtime palette selects colours directly and drags brush width through con
  for(const brush of ['water','vine','earth','firefly']){trial.command('brush:'+brush);assert.equal(trial.snapshot().paint.brush,brush);}
  trial.command('width:0.014');assert.equal(trial.snapshot().paint.width,.014);
  trial.command('width:NaN');assert.equal(trial.snapshot().paint.width,.014);
- // Width is the seventh two-column row, with its track inside the square.
- const rayAt=x=>{root.updateMatrixWorld(true);const p=new THREE.Vector3((x/900-.5)*.46,(.5-((140+6*50+23)/900))*.46,0).applyMatrix4(trial.panel.matrixWorld);return {origin:{x:p.x,y:p.y,z:p.z+.2},direction:{x:0,y:0,z:-1}};};
+ // Anchor the watch on the left wrist and aim with the right controller.
+ const wristSource={handedness:'left'},wristMatrix=new THREE.Matrix4().makeRotationX(Math.PI/2).setPosition(-.5,.3,-.2).elements;
  const matrix=new THREE.Matrix4().makeTranslation(0,.3,0).elements;
- for(const x of [80,370]){const ray=rayAt(x),target=trial.hit(ray);assert.match(target.id,/^width:/);trial.update(.016,{visible:true,inputs:[{source,matrix,ray,trigger:true}]});}
+ const wrist={source:wristSource,matrix:wristMatrix,down:true,trigger:false};
+ trial.command('page:options');trial.update(0,{visible:true,inputs:[wrist,{source,matrix}]});
+ const rayAt=(x,y)=>{root.updateMatrixWorld(true);const p=new THREE.Vector3((x/900-.5)*.24,(.5-(y/900))*.24,0).applyMatrix4(trial.panel.matrixWorld);return {origin:{x:p.x,y:p.y,z:p.z+.2},direction:{x:0,y:0,z:-1}};};
+ for(const x of [80,370]){const ray=rayAt(x,348),target=trial.hit(ray);assert.match(target?.id || '',/^width:/);trial.update(.016,{visible:true,inputs:[wrist,{source,matrix,ray,trigger:true}]});}
  assert.ok(trial.snapshot().paint.width>.015);assert.equal(trial.snapshot().strokes,0,'panel drags do not paint');trial.destroy();
 }));

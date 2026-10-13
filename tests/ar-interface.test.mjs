@@ -1215,8 +1215,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /function demoPointerWorldOrigin\(\)/);
     assert.match(source, /function drawDemoControllerPointer\(view\)/);
     assert.match(source, /const hoveredRecordHit=/);
-    assert.match(source, /const contactPoint=surface\?\.point \|\| surface\?\.position/);
-    assert.match(source, /contactPoint\.x-direction\.x\*\.004/);
+    assert.match(source, /const contactPoint=surface\?\.worldPoint \|\| surface\?\.point \|\| surface\?\.position/);
+    assert.match(source, /const end = surfacePoint \|\| controllerRayEnd\(latestControllerRay/);
     assert.doesNotMatch(source.slice(source.indexOf('function drawDemoControllerPointer'), source.indexOf('async function startImmersive')), /drawSpatialSphere/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen'/);
     assert.match(source, /pointerSource\?\.targetRayMode === 'screen' \|\| pointerSource\?\.hand/);
@@ -1349,7 +1349,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const placementDelay = demoStage === 'note' \? 120 : demoStage==='totem'\?220:360/);
     assert.match(source, /\}, placementDelay\)/);
     assert.match(styles, /tryit-pointer-press \.36s/);
-    assert.match(source, /const type = demoStage;\s*const position = type==='totem' \? totemPlacementPosition\(\) : placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
+    assert.match(source, /const type = demoStage;[\s\S]*?if\(type==='note'\)demoHiddenElements\.delete\('note'\);\s*const position = type==='totem' \? totemPlacementPosition\(\) : placementPosition\(\);\s*if \(!position\) \{[\s\S]*?return;\s*\}\s*placementReady = false;/);
     assert.doesNotMatch(source, /direct = false|if \(direct\)/);
     assert.match(source, /const id=moringa\?'ELEMENTS 1\.12':'ELEMENTS 1\.6',step=guidedDemoStep\(id\)/);
     assert.match(source, /if\(index===0\)\{[\s\S]*infoPanel\?\.setMediaCollapsed\(true\);[\s\S]*infoPanel\?\.setIntroduction\(true\);[\s\S]*infoPanel\?\.suspend\(false\);[\s\S]*if\(step\?\.art\)/);

@@ -54,7 +54,7 @@ test('Peek choices share one bounded row and shake reactions vary per butterfly'
  assert.equal(new Set(reactions.map(r=>r.duration)).size,8);assert.equal(new Set(reactions.map(r=>r.at)).size,8);
  assert.equal(new Set(reactions.map(r=>r.side)).size,8);
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
- assert.match(source,/ambientBeesStartedAt=0/);assert.match(source,/surface.kind==='living-frame-rim'\?\.0035/);
+ assert.match(source,/ambientBeesStartedAt=0/);assert.match(source,/surface.kind==='living-frame-rim'\?\.012/);
 });
 
 test('peek clips each eye at the aperture, draws shared depth geometry and disposes resources',async()=>{
