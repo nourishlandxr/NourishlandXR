@@ -6920,11 +6920,8 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     // Development fixtures may inspect XR, but public desktop entry is a book.
     if((!chapter || chapter==='tutorial') && !developerStation && !livingMapPreviewRecords && !refinementPreview && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
     if(!microphonePrepared && !developerStation && !livingMapPreviewRecords && !refinementPreview && isQuestHeadsetBrowser()){
-        app.innerHTML='<section class="screen"><header class="page-header"><h1>Before we begin</h1><p>Zinnia can listen when you answer. Microphone access is optional.</p></header><section class="panel"><button type="button" data-prepare-mic aria-label="Enable microphone" title="Enable microphone"><svg aria-hidden="true" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v2a7 7 0 0014 0v-2M12 19v3M8 22h8"/></svg></button><p role="status" data-mic-status>You can also continue without speaking.</p><button type="button" class="primary" data-enter-demo>Continue to experience</button></section></section>';
-        const enter=app.querySelector('[data-enter-demo]'),mic=app.querySelector('[data-prepare-mic]');
-        const prepare=async()=>{mic.disabled=enter.disabled=true;const ready=await prepareZinniaMicrophone();if(!app.contains(mic))return;app.querySelector('[data-mic-status]').textContent=ready?'Microphone ready. Continue when you are comfortable.':'Microphone unavailable. You can continue without speaking, or retry.';enter.disabled=false;mic.disabled=ready;};
-        mic.onclick=prepare;void prepare();
-        enter.onclick=()=>startTemporaryArDemo(app,{chapter,microphonePrepared:true});return;
+        // Request permission alongside entry; no extra page or XR-blocking await.
+        void prepareZinniaMicrophone();
     }
     resetZinniaVisitor();appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));

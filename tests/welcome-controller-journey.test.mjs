@@ -28,15 +28,15 @@ test('real controller poses start with skins only, extend lasers, select Zinnia,
         stage.start(viewer,0);tick(.1);assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().controllerGuide.filter(e=>e.visible && e.tool==='standard').length,2);
         const fruitRequests=()=>requests.filter(url=>/fruits\/|strawberry\.glb|strawberry-packet\.jpg|dragonfly\.glb/.test(url));
         assert.deepEqual(fruitRequests(),[]);
-        stage.previewLesson('controls-trigger');tick(.05);inputs[0].trigger=true;tick(.05);inputs[1].trigger=true;tick(.05);
-        assert.equal(feedback.filter(f=>f.kind==='step').length,2);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'face');assert.equal(stage.zinniaMount.parent.visible,false);
+        stage.previewLesson('controls-trigger');tick(.05);for(const entry of stage.snapshot().controllerGuide.filter(e=>e.visible)){assert.equal(entry.labelScale,1);assert.ok(entry.connectorLength<=.05);assert.deepEqual(entry.pose,inputs.find(i=>i.source.handedness===entry.id.split('/')[1]).matrix,'skin uses the current grip pose directly');}inputs[0].trigger=true;tick(.05);inputs[1].trigger=true;tick(.05);
+        assert.equal(feedback.filter(f=>f.kind==='step').length,2);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'controls-grip');assert.equal(stage.zinniaMount.parent.visible,true);
         stage.previewLesson('laser-intro');tick(.7);assert.ok(stage.controllerLaserProgress>0 && stage.controllerLaserProgress<1);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().settingsAvailable,false);assert.equal(feedback.filter(f=>f.kind==='magic').length,2);
         stage.previewLesson('laser-zinnia');tick(.1);const eye=stage.zinniaMount.getObjectByName('Eye_L_expression'),point=new THREE.Box3().setFromObject(eye).getCenter(new THREE.Vector3()),ray={origin:{x:point.x,y:point.y,z:point.z+.45},direction:{x:0,y:0,z:-1}};
         assert.equal(stage.hit(ray)?.kind,'zinnia');assert.equal(stage.select(ray,inputs[1].source),true);assert.equal(stage.snapshot().laserConfirmed,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.touch.snapshot().reaction,'tickle');
         stage.select(ray,inputs[1].source);assert.equal(feedback.filter(f=>f.kind==='step').length,3,'one selection produces one success');tick(3.5);assert.equal(stage.phase,'settings-open');
         stage.previewLesson('virtual-hands-reveal');tick(.9);const first=stage.controllerHandReveal;assert.ok(first.left>0 && first.left<1);assert.equal(first.right,0);assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.objects.get('peach').visible,false);assert.deepEqual(fruitRequests(),[]);
         const frozen={...stage.controllerHandReveal};stage.button('pause');tick(1);assert.deepEqual(stage.controllerHandReveal,frozen);stage.button('pause');tick(2.2);assert.deepEqual(stage.controllerHandReveal,{left:1,right:1});assert.ok(feedback.some(f=>f.kind==='magic-charge'));assert.equal(stage.snapshot().controllerGuide.filter(e=>e.visible).length,0);
-        tick(2);assert.equal(stage.phase,'gloves');inputs.forEach(input=>{input.trigger=false;input.down=false;});tick(.05);inputs.forEach(input=>input.down=true);tick(.05);assert.equal(stage.snapshot().completed,false,'both hands must open again');inputs.forEach(input=>input.down=false);tick(.05);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'table');assert.ok(fruitRequests().length>0);
+        tick(2);assert.equal(stage.phase,'gloves');inputs.forEach(input=>{input.trigger=false;input.down=false;});tick(.05);inputs.forEach(input=>input.down=true);tick(.05);assert.equal(stage.snapshot().completed,false,'both hands must open again');inputs.forEach(input=>input.down=false);tick(.05);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'basket');assert.ok(fruitRequests().length>0);
     }finally{stage.destroy();}
 }));
 
@@ -52,3 +52,15 @@ test('each accepted button step gets its own success tone and tap; magic gets st
     playWelcomePracticeFeedback(feedback,'step',source);playWelcomePracticeFeedback(feedback,'step',source);playWelcomePracticeFeedback(feedback,'lesson',source);playWelcomePracticeFeedback(feedback,'magic-charge',source,.8);playWelcomePracticeFeedback(feedback,'magic',source);
     assert.deepEqual(sounds,['practice-success','practice-success','practice-reward','practice-magic']);assert.equal(pulses.length,5);assert.equal(pulses[0][1],.45);assert.equal(pulses[2][1],.65);assert.ok(pulses[3][1]>.8);assert.deepEqual(pulses[4],[source,.95,190]);
 });
+
+
+test('fresh startup reaches the table and Zinnia before buttons, with no fruit downloads',()=>withAssets(async requests=>{
+ const phases=[],voice={status:()=>({playing:false,paused:false,muted:true}),speak(){},stop(){}};
+ const stage=createWelcomePracticeScene({voice,embedded:true,onChange:state=>{if(phases.at(-1)!==state.phase)phases.push(state.phase);}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);
+ for(let i=0;i<2400 && stage.phase!=='visitor-intro';i++)stage.update(.05,{viewer,floor:0,frameReady:true});
+ assert.equal(stage.phase,'visitor-intro');assert.deepEqual(phases.filter(id=>!['frame'].includes(id)),['title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','living-frame','controls-intro','visitor-intro']);
+ assert.equal(stage.zinniaMount.parent.visible,true);assert.ok(stage.root.children.some(child=>child.visible && child.name.toLowerCase().includes('table')));
+ assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.snapshot().settingsAvailable,false);assert.equal(requests.some(url=>/fruits\/|strawberry\.glb/.test(url)),false);
+ }finally{stage.destroy();}
+}));

@@ -19,7 +19,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}};
     function eventRay(event){try{return controllerRayFromPose(event.frame.getPose(event.inputSource.targetRaySpace,space),event.inputSource.handedness);}catch{return inputs.find(i=>i.source===event.inputSource)?.ray || null;}}
     function unbind(){abort?.abort();abort=null;stage.releaseAll(false);forceGrip.clear();forceTrigger.clear();curling.clear();comfortPinches.clear();session=null;}
-    function bind(value,referenceSpace){unbind();void stage.preloadControllers([...value.inputSources].filter(source=>!source.hand));session=value;space=referenceSpace;abort=new AbortController();
+    function bind(value,referenceSpace){unbind();void stage.preloadControllers([...value.inputSources].filter(source=>!source.hand));session=value;space=referenceSpace;voice?.unlock();abort=new AbortController();
         for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,event=>{
             if(!stage.active){if(performance.now()<(suppressed.get(event.inputSource) || 0)){event.stopImmediatePropagation();event.preventDefault?.();}return;}
             const source=event.inputSource;if(type==='selectstart'){unlockZinniaTouchAudio();voice?.unlock();}
@@ -54,18 +54,20 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
             }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0),uiBlocked};inputs.push(input);if(input.matrix)controllers.push(input);}
         }
         stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError(),handsReady:nativeHandsReady});revealTime+=Math.max(0,Math.min(.1,dt));
-        if((!renderer && !pendingRenderer) || rebuild){rebuild=false;pendingRenderer?.destroy();pendingRenderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,progressive:true,welcomeMagic:true});}
+        if(!pendingRenderer && (!renderer || rebuild)){rebuild=false;pendingRenderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,progressive:true,welcomeMagic:true,visibleParentsOnly:true});}
         if(pendingRenderer){const ready=pendingRenderer.prepareNext();if(ready){pendingRenderer.update();renderer?.destroy();renderer=pendingRenderer;pendingRenderer=null;}}
         // Keep controller poses available while the visitor puts them down.
         // Tracked hands becoming available never turns off controller access.
         renderer?.update();renderer?.prepareNext();
+        const pointerEnabled=stage.controllerLasersVisible || stage.snapshot().settingsAvailable;
+        for(const input of inputs)if(pointerEnabled && !input.source.hand && input.ray && !stage.exiting && !stage.isBrushHeld(input.source))input.pointerHit=nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray));
     }
     return {stage,bind,update,get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
         draw(view,handRenderer){if(!stage.active)return;nativeHandsReady=Boolean(handRenderer?.ready);const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);
             handRenderer?.draw(view,hands,{filled:true,controllers:stage.controllerHandsVisible?controllers.filter(input=>(stage.controllerHandReveal[input.source.handedness] || 0)>0):[],controllerOpacity:stage.controllerHandOpacity*opacity,trackedOpacity:stage.trackedHandOpacity*opacity,controllerReveal:stage.controllerHandReveal});
             for(const input of inputs){
                 if(input.source.hand || !input.ray || stage.exiting)continue;
-                const r=input.ray,hit=nearestWelcomePointerHit(r,onHit?.(r),stage.hit(r));
+                const r=input.ray,hit=input.pointerHit;
                 if(!stage.controllerLasersVisible){if(stage.snapshot().settingsAvailable && hit?.worldPoint && ['panel','trial-control','voice-bar'].includes(hit.kind))drawSpatialPointerContact(gl,pointer,view,hit.worldPoint,.007,[.8,.96,1,.9*opacity]);continue;}
                 if(stage.trials.active==='painting' || stage.isBrushHeld(input.source))continue;
                 drawWelcomeControllerLaser(gl,pointer,view,r,hit?.worldPoint,stage.controllerLaserProgress,opacity);

@@ -11,6 +11,7 @@
 <script type="module">
 import * as THREE from '../../assets/fruit-window/vendor/three.module.js';
 import {WELCOME_PRACTICE_LESSONS} from '../../services/welcomePracticeContent.js';
+import {livingFramePose} from '../../services/livingFramePlacement.js';
 import {createLivingFrameModel} from '../../services/livingFrameModel.js';
 import {getSpatialVisualSettings,setSpatialVisualSettings} from '../../services/spatialVisualSettings.js';
 import {createWelcomePracticeScene} from '../../services/welcomePracticeScene.js';
@@ -27,7 +28,7 @@ import {createDemoFeedback} from '../../services/demoFeedback.js';
 import {BUILD_INFO} from '../../services/buildInfo.js';
 for(const lesson of WELCOME_PRACTICE_LESSONS){const option=document.createElement('option');option.value=lesson.id;option.textContent=lesson.title || 'Living Frame loading';document.querySelector('#lesson').append(option);}
 document.querySelector('#version').textContent='V'+BUILD_INFO.version+' · local preview';
-const canvas=document.querySelector('#scene'),gl=canvas.getContext('webgl',{antialias:true,alpha:true});
+const canvas=document.querySelector('#scene'),gl=canvas.getContext('webgl2',{antialias:true,alpha:true});
 const laserRenderer=createSpatialTetherRenderer(gl),handRenderer=createXRHandOutline(gl),voiceBar=createSpatialZinniaVoiceBar(gl,{getConversation:()=>stage.conversation});
 const poseControls=document.createElement('div');poseControls.style.cssText='display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 24px';
 poseControls.innerHTML='<label><input type="checkbox" id="show-hands"> Compare virtual hands with controllers</label><label>Grip <input id="grip-curl" type="range" min="0" max="1" step=".01" value="0"></label><label>Index trigger <input id="trigger-curl" type="range" min="0" max="1" step=".01" value="0"></label>';
@@ -46,7 +47,7 @@ let native=null,rebuild=false,started=false,last=0,drag=null;
 if(getSpatialVisualSettings().livingFrameQuality==='off')setSpatialVisualSettings({livingFrameQuality:'sd'});
 const livingFrame=createLivingFrameModel();livingFrame.setContext(gl);void livingFrame.select(getSpatialVisualSettings().livingFrameQuality);
 const framePose=new THREE.Matrix4().makeTranslation(0,1.55,-2.2).multiply(new THREE.Matrix4().makeScale(.6,.6,.6)).elements;
-const stage=createWelcomePracticeScene({voice,embedded:true,onToolMenu:()=>previewComfort?.act('controller-toggle'),onFeedback:(kind,source,intensity)=>playWelcomePracticeFeedback(feedback,kind,source,intensity),onAssets:()=>rebuild=true,onChange:state=>{
+const stage=createWelcomePracticeScene({voice,embedded:true,getFramePose:()=>livingFramePose(framePose),onToolMenu:()=>previewComfort?.act('controller-toggle'),onFeedback:(kind,source,intensity)=>playWelcomePracticeFeedback(feedback,kind,source,intensity),onAssets:()=>rebuild=true,onChange:state=>{
     syncPreviewSettings();document.querySelector('#lesson').value=state.phase;const next=document.querySelector('#next');next.hidden=Boolean(state.trials?.active || state.voice?.playing || !['hands','explore'].includes(state.phase));next.textContent=state.phase==='hands'?'Use controllers':'Continue';document.querySelector('#voice').textContent=state.voice?.muted?'Voice off':'Voice on';document.querySelector('#pause').textContent=state.voice?.paused?'Resume':'Pause';
     document.querySelector('#trial').value=state.trials?.active || '';document.querySelector('#trial-mode').value=state.trials?.mode || 'controllers';for(const id of ['trial-colour','trial-undo','trial-clear'])document.getElementById(id).hidden=state.trials?.active!=='painting';document.getElementById('trial-dock').hidden=state.trials?.active!=='garden';document.getElementById('trial-reset').hidden=!state.trials?.active;document.querySelector('#repeat').disabled=Boolean(state.trials?.active);
 },onComplete:()=>{document.querySelector('#status').textContent='Welcome practice complete. The headset continues into the Nourishland introduction.';}});
@@ -79,7 +80,7 @@ function frame(now){const cpuStarted=performance.now();requestAnimationFrame(fra
     source.hand=stage.handsEnabled?{}:null;leftSource.hand=source.hand;
     if(stage.trials.active){input.fist=keys.has('KeyF');input.down ||= input.fist;leftInput.fist=input.fist;leftInput.down=input.fist;if(stage.trials.active==='painting')input.trigger ||= Boolean(drag?.down);}
     if(heldFruitInput){heldFruitInput.down=heldFruitPrimed;heldFruitPrimed=true;}if(stage.active)stage.update(dt,{frameReady:livingFrame.entranceReady,frameError:livingFrame.error,handsReady:handRenderer.ready,viewer:camera.matrixWorld.elements,floor:0,inputs:stage.trials.active || stage.phase.startsWith('controls-') || stage.phase==='gloves'?[input,leftInput]:heldFruitInput?[input,heldFruitInput]:[input,leftInput],controllers:[input,leftInput],hands:[]});if(drag && !drag.down && !remoteLatched)drag=null;if(stage.phase!=='fly')remoteLatched=false;
-    if(!native || rebuild){native?.destroy();native=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,welcomeMagic:true});rebuild=false;}native.update();native.prepareNext();
+    if(!native || rebuild){native?.destroy();native=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,welcomeMagic:true,visibleParentsOnly:true});rebuild=false;}native.update();native.prepareNext();
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     livingFrame.update(now,{show:started,frameToken:now});if(started)livingFrame.drawXR({projectionMatrix:camera.projectionMatrix.elements,transform:{inverse:{matrix:camera.matrixWorldInverse.elements}}},framePose);
     native.draw({projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}},anchor);
@@ -87,7 +88,7 @@ function frame(now){const cpuStarted=performance.now();requestAnimationFrame(fra
     canvas.dataset.trials=JSON.stringify(stage.trials.snapshot());
     if(started){voiceBar.update(camera.matrixWorld.elements);voiceBar.draw(view);if(document.querySelector('#show-hands').checked || stage.controllerHandsVisible)handRenderer.draw(view,[],{filled:true,controllerReveal:stage.controllerHandReveal,controllers:[{...input,source:{...source,hand:null}},leftInput].filter(i=>(stage.controllerHandReveal[i.source.handedness] || 0)>0)});}
     if(stage.controllerLasersVisible){for(const controller of [input,leftInput]){const m=controller.matrix,ray={origin:{x:m[12],y:m[13],z:m[14]},direction:{x:-m[8],y:-m[9],z:-m[10]}};drawWelcomeControllerLaser(gl,laserRenderer,view,ray,stage.hit(ray)?.worldPoint,stage.controllerLaserProgress);}}
-    canvas.dataset.handReveal=JSON.stringify(stage.controllerHandReveal);canvas.dataset.laserProgress=String(stage.controllerLaserProgress);canvas.dataset.phase=stage.phase;canvas.dataset.assets=JSON.stringify(stage.snapshot().assets);canvas.dataset.held=stage.snapshot().held.join(',');canvas.dataset.voice=JSON.stringify(stage.snapshot().voice);canvas.dataset.controllerGuide=JSON.stringify(stage.snapshot().controllerGuide);canvas.dataset.garden=JSON.stringify(stage.snapshot().garden);canvas.dataset.basket=JSON.stringify(stage.snapshot().basket);canvas.dataset.flight=JSON.stringify(stage.snapshot().flight);canvas.dataset.nextFruit=stage.snapshot().nextFruit || '';canvas.dataset.gl=String(gl.getError());canvas.dataset.cpuMs=(performance.now()-cpuStarted).toFixed(2);
+    canvas.dataset.caption=stage.snapshot().caption;canvas.dataset.renderStats=JSON.stringify(native.stats);canvas.dataset.handReveal=JSON.stringify(stage.controllerHandReveal);canvas.dataset.laserProgress=String(stage.controllerLaserProgress);canvas.dataset.phase=stage.phase;canvas.dataset.assets=JSON.stringify(stage.snapshot().assets);canvas.dataset.held=stage.snapshot().held.join(',');canvas.dataset.voice=JSON.stringify(stage.snapshot().voice);canvas.dataset.controllerGuide=JSON.stringify(stage.snapshot().controllerGuide);canvas.dataset.garden=JSON.stringify(stage.snapshot().garden);canvas.dataset.basket=JSON.stringify(stage.snapshot().basket);canvas.dataset.flight=JSON.stringify(stage.snapshot().flight);canvas.dataset.nextFruit=stage.snapshot().nextFruit || '';canvas.dataset.gl=String(gl.getError());canvas.dataset.cpuMs=(performance.now()-cpuStarted).toFixed(2);
 }
 requestAnimationFrame(frame);
 window.addEventListener('pagehide',()=>{stage.destroy();livingFrame.destroy();voice.destroy();feedback.destroy();native?.destroy();handRenderer.destroy();voiceBar.destroy();destroySpatialTetherRenderer(gl,laserRenderer);},{once:true});

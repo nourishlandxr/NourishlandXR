@@ -16,7 +16,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
     const pressed=new THREE.MeshBasicMaterial({color:'#8fe5ef',transparent:true,opacity:.97,depthWrite:false});
     function load(profile,hand){
         const key=profile+'/'+hand;if(entries.has(key))return entries.get(key);
-        const group=new THREE.Group();group.matrixAutoUpdate=false;group.visible=false;scene.add(group);
+        const group=new THREE.Group();group.matrixAutoUpdate=false;group.visible=false;group.userData.welcomeAlwaysConvert=true;scene.add(group);
         const entry={group,ready:false,failed:false,highlights:[],responses:[]};entries.set(key,entry);
         const base=new URL('../assets/welcome-practice/controllers/'+profile+'/',import.meta.url);
         entry.promise=Promise.all([fetch(new URL('profile.json',base)).then(r=>{if(!r.ok)throw Error('Controller profile unavailable');return r.json();}),loader.loadAsync(new URL(hand+'.glb',base).href)])
@@ -65,7 +65,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             entry.group.visible=true;entry.group.matrix.fromArray(input.matrix);
             const magic=handReveal>0?{progress:handReveal,plane:welcomeControllerMagicPlane(input.matrix,entry.magicBounds.min,entry.magicBounds.max)}:null;
             for(const material of entry.originalMaterials)material.userData.welcomeMagic=magic;entry.sparks.update(handReveal,elapsed);
-            const fadeTree=(tree,fade)=>tree.traverse(node=>{for(const m of [node.material].flat().filter(Boolean)){m.userData.controllerBase??={opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite};const base=m.userData.controllerBase;m.opacity=base.opacity*fade;m.transparent=base.transparent || fade<1;m.depthWrite=base.depthWrite && fade>=1;}});
+            const fadeTree=(tree,fade)=>{if(tree.userData.controllerFade===fade)return;tree.userData.controllerFade=fade;const materials=tree.userData.controllerFadeMaterials ||= (()=>{const result=new Set();tree.traverse(node=>{for(const m of [node.material].flat().filter(Boolean))result.add(m);});return [...result];})();for(const m of materials){m.userData.controllerBase??={opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite};const base=m.userData.controllerBase;m.opacity=base.opacity*fade;m.transparent=base.transparent || fade<1;m.depthWrite=base.depthWrite && fade>=1;}};
             fadeTree(entry.model,opacity*(1-blend));if(entry.prototype)fadeTree(entry.prototype.group,opacity*blend);
             fadeTree(entry.label,opacity);fadeTree(entry.link,opacity);
             entry.label.visible=entry.link.visible=requested.length>0;
@@ -81,14 +81,14 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             if(viewer){
                 const controllerQ=new THREE.Quaternion().setFromRotationMatrix(entry.group.matrix),viewQ=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(viewer));
                 // Labels stay outside the hands in viewer space, even as wrists turn.
-                const offset=new THREE.Vector3(hand==='left'?-.10:.10,.095,.025).applyQuaternion(viewQ).applyQuaternion(controllerQ.clone().invert());
-                if(toolState.framePose){const frame=toolState.framePose;offset.set(frame.center.x,frame.center.y,frame.center.z).addScaledVector(new THREE.Vector3(frame.right.x,frame.right.y,frame.right.z),hand==='left'?-.64:.64).addScaledVector(new THREE.Vector3(frame.up.x,frame.up.y,frame.up.z),.62).addScaledVector(new THREE.Vector3(frame.normal.x,frame.normal.y,frame.normal.z),.12).applyMatrix4(entry.group.matrix.clone().invert());entry.label.scale.setScalar(3);}else entry.label.scale.setScalar(1);
+                const offset=new THREE.Vector3(hand==='left'?-.09:.09,.065,.015).applyQuaternion(viewQ).applyQuaternion(controllerQ.clone().invert());
+                entry.label.scale.setScalar(1);
                 entry.label.position.copy(offset);entry.label.quaternion.copy(controllerQ.invert().multiply(viewQ));
-                const end=offset.clone().multiplyScalar(.52),start=new THREE.Vector3(0,.018,0),direction=end.clone().sub(start);entry.link.position.copy(start).add(end).multiplyScalar(.5);entry.link.scale.y=direction.length();entry.link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
+                const end=offset.clone().multiplyScalar(.52),start=new THREE.Vector3(0,.018,0),direction=end.clone().sub(start);entry.link.position.copy(start).add(end).multiplyScalar(.5);entry.link.scale.y=Math.min(.05,direction.length());entry.link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
             }
 
         }
     }
-    return {update,preload(sources){return Promise.all(sources.map(source=>{const profile=(source.profiles || []).find(id=>supported.includes(id));return profile && ['left','right'].includes(source.handedness)?load(profile,source.handedness).promise:null;}));},snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,tool:e.tool || 'standard',handReveal:e.handReveal || 0,sparks:e.sparks?.snapshot?.() || (e.handReveal>0 && e.handReveal<1),highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;for(const {group,texture,skin,prototype,sparks} of entries.values()){prototype?.dispose();sparks?.destroy();skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
+    return {update,preload(sources){return Promise.all(sources.map(source=>{const profile=(source.profiles || []).find(id=>supported.includes(id));return profile && ['left','right'].includes(source.handedness)?load(profile,source.handedness).promise:null;}));},snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,tool:e.tool || 'standard',handReveal:e.handReveal || 0,labelVisible:Boolean(e.label?.visible),labelScale:e.label?.scale.x || 1,connectorLength:e.link?.scale.y || 0,pose:e.group.matrix.elements.slice(),sparks:e.sparks?.snapshot?.() || (e.handReveal>0 && e.handReveal<1),highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;for(const {group,texture,skin,prototype,sparks} of entries.values()){prototype?.dispose();sparks?.destroy();skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
 }
 function disposeModel(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of [n.material].flat().filter(Boolean)){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>{t.image?.close?.();t.dispose();});}

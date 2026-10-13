@@ -12,9 +12,9 @@ import {welcomePracticeVisualGuide} from '../app/services/welcomeComfortOptions.
 import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
 import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.js';
 
-test('button practice introduces Zinnia after the first trigger step, then laser, settings, virtual hands and finally fruit and painting',()=>{
+test('arrival reveals the table and Zinnia before controllers, then laser, settings, virtual hands and fruit',()=>{
     const before=(a,b)=>assert.ok(lessons.findIndex(l=>l.id===a)<lessons.findIndex(l=>l.id===b),`${a} precedes ${b}`);
-    before('controls-trigger','face');before('zinnia','controls-grip');before('controls-face-second','laser-intro');before('laser-zinnia','settings-open');before('settings-close','interaction-methods');before('interaction-methods','virtual-hands-reveal');before('virtual-hands-reveal','gloves');before('gloves','table');before('gloves','basket-reveal');before('grab','brush');before('brush','fruit');
+    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','conversation-bridge');before('conversation-bridge','controls-trigger');before('zinnia','controls-grip');before('controls-face-second','laser-intro');before('laser-zinnia','settings-open');before('settings-close','interaction-methods');before('interaction-methods','virtual-hands-reveal');before('virtual-hands-reveal','gloves');before('gloves','basket-reveal');before('grab','brush');before('brush','fruit');
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
     for(const clip of [...lessons,...responses].filter(c=>c.spoken && !c.liveVoice))assert.ok(fs.statSync(new URL('../app/'+(WELCOME_NARRATION_BANK?.base || 'assets/welcome-practice/voice/')+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
@@ -56,7 +56,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         assert.equal(stage.zinniaMount.parent.visible,false);
         tick(.1,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,0);
         tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/Welcome to Nourishland XR/);assert.equal(spoken.at(-1).recorded,false);
-        stage.previewLesson('table-reveal');tick(1);assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.zinniaMount.parent.visible,true);
+        stage.previewLesson('table-reveal');tick(.1);assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.zinniaMount.parent.visible,false);
         stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.status,'ready');assert.ok(stage.zinniaMount.getObjectByName('Eye_L_expression'));assert.ok(stage.zinniaMount.getObjectByName('Pot'));
         stage.previewLesson('comfort');assert.equal(stage.snapshot().comfortVisible,true);stage.button('pause');tick(60);assert.equal(stage.phase,'comfort');assert.equal(stage.snapshot().voice.paused,true);stage.button('pause');
         stage.previewLesson('grab');tick(2);

@@ -64,12 +64,15 @@ test('repeated fruit leaves draw together while hidden leaves stay collapsed and
  const gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getExtension:()=>null,getParameter:()=>16,getAttribLocation:(_p,name)=>attributes.indexOf(name),getUniformLocation:(_p,name)=>name},{get(target,key){if(key in target)return target[key];if(key===key.toUpperCase())return key;if(key.startsWith('create'))return ()=>({});return (...args)=>calls.push([key,...args.map(value=>ArrayBuffer.isView(value)?Array.from(value):value)]);}});
  try{
   const geometry=new THREE.BoxGeometry(.02,.06,.002),material=new THREE.MeshStandardMaterial(),root=new THREE.Group(),leaf=new THREE.Mesh(geometry,material),hidden=new THREE.Mesh(geometry,material);leaf.position.x=.1;hidden.position.x=.2;hidden.visible=false;root.add(leaf,hidden);
+  const hiddenGroup=new THREE.Group();hiddenGroup.visible=false;const heavy=new THREE.Mesh(new THREE.SphereGeometry(1,48,24),material);hiddenGroup.add(heavy);root.add(hiddenGroup);const filtered=createFruitWindowXR(gl,root,{visibleParentsOnly:true});assert.equal(filtered.stats.sourceMeshes,2,'hidden future lessons are not converted');filtered.destroy();root.remove(hiddenGroup);
   const renderer=createFruitWindowXR(gl,root,{progressive:true}),identity=new THREE.Matrix4().elements,view={projectionMatrix:identity,transform:{inverse:{matrix:identity}}},anchor={position:new THREE.Vector3(0,1,-1),quaternion:new THREE.Quaternion()};assert.equal(renderer.ready,false);let prepared=false;for(let i=0;i<100&&!prepared;i++)prepared=renderer.prepareNext();assert.equal(prepared,true);renderer.update();
   assert.equal(renderer.stats.drawCalls,1);assert.equal(renderer.stats.instanceBatches,1);
   renderer.draw(view,anchor);renderer.draw(view,anchor);
   assert.equal(calls.filter(call=>call[0]==='drawArraysInstanced').length,2);
   const poseUpload=calls.find(call=>call[0]==='bufferData'&&call[2]?.length===32);assert.ok(poseUpload,'instance poses uploaded');assert.equal(poseUpload[2][16],0);assert.equal(poseUpload[2][21],0);assert.equal(poseUpload[2][26],0);
   hidden.visible=true;renderer.update();renderer.draw(view,anchor);renderer.draw(view,anchor);assert.equal(calls.filter(call=>call[0]==='bufferSubData'&&call[3]?.length===32).length,1);
+  root.remove(leaf,hidden);renderer.update();assert.equal(renderer.stats.drawCalls,0,'detached replaced assets must never render from the old scene');
+  renderer.draw(view,anchor);assert.equal(calls.filter(call=>call[0]==='drawArraysInstanced').length,4);
   renderer.destroy();
  }finally{globalThis.document=oldDocument;}
 });

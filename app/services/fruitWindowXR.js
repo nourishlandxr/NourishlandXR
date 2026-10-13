@@ -3,11 +3,14 @@ import {createDemoLivingMapXR} from './demoLivingMapXR.js';
 
 // Split multi-material GLB meshes and apply their animated morphs once per
 // update. The session renderer then draws the same geometry for both eyes.
-export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressive=false,welcomeMagic=false}={}){
+export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressive=false,welcomeMagic=false,visibleParentsOnly=false}={}){
     const scene=new THREE.Scene(),entries=[],sharedGeometry=new Map(),batches=[];
     const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
-    const nodes=[];source.traverse(node=>{if(node.isMesh)nodes.push(node);});
+    function attached(node,visible=false){let parent=node;for(;parent;parent=parent.parent){if(visible && !parent.visible)return false;if(parent===source)return true;}return false;}
+    function eligible(node){if(!visibleParentsOnly)return true;for(let parent=node.parent;parent && parent!==source;parent=parent.parent)if(parent.userData.welcomeAlwaysConvert)return attached(node);return attached(node.parent,true);}
+    const nodes=[];source.traverse(node=>{if(node.isMesh && eligible(node))nodes.push(node);});
     function* convert(){for(const node of nodes){
+        if(!attached(node))continue;
         if(node.isInstancedMesh){
             const mesh=new THREE.InstancedMesh(node.geometry.clone(),node.material,node.instanceMatrix.count);mesh.instanceMatrix=node.instanceMatrix;mesh.instanceColor=node.instanceColor;mesh.count=node.count;mesh.matrixAutoUpdate=false;mesh.frustumCulled=false;mesh.userData.livingMapDynamic=true;scene.add(mesh);entries.push({node,mesh,base:{},morph:{},instanced:true});yield;continue;
         }
@@ -20,7 +23,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
             for(const [name,attribute] of Object.entries(data.attributes)){
                 if(reused)continue;
                 const values=attribute.array.slice(group.start*attribute.itemSize,(group.start+group.count)*attribute.itemSize);
-                geometry.setAttribute(name,new THREE.BufferAttribute(values,attribute.itemSize));base[name]=values.slice();
+                geometry.setAttribute(name,new THREE.BufferAttribute(values,attribute.itemSize));if(data.morphAttributes[name]?.length)base[name]=values.slice();
             }
             if(key && !reused)sharedGeometry.set(key,geometry);
             for(const name of ['position','normal'])morph[name]=(data.morphAttributes[name]||[]).map(a=>a.array.slice(group.start*a.itemSize,(group.start+group.count)*a.itemSize));
@@ -52,8 +55,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
             source.updateMatrixWorld(true);
             for(const mesh of batches){mesh.visible=false;mesh.userData.poseChanged=false;}
             for(const entry of entries){
-                const {node,mesh,base,morph}=entry;mesh.visible=true;
-                for(let parent=node;parent;parent=parent.parent)if(!parent.visible){mesh.visible=false;break;}
+                const {node,mesh,base,morph}=entry;mesh.visible=attached(node,true);
                 if(entry.batch){const pose=mesh.visible?node.matrixWorld:hiddenMatrix;if(!entry.lastMatrix.equals(pose)){entry.batch.setMatrixAt(entry.instanceIndex,pose);entry.lastMatrix.copy(pose);entry.batch.userData.poseChanged=true;}entry.batch.visible ||= mesh.visible;}
                 else mesh.matrix.copy(node.matrixWorld);
                 if(entry.instanced){mesh.count=node.count;mesh.instanceColor=node.instanceColor;continue;}

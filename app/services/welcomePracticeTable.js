@@ -6,7 +6,7 @@ export function createWelcomePracticeTable(root){
  for(let y=0;y<512;y+=2){ctx.strokeStyle=`rgba(91,57,31,${.035+.025*(1+Math.sin(y*.17))})`;ctx.lineWidth=1;ctx.beginPath();for(let x=0;x<=1024;x+=12){const yy=y+2.7*Math.sin(x*.011+y*.063)+.8*Math.sin(x*.04+y);x?ctx.lineTo(x,yy):ctx.moveTo(x,yy);}ctx.stroke();}
  for(const y of [128,256,384]){ctx.fillStyle='rgba(76,48,25,.10)';ctx.fillRect(0,y,1024,1);}
  const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
- const group=new THREE.Group();root.add(group);const top=new THREE.Mesh(new THREE.BoxGeometry(width*2,.035,depth*2),new THREE.MeshStandardMaterial({map:texture,color:'#b2ac97',roughness:.85}));top.position.y=-.0175;group.add(top);
+ const group=new THREE.Group();group.name='Welcome practice table';root.add(group);const top=new THREE.Mesh(new THREE.BoxGeometry(width*2,.035,depth*2),new THREE.MeshStandardMaterial({map:texture,color:'#b2ac97',roughness:.85}));top.position.y=-.0175;group.add(top);
  const material=new THREE.MeshStandardMaterial({color:'#625b49',roughness:.86});
  for(const side of [-1,1]){
   const edge=new THREE.Mesh(new THREE.BoxGeometry(width*2,.025,.018),material);edge.position.set(0,.0125,side*(depth-.009));group.add(edge);

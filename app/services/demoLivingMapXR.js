@@ -85,6 +85,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         gl.uniform1i(uniform,unit);
     }
     function drawNode(node,matrix,opacity,batch=null){
+        if(node.isInstancedMesh && node.count===0)return;
         const material=node.material;if(Array.isArray(material))return;
         const entry=geometry(batch?.geometry || node.geometry);
         entry.buffers.forEach((buffer,i)=>{if(attributes[i]<0)return;gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.enableVertexAttribArray(attributes[i]);gl.vertexAttribPointer(attributes[i],i===2?2:3,gl.FLOAT,false,0,0);});

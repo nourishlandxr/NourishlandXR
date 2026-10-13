@@ -54,7 +54,7 @@ test('controller lasers are absent before the taught reveal, then render normall
     const draw=vm.runInNewContext('({'+source.slice(start,end)+'}}).draw',context);
     draw({});assert.equal(lines,0);controller.source.gamepad.buttons[4].pressed=true;draw({});assert.equal(lines,0,'A/X never secretly enables a laser');
     stage.phase='laser-intro';stage.controllerLasersVisible=true;draw({});assert.equal(lines,1);
-    stage.phase='fruit';stage.controllerLasersVisible=false;context.nearestWelcomePointerHit=()=>({kind:'panel',worldPoint:{x:0,y:1,z:-.6}});draw({});assert.equal(lines,1);assert.equal(contacts,1);
+    stage.phase='fruit';stage.controllerLasersVisible=false;controller.pointerHit={kind:'panel',worldPoint:{x:0,y:1,z:-.6}};draw({});assert.equal(lines,1);assert.equal(contacts,1);
     stage.phase='controls-trigger';draw({});assert.equal(contacts,1,'early button practice has no pointer');
     stage.phase='fruit';controller.source.hand={};draw({});assert.equal(lines,1);assert.equal(contacts,1);
 });
