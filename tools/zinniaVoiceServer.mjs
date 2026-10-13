@@ -1,5 +1,5 @@
-export const ZINNIA_V10_PROFILE=Object.freeze({model:'gpt-4o-mini-tts',voice:'coral',response_format:'mp3',instructions:"Speak as a warm, confident adult female guide in natural American English. Use a light, clear conversational voice and normal speaking speed. Connect words and clauses smoothly. Let punctuation shape short natural breaths; do not insert a deliberate pause after every sentence. Avoid a heavy low register, breathy theatrical delivery, sing-song pitch, exaggerated cheerfulness, stretched vowels and choppy clipped word endings. Sound like a person explaining something to a nearby listener, with quiet interest and gentle assurance. Keep word-final syllables gently voiced through their natural release, without abrupt cutoffs, gravelly creaks or a breath after each phrase. Carry intonation smoothly into the next clause. Use brief pauses where the meaning needs them; keep the voice clear and lightly resonant."});
-export const ZINNIA_V10_DELIVERY='v10-refined-1';
+export const ZINNIA_VOICE_PROFILE=Object.freeze({"model":"gpt-4o-mini-tts","voice":"coral","response_format":"mp3","instructions":"Zinnia is a 23-year-old female flower character: bright, gentle, curious and quietly confident. Speak in natural contemporary American English, as a young adult talking comfortably to one nearby person. Give her a light, clear upper-middle speaking register, fresh warmth and soft rounded vowels. Keep chest resonance light and consonants gentle but intelligible. Her voice has the delicacy of a flower and the composure of a capable guide. Use fluid, connected everyday phrasing at normal speed. Let word endings release naturally into the next word, with short breaths at thought boundaries. Keep the performance understated and sincere, without dramatic low resonance, regal declamation, affected whispering, cartoon squeak or exaggerated sing-song. Maintain this light vocal placement throughout the whole passage."});
+export const ZINNIA_VOICE_DELIVERY='v13-approved-1';
 // Paid voice routes are explicitly enabled on the server, never with a browser key.
 const clients=new Map();let daily={day:'',count:0};
 export function handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isAllowedOrigin}){
@@ -28,12 +28,12 @@ export function handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isA
                 body=new FormData();body.append('file',new Blob([buffer],{type:mime}),'voice.'+extension);body.append('model','gpt-4o-mini-transcribe');body.append('language','en');body.append('prompt','Plant names, cultivars, Zinnia, Daleys.');endpoint='transcriptions';
             }else{
                 const text=String(data.text || '').trim();if(!text || text.length>1200)return sendJson(res,400,{error:'Speech text is too long or empty.'});
-                headers['Content-Type']='application/json';body=JSON.stringify({...ZINNIA_V10_PROFILE,input:text});endpoint='speech';
+                headers['Content-Type']='application/json';body=JSON.stringify({...ZINNIA_VOICE_PROFILE,input:text});endpoint='speech';
             }
             const response=await fetch('https://api.openai.com/v1/audio/'+endpoint,{method:'POST',headers,body,signal:AbortSignal.timeout(25000)});
             if(!response.ok)return sendJson(res,response.status===429?429:502,{error:'Voice provider unavailable. Please retry.'});
             if(endpoint==='transcriptions'){const payload=await response.json();sendJson(res,200,{text:String(payload.text || '').slice(0,2000)});}
-            else{res.writeHead(200,{'Content-Type':'audio/mpeg','X-Zinnia-Delivery':ZINNIA_V10_DELIVERY});res.end(Buffer.from(await response.arrayBuffer()));}
+            else{res.writeHead(200,{'Content-Type':'audio/mpeg','X-Zinnia-Delivery':ZINNIA_VOICE_DELIVERY});res.end(Buffer.from(await response.arrayBuffer()));}
         }catch{sendJson(res,502,{error:'Voice request timed out or could not complete.'});}
     });return true;
 }

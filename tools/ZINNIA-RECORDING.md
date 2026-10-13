@@ -14,8 +14,8 @@ Old audio is retained. Dynamic personalised speech uses the same Coral voice onl
 
 Official API documentation: https://developers.openai.com/api/docs/guides/text-to-speech
 
-## Refined OpenAI V10 delivery
+## Approved OpenAI V13 delivery
 
-Tutorial and demo recorders import one profile from `tools/zinniaVoiceServer.mjs`. The hosted route returns `X-Zinnia-Delivery: v10-refined-1`; recorders reject a successful response with the wrong profile marker. The bank hash includes the delivery instructions, so existing basic recordings are not reused. Each active bank records its instructions and delivery version. Live replies use the same delivery.
+Tutorial and demo recorders import one profile from `tools/zinniaVoiceServer.mjs`. The hosted route returns `X-Zinnia-Delivery: v13-approved-1`; recorders reject a successful response with the wrong profile marker. The bank hash includes the delivery instructions, so existing basic recordings are not reused. Each active bank records its instructions and delivery version. Live replies use the same delivery.
 
-V10 is a delivery reference, not an Ava clone. OpenAI Coral keeps normal playback rate; the prompt asks for lighter conversational delivery, connected clauses and gently released word endings. Background music and short echo remain separate from the saved voice recordings.
+V13 is the approved 23-year-old flower character delivery. OpenAI Coral keeps normal playback rate; the prompt asks for a light upper-middle register, connected conversational phrasing, gentle warmth and naturally released word endings. Background music and short echo remain separate from the saved voice recordings.
