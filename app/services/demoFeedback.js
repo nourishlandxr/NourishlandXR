@@ -1,7 +1,7 @@
 // Demo-only streamed music and lightweight, original touch tones.
 export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .20, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.24, beeApproachDuration:50 });
 export function createDemoFeedback({resetSettings=false}={}) {
-    let music=null, context=null,fxGain=null, lastSound=-Infinity, lastTick=-Infinity, destroyed=false;
+    let music=null, context=null,fxGain=null, lastSound=-Infinity,lastSoundKind=null, lastTick=-Infinity, destroyed=false;
     const encounters=new WeakMap(),encounterPulseUntil=new WeakMap();
     let nextBeeBuzz=-Infinity;
     const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35,haptics:true};
@@ -43,12 +43,12 @@ export function createDemoFeedback({resetSettings=false}={}) {
     function sound(kind='menu') {
         if(destroyed || !context || context.state!=='running' || levels.fx===0)return;
         const now=context.currentTime;
-        if(now-lastSound<.065)return;
-        lastSound=now;
-        const notes=kind==='practice-reward'?[523,659,784]:kind==='practice-press'?[740]:kind==='practice-water'?[392,523]:kind==='dice'?[130,196]:kind==='cell'?[1174,1761]:kind==='placement'?[330,660]:kind==='totem'?[440,660]:[620];
-        const duration=kind==='menu' || kind==='practice-press'?.085:kind==='cell' || kind==='practice-reward'?.28:.20;
+        if(now-lastSound<.065 && !(kind==='practice-reward' && ['practice-press','practice-success'].includes(lastSoundKind)))return;
+        lastSound=now;lastSoundKind=kind;
+        const notes=kind==='practice-magic'?[392,523,784,1046]:kind==='practice-success'?[880,1174]:kind==='practice-reward'?[523,659,784]:kind==='practice-press'?[740]:kind==='practice-water'?[392,523]:kind==='dice'?[130,196]:kind==='cell'?[1174,1761]:kind==='placement'?[330,660]:kind==='totem'?[440,660]:[620];
+        const duration=kind==='menu' || kind==='practice-press'?.085:kind==='practice-magic'?.36:kind==='cell' || kind==='practice-reward'?.28:kind==='practice-success'?.12:.20;
         notes.forEach((frequency,index)=>{
-            const oscillator=context.createOscillator(),gain=context.createGain(),start=now+index*(kind==='practice-reward'?.065:.025);
+            const oscillator=context.createOscillator(),gain=context.createGain(),start=now+index*(kind==='practice-magic'?.09:kind==='practice-reward'?.065:.025);
             oscillator.type=kind==='dice'?'triangle':'sine';oscillator.frequency.value=frequency;
             gain.gain.setValueAtTime(0,start);gain.gain.linearRampToValueAtTime(.1/notes.length,start+.008);
             gain.gain.exponentialRampToValueAtTime(.0001,start+duration);

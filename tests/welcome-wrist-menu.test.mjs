@@ -10,9 +10,9 @@ function setup(){
     let controllerTool='standard';const stage={trials,paint,setControllerTool(tool){controllerTool=tool;},snapshot:()=>({phase:'brush',controllerTool,insectControllerAvailable:false,voice:{},trials:{active:trials.active},inputMode:'controllers'}),setInputMode(mode){trials.mode=mode;},button(){}};
     return {menu:createWelcomeComfortOptions({stage}),paint};
 }
-test('a discreet pulse button opens six 30mm targets in two columns down the forearm, with fixed right-side tools',()=>{
-    const {menu,paint}=setup(),collapsed=menu.context();assert.equal(collapsed.items.length,1);assert.equal(collapsed.items[0].action,'Comfort:toggle');assert.ok(collapsed.width<.03);
-    menu.act('toggle');const home=menu.context(),dock=home.items.filter(item=>item.dock);assert.equal(dock.length,6);assert.equal(new Set(dock.map(item=>item.worldBox.x)).size,2);assert.equal(new Set(dock.map(item=>item.worldBox.y)).size,3);
+test('right thumbstick opens and closes six 30mm targets in two columns down the forearm, with fixed right-side tools',()=>{
+    const {menu,paint}=setup(),collapsed=menu.context();assert.equal(collapsed.items.length,0);assert.ok(collapsed.width<.03);
+    menu.act('controller-toggle');assert.equal(menu.context().opened,true);menu.act('controller-toggle');assert.equal(menu.context().opened,false);menu.act('controller-toggle');const home=menu.context(),dock=home.items.filter(item=>item.dock);assert.equal(dock.length,6);assert.equal(new Set(dock.map(item=>item.worldBox.x)).size,2);assert.equal(new Set(dock.map(item=>item.worldBox.y)).size,3);
     for(const item of dock){assert.ok(item.ariaLabel);assert.ok(item.accent);assert.equal(item.text,undefined);assert.ok(Math.abs(item.width*home.width/1000-.030)<1e-9);}
     const matrix=new THREE.Matrix4().makeRotationY(.65).setPosition(.2,1,-.4).elements,closed=welcomeWristPose(matrix,home);menu.act('games');const expanded=menu.context(),opened=welcomeWristPose(matrix,expanded);
     const base=(pose,context)=>pose.center.clone().addScaledVector(pose.right,-context.centerOffset.x).addScaledVector(pose.up,-context.centerOffset.y);assert.ok(base(opened,expanded).distanceTo(base(closed,home))<1e-9);

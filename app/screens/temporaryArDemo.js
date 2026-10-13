@@ -111,6 +111,7 @@ import {supportsSpatialPIMO} from '../services/pimoSpatialCapabilities.js';
 import {knowledgeExplorer,knowledgeExplorerOptions,knowledgeExplorerAction,preserveKnowledgeContext} from '../services/knowledgeExplorer.js';
 import {createKnowledgeSpatialRenderer} from '../services/knowledgeSpatialRenderer.js';
 import {mountKnowledgeDesktopView,disposeKnowledgeDesktopViews} from '../services/knowledgeDesktopView.js';
+import {playWelcomePracticeFeedback} from '../services/welcomePracticeFeedback.js';
 import {createWelcomePracticeXR} from '../services/welcomePracticeXR.js';
 import {createWelcomePracticeVoice} from '../services/welcomePracticeVoice.js';
 import {createWelcomeComfortOptions,welcomePracticeVisualGuide} from '../services/welcomeComfortOptions.js';
@@ -1302,7 +1303,7 @@ function demoTotemCards(record) {
         ...(note ? [{id:`note-${note.id}`,eyebrow:'',title:pointedTitle('Note',directionFor(note)),summary:'',body:note.description || note.notes || (demoContentFor(note)?.lines || []).join(' · '),plaque:true,boardSide:directionFor(note),references:[note.id]}] : []),
     ].slice(0,5);
 }
-function demoAreaVisible(record) { return !demoHiddenElements.has(record?.demoType) && (introBoardStep!=='UTILITY 1.1' || Boolean(record.demoMapPiece)) && !record?.demoHiddenForLimo && demoAreaRecordVisible(record,markers); }
+function demoAreaVisible(record) { return !welcomePractice?.active && !demoHiddenElements.has(record?.demoType) && (introBoardStep!=='UTILITY 1.1' || Boolean(record.demoMapPiece)) && !record?.demoHiddenForLimo && demoAreaRecordVisible(record,markers); }
 
 function clearHiddenDemoAreaState(area) {
     const owned=markers.filter(record=>record.demoAreaId===area?.id);
@@ -2204,7 +2205,7 @@ function paintWelcomeLayer(now) {
     context.scale(arWelcomeCanvas.width/2500,arWelcomeCanvas.height/2100);
     const frames=drawArWelcomeShowcase(context,arWelcomeClock.elapsed,
         simulatedMode || window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{
-            simpleDesktop:simulatedMode,opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
+            simpleDesktop:simulatedMode,opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:!welcomePractice?.active && limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,
             frameAnimation:false,frameArtwork:false,drawRoots:!simulatedMode && arWelcomeSharedBoard && introBoardVisible,
             rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,
             drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt),connectionGraph:demoLimo?.graph()},
@@ -5072,7 +5073,7 @@ function setupRenderer() {
     // The interaction toy now has a purpose on the welcome table. The loose
     // Hero Dice no longer competes with the plant/Control panel journey.
     if((developerLab?.id==='toys' || !developerLab && welcomeTutorialEnabled()) && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getTrialPanelPose:()=>infoPanel?.spatialPose,getFramePose:()=>{if(!introWorldAnchor)return null;const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);return livingFramePose(billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor));},
-        onToolMenu:()=>welcomeComfort?.act("controller-toggle"),onFeedback:(kind,source)=>{if(kind==='transform'){demoFeedback.sound('practice-reward');if(source)demoFeedback.pulse(source,.25,90);return;}const reward=['lesson','plant','collect','open','harvest','ring','land'].includes(kind);demoFeedback?.sound(reward?'practice-reward':kind==='control' || kind==='point'?'practice-press':kind==='water'?'practice-water':kind==='impact'?'dice':'placement');if(source && (reward || ['control','point','water','grab','release','paint'].includes(kind)))demoFeedback?.pulse(source,reward?.28:.18,reward?55:30);},
+        onToolMenu:()=>welcomeComfort?.act("controller-toggle"),onFeedback:(kind,source,intensity)=>playWelcomePracticeFeedback(demoFeedback,kind,source,intensity),
         onChange:state=>{syncDemoVoiceBar();syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
         isFrameReady:()=>Boolean(livingFrameModel?.entranceReady),getFrameError:()=>livingFrameModel?.error,
         onPanelOwns:source=>infoPanel?.getHeldInputSource()===source || Boolean(infoPanel?.isHandInteracting(source)),
@@ -5480,7 +5481,7 @@ function createIntroNoteTexture(texture = null) {
     ctx.save();ctx.scale(textureScale,textureScale);
     if(welcomePractice?.active && welcomePractice.stage.phase==='frame' && !welcomePractice.stage.snapshot().comfortVisible){ctx.restore();return canvasTexture(label,texture);}
     if(arWelcomeShowcaseActive){
-        arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,frameAnimation:false,frameArtwork:false,drawRoots:!welcomePractice?.active && arWelcomeSharedBoard && introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt),connectionGraph:demoLimo?.graph()},cellOpacity:currentCellOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
+        arWelcomeRenderedFrames=drawArWelcomeShowcase(ctx,arWelcomeClock.elapsed,window.matchMedia('(prefers-reduced-motion: reduce)').matches,arWelcomeClusters,{opening:arWelcomeOpeningActive,minimalIntro:arWelcomeIntroPending,openingSeed:arWelcomeOpeningSeed,openingDuration:arWelcomeOpeningDuration,minimalStartAt:DEMO_ARCHETYPE_START_MS,minimalInterval:DEMO_ARCHETYPE_INTERVAL_MS,minimalRevealDuration:DEMO_ARCHETYPE_REVEAL_MS,hidden:limHiddenCells,drawCells:!welcomePractice?.active && limMeshVisible,drawPanel:arWelcomeSharedBoard && introBoardVisible,frameAnimation:false,frameArtwork:false,drawRoots:!welcomePractice?.active && arWelcomeSharedBoard && introBoardVisible,rootMilestone:arWelcomeRootMilestone,rootMilestoneStartedAt:arWelcomeRootMilestoneStartedAt,drawContent:drawIntroNoteContent,progression:{cellsActivatedAt:limMeshActivatedAt,expandedLimIds:[...limExpandedCells],expandedAt:Object.fromEntries(limExpandedAt),connectionGraph:demoLimo?.graph()},cellOpacity:currentCellOpacity(),selectedKey:selectedLimCell,hoverKey:contextCellKey,pathwayKey:limPathwayState.status==='active'?(currentPathwayNode()?.key || ''):'',holdKey:limActivation?.activeKey,holdProgress:limActivation?.progress || 0,connectedKey:nativeConnectionState?.phase==='connected'?nativeConnectionTargetKey():''});
         ctx.restore();return canvasTexture(label,texture);
     }
     drawArWelcomePanel(ctx,{elapsed:arWelcomeClock.elapsed,reducedMotion:window.matchMedia('(prefers-reduced-motion: reduce)').matches,simple:true,rim:false});
@@ -5747,7 +5748,7 @@ function createIntroKnowledgeTexture() {
 function introLocalPosition(matrix, [x, y, z]) {
     return {
         x: matrix[12] + matrix[0] * x + matrix[4] * y + matrix[8] * z,
-        y: matrix[13] + matrix[1] * x + matrix[5] * y + matrix[9] * z,
+        y: matrix[13] + matrix[1] * x + matrix[5] * y + matrix[9] * z + (arWelcomeSharedBoard && x===AR_PHONE_COMFORT.boardPosition[0] && y===AR_PHONE_COMFORT.boardPosition[1] && z===AR_PHONE_COMFORT.boardPosition[2] ? getSpatialVisualSettings().livingFrameHeight || 0 : 0),
         z: matrix[14] + matrix[2] * x + matrix[6] * y + matrix[10] * z
     };
 }

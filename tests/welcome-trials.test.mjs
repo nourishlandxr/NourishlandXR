@@ -48,12 +48,12 @@ test('opening, switching and closing trials preserves the guided lesson, props a
     try{
         stage=createWelcomePracticeScene({voice,embedded:true,loadZinnia:async()=>{const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}});await stage.loading;
         const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('grab');stage.update(.05,{viewer,floor:0});
-        const orange=stage.objects.get('peach'),position=orange.position.clone();assert.equal(orange.visible,true);
+        const orange=stage.objects.get('peach'),position=orange.position.clone();assert.equal(orange.visible,false,'failed fruit assets never display placeholder balls');
         stage.trials.open('garden');assert.equal(orange.visible,false);for(let i=0;i<800;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.phase,'grab');assert.equal(stage.snapshot().completed,false);
         stage.trials.command('mode:gloves');assert.equal(stage.controllerHandsVisible,true);assert.equal(stage.handsEnabled,false);
         stage.trials.command('mode:hands');assert.equal(stage.handsEnabled,true);assert.equal(stage.trackedHandOpacity,1);
-        stage.trials.open('painting');stage.trials.close();assert.equal(stage.phase,'grab');assert.equal(orange.visible,true);assert.deepEqual(orange.position,position);
-        assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.handsEnabled,false);
+        stage.trials.open('painting');stage.trials.close();assert.equal(stage.phase,'grab');assert.equal(orange.visible,false,'failed fruit assets never display placeholder balls');assert.deepEqual(orange.position,position);
+        assert.equal(stage.controllerHandsVisible,true,'returning to fruit practice restores the virtual hands introduced earlier');assert.equal(stage.handsEnabled,false);
     }finally{stage?.destroy();globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.Image=oldImage;console.warn=oldWarn;}
 });
 

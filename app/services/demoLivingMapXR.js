@@ -5,7 +5,7 @@ import {currentGraphicsQuality} from './spatialVisualSettings.js';
 
 // Upload the actual miniature meshes to the session's context: each eye sees
 // its own perspective, depth and occlusion, including the land's solid sides.
-export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false,fadeTransform=true,maxTextureSize=Infinity,detailMaps=true,alphaCompositing=false}={}){
+export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCALE,surfaceDetail=false,fadeTransform=true,maxTextureSize=Infinity,detailMaps=true,alphaCompositing=false,welcomeMagic=false}={}){
     const resources=[],cache=new Map(),textures=new Map(),textureVersions=new Map(),instanceGeometry=new Map(),instanceBuffers=new WeakMap();
     // This renderer shares the XR context with every panel and object. Keep
     // its attribute pointers in a private VAO so deleting map buffers cannot
@@ -29,11 +29,13 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
     const surfaceShader=(source,fragment=false)=>gl.createVertexArray?
         '#version 300 es\n'+source.replace(/\battribute\b/g,'in').replace(/\bvarying\b/g,fragment?'in':'out').replace(/\btexture2D\b/g,'texture').replace(/\bgl_FragColor\b/g,'surfaceOutput').replace('precision highp float;','precision highp float;\nout vec4 surfaceOutput;'):
         (fragment?'#extension GL_OES_standard_derivatives : enable\n':'')+source;
+    const magicVertex=welcomeMagic?FRUIT_SURFACE_VERTEX.replace('varying vec3 pointView','uniform vec4 magicPlane;varying float magicCoord;varying vec3 pointView').replace('vec4 pv=view*model*point;','magicCoord=dot(magicPlane,model*point);vec4 pv=view*model*point;'):FRUIT_SURFACE_VERTEX;
+    const magicFragment=welcomeMagic?FRUIT_SURFACE_FRAGMENT.replace('uniform vec3 colour;','varying float magicCoord;uniform float magicProgress;uniform vec3 colour;').replace('void main(){vec4 texel','void main(){if(magicProgress>=0. && magicCoord<magicProgress)discard;vec4 texel').replace('gl_FragColor=vec4(pow(max(lit','if(magicProgress>=0.)lit=mix(lit,vec3(8.,5.,1.2),1.-smoothstep(0.,.09,magicCoord-magicProgress));gl_FragColor=vec4(pow(max(lit'):FRUIT_SURFACE_FRAGMENT;
     const program=gl.createProgram();resources.push(['Program',program]);
-    gl.attachShader(program,compile(gl.VERTEX_SHADER,detailed?surfaceShader(FRUIT_SURFACE_VERTEX):`attribute vec3 p,n,c,ic;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;uniform mat4 projection,view,model;uniform float instanced;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}vec3 normal=normalize(mat3(model)*norm);light=.68+.32*max(0.,dot(normal,normalize(vec3(-.3,.8,.5))));v=uv;tint=pow(max(c*(instanced>.5?ic:vec3(1.)),vec3(0.)),vec3(.4545));gl_Position=projection*view*model*point;}`));
-    gl.attachShader(program,compile(gl.FRAGMENT_SHADER,detailed?surfaceShader(FRUIT_SURFACE_FRAGMENT,true):`precision mediump float;uniform vec3 colour;uniform float alpha,textured;uniform sampler2D image;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 c=vec4(colour*tint,1.);if(textured>.5)c*=texture2D(image,v);if(c.a*alpha<.01)discard;gl_FragColor=vec4(c.rgb*light,c.a*alpha);}`));
+    gl.attachShader(program,compile(gl.VERTEX_SHADER,detailed?surfaceShader(magicVertex):`attribute vec3 p,n,c,ic;attribute vec2 uv;attribute vec4 i0,i1,i2,i3;uniform mat4 projection,view,model;uniform float instanced;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 point=vec4(p,1.);vec3 norm=n;if(instanced>.5){mat4 pose=mat4(i0,i1,i2,i3);point=pose*point;norm=mat3(pose)*n;}vec3 normal=normalize(mat3(model)*norm);light=.68+.32*max(0.,dot(normal,normalize(vec3(-.3,.8,.5))));v=uv;tint=pow(max(c*(instanced>.5?ic:vec3(1.)),vec3(0.)),vec3(.4545));gl_Position=projection*view*model*point;}`));
+    gl.attachShader(program,compile(gl.FRAGMENT_SHADER,detailed?surfaceShader(magicFragment,true):`precision mediump float;uniform vec3 colour;uniform float alpha,textured;uniform sampler2D image;varying float light;varying vec2 v;varying vec3 tint;void main(){vec4 c=vec4(colour*tint,1.);if(textured>.5)c*=texture2D(image,v);if(c.a*alpha<.01)discard;gl_FragColor=vec4(c.rgb*light,c.a*alpha);}`));
     gl.linkProgram(program);if(!gl.getProgramParameter(program,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(program));
-    const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image','instanced','normalView','normalImage','normalMapped','normalScale','roughImage','roughMapped','roughness','metalness','unlit'].map(k=>[k,gl.getUniformLocation(program,k)]));
+    const uniforms=Object.fromEntries(['projection','view','model','colour','alpha','textured','image','instanced','normalView','normalImage','normalMapped','normalScale','roughImage','roughMapped','roughness','metalness','unlit','magicPlane','magicProgress'].map(k=>[k,gl.getUniformLocation(program,k)]));
     const attributes=['p','n','uv','c'].map(k=>gl.getAttribLocation(program,k));
     const matrixAttributes=['i0','i1','i2','i3'].map(k=>gl.getAttribLocation(program,k));
     const instanceColourAttribute=gl.getAttribLocation(program,'ic');
@@ -113,6 +115,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.image,0);
         }
         if(detailed){
+            if(welcomeMagic){const magic=material.userData?.welcomeMagic;gl.uniform1f(uniforms.magicProgress,magic?.progress ?? -2);gl.uniform4fv(uniforms.magicPlane,magic?.plane || [0,0,0,0]);}
             const detail=detailMaps && currentGraphicsQuality()!=='low';
             surfaceMatrix.multiplyMatrices(eyeMatrix,matrix);surfaceNormal.getNormalMatrix(surfaceMatrix);
             gl.uniformMatrix3fv(uniforms.normalView,false,surfaceNormal.elements);

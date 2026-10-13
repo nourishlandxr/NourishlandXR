@@ -23,7 +23,7 @@ export function createZinniaTouchReactions(){
         for(const source of histories.keys())if(!present.has(source))histories.delete(source);
         if(candidate && cooldown===0){reaction=candidate;remaining=1.8;cooldown=remaining;for(const h of histories.values())h.age=h.distance=h.turns=0;}
         return reaction;
-    },reset(){histories.clear();reaction=null;remaining=cooldown=0;},snapshot:()=>({reaction,remaining})};
+    },react(kind='tickle'){reaction=kind;remaining=cooldown=1.8;histories.clear();},reset(){histories.clear();reaction=null;remaining=cooldown=0;},snapshot:()=>({reaction,remaining})};
 }
 
 export function zinniaContacts(root,inputs=[],{includeHover=false}={}){

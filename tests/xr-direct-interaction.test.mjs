@@ -46,15 +46,16 @@ test('actual panel XR handler ignores grip, distant selection and hand pinch; ne
     assert.equal(scope.spatialMove,null);assert.equal(scope.spatialGrabPending,null);
 });
 
-test('welcome controllers have no idle laser; held left X/Y requests a contact ray',()=>{
+test('controller lasers are absent before the taught reveal, then render normally; virtual hands retain settings contact feedback',()=>{
     const source=fs.readFileSync(new URL('../app/services/welcomePracticeXR.js',import.meta.url),'utf8'),start=source.indexOf('draw(view,handRenderer){'),end=source.indexOf('        },destroy',start);
-    let lines=0,contacts=0;const stage={active:true,exitOpacity:1,controllerLasersVisible:false,controllerHandsVisible:false,trials:{active:null},phase:'fruit',snapshot:()=>({comfortVisible:true}),isBrushHeld:()=>false,hit:()=>null};
+    let lines=0,contacts=0;const stage={active:true,exitOpacity:1,controllerLaserProgress:.5,controllerLasersVisible:false,controllerHandsVisible:false,trials:{active:null},phase:'controls-trigger',snapshot:()=>({settingsAvailable:stage.phase==='fruit'}),isBrushHeld:()=>false,hit:()=>null};
     const controller={source:{handedness:'left',gamepad:{buttons:Array.from({length:6},()=>({pressed:false}))}},ray:{origin:{x:0,y:1,z:0},direction:{x:0,y:0,z:-1}}};
-    const context={stage,revealTime:2,renderer:null,anchor:{},hands:[],controllers:[],inputs:[controller],onHit:()=>null,nearestWelcomePointerHit:()=>null,drawSpatialTether:()=>lines++,drawSpatialPointerContact:()=>contacts++,gl:{},pointer:{}};
+    const context={stage,revealTime:2,renderer:null,anchor:{},hands:[],controllers:[],inputs:[controller],onHit:()=>null,nearestWelcomePointerHit:()=>null,drawWelcomeControllerLaser:()=>lines++,drawSpatialPointerContact:()=>contacts++,gl:{},pointer:{}};
     const draw=vm.runInNewContext('({'+source.slice(start,end)+'}}).draw',context);
-    draw({});assert.equal(lines,0);controller.source.gamepad.buttons[4].pressed=true;draw({});assert.equal(lines,1);
-    controller.source.gamepad.buttons[4].pressed=false;context.nearestWelcomePointerHit=()=>({kind:'panel',worldPoint:{x:0,y:1,z:-.6}});draw({});assert.equal(lines,1);assert.equal(contacts,1);
-    stage.phase='controls-trigger';draw({});assert.equal(contacts,1,'controller introduction has no pointer');
+    draw({});assert.equal(lines,0);controller.source.gamepad.buttons[4].pressed=true;draw({});assert.equal(lines,0,'A/X never secretly enables a laser');
+    stage.phase='laser-intro';stage.controllerLasersVisible=true;draw({});assert.equal(lines,1);
+    stage.phase='fruit';stage.controllerLasersVisible=false;context.nearestWelcomePointerHit=()=>({kind:'panel',worldPoint:{x:0,y:1,z:-.6}});draw({});assert.equal(lines,1);assert.equal(contacts,1);
+    stage.phase='controls-trigger';draw({});assert.equal(contacts,1,'early button practice has no pointer');
     stage.phase='fruit';controller.source.hand={};draw({});assert.equal(lines,1);assert.equal(contacts,1);
 });
 

@@ -4,16 +4,17 @@ import {WELCOME_TRIALS} from './welcomeTrialState.js';
 import {MARKING_BRUSHES} from './creatorMarkingBrushes.js';
 import {PAINT_V2_COLOURS} from './spatialPaintV2.js';
 
-// A pulse button opens six controls in two columns down the forearm.
+// Right thumbstick toggles settings; hand tracking retains an icon entry.
 export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChange=()=>{}}={}){
     let page='home',opened=false;
     const paint=()=>stage.trials.active==='painting'?stage.trials.paint:stage.paint;
     const item=(id,label,icon,extra={})=>({action:'Comfort:'+id,label,ariaLabel:label,description:label,icon,kind:'utility',...extra});
     function context(){
         const state=stage.snapshot(),voice=state.voice || {},visual=getSpatialVisualSettings(),audio=getWelcomeNarrationSettings(),drawing=paint()?.snapshot?.() || {};
+        if(state.settingsAvailable===false){opened=false;page='home';}
         if((page.startsWith('paint') || page==='controller-tools') && state.controllerTool==='standard')page='home';
         const expanded=opened && page!=='home';
-        const items=[item('toggle','Wrist menu',opened?'close':'pulse',{pulse:true,selected:opened})];
+        const items=[item('toggle','Wrist menu',opened?'close':'settings',{selected:opened})];
         if(opened)items.push(item('reset','Reset objects','repeat',{accent:'#8bbdd4'}),item('games','Games','games',{selected:page==='games',accent:'#c7ad76'}),item('input','Change controllers','controller',{selected:page==='input',accent:'#a4c3a0'}),item('audio','Audio','audio',{selected:page==='audio',accent:'#b8a6d2'}),item('adjust','Comfort settings','settings',{selected:page==='settings',accent:'#83bfae'}),item('tutorial','Tutorial actions','lesson',{selected:page==='tutorial',accent:'#cb9c8b'}));
         items[0].worldBox={x:0,y:.059,size:.022};
         items.slice(1).forEach((button,i)=>{button.dock=true;button.worldBox={x:(i%2-.5)*.034,y:.020-Math.floor(i/2)*.034,size:.030};});
@@ -54,7 +55,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         const gridBottom=grid.length?.012-(Math.ceil(grid.length/columns)-1)*.029-.0125:-.065;
         if(state.trials?.active && expanded){const y=Math.min(-.075,gridBottom-.020);options.push(item('game-reset','Reset activity','repeat',{worldBox:{x:.081,y,size:.027}}),item('game-close','Return to tutorial','back',{worldBox:{x:.162,y,size:.027}}));}
         const header=options.find(button=>button.header);if(header)header.worldBox={x:.184,y:.052,size:.027};
-        const visibleOptions=expanded?options:[],all=[...items,...visibleOptions];
+        const visibleOptions=expanded?options:[],all=[...items,...visibleOptions].filter(button=>state.settingsAvailable!==false && (button.action!=='Comfort:toggle' || state.inputMode==='hands' || opened));
         const bounds=controllerMounted?{left:.043,right:.202,top:.109,bottom:Math.min(-.035,...visibleOptions.map(button=>button.worldBox.y-(button.worldBox.h || button.worldBox.size)/2-.004))}:opened?{left:-.034,right:expanded?.202:.034,top:.073,bottom:Math.min(-.067,...visibleOptions.map(button=>button.worldBox.y-(button.worldBox.h || button.worldBox.size)/2-.004))}:{left:-.014,right:.014,top:.073,bottom:.045};
         const width=bounds.right-bounds.left,height=Math.round((bounds.top-bounds.bottom)/width*1000),centerOffset={x:(bounds.left+bounds.right)/2,y:(bounds.top+bounds.bottom)/2};
         for(const button of all){const box=button.worldBox,w=box.w || box.size,h=box.h || box.size;Object.assign(button,{x:(box.x-w/2-bounds.left)/width*1000,y:(bounds.top-box.y-h/2)/width*1000,width:w/width*1000,height:h/width*1000,disabled:Boolean(button.disabled || state.exiting)});}
@@ -70,9 +71,9 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         onChange();
     }
     function act(id){
-        if(stage.snapshot().exiting)return;
+        if(stage.snapshot().exiting || stage.snapshot().settingsAvailable===false)return;
         if(id==='toggle'){opened=!opened;page='home';}
-        else if(id==='controller-toggle'){if(stage.snapshot().controllerTool==='standard')return;opened=true;page=page.startsWith('paint') || page==='controller-tools'?'home':stage.snapshot().controllerTool==='paint'?'paint-brush':'controller-tools';}
+        else if(id==='controller-toggle'){opened=!opened;page=opened && stage.snapshot().controllerTool==='paint'?'paint-brush':opened && stage.snapshot().controllerTool==='insect'?'controller-tools':'home';}
         else if(id==='home')page='home';
         else if(['games','input','audio','tutorial','adjust'].includes(id)){const next=id==='adjust'?'settings':id;page=page===next?'home':next;}
         else if(id==='paint-tools'){page=stage.snapshot().controllerTool!=='paint'?'input':page.startsWith('paint')?'home':'paint-brush';}
@@ -94,7 +95,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         else if(id.startsWith('graphics:')){setSpatialVisualSettings({graphicsQuality:id.slice(9)});onVisualChange();}
         else if(id.startsWith('frame:')){setSpatialVisualSettings({livingFrameHeight:getSpatialVisualSettings().livingFrameHeight+(id.endsWith('higher')?.05:-.05)});onVisualChange();}
         else if(id.startsWith('table:')){const value=setSpatialVisualSettings({practiceTableHeight:getSpatialVisualSettings().practiceTableHeight+(id.endsWith('higher')?.05:-.05)});stage.setTableHeightOffset(value.practiceTableHeight);}
-        if(id!=='toggle')opened=true;onChange();
+        if(!['toggle','controller-toggle'].includes(id))opened=true;onChange();
     }
     return {context,act,setValue};
 }

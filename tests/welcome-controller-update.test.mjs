@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
@@ -32,4 +34,15 @@ test('old echo preferences do not add delayed copies to the new narration',()=>{
     const oldStorage=globalThis.localStorage;let saved;
     globalThis.localStorage={getItem:()=>JSON.stringify({echo:.03,volume:.8}),setItem:(_key,value)=>{saved=JSON.parse(value);}};
     try{assert.equal(getWelcomeNarrationSettings().echo,0);assert.equal(getWelcomeNarrationSettings().volume,.8);assert.equal(setWelcomeNarrationSettings({echo:.1}).echo,0);assert.equal(saved.echo,0);}finally{globalThis.localStorage=oldStorage;}
+});
+
+
+test('Living Frame height moves its text surface and native rim together',async()=>{
+ const {livingFramePose}=await import('../app/services/livingFramePlacement.js');
+ const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+ const body=source.slice(source.indexOf('function introLocalPosition('),source.indexOf('function introWorldAnchorFromViewer('));let height=0;
+ const boardPosition=[0,.6,-1],scope=vm.createContext({arWelcomeSharedBoard:true,AR_PHONE_COMFORT:{boardPosition},getSpatialVisualSettings:()=>({livingFrameHeight:height})});vm.runInContext(body,scope);
+ const anchor=[1,0,0,0,0,1,0,0,0,0,1,0,0,1,0,1];
+ const measure=()=>{const surface=scope.introLocalPosition(anchor,boardPosition),board=new Float32Array(anchor);board[12]=surface.x;board[13]=surface.y;board[14]=surface.z;return {surface,rim:livingFramePose(board).center};};
+ const before=measure();height=.45;const after=measure();assert.ok(Math.abs(after.surface.y-before.surface.y-.45)<1e-6);assert.ok(Math.abs(after.rim.y-before.rim.y-.45)<1e-6);assert.ok(Math.abs((after.rim.y-after.surface.y)-(before.rim.y-before.surface.y))<1e-6);
 });

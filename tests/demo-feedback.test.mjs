@@ -3,12 +3,12 @@ import assert from 'node:assert/strict';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../app/services/demoFeedback.js';
 test('demo music streams, touch tones release resources, haptics throttle and stop on exit',t=>{
     const originalAudio=globalThis.Audio,originalContext=globalThis.AudioContext;
-    let audio,plays=0,paused=0,closed=0,tones=0,now=0;t.mock.method(performance,'now',()=>now);
+    let audio,context,plays=0,paused=0,closed=0,tones=0,now=0;t.mock.method(performance,'now',()=>now);
     globalThis.Audio=class {constructor(src){this.src=src;audio=this;}play(){plays++;return Promise.resolve();}pause(){paused++;}removeAttribute(){this.src='';}load(){}};
-    globalThis.AudioContext=class {state='running';currentTime=1;destination={};resume(){return Promise.resolve();}close(){closed++;return Promise.resolve();}createOscillator(){tones++;return {frequency:{},connect(){},disconnect(){},start(){},stop(){}};}createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}};
+    globalThis.AudioContext=class {constructor(){context=this;}state='running';currentTime=1;destination={};resume(){return Promise.resolve();}close(){closed++;return Promise.resolve();}createOscillator(){tones++;return {frequency:{},connect(){},disconnect(){},start(){},stop(){}};}createGain(){return {gain:{setValueAtTime(){},linearRampToValueAtTime(){},exponentialRampToValueAtTime(){}},connect(){},disconnect(){}};}};
     try{
         const feedback=createDemoFeedback(),tick=(time,options)=>{now=time;feedback.tick(time,options);};feedback.start();assert.equal(plays,1);assert.equal(audio.preload,'metadata');assert.equal(audio.loop,true);assert.equal(audio.volume,DEMO_FEEDBACK.musicVolume);
-        feedback.sound('cell');assert.equal(tones,2);feedback.sound('menu');assert.equal(tones,2);
+        feedback.sound('cell');assert.equal(tones,2);feedback.sound('menu');assert.equal(tones,2);context.currentTime+=.1;feedback.sound('practice-press');assert.equal(tones,3);feedback.sound('practice-reward');assert.equal(tones,6,'success chord is never swallowed by the final button tap');feedback.sound('practice-reward');assert.equal(tones,6,'both controllers share one success chord');
         const pulses=[],source={gamepad:{hapticActuators:[{pulse:(...args)=>{pulses.push(args);return Promise.resolve();}}]}};
         feedback.pulse(source,DEMO_FEEDBACK.holdStrength,100);
         tick(120,{sources:[source],heldSource:source});assert.equal(pulses.length,1);assert.equal(pulses[0][0],DEMO_FEEDBACK.holdStrength);

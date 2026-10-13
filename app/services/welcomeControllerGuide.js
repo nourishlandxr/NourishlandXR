@@ -1,11 +1,12 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {createWelcomeControllerSkin} from './welcomeControllerSkin.js';
+import {createWelcomeControllerSparks,welcomeControllerMagicPlane} from './welcomeControllerMagic.js';
 import {createNourishlandControllerPrototype} from './nourishlandControllerPrototype.js';
 
 const supported=['meta-quest-touch-plus','oculus-touch-v3'];
-const actions={'controls-trigger':['trigger'],'controls-grip':['squeeze'],'controls-stick':['thumbstick'],brush:['squeeze','trigger'],point:['trigger'],grab:['squeeze'],gloves:['squeeze'],fly:['trigger','squeeze','thumbstick'],fruit:['squeeze','trigger'],packet:['squeeze','trigger'],seed:['squeeze'],harvest:['squeeze'],water:['squeeze'],trial:['squeeze','trigger']};
-const labels={'controls-trigger':'Press both triggers','controls-grip':'Squeeze both grips','controls-stick':'Circle both thumbsticks',brush:'Grip to hold · trigger to paint',point:'Index finger · trigger',grab:'Middle finger · grip',gloves:'Gently squeeze your grip',fly:'Trigger forward · grip back · stick turns / height',fruit:'Middle finger · grip',packet:'Hold grip · press trigger to open',seed:'Middle finger · grip',harvest:'Pick · release into the basket',water:'Hold grip · tilt the can',trial:'Grip to hold · trigger to act'};
+const actions={'controls-trigger':['trigger'],'controls-grip':['squeeze'],'controls-stick':['thumbstick'],'controls-stick-click':['thumbstick'],'controls-face-first':['a-button','x-button'],'controls-face-second':['b-button','y-button'],'settings-open':['thumbstick'],'settings-close':['thumbstick'],brush:['squeeze','trigger'],point:['trigger'],grab:['squeeze'],gloves:['squeeze'],fly:['trigger','squeeze','thumbstick'],fruit:['squeeze','trigger'],packet:['squeeze','trigger'],seed:['squeeze'],harvest:['squeeze'],water:['squeeze'],trial:['squeeze','trigger']};
+const labels={'controls-trigger':'Press both triggers','controls-grip':'Squeeze both grips','controls-stick':'Circle both thumbsticks','controls-stick-click':'Click both thumbsticks','controls-face-first':'A · right / X · left','controls-face-second':'B · right / Y · left','settings-open':'Right stick · open settings','settings-close':'Right stick · close settings',brush:'Grip to hold · trigger to paint',point:'Index finger · trigger',grab:'Middle finger · grip',gloves:'Gently squeeze your grip',fly:'Trigger forward · grip back · stick turns / height',fruit:'Middle finger · grip',packet:'Hold grip · press trigger to open',seed:'Middle finger · grip',harvest:'Pick · release into the basket',water:'Hold grip · tilt the can',trial:'Grip to hold · trigger to act'};
 
 // Official, grip-space-aligned controller assets; never put a guessed button
 // location on an unsupported controller. These assets are bundled for offline XR.
@@ -18,10 +19,10 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
         const group=new THREE.Group();group.matrixAutoUpdate=false;group.visible=false;scene.add(group);
         const entry={group,ready:false,failed:false,highlights:[],responses:[]};entries.set(key,entry);
         const base=new URL('../assets/welcome-practice/controllers/'+profile+'/',import.meta.url);
-        Promise.all([fetch(new URL('profile.json',base)).then(r=>{if(!r.ok)throw Error('Controller profile unavailable');return r.json();}),loader.loadAsync(new URL(hand+'.glb',base).href)])
+        entry.promise=Promise.all([fetch(new URL('profile.json',base)).then(r=>{if(!r.ok)throw Error('Controller profile unavailable');return r.json();}),loader.loadAsync(new URL(hand+'.glb',base).href)])
             .then(([data,gltf])=>{
                 if(disposed){disposeModel(gltf.scene);return;}
-                const model=gltf.scene;group.add(model);entry.model=model;entry.tool='standard';entry.mix=0;entry.skin=createWelcomeControllerSkin(model);
+                const model=gltf.scene;group.add(model);entry.model=model;entry.tool='standard';entry.mix=0;entry.skin=createWelcomeControllerSkin(model);entry.originalMaterials=new Set();model.traverse(node=>{for(const material of [node.material].flat().filter(Boolean))entry.originalMaterials.add(material);});const bounds=new THREE.Box3().setFromObject(model);entry.magicBounds={min:bounds.min.y-.003,max:bounds.max.y+.003};entry.sparks=createWelcomeControllerSparks(group,entry.magicBounds.min,entry.magicBounds.max);
                 // Preserve the hardware model's textures, finish and button legends.
                 for(const [id,component] of Object.entries(data.layouts[hand].components)){
                     const kind=id.replace('xr-standard-','');
@@ -29,7 +30,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
                         const value=model.getObjectByName(response.valueNodeName),min=model.getObjectByName(response.minNodeName),max=model.getObjectByName(response.maxNodeName);
                         if(value && min && max && response.valueNodeProperty==='transform')entry.responses.push({value,min,max,property:response.componentProperty,indices:component.gamepadIndices});
                     }
-                    if(!['trigger','squeeze','thumbstick'].includes(kind))continue;
+                    if(!['trigger','squeeze','thumbstick','a-button','b-button','x-button','y-button'].includes(kind))continue;
                     const response=Object.values(component.visualResponses).find(r=>r.componentProperty==='button'),node=model.getObjectByName(response?.valueNodeName);
                     const meshes=[];node?.traverse(mesh=>{if(mesh.isMesh)meshes.push(mesh);});
                     for(const mesh of meshes){const glow=new THREE.Mesh(mesh.geometry,pending),confirmation=new THREE.Mesh(mesh.geometry,pressed),halo=new THREE.Mesh(mesh.geometry,new THREE.MeshBasicMaterial({color:'#ffdca0',transparent:true,opacity:.24,depthWrite:false}));halo.scale.setScalar(1.3);halo.visible=false;halo.renderOrder=4;mesh.add(halo);for(const overlay of [glow,confirmation]){overlay.scale.setScalar(1.16);overlay.visible=false;overlay.renderOrder=5;mesh.add(overlay);}entry.highlights.push({kind,glow,confirmation,halo});}
@@ -42,14 +43,14 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
     }
     function update(dt,controllers,phase,viewer,complete=false,opacity=1,tool='standard',toolState={}){
         elapsed+=dt;for(const entry of entries.values())entry.group.visible=false;
-        const requested=phase.startsWith('controls-')?actions[phase] || []:[];
+        const requested=phase.startsWith('controls-') || phase.startsWith('settings-')?actions[phase] || []:[];
         for(const input of controllers){
             if(input.source.hand || !input.matrix)continue;
             const profile=(input.source.profiles || []).find(id=>supported.includes(id)),hand=input.source.handedness;
             if(!profile || !['left','right'].includes(hand))continue;
-            const entry=load(profile,hand);if(!entry.ready || opacity<.01)continue;
+            const entry=load(profile,hand);if(!entry.ready)continue;const handReveal=toolState.handReveal?.[hand] || 0;entry.handReveal=handReveal;if(handReveal>=1 || opacity<.01){entry.sparks.update(0,elapsed);continue;}
             const nextTool=hand==='right' && ['paint','insect'].includes(tool)?tool:'standard';
-            if(nextTool!=='standard' && !entry.prototype){entry.prototype=createNourishlandControllerPrototype({mode:nextTool,hand});group.add(entry.prototype.group);entry.prototype.tip.visible=false;onAssets();}
+            if(nextTool!=='standard' && !entry.prototype){entry.prototype=createNourishlandControllerPrototype({mode:nextTool,hand});entry.group.add(entry.prototype.group);entry.prototype.tip.visible=false;onAssets();}
             if(nextTool!==entry.tool){entry.tool=nextTool;if(nextTool!=='standard')entry.prototype.setMode(nextTool);}
             entry.mix=THREE.MathUtils.clamp(entry.mix+(nextTool==='standard'?-1:1)*dt,0,1);
             const blend=entry.mix*entry.mix*(3-2*entry.mix);
@@ -62,6 +63,8 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
                 entry.prototype.tip.visible=false;
             }
             entry.group.visible=true;entry.group.matrix.fromArray(input.matrix);
+            const magic=handReveal>0?{progress:handReveal,plane:welcomeControllerMagicPlane(input.matrix,entry.magicBounds.min,entry.magicBounds.max)}:null;
+            for(const material of entry.originalMaterials)material.userData.welcomeMagic=magic;entry.sparks.update(handReveal,elapsed);
             const fadeTree=(tree,fade)=>tree.traverse(node=>{for(const m of [node.material].flat().filter(Boolean)){m.userData.controllerBase??={opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite};const base=m.userData.controllerBase;m.opacity=base.opacity*fade;m.transparent=base.transparent || fade<1;m.depthWrite=base.depthWrite && fade>=1;}});
             fadeTree(entry.model,opacity*(1-blend));if(entry.prototype)fadeTree(entry.prototype.group,opacity*blend);
             fadeTree(entry.label,opacity);fadeTree(entry.link,opacity);
@@ -72,19 +75,20 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
                 if(r.property==='button' && r.indices.button===1)value=Math.max(value,input.down?1:0);
                 value=THREE.MathUtils.clamp(value,0,1);r.value.position.lerpVectors(r.min.position,r.max.position,value);r.value.quaternion.slerpQuaternions(r.min.quaternion,r.max.quaternion,value);
             }
-            for(const {kind,glow,confirmation,halo} of entry.highlights){const down=kind==='trigger'?input.trigger:kind==='squeeze'?input.down:input.source.gamepad?.axes?.some((a,i)=>i>=2 && Math.abs(a)>.18),required=requested.includes(kind),confirmed=Boolean(down || complete);halo.visible=required;halo.scale.setScalar(1.3+.035*Math.sin(elapsed*3));glow.visible=required && !confirmed;confirmation.visible=required && confirmed;glow.scale.setScalar(1.16+.025*Math.sin(elapsed*4));confirmation.scale.setScalar(1.1);}
-            const text=complete?'That’s it!':labels[phase];if(requested.length && entry.text!==text){entry.text=text;const ctx=entry.canvas.getContext('2d');ctx.clearRect(0,0,700,150);ctx.fillStyle='rgba(39,57,47,.90)';ctx.beginPath();ctx.roundRect(2,2,696,146,16);ctx.fill();ctx.fillStyle='#e0e5d5';ctx.font='500 42px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+            for(const {kind,glow,confirmation,halo} of entry.highlights){const down=kind==='trigger'?input.trigger:kind==='squeeze'?input.down:kind==='thumbstick'?Boolean(input.source.gamepad?.buttons?.[3]?.pressed || input.source.gamepad?.axes?.some((a,i)=>i>=2 && Math.abs(a)>.18)):Boolean(input.source.gamepad?.buttons?.[kind==='a-button' || kind==='x-button'?4:5]?.pressed),required=requested.includes(kind),confirmed=Boolean(down || complete);halo.visible=required;halo.scale.setScalar(1.3+.035*Math.sin(elapsed*3));glow.visible=required && !confirmed;confirmation.visible=required && confirmed;glow.scale.setScalar(1.16+.025*Math.sin(elapsed*4));confirmation.scale.setScalar(1.1);}
+            const text=complete?'That’s it!':labels[phase];if(requested.length && entry.text!==text){entry.text=text;const ctx=entry.canvas.getContext('2d');ctx.clearRect(0,0,700,150);ctx.fillStyle='rgba(39,57,47,.22)';ctx.beginPath();ctx.roundRect(2,2,696,146,16);ctx.fill();ctx.strokeStyle='rgba(220,245,235,.7)';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#f4fff8';ctx.font='500 42px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
                 const lines=phase==='fly' && !complete?['Trigger forward · grip back','Stick turns / height']:[text];lines.forEach((line,i)=>ctx.fillText(line,350,75+(i-(lines.length-1)/2)*50,660));entry.texture.needsUpdate=true;}
             if(viewer){
                 const controllerQ=new THREE.Quaternion().setFromRotationMatrix(entry.group.matrix),viewQ=new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(viewer));
                 // Labels stay outside the hands in viewer space, even as wrists turn.
-                const offset=new THREE.Vector3(hand==='left'?-.10:.10,-.055,.025).applyQuaternion(viewQ).applyQuaternion(controllerQ.clone().invert());
+                const offset=new THREE.Vector3(hand==='left'?-.10:.10,.095,.025).applyQuaternion(viewQ).applyQuaternion(controllerQ.clone().invert());
+                if(toolState.framePose){const frame=toolState.framePose;offset.set(frame.center.x,frame.center.y,frame.center.z).addScaledVector(new THREE.Vector3(frame.right.x,frame.right.y,frame.right.z),hand==='left'?-.64:.64).addScaledVector(new THREE.Vector3(frame.up.x,frame.up.y,frame.up.z),.62).addScaledVector(new THREE.Vector3(frame.normal.x,frame.normal.y,frame.normal.z),.12).applyMatrix4(entry.group.matrix.clone().invert());entry.label.scale.setScalar(3);}else entry.label.scale.setScalar(1);
                 entry.label.position.copy(offset);entry.label.quaternion.copy(controllerQ.invert().multiply(viewQ));
                 const end=offset.clone().multiplyScalar(.52),start=new THREE.Vector3(0,.018,0),direction=end.clone().sub(start);entry.link.position.copy(start).add(end).multiplyScalar(.5);entry.link.scale.y=direction.length();entry.link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());
             }
 
         }
     }
-    return {update,snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,tool:e.tool || 'standard',highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;for(const {group,texture,skin,prototype} of entries.values()){prototype?.dispose();skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
+    return {update,preload(sources){return Promise.all(sources.map(source=>{const profile=(source.profiles || []).find(id=>supported.includes(id));return profile && ['left','right'].includes(source.handedness)?load(profile,source.handedness).promise:null;}));},snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,tool:e.tool || 'standard',handReveal:e.handReveal || 0,sparks:e.sparks?.snapshot?.() || (e.handReveal>0 && e.handReveal<1),highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;for(const {group,texture,skin,prototype,sparks} of entries.values()){prototype?.dispose();sparks?.destroy();skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
 }
 function disposeModel(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of [n.material].flat().filter(Boolean)){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>{t.image?.close?.();t.dispose();});}

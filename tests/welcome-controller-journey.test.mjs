@@ -1,0 +1,54 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';
+import {playWelcomePracticeFeedback} from '../app/services/welcomePracticeFeedback.js';
+import {welcomeHandMagicProgress,welcomeControllerMagicPlane} from '../app/services/welcomeControllerMagic.js';
+import {welcomeControllerLaserEnd} from '../app/services/welcomeControllerLaser.js';
+
+async function withAssets(run){
+    const saved={document:globalThis.document,Image:globalThis.Image,fetch:globalThis.fetch,createImageBitmap:globalThis.createImageBitmap,self:globalThis.self};
+    const requests=[],context=new Proxy({measureText:text=>({width:text.length*18}),createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(target,key)=>target[key] || (()=>{})});
+    globalThis.document={createElement:()=>({getContext:()=>context})};globalThis.Image=class {set src(value){requests.push(value);}};
+    globalThis.self=globalThis;globalThis.createImageBitmap=async()=>({width:64,height:64,close(){}});
+    globalThis.fetch=async request=>{const url=request.url || String(request);requests.push(url);if(url.startsWith('blob:'))return saved.fetch(request);const bytes=fs.readFileSync(new URL(url));return {ok:true,status:200,statusText:'OK',url,headers:new Headers(),arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),json:async()=>JSON.parse(bytes.toString())};};
+    try{await run(requests);}finally{await new Promise(resolve=>setTimeout(resolve,30));Object.assign(globalThis,saved);}
+}
+const settle=async predicate=>{for(let i=0;i<100 && !predicate();i++)await new Promise(resolve=>setTimeout(resolve,5));assert.ok(predicate(),'bundled controllers must be ready');};
+
+test('real controller poses start with skins only, extend lasers, select Zinnia, then reveal hands before any fruit request',()=>withAssets(async requests=>{
+    const feedback=[],spoken=[],voice={status:()=>({playing:false,paused:false,available:true,muted:false}),speak:value=>spoken.push(value),stop(){},unlock(){},pause(){},resume(){}};
+    const stage=createWelcomePracticeScene({voice,embedded:true,onFeedback:(kind,source,intensity)=>feedback.push({kind,source,intensity})});
+    try{
+        await stage.loading;await settle(()=>stage.snapshot().controllerGuide.filter(e=>e.ready).length===2);
+        const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
+        const inputs=['left','right'].map((handedness,i)=>({source:{handedness,profiles:['meta-quest-touch-plus'],gamepad:{buttons:Array.from({length:6},()=>({pressed:false,value:0})),axes:[0,0,0,0]}},matrix:new THREE.Matrix4().makeTranslation(i?.25:-.25,1.15,-.35).elements,down:false,trigger:false}));
+        const tick=seconds=>{for(let i=0;i<Math.ceil(seconds/.05);i++)stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});};
+        stage.start(viewer,0);tick(.1);assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().controllerGuide.filter(e=>e.visible && e.tool==='standard').length,2);
+        const fruitRequests=()=>requests.filter(url=>/fruits\/|strawberry\.glb|strawberry-packet\.jpg|dragonfly\.glb/.test(url));
+        assert.deepEqual(fruitRequests(),[]);
+        stage.previewLesson('controls-trigger');tick(.05);inputs[0].trigger=true;tick(.05);inputs[1].trigger=true;tick(.05);
+        assert.equal(feedback.filter(f=>f.kind==='step').length,2);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'face');assert.equal(stage.zinniaMount.parent.visible,false);
+        stage.previewLesson('laser-intro');tick(.7);assert.ok(stage.controllerLaserProgress>0 && stage.controllerLaserProgress<1);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().settingsAvailable,false);assert.equal(feedback.filter(f=>f.kind==='magic').length,2);
+        stage.previewLesson('laser-zinnia');tick(.1);const eye=stage.zinniaMount.getObjectByName('Eye_L_expression'),point=new THREE.Box3().setFromObject(eye).getCenter(new THREE.Vector3()),ray={origin:{x:point.x,y:point.y,z:point.z+.45},direction:{x:0,y:0,z:-1}};
+        assert.equal(stage.hit(ray)?.kind,'zinnia');assert.equal(stage.select(ray,inputs[1].source),true);assert.equal(stage.snapshot().laserConfirmed,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.touch.snapshot().reaction,'tickle');
+        stage.select(ray,inputs[1].source);assert.equal(feedback.filter(f=>f.kind==='step').length,3,'one selection produces one success');tick(3.5);assert.equal(stage.phase,'settings-open');
+        stage.previewLesson('virtual-hands-reveal');tick(.9);const first=stage.controllerHandReveal;assert.ok(first.left>0 && first.left<1);assert.equal(first.right,0);assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.objects.get('peach').visible,false);assert.deepEqual(fruitRequests(),[]);
+        const frozen={...stage.controllerHandReveal};stage.button('pause');tick(1);assert.deepEqual(stage.controllerHandReveal,frozen);stage.button('pause');tick(2.2);assert.deepEqual(stage.controllerHandReveal,{left:1,right:1});assert.ok(feedback.some(f=>f.kind==='magic-charge'));assert.equal(stage.snapshot().controllerGuide.filter(e=>e.visible).length,0);
+        tick(2);assert.equal(stage.phase,'gloves');inputs.forEach(input=>{input.trigger=false;input.down=false;});tick(.05);inputs.forEach(input=>input.down=true);tick(.05);assert.equal(stage.snapshot().completed,false,'both hands must open again');inputs.forEach(input=>input.down=false);tick(.05);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'table');assert.ok(fruitRequests().length>0);
+    }finally{stage.destroy();}
+}));
+
+test('the magic front stays in grip space when the controller rotates, and the right reveal follows the left',()=>{
+    const matrix=new THREE.Matrix4().makeRotationZ(.8).setPosition(.2,1,-.4),plane=welcomeControllerMagicPlane(matrix.elements,-.12,.05);
+    for(const [y,expected] of [[-.12,0],[.05,1]]){const p=new THREE.Vector3(0,y,0).applyMatrix4(matrix);assert.ok(Math.abs(plane[0]*p.x+plane[1]*p.y+plane[2]*p.z+plane[3]-expected)<1e-6);}
+    assert.equal(welcomeHandMagicProgress(0,'left'),0);assert.equal(welcomeHandMagicProgress(.8,'right'),0);assert.ok(welcomeHandMagicProgress(1,'left')>welcomeHandMagicProgress(1,'right'));assert.equal(welcomeHandMagicProgress(4,'right'),1);
+    const ray={origin:{x:.1,y:1,z:0},direction:{x:0,y:0,z:-1}};assert.deepEqual(welcomeControllerLaserEnd(ray,null,0),ray.origin);assert.equal(welcomeControllerLaserEnd(ray,null,.5).z,-1.25);assert.equal(welcomeControllerLaserEnd(ray,{x:.1,y:1,z:-1},1).z,-1);
+});
+
+test('each accepted button step gets its own success tone and tap; magic gets strong bounded haptics',()=>{
+    const sounds=[],pulses=[],source={gamepad:{}},feedback={sound:kind=>sounds.push(kind),pulse:(...args)=>pulses.push(args)};
+    playWelcomePracticeFeedback(feedback,'step',source);playWelcomePracticeFeedback(feedback,'step',source);playWelcomePracticeFeedback(feedback,'lesson',source);playWelcomePracticeFeedback(feedback,'magic-charge',source,.8);playWelcomePracticeFeedback(feedback,'magic',source);
+    assert.deepEqual(sounds,['practice-success','practice-success','practice-reward','practice-magic']);assert.equal(pulses.length,5);assert.equal(pulses[0][1],.45);assert.equal(pulses[2][1],.65);assert.ok(pulses[3][1]>.8);assert.deepEqual(pulses[4],[source,.95,190]);
+});

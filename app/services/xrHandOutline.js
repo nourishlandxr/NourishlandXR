@@ -14,16 +14,16 @@ export function createXRHandOutline(gl){
     const compile=(type,source)=>{const shader=gl.createShader(type);gl.shaderSource(shader,source);gl.compileShader(shader);if(!gl.getShaderParameter(shader,gl.COMPILE_STATUS)){const error=gl.getShaderInfoLog(shader);gl.deleteShader(shader);throw Error(error);}return shader;};
     const vertex=compile(gl.VERTEX_SHADER,`precision highp float;
         attribute vec3 p,n;attribute vec4 joints,weights;
-        uniform mat4 bones[25],projection,view;uniform vec3 eye;
-        varying float rim;
+        uniform mat4 bones[25],projection,view;uniform vec3 eye;uniform vec4 magicPlane;
+        varying float rim,magicCoord;
         void main(){mat4 skin=bones[int(joints.x)]*weights.x+bones[int(joints.y)]*weights.y+bones[int(joints.z)]*weights.z+bones[int(joints.w)]*weights.w;
             vec4 world=skin*vec4(p,1.);vec3 normal=normalize(mat3(skin)*n);
-            rim=1.-abs(dot(normal,normalize(eye-world.xyz)));
+            magicCoord=dot(magicPlane,vec4(p,1.));rim=1.-abs(dot(normal,normalize(eye-world.xyz)));
             gl_Position=projection*view*world;}`);
-    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;varying float rim;uniform float opacity,filled;uniform vec3 fillColour;void main(){float edge=smoothstep(.48,.87,rim);float alpha=mix(edge,.98+.02*edge,filled);if(alpha<.025)discard;gl_FragColor=vec4(mix(vec3(.93,.96,.96),fillColour*(.82+.18*edge),filled),alpha*opacity);}');
+    const fragment=compile(gl.FRAGMENT_SHADER,'precision mediump float;varying float rim,magicCoord;uniform float opacity,filled,magicProgress;uniform vec3 fillColour;void main(){if(magicProgress<1. && magicCoord>magicProgress)discard;float edge=smoothstep(.48,.87,rim);float alpha=mix(edge,.98+.02*edge,filled);if(alpha<.025)discard;vec3 colour=mix(vec3(.93,.96,.96),fillColour*(.82+.18*edge),filled);if(magicProgress<1.)colour=mix(colour,vec3(1.,.96,.65),1.-smoothstep(0.,.12,magicProgress-magicCoord));gl_FragColor=vec4(colour,alpha*opacity);}');
     const program=gl.createProgram();gl.attachShader(program,vertex);gl.attachShader(program,fragment);gl.linkProgram(program);gl.deleteShader(vertex);gl.deleteShader(fragment);
     if(!gl.getProgramParameter(program,gl.LINK_STATUS)){const error=gl.getProgramInfoLog(program);gl.deleteProgram(program);throw Error(error);}
-    const locations=Object.fromEntries(['bones[0]','projection','view','eye','opacity','filled','fillColour'].map(name=>[name,gl.getUniformLocation(program,name)]));
+    const locations=Object.fromEntries(['bones[0]','projection','view','eye','opacity','filled','fillColour','magicPlane','magicProgress'].map(name=>[name,gl.getUniformLocation(program,name)]));
     const attributes=Object.fromEntries(['p','n','joints','weights'].map(name=>[name,gl.getAttribLocation(program,name)]));
     const buffer=(target,data)=>{const value=gl.createBuffer();buffers.push(value);gl.bindBuffer(target,value);gl.bufferData(target,data,gl.STATIC_DRAW);return value;};
     for(const side of ['left','right'])loadHand(side).then(gltf=>{
@@ -33,11 +33,13 @@ export function createXRHandOutline(gl){
         const indices=accessorData(gltf,primitive.indices).data;
         const bind=Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16).invert());
         const names=skin.joints.map(id=>gltf.json.nodes[id].name),wristIndex=names.indexOf('wrist'),parents=controllerHandParents(names);
+        const wrist=new THREE.Vector3().setFromMatrixPosition(bind[wristIndex]),tip=new THREE.Vector3().setFromMatrixPosition(bind[names.indexOf('middle-finger-tip')]),axis=tip.clone().sub(wrist),length=axis.length();axis.normalize();const magicPlane=[axis.x/length,axis.y/length,axis.z/length,-wrist.dot(axis)/length];
         const flexAxes=controllerHandFlexAxes(names,parents,bind,wristIndex,side);
-        rigs.set(side,{geometry,index:buffer(gl.ELEMENT_ARRAY_BUFFER,indices),count:indices.length,type:indices.BYTES_PER_ELEMENT===4?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,names,wristIndex,parents,flexAxes,inverse:Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16)),bind,matrices:new Float32Array(25*16),matrix:new THREE.Matrix4(),sample:null});
+        rigs.set(side,{geometry,index:buffer(gl.ELEMENT_ARRAY_BUFFER,indices),count:indices.length,type:indices.BYTES_PER_ELEMENT===4?gl.UNSIGNED_INT:gl.UNSIGNED_SHORT,names,wristIndex,parents,flexAxes,magicPlane,inverse:Array.from({length:25},(_,i)=>new THREE.Matrix4().fromArray(inverse,i*16)),bind,matrices:new Float32Array(25*16),matrix:new THREE.Matrix4(),sample:null});
     }).catch(error=>{if(!disposed)console.warn('Hand outline:',error.message);});
     return {
-        draw(view,entries,{filled=false,controllers=[],controllerOpacity=1,trackedOpacity=1}={}){
+        get ready(){return rigs.has('left') && rigs.has('right');},
+        draw(view,entries,{filled=false,controllers=[],controllerOpacity=1,trackedOpacity=1,controllerReveal=null}={}){
             if(disposed)return false;
             const ready=entries.filter(({source,state})=>state?.tracked && state.visualConfidence>0 && performance.now()-state.time<100 && rigs.has(source.handedness) && rigs.get(source.handedness).names.every(name=>state.rawJoints.has(name)));
             for(const input of controllers)if(input.matrix && rigs.has(input.source.handedness) && !ready.some(entry=>entry.source.handedness===input.source.handedness))ready.push({source:input.source,controller:input});
@@ -55,6 +57,7 @@ export function createXRHandOutline(gl){
                         rig.names.forEach((name,i)=>rig.matrix.copy(base).multiply(joints[i]).multiply(rig.inverse[i]).toArray(rig.matrices,i*16));
                     }else rig.names.forEach((name,i)=>{rig.matrix.fromArray(state.rawJoints.get(name).matrix).multiply(rig.inverse[i]).toArray(rig.matrices,i*16);});rig.sample=sample;
                 }
+                gl.uniform1f(locations.magicProgress,controller?(controllerReveal?.[source.handedness] ?? 1):1);gl.uniform4fv(locations.magicPlane,rig.magicPlane);
                 gl.uniformMatrix4fv(locations['bones[0]'],false,rig.matrices);gl.uniform1f(locations.opacity,controller?controllerOpacity:(state.pinch?.95:.9)*state.visualConfidence*trackedOpacity);gl.uniform3f(locations.fillColour,...(controller?[.52,.64,.49]:[.93,.91,.84]));
                 for(const a of rig.geometry){gl.bindBuffer(gl.ARRAY_BUFFER,a.buffer);gl.enableVertexAttribArray(a.location);gl.vertexAttribPointer(a.location,a.size,gl.FLOAT,false,0,0);}
                 gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,rig.index);gl.drawElements(gl.TRIANGLES,rig.count,rig.type,0);

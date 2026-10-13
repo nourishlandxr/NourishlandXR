@@ -25,6 +25,10 @@ export function animateZinniaCharacter(root,time,speaking=false,options={}){
     if(reaction==='tickle' && previous!=='tickle' && !speaking)playZinniaGiggle();
     state.guide.update(state.paused?0:dt,{lesson:'explore',...options,reaction,focused:Boolean(options.focused || speaking || contacts.length)});
 }
+export function giggleZinniaCharacter(root){
+    const state=root?.userData.zinnia;if(!state || state.disposed)return;
+    state.touch.react('tickle');state.guide.celebrate();unlockZinniaTouchAudio();playZinniaGiggle();
+}
 export function disposeZinniaCharacter(root){
     const state=root?.userData.zinnia;if(state){state.disposed=true;state.guide?.destroy();state.touch?.reset();globalThis.document?.removeEventListener?.('pointerdown',state.unlockAudio);}
     const geometries=new Set(),materials=new Set(),textures=new Set();
