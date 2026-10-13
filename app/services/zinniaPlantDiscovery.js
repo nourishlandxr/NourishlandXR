@@ -8,7 +8,7 @@ import {MORINGA_PROFILE} from '../features/ar-demo/demoPlantContent.js';
 const clean=value=>String(value || '').trim();
 const plantLabel=value=>clean(value).replace(/[<>"\u0000-\u001f]/g,'');
 const safeUrl=value=>{try{const url=new URL(value);return url.protocol==='https:'?url.href:'';}catch{return '';}};
-export const ZINNIA_PLANT_COPY='Use the Moringa sample, or tap Speak and name a plant to create a custom Orb.';
+export const ZINNIA_PLANT_COPY='Name a plant to create a custom Orb, or choose the Moringa sample. Zinnia listens after her prompt when your microphone is ready.';
 
 function plantQuery(value){
     return clean(value).replace(/^\s*(?:hey\s+)?zinnia[,:]?\s*/i,'').replace(/^(?:please\s+)?(?:find|show|load|search for|tell me about)\s+(?:me\s+)?(?:a |an |the )?/i,'').replace(/[.!?]+$/,'').slice(0,120);
@@ -105,11 +105,12 @@ function daleysProfile(taxon){
     for(const node of profile.pim.nodes)if(node.id==='scientific-information'){node.sourceIds=['daleys'];node.provenance=[{sourceDatabase:'Daleys Fruit Tree Nursery',sourceRecordId:taxon.externalId,sourceUrl:taxon.sourceUrl}];}
     return profile;
 }
-export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpeak=()=>{},onCancel=()=>{},mode='plant'}={}){
-    let state={mode,query:'',phase:'idle',message:mode==='note'?'Choose a sample Note, or tap Speak to write your own.':'Use the Moringa sample, or tap Speak and name a plant to create a custom Orb.',results:[]},controller,disposed=false,generation=0,catalogue=[],page=0,selected,draft='';
+export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpeak=()=>{},onCancel=()=>{},mode='plant',createVoice=createZinniaVoice,microphoneReady=()=>globalThis.sessionStorage?.getItem('nlxr.mic.ready')==='true'}={}){
+    let state={mode,query:'',phase:'idle',listening:false,message:mode==='note'?'Tell Zinnia what your Note should say, or choose a sample Note.':ZINNIA_PLANT_COPY,results:[]},controller,disposed=false,generation=0,voiceTurn=0,catalogue=[],page=0,selected,draft='';
     const emit=patch=>{if(!disposed){state={...state,...patch};onChange(state);}};
-    const voice=createZinniaVoice({onSpeak,onText:value=>void receive(value),onStatus:message=>emit({voiceMessage:message})});
-    const say=message=>{emit({message,voiceMessage:''});void voice.speak(message);};
+    const voice=createVoice({onSpeak,onText:value=>void receive(value),onStatus:(message,info={})=>emit({voiceMessage:message,listening:Boolean(info.listening),voiceError:info.error || null})});
+    const say=message=>{const turn=++voiceTurn;emit({message,voiceMessage:'',listening:false});void Promise.resolve(voice.speak(message)).then(completed=>{if(completed!==false && !disposed && turn===voiceTurn && microphoneReady() && !['loading','searching','ready','cancelled'].includes(state.phase))return voice.listen();}).catch(()=>emit({voiceMessage:'Open Audio and choose Listen again to reconnect.'}));};
+    const listen=()=>{voiceTurn++;return voice.listen();};
     function showResults(message){emit({phase:'results',results:catalogue.slice(page*3,page*3+3),hasMore:catalogue.length>3});say(message || 'These are catalogue matches. Say a name, first, second, or third. You can also ask for a dwarf variety.');}
     async function search(value=state.query){
         const query=plantQuery(value);if(query.length<2){say('Please say a plant or fruit name.');return;}
@@ -158,7 +159,7 @@ export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpe
         const text=clean(value).slice(0,2000),lower=text.toLowerCase().replace(/[.!?]+$/,'').trim();
         if(/^(cancel|stop|never mind)$/.test(lower)){generation++;controller?.abort();voice.cancel();emit({phase:'cancelled',message:'Cancelled. Nothing was saved.'});onCancel();return;}
         if(['loading','searching','ready'].includes(state.phase))return;
-        emit({voiceMessage:'',heard:text});
+        emit({voiceMessage:'',heard:text,listening:false});
         if(mode==='note'){
             if(state.phase==='idle'){draft=text;emit({phase:'confirm-note',query:text});say('I heard: '+text+'. Is that correct? Say yes to keep it, or no to record it again.');return;}
             if(/^yes\b|^correct$|^save\b|^confirm$/.test(lower)){void confirm();return;}
@@ -185,9 +186,10 @@ export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpe
         if(mode==='note'){draft='Observe the leaves and soil here.';emit({phase:'color',query:draft,message:draft+' Choose a colour.',voiceMessage:''});return;}
         emit({phase:'ready',voiceMessage:''});onReady(MORINGA_PROFILE);
     }
-    const api={state:()=>state,search,select,confirm,receive,listen:()=>voice.listen(),speak:voice.speak,
-        activate(action){if(action==='sample')useSample();else if(action==='voice')void voice.listen();else if(action==='done')voice.finish();else if(action==='confirm')void confirm();else if(action==='retry'){emit({phase:'idle',query:'',results:[]});say(mode==='note'?'What would you like written?':'Which plant would you like?');}else if(action==='back')showResults();else if(action==='more'){page=(page+1)%Math.ceil(catalogue.length/3);showResults();}else if(action==='cancel')void receive('cancel');else if(action.startsWith('result:'))select(Number(action.split(':')[1]));else if(action.startsWith('color:'))chooseColor(action.slice(6));},
-        destroy(){disposed=true;generation++;controller?.abort();voice.destroy();}};return api;
+    const api={state:()=>state,search,select,confirm,receive,listen,speak:voice.speak,
+        begin(){if(!disposed)say(mode==='note'?'What would you like your Note to say?': 'Which plant would you like for your Orb?');},
+        activate(action){if(action==='sample')useSample();else if(action==='voice')void listen();else if(action==='done')voice.finish();else if(action==='confirm')void confirm();else if(action==='retry'){emit({phase:'idle',query:'',results:[]});say(mode==='note'?'What would you like written?':'Which plant would you like?');}else if(action==='back')showResults();else if(action==='more'){page=(page+1)%Math.ceil(catalogue.length/3);showResults();}else if(action==='cancel')void receive('cancel');else if(action.startsWith('result:'))select(Number(action.split(':')[1]));else if(action.startsWith('color:'))chooseColor(action.slice(6));},
+        destroy(){disposed=true;generation++;voiceTurn++;controller?.abort();voice.destroy();}};return api;
 }
 export function zinniaPlantButtons(state,{voiceControls=false}={}){
     const busy=['loading','searching','ready','cancelled'].includes(state.phase);

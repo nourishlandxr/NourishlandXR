@@ -5,6 +5,7 @@ import {createLivingMapDetailKit} from './demoLivingMapDetail.js';
 import {loadTrialButterflies} from './welcomeTrialButterflies.js';
 import {createWelcomeTrialState,WELCOME_TRIALS,TRIAL_PLANT_CARDS} from './welcomeTrialState.js';
 import {createWelcomeOptionalGame} from './welcomeOptionalGames.js';
+import {createSpatialPaintTip} from './spatialPaintTip.js';
 
 const colours=['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff'];
 const v=()=>new THREE.Vector3();
@@ -15,7 +16,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
     const texture=new THREE.CanvasTexture(canvas),panelMesh=new THREE.Mesh(new THREE.PlaneGeometry(.24,.24),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));panel.add(panelMesh);panelMesh.renderOrder=25;panel.position.set(-.91,.49,-.12);
     const sphere=new THREE.SphereGeometry(1,12,8),cylinder=new THREE.CylinderGeometry(1,1,1,6),materials=new Map(),groups=new Map(),edges=new Map(),holds=new Map();
     let rows=[],signature='',disposed=false,time=0,cup=null,cloud=null,disk=null,deck=[],wisps=[],rain=[],insects=[],plantSlots=[],paint=null,paintTip=null,diskDocked=true,strokeBySource=new Map(),paintPage='brush',ticBoard=null,ticMarks=[],ticCells=Array(9).fill(null),ticStatus='Your turn. Choose a square.';
-    const consumedSelects=new WeakSet(),games=new Map();
+    const consumedSelects=new WeakSet(),paintNeedsRelease=new WeakSet(),games=new Map();let paintSource=null;
     const geometry=g=>g;
     const material=colour=>{if(!materials.has(colour))materials.set(colour,new THREE.MeshStandardMaterial({color:colour,roughness:.8}));return materials.get(colour);};
     const mesh=(geo,colour,x=0,y=0,z=0,sx=1,sy=sx,sz=sx,parent=layer)=>{const node=new THREE.Mesh(geo,material(colour));node.position.set(x,y,z);node.scale.set(sx,sy,sz);parent.add(node);return node;};
@@ -57,7 +58,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         }
         if(id==='painting'){
             paint=createSpatialPaintV2({markings:true});paint.setBrush('earth');if(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches)paint.setMotion(false);group.add(paint.root);
-            paintTip=mesh(sphere,colours[0],0,.25,0,.007,.007,.007,group);paintTip.material=new THREE.MeshBasicMaterial({color:colours[0]});paintTip.visible=false;
+            paintTip=createSpatialPaintTip(group);
         }
         if(id==='tic-tac-toe'){
             ticBoard=new THREE.Group();ticBoard.name='Wooden Tic-Tac-Toe board';ticBoard.position.set(0,.13,.08);group.add(ticBoard);
@@ -150,14 +151,19 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             for(const mark of ticMarks)if(mark.visible){const t=Math.min(1,(time-mark.userData.growAt)/.2);mark.scale.setScalar(THREE.MathUtils.smoothstep(t,0,1));}
         }
         const eligible=inputs.filter(input=>Boolean(input.source.hand)===(state.mode==='hands') && input.matrix);
-        const tipInput=eligible.find(input=>input.trigger) || eligible.find(input=>input.source.handedness==='right') || eligible[0];
+        const right=eligible.find(input=>input.source.handedness==='right');if(right)paintSource=right.source;
+        if(!paintSource)paintSource=eligible.find(input=>!input.uiBlocked)?.source || null;
+        const tipInput=eligible.find(input=>input.source===paintSource);
         if(state.active==='painting'){const wrist=eligible.find(input=>input.source.handedness==='left') || eligible.find(input=>input.source!==tipInput) || eligible[0];if(wrist){const wristPose=new THREE.Matrix4().fromArray(wrist.matrix).premultiply(inverse);panel.position.setFromMatrixPosition(wristPose);panel.position.y+=.055;panel.quaternion.setFromRotationMatrix(wristPose).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)));}}
-        if(paintTip)paintTip.visible=false;
+        paintTip?.hide();
+        if(state.active==='painting' && tipInput){const pose=new THREE.Matrix4().fromArray(tipInput.matrix).premultiply(inverse);paintTip.root.position.copy(tipInput.tip?v().copy(tipInput.tip).applyMatrix4(inverse):v().set(0,0,-.095).applyMatrix4(pose));paintTip.root.quaternion.setFromRotationMatrix(pose);paintTip.update(paint.snapshot(),time);}
         for(const source of [...holds.keys()])if(!eligible.some(i=>i.source===source))release(source,false);
         for(const source of [...edges.keys()])if(!eligible.some(i=>i.source===source)){edges.delete(source);strokeBySource.delete(source);paint?.end(source);}
         if(paused){releaseAll();drawPanel();return;}
         for(const input of eligible){
             const {source}=input,pose=new THREE.Matrix4().fromArray(input.matrix).premultiply(inverse),point=v().setFromMatrixPosition(pose),previous=edges.get(source) || {down:false,trigger:false};let held=holds.get(source);
+            if(input.uiBlocked){paintNeedsRelease.add(source);paint?.end(source);strokeBySource.delete(source);edges.set(source,{down:!!input.down,trigger:!!input.trigger});continue;}
+            if(paintNeedsRelease.has(source)){if(!input.trigger)paintNeedsRelease.delete(source);else {edges.set(source,{down:!!input.down,trigger:true});continue;}}
             if(consumedSelects.has(source)){consumedSelects.delete(source);edges.set(source,{down:!!input.down,trigger:!!input.trigger});continue;}
             const tip=input.tip?v().copy(input.tip):root.localToWorld(point.clone()),poke=panelPoint(tip);
             const rayHit=input.ray?hit(input.ray):null,control=rayHit?.kind==='trial-control';
@@ -176,9 +182,8 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             }
             games.get(state.active)?.act(input,held,previous,eligible,inverse);
             if(state.active==='painting'){
-                const paintPoint=input.tip?v().copy(input.tip).applyMatrix4(inverse):v().set(0,0,-.08).applyMatrix4(pose);
-                if(input===tipInput){paintTip.visible=true;paintTip.position.copy(paintPoint);paintTip.material.color.set(PAINT_V2_COLOURS[paint.snapshot().colour]);}
-                if(input.trigger && !control && !poke){
+                const paintPoint=input.tip?v().copy(input.tip).applyMatrix4(inverse):v().set(0,0,-.095).applyMatrix4(pose);
+                if(input===tipInput && input.trigger && !control && !poke){
                     if(!paint.isDrawing(source)){const stroke=paint.begin(source,paintPoint);if(stroke){state.addStroke(stroke);strokeBySource.set(source,stroke);onFeedback('control',source);}}
                     else paint.add(source,paintPoint,dt);
                 }else {paint.end(source);strokeBySource.delete(source);}

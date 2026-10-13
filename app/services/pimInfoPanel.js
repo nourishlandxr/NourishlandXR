@@ -1308,7 +1308,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(card.id==='control' && card.performanceReadout){ctx.save();ctx.textAlign='right';ctx.textBaseline='bottom';ctx.fillStyle='#dcebd7';ctx.font='600 18px system-ui';ctx.fillText(card.performanceReadout,970,c.height-4,300);ctx.restore();}
         return c;
     }
-    function hit(ray){const fruitTarget=fruitWindow?.hit(ray);if(!pose || !renderer || detached)return fruitTarget || null;const target=renderer.hit(ray);if(target?.card.hidden && Math.hypot(target.localX/target.width,target.localY/target.height)>.44)return fruitTarget || null;return fruitTarget && (!target || fruitTarget.distance<target.distance)?fruitTarget:target;}
+    function hit(ray){const fruitTarget=fruitWindow?.hit(ray);if(!pose || !renderer || detached)return fruitTarget || null;const target=renderer.hit(ray);if(target?.card.hidden && Math.hypot(target.localX/target.width,target.localY/target.height)>.44)return fruitTarget || null;if(comfortContext && target?.card.id==='control' && !targetButtonAtRay(target))return fruitTarget || null;return fruitTarget && (!target || fruitTarget.distance<target.distance)?fruitTarget:target;}
     const controlsForTarget=target=>target?.card?.lowerCompanion==='view'?panelViewControls(sceneVisibility()):target?.card?.guides?guidesControls():target?.card?.explorer?explorerControls():target?.card?.settings?settingsControls():(headset?spatialControls():controls());
     const targetButtonAtRay=target=>{
         if(target?.kind==='fruit-window')return null;
@@ -1329,11 +1329,11 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(!state?.tracked || inputOccupied(source) || typeof blocked==='function' && blocked(source)){poke.reset();continue;}
             for(const point of state.rawJoints.values()){
                 const target=renderer.hitPoint(point,{front:.045,back:.018});if(!target)continue;
-                handContacts.set(source,true);const button=targetButtonAtRay(target);
+                const button=targetButtonAtRay(target);if(!comfortContext || button)handContacts.set(source,true);
                 if(button && (!hover || target.distance<hover.distance))hover={...target,button};
             }
             const index=state.rawJoints.get('index-finger-tip'),surface=renderer.hitPoint(index),target=surface?{...surface,button:targetButtonAtRay(surface)}:null;
-            if(!handIndexCanPoke(state))poke.reset();
+            if(comfortContext?(!state.tracked || state.pinch):!handIndexCanPoke(state))poke.reset();
             else if(poke.update(index,target,time)){
                 // A poke owns its press, including a simultaneous pinch event.
                 handContacts.set(source,true);

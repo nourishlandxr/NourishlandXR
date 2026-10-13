@@ -15,7 +15,8 @@ export function welcomeWristPose(matrix,context,forearmDirection=null){
     const normal=new THREE.Vector3(0,0,1).applyQuaternion(rotation),up=new THREE.Vector3(0,1,0).applyQuaternion(rotation);
     if(forearmDirection){const along=forearmDirection.clone().negate().addScaledVector(normal,forearmDirection.dot(normal));if(along.lengthSq()>.001)up.copy(along.normalize());}
     const right=new THREE.Vector3().crossVectors(up,normal).normalize();up.crossVectors(normal,right).normalize();
-    const center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(up,-.065).addScaledVector(normal,.018).addScaledVector(right,context.expanded?.08:0);
+    const offset=context.centerOffset || {x:0,y:0};
+    const center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(up,(forearmDirection?-.11:-.17)+offset.y).addScaledVector(normal,.028).addScaledVector(right,offset.x);
     return {center,right,up,normal,anchorHeading:right,width:context.width || .12,height:(context.width || .12)*context.height/1000};
 }
 
@@ -24,7 +25,11 @@ export function drawWristIcon(ctx,id,x,y,size){
     ctx.save();ctx.translate(x,y);ctx.scale(size/2,size/2);ctx.lineWidth=.12;ctx.lineCap=ctx.lineJoin='round';ctx.strokeStyle=ctx.fillStyle;ctx.beginPath();
     const line=(a,b,c,d)=>{ctx.moveTo(a,b);ctx.lineTo(c,d);};
     const circle=(x,y,r,fill=false)=>{ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,Math.PI*2);if(fill)ctx.fill();};
-    if(id==='brush'){ctx.moveTo(-.65,.65);ctx.lineTo(-.4,.05);ctx.lineTo(.45,-.75);ctx.lineTo(.75,-.45);ctx.lineTo(-.05,.4);ctx.closePath();line(-.4,.05,-.05,.4);}
+    if(id==='pulse'){ctx.moveTo(-.8,0);ctx.lineTo(-.35,0);ctx.lineTo(-.15,-.55);ctx.lineTo(.12,.55);ctx.lineTo(.35,0);ctx.lineTo(.8,0);}
+    else if(id==='mic'){ctx.roundRect(-.2,-.8,.4,.9,.2);ctx.moveTo(-.45,-.2);ctx.arc(0,-.2,.45,Math.PI,0,true);line(0,.25,0,.65);line(-.3,.65,.3,.65);}
+    else if(id==='stop'){ctx.roundRect(-.55,-.55,1.1,1.1,.1);}
+    else if(id==='check'){line(-.7,0,-.2,.5);line(-.2,.5,.7,-.65);}
+    else if(id==='brush'){ctx.moveTo(-.65,.65);ctx.lineTo(-.4,.05);ctx.lineTo(.45,-.75);ctx.lineTo(.75,-.45);ctx.lineTo(-.05,.4);ctx.closePath();line(-.4,.05,-.05,.4);}
     else if(id==='games'){ctx.roundRect(-.75,-.75,1.5,1.5,.2);for(const [x,y] of [[-.4,-.4],[.4,-.4],[0,0],[-.4,.4],[.4,.4]])circle(x,y,.07);}
     else if(id==='hand'){ctx.moveTo(-.5,.7);ctx.lineTo(-.8,-.1);ctx.quadraticCurveTo(-.8,-.35,-.5,-.15);ctx.lineTo(-.3,.08);ctx.lineTo(-.3,-.7);ctx.quadraticCurveTo(-.3,-.95,-.1,-.75);ctx.lineTo(-.1,-.1);ctx.lineTo(.05,-.85);ctx.quadraticCurveTo(.15,-1,.25,-.75);ctx.lineTo(.25,-.08);ctx.lineTo(.45,-.6);ctx.quadraticCurveTo(.7,-.7,.65,-.4);ctx.lineTo(.55,.5);ctx.quadraticCurveTo(.3,.9,-.5,.7);}
     else if(id==='controller'){ctx.ellipse(0,0,.48,.8,.2,0,Math.PI*2);circle(-.12,-.4,.12);circle(.22,-.2,.055);line(-.25,.15,.25,.15);}
@@ -49,27 +54,31 @@ export function drawWristIcon(ctx,id,x,y,size){
 
 export function drawWelcomeWristMenu(ctx,card){
     const menu=card.comfort,height=menu.height;ctx.clearRect(0,0,1000,height);
-    const expanded=menu.expanded,dockWidth=expanded?420:984;
-    ctx.fillStyle='rgba(17,36,33,.96)';ctx.strokeStyle='#6cb8a7';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(8,height/2-(expanded?185:400),dockWidth,expanded?370:800,expanded?38:70);ctx.fill();ctx.stroke();
-    if(expanded){ctx.fillStyle='rgba(17,36,33,.96)';ctx.beginPath();ctx.roundRect(454,8,538,height-16,28);ctx.fill();ctx.stroke();ctx.fillStyle='#c2e2d6';ctx.font='600 29px system-ui';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(menu.title,480,60,400);}
+    const expanded=menu.expanded;
+    const px=x=>(x-menu.bounds.left)/menu.width*1000,py=y=>(menu.bounds.top-y)/menu.width*1000;
+    ctx.strokeStyle='#6cb8a7';ctx.lineWidth=2;
+    if(expanded){
+        ctx.fillStyle='rgba(17,36,33,.94)';ctx.beginPath();ctx.roundRect(px(.043),py(.068),px(.201)-px(.043),height-py(.068)-4,12);ctx.fill();ctx.stroke();ctx.fillStyle='#c2e2d6';ctx.font='600 25px system-ui';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText(menu.title,px(.050),py(.052),px(.163)-px(.050));
+        if(menu.page==='paint-brush'){ctx.strokeStyle='#6da88e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px(.123),py(.033));ctx.lineTo(px(.061),py(-.072));ctx.lineTo(px(.185),py(-.072));ctx.closePath();ctx.stroke();}
+    }
     for(const button of card.controls){
         ctx.globalAlpha=button.disabled?.32:1;const aimed=card.hoverAction===button.action;
-        ctx.fillStyle=button.selected?'#376e60':aimed?'#385a51':'#203f37';ctx.strokeStyle=button.selected?'#d8e9bf':aimed?'#abe6d3':'#52766a';ctx.lineWidth=button.selected?5:aimed?4:2;
+        ctx.fillStyle=button.selected?'#376e60':aimed?'#385a51':button.pulse?'rgba(28,54,45,.65)':'#203f37';ctx.strokeStyle=button.selected?'#d8e9bf':aimed?'#abe6d3':button.accent || '#52766a';ctx.lineWidth=button.selected?5:aimed?4:2;
         ctx.beginPath();
         if(button.radial){const r=button.radial;ctx.arc(r.x,r.y,r.outer,r.start+.025,r.end-.025);ctx.arc(r.x,r.y,r.inner,r.end-.025,r.start+.025,true);ctx.closePath();}
-        else ctx.roundRect(button.x,button.y,button.width,button.height,button.dock?22:16);
-        ctx.fill();ctx.stroke();ctx.fillStyle='#e1f0e5';
+        else ctx.roundRect(button.x,button.y,button.width,button.height,button.pulse?button.width/2:12);
+        ctx.fill();ctx.stroke();ctx.fillStyle=button.accent || '#e1f0e5';
         const x=button.x+button.width/2,y=button.y+button.height/2;
         if(button.kind==='slider'){
-            ctx.font='500 24px system-ui';ctx.textAlign='left';ctx.fillText(button.label,button.x+12,button.y+27,button.width-24);
-            const a=button.x+22,b=button.x+button.width-22,cy=button.y+76;ctx.strokeStyle='#75beaa';ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(a,cy);ctx.lineTo(b,cy);ctx.stroke();ctx.beginPath();ctx.arc(a+(b-a)*(button.value-button.min)/(button.max-button.min),cy,10,0,Math.PI*2);ctx.fill();
+            ctx.font='500 20px system-ui';ctx.textAlign='left';ctx.fillText(button.label,button.x+9,button.y+button.height*.24,button.width-18);
+            const a=button.x+18,b=button.x+button.width-18,cy=button.y+button.height*.7;ctx.strokeStyle='#75beaa';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(a,cy);ctx.lineTo(b,cy);ctx.stroke();ctx.beginPath();ctx.arc(a+(b-a)*(button.value-button.min)/(button.max-button.min),cy,8,0,Math.PI*2);ctx.fill();
         }else if(button.text){
-            ctx.font='500 27px system-ui';ctx.textAlign='center';const words=button.label.split(' '),lines=[''];for(const word of words){const last=lines.length-1;if(ctx.measureText(lines[last]+word).width>button.width-28)lines.push(word+' ');else lines[last]+=word+' ';}lines.slice(0,3).forEach((line,i)=>ctx.fillText(line.trim(),x,y+(i-(lines.length-1)/2)*30,button.width-24));
+            ctx.font='500 21px system-ui';ctx.textAlign='center';const words=button.label.split(' '),lines=[''];for(const word of words){const last=lines.length-1;if(ctx.measureText(lines[last]+word).width>button.width-20)lines.push(word+' ');else lines[last]+=word+' ';}lines.slice(0,3).forEach((line,i)=>ctx.fillText(line.trim(),x,y+(i-(lines.length-1)/2)*24,button.width-18));
         }else if(button.color){ctx.fillStyle=button.color;ctx.beginPath();ctx.roundRect(x-32,y-32,64,64,10);ctx.fill();ctx.strokeStyle='#c9dbd0';ctx.stroke();}
         else drawWristIcon(ctx,button.icon,x,y,Math.min(button.width,button.height)*(button.dock?.58:.55));
         if(button.selected){ctx.strokeStyle='#eff5dc';ctx.lineWidth=4;const cx=button.x+button.width-20,cy=button.y+19;ctx.beginPath();ctx.moveTo(cx-7,cy);ctx.lineTo(cx-2,cy+5);ctx.lineTo(cx+8,cy-7);ctx.stroke();}
     }
     ctx.globalAlpha=1;ctx.fillStyle='#c2ddd0';ctx.font='500 25px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
-    const hint=card.hoverHint || menu.subtitle;
-    if(hint){ctx.fillStyle='rgba(13,29,26,.96)';ctx.beginPath();ctx.roundRect(expanded?474:30,height-62,expanded?506:940,50,12);ctx.fill();ctx.fillStyle='#d4e8dc';ctx.fillText(hint,expanded?727:500,height-36,expanded?476:890);}
+    const hint=card.hoverHint;
+    if(hint && expanded){ctx.fillStyle='#d4e8dc';ctx.font='500 20px system-ui';ctx.fillText(hint,px(.123),py(.035),px(.194)-px(.050));}
 }

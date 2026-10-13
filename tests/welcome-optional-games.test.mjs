@@ -24,7 +24,7 @@ test('Games are launched through the wrist, never loaded on startup, and have co
     assert.equal(trials.layer.children.length,0);assert.equal(trials.active,null);
     const stage={trials,snapshot:()=>({phase:'grab',voice:{},trials:trials.snapshot()}),button(){},paint:null,setInputMode:mode=>trials.command('mode:'+mode)};
     const menu=createWelcomeComfortOptions({stage});
-    assert.ok(menu.context().items.some(item=>item.action==='Comfort:games' && item.ariaLabel==='Games'));
+    assert.equal(menu.context().items.length,1);menu.act('toggle');assert.ok(menu.context().items.some(item=>item.action==='Comfort:games' && item.ariaLabel==='Games'));
     menu.act('games');const choices=menu.context().items;
     for(const id of ['dragonfly','strawberry'])assert.ok(choices.some(item=>item.action==='Comfort:game:'+id));
     menu.act('game:strawberry');trials.update(0,{visible:true});assert.equal(trials.active,'strawberry');assert.equal(trials.panel.visible,false,'new games use the existing wrist controls');

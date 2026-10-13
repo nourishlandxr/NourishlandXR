@@ -2057,7 +2057,12 @@ function currentLimPointerCell(){return currentLimPointerTarget()?.node || null;
 function demoLivingFrameRimHit(ray=latestControllerRay){
     if(!introWorldAnchor || !introBoardVisible || !arWelcomeSharedBoard || getSpatialVisualSettings().livingFrame===false)return null;
     const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
-    return livingFrameRimHit(ray,livingFramePose(board));
+    const pose=livingFramePose(board);return livingFrameModel?.ready?livingFrameModel.hit(ray,pose.matrix):livingFrameRimHit(ray,pose);
+}
+function demoZinniaPointerHit(ray=latestControllerRay){
+    if(welcomePractice?.active || !introWorldAnchor || !introBoardVisible || !arWelcomeSharedBoard)return null;
+    const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
+    return zinniaFramePerch?.hit(ray,livingFramePose(board).matrix) || null;
 }
 function resolveDemoCellTarget(){
     const panel=infoPanel?.hit(latestControllerRay);
@@ -2649,12 +2654,12 @@ function guidePlantConversion(record) {
 function showDemoNativePlantChooser(orb){
     if(demoFramePlantChoiceOrbId===orb.id && demoZinniaDiscovery)return;
     clearDemoZinniaDiscovery();
-    showIntroBoard('Ask Zinnia',ZINNIA_PLANT_COPY,'',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Use Moringa as the sample, or tap Speak and name the plant for a custom Orb.'});
+    showIntroBoard('Ask Zinnia',ZINNIA_PLANT_COPY,'',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Name a plant after Zinnia’s prompt, or choose the Moringa sample.'});
     demoFramePlantChoiceOrbId=orb.id;introBoardTextureDirty=true;
     demoZinniaDiscovery=createZinniaPlantDiscovery({onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);const input=arWelcomeLayer?.querySelector('[data-zinnia-plant-input]');if(input){input.value=state.query;input.disabled=['loading','searching','listening'].includes(state.phase);}syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onSpeak:()=>demoProjectVoice?.stop(),onReady:profile=>selectDemoNativePlant({demoNativeChooserFor:orb.id},profile)});
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');
     if(board && !simulatedMode){demoZinniaView=mountZinniaPlantDiscovery(board,demoZinniaDiscovery);demoZinniaView.render(demoZinniaDiscovery.state());}
-    syncDemoZinniaButtons(demoZinniaDiscovery.state());
+    syncDemoZinniaButtons(demoZinniaDiscovery.state());demoZinniaDiscovery.begin();
 }
 function showDemoZinniaNote(record=null){
     clearDemoZinniaDiscovery();
@@ -2669,7 +2674,7 @@ function showDemoZinniaNote(record=null){
     }});
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');
     if(board && !simulatedMode){demoZinniaView=mountZinniaPlantDiscovery(board,demoZinniaDiscovery);demoZinniaView.render(demoZinniaDiscovery.state());}
-    syncDemoZinniaButtons(demoZinniaDiscovery.state());
+    syncDemoZinniaButtons(demoZinniaDiscovery.state());demoZinniaDiscovery.begin();
 }
 function syncDemoZinniaButtons(state){
     syncDemoVoiceBar();
@@ -5084,7 +5089,7 @@ function setupRenderer() {
             const completed=welcomePractice;welcomePracticeDisposeTimer=setTimeout(()=>{if(welcomePractice!==completed)return;completed.destroy({stopVoice:false});welcomePractice=null;welcomePracticeDisposeTimer=null;},750);
         }
     });
-    zinniaVoiceBar=createSpatialZinniaVoiceBar(gl,{getConversation:()=>welcomePractice?.stage.conversation || demoZinniaDiscovery,isInputOccupied:source=>welcomePractice?.stage.isHolding(source) || false,ray:()=>latestControllerRay,getPanelPose:()=>infoPanel?.spatialPose,isEnabled:()=>Boolean(welcomePractice)});
+    zinniaVoiceBar?.destroy();zinniaVoiceBar=null;
     // Direct demo entry still needs the living guide when practice is disabled.
     if(!welcomePractice){zinniaFramePerch?.destroy();zinniaFramePerch=createZinniaFramePerch({getVoice:()=>demoProjectVoice});zinniaFramePerch.attach(gl);zinniaFramePerch.show(performance.now(),{immediate:true});}
 }
@@ -5782,7 +5787,7 @@ function syncWelcomeComfortOptions(state=welcomePractice?.stage.snapshot()){
 function welcomePracticeFrameHit(ray){
     if(!welcomePractice?.active || welcomePractice.stage.exiting)return null;
     const panel=infoPanel?.hitButton(ray),rim=demoLivingFrameRimHit(ray);
-    const hit=nearestDemoXrTarget([panel?{...panel,kind:'panel'}:null,rim,zinniaVoiceBar?.hit(ray)]);
+    const hit=nearestDemoXrTarget([panel?{...panel,kind:'panel'}:null,rim,demoZinniaPointerHit(ray)]);
     return hit?{...hit,worldPoint:{x:ray.origin.x+ray.direction.x*hit.distance,y:ray.origin.y+ray.direction.y*hit.distance,z:ray.origin.z+ray.direction.z*hit.distance}}:null;
 }
 function drawWelcomePracticeFrame(view){
@@ -6568,7 +6573,7 @@ function drawDemoInputPointer(view,pointerSource) {
     // Butterflies can be caught along the ray, but never clamp the laser tip.
     const practiceFrameHit=welcomePracticeFrameHit(latestControllerRay),practiceStageHit=welcomePractice?.stage.hit(latestControllerRay);
     const practiceTarget=practiceStageHit && !practiceStageHit.worldPoint && Number.isFinite(practiceStageHit.distance)?{...practiceStageHit,worldPoint:{x:origin.x+direction.x*practiceStageHit.distance,y:origin.y+direction.y*practiceStageHit.distance,z:origin.z+direction.z*practiceStageHit.distance}}:practiceStageHit;
-    const surface = mapDragging?mapSurface:[welcomePractice?zinniaVoiceBar?.hit(latestControllerRay):null,practiceFrameHit,practiceTarget,demoFramePlantChoiceHit(),demoLivingFrameRimHit(),limSurface,controlSurface,greenSurface,placementSurface,handleSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = mapDragging?mapSurface:[welcomePractice?zinniaVoiceBar?.hit(latestControllerRay):null,practiceFrameHit,practiceTarget,demoFramePlantChoiceHit(),demoLivingFrameRimHit(),demoZinniaPointerHit(latestControllerRay),limSurface,controlSurface,greenSurface,placementSurface,handleSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.

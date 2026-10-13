@@ -1,6 +1,8 @@
 # Zinnia voice: custom Orbs and Notes
 
-The second demonstration Orb uses a shared voice controller with Notes. There is no text keyboard in this flow. Tap **Speak** for each turn; **Done speaking** finishes a server recording early. Recordings stop after 20 seconds. Only one microphone session can run at a time. Closing the experience releases its microphone tracks and cancels requests.
+The second demonstration Orb uses a shared voice controller with Notes. Enable the microphone before entering Quest XR. With that permission enabled, Zinnia listens automatically after each prompt has finished playing. **Listen again** retries a turn and **Finish listening** ends a recording early. Recordings stop after a sentence pause or a maximum of 20 seconds. Only one microphone session can run at a time. Closing the experience releases its microphone tracks and cancels requests. Permission denial, a busy microphone, silence and transcription failures are reported separately.
+
+Tutorial audio controls live in the forearm menu: tap the discreet pulse button, then Audio. The six menu icons form two columns and three rows. The menu starts closed, and tools open to its right. Main demo audio controls remain in its Control panel.
 
 ## Plant conversation
 

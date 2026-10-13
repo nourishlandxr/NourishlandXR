@@ -3,6 +3,7 @@ import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {createLivingFrameXR} from './livingFrameXR.js';
 import {getSpatialVisualSettings,currentLivingFrameQuality} from './spatialVisualSettings.js';
 import {refineLivingFrameMaterials} from './livingFrameSurface.js';
+import {createMeshPointerContact} from './xrMeshPointerContact.js';
 
 export const LIVING_FRAME_GROWTH_DURATION_MS=15*60*1000;
 const SOURCE_GROWTH_SECONDS=60;
@@ -23,6 +24,7 @@ export function prepareLivingFrameModel(quality=getSpatialVisualSettings().livin
 // Text never waits for this controller. Its ready flag swaps the canvas rim
 // only when the selected model can draw; failures leave the fallback usable.
 export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()=>{}}={}){
+ const meshPointerContact=createMeshPointerContact();
  let quality='off',entry=null,scene=null,mixer=null,xr=null,gl=null,desktop=null,disposeMaterials=null,generation=0,destroyed=false,lastTime=-1,lastDraw=-Infinity,visible=false,revealStartedAt=null,revealInstant=false,error=null,failedQuality=null;
  const drop=(keep=quality)=>{revealStartedAt=null;xr?.destroy();xr=null;if(scene){mixer?.stopAllAction();mixer?.uncacheRoot(scene);}disposeMaterials?.();disposeMaterials=null;if(entry)entry.users--;entry=null;scene=null;mixer=null;lastTime=-1;trim(keep);};
  async function select(next){
@@ -38,6 +40,7 @@ export function createLivingFrameModel({load=prepareLivingFrameModel,onChange=()
   const world=new THREE.Scene(),group=new THREE.Group(),camera=new THREE.OrthographicCamera(-2,2,1.68,-1.68,.01,12);camera.position.z=4;group.position.y=-.016;world.add(group);if(scene)group.add(scene);world.add(new THREE.HemisphereLight(0xdce9f4,0x303820,3),new THREE.AmbientLight(0xe4e9df,.9));const key=new THREE.DirectionalLight(0xffedcf,4.2);key.position.set(-2,3,4);world.add(key);desktop={renderer,canvas,world,group,camera,width:0,height:0};
  }
  const api={select,attachDesktop,
+  hit(ray,anchorMatrix){if(!visible || !api.ready || !scene || !anchorMatrix)return null;const matrix=new THREE.Matrix4().fromArray(anchorMatrix).multiply(new THREE.Matrix4().makeTranslation(0,0,.012));return meshPointerContact(ray,scene,{matrix:matrix.elements,kind:'living-frame-rim',frameToken:lastTime});},
   setDesktopDetail(close){if(!desktop)return;const roots=close==='roots';desktop.detail=Boolean(close);desktop.camera.zoom=roots?4:close?8:1;desktop.camera.position.x=roots?0:close ? .62 : 0;desktop.camera.position.y=roots?-1.23:close ? .65 : 0;desktop.camera.updateProjectionMatrix();desktop.width=0;lastDraw=-Infinity;},
   get ready(){return Boolean(scene&&quality!=='off'&&(!gl||xr?.ready));},get entranceReady(){return api.ready && (!gl || revealInstant || revealStartedAt!==null && performance.now()-revealStartedAt>=1200);},get quality(){return quality;},get error(){return error;},get scene(){return scene;},get growthTime(){return lastTime;},get renderStats(){return xr?.stats||null;},
   setContext(context){if(gl===context)return;revealStartedAt=null;xr?.destroy();gl=context;xr=gl&&scene?createLivingFrameXR(gl,scene):null;onChange();},

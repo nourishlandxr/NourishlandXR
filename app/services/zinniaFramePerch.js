@@ -2,10 +2,12 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} from './zinniaCharacter.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
 import {zinniaVoiceState,zinniaSpeechLevel,zinniaCharacterCue} from './zinniaVoiceCoordinator.js';
+import {createMeshPointerContact} from './xrMeshPointerContact.js';
 
 // Kept inside the frame silhouette. Totems occupy the space beside the frame.
 export const ZINNIA_FRAME_PERCH=Object.freeze({x:.88,y:-.18,z:.32,width:.19,depth:.16});
 export function createZinniaFramePerch({character:initialCharacter=null,getVoice=()=>null}={}){
+    const meshPointerContact=createMeshPointerContact();
     const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);root.matrixAutoUpdate=false;
     const home=new THREE.Group();home.position.set(ZINNIA_FRAME_PERCH.x,ZINNIA_FRAME_PERCH.y,ZINNIA_FRAME_PERCH.z);root.add(home);
     // Curved branch grows inward from the right rim, under the pot.
@@ -33,6 +35,7 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
     }
     return {scene,root,characterMount,update,
+        hit(ray,matrix){if(disposed || started===null || !renderer)return null;if(matrix){root.matrix.fromArray(matrix);root.updateMatrixWorld(true);}return meshPointerContact(ray,characterMount,{kind:'zinnia',frameToken:character.userData.zinnia?.time ?? lastFrame});},
         matchRim(frameScene){let material=null;frameScene?.traverse(node=>{for(const candidate of [node.material].flat().filter(Boolean))if(candidate.name==='Brown lower soil')material ||= candidate;});if(!material || material.uuid===rimMaterialId)return;rimMaterialId=material.uuid;wood.copy(material);wood.map=null;wood.color.set('#4c3320');wood.name='Living Frame branch';renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true}):null;},
         adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
         attach(gl){glContext=gl;renderer?.destroy();renderer=createFruitWindowXR(gl,scene,{alphaCompositing:true});},

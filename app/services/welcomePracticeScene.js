@@ -20,9 +20,11 @@ import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} fro
 import {createWelcomeObjectReveal} from './welcomeObjectReveal.js';
 import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 import {createWelcomePracticeTrials} from './welcomePracticeTrials.js';
+import {createMeshPointerContact} from './xrMeshPointerContact.js';
 
 const one=new THREE.Vector3(1,1,1),up=new THREE.Vector3(0,1,0);
 const serial=v=>({x:v.x,y:v.y,z:v.z});
+const meshPointerContact=createMeshPointerContact();
 function disposeTree(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of [n.material].flat().filter(Boolean)){materials.add(m);for(const value of Object.values(m))if(value?.isTexture)textures.add(value);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>{t.image?.close?.();t.dispose();});}
 function glass(colour,opacity=1){return new THREE.MeshStandardMaterial({color:colour,roughness:.72,metalness:0,transparent:opacity<1,opacity,depthWrite:true,side:THREE.DoubleSide});}
 function tableSurface(colour,opacity){return new THREE.MeshBasicMaterial({color:colour,transparent:opacity<1,opacity,depthWrite:opacity>=1,side:THREE.DoubleSide});}
@@ -121,15 +123,14 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     function localPose(matrix){return new THREE.Matrix4().multiplyMatrices(worldInverse,new THREE.Matrix4().fromArray(matrix));}
     function localRay(ray){if(!ray?.origin || !ray.direction)return null;root.updateMatrixWorld(true);worldInverse.copy(root.matrixWorld).invert();return new THREE.Ray(new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z).normalize()).applyMatrix4(worldInverse);}
     function hit(ray){if(!active || !anchored)return null;const r=localRay(ray);if(!r)return null;let best=null;
-        const trialHit=trials.hit(ray);if(trials.active)return trialHit;if(trialHit)best=trialHit;
+        const trialHit=trials.hit(ray);if(trialHit)best=trialHit;
         const pick=(distance,value)=>{if(distance>0 && (!best || distance<best.distance))best={...value,distance};};
-        if(index>0)for(const body of bodies){if(!body.visible)continue;const p=r.intersectSphere(new THREE.Sphere(new THREE.Vector3(body.position.x,body.position.y,body.position.z),body.radius+.014),new THREE.Vector3());if(p)pick(p.distanceTo(r.origin),{kind:'body',body,point:p});}
-        if(['fly','explore'].includes(phase())){const p=r.intersectSphere(new THREE.Sphere(dragon.group.position,.095),new THREE.Vector3());if(p)pick(p.distanceTo(r.origin),{kind:'dragon',point:p});}
+        if(!trials.active && index>0)for(const body of bodies){if(!body.visible)continue;const p=r.intersectSphere(new THREE.Sphere(new THREE.Vector3(body.position.x,body.position.y,body.position.z),body.radius+.014),new THREE.Vector3());if(p)pick(p.distanceTo(r.origin),{kind:'body',body,point:p});}
+        if(!trials.active && ['fly','explore'].includes(phase())){const p=r.intersectSphere(new THREE.Sphere(dragon.group.position,.095),new THREE.Vector3());if(p)pick(p.distanceTo(r.origin),{kind:'dragon',point:p});}
         const p=r.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),.41),new THREE.Vector3());
         if(p && !embedded)for(const [id,b] of buttons)if(b.enabled && Math.abs(p.x-b.x)<b.width/2 && Math.abs(p.y-b.y)<b.height/2)pick(p.distanceTo(r.origin),{kind:'button',id,point:p.clone()});
-        const tablePoint=r.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),new THREE.Vector3());
-        if(table.visible && tablePoint && onPracticeTable(tablePoint.x,tablePoint.z))pick(tablePoint.distanceTo(r.origin),{kind:'table',point:tablePoint});
-        if(best){best.worldPoint=best.point.clone().applyMatrix4(root.matrixWorld);return best;}return null;
+        for(const target of [[table,'table'],[zinniaCharacter,'zinnia']]){const contact=meshPointerContact(ray,target[0],{kind:target[1],frameToken:elapsed});if(contact)pick(contact.distance,{...contact,point:root.worldToLocal(contact.worldPoint.clone())});}
+        if(best){best.worldPoint ||= best.point.clone().applyMatrix4(root.matrixWorld);return best;}return null;
     }
     function finish(skipped=false){visitorIntroduction.cancel();if(!active || exiting)return;trials.close();exiting=true;tutorialPaused=false;exitSkipped=skipped;exitStarted=elapsed;fadeStarted=null;releaseAll(false);voice?.stop();void voice?.speak({...cue(skipped?'practice-exit':'practice-complete'),recorded:true});lastSignature='';paint();}
     function abort(){visitorIntroduction.cancel();trials.close();active=false;exiting=false;exitOpacity=0;voice?.stop();releaseAll(false);root.visible=false;onChange(snapshot());onComplete({aborted:true});}
@@ -177,7 +178,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         if(!active || disposed)return;dt=!exiting && (tutorialPaused || voice?.status().paused)?0:Math.min(.06,Math.max(0,dt));elapsed+=dt;frameLoadError=phase()==='frame'?frameError:null;anchor(viewer,floor);if(!anchored)return;
         if(exiting){if(fadeStarted===null && elapsed-exitStarted>2.5 && (!voice?.status().playing || elapsed-exitStarted>24)){voice?.stop();fadeStarted=elapsed;}if(fadeStarted!==null){const t=Math.min(1,(elapsed-fadeStarted)/1.8);exitOpacity=1-t*t*(3-2*t);if(t>=1){active=false;root.visible=false;onChange(snapshot());onComplete({skipped:exitSkipped});return;}}paint();return;}
         root.visible=true;root.updateMatrixWorld(true);worldInverse.copy(root.matrixWorld).invert();
-        const handsAllowed=handsEnabled();hands=handsAllowed?hands:[];inputs=inputs.filter(input=>!input.source.hand || handsAllowed);handsPresent=hands.some(e=>e.state?.tracked);handStable=handsPresent?Math.min(3,handStable+dt):Math.max(0,handStable-dt*3);
+        const handsAllowed=handsEnabled();hands=handsAllowed?hands:[];inputs=inputs.filter(input=>!input.uiBlocked && (!input.source.hand || handsAllowed));handsPresent=hands.some(e=>e.state?.tracked);handStable=handsPresent?Math.min(3,handStable+dt):Math.max(0,handStable-dt*3);
         const age=elapsed-stepStarted;if(phase()==='visitor-intro')visitorIntroduction.update(dt,{ready:!voice?.status().playing});
         tableReveal.update(reveals.table===null?-1:elapsed-reveals.table);
         zinniaReveal?.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);

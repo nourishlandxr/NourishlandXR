@@ -1,4 +1,4 @@
-import {createSpatialTetherRenderer,drawSpatialTether,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
+import {createSpatialTetherRenderer,drawSpatialTether,drawSpatialPointerContact,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {unlockZinniaTouchAudio} from './zinniaTouchReactions.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createWelcomePracticeScene} from './welcomePracticeScene.js';
@@ -40,7 +40,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
     function update(frame,time,viewer,floor,trackedHands){
         if(disposed || !stage.active)return;const dt=lastTime===null?0:(time-lastTime)/1000;lastTime=time;hands=trackedHands || [];inputs=[];controllers=[];
         for(const source of session?.inputSources || []){
-            if(panelRouting.occupied(source))continue;
+            const uiBlocked=panelRouting.occupied(source);
             let pose=null,ray=null;try{pose=frame.getPose(source.gripSpace || source.targetRaySpace,space);ray=controllerRayFromPose(frame.getPose(source.targetRaySpace,space),source.handedness);}catch{}
             if(source.hand){const state=hands.find(h=>h.source===source)?.state,wrist=state?.rawJoints.get('wrist'),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');
                 if(!state?.tracked || !wrist || !index || !thumb){comfortPinches.delete(source);inputs.push({source,matrix:null});continue;}
@@ -49,8 +49,8 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 const tips=['middle-finger-tip','ring-finger-tip','pinky-finger-tip'].map(name=>state.rawJoints.get(name)).filter(Boolean),curl=tips.length===3?tips.reduce((sum,t)=>sum+Math.hypot(t.x-wrist.x,t.y-wrist.y,t.z-wrist.z),0)/3:1;
                 const fist=curl<(curling.get(source)?.105:.087);curling.set(source,fist);
                 const gripPoint=trackedPalmPoint(state.rawJoints);if(!gripPoint){inputs.push({source,matrix:null});continue;}
-                inputs.push({source,matrix:new THREE.Matrix4().compose(gripPoint,q,new THREE.Vector3(1,1,1)).elements,ray:state.pointer,tip:index,fist,down:Boolean(state.pinch || fist),trigger:Boolean(state.pinch)});
-            }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0)};inputs.push(input);if(input.matrix)controllers.push(input);}
+                inputs.push({source,matrix:new THREE.Matrix4().compose(gripPoint,q,new THREE.Vector3(1,1,1)).elements,ray:state.pointer,tip:index,fist,down:Boolean(state.pinch || fist),trigger:Boolean(state.pinch),uiBlocked});
+            }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0),uiBlocked};inputs.push(input);if(input.matrix)controllers.push(input);}
         }
         stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError()});revealTime+=Math.max(0,Math.min(.1,dt));
         if((!renderer && !pendingRenderer) || rebuild){rebuild=false;pendingRenderer?.destroy();pendingRenderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,progressive:true});}
@@ -71,6 +71,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 if(!panel && (!stage.controllerLasersVisible || stage.trials.active==='painting' || stage.isBrushHeld(input.source)) && !requested)continue;
                 const end=hit?.worldPoint || {x:r.origin.x+r.direction.x*1.25,y:r.origin.y+r.direction.y*1.25,z:r.origin.z+r.direction.z*1.25};
                 drawSpatialTether(gl,pointer,view,r.origin,end,{width:.0018,curve:0,lift:0,segments:4,color:[.8,.9,.79,.6*opacity]});
+                if(hit)drawSpatialPointerContact(gl,pointer,view,end,.006,[.8,.9,.79,.85*opacity]);
             }
         },destroy({stopVoice=true}={}){if(disposed)return;disposed=true;unbind();stage.destroy({stopVoice});pendingRenderer?.destroy();pendingRenderer=null;renderer?.destroy();renderer=null;destroySpatialTetherRenderer(gl,pointer);hands=[];controllers=[];inputs=[];}};
 }

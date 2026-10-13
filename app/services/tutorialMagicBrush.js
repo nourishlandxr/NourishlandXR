@@ -1,16 +1,17 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createSpatialPaintV2} from './spatialPaintV2.js';
 import {createPracticeBody} from './welcomePracticePhysics.js';
+import {createSpatialPaintTip} from './spatialPaintTip.js';
 export function createTutorialMagicBrush(root,{onAssets=()=>{}}={}){
  const body=createPracticeBody('magic-brush',{x:-.52,z:-.04,radius:.045,halfSize:{x:.026,y:.022,z:.085}}),group=new THREE.Group();group.name='Tutorial magic brush';
  const handle=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),new THREE.MeshStandardMaterial({color:'#526454',roughness:.4}));handle.scale.set(.026,.022,.075);group.add(handle);
- const tip=new THREE.Mesh(new THREE.SphereGeometry(.004,8,6),new THREE.MeshBasicMaterial({color:'#86e7d0'}));tip.rotation.x=-Math.PI/2;tip.position.z=-.08;group.add(tip);root.add(group);
+ const tip=createSpatialPaintTip(group);tip.root.position.z=-.08;root.add(group);
  const paint=createSpatialPaintV2({capacity:2048});paint.setMotion(false);const marks=paint.root;marks.name='Brush practice marks';root.add(marks);const guide=new THREE.Mesh(new THREE.TorusGeometry(.06,.002,6,32),new THREE.MeshBasicMaterial({color:'#ffe0a0'}));root.add(guide);guide.visible=false;
  body.gripPoint={x:0,y:0,z:0};body.anchored=true;let stroke=null,painted=false,docked=false;
  function end(){const fruit=stroke?.fruit,ready=fruit && stroke.travel>.045 && stroke.touched;stroke=null;paint.end('tutorial-brush');return ready?fruit:null;}
  function update(point,pressed,fruit){
   guide.visible=Boolean(fruit);if(fruit){guide.position.set(fruit.position.x,fruit.position.y,fruit.position.z);guide.rotation.y=Math.PI/2;guide.scale.setScalar(fruit.radius/.06);}
-  tip.material.color.set(fruit?'#ffe0a0':'#86e7d0');
+  tip.update(paint.snapshot());
   if(!pressed)return end();
   if(!stroke)stroke={last:point.clone(),travel:0,fruit,touched:false};
   const distance=stroke.last.distanceTo(point);if(distance>.15){stroke=null;return null;}
