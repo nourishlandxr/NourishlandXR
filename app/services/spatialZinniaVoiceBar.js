@@ -17,7 +17,7 @@ export function activateZinniaVoiceBar(action,conversation){
     else if(action==='mute')setWelcomeNarrationSettings({enabled:!getWelcomeNarrationSettings().enabled});
     else if(['cancel','confirm','retry'].includes(action))conversation?.activate(action);
 }
-export function createSpatialZinniaVoiceBar(gl,{getConversation=()=>null,isInputOccupied=()=>false,onAction=()=>{},ray=()=>null,getPanelPose=()=>null}={}){
+export function createSpatialZinniaVoiceBar(gl,{getConversation=()=>null,isInputOccupied=()=>false,onAction=()=>{},ray=()=>null,getPanelPose=()=>null,isEnabled=()=>true}={}){
     let pose=null,surfaces=[],disposed=false;const pokes=new Map();
     const renderer=createSpatialTotemCards(gl,{surfaces:()=>surfaces,ray,canvas:card=>{
         const canvas=document.createElement('canvas');canvas.width=128;canvas.height=128;const ctx=canvas.getContext('2d');
@@ -37,7 +37,7 @@ export function createSpatialZinniaVoiceBar(gl,{getConversation=()=>null,isInput
         else line([[45,45],[83,83]]),line([[83,45],[45,83]]);
         return canvas;
     }});
-    function update(viewer){if(disposed || !viewer)return;const dock=getPanelPose();if(dock){const offset=(dock.height || .42)/2+.07;pose={...dock,center:{x:dock.center.x-dock.up.x*offset,y:dock.center.y-dock.up.y*offset,z:dock.center.z-dock.up.z*offset}};}else {surfaces=[];pose=null;return;}
+    function update(viewer){if(disposed || !viewer)return;if(!isEnabled()){surfaces=[];pose=null;return;}const dock=getPanelPose();if(dock){const offset=(dock.height || .42)/2+.07;pose={...dock,center:{x:dock.center.x-dock.up.x*offset,y:dock.center.y-dock.up.y*offset,z:dock.center.z-dock.up.z*offset}};}else {surfaces=[];pose=null;return;}
         const conversation=getConversation(),buttons=zinniaVoiceBarButtons({conversation:Boolean(conversation)}).filter(button=>!['voice','done'].includes(button.id));if(conversation)buttons.push(...(conversation.buttons?.() || []),{id:'cancel',label:conversation.buttons?'Skip':'Cancel'});
         surfaces=buttons.map((button,index)=>{const offset=(index-(buttons.length-1)/2)*.078;return {card:{id:button.id,title:button.label,disabled:button.disabled,icon:button.icon,active:button.active,fadeDuration:0},center:{x:pose.center.x+pose.right.x*offset,y:pose.center.y+pose.right.y*offset,z:pose.center.z+pose.right.z*offset},right:pose.right,up:pose.up,normal:pose.normal,width:.07,height:.07};});
     }

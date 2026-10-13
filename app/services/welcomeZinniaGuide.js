@@ -54,8 +54,8 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         // Preserve the authored shape; the reveal fades materials rather than scaling it.
         const paused=voice?.status().paused,raw=voice?.speechLevel?.() || 0;
         level=paused?0:THREE.MathUtils.damp(level,raw,raw>level?24:14,dt);
-        const sad=reaction==='sad',tickled=reaction==='tickle',patted=reaction==='pat';
-        const celebrating=rewardAge<2.4 && !sad;
+        const tickled=reaction==='tickle',patted=reaction==='pat';
+        const celebrating=rewardAge<2.4;
         const task=taskTarget && !celebrating && lesson!=='zinnia' && lesson!=='hands';
         holder.updateWorldMatrix(true,true);
         if(task)worldTarget.copy(taskTarget).applyMatrix4(root.matrixWorld);
@@ -64,14 +64,14 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         const head=parts.Head_nod_root?.userData.guidePivot;
         if(head){local.copy(worldTarget);head.parent.worldToLocal(local).sub(head.position);let yaw=THREE.MathUtils.clamp(Math.atan2(local.x,local.z),-.8,.8),pitch=THREE.MathUtils.clamp(Math.atan2(local.y,Math.hypot(local.x,local.z)),-.42,.42);
             if(ackAge<1.8){const fade=Math.min(1,ackAge*6)*Math.max(0,Math.min(1,(1.8-ackAge)*5)),wave=Math.sin(ackAge*Math.PI*3.4)*fade;if(ack==='no')yaw+=wave*.32;else pitch+=wave*.23;}
-            if(sad)pitch-=.23;else if(tickled)pitch+=Math.sin(age*26)*.075;else if(patted)pitch+=Math.sin(age*6)*.06;
+            if(tickled)pitch+=Math.sin(age*26)*.075;else if(patted)pitch+=Math.sin(age*6)*.06;
             target.set(-pitch,yaw,tickled?Math.sin(age*22)*.06:level*.025*Math.sin(age*3));const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(target.x,target.y,target.z));head.quaternion.slerp(q,1-Math.exp(-8*dt));
         }
         const body=parts.Body_sway_root?.userData.guidePivot;if(body)body.rotation.z=Math.sin(age*2.1)*level*.025+(lesson==='zinnia'?Math.sin(age*3)*.035:lesson==='demo-guide'?Math.sin(age*.8)*.009:0);
         for(const [i,petal] of petals.entries())petal.rotation.x=Math.sin(age*1.6+i*.8)*.007*(.4+level);
         const attentive=focused || Boolean(task) || level>.025 || ['grab','fruit','packet','seed','water','grow','harvest'].includes(lesson);
-        const happy=!sad && (celebrating || success || tickled || patted);
-        eyeSmile=THREE.MathUtils.damp(eyeSmile,sad?0:happy?.9:attentive?0:.65,10,dt);
+        const happy=celebrating || success || tickled || patted;
+        eyeSmile=THREE.MathUtils.damp(eyeSmile,happy?.9:attentive?0:.65,10,dt);
         const blinkTime=age%4.7;blink=blinkTime>4.43?Math.sin((blinkTime-4.43)/.27*Math.PI):0;
         mouthOpen=THREE.MathUtils.clamp(level*2.4,0,1);mouthRound=THREE.MathUtils.smoothstep(level,.22,.65)*.8;
         // Audio energy controls openness; syllable motion varies the vowel silhouette.
@@ -81,13 +81,12 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         mouthClosed=voiced?Math.max(0,1-mouthOpen)*.55:0;
         mouthRound=voiced?THREE.MathUtils.clamp(mouthRound*(.7+.3*Math.sin(age*8.1)),.04,.8):0;
         if(tickled && level<.025)mouthOpen=.3+.25*Math.max(0,Math.sin(age*26));
-        smileNow=THREE.MathUtils.damp(smileNow,sad?0:happy?1:mouthOpen>.02?.12:attentive?.3:.75,8,dt);
-        for(const name of ['Eye_L_expression','Eye_R_expression']){const eye=parts[name];if(!eye)continue;const map=eye.morphTargetDictionary;eye.morphTargetInfluences[map.Smile]=eyeSmile*(1-blink);eye.morphTargetInfluences[map.Sad]=sad?.8:0;eye.morphTargetInfluences[map.Blink]=blink;eye.userData.catchlight.visible=eyeSmile<.4 && blink<.5;}
-        for(const name of ['Eyebrow_L','Eyebrow_R']){const brow=parts[name];if(!brow)continue;brow.morphTargetInfluences[brow.morphTargetDictionary.Smile]=sad?0:attentive?.2+mouthOpen*.25:smileNow*.5;brow.morphTargetInfluences[brow.morphTargetDictionary.Sad]=sad?.85:0;}
-        const mouth=parts.Mouth_speech;if(mouth){const map=mouth.morphTargetDictionary;for(const [key,value] of [['Smile',smileNow*(1-mouthOpen)],['Sad',sad?.85:0],['Open',mouthOpen*(1-mouthRound)],['Round',mouthOpen*mouthRound],['Wide',mouthWide],['Narrow',mouthNarrow],['Closed',mouthClosed]])mouth.morphTargetInfluences[map[key]]=value;}
+        smileNow=THREE.MathUtils.damp(smileNow,happy?1:mouthOpen>.02?.12:attentive?.3:.75,8,dt);
+        for(const name of ['Eye_L_expression','Eye_R_expression']){const eye=parts[name];if(!eye)continue;const map=eye.morphTargetDictionary;eye.morphTargetInfluences[map.Smile]=eyeSmile*(1-blink);eye.morphTargetInfluences[map.Sad]=0;eye.morphTargetInfluences[map.Blink]=blink;eye.userData.catchlight.visible=eyeSmile<.4 && blink<.5;}
+        for(const name of ['Eyebrow_L','Eyebrow_R']){const brow=parts[name];if(!brow)continue;brow.morphTargetInfluences[brow.morphTargetDictionary.Smile]=attentive?.2+mouthOpen*.25:smileNow*.5;brow.morphTargetInfluences[brow.morphTargetDictionary.Sad]=0;}
+        const mouth=parts.Mouth_speech;if(mouth){const map=mouth.morphTargetDictionary;for(const [key,value] of [['Smile',smileNow*(1-mouthOpen)],['Sad',0],['Open',mouthOpen*(1-mouthRound)],['Round',mouthOpen*mouthRound],['Wide',mouthWide],['Narrow',mouthNarrow],['Closed',mouthClosed]])mouth.morphTargetInfluences[map[key]]=value;}
         for(const side of ['L','R']){const pivot=parts['Leaf_arm_'+side]?.userData.guidePivot;if(!pivot)continue;const q=new THREE.Quaternion(),sign=side==='L'?-1:1;
-            if(sad)q.setFromEuler(new THREE.Euler(.18,-sign*.3,sign*.22));
-            else if(celebrating){const fade=Math.min(1,rewardAge*3)*Math.max(0,Math.min(1,(2.4-rewardAge)*3)),angle=(1.05+.34*Math.sin(rewardAge*Math.PI*5))*fade;q.setFromEuler(new THREE.Euler(0,side==='L'?angle:-angle,-sign*.2*fade));}
+            if(celebrating){const fade=Math.min(1,rewardAge*3)*Math.max(0,Math.min(1,(2.4-rewardAge)*3)),angle=(1.05+.34*Math.sin(rewardAge*Math.PI*5))*fade;q.setFromEuler(new THREE.Euler(0,side==='L'?angle:-angle,-sign*.2*fade));}
             else if(task){local.copy(worldTarget);pivot.parent.worldToLocal(local).sub(pivot.position);const selected=holder.worldToLocal(worldTarget.clone()).x>=0?'R':'L';if(side===selected)q.setFromUnitVectors(new THREE.Vector3(sign,.1,.2).normalize(),local.normalize());}
             else if(lesson==='zinnia' || cueIntent==='greet')q.setFromEuler(new THREE.Euler(0,-sign*.25,sign*(.32+.06*Math.sin(age*3))));
             else if(cue && level>.025)q.setFromEuler(new THREE.Euler(0,-sign*(.12+.08*Math.sin(age*2.4)),sign*.12));

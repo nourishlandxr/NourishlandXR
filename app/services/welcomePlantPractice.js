@@ -33,7 +33,7 @@ export function createWelcomePlantPractice(root,{onAssets=()=>{}}={}){
     const bottle=new THREE.Mesh(new THREE.CylinderGeometry(.019,.023,.075,16),material('#667966'));brush.add(bottle);
     const nozzle=new THREE.Mesh(new THREE.BoxGeometry(.022,.015,.031),material('#ddd9c6'));nozzle.position.set(0,.046,-.009);brush.add(nozzle);
     const mist=new THREE.Mesh(new THREE.ConeGeometry(.035,.14,12,1,true),sprayMaterial);mist.rotation.x=-Math.PI/2;mist.position.set(0,.046,-.095);mist.visible=false;brush.add(mist);
-    const palette=new THREE.Group();root.add(palette);palette.position.set(-.21,.014,.13);
+    const palette=new THREE.Group();palette.visible=false;root.add(palette);palette.position.set(-.21,.014,.13);
     const colours=['#729b83','#bf827c','#c6a35f','#758ead'];
     colours.forEach((colour,i)=>{const swatch=new THREE.Mesh(new THREE.CylinderGeometry(.016,.016,.006,16),material(colour));swatch.position.x=i*.039;palette.add(swatch);});
     function choosePaint(point){if(!palette.visible)return false;const swatch=palette.children.find(item=>point.distanceTo(palette.position.clone().add(item.position))<.027);if(!swatch)return false;paintColour.copy(swatch.material.color);sprayMaterial.color.copy(paintColour);bottle.material.color.copy(paintColour);return true;}
@@ -60,7 +60,7 @@ export function createWelcomePlantPractice(root,{onAssets=()=>{}}={}){
         if(disposed)return;const model=gltf.scene;model.updateMatrixWorld(true);const bounds=new THREE.Box3().setFromObject(model),size=bounds.getSize(new THREE.Vector3()),centre=bounds.getCenter(new THREE.Vector3()),factor=.045/Math.max(size.x,size.y,size.z),normalised=new THREE.Group();normalised.scale.setScalar(factor);normalised.position.copy(centre).multiplyScalar(-factor);normalised.add(model);
         for(const group of harvestObjects){for(const child of [...group.children]){child.geometry?.dispose();child.material?.dispose();}group.clear();group.add(normalised.clone(true));}asset='ready';onAssets();
     }).catch(error=>{asset='fallback';console.warn('Practice strawberry:',error.message);});
-    function reset({station=false}={}){if(station){resetPracticeBody(potBody);potBody.position.y=.045;potBody.anchored=true;paintedTime=0;clay.color.set('#b9c7b1');potAppearedAt=null;elapsed=0;pot.visible=false;}opened=false;plant.group.visible=false;planted=false;poured=0;growTime=0;pouring=false;flow=0;lastStream=null;seedTaken=false;openAt=plantAt=-Infinity;seedBody.anchored=true;harvestBodies.forEach(body=>{resetPracticeBody(body);body.anchored=true;body.plantAttached=true;});}
+    function reset({station=false}={}){palette.visible=false;if(station){resetPracticeBody(potBody);potBody.position.y=.045;potBody.anchored=true;paintedTime=0;clay.color.set('#b9c7b1');potAppearedAt=null;elapsed=0;pot.visible=false;}opened=false;plant.group.visible=false;planted=false;poured=0;growTime=0;pouring=false;flow=0;lastStream=null;seedTaken=false;openAt=plantAt=-Infinity;seedBody.anchored=true;harvestBodies.forEach(body=>{resetPracticeBody(body);body.anchored=true;body.plantAttached=true;});}
     reset();
     function openPacket(){if(opened)return false;opened=true;openAt=elapsed;return true;}
     function sealPoint(){return new THREE.Vector3(0,.015,-.055).applyQuaternion(new THREE.Quaternion(packetBody.rotation.x,packetBody.rotation.y,packetBody.rotation.z,packetBody.rotation.w)).add(new THREE.Vector3(packetBody.position.x,packetBody.position.y,packetBody.position.z));}

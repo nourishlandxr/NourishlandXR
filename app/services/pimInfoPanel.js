@@ -19,6 +19,7 @@ import { createSpatialTotemCards, hitTotemSurface } from './spatialTotemCards.js
 import { handTrackingState } from './xrPointer.js';
 import {fruitWindowSpecies,FRUIT_WINDOW_LIBRARY} from './fruitWindowInteraction.js';
 import { createHandPokeTracker,handIndexCanPoke } from './handPoke.js';
+import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 
 export const INFO_HELP = `Aim at an object to highlight it. Press a plant cell once to read or expand its information here. Select a Plant Orb to explore information connected to that plant.
 
@@ -210,7 +211,7 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='outline',spatialScale=1,performanceSettings=null,infoOpacity=.38,cellOpacity=.42,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,languageOpen=false,demoSound=null,tutorialAvailable=false,developerLabAvailable=false}={}){
+export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='outline',spatialScale=1,performanceSettings=null,infoOpacity=.38,cellOpacity=.42,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,languageOpen=false,demoSound=null,voiceControls=null,tutorialAvailable=false,developerLabAvailable=false}={}){
     const choice=(action,label,group,title,y,x=540,width=404)=>({action,label,ariaLabel:title || label,settingGroup:group,settingLabel:title,x,y,width,height:58});
     const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
     const includeLanguage=simpleDesktop || typeof document!=='undefined';
@@ -218,7 +219,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
     const close={...choice('CloseSettings','Done','close','Close settings',26,806,138),kind:'settings-close'};
     const frameControls=y=>Object.entries(LIVING_FRAME_QUALITIES).map(([quality,item],index)=>({...choice('LivingFrame:'+quality,item.label,'living-frame','',y,56+index*300,288),selected:getSpatialVisualSettings().livingFrameQuality===quality}));
     if(languageOpen)return [choice('LanguageMenu','‹ General','navigation','',100,56,888),...[['en','English'],['pt-PT','Português (Portugal)'],['nl-NL','Nederlands']].map(([code,label],index)=>({...choice('Language:'+code,label,'language','Language',202+index*88,56,888),selected:currentNxrLanguage()===code})),close];
-    if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),choice('Narration',getWelcomeNarrationSettings().enabled?'On':'Off','narration','Spoken guidance',466),slider('NarrationVolume','narration-volume','Voice volume',getWelcomeNarrationSettings().volume,0,2,.05,554),choice('NarrationReplay','Replay voice','narration-replay','',642),close];
+    if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),choice('Narration',getWelcomeNarrationSettings().enabled?'On':'Off','narration','Spoken guidance',466),slider('NarrationVolume','narration-volume','Voice volume',getWelcomeNarrationSettings().volume,0,2,.05,554),choice('NarrationReplay','↻ Replay','narration-replay','Replay Zinnia',642),choice('VoicePause',voiceControls?.paused?'▶ Resume':'Ⅱ Pause','voice-pause','Pause or resume Zinnia',714),...(voiceControls?.available?[choice('VoiceListen',voiceControls.listening?'■ Finish':'● Speak','voice-listen','Speak to Zinnia',786)]:[]),close];
     if(simpleDesktop)return [slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),choice('LanguageMenu','Language ›','language','',290,56,888),...frameControls(378),slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight||0,-1,1,.05,466),choice('SettingsHelp','Help','help','',570,56,888),close];
     const rates=Array.from(performanceSettings?.supported || []).filter(rate=>[60,72,90,120].includes(rate)).sort((a,b)=>a-b);
     const safeRate=Math.max(0,...rates.filter(rate=>rate<=90)) || rates[0];
@@ -324,7 +325,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, directInteractionOnly = () => false, allowPanelGrip = () => true, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, onRestartTutorial=null,onDeveloperLab=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, directInteractionOnly = () => false, allowPanelGrip = () => true, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, getVoiceControls=()=>null, onRestartTutorial=null,onDeveloperLab=null, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
     let rayFilter=()=>true;
     let comfortContext=null,panelOpacity=1,panelIntroductionAt=null;
@@ -526,6 +527,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='SoundMenu'){soundOpen=!soundOpen;graphicsOpen=false;renderSettings();return;}
         if(action==='Haptics'){demoSound?.setHaptics(!demoSound.volumes().haptics);renderSettings();return;}
         if(action==='NarrationReplay'){globalThis.dispatchEvent?.(new Event('nlxr-narration-replay'));return;}
+        if(action==='VoicePause'){onUtilityAction('voice-pause');renderSettings();return;}
+        if(action==='VoiceListen'){onUtilityAction('voice-listen');renderSettings();return;}
         if(action==='Narration'){setWelcomeNarrationSettings({enabled:!getWelcomeNarrationSettings().enabled});renderSettings();return;}
         if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
         if(action==='DeveloperLab'){onDeveloperLab?.();return;}
@@ -635,7 +638,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         panel.addEventListener('pointermove',event=>{if(!drag || drag.pointer!==event.pointerId)return;lowerDomPositions[id]={left:Math.max(8,Math.min(innerWidth-panel.offsetWidth-8,event.clientX-drag.x)),top:Math.max(8,Math.min(innerHeight-90,event.clientY-drag.y))};renderLowerCompanions();});
         panel.addEventListener('pointerup',()=>{drag=null;});panel.addEventListener('pointercancel',()=>{drag=null;});
     }
-    const settingsControls=()=>panelSettingsControls({simpleDesktop,headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,cellOpacity:meshCellOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,languageOpen,demoSound:demoSound?.volumes(),tutorialAvailable:typeof onRestartTutorial==='function',developerLabAvailable:typeof onDeveloperLab==='function'});
+    const settingsControls=()=>panelSettingsControls({simpleDesktop,headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,cellOpacity:meshCellOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,languageOpen,demoSound:demoSound?.volumes(),voiceControls:getVoiceControls?.(),tutorialAvailable:typeof onRestartTutorial==='function',developerLabAvailable:typeof onDeveloperLab==='function'});
     function renderSettings(){
         renderExplorer();
         syncPanelOpenerButtons();
@@ -996,7 +999,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(comfortContext){
             if(detached)return;
             const focused=element.contains(document.activeElement)?document.activeElement?.dataset.infoAction:null;
-            element.replaceChildren();element.classList.remove('is-hidden');element.setAttribute('aria-label',comfortContext.title || 'Control panel');
+            element.replaceChildren();element.classList.remove('is-hidden');element.setAttribute('aria-label','Wrist controls');
             const header=document.createElement('header');header.className='nlxr-control-header';
             const brand=document.createElement('strong');brand.className='nlxr-panel-brand';brand.textContent=(comfortContext.title || 'Control panel').toUpperCase();header.append(brand);element.append(header);
             const content=document.createElement('section');content.style.cssText='grid-column:1 / -1;padding:20px;';
@@ -1131,11 +1134,10 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         ctx.stroke();ctx.textBaseline='top';
         ctx.fillStyle='rgba(139,211,241,.85)';ctx.fillRect(22,10,96,4);
         if(card.comfort){
-            ctx.fillStyle='#f2f2e7';ctx.font='750 36px Manrope, system-ui';ctx.fillText(comfortContext.title || 'Control panel',30,30,850);
-            ctx.fillStyle='#cbd8ca';ctx.font='500 25px system-ui';ctx.fillText(card.comfort.subtitle,30,78,940);
-            if(card.comfort.expanded && !card.comfort.painting){ctx.fillText('Voice and graphics',30,208);ctx.fillText('Living Frame',30,308);ctx.fillText('Table height',30,408);}
-            else if(!card.comfort.painting){ctx.font='500 29px system-ui';ctx.fillText('1  Controllers',45,270);ctx.fillText('2  Gardening hands',45,330);ctx.fillText('3  Your own hands',45,390);}
-            for(const button of card.controls){ctx.globalAlpha=button.disabled?.36:1;ctx.fillStyle=button.selected?'rgba(137,189,144,.42)':card.hoverAction===button.action?'rgba(170,212,184,.35)':'rgba(218,237,224,.12)';ctx.strokeStyle=button.primary?'#b9d4ac':'rgba(217,236,226,.48)';ctx.lineWidth=button.selected?5:2;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,10);ctx.fill();ctx.stroke();ctx.fillStyle=button.color || '#f0f4e8';ctx.font=(button.ariaLabel?'650 42px':'650 28px')+' system-ui';ctx.textAlign='center';ctx.fillText(button.label,button.x+button.width/2,button.y+19,button.width-20);if(button.selected){ctx.font='700 18px system-ui';ctx.fillText('✓',button.x+button.width-18,button.y+6);}}ctx.globalAlpha=1;if(card.comfort.painting && card.hoverHint){ctx.font='500 22px system-ui';ctx.textAlign='center';ctx.fillText(card.hoverHint,500,392,900);}return c;
+            ctx.clearRect(0,0,c.width,c.height);ctx.fillStyle='rgba(17,35,32,.90)';ctx.beginPath();ctx.roundRect(48,12,904,c.height-24,100);ctx.fill();ctx.strokeStyle='rgba(126,215,192,.78)';ctx.lineWidth=8;ctx.stroke();
+            const glyph=button=>({'input:controllers':'⌖','input:gloves':'◉','input:hands':'✋',reset:'↺',skip:'↗',next:'✓','paint-tools':'✎',adjust:'⚙',quieter:'−',louder:'+','graphics:auto':'A','graphics:low':'SD','graphics:high':'HD','frame:lower':'↓','frame:higher':'↑','frame:sd':'S','frame:hd':'H','table:lower':'↓','table:higher':'↑','paint:undo':'↶','paint:clear':'⌫','paint:fine':'╱','paint:bold':'▰'}[button.action] || button.label || '•');
+            for(const button of card.controls){ctx.globalAlpha=button.disabled?.36:1;const aimed=card.hoverAction===button.action;ctx.fillStyle=button.selected?'rgba(114,190,164,.72)':aimed?'rgba(186,231,215,.38)':'rgba(218,237,224,.16)';ctx.strokeStyle=button.selected?'#e5ffe7':aimed?'#d8fff4':'rgba(217,236,226,.55)';ctx.lineWidth=button.selected?8:4;ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,36);ctx.fill();ctx.stroke();if(button.color){ctx.fillStyle=button.color;ctx.fillRect(button.x+button.width/2-34,button.y+button.height/2-34,68,68);}else{ctx.fillStyle='#f2f7ed';ctx.font='700 86px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(glyph(button),button.x+button.width/2,button.y+button.height/2,button.width-20);}if(button.selected){ctx.font='700 28px system-ui';ctx.fillStyle='#f2f7ed';ctx.textAlign='center';ctx.fillText('✓',button.x+button.width-22,button.y+22);}}
+            ctx.globalAlpha=1;if(card.hoverHint){ctx.fillStyle='rgba(10,24,22,.92)';ctx.beginPath();ctx.roundRect(250,c.height-68,500,48,16);ctx.fill();ctx.fillStyle='#f2f7ed';ctx.font='600 26px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(card.hoverHint,500,c.height-44,460);}return c;
         }
         if(card.explorer && card.limo){drawLimoSpatialControls(ctx,card);return c;}
         if(card.explorer){
@@ -1409,7 +1411,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function settingsDockPose(){return spatialMediaDockPose(!mediaCollapsed && mediaDockSide==='left'?'top':'left');}
     function settingsNearDock(){const dock=settingsDockPose();return Boolean(dock && settingsPose && Math.hypot(settingsPose.center.x-dock.center.x,settingsPose.center.y-dock.center.y,settingsPose.center.z-dock.center.z)<.24);}
     function finishSettingsDock(){if(settingsNearDock()){settingsPose=null;settingsElement.classList.add('is-magnetized');}}
-    function spatialDimensions(){if(comfortContext)return {mainWidth:(comfortContext.painting?.42:.60)*spatialScale,mainHeight:(comfortContext.painting?.42:.60)*spatialScale,mediaWidth:.32*spatialScale};return {mainWidth:(hidden ? .22 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .22 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
+    function spatialDimensions(){if(comfortContext){const mainWidth=.23*spatialScale;return {mainWidth,mainHeight:mainWidth*(comfortContext.height || 700)/1000,mediaWidth:.32*spatialScale};}return {mainWidth:(hidden ? .22 : headset ? .84 : .66)*spatialScale,mainHeight:(hidden ? .22 : headset ? guided?Math.max(.588,spatialHeight()/700*.588):.588 : spatialHeight()/1000*.60)*spatialScale,mediaWidth:.66*spatialScale};}
     function spatialMediaDockPose(side){
         if(!pose)return null;
         const {mainWidth,mainHeight,mediaWidth}=spatialDimensions(),mediaHeight=mainHeight,gap=.035;
@@ -1432,7 +1434,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     }
     function dockSpatialMedia(side){mediaDockSide=side || 'top';mediaDetached=false;mediaPose=null;mediaPosition=null;mediaCollapsed=false;render(true);}
     const api={element,get spatialPose(){return pose?{...pose,width:spatialDimensions().mainWidth,height:spatialDimensions().mainHeight}:null;},
-        setComfortContext(value){if(Boolean(comfortContext)!==Boolean(value)){previewHint='';hoveredAction='';hoveredDescription='';hoveredPanelId='';}comfortContext=value;hidden=false;settingsOpen=viewOpen=guidesOpen=false;explorerClosed=true;railCollapsed=false;mediaDockSide=value?'right':'top';element.classList.remove('is-opening-compact');if(value){settingsElement.hidden=explorerElement.hidden=viewElement.hidden=guidesElement.hidden=true;}render(true);},
+        setComfortContext(value){if(Boolean(comfortContext)!==Boolean(value)){previewHint='';hoveredAction='';hoveredDescription='';hoveredPanelId='';}comfortContext=value;element.hidden=Boolean(value && headset);hidden=false;settingsOpen=viewOpen=guidesOpen=false;explorerClosed=true;railCollapsed=false;spatialMove=null;spatialGrabPending=null;mediaDockSide=value?'right':'top';element.classList.remove('is-opening-compact');if(value){settingsElement.hidden=explorerElement.hidden=viewElement.hidden=guidesElement.hidden=true;}render(true);},
         setOpacity(value=1){panelOpacity=Math.max(0,Math.min(1,value));element.style.opacity=String(panelOpacity);},
         setRayFilter(value){rayFilter=typeof value==='function'?value:()=>true;},
         showConfirmation(value={}){
@@ -1543,7 +1545,16 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 if(finishingMoveSource && !sources.includes(finishingMoveSource))finishingMoveSource=null;
                 if(finishingSliderSource && !sources.includes(finishingSliderSource))finishingSliderSource=null;
             }
-            const next=comfortContext?welcomeComfortPanelPose(matrix,heading,headset,phoneAR):infoPanelPose(matrix,heading,headset,phoneAR);if(!next)return;heading=next.anchorHeading;
+            let next=comfortContext?welcomeComfortPanelPose(matrix,heading,headset,phoneAR):infoPanelPose(matrix,heading,headset,phoneAR);
+            if(comfortContext && headset && xrFrame?.session){
+                const sources=Array.from(xrFrame.session.inputSources || []),leftHand=sources.find(source=>source.handedness==='left' && source.hand),leftController=sources.find(source=>source.handedness==='left' && !source.hand && source.gripSpace);let wristMatrix=null,forearmDirection=null;
+                if(leftHand && handReferenceSpace){const state=handTrackingState(xrFrame,leftHand,handReferenceSpace),wristJoint=state?.rawJoints.get('wrist'),knuckle=state?.rawJoints.get('index-finger-metacarpal');wristMatrix=state?.tracked?wristJoint?.matrix:null;if(wristJoint && knuckle)forearmDirection=new THREE.Vector3(wristJoint.x-knuckle.x,wristJoint.y-knuckle.y,wristJoint.z-knuckle.z).normalize();}
+                if(!wristMatrix && leftController && handReferenceSpace){try{wristMatrix=xrFrame.getPose(leftController.gripSpace,handReferenceSpace)?.transform.matrix || null;}catch{wristMatrix=null;}}
+                if(!wristMatrix){pose=null;lastTime=time;return;}
+                const wrist=new THREE.Matrix4().fromArray(wristMatrix),rotation=new THREE.Quaternion().setFromRotationMatrix(wrist).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0))),right=new THREE.Vector3(1,0,0).applyQuaternion(rotation),up=new THREE.Vector3(0,1,0).applyQuaternion(rotation),normal=new THREE.Vector3(0,0,1).applyQuaternion(rotation),center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(forearmDirection || up,.035);
+                next={center:{x:center.x,y:center.y,z:center.z},right:{x:right.x,y:right.y,z:right.z},up:{x:up.x,y:up.y,z:up.z},normal:{x:normal.x,y:normal.y,z:normal.z},anchorHeading:{x:right.x,y:right.y,z:right.z},width:.22,height:.20};
+            }
+            if(!next)return;heading=next.anchorHeading;if(comfortContext && headset){pose=next;firstPlacement=false;spatialMove=null;spatialGrabPending=null;}
             const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
             if(spatialMove?.panel==='settings' && grab?.source?.hand && xrFrame){const state=handTrackingState(xrFrame,grab.source,grab.referenceSpace);if(!state?.tracked || !state.pinch)finishSettingsDock();}
@@ -1723,6 +1734,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 return;
             }
             if(type==='selectstart' && target.card?.id==='control' && !button){
+                if(comfortContext)return;
                 panelGestureSource=event.inputSource;
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'main',cardId:'control',startedAt:performance.now()-PANEL_GRAB_HOLD_MS,handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;

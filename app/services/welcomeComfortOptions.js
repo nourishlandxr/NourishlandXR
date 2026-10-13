@@ -4,7 +4,7 @@ import {WELCOME_FRUIT_ASSETS} from './welcomePracticeFruitAssets.js';
 
 // A tutorial presentation of the existing panel. No project or plant actions.
 export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChange=()=>{}}={}){
-    let expanded=false;
+    let expanded=false,paintPage='brush';
     const button=(id,label,x,y,width=220,extra={})=>({action:'Comfort:'+id,label,x,y,width,height:66,kind:'utility',...extra});
     function context(){
         const state=stage.snapshot(),visual=getSpatialVisualSettings(),audio=getWelcomeNarrationSettings(),voice=state.voice || {};
@@ -14,9 +14,8 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         const drawing=paint?.snapshot?.() || {};
         const icon=(id,label,symbol,x,y,extra={})=>button(id,symbol,x,y,112,{height:80,ariaLabel:label,description:label,...extra});
         const items=painting?[
-            ...['earth','water','vine','firefly'].map((name,i)=>icon('brush:'+name,name[0].toUpperCase()+name.slice(1)+' brush',['▧','≈','❧','✧'][i],70+i*230,122,{selected:drawing.brush===name})),
-            ...['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff','#263b32','#ed795c','#b39add'].map((colour,i)=>icon('paint:colour:'+i,'Colour '+(i+1),'●',50+i*116,220,{width:92,height:72,color:colour,selected:drawing.colour===i})),
-            icon('paint:undo','Undo','↶',70,310),icon('paint:clear','Clear drawing','⌫',300,310),icon('paint:fine','Fine stroke','╱',530,310,{selected:drawing.width<=.002}),icon('paint:bold','Bold stroke','▰',760,310,{selected:drawing.width>=.01})
+            ...[['brush','Brushes','B'],['colour','Colours','C'],['tools','Tools','⚙']].map(([id,label,symbol],i)=>icon('paint-page:'+id,label,symbol,50+i*300,50,{selected:paintPage===id})),
+            ...(paintPage==='brush'?['earth','water','vine','firefly'].map((name,i)=>icon('brush:'+name,name[0].toUpperCase()+name.slice(1)+' brush',['▧','≈','❧','✧'][i],50+i*225,180,{selected:drawing.brush===name})):paintPage==='colour'?['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff','#263b32','#ed795c','#b39add'].map((colour,i)=>icon('paint:colour:'+i,'Colour '+(i+1),'■',50+(i%4)*225,170+Math.floor(i/4)*105,{color:colour,selected:drawing.colour===i})): [icon('paint:undo','Undo','↶',50,175),icon('paint:clear','Clear drawing','⌫',275,175),icon('paint:fine','Fine stroke','╱',500,175,{selected:drawing.width<=.002}),icon('paint:bold','Bold stroke','▰',725,175,{selected:drawing.width>=.01})])
         ]:[icon('paint-tools','Brush tools','✎',30,112),icon('adjust',expanded?'Close settings':'Settings','⚙',850,112)];
         if(painting && state.trials?.active==='painting')items.push(icon('paint-tools','Close brush practice','×',850,26,{width:80,height:60}));
         if(!painting && !expanded){items.push(...['controllers','gloves','hands'].map((mode,i)=>button('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],30+i*320,240,300)),button('reset','Reset objects',30,340,460));}else if(!painting && expanded){
@@ -26,13 +25,16 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         }
         items.push(button('skip','Skip tutorial',30,painting?414:584,460,{primary:true}),button('next','Continue',510,painting?414:584,460,{disabled:disabled || voice.playing || voice.paused || state.phase!=='explore'}));
         for(const item of items)item.disabled ||= disabled;
-        return {painting,height:painting?510:700,title:painting?'Brush palette':'Control panel',subtitle:painting?'Aim at a tool for its name.':expanded?'Voice · visual detail · comfortable height':'Grip and move this panel. Take your time.',expanded,items,onAction:act};
+        const columns=4,rows=Math.ceil(items.length/columns),height=painting?560:700,cellHeight=(height-54)/Math.max(1,rows);
+        items.forEach((item,index)=>{item.x=20+(index%columns)*240;item.y=24+Math.floor(index/columns)*cellHeight;item.width=200;item.height=Math.max(72,cellHeight-8);item.description ||= item.ariaLabel || item.label;item.ariaLabel ||= item.label;});
+        return {painting,height,title:'Wrist controls',subtitle:'Raise your left wrist to reach controls.',expanded,items,onAction:act};
     }
     function act(id){
         if(stage.snapshot().exiting)return;
         if(['pause','replay','mute','skip','next'].includes(id))stage.button(id);
         else if(id==='reset')stage.resetObjects();
         else if(id.startsWith('input:'))stage.setInputMode(id.slice(6));
+        else if(id.startsWith('paint-page:'))paintPage=id.slice(11);
         else if(id==='paint-tools')stage.trials.active==='painting'?stage.trials.close():stage.trials.open('painting');
         else if(id.startsWith('brush:'))(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setBrush(id.slice(6));
         else if(id.startsWith('paint:colour:'))(stage.trials.active==='painting'?stage.trials.paint:stage.paint).setColour(Number(id.slice(13)));

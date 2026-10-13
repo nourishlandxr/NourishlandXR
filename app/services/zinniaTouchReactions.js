@@ -17,12 +17,11 @@ export function createZinniaTouchReactions(){
             old.age+=dt;old.distance+=distance;
             const sign=Math.abs(delta.x)>.001?Math.sign(delta.x):0;
             if(sign && old.sign && sign!==old.sign)old.turns++;if(sign)old.sign=sign;
-            if(speed>1.15 && distance>.018)candidate='sad';
-            else if(candidate!=='sad' && head && old.age>.22 && speed<.65 && old.distance>.008)candidate='pat';
+            if(head && old.age>.22 && speed<.65 && old.distance>.008)candidate='pat';
             else if(!candidate && !head && old.age>.28 && old.turns>=3 && old.distance>.025 && speed<.9)candidate='tickle';
         }
         for(const source of histories.keys())if(!present.has(source))histories.delete(source);
-        if(candidate && (cooldown===0 || candidate==='sad' && reaction!=='sad')){reaction=candidate;remaining=candidate==='sad'?2.4:1.8;cooldown=remaining;for(const h of histories.values())h.age=h.distance=h.turns=0;}
+        if(candidate && cooldown===0){reaction=candidate;remaining=1.8;cooldown=remaining;for(const h of histories.values())h.age=h.distance=h.turns=0;}
         return reaction;
     },reset(){histories.clear();reaction=null;remaining=cooldown=0;},snapshot:()=>({reaction,remaining})};
 }
@@ -36,7 +35,7 @@ export function zinniaContacts(root,inputs=[],{includeHover=false}={}){
         let point=null;
         if(input.tip){const tip=new THREE.Vector3(input.tip.x,input.tip.y,input.tip.z);if(box.distanceToPoint(tip)<.018)point=tip;}
         else if((includeHover || input.trigger || input.down) && input.ray?.origin && input.ray.direction){caster.set(new THREE.Vector3().copy(input.ray.origin),new THREE.Vector3().copy(input.ray.direction).normalize());caster.far=8;point=caster.intersectObject(root,true)[0]?.point;}
-        if(point){const local=root.worldToLocal(point.clone());contacts.push({source:input.source,point:local,pressed:input.tip?undefined:Boolean(input.trigger || input.down),pressed:input.tip?undefined:Boolean(input.trigger || input.down),head:point.y>box.min.y+height*.86});}
+        if(point){const local=root.worldToLocal(point.clone());contacts.push({source:input.source,point:local,pressed:input.tip?undefined:Boolean(input.trigger || input.down),head:point.y>box.min.y+height*.86});}
     }
     return contacts;
 }

@@ -92,7 +92,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     const handsEnabled=()=>inputOverride?inputOverride==='hands':trials.active?trials.mode==='hands':['hands','paint-pot','packet','seed','water','grow','harvest','explore'].includes(phase());
     const lesson=()=>WELCOME_PRACTICE_LESSONS[index];
     const phase=()=>lesson().id;
-    const gloveOpacity=()=>!inputOverride && handsEnabled() && handStable<1.2?1:inputOverride?inputOverride==='gloves'?1:0:phase()==='gloves'?THREE.MathUtils.smoothstep(elapsed-stepStarted,1.2,3.4):['fruit','water','grow'].includes(phase())?1:0;
+    const gloveOpacity=()=>inputOverride?inputOverride==='gloves'?1:0:phase()==='gloves'?THREE.MathUtils.smoothstep(elapsed-stepStarted,1.2,3.4):0;
     const cue=id=>WELCOME_PRACTICE_RESPONSES.find(value=>value.id===id);
     const spokenLesson=()=>lesson().silent?null:{...lesson(),recorded:!lesson().liveVoice};
     const comfortVisible=()=>Boolean(frameLoadError) || zinniaCharacter.userData.zinnia.status==='error' || index>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='comfort');
