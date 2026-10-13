@@ -13,3 +13,9 @@ Alternatively, configure `OPENAI_API_KEY` in the local process environment with 
 Old audio is retained. Dynamic personalised speech uses the same Coral voice only after the Coral tutorial bank is active. If live speech fails, captions remain; device speech is never substituted.
 
 Official API documentation: https://developers.openai.com/api/docs/guides/text-to-speech
+
+## Refined OpenAI V10 delivery
+
+Tutorial and demo recorders import one profile from `tools/zinniaVoiceServer.mjs`. The hosted route returns `X-Zinnia-Delivery: v10-refined-1`; recorders reject a successful response with the wrong profile marker. The bank hash includes the delivery instructions, so existing basic recordings are not reused. Each active bank records its instructions and delivery version. Live replies use the same delivery.
+
+V10 is a delivery reference, not an Ava clone. OpenAI Coral keeps normal playback rate; the prompt asks for lighter conversational delivery, connected clauses and gently released word endings. Background music and short echo remain separate from the saved voice recordings.

@@ -1,10 +1,13 @@
 import {setZinniaVoiceContext} from './zinniaVoiceCoordinator.js';
+import {DEMO_NARRATION_BANK} from './demoNarrationBank.js';
 import {PROJECT_NARRATION_CATALOG} from './projectNarrationCatalog.js';
 
 // Voice introduces the current idea; the Frame retains its full explanation.
 export function spokenFrameLead(text){
     // Preserve a short bundled introduction rather than synthesizing a fragment.
     const normalized=String(text || '').replace(/[’‘]/g,"'").replace(/[–—]/g,', ').replace(/\s+/g,' ').trim();
+    const demo=Object.values(DEMO_NARRATION_BANK?.catalog || {}).find(clip=>normalized===clip.text);
+    if(demo)return demo.text;
     const recorded=Object.values(PROJECT_NARRATION_CATALOG).filter(clip=>clip.text.split(/\s+/).length<=55 && (normalized===clip.text || normalized.startsWith(clip.text+' '))).sort((a,b)=>b.text.length-a.text.length)[0];
     if(recorded)return recorded.text;
     const sentences=String(text || '').match(/[^.!?]+[.!?](?:\s|$)|[^.!?]+$/g) || [];
