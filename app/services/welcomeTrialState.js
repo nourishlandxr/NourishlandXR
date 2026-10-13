@@ -2,7 +2,8 @@
 export const WELCOME_TRIALS=Object.freeze([
     {id:'butterflies',label:'Butterfly cup'},
     {id:'garden',label:'Cloud + Living Disk'},
-    {id:'painting',label:'Paint in space'}
+    {id:'painting',label:'Paint in space'},
+    {id:'tic-tac-toe',label:'Tic-Tac-Toe with Zinnia'}
 ]);
 export const TRIAL_INPUT_MODES=Object.freeze(['controllers','gloves','hands']);
 export const TRIAL_PLANT_CARDS=Object.freeze([

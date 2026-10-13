@@ -19,10 +19,13 @@ export function createSpatialPaintV2({capacity=8192,onChange=()=>{},markings=fal
     function changed(){onChange(snapshot());}
     function emit(stroke,p){
         if(caps.count>=capacity || tubes.count>=capacity){if(!limited){limited=true;changed();}return false;}
-        const previous=stroke.points.at(-1),point=new THREE.Vector3(p.x,p.y,p.z),radius=stroke.width/2;
-        if(previous){const a=new THREE.Vector3(previous.x,previous.y,previous.z),d=point.clone().sub(a),length=d.length();if(length<.00001)return true;
+        const previous=stroke.points.at(-1),point=new THREE.Vector3(p.x,p.y,p.z),radius=stroke.width/2;let particlePoint=point;
+        if(stroke.brush==='spray'){
+            const n=stroke.points.length+1,seed=n*12.9898+(Math.round(point.x*10000)*78.233)+(Math.round(point.z*10000)*37.719),random=k=>{const value=Math.sin(seed+k*19.19)*43758.5453;return value-Math.floor(value);};
+            particlePoint=point.clone().add(new THREE.Vector3((random(1)-.5)*stroke.width*3.2,(random(2)-.5)*stroke.width*2.0,(random(3)-.5)*stroke.width*3.2));
+        }else if(previous){const a=new THREE.Vector3(previous.x,previous.y,previous.z),d=point.clone().sub(a),length=d.length();if(length<.00001)return true;
             rotation.setFromUnitVectors(up,d.divideScalar(length));matrix.compose(a.add(point).multiplyScalar(.5),rotation,scale.set(radius,length,radius));tubes.setMatrixAt(tubes.count,matrix);tubes.setColorAt(tubes.count++,colourValue.set(stroke.colour));}
-        matrix.compose(point,new THREE.Quaternion(),scale.setScalar(radius));caps.setMatrixAt(caps.count,matrix);caps.setColorAt(caps.count++,colourValue.set(stroke.colour));
+        matrix.compose(particlePoint,new THREE.Quaternion(),scale.setScalar(stroke.brush==='spray'?Math.max(.0007,radius*.55):radius));caps.setMatrixAt(caps.count,matrix);caps.setColorAt(caps.count++,colourValue.set(stroke.colour));
         stroke.points.push({x:point.x,y:point.y,z:point.z});for(const node of [tubes,caps]){node.instanceMatrix.needsUpdate=true;node.instanceColor.needsUpdate=true;}return true;
     }
     function sample(stroke,start,control,end){
