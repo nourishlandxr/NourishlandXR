@@ -13,7 +13,7 @@ import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js'
 import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.js';
 
 test('soft landing order introduces the frame, voice, table, face, comfort, then hands',()=>{
-    assert.deepEqual(lessons.slice(0,21).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','comfort','living-frame','visitor-intro','controls-trigger','controls-grip','controls-stick','brush','basket','basket-reveal','practice-ready','grab','gloves','fruit']);
+    assert.deepEqual(lessons.slice(0,24).map(l=>l.id),['frame','title','arrival','table','table-reveal','face','zinnia-reveal','zinnia','comfort','living-frame','controls-intro','visitor-intro','controls-trigger','controls-grip','controls-stick','wrist-menu','brush','basket','basket-reveal','practice-ready','grab','gloves','fruit','fly']);
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
     for(const clip of [...lessons,...responses].filter(c=>c.spoken && !c.liveVoice))assert.ok(fs.statSync(new URL('../app/'+(WELCOME_NARRATION_BANK?.base || 'assets/welcome-practice/voice/')+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
@@ -54,7 +54,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         stage.start(viewer,0);tick(10,{frameReady:false});assert.equal(stage.phase,'frame');assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.snapshot().comfortVisible,false);
         assert.equal(stage.zinniaMount.parent.visible,false);
         tick(.1,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,0);
-        tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/Hi, my name is Zinnia/);assert.equal(spoken.at(-1).recorded,true);
+        tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/Welcome to Nourishland XR/);assert.equal(spoken.at(-1).recorded,true);
         stage.previewLesson('table-reveal');tick(1);assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.zinniaMount.parent.visible,false);
         stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.status,'ready');assert.ok(stage.zinniaMount.getObjectByName('Eye_L_expression'));assert.ok(stage.zinniaMount.getObjectByName('Pot'));
         stage.previewLesson('comfort');assert.equal(stage.snapshot().comfortVisible,true);stage.button('pause');tick(60);assert.equal(stage.phase,'comfort');assert.equal(stage.snapshot().voice.paused,true);stage.button('pause');
@@ -79,17 +79,9 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
             assert.ok(attached.distanceTo(hold)<1e-6,'handle remains attached while pouring');assert.equal(stage.snapshot().completed,true);
             tick(.1,{inputs:[{source,matrix:worldPose(hold,q),down:false}]});assert.equal(stage.isHolding(source),false);
         }
-        // Picking up the RC transmitter from the side snaps it to grip space.
-        stage.previewLesson('fly');tick(.1);
-        const remote=stage.bodies.find(b=>b.id==='remote');
-        const remotePoint=new THREE.Vector3(remote.position.x+.025,remote.position.y+.025,remote.position.z).applyMatrix4(stage.root.matrixWorld);
-        const remotePose=new THREE.Matrix4().compose(remotePoint,new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),.7),new THREE.Vector3(1,1,1));
-        tick(.1,{inputs:[{source,matrix:remotePose.elements,down:true}]});assert.equal(stage.isHolding(source),true);
-        remotePose.elements[13]+=.18;tick(.1,{inputs:[{source,matrix:remotePose.elements,down:true}]});
-        const heldPoint=new THREE.Vector3(remote.position.x,remote.position.y,remote.position.z).applyMatrix4(stage.root.matrixWorld);
-        assert.ok(heldPoint.distanceTo(new THREE.Vector3().setFromMatrixPosition(remotePose))<1e-6);
-        const heldQuaternion=new THREE.Quaternion(remote.rotation.x,remote.rotation.y,remote.rotation.z,remote.rotation.w).premultiply(stage.root.quaternion);
-        assert.ok(heldQuaternion.angleTo(new THREE.Quaternion().setFromRotationMatrix(remotePose))<1e-6);
+        stage.previewLesson('fly');tick(.1);assert.equal(stage.snapshot().insectControllerAvailable,true);assert.equal(stage.setControllerTool('insect'),true);
+        const remote=stage.bodies.find(b=>b.id==='remote');assert.equal(remote.visible,false);assert.equal(stage.objects.get('remote').parent,null);
+        const remotePose=new THREE.Matrix4().makeTranslation(.2,1.1,-.4);tick(.5,{inputs:[{source,matrix:remotePose.elements,down:false,trigger:true}]});assert.equal(stage.isHolding(source),false);assert.equal(stage.snapshot().flight.airborne,true);
         stage.releaseAll(false);stage.resetObjects();stage.previewLesson('water');tick(.1);
         const can=stage.bodies.find(b=>b.id==='watering-can'),hand={hand:{},handedness:'right'};
         const canPoint=new THREE.Vector3(can.position.x,can.position.y,can.position.z).applyMatrix4(stage.root.matrixWorld);
@@ -109,7 +101,7 @@ test('fixed narration uses its bundled recording at natural speed and resumes at
     class Context{constructor(){context=this;this.currentTime=0;this.state='running';this.destination={};}resume(){return Promise.resolve();}close(){return Promise.resolve();}decodeAudioData(){return Promise.resolve({duration:20});}createGain(){return {connect(){},gain:{setTargetAtTime(){}}};}createDelay(){return {connect(){},delayTime:{}};}createDynamicsCompressor(){return {connect(){},threshold:{},knee:{},ratio:{}};}createBufferSource(){source={connect(){},disconnect(){},stop(){},playbackRate:{},start:(_when,offset)=>{source.offset=offset;}};return source;}}
     globalThis.AudioContext=Context;globalThis.fetch=async url=>{requested=String(url);return {ok:true,arrayBuffer:async()=>new ArrayBuffer(1)};};
     const voice=createWelcomePracticeVoice();
-    try{voice.unlock();await voice.speak({...lessons.find(l=>l.id==='arrival'),recorded:true});assert.match(requested,/arrival\.mp3$/);assert.equal(source.playbackRate.value,1);context.currentTime=3;voice.pause();voice.resume();await Promise.resolve();await Promise.resolve();assert.equal(source.offset,3);assert.equal(source.playbackRate.value,1);}finally{voice.destroy();globalThis.AudioContext=oldContext;globalThis.fetch=oldFetch;}
+    try{voice.unlock();await voice.speak({...lessons.find(l=>l.id==='visitor-intro'),recorded:true});assert.match(requested,/visitor-intro\.mp3$/);assert.equal(source.playbackRate.value,1);context.currentTime=3;voice.pause();voice.resume();await Promise.resolve();await Promise.resolve();assert.equal(source.offset,3);assert.equal(source.playbackRate.value,1);}finally{voice.destroy();globalThis.AudioContext=oldContext;globalThis.fetch=oldFetch;}
 });
 
 test('demo narration recovers an audio-blocked clip on unlock but preserves an intentional pause',async()=>{

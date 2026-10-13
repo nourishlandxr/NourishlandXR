@@ -10,7 +10,7 @@ import {createSpatialPaintTip} from './spatialPaintTip.js';
 const colours=['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff'];
 const v=()=>new THREE.Vector3();
 export function trialTerrainHeight(x,z){return .012+.10*Math.exp(-((x+.105)**2+(z+.11)**2)/.006)+.055*Math.exp(-((x-.13)**2+(z+.09)**2)/.004);}
-export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},onClose=()=>{},onFeedback=()=>{},getPanelPose=()=>null,wristControls=false}={}){
+export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},onClose=()=>{},onFeedback=()=>{},getPanelPose=()=>null,getControllerTool=()=>'paint',wristControls=false}={}){
     const state=createWelcomeTrialState(),layer=new THREE.Group(),panel=new THREE.Group();root.add(layer,panel);layer.name='Optional welcome trials';layer.visible=false;panel.name='Welcome trial list';panel.visible=false;
     const canvas=document.createElement('canvas');canvas.width=900;canvas.height=900;
     const texture=new THREE.CanvasTexture(canvas),panelMesh=new THREE.Mesh(new THREE.PlaneGeometry(.24,.24),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));panel.add(panelMesh);panelMesh.renderOrder=25;panel.position.set(-.91,.49,-.12);
@@ -152,11 +152,11 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         }
         const eligible=inputs.filter(input=>Boolean(input.source.hand)===(state.mode==='hands') && input.matrix);
         const right=eligible.find(input=>input.source.handedness==='right');if(right)paintSource=right.source;
-        if(!paintSource)paintSource=eligible.find(input=>!input.uiBlocked)?.source || null;
+        if(!paintSource)paintSource=eligible.find(input=>!input.uiBlocked && input.source.handedness!=='left')?.source || null;
         const tipInput=eligible.find(input=>input.source===paintSource);
         if(state.active==='painting'){const wrist=eligible.find(input=>input.source.handedness==='left') || eligible.find(input=>input.source!==tipInput) || eligible[0];if(wrist){const wristPose=new THREE.Matrix4().fromArray(wrist.matrix).premultiply(inverse);panel.position.setFromMatrixPosition(wristPose);panel.position.y+=.055;panel.quaternion.setFromRotationMatrix(wristPose).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)));}}
         paintTip?.hide();
-        if(state.active==='painting' && tipInput){const pose=new THREE.Matrix4().fromArray(tipInput.matrix).premultiply(inverse);paintTip.root.position.copy(tipInput.tip?v().copy(tipInput.tip).applyMatrix4(inverse):v().set(0,0,-.095).applyMatrix4(pose));paintTip.root.quaternion.setFromRotationMatrix(pose);paintTip.update(paint.snapshot(),time);}
+        if(state.active==='painting' && getControllerTool()==='paint' && tipInput){const pose=new THREE.Matrix4().fromArray(tipInput.matrix).premultiply(inverse);paintTip.root.position.copy(tipInput.tip?v().copy(tipInput.tip).applyMatrix4(inverse):v().set(0,0,-.095).applyMatrix4(pose));paintTip.root.quaternion.setFromRotationMatrix(pose);paintTip.update(paint.snapshot(),time);}
         for(const source of [...holds.keys()])if(!eligible.some(i=>i.source===source))release(source,false);
         for(const source of [...edges.keys()])if(!eligible.some(i=>i.source===source)){edges.delete(source);strokeBySource.delete(source);paint?.end(source);}
         if(paused){releaseAll();drawPanel();return;}
@@ -183,7 +183,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             games.get(state.active)?.act(input,held,previous,eligible,inverse);
             if(state.active==='painting'){
                 const paintPoint=input.tip?v().copy(input.tip).applyMatrix4(inverse):v().set(0,0,-.095).applyMatrix4(pose);
-                if(input===tipInput && input.trigger && !control && !poke){
+                if(getControllerTool()==='paint' && input===tipInput && input.trigger && !control && !poke){
                     if(!paint.isDrawing(source)){const stroke=paint.begin(source,paintPoint);if(stroke){state.addStroke(stroke);strokeBySource.set(source,stroke);onFeedback('control',source);}}
                     else paint.add(source,paintPoint,dt);
                 }else {paint.end(source);strokeBySource.delete(source);}
@@ -203,7 +203,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             plantSlots.forEach((slot,i)=>{const plant=state.plants[i];slot.mesh.visible=Boolean(plant);if(!plant)return;slot.mesh.position.set(plant.x,trialTerrainHeight(plant.x,plant.z),plant.z);slot.mesh.scale.setScalar(plant.growth);slot.forms.forEach((f,j)=>f.visible=TRIAL_PLANT_CARDS[j].id===plant.card);});
             rain.forEach(({mesh:drop,phase},i)=>{drop.visible=squeezing;if(!squeezing)return;const fall=(time*1.8+phase)%1,angle=i*2.4,r=(.025+i%5*.008)*size;drop.position.set(cloud.position.x+Math.cos(angle)*r,cloud.position.y-fall*Math.max(.06,cloud.position.y-.035),cloud.position.z+Math.sin(angle)*r);});
         }
-        games.get(state.active)?.update(dt,eligible,[...holds]);
+        games.get(state.active)?.update(dt,eligible,[...holds],getControllerTool());
         if(state.active==='painting')paint.update(time);
         drawPanel();
     }

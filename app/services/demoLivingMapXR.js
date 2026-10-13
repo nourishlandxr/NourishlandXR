@@ -101,7 +101,9 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             if(buffers.colourVersion!==colourVersion){gl.bufferData(gl.ARRAY_BUFFER,node.instanceColor?.array || new Float32Array(node.instanceMatrix.count*3).fill(1),gl.STATIC_DRAW);buffers.colourVersion=colourVersion;}
             gl.enableVertexAttribArray(instanceColourAttribute);gl.vertexAttribPointer(instanceColourAttribute,3,gl.FLOAT,false,0,0);instancing.divisor(instanceColourAttribute,1);
         }
-        let c=materialColours.get(material);if(!c){const colour=material.color.clone();if(!detailed)colour.convertLinearToSRGB();c=[colour.r,colour.g,colour.b];materialColours.set(material,c);}gl.uniform3f(uniforms.colour,c[0],c[1],c[2]);gl.uniform1f(uniforms.alpha,opacity*material.opacity);
+        let cached=materialColours.get(material);const rgb=material.color;
+        if(!cached || cached.r!==rgb.r || cached.g!==rgb.g || cached.b!==rgb.b){const colour=rgb.clone();if(!detailed)colour.convertLinearToSRGB();cached={r:rgb.r,g:rgb.g,b:rgb.b,value:[colour.r,colour.g,colour.b]};materialColours.set(material,cached);}
+        const c=cached.value;gl.uniform3f(uniforms.colour,c[0],c[1],c[2]);gl.uniform1f(uniforms.alpha,opacity*material.opacity);
         gl.uniformMatrix4fv(uniforms.model,false,matrix.elements);
         gl.uniform1f(uniforms.textured,material.map?1:0);
         if(material.map){

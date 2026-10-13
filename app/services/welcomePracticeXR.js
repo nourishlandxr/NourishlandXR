@@ -66,11 +66,11 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 if(input.source.hand || !input.ray || stage.exiting)continue;
                 const r=input.ray,hit=nearestWelcomePointerHit(r,onHit?.(r),stage.hit(r));
                 const requested=input.source.handedness==='left' && Boolean(input.source.gamepad?.buttons?.[4]?.pressed || input.source.gamepad?.buttons?.[5]?.pressed);
-                if(stage.phase.startsWith('controls-') && !requested)continue;
+                if((stage.phase.startsWith('controls-') || !stage.snapshot().comfortVisible) && !requested)continue;
                 const panel=hit?.kind==='panel' || hit?.kind==='trial-control' || hit?.kind==='voice-bar';
                 if(!panel && (!stage.controllerLasersVisible || stage.trials.active==='painting' || stage.isBrushHeld(input.source)) && !requested)continue;
                 const end=hit?.worldPoint || {x:r.origin.x+r.direction.x*1.25,y:r.origin.y+r.direction.y*1.25,z:r.origin.z+r.direction.z*1.25};
-                drawSpatialTether(gl,pointer,view,r.origin,end,{width:.0018,curve:0,lift:0,segments:4,color:[.8,.9,.79,.6*opacity]});
+                if(requested)drawSpatialTether(gl,pointer,view,r.origin,end,{width:.0018,curve:0,lift:0,segments:4,color:[.8,.9,.79,.6*opacity]});
                 if(hit)drawSpatialPointerContact(gl,pointer,view,end,.006,[.8,.9,.79,.85*opacity]);
             }
         },destroy({stopVoice=true}={}){if(disposed)return;disposed=true;unbind();stage.destroy({stopVoice});pendingRenderer?.destroy();pendingRenderer=null;renderer?.destroy();renderer=null;destroySpatialTetherRenderer(gl,pointer);hands=[];controllers=[];inputs=[];}};

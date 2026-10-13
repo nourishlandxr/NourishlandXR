@@ -22,14 +22,14 @@ export function createDemoFeedback({resetSettings=false}={}) {
         if(fxGain)fxGain.gain.setTargetAtTime(levels.fx,context.currentTime,.025);
         save();
     }
-    const pulsing=new Set();
+    const pulsing=new Set(),pulseEnds=new WeakMap();
     function pulse(source,strength=DEMO_FEEDBACK.selectionStrength,duration=35) {
         if(destroyed || !source?.gamepad || !levels.haptics && strength>0)return;
         try {
             const actuator=source.gamepad.hapticActuators?.[0] || source.gamepad.vibrationActuator;
             const result=actuator?.pulse ? actuator.pulse(strength,duration) : actuator?.playEffect?.('dual-rumble',{duration,strongMagnitude:strength,weakMagnitude:strength*.7});
             result?.catch?.(()=>{});
-            if(strength)pulsing.add(source);else pulsing.delete(source);
+            if(strength){pulsing.add(source);pulseEnds.set(source,performance.now()+duration);}else pulsing.delete(source);
         } catch {}
     }
     function start() {
@@ -76,7 +76,7 @@ export function createDemoFeedback({resetSettings=false}={}) {
                     pulse(source,strength,duration);encounterPulseUntil.set(source,time+duration);continue;
                 }
             }
-            if(pulsing.has(source))pulse(source,0,1);
+            if(pulsing.has(source) && time>=(pulseEnds.get(source) || 0))pulsing.delete(source);
         }
     }
     function destroy() {

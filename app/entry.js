@@ -12,5 +12,3 @@ if(params.get('paint')==='v2'){
 } else {
     await import('./main.js');
 }
-const {mountProjectVoiceGuide}=await import('./services/projectVoiceGuide.js');
-mountProjectVoiceGuide(document.getElementById('app'));

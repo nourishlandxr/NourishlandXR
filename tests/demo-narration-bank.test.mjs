@@ -5,10 +5,14 @@ import {DEMO_NARRATION_BANK as bank} from '../app/services/demoNarrationBank.js'
 import {DEMO_GUIDED_STEPS} from '../app/features/ar-demo/demoJourneyContent.js';
 import {normalizeNarrationText,projectNarrationSegments} from '../app/services/projectNarration.js';
 
-test('every authored main-demo paragraph has a complete saved Coral recording',()=>{
-    assert.equal(bank?.voice,'coral');
+test('every authored main-demo paragraph has a complete saved friendly Marin recording',()=>{
+    assert.equal(bank?.voice,'marin');
     assert.equal(bank.provider,'OpenAI');
     const expected=new Set(DEMO_GUIDED_STEPS.flatMap(step=>step.main.split(/\n\n+/).map(normalizeNarrationText)));
+    const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+    const start=source.indexOf('function showDemoFruitDiscovery('),end=source.indexOf('function showDemoPanelIntroduction(',start);
+    const bodies=[...source.slice(start,end).matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(match=>match[1].replaceAll('\\n','\n'));
+    for(const prefix of ['Look closely at the plant','PIMO is now closed']){const text=bodies.find(body=>body.startsWith(prefix));assert.ok(text);for(const paragraph of text.split(/\n\n+/))expected.add(normalizeNarrationText(paragraph));}
     assert.equal(Object.keys(bank.catalog).length,expected.size);
     for(const text of expected){
         const segments=projectNarrationSegments(text,{demo:true});

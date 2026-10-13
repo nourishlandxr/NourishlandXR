@@ -7,7 +7,7 @@ import {createSpatialPaintV2} from '../app/services/spatialPaintV2.js';
 
 function setup(){
     const paint=createSpatialPaintV2({markings:true}),trials={active:null,mode:'controllers',paint,open(id){this.active=id;},close(){this.active=null;},command(){}};
-    const stage={trials,paint,snapshot:()=>({phase:'brush',voice:{},trials:{active:trials.active},inputMode:'controllers'}),setInputMode(mode){trials.mode=mode;},button(){}};
+    let controllerTool='standard';const stage={trials,paint,setControllerTool(tool){controllerTool=tool;},snapshot:()=>({phase:'brush',controllerTool,insectControllerAvailable:false,voice:{},trials:{active:trials.active},inputMode:'controllers'}),setInputMode(mode){trials.mode=mode;},button(){}};
     return {menu:createWelcomeComfortOptions({stage}),paint};
 }
 test('a discreet pulse button opens six 30mm targets in two columns down the forearm, with fixed right-side tools',()=>{
@@ -22,7 +22,7 @@ test('a discreet pulse button opens six 30mm targets in two columns down the for
     const degenerate=welcomeWristPose(matrix,home,closed.normal);assert.ok(degenerate.right.length()>.99);paint.destroy();
 });
 test('triangular brush layout selects all five brushes without a circular hub',()=>{
-    const {menu,paint}=setup();menu.act('paint-tools');const context=menu.context(),choices=context.items.filter(item=>item.brushChoice);assert.equal(choices.length,5);assert.equal(context.items.some(item=>item.radial),false);
+    const {menu,paint}=setup();menu.act('paint-tools');assert.equal(menu.context().page,'input');assert.ok(menu.context().items.find(i=>i.action==='Comfort:tool:insect').disabled);menu.act('tool:paint');const context=menu.context(),choices=context.items.filter(item=>item.brushChoice);assert.equal(choices.length,5);assert.equal(context.items.some(item=>item.radial),false);
     for(const item of choices){assert.equal(wristButtonAt(context.items,item.x+item.width/2,item.y+item.height/2),item);menu.act(item.action.slice(8));assert.equal(paint.snapshot().brush,item.action.slice(14));}
     assert.equal(wristButtonAt(context.items,995,context.height-1),null);
     menu.act('paint-page:options');assert.ok(menu.context().items.some(item=>item.kind==='slider'));menu.setValue('paint-width',.016);assert.equal(paint.snapshot().width,.016);paint.destroy();

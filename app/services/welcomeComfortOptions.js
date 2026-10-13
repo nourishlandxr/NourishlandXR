@@ -13,14 +13,17 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         const state=stage.snapshot(),voice=state.voice || {},visual=getSpatialVisualSettings(),audio=getWelcomeNarrationSettings(),drawing=paint()?.snapshot?.() || {};
         const expanded=opened && page!=='home';
         const items=[item('toggle','Wrist menu',opened?'close':'pulse',{pulse:true,selected:opened})];
-        if(opened)items.push(item('paint-tools','Brush tools','brush',{selected:page.startsWith('paint'),accent:'#8bbdd4'}),item('games','Games','games',{selected:page==='games',accent:'#c7ad76'}),item('input','Input mode','hand',{selected:page==='input',accent:'#a4c3a0'}),item('audio','Audio','audio',{selected:page==='audio',accent:'#b8a6d2'}),item('adjust','Comfort settings','settings',{selected:page==='settings',accent:'#83bfae'}),item('tutorial','Tutorial actions','lesson',{selected:page==='tutorial',accent:'#cb9c8b'}));
+        if(opened)items.push(item('paint-tools','Marking settings','colour',{selected:page.startsWith('paint'),accent:'#8bbdd4'}),item('games','Games','games',{selected:page==='games',accent:'#c7ad76'}),item('input','Change controllers','controller',{selected:page==='input',accent:'#a4c3a0'}),item('audio','Audio','audio',{selected:page==='audio',accent:'#b8a6d2'}),item('adjust','Comfort settings','settings',{selected:page==='settings',accent:'#83bfae'}),item('tutorial','Tutorial actions','lesson',{selected:page==='tutorial',accent:'#cb9c8b'}));
         items[0].worldBox={x:0,y:.059,size:.022};
         items.slice(1).forEach((button,i)=>{button.dock=true;button.worldBox={x:(i%2-.5)*.034,y:.020-Math.floor(i/2)*.034,size:.030};});
-        const titles={games:'Games',input:'Input',audio:'Audio',settings:'Comfort',tutorial:'Tutorial','paint-brush':'Marking brushes','paint-colour':'Colour','paint-options':'Brush settings'};
+        const titles={games:'Games',input:'Controllers',audio:'Audio',settings:'Comfort',tutorial:'Tutorial','paint-brush':'Marking brushes','paint-colour':'Colour','paint-options':'Brush settings'};
         const options=[];
         if(expanded)options.push(item('home','Close tools','close',{header:true}));
         if(page==='games')options.push(...WELCOME_TRIALS.map(trial=>item('game:'+trial.id,trial.label,null,{selected:state.trials?.active===trial.id,text:true})));
-        if(page==='input')options.push(...['controllers','gloves','hands'].map((mode,i)=>item('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],['controller','hand','hand'][i],{selected:(state.trials?.active?stage.trials.mode:state.inputMode)===mode,text:true})));
+        if(page==='input'){
+            options.push(item('tool:standard','Standard controllers','controller',{selected:state.controllerTool==='standard',text:true}),item('tool:paint','Precision paint','triangle',{selected:state.controllerTool==='paint',text:true}),item('tool:insect','Insect flight','firefly',{selected:state.controllerTool==='insect',disabled:!state.insectControllerAvailable,text:true}));
+            options.push(...['controllers','gloves','hands'].map((mode,i)=>item('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],['controller','hand','hand'][i],{selected:(state.trials?.active?stage.trials.mode:state.inputMode)===mode && state.controllerTool==='standard',text:true})));
+        }
         if(page==='audio'){
             options.push(item('pause',voice.paused?'Resume narration':'Pause narration',voice.paused?'play':'pause',{selected:voice.paused}),item('replay','Repeat narration','repeat'),item('mute',voice.muted?'Unmute voice':'Mute voice',voice.muted?'mute':'audio',{selected:voice.muted}),item('volume','Voice volume','audio',{kind:'slider',value:audio.volume,min:0,max:2,step:.05,text:true}));
             if(stage.conversation){const listening=stage.conversation.state?.().listening;options.push(item('conversation:'+ (listening?'done':'voice'),listening?'Finish listening':'Listen again',listening?'stop':'mic'));options.push(...(stage.conversation.buttons?.() || []).map(button=>item('conversation:'+button.id,button.label,button.id==='confirm'?'check':'repeat')));}
@@ -44,6 +47,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         const bounds=opened?{left:-.034,right:expanded?.202:.034,top:.073,bottom:Math.min(-.067,...visibleOptions.map(button=>button.worldBox.y-(button.worldBox.h || button.worldBox.size)/2-.004))}:{left:-.014,right:.014,top:.073,bottom:.045};
         const width=bounds.right-bounds.left,height=Math.round((bounds.top-bounds.bottom)/width*1000),centerOffset={x:(bounds.left+bounds.right)/2,y:(bounds.top+bounds.bottom)/2};
         for(const button of all){const box=button.worldBox,w=box.w || box.size,h=box.h || box.size;Object.assign(button,{x:(box.x-w/2-bounds.left)/width*1000,y:(bounds.top-box.y-h/2)/width*1000,width:w/width*1000,height:h/width*1000,disabled:Boolean(button.disabled || state.exiting)});}
+        if(state.phase==='brush' && state.controllerTool!=='paint'){const target=!opened?'toggle':page==='input'?'tool:paint':'input';const button=all.find(item=>item.action==='Comfort:'+target);if(button)button.guided=true;}
         return {wrist:true,page,opened,expanded,painting:page.startsWith('paint'),width,height,bounds,centerOffset,title:titles[page] || 'Wrist controls',subtitle:expanded?state.trials?.gameHint || '':'',items:all,onAction:act,onValue:setValue};
     }
     function setValue(id,value){
@@ -57,7 +61,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         if(id==='toggle'){opened=!opened;page='home';}
         else if(id==='home')page='home';
         else if(['games','input','audio','tutorial','adjust'].includes(id)){const next=id==='adjust'?'settings':id;page=page===next?'home':next;}
-        else if(id==='paint-tools'){if(stage.snapshot().phase!=='brush' && stage.trials.active!=='painting')stage.trials.open('painting');page=page.startsWith('paint')?'home':'paint-brush';}
+        else if(id==='paint-tools'){page=stage.snapshot().controllerTool!=='paint'?'input':page.startsWith('paint')?'home':'paint-brush';}
         else if(id.startsWith('paint-page:'))page='paint-'+id.slice(11);
         else if(id.startsWith('game:')){stage.trials.open(id.slice(5));page='home';}
         else if(id==='game-reset')stage.trials.command('reset');
@@ -65,7 +69,8 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         else if(id.startsWith('conversation:'))stage.conversation?.activate(id.slice(13));
         else if(['pause','replay','mute','skip','next'].includes(id))stage.button(id);
         else if(id==='reset')stage.resetObjects();
-        else if(id.startsWith('input:'))stage.setInputMode(id.slice(6));
+        else if(id.startsWith('tool:')){const tool=id.slice(5);if(tool==='insect' && !stage.snapshot().insectControllerAvailable)return;if(tool==='paint' && !['brush','fruit','paint-pot','grab'].includes(stage.snapshot().phase) && stage.trials.active!=='painting')stage.trials.open('painting');if(stage.setControllerTool?.(tool)!==false)page=tool==='paint'?'paint-brush':'input';}
+        else if(id.startsWith('input:')){stage.setControllerTool?.('standard');stage.setInputMode(id.slice(6));}
         else if(id.startsWith('brush:'))paint()?.setBrush(id.slice(6));
         else if(id.startsWith('paint:colour:'))paint()?.setColour(Number(id.slice(13)));
         else if(id==='paint:undo')paint()?.undo();

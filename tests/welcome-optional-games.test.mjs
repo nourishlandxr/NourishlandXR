@@ -47,11 +47,10 @@ for(const mode of ['controllers','gloves','hands'])test(mode+': optional strawbe
     trials.command('reset');assert.equal(trials.snapshot().game.planted,false);assert.equal(trials.snapshot().game.opened,false);trials.destroy();
 }));
 
-test('optional dragonfly uses the real asset and held remote controls; switching activities releases its owner',()=>withAssets(async()=>{
-    const root=new THREE.Group(),trials=createWelcomePracticeTrials(root),source={handedness:'right',gamepad:{axes:[0,0,0,-.7],buttons:[]}};
+test('optional dragonfly uses the actual controller in Insect flight; no detached remote is loaded',()=>withAssets(async()=>{
+    const root=new THREE.Group(),trials=createWelcomePracticeTrials(root,{getControllerTool:()=> 'insect'}),source={handedness:'right',gamepad:{axes:[0,0,0,-.7],buttons:[]}};
     trials.open('dragonfly');await settle(()=>trials.snapshot().game.asset==='ready');trials.update(0,{visible:true});
-    const remote=trials.layer.children[0].getObjectByName('Nature controller');
-    trials.update(.05,{visible:true,inputs:[input(root,source,remote.position.clone())]});trials.update(.05,{visible:true,inputs:[input(root,source,remote.position.clone(),true,true)]});
+    assert.equal(trials.layer.children[0].getObjectByName('Nature controller'),undefined);
     for(let i=0;i<12;i++)trials.update(.05,{visible:true,inputs:[input(root,source,new THREE.Vector3(.27,.3,.14),true,true)]});
     assert.equal(trials.snapshot().game.airborne,true);assert.ok(trials.snapshot().game.position.y>.035);
     trials.open('strawberry');assert.equal(trials.isHolding(source),false);trials.open('dragonfly');assert.equal(trials.snapshot().game.asset,'ready');trials.command('reset');assert.equal(trials.snapshot().game.airborne,false);trials.destroy();

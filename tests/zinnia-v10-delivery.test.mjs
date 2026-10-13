@@ -10,11 +10,11 @@ test('tutorial, demo and live speech use the same refined OpenAI delivery',()=>{
  for(const bank of [tutorial,demo]){
   assert.equal(bank.delivery,ZINNIA_VOICE_DELIVERY);
   assert.equal(bank.instructions,ZINNIA_VOICE_PROFILE.instructions);
-  assert.equal(bank.voice,'coral');
+  assert.equal(bank.voice,'marin');
   for(const id of bank.clips)assert.ok(fs.statSync(new URL('../app/'+bank.base+id+'.mp3',import.meta.url)).size>1000,id);
  }
- assert.match(ZINNIA_VOICE_PROFILE.instructions,/word endings release naturally/);
- assert.match(ZINNIA_VOICE_PROFILE.instructions,/normal speed/);
+ assert.match(ZINNIA_VOICE_PROFILE.instructions,/smooth word joins and soft, clear word endings/);
+ assert.match(ZINNIA_VOICE_PROFILE.instructions,/ordinary comfortable pace/);
 });
 test('demo paragraphs preserve complete saved recordings rather than shortened live fragments',()=>{
  for(const clip of Object.values(demo.catalog))assert.equal(spokenFrameLead(clip.text),clip.text);

@@ -29,6 +29,7 @@ export function drawWristIcon(ctx,id,x,y,size){
     else if(id==='mic'){ctx.roundRect(-.2,-.8,.4,.9,.2);ctx.moveTo(-.45,-.2);ctx.arc(0,-.2,.45,Math.PI,0,true);line(0,.25,0,.65);line(-.3,.65,.3,.65);}
     else if(id==='stop'){ctx.roundRect(-.55,-.55,1.1,1.1,.1);}
     else if(id==='check'){line(-.7,0,-.2,.5);line(-.2,.5,.7,-.65);}
+    else if(id==='triangle'){ctx.moveTo(0,-.8);ctx.lineTo(.7,.55);ctx.lineTo(-.7,.55);ctx.closePath();}
     else if(id==='brush'){ctx.moveTo(-.65,.65);ctx.lineTo(-.4,.05);ctx.lineTo(.45,-.75);ctx.lineTo(.75,-.45);ctx.lineTo(-.05,.4);ctx.closePath();line(-.4,.05,-.05,.4);}
     else if(id==='games'){ctx.roundRect(-.75,-.75,1.5,1.5,.2);for(const [x,y] of [[-.4,-.4],[.4,-.4],[0,0],[-.4,.4],[.4,.4]])circle(x,y,.07);}
     else if(id==='hand'){ctx.moveTo(-.5,.7);ctx.lineTo(-.8,-.1);ctx.quadraticCurveTo(-.8,-.35,-.5,-.15);ctx.lineTo(-.3,.08);ctx.lineTo(-.3,-.7);ctx.quadraticCurveTo(-.3,-.95,-.1,-.75);ctx.lineTo(-.1,-.1);ctx.lineTo(.05,-.85);ctx.quadraticCurveTo(.15,-1,.25,-.75);ctx.lineTo(.25,-.08);ctx.lineTo(.45,-.6);ctx.quadraticCurveTo(.7,-.7,.65,-.4);ctx.lineTo(.55,.5);ctx.quadraticCurveTo(.3,.9,-.5,.7);}
@@ -63,7 +64,7 @@ export function drawWelcomeWristMenu(ctx,card){
     }
     for(const button of card.controls){
         ctx.globalAlpha=button.disabled?.32:1;const aimed=card.hoverAction===button.action;
-        ctx.fillStyle=button.selected?'#376e60':aimed?'#385a51':button.pulse?'rgba(28,54,45,.65)':'#203f37';ctx.strokeStyle=button.selected?'#d8e9bf':aimed?'#abe6d3':button.accent || '#52766a';ctx.lineWidth=button.selected?5:aimed?4:2;
+        ctx.fillStyle=button.selected?'#376e60':aimed?'#385a51':button.pulse?'rgba(28,54,45,.65)':'#203f37';ctx.strokeStyle=button.guided?'#d8e9bf':button.selected?'#d8e9bf':aimed?'#abe6d3':button.accent || '#52766a';ctx.lineWidth=button.guided?5:button.selected?5:aimed?4:2;
         ctx.beginPath();
         if(button.radial){const r=button.radial;ctx.arc(r.x,r.y,r.outer,r.start+.025,r.end-.025);ctx.arc(r.x,r.y,r.inner,r.end-.025,r.start+.025,true);ctx.closePath();}
         else ctx.roundRect(button.x,button.y,button.width,button.height,button.pulse?button.width/2:12);

@@ -459,8 +459,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     // The demo keeps one stable spatial frame while its slide copy changes.
     const spatialHeight=()=>phoneAR?900:headset?700:620;
     const spatialControls=()=>comfortContext?controls():spatialPanelControls({hidden,height:spatialHeight(),railCollapsed,mediaCollapsed,items:controls()});
-    function act(action){
-        if(action.startsWith('Comfort:')){const item=controls().find(item=>item.action===action);if(!item || item.disabled)return;onInteract(action);comfortContext?.onAction(action.slice(8));return;}
+    function act(action,source=null){
+        if(action.startsWith('Comfort:')){const item=controls().find(item=>item.action===action);if(!item || item.disabled)return;onInteract(action,source);comfortContext?.onAction(action.slice(8));return;}
         if(action==='LanguageMenu'){languageOpen=!languageOpen;graphicsOpen=false;soundOpen=false;render(true);return;}
         if(action.startsWith('Language:')){setNxrLanguage(action.slice(9));render(true);return;}
         if(action.startsWith('OpenSource:'))return;
@@ -474,7 +474,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action.startsWith('KnowledgeMode:')){panelModeChoice=action.split(':')[1];if(!visiblePimoModes().includes(panelModeChoice))return;if(!knowledgeRecord){renderExplorer();return;}}
         if(action.startsWith('Knowledge')){
             if(!knowledgeRecord || explorerControls().find(item=>item.action===action)?.disabled)return;
-            const owner=knowledgeRecord,state=knowledgeExplorer(owner);if(state.mode==='explore' && owner.explorerMolecule)owner.explorerMolecule.readingPage=page;else state.readingPage=page;onInteract(action);
+            const owner=knowledgeRecord,state=knowledgeExplorer(owner);if(state.mode==='explore' && owner.explorerMolecule)owner.explorerMolecule.readingPage=page;else state.readingPage=page;onInteract(action,source);
             const knowledge=knowledgeDocument?pimToArKnowledge(knowledgeDocument.explorerSourceDocument || knowledgeDocument):null;
             if(action.startsWith('KnowledgeMolecule') && knowledge){
                 if(explorerMoleculeAction(owner,knowledge,action)){
@@ -504,7 +504,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 render();renderExplorer();
             }return;
         }
-        const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;onInteract(action);
+        const button=(headset?spatialControls():controls()).find(item=>item.action===action);if(button?.disabled)return;onInteract(action,source);
         if(action==='ToggleMedia'){mediaCollapsed=!mediaCollapsed;mediaTouched=true;}
         if(action==='ToggleMediaDetach'){if(mediaDetached)dockMediaPanel();else detachMediaPanel();return;}
         if(action==='RefreshRate' || action.startsWith('RefreshRate:') || action==='ShowFps'){onPerformanceAction(action);return;}
@@ -1338,7 +1338,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 // A poke owns its press, including a simultaneous pinch event.
                 handContacts.set(source,true);
                 handSelections.set(source,state.pinchSequence+(state.pinch?0:1));
-                if(!slideAtTarget(target.button,target) && target.button.action!=='MoveMediaPanel')act(target.button.action);
+                if(!slideAtTarget(target.button,target) && target.button.action!=='MoveMediaPanel')act(target.button.action,source);
             }else if(poke.pressed && target?.button?.kind==='slider' && !target.button.disabled && poke.action===target.button.action){
                 slideAtTarget(target.button,target);
             }
@@ -1640,7 +1640,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         getFruitPerchPose(side='right'){return fruitVisible && fruitControlsActive?fruitWindow?.getPerchPose(side):null;},
         getFruitGripContact(source){return fruitWindow?.gripContact(source) || null;},
         hitButton(ray){const target=hit(ray);return target?{...target,button:targetButtonAtRay(target)}:null;},
-        activate(ray){if(fruitWindow?.activate(ray)){fruitControlsActive=true;explorerClosed=false;renderExplorer();return true;}const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;},
+        activate(ray,source=null){if(fruitWindow?.activate(ray)){fruitControlsActive=true;explorerClosed=false;renderExplorer();return true;}const target=hit(ray);if(!target)return false;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action,source);return true;},
         isHandInteracting(source){return Boolean(source && (fruitWindow?.owns(source)||handContacts.get(source)));},
         hitPoint(point){return !pose || !renderer || detached?null:renderer.hitPoint(point,{front:.045,back:.025});},
         activateHand(ray,source,state){
@@ -1651,7 +1651,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             const sequence=state?.pinchSequence+(state?.pinch?0:1);
             if(source && handSelections.get(source)===sequence)return true;
             if(source)handSelections.set(source,sequence);
-            if(!slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action);return true;
+            if(!slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action,source);return true;
         },
         getPerchPose(side='right',surface='control'){
             if(!pose || hidden || detached)return null;
@@ -1684,7 +1684,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 const surface=ray && rayFilter(ray)?hit(ray):null,button=targetButtonAtRay(surface),target=surface?{...surface,button}:null;
                 const gesture=directPanelGesture.update(event.inputSource,ray,target,event.type);
                 if(type==='selectend' && sliderGrab?.source===event.inputSource){sliderGrab=null;panelGestureSource=null;}
-                if(gesture.accepted){event.stopImmediatePropagation();if(type==='selectstart' && button.kind==='slider'){sliderGrab={source:event.inputSource,referenceSpace,button,surface:{...surface}};panelGestureSource=event.inputSource;slideAtTarget(button,surface);}else if(gesture.activate && button.kind!=='slider' && button.action!=='MoveMediaPanel')act(button.action);}
+                if(gesture.accepted){event.stopImmediatePropagation();if(type==='selectstart' && button.kind==='slider'){sliderGrab={source:event.inputSource,referenceSpace,button,surface:{...surface}};panelGestureSource=event.inputSource;slideAtTarget(button,surface);}else if(gesture.activate && button.kind!=='slider' && button.action!=='MoveMediaPanel')act(button.action,event.inputSource);}
                 return;
             }
             if(grip && onGripEvent(event)){event.stopImmediatePropagation();return;}
@@ -1743,8 +1743,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 spatialGrabPending={source:event.inputSource,referenceSpace,distance:target.distance,localX:target.localX,localY:target.localY,panel:'main',cardId:'control',startedAt:performance.now()-PANEL_GRAB_HOLD_MS,handDirection:event.inputSource?.hand?{...ray.direction}:null};
                 return;
             }
-            if(type==='selectend' && button?.action?.startsWith('Object:') && !spatialMove){spatialGrabPending=null;act(button.action);finishingMoveSource=event.inputSource;panelGestureSource=null;event.stopImmediatePropagation();return;}
-            if(type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray);}
+            if(type==='selectend' && button?.action?.startsWith('Object:') && !spatialMove){spatialGrabPending=null;act(button.action,event.inputSource);finishingMoveSource=event.inputSource;panelGestureSource=null;event.stopImmediatePropagation();return;}
+            if(type==='select' && !spatialMove){spatialGrabPending=null;api.activate(ray,event.inputSource);}
             if(type==='selectend')panelGestureSource=null;
         };const visibility=()=>{if(session.visibilityState!=='visible'){fruitWindow?.resetGrips();sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;}};for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,handle,true);session.addEventListener('visibilitychange',visibility);
             removeXrControls=()=>{fruitWindow?.resetGrips();fruitSession=null;fruitSpace=null;handReferenceSpace=null;handContacts.clear();handPokes.clear();sliderGrab=null;finishingSliderSource=null;spatialGrabPending=null;spatialMove=null;finishingMoveSource=null;panelGestureSource=null;for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.removeEventListener(type,handle,true);session.removeEventListener('visibilitychange',visibility);};},

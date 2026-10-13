@@ -5,13 +5,22 @@ import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
 import {DEMO_GUIDED_STEPS} from '../app/features/ar-demo/demoJourneyContent.js';
 import {normalizeNarrationText} from '../app/services/projectNarration.js';
+import {DEMO_NARRATION_BANK as previousBank} from '../app/services/demoNarrationBank.js';
 const key=text=>{let h=2166136261;for(const c of text){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return 'z-'+(h>>>0).toString(16);};
 const serverArg=process.argv.find(a=>a.startsWith('--server='));
 const server=serverArg?new URL(serverArg.slice(9)):null;
 if(server && server.protocol!=='https:' && !['127.0.0.1','localhost'].includes(server.hostname))throw new Error('Use HTTPS for a remote speech server.');
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const profile=ZINNIA_VOICE_PROFILE;
-const clips=[...new Map(DEMO_GUIDED_STEPS.flatMap(step=>step.main.split(/\n\n+/).map(part=>{const text=normalizeNarrationText(part);return [key(text),{id:key(text),text,spoken:text.replace(/NourishlandXR/g,'Nourishland X R').replace(/\bPIMO\b/g,'plant information').replace(/\bLIMO\b/g,'learning pathway')}];}))).values()];
+const requestGap=Math.max(5200,Number(process.argv.find(arg=>arg.startsWith('--gap-ms='))?.slice(9)) || 5200);
+// Fruit Window screens are authored in the runtime rather than the chapter
+// list. Include them so WebXR and Unity do not leave these chapters silent.
+const runtime=await fs.readFile(path.join(root,'app/screens/temporaryArDemo.js'),'utf8');
+const fruitStart=runtime.indexOf('function showDemoFruitDiscovery('),fruitEnd=runtime.indexOf('function showDemoPanelIntroduction(',fruitStart);
+if(fruitStart<0 || fruitEnd<fruitStart)throw Error('Fruit Window narration source changed.');
+const fruitCopy=[...runtime.slice(fruitStart,fruitEnd).matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(match=>match[1].replaceAll('\\n','\n'));
+const fruitScreens=['Look closely at the plant','PIMO is now closed'].map(prefix=>{const text=fruitCopy.find(text=>text.startsWith(prefix));if(!text)throw Error('Missing Fruit Window narration: '+prefix);return text;});
+const clips=[...new Map([...DEMO_GUIDED_STEPS.map(step=>step.main),...fruitScreens].flatMap(main=>main.split(/\n\n+/).map(part=>{const text=normalizeNarrationText(part);return [key(text),{id:key(text),text,spoken:text.replace(/NourishlandXR/g,'Nourishland X R').replace(/\bPIMO\b/g,'plant information').replace(/\bLIMO\b/g,'learning pathway')}];}))).values()];
 const hash=createHash('sha256').update(JSON.stringify({profile,clips:clips.map(({id,spoken})=>({id,spoken}))})).digest('hex').slice(0,16);
 const bankName='openai-'+hash,relative='assets/demo-narration/'+bankName+'/',directory=path.join(root,'app',relative);
 if(process.argv.includes('--plan')){console.log(JSON.stringify({provider:'OpenAI',voice:profile.voice,clips:clips.length,characters:clips.reduce((n,c)=>n+c.spoken.length,0),bank:relative,requires:'OPENAI_API_KEY',activation:'Only after all clips have been generated'},null,2));process.exit(0);}
@@ -21,18 +30,22 @@ for(const clip of clips){
     if(!/^[a-z0-9-]+$/.test(clip.id))throw new Error('Invalid clip ID');
     const target=path.join(directory,clip.id+'.mp3');
     try{if((await fs.stat(target)).size>1000){console.log('Saved: '+clip.id);continue;}}catch{}
+    if(previousBank.voice===profile.voice && previousBank.delivery===ZINNIA_VOICE_DELIVERY && previousBank.instructions===profile.instructions && previousBank.catalog?.[clip.id]?.text===clip.text){
+        const saved=path.join(root,'app',previousBank.base,clip.id+'.mp3');
+        if((await fs.stat(saved)).size>1000){await fs.copyFile(saved,target);console.log('Reused: '+clip.id);continue;}
+    }
     let bytes;
     for(let attempt=0;attempt<3;attempt++){
         const endpoint=server?server.href.replace(/\/$/,'')+'/zinnia/speech':'https://api.openai.com/v1/audio/speech';
         const headers=server?{'Content-Type':'application/json',Origin:server.origin}:{Authorization:'Bearer '+process.env.OPENAI_API_KEY,'Content-Type':'application/json'};
-        const response=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(server?{text:clip.spoken,delivery:'v13'}:{...profile,input:clip.spoken}),signal:AbortSignal.timeout(45000)});
+        const response=await fetch(endpoint,{method:'POST',headers,body:JSON.stringify(server?{text:clip.spoken,delivery:ZINNIA_VOICE_DELIVERY}:{...profile,input:clip.spoken}),signal:AbortSignal.timeout(120000)});
         if(response.ok){if(server && response.headers.get('X-Zinnia-Delivery')!==ZINNIA_VOICE_DELIVERY)throw new Error('Hosted delivery profile does not match. Existing bank preserved.');bytes=Buffer.from(await response.arrayBuffer());break;}
         if(![429,500,502,503,504].includes(response.status) || attempt===2)throw new Error('Speech provider returned HTTP '+response.status+'. The existing audio bank has not been replaced.');
-        await new Promise(resolve=>setTimeout(resolve,2000*(attempt+1)));
+        await new Promise(resolve=>setTimeout(resolve,response.status===429?30000:2000*(attempt+1)));
     }
     if(!bytes || bytes.length<1000)throw new Error('Incomplete recording: '+clip.id);
     await fs.writeFile(target+'.partial',bytes);await fs.rename(target+'.partial',target);console.log('Recorded: '+clip.id);
-    if(server)await new Promise(resolve=>setTimeout(resolve,5200));
+    if(server)await new Promise(resolve=>setTimeout(resolve,requestGap));
 }
 const bank={provider:'OpenAI',voice:profile.voice,model:profile.model,delivery:ZINNIA_VOICE_DELIVERY,instructions:profile.instructions,base:relative,clips:clips.map(c=>c.id),catalog:Object.fromEntries(clips.map(c=>[c.id,{text:c.text,file:c.id+'.mp3'}]))};
 await fs.writeFile(path.join(directory,'manifest.json'),JSON.stringify(bank,null,2));

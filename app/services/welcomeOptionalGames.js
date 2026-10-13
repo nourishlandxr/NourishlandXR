@@ -2,7 +2,6 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {prepareWelcomeDragonfly} from './welcomeDragonflyModel.js';
 import {createWelcomeFlightLesson} from './welcomeFlightLesson.js';
-import {createWelcomeNatureController} from './welcomeNatureController.js';
 import {createWelcomePlantPractice} from './welcomePlantPractice.js';
 import {createWelcomePracticeProps} from './welcomePracticeProps.js';
 import {createPracticeBody,resetPracticeBody,stepPracticeBodies} from './welcomePracticePhysics.js';
@@ -11,14 +10,12 @@ import {createPracticeBody,resetPracticeBody,stepPracticeBodies} from './welcome
 export function createWelcomeOptionalGame(id,root,{onAssets=()=>{},onFeedback=()=>{}}={}){
     let disposed=false,asset='loading';
     const bodies=[],objects=new Map();
-    let dragon,flight,nature,remote,garden,props,manualPosition=null;
+    let dragon,flight,garden,props,manualPosition=null;
     if(id==='dragonfly'){
         dragon={group:new THREE.Group(),wings:[]};root.add(dragon.group);
         const landing=new THREE.Mesh(new THREE.TorusGeometry(.07,.003,6,32),new THREE.MeshBasicMaterial({color:'#c4d9ab',transparent:true,opacity:.3}));
         landing.rotation.x=-Math.PI/2;landing.position.set(-.43,.005,-.20);root.add(landing);
         flight=createWelcomeFlightLesson(root,dragon,landing,{onFeedback});
-        remote=createPracticeBody('remote',{x:.27,z:.14,radius:.075,halfSize:{x:.045,y:.027,z:.068},bounce:.06});
-        nature=createWelcomeNatureController();root.add(nature.group);bodies.push(remote);objects.set(remote.id,nature.group);remote.visible=true;
         new GLTFLoader().loadAsync(new URL('../assets/welcome-practice/dragonfly.glb',import.meta.url).href).then(gltf=>{
             if(disposed){disposeModel(gltf.scene);return;}
             const prepared=prepareWelcomeDragonfly(gltf.scene);dragon.group.add(prepared.model);dragon.wings=prepared.wings;asset='ready';onAssets();
@@ -56,12 +53,12 @@ export function createWelcomeOptionalGame(id,root,{onAssets=()=>{},onFeedback=()
         const otherPinch=inputs.some(other=>other.source!==input.source && other.trigger && new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(other.matrix).premultiply(inverse)).distanceTo(garden.sealPoint())<.1);
         if(held?.target.id==='seed-packet' && (input.trigger && !previous.trigger || otherPinch)){if(garden.openPacket())onFeedback('open',input.source);}
     }
-    function update(dt,inputs,holds){
+    function update(dt,inputs,holds,controllerTool='standard'){
         if(flight){
-            const owner=holds.find(([,h])=>h.target.id==='remote')?.[0],input=inputs.find(i=>i.source===owner);
+            const input=controllerTool==='insect'?inputs.find(i=>!i.uiBlocked && !i.source.hand && i.source.handedness==='right'):null;
             const hand=holds.find(([,h])=>h.target.manual)?.[0];
-            const pilot=manualPosition?{source:hand,position:manualPosition}:input?{...input,reverse:Boolean(input.source.gamepad?.buttons?.[4]?.pressed)}:null;
-            flight.update(dt,'fly',pilot);nature.stick.rotation.z=-(input?.source.gamepad?.axes?.[2] || 0)*.32;nature.stick.rotation.x=(input?.source.gamepad?.axes?.[3] || 0)*.32;nature.trigger.scale.setScalar(input?.trigger?1.2:1);
+            const pilot=manualPosition?{source:hand,position:manualPosition}:input?{...input,reverse:Boolean(input.down)}:null;
+            flight.update(dt,'fly',pilot);
             dragon.group.visible=asset==='ready';
         }
         if(garden){
@@ -73,7 +70,7 @@ export function createWelcomeOptionalGame(id,root,{onAssets=()=>{},onFeedback=()
         stepPracticeBodies(bodies,dt);sync();
     }
     function hints(){
-        if(flight)return asset==='loading'?['Loading the dragonfly…']:asset==='error'?['Dragonfly model could not load. Reload to retry.']:[flight.cue,'Hold the remote: trigger to fly, stick to steer / climb.','With hands, hold and guide the dragonfly through rings.'];
+        if(flight)return asset==='loading'?['Loading the dragonfly…']:asset==='error'?['Dragonfly model could not load. Reload to retry.']:[flight.cue,'Wrist → Change controllers → Insect flight. Trigger to fly; stick to steer / climb.','With hands, hold and guide the dragonfly through rings.'];
         const instruction={packet:'Hold the packet; trigger or pinch its seal to open.',seed:'Pick up the tiny seed and release it onto the soil.',water:'Hold the watering can by its handle and tilt over the pot.',grow:'Watch the strawberry plant grow and ripen.',harvest:'Pick the ripe strawberries and put them in the basket.'};
         return [instruction[phase()],phase()==='grow'?`Growth ${Math.round(garden.snapshot().growth*100)}%`:`Collected ${props.snapshot().harvestCount} of 3 strawberries.`];
     }
