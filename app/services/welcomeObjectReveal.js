@@ -9,7 +9,7 @@ export function createWelcomeObjectReveal(object,{duration=3.6,glowStrength=1}={
     for(const node of meshes){for(const mat of [node.material].flat())if(mat && !materials.has(mat))materials.set(mat,{opacity:mat.opacity,transparent:mat.transparent,depthWrite:mat.depthWrite});
         const copy=new THREE.Mesh(node.geometry,glow);copy.matrixAutoUpdate=false;copy.matrix.multiplyMatrices(inverse,node.matrixWorld);shell.add(copy);copies.push({copy,node});}
     let complete=false;
-    return {removeGlow(){shell.removeFromParent();glow.dispose();},update(age){
+    return {removeGlow(){shell.removeFromParent();glow.dispose();object.visible=true;for(const [mat,original] of materials){mat.opacity=original.opacity;mat.transparent=original.transparent;mat.depthWrite=original.depthWrite;}complete=true;},update(age){
         object.visible=age>=0;
         const progress=age*3.6/duration;
         const amount=THREE.MathUtils.smoothstep(progress,glowStrength?1.8:0,3.1);

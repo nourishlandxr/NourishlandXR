@@ -12031,3 +12031,8 @@ body:has(.app-surface) {
 /* Main demo copy appears as one clear paragraph, without previewing future text. */
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {opacity:0;visibility:hidden;clip-path:none;transform:none;transition:none;}
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p:is(.is-current,.is-revealed) {opacity:1;visibility:visible;clip-path:none;}
+
+/* Current paragraphs appear fully readable; future copy never paints. */
+.tryit-demo .tryit-board-text-window p {transition:none!important;animation:none!important;filter:none!important;clip-path:none!important;text-shadow:none!important;}
+.tryit-demo .tryit-board-text-window p[hidden] {display:none!important;}
+.tryit-demo .tryit-board-text-window p:is(.is-current,.is-revealed,.is-sequence-current) {opacity:1!important;visibility:visible!important;}

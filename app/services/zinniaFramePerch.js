@@ -25,7 +25,7 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         if(disposed)return;
         root.matrix.fromArray(matrix);root.updateMatrixWorld(true);
         const direct=getVoice(),directState=direct?.status?.(),shared=zinniaVoiceState();
-        const voice=directState?.playing || directState?.paused?directState:shared,cue=zinniaCharacterCue();
+        const voice=directState || shared,cue=zinniaCharacterCue();
         const speechLevel=voice.paused?0:Math.max(zinniaSpeechLevel(),direct?.speechLevel?.() || 0);
         animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
     }

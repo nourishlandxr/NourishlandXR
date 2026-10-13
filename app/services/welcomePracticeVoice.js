@@ -22,7 +22,7 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         if(token!==generation || disposed || muted || paused || !buffer)return;
         if(context.state!=='running'){awaitingAudioUnlock=true;playing=false;paused=true;changed();return;}
         if(offset>=buffer.duration){playing=false;buffer=null;changed();return;}
-        if(!analyser && context.createAnalyser){analyser=context.createAnalyser();analyser.fftSize=256;wave=new Float32Array(analyser.fftSize);analyser.connect(gain);}
+        if(!analyser && context.createAnalyser){analyser=context.createAnalyser();analyser.fftSize=1024;wave=new Float32Array(analyser.fftSize);analyser.connect(gain);}
         current=context.createBufferSource();current.buffer=buffer;current.playbackRate.value=1;current.connect(analyser || gain);startedAt=context.currentTime;
         const source=current;source.onended=()=>{if(token!==generation || current!==source)return;source.disconnect();current=null;buffer=null;offset=0;playing=false;releaseZinniaVoice(owner);changed();onEnded();};
         playing=true;source.start(0,offset);changed();
@@ -56,7 +56,7 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
     }
     function syncSettings(){const settings=getWelcomeNarrationSettings(),wasMuted=muted;muted=!settings.enabled;if(gain){gain.gain.setTargetAtTime(settings.volume,context.currentTime,.025);echoGain.gain.setTargetAtTime(settings.echo,context.currentTime,.025);}if(muted)stop();else if(wasMuted && lesson && isLastZinniaVoice(owner)){unlock();void speak(lesson);}changed();}
     globalThis.addEventListener?.('nlxr-narration-change',syncSettings);
-    function speechLevel(){if(!playing || paused || muted)return 0;if(fallbackSpeaking)return .2;if(!current || !analyser || context?.state!=='running')return 0;analyser.getFloatTimeDomainData(wave);let energy=0;for(const value of wave)energy+=value*value;return Math.min(1,Math.max(0,(Math.sqrt(energy/wave.length)-.008)*7));}
+    function speechLevel(){if(!playing || paused || muted)return 0;if(fallbackSpeaking)return .2;if(!current || !analyser || context?.state!=='running')return 0;analyser.getFloatTimeDomainData(wave);let energy=0;for(const value of wave)energy+=value*value;return Math.min(1,Math.max(0,(Math.sqrt(energy/wave.length)-.003)*12));}
     const owner={status,speechLevel,pause,resume,cancel(){onInterrupt();stop();},replay(){if(onReplay)onReplay();else {unlock();if(lesson)void speak(lesson);}}};
     return {unlock,speak,stop,pause,resume,status,speechLevel,preload:(id=initialId)=>muted?null:load(id),replay:owner.replay,toggleMute(){setWelcomeNarrationSettings({enabled:muted});},destroy(){disposed=true;globalThis.removeEventListener?.('nlxr-narration-change',syncSettings);stop();forgetZinniaVoice(owner);abort.abort();cache.clear();analyser?.disconnect();context?.close()?.catch(()=>{});context=null;}};
 }

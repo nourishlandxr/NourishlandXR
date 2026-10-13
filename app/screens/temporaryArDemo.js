@@ -1631,6 +1631,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             const end = start + paragraph.length;
             if (paragraphElements[index]) {
                 paragraphElements[index].textContent = visibleText.slice(start, end);
+                paragraphElements[index].hidden=!paragraphElements[index].textContent;
                 paragraphElements[index].classList.toggle('is-current', visibleText.length >= start && visibleText.length <= end);
                 paragraphElements[index].classList.toggle('is-revealed', visibleText.length >= end);
             }
@@ -1664,7 +1665,8 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         const elements=[...(board?.querySelectorAll('.tryit-board-text-window p:not(.tryit-board-next)') || [])];
         elements.forEach((element,index)=>{
             const current=index===event.index;
-            element.textContent=current?event.paragraph:'';
+            element.textContent=current?event.paragraph:'';element.hidden=!current;
+            element.classList.toggle('is-current',current);
             element.classList.toggle('is-sequence-current',current);
             element.classList.toggle('is-sequence-fading',current && event.phase==='fade-out');
         });
@@ -5628,7 +5630,7 @@ function drawIntroNoteContent(ctx) {
         if(paragraphIndex<windowLayout.first || paragraphIndex>=windowLayout.end)continue;
         const visibleLines = wrappedTextureLines(ctx, visibleParagraphs[paragraphIndex] || '', contentWidth);
         ctx.save();
-        const reveal=sequenceSnapshot?sequenceSnapshot.opacity:window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/180));ctx.globalAlpha=reveal;
+        const reveal=sequenceSnapshot?sequenceSnapshot.opacity:window.matchMedia('(prefers-reduced-motion: reduce)').matches?1:Math.min(1,Math.max(0,(performance.now()-(introBoardParagraphFadeTimes[paragraphIndex] ?? -Infinity))/180));ctx.globalAlpha=1;
         for (const [lineIndex, line] of visibleLines.entries()) {
             const lineY = paragraphY + lineIndex * bodyLayout.lineHeight;
             if (lineY > bodyBottom) { clipped = true;ctx.restore();break outer; }
@@ -6923,7 +6925,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
     demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});
-    demoProjectVoice=createProjectNarration({demo:true,isVisible:()=>session?session.visibilityState==='visible':!document.hidden,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
+    demoProjectVoice=createProjectNarration({demo:true,isVisible:()=>session?session.visibilityState!=='hidden':!document.hidden,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
     {welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();

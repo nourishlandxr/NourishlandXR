@@ -1541,7 +1541,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /font-size:calc\(clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\) \+ 2px\)/);
     assert.match(source, /const reference=demoLocalizedText\(DEMO_QUICK_ACCESS_COPY\['INTRO 1\.2'\]\)/);
     assert.doesNotMatch(source, /introTextPageTransition|resolveIntroTextPage/);
-    assert.match(source, /ctx\.globalAlpha=reveal/);
+    assert.match(source, /ctx\.globalAlpha=1/);
     assert.match(source, /paragraphs:openingParagraphs,voice:demoProjectVoice,readingTime:demoParagraphReadingTime/);
     assert.match(source, /introNarrationTimer = setTimeout/);
     assert.match(source, /setTimeout\(showArWelcomeShowcase, 120\)/);
