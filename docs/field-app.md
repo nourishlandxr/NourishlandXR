@@ -2,6 +2,14 @@
 
 Field is a separate Android-first mobile web/PWA application within the existing repository. It consumes the same published knowledge as Desktop and Unity; it is not a separate authoritative content database or a native Android APK.
 
+## Field launcher design
+
+Field now opens on an app launcher instead of a public-project webpage. Six recognizable icon tiles open Discover, Checklists, Journal, WebXR, Studio and Content. Local tools stay within the Field shell; WebXR/Studio/Desktop links are marked as separate entries. Only implemented tools are displayed. A fixed bottom icon dock provides Home, Discover, Checklists and Journal, with accessible names, visible active underline/shape and keyboard focus. Settings is a compact icon that opens a modal, containing version, install guidance, local-data information and offline-update status.
+
+The Field-owned stylesheet supplies the launcher background, compact app bar, tool screen typography, icon tiles, safe-area dock spacing and responsive layouts. Desktop keeps its content navigation and does not load this stylesheet. No fake Android battery/time/status bar, system permissions, unimplemented tool or native APK is introduced. The launcher requires no API request, including offline startup. Existing journal/checklist stores and public knowledge identities remain unchanged; unsaved draft protection applies to launcher/dock navigation as well as Back.
+
+Browser chrome depends on launching the installed app in standalone display mode, which the manifest declares. The redesigned UI does not remove browser chrome from ordinary browser tabs. Physical Android installation, keyboard/dock behavior and system Back still require device acceptance.
+
 The next increment adds [portable personal checklists](checklist-foundation.md), accessible through Checklists and available with the offline shell. The earlier V0.9594 statements below describe that initial entry/journal milestone; official project downloads and server publication remain later work.
 
 ## Entry and ownership
@@ -53,3 +61,9 @@ On 14 October 2026, focused Field/foundation/visitor checks passed 37/37, the fu
 The isolated browser fixture opened `field/index.html` as Nourishland Field, displayed published test content, retained the earlier route's journal drafts, saved a new local draft, and redirected the old Field link to the new journal route. Desktop opened independently. After stopping that fixture server, reloading the journal document still rendered the app and saved observations. A 390px viewport screenshot is retained in `artifacts/platform-foundation/field-entity-offline.jpg`. This is browser offline-shell evidence, not physical Android installation or offline project-pack evidence.
 
 The Unity chat reported 61 focused menu checks passed and continued its feature regression. That is progress from a separate native checkout, not a completed Unity/Quest release. No web commit/push/deployment or device installation is claimed for this increment.
+
+## V0.9602 launcher evidence
+
+On 14 October 2026 Field's app launcher and dock replaced its webpage-style navigation. The full current checkout suite passed 929/929; the final launcher/Field/contract checks passed 26/26 after preserving the explicit Discover view on reload. Syntax/scoped diff checks and the final frontend build passed. The original welcome and Field Settings showed V0.9602.
+
+Browser QA verified icon → Journal, unsaved text protection when pressing Home, saving and returning to the launcher, settings dialog opening/closing, Discover icon navigation, and a 320px viewport without horizontal overflow. The 390px launcher screenshot is `artifacts/platform-foundation/field-launcher.jpg`. After closing the older test tab to activate the downloaded update, the launcher reopened with its icon grid and dock while the synthetic preview server was stopped; Checklists opened the saved library without API access. Existing test journal/checklist content was retained. Physical Android installation, system Back and soft-keyboard viewport behavior remain unverified. This is a local, uncommitted/undeployed app-shell increment.

@@ -39,7 +39,7 @@ export function createWelcomeControlOrb(root,{onFeedback=()=>{}}={}){
                 const clicked=Boolean(input.source.gamepad?.buttons?.[3]?.pressed);if(id==='controls-stick-click' && clicked && before?.buttons?.[3]===false){if(input.source.handedness==='right'){light=false;rightClicked=true;}else if(rightClicked){physical=physicalLearned=true;release();Object.assign(ball.position,group.position);Object.assign(ball.velocity,{x:0,y:0,z:0});onFeedback('release',input.source);}}
                 previous.set(input.source,{down:Boolean(input.down),trigger:Boolean(input.trigger),buttons:(input.source.gamepad?.buttons || []).map(b=>b.pressed)});
             }
-            if(physical && !owner && dt>0){stepPracticeBodies([ball],dt,{floor:-.7});group.position.set(ball.position.x,ball.position.y,ball.position.z);shell.rotation.x+=ball.velocity.z*dt/radius;shell.rotation.z-=ball.velocity.x*dt/radius;}core.material.emissiveIntensity=light?.2+.18*Math.sin(clock*3+open*2)**2:0;
+            if(physical && !owner && dt>0){stepPracticeBodies([ball],dt,{floor:-.7});group.position.set(ball.position.x,ball.position.y,ball.position.z);shell.rotation.x+=ball.velocity.z*dt/radius;shell.rotation.z-=ball.velocity.x*dt/radius;}core.material.emissive.copy(core.material.color);core.material.emissiveIntensity=light?.35+.65*Math.sin(clock*3+open*2)**2:0;
             open=THREE.MathUtils.damp(open,opened?1:0,1/.32,dt);for(const {mesh,axis} of cells)mesh.position.copy(axis).multiplyScalar(open*.22*radius);core.rotation.y+=dt*.35;
         },
         complete(id){return id==='controls-orb-grab'?grabbed && moved && released:id==='controls-orb-open'?opened:id==='controls-stick-click'?physical:false;},

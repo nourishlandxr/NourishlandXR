@@ -45,7 +45,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         // Decorative animation stays; the current explanation owns gaze and arms.
         mixer=new THREE.AnimationMixer(model);for(const clip of gltf.animations){const filtered=clip.clone();filtered.tracks=filtered.tracks.filter(track=>!/(?:^|_)petal_\d|^(Head_nod_root|Body_sway_root|Leaf_arm_[LR])/i.test(track.name) && !/^(Eye_[LR]_expression|Mouth_speech|Eyebrow_[LR])\.morphTargetInfluences/.test(track.name));mixer.clipAction(filtered).play();}
         for(const name of ['Head_nod_root','Body_sway_root','Leaf_arm_L','Leaf_arm_R'])if(parts[name])parts[name].userData.guidePivot=wrapper(parts[name]);
-          for(const side of ['L','R']){const arm=parts['Leaf_arm_'+side],pivot=arm?.userData.guidePivot;if(!pivot)continue;const socket=new THREE.Group();socket.name='Zinnia micro-fruit hand socket '+side;socket.position.set(side==='L' ? -.09 : .09,.035,.025);pivot.add(socket);fruitSockets[side]=socket;}
+          for(const side of ['L','R']){const arm=parts['Leaf_arm_'+side],pivot=arm?.userData.guidePivot;if(!pivot)continue;arm.updateWorldMatrix(true,true);const centre=new THREE.Box3().setFromObject(arm).getCenter(new THREE.Vector3());arm.worldToLocal(centre);const socket=new THREE.Group();socket.name='Zinnia micro-fruit hand socket '+side;socket.position.copy(centre).add(new THREE.Vector3(0,.055,.025));arm.add(socket);fruitSockets[side]=socket;}
         ready=true;onAssets();
     }).catch(error=>{if(!disposed)onError(error);});
     function acknowledge(kind='yes'){ack=kind;ackAge=0;}

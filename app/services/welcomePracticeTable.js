@@ -16,6 +16,7 @@ export function createWelcomePracticeTable(root){
  const foot=new THREE.Mesh(new THREE.CylinderGeometry(.22,.25,.03,32),material);group.add(foot);
  const landing=new THREE.Mesh(new THREE.TorusGeometry(.11,.003,6,40),new THREE.MeshBasicMaterial({color:'#9caa83',transparent:true,opacity:.35,depthWrite:false}));landing.name='Dragonfly landing marker';landing.visible=false;landing.userData.skipArrivalGlow=true;landing.rotation.x=Math.PI/2;landing.position.set(-.43,.005,-.20);group.add(landing);
  const revealMaterials=[top.material,material];
+ const grip=new THREE.Mesh(new THREE.BoxGeometry(.10,.012,.025),new THREE.MeshStandardMaterial({color:'#ada58b',roughness:.9}));grip.name='Table height grip';grip.position.set(0,.009,.025);group.add(grip);revealMaterials.push(grip.material);
  function setHeight(height){
   // Keep the whole pedestal beneath the underside, including during reveal.
   const underside=-.038,footTop=-height+.030;
@@ -23,5 +24,5 @@ export function createWelcomePracticeTable(root){
   foot.position.y=-height+.015;
  }
  setHeight(.8);
- return {group,stand,foot,landing,revealMaterials,setHeight};
+ return {group,stand,foot,landing,grip,revealMaterials,setHeight};
 }

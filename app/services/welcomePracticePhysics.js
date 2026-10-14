@@ -32,13 +32,13 @@ export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{},constrai
             // The low timber rim catches resting pieces without trapping lifted objects.
             if(previousY-b.support>=-.012 && p.y-b.support<.035){
                 const x=PRACTICE_TABLE_HALF_WIDTH-b.radius-.015,z=PRACTICE_TABLE_HALF_DEPTH-b.radius-.015;
-                if(Math.abs(p.x)>x && Math.abs(p.x)<PRACTICE_TABLE_HALF_WIDTH+b.radius && Math.abs(p.z)<PRACTICE_TABLE_HALF_DEPTH){p.x=Math.sign(p.x)*x;v.x=0;}
-                if(Math.abs(p.z)>z && Math.abs(p.z)<PRACTICE_TABLE_HALF_DEPTH+b.radius && Math.abs(p.x)<PRACTICE_TABLE_HALF_WIDTH){p.z=Math.sign(p.z)*z;v.z=0;}
+                if(Math.abs(p.x)>x && Math.abs(p.x)<PRACTICE_TABLE_HALF_WIDTH+b.radius && Math.abs(p.z)<PRACTICE_TABLE_HALF_DEPTH){const side=Math.sign(p.x);p.x=side*x;if(v.x*side>0)v.x=b.id==='ball'?-v.x*.82:0;}
+                if(Math.abs(p.z)>z && Math.abs(p.z)<PRACTICE_TABLE_HALF_DEPTH+b.radius && Math.abs(p.x)<PRACTICE_TABLE_HALF_WIDTH){const side=Math.sign(p.z);p.z=side*z;if(v.z*side>0)v.z=b.id==='ball'?-v.z*.82:0;}
             }
             const onTable=onPracticeTable(p.x,p.z,Math.min(.035,b.radius*.45)) && previousY-b.support>=-.012;
             const surface=onTable?0:floor;
             if(p.y-b.support<surface){p.y=surface+b.support;if(v.y<-.8)onImpact(b,-v.y);v.y=Math.abs(v.y)>.45?-v.y*b.bounce:0;
-                const damping=Math.exp(-(onTable?(b.id==='ball'?.65:4.5):6)*s);v.x*=damping;v.z*=damping;b.angular.x*=damping;b.angular.y*=damping;b.angular.z*=damping;
+                const damping=Math.exp(-(onTable?(b.id==='ball'?.18:4.5):6)*s);v.x*=damping;v.z*=damping;b.angular.x*=damping;b.angular.y*=damping;b.angular.z*=damping;
                 if(Math.hypot(v.x,v.z)<.012){v.x=v.z=0;Object.assign(b.angular,{x:0,y:0,z:0});}
             }
             b.floorTime=surface===floor && p.y-b.support<=floor+.012?b.floorTime+s:0;

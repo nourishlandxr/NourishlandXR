@@ -4,6 +4,7 @@ import { dashboardIcon } from './workspaceIcons.js';
 import { createPublicContentClient } from './platformPublicContent.js';
 import { readJournal, saveJournalDraft, journalExport } from './fieldJournal.js';
 import { renderChecklistWorkspace } from './checklistWorkspace.js';
+import { fieldShellMarkup, fieldLauncherMarkup } from './fieldShell.js';
 
 // Both entries deliberately reuse public content views; each owns its startup/lifecycle.
 export async function renderPlatformApplication({ mode = 'desktop' } = {}) {
@@ -23,16 +24,32 @@ const url = (file, entries = {}) => {
 };
 const iconButton = (action, icon, label) => `<button class="icon-control" type="button" data-action="${action}" aria-label="${label}" title="${label}">${dashboardIcon(icon)}</button>`;
 document.body.dataset.platformInterface = mode;
-app.innerHTML = `<div class="platform-shell"><header class="platform-header"><a class="wordmark" href="${url('platform.html', { interface: mode })}">nourishland</a><span>${mode === 'field' ? 'Field Multitool' : 'Content library'}</span><small class="welcome-version-badge">V${BUILD_INFO.version} · ${BUILD_INFO.target === 'production' ? 'Live' : 'Local preview'}</small></header>
+app.innerHTML = mode === 'field' ? fieldShellMarkup(BUILD_INFO) : `<div class="platform-shell"><header class="platform-header"><a class="wordmark" href="${url('platform.html', { interface: mode })}">nourishland</a><span>Content library</span><small class="welcome-version-badge">V${BUILD_INFO.version} · ${BUILD_INFO.target === 'production' ? 'Live' : 'Local preview'}</small></header>
 <nav class="platform-nav" aria-label="Nourishland tools"><button type="button" data-view="discover">${dashboardIcon('explore')}Discover</button><button type="button" data-view="checklists">${dashboardIcon('grid')}Checklists</button>${mode === 'field' ? `<button type="button" data-view="journal">${dashboardIcon('note')}Field journal</button>` : ''}<a href="${url('index.html', { creator: '1' })}">${dashboardIcon('grid')}Create &amp; manage</a><a href="${url('index.html', { experience: 'webxr-demo' })}">${dashboardIcon('ar')}WebXR introduction</a><a href="${url('platform.html', { interface: mode === 'field' ? 'desktop' : 'field', project: params.get('project') })}">${mode === 'field' ? 'Desktop content' : 'Field tools'}</a></nav>
 <main><div class="platform-context">${iconButton('back', 'arrow', 'Back')}<p data-context>Public knowledge</p>${iconButton('refresh', 'refresh', 'Refresh content')}</div><p class="platform-status" role="status" aria-live="polite" data-status></p><div data-content></div></main></div>`;
 const content = app.querySelector('[data-content]');
 const status = text => { app.querySelector('[data-status]').textContent = text; };
+if(mode==='field') {
+    const settings=app.querySelector('[data-field-settings]');
+    const update=document.querySelector('[data-field-shell-status]');
+    if(update)settings.querySelector('[data-field-update]').append(update);
+    app.querySelector('[data-action=settings]').onclick=()=>settings.showModal();
+    app.querySelector('[data-action=close-settings]').onclick=()=>settings.close();
+    const connection=()=>{app.querySelector('[data-field-connection]').textContent=navigator.onLine===false?'Offline':'Online';};
+    connection();window.addEventListener('online',connection);window.addEventListener('offline',connection);
+}
 function context(text) {
     app.querySelector('[data-context]').textContent = text;
-    app.querySelector('[data-action=back]').hidden = state.view === 'discover' && !state.project;
+    app.querySelector('[data-action=back]').hidden = state.view === 'home' || state.view === 'discover' && !state.project && mode==='desktop';
+    document.body.dataset.fieldView=state.view;
+    if(mode==='field')window.scrollTo(0,0);
     app.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-current', button.dataset.view === state.view ? 'page' : 'false'));
-    app.querySelector('[data-action=refresh]').hidden = ['journal','checklists'].includes(state.view);
+    app.querySelector('[data-action=refresh]').hidden = ['home','journal','checklists'].includes(state.view);
+}
+function home() {
+    state.request?.abort();state.view='home';status('');context('');
+    history.replaceState(null,'',url('platform.html',{interface:mode}));
+    content.innerHTML=fieldLauncherMarkup({studioUrl:url('index.html',{creator:'1'}),contentUrl:url('platform.html',{interface:'desktop'}),xrUrl:url('index.html',{experience:'webxr-demo'})});
 }
 async function load(task) {
     state.request?.abort();
@@ -48,7 +65,7 @@ function cards(records, attribute) {
 }
 async function discover() {
     state.view = 'discover'; state.project = state.area = state.record = null; context('Public projects');
-    history.replaceState(null, '', url('platform.html', { interface: mode }));
+    history.replaceState(null, '', url('platform.html', { interface: mode, view: mode==='field'?'discover':'' }));
     await load(async signal => {
         const projects = await client.projects(signal); if (signal.aborted) return;
         content.innerHTML = `<p class="eyebrow">${mode === 'field' ? 'Choose a place. Look closer.' : 'Knowledge connected to place'}</p><h1>${mode === 'field' ? 'Your field companion' : 'Explore Nourishland content'}</h1><p>Read published project knowledge without an account.</p>${cards(projects, 'data-project')}`;
@@ -129,18 +146,22 @@ app.querySelector('[data-action=back]').onclick = () => {
     if (state.view === 'journal') { state.view = 'discover'; return state.record ? openRecord(state.record) : state.project ? openProject(state.project.id) : discover(); }
     if (state.record) return openArea(state.area);
     if (state.area) return openProject(state.project.id);
+    if(mode==='field')return home();
     return discover();
 };
 app.querySelector('[data-action=refresh]').onclick = () => state.record ? openRecord(state.record) : state.area ? openArea(state.area) : state.project ? openProject(state.project.id) : discover();
-app.querySelectorAll('[data-view]').forEach(button => button.onclick = () => {
+app.addEventListener('click',event=>{
+    const button=event.target.closest('[data-view]');if(!button||!app.contains(button))return;
     if (hasUnsavedObservation()) return;
-    return button.dataset.view === 'journal' ? journal() : button.dataset.view==='checklists'?checklists():discover();
+    return button.dataset.view === 'home' ? home() : button.dataset.view === 'journal' ? journal() : button.dataset.view==='checklists'?checklists():discover();
 });
 window.addEventListener('beforeunload', event => { if (checklistDirty || state.view === 'journal' && content.querySelector('textarea')?.value.trim()) { event.preventDefault(); event.returnValue = ''; } });
 window.addEventListener('pagehide', () => state.request?.abort());
 if (params.get('view') === 'checklists') checklists();
-else if (mode === 'field' && (params.get('view') === 'journal' || navigator.onLine === false)) {
+else if (mode === 'field' && params.get('view') === 'journal') {
     journal();
     if (navigator.onLine === false) status('Offline. Your saved journal is available; project downloads are not connected yet.');
-} else await (params.get('project') ? openProject(params.get('project')) : discover());
+} else if(params.get('project'))await openProject(params.get('project'));
+else if(mode==='field'&&params.get('view')!=='discover')home();
+else await discover();
 }

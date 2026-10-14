@@ -1,5 +1,6 @@
 import {createWelcomePracticeVoice,getWelcomeNarrationSettings} from './welcomePracticeVoice.js';
 import {claimZinniaVoice,releaseZinniaVoice,forgetZinniaVoice} from './zinniaVoiceCoordinator.js';
+import {createVoiceEndpoint} from './voiceEndpoint.js';
 
 export function zinniaApiBase(){return globalThis.NOURISHLAND_CONFIG?.apiBase || (globalThis.location?.pathname.startsWith('/xr/')?'/xr-api':'/api');}
 // One microphone owner across Orbs and Notes. Audio stays in memory only.
@@ -40,7 +41,7 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},
                 // Frequent chunks preserve short replies and tolerate Quest stop timing.
                 recorder.start(250);timer=setTimeout(()=>finish(),Math.min(8,Number(cap.maximumSeconds)||8)*1000);
                 const AudioContext=globalThis.AudioContext || globalThis.webkitAudioContext;
-                if(AudioContext){try{meter=new AudioContext();const analyser=meter.createAnalyser();analyser.fftSize=512;meter.createMediaStreamSource(stream).connect(analyser);const samples=new Uint8Array(analyser.fftSize);let lastSound=performance.now(),noise=.002;void meter.resume().catch(()=>{});meterTimer=setInterval(()=>{analyser.getByteTimeDomainData(samples);level=Math.sqrt(samples.reduce((sum,x)=>sum+((x-128)/128)**2,0)/samples.length);if(!heard)noise=Math.min(.012,noise*.97+level*.03);if(level>Math.max(.0035,noise*1.8)){heard=true;lastSound=performance.now();}if(heard && performance.now()-lastSound>700 && performance.now()-recordingStarted>700){clearInterval(meterTimer);finish();}},100);}catch{/* Recording still works when the XR browser cannot start a meter. */}}
+                if(AudioContext){try{meter=new AudioContext();const analyser=meter.createAnalyser();analyser.fftSize=512;meter.createMediaStreamSource(stream).connect(analyser);const samples=new Uint8Array(analyser.fftSize),endpoint=createVoiceEndpoint();void meter.resume().catch(()=>{});meterTimer=setInterval(()=>{analyser.getByteTimeDomainData(samples);level=Math.sqrt(samples.reduce((sum,x)=>sum+((x-128)/128)**2,0)/samples.length);const finished=endpoint.sample(level,performance.now());heard=endpoint.heard;if(finished){clearInterval(meterTimer);finish();}},50);}catch{/* Recording still works when the XR browser cannot start a meter. */}}
                 status('');
             }catch(error){release();status(error.name==='NotAllowedError'?'Microphone permission was denied. Enable it for nourishland.org in Quest Browser settings.':error.name==='NotFoundError'?'Quest Browser could not find a microphone.':error.name==='NotReadableError'?'The microphone is busy. Close another app using it and choose Listen again.':error.message || 'Could not start the microphone. Choose Listen again.','microphone');}
             return;

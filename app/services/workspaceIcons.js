@@ -1,6 +1,7 @@
 const DASHBOARD_ICON_PATHS = Object.freeze({
     plant: '<path d="M12 21V10M12 15C5 15 3 11 3 6c6 0 9 3 9 9Zm0-4c0-5 3-8 9-8 0 5-3 8-9 8Z"/>',
     note: '<path d="M5 3h10l4 4v14H5zM15 3v5h4M8 12h8M8 16h6"/>',
+    checklist: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m7 8 1.5 1.5L11 7M13 8h4M7 14l1.5 1.5L11 13M13 14h4"/>',
     totem: '<path d="M12 2v20M3 5h14l4 3-4 3H3zM21 14H7l-4 3 4 3h14z"/>',
     home: '<path d="m3 11 9-8 9 8M5 10v11h14V10M9 21v-7h6v7"/>',
     grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',

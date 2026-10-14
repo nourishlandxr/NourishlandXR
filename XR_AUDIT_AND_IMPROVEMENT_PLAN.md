@@ -14,6 +14,7 @@ IWSDK is Meta's official **Immersive Web SDK**. It provides reusable components 
 
 - Inspected the actual working checkout at `C:/FILES/Projects/website/github/NourishlandXR`, including uncommitted tutorial work. HEAD during inspection: `1e0ab707a67c42070da3402a08f6b5d6a63a565c`.
 - This is an actively changing checkout. The first retained inventory records version `0.9597`; the refreshed inventory at `2026-10-14T04:54:09Z` records `0.9599`. Other work changed files during inspection. These are source snapshots, not an assertion about the deployed release. SHA-256 hashes and line counts are in the evidence files below. Recheck references before implementation if the checkout changes again.
+- At final verification the build version was `0.9601`; `buildInfo.js`, `welcomePracticeScene.js` and `welcomeVisitorIntroduction.js` had changed again relative to the refreshed inventory. The focused tests and boundary probes were rerun successfully. References describe the inspected paths; ongoing edits can move line numbers. This audit did not create those production changes.
 - **No production source, assets, dependencies, version or release settings were changed by this audit.** Only this report and audit evidence scripts/results were created. No production build, commit, deployment or Quest acceptance is claimed. The release/version rule applies when approved production edits are implemented; a documentation audit must not alter the running experience.
 - Existing focused Node tests passed: **80 passed, 0 failed**. These use unit, mock and source-contract checks; they do not establish headset usability or GPU performance.
 - No physical Quest session, GPU capture, motion-to-photon measurement, browser heap recording or thermal run was available. User-reported frame drops and interaction difficulty remain important reports, but their magnitude and exact rendering cause have not been measured here.
@@ -27,7 +28,7 @@ Evidence files:
 | `artifacts/xr-audit/texture-snapshot.json` | Embedded-image dimensions and RGBA8-equivalent sizes; not measured residency. |
 | `artifacts/xr-audit/probes.mjs` | Read-only imports and mock/VM boundary probes against production functions. |
 | `artifacts/xr-audit/probe-results.json` | Reproductions for hand edges, pose recovery, panel ownership expiry, texture limits and emissive support. |
-| `.codex-xr-audit-tests.log` | Focused test results from this audit. |
+| `artifacts/xr-audit/focused-tests-final.log` | Final focused test run: 80 passed, 0 failed, after refreshing the source review. |
 
 Classification used throughout:
 
@@ -53,6 +54,7 @@ The main immersive demo is **not rendered by Three.js WebGLRenderer**. It uses T
 | Orb and physics | `app/services/welcomeControlOrb.js:38`; `app/services/welcomePracticePhysics.js:22` | Orb learning actions and gravity toy; custom bounded/substepped physics. |
 | Native scene bridge | `app/services/fruitWindowXR.js:11`, `:45`, `:54` | Converts Three scene data, geometry and morphs to the custom renderer; progressive preparation and quantized morph updates. |
 | General native renderer | `app/services/demoLivingMapXR.js:44`, `:76`, `:111`, `:148`, `:169` | Buffers, textures, instancing/fallback batching, portable lighting shader and GL draw calls. |
+| Performance policy | `app/services/xrPerformanceSettings.js`; `app/services/welcomePracticeXR.js:66` | Quality/recovery policy, callback cadence and instrumented JavaScript timing. These are not whole-application GPU measurements. |
 | Living Frame | `app/services/livingFrameModel.js:43`, `:47`; `app/services/livingFrameXR.js:47` | Cached model/growth/hit testing; separate native renderer with indexed geometry. |
 | Zinnia in main scene | `app/services/zinniaFramePerch.js:24`, `:55`, `:61`; `app/services/welcomeZinniaGuide.js` | Model/native bridge, animation, pose/follow behaviour; an existing guard avoids updating once per eye. |
 | General interaction routing | `app/screens/temporaryArDemo.js:5119`, `:5157`, `:5242`; `app/services/welcomeInputRouting.js:3` | Source selection, event-frame controller rays, hand polling, event suppression and tutorial/panel arbitration. |
@@ -63,7 +65,7 @@ The main immersive demo is **not rendered by Three.js WebGLRenderer**. It uses T
 | Painting / haptics | `app/services/tutorialMagicBrush.js`; `app/services/spatialPaintV2.js`; `app/services/demoFeedback.js:21`, `:34` | Stroke operations, controller tools, capability-dependent haptics and continuous-feedback watchdog. |
 | Creator spatial XR | `app/screens/arMode.js:6315`, `:6434` | Another native WebGL1 session/loop, shared session helper and panel modules. |
 | Other Three renderer routes | `app/screens/spatialPaintStudio.js:40`; `app/screens/livingPaintingTest.js:60`, `:147` | Three WebGLRenderer/XR lifecycle rather than the main demo's native path. |
-| Physical placement | `app/services/physicalAnchor.js`; `app/services/physicalAnchorScanner.js:13`; `app/services/spatialDeviceAdapters.js:7` | Marker/adapter abstractions. No active persistent WebXR anchor creation/restoration found. |
+| Physical placement | `app/services/physicalAnchor.js`; `app/screens/physicalAnchorScanner.js:13`; `app/services/spatialDeviceAdapters.js:7` | Marker/adapter abstractions. No active persistent WebXR anchor creation/restoration found. |
 
 ```mermaid
 flowchart TD
