@@ -7,7 +7,8 @@ import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} fro
 import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
 import {createZinniaFramePerch,ZINNIA_FRAME_PERCH} from '../app/services/zinniaFramePerch.js';
 
-test('demo character resets a previous lesson clock and uploads facial morphs through the XR renderer',async()=>{
+test('demo character resets a previous lesson clock and uploads facial morphs through the XR renderer',async(t)=>{
+    let frameTime=0;t.mock.method(performance,'now',()=>frameTime);
     const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
     const character=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await character.userData.zinnia.ready;
     character.userData.zinnia.time=10000;character.userData.zinnia.paused=true;character.userData.zinnia.guide.holder.visible=false;
@@ -19,7 +20,7 @@ test('demo character resets a previous lesson clock and uploads facial morphs th
         perch.attach(gl);perch.show(0,{immediate:true});
         const identity=new THREE.Matrix4().elements,pose=new THREE.Matrix4().makeTranslation(0,1.4,-2).elements,viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
         const view={projectionMatrix:identity,transform:{matrix:viewer,inverse:{matrix:new THREE.Matrix4().fromArray(viewer).invert().elements}}};
-        for(let t=0;t<1000;t+=30){perch.draw(view,pose,t,[],viewer);perch.draw(view,pose,t,[],viewer);}
+        for(frameTime=0;frameTime<1000;frameTime+=30){perch.draw(view,pose,frameTime,[],viewer);perch.draw(view,pose,frameTime,[],viewer);}
         assert.ok(character.userData.zinnia.guide.snapshot().mouthOpen>.5);
         assert.ok(character.userData.zinnia.guide.snapshot().visibleAge>.8);
         assert.ok(calls.some(call=>call[0]==='bufferSubData'),'animated face reaches GPU buffers');
