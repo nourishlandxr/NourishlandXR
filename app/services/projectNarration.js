@@ -28,5 +28,5 @@ export function createProjectNarration({onChange=()=>{},demo=false,isVisible=()=
  const visibility=()=>{if(!isVisible()){visibilityPaused=voice.status().playing;voice.pause();}else if(visibilityPaused){visibilityPaused=false;resume();}};
  const unlock=()=>voice.unlock();
  document.addEventListener('visibilitychange',visibility);document.addEventListener('pointerdown',unlock,{capture:true});document.addEventListener('keydown',unlock,{capture:true});
- return {speak,stop,unlock,pause:voice.pause,resume,status:voice.status,speechLevel:voice.speechLevel,preload:voice.preload,replay:()=>speak(lastText),destroy(){disposed=true;stop();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('pointerdown',unlock,true);document.removeEventListener('keydown',unlock,true);voice.destroy();}};
+ return {get context(){return voice.context;},setSpatialOutput:voice.setSpatialOutput,speak,stop,unlock,pause:voice.pause,resume,status:voice.status,speechLevel:voice.speechLevel,preload:voice.preload,replay:()=>speak(lastText),destroy(){disposed=true;stop();document.removeEventListener('visibilitychange',visibility);document.removeEventListener('pointerdown',unlock,true);document.removeEventListener('keydown',unlock,true);voice.destroy();}};
 }

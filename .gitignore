@@ -4,6 +4,7 @@ dist/
 .env
 .env.*
 *.log
+app/vendor/iwsdk-input/
 
 # Hosted project data is maintained outside this application repository.
 workspace/*

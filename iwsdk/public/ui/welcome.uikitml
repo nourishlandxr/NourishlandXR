@@ -1,0 +1,281 @@
+<style>
+  .panel-root {
+    flex-direction: column;
+    width: 480px;
+  }
+
+  .panel-content {
+    align-items: center;
+    flex-direction: column;
+    padding-top: 16px;
+    padding-left: 22px;
+    padding-right: 22px;
+  }
+
+  .heading {
+    height: 42px;
+    text-align: center;
+    font-size: 23px;
+    font-weight: 700;
+    line-height: 24px;
+    color: #272727;
+  }
+
+  .sub-heading {
+    color: #343434;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .cell-preview {
+    color: #343434;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .cell-body {
+    color: #343434;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .cell-evidence {
+    color: #343434;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .cell-source {
+    color: #343434;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .cell-notes {
+    color: #542f18;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .place-note {
+    color: #343434;
+    width: 100%;
+    margin-top: 8px;
+  }
+
+  .sub-heading {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .cell-body {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .place-note {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+
+  .section-heading {
+    width: 100%;
+    margin-top: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #272727;
+  }
+
+  .root-grid {
+    flex-direction: column;
+    width: 100%;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .root-row {
+    flex-direction: row;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .root-button {
+    width: 128px;
+    height: 112px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background-color: #eff4e8;
+    border-color: #88a77e;
+    border-width: 2px;
+    border-radius: 18px;
+  }
+
+  .root-glyph {
+    font-size: 22px;
+    font-weight: 700;
+    color: #326343;
+  }
+
+  .root-label {
+    width: 104px;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: #24382c;
+  }
+
+  .root-cell-uses {
+    background-color: #f6eee0;
+    border-color: #bb8e54;
+  }
+
+  .root-cell-propagation {
+    background-color: #e8f0f4;
+    border-color: #7198a7;
+  }
+
+  .root-cell-science {
+    background-color: #e9edf5;
+    border-color: #7183a9;
+  }
+
+  .root-cell-history {
+    background-color: #f2eae4;
+    border-color: #a37d65;
+  }
+
+  .root-cell-cultivation {
+    background-color: #eef0df;
+    border-color: #929b5c;
+  }
+
+  .action-button {
+    width: 100%;
+    height: 42px;
+  }
+
+  .detail {
+    flex-direction: column;
+    width: 100%;
+    margin-top: 10px;
+  }
+
+  .cell-title {
+    width: 100%;
+    font-size: 20px;
+    font-weight: 700;
+    color: #1d382b;
+  }
+
+  .cell-preview {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .cell-evidence {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .cell-source {
+    font-size: 11px;
+    line-height: 1.25;
+  }
+
+  .cell-notes {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .navigation {
+    flex-direction: row;
+    width: 100%;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .action-button {
+    width: 50%;
+  }
+
+  .place-note {
+    font-size: 11px;
+    line-height: 1.25;
+    margin-top: 8px;
+    margin-left: 22px;
+    margin-right: 22px;
+    margin-bottom: 14px;
+  }
+
+  .button-label {
+    transform-translate-y: 1px;
+  }
+</style>
+<Panel class="panel-root">
+  <div class="panel-content">
+    <div class="heading">Pigeon Pea / PIMO</div>
+    <Divider></Divider>
+    <div class="sub-heading">
+      Explore the six knowledge roots. Open a root, then move through its related cells.
+    </div>
+    <Button id="xr-button" class="root-button" style="margin-top: 10px">
+      <ButtonIcon><RectangleGoggles></RectangleGoggles></ButtonIcon>
+      <ButtonLabel class="button-label">Enter XR and grab the pod</ButtonLabel>
+    </Button>
+    <Button id="exit-button" class="root-button" style="display: none; margin-top: 10px">
+      <ButtonIcon><LogIn></LogIn></ButtonIcon>
+      <ButtonLabel class="button-label">Exit to Browser</ButtonLabel>
+    </Button>
+    <div class="section-heading">PIMO roots</div>
+    <div id="root-grid" class="root-grid">
+      <div class="root-row">
+        <Button id="root-food-forest" class="root-button">
+          <ButtonIcon><span class="root-glyph">01</span></ButtonIcon>
+          <ButtonLabel class="root-label">Food Forest</ButtonLabel>
+        </Button>
+        <Button id="root-uses" class="root-button root-cell-uses">
+          <ButtonIcon><span class="root-glyph">02</span></ButtonIcon>
+          <ButtonLabel class="root-label">Uses</ButtonLabel>
+        </Button>
+        <Button id="root-propagation" class="root-button root-cell-propagation">
+          <ButtonIcon><span class="root-glyph">03</span></ButtonIcon>
+          <ButtonLabel class="root-label">Propagation</ButtonLabel>
+        </Button>
+      </div>
+      <div class="root-row">
+        <Button id="root-scientific-information" class="root-button root-cell-science">
+          <ButtonIcon><span class="root-glyph">04</span></ButtonIcon>
+          <ButtonLabel class="root-label">Scientific Information</ButtonLabel>
+        </Button>
+        <Button id="root-historical-data" class="root-button root-cell-history">
+          <ButtonIcon><span class="root-glyph">05</span></ButtonIcon>
+          <ButtonLabel class="root-label">Historical Data</ButtonLabel>
+        </Button>
+        <Button id="root-cultivation" class="root-button root-cell-cultivation">
+          <ButtonIcon><span class="root-glyph">06</span></ButtonIcon>
+          <ButtonLabel class="root-label">Cultivation</ButtonLabel>
+        </Button>
+      </div>
+    </div>
+    <div id="cell-detail" class="detail" style="display: none">
+      <div id="cell-title" class="cell-title"></div>
+      <div id="cell-preview" class="cell-preview"></div>
+      <div id="cell-body" class="cell-body"></div>
+      <div id="cell-evidence" class="cell-evidence"></div>
+      <div id="cell-source" class="cell-source"></div>
+      <div id="cell-notes" class="cell-notes" style="display: none"></div>
+      <div class="navigation">
+        <Button id="cell-back" class="action-button"><ButtonLabel>Back one level</ButtonLabel></Button>
+        <Button id="cell-child" class="action-button"><ButtonLabel id="cell-child-label">Open related cell</ButtonLabel></Button>
+      </div>
+      <Button id="cell-next" class="root-button" style="display: none; margin-top: 8px">
+        <ButtonLabel>Next related cell</ButtonLabel>
+      </Button>
+    </div>
+  </div>
+  <div class="place-note">
+    Reference knowledge is a starting point. Check the plant, season and conditions in this real place.
+  </div>
+</Panel>

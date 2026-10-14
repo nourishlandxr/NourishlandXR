@@ -10,6 +10,7 @@ on:
       - "deploy/**"
       - "tests/**"
       - "tools/**"
+      - "iwsdk/**"
       - "package.json"
       - "package-lock.json"
       - ".github/workflows/deploy-xr-production.yml"
@@ -42,7 +43,9 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          npm ci
+          npm --prefix iwsdk ci
 
       - name: Run test suite
         run: npm test

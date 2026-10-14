@@ -1,5 +1,14 @@
 import * as THREE from '../vendor/three.module.min.js';
 
+export function handJointPointer(joints){
+    const tipMatrix=joints?.get('index-finger-tip')?.matrix,knuckleMatrix=joints?.get('index-finger-phalanx-proximal')?.matrix;
+    if(!tipMatrix || !knuckleMatrix)return null;
+    const tip=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(tipMatrix));
+    const knuckle=new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(knuckleMatrix));
+    const direction=tip.clone().sub(knuckle);if(direction.lengthSq()<1e-10)return null;
+    return {origin:{x:tip.x,y:tip.y,z:tip.z},direction:direction.normalize()};
+}
+
 export function controllerHandParents(names){
     const chains=[['wrist','thumb-metacarpal','thumb-phalanx-proximal','thumb-phalanx-distal','thumb-tip'],
         ...['index','middle','ring','pinky'].map(finger=>['wrist',finger+'-finger-metacarpal',finger+'-finger-phalanx-proximal',finger+'-finger-phalanx-intermediate',finger+'-finger-phalanx-distal',finger+'-finger-tip'])];

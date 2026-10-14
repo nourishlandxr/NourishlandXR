@@ -5,21 +5,25 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createWelcomePracticeScene} from './welcomePracticeScene.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
 import {trackedPalmPoint,directPanelPress} from './xrDirectInteraction.js';
-import {controllerRayFromPose} from './xrPointer.js';
+import {xrInputRay,handTrackingState} from './xrPointer.js';
+import {xrInputRuntime,updateXRInputRuntime} from './xrInputRuntime.js';
 import {createWelcomeInputRouting} from './welcomeInputRouting.js';
 import {nearestWelcomePointerHit} from './welcomePointerTarget.js';
 
 export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onToolMenu=()=>{},onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null,getFramePose=()=>null}={}){
     let handOutline=null;const frameSamples=[];let updateCpuMs=0,rendererRebuilds=0,retainedRevisions=0;let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false,nativeHandsReady=false,rendererRevision=-1,pendingRevision=-1;
     const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
-    const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onToolMenu,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose});
+    let fruitOwner=null,physicsOwner=null,audioOwner=null;
+    const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onToolMenu,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose,getFruitInteractionOwner:()=>fruitOwner,getPhysicsOwner:()=>physicsOwner,getAudioOwner:()=>audioOwner});
     const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:ray=>{
         const hit=nearestWelcomePointerHit(ray,onHit?.(ray),stage.hit(ray));return hit?.kind==='panel'?hit:null;
     }});
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}},handMatrices=new WeakMap(),wristMatrix=new THREE.Matrix4(),wristRotation=new THREE.Quaternion(),unitScale=new THREE.Vector3(1,1,1),overlayPoint=new THREE.Vector3(),visibleControllers=[],curlJointNames=['middle-finger-tip','ring-finger-tip','pinky-finger-tip'];
-    function eventRay(event){if(stage.controllerHandsVisible){const ray=inputs.find(i=>i.source===event.inputSource)?.ray;if(ray)return ray;}try{return controllerRayFromPose(event.frame.getPose(event.inputSource.targetRaySpace,space),event.inputSource.handedness);}catch{return inputs.find(i=>i.source===event.inputSource)?.ray || null;}}
-    function unbind(){abort?.abort();abort=null;stage.releaseAll(false);forceGrip.clear();forceTrigger.clear();curling.clear();comfortPinches.clear();session=null;}
-    function bind(value,referenceSpace){unbind();void stage.preloadControllers([...value.inputSources].filter(source=>!source.hand));session=value;space=referenceSpace;voice?.unlock();abort=new AbortController();
+    function eventRay(event){if(stage.controllerHandsVisible && !xrInputRuntime(session)){const ray=inputs.find(i=>i.source===event.inputSource)?.ray;if(ray)return ray;}try{return xrInputRay(event.frame,event.inputSource,space);}catch{return null;}}
+    function unbind(){abort?.abort();abort=null;stage.releaseAll(false);fruitOwner?.dispose();fruitOwner=null;physicsOwner?.dispose();physicsOwner=null;audioOwner?.dispose();audioOwner=null;forceGrip.clear();forceTrigger.clear();curling.clear();comfortPinches.clear();session=null;}
+    function bind(value,referenceSpace){unbind();void stage.preloadControllers([...value.inputSources].filter(source=>!source.hand));session=value;space=referenceSpace;fruitOwner=xrInputRuntime(value)?.createTutorialInteractions?.() || null;physicsOwner=xrInputRuntime(value)?.createTutorialPhysics?.() || null;voice?.unlock();abort=new AbortController();
+        const binding=abort;
+        void xrInputRuntime(value)?.createTutorialAudio?.(voice).then(owner=>{if(session!==value || binding.signal.aborted || disposed){owner?.dispose();return;}audioOwner=owner;}).catch(error=>console.warn('IWSDK tutorial audio:',error.message));
         for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,event=>{
             if(!stage.active){if(performance.now()<(suppressed.get(event.inputSource) || 0)){event.stopImmediatePropagation();event.preventDefault?.();}return;}
             const source=event.inputSource;if(type==='selectstart'){unlockZinniaTouchAudio();voice?.unlock();}
@@ -34,16 +38,18 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
             else if(type==='squeezestart')forceGrip.set(event.inputSource,true);
             else if(type==='squeezeend'){forceGrip.set(event.inputSource,false);stage.releaseLeaf(source);}
         },{capture:true,signal:abort.signal});
-        session.addEventListener('visibilitychange',()=>{if(session.visibilityState!=='visible'){stage.releaseAll(false);visibilityPaused=!voice?.status().paused;voice?.pause();lastTime=null;forceGrip.clear();forceTrigger.clear();}else {voice?.unlock();if(visibilityPaused)voice?.resume();visibilityPaused=false;}},{signal:abort.signal});
+        session.addEventListener('visibilitychange',()=>{if(session.visibilityState!=='visible'){stage.releaseAll(false);audioOwner?.suspend();visibilityPaused=!voice?.status().paused;voice?.pause();lastTime=null;forceGrip.clear();forceTrigger.clear();}else {voice?.unlock();if(visibilityPaused)voice?.resume();visibilityPaused=false;}},{signal:abort.signal});
         session.addEventListener('inputsourceschange',event=>{if(event.removed?.length)stage.releaseAll(false);for(const source of event.removed || []){forceGrip.delete(source);forceTrigger.delete(source);curling.delete(source);comfortPinches.delete(source);}},{signal:abort.signal});
+        session.addEventListener('end',()=>{stage.releaseAll(false);fruitOwner?.dispose();fruitOwner=null;physicsOwner?.dispose();physicsOwner=null;audioOwner?.dispose();audioOwner=null;abort?.abort();},{signal:abort.signal});
         referenceSpace.addEventListener?.('reset',event=>{if(event.transform?.inverse?.matrix)stage.rebase(event.transform.inverse.matrix);else {stage.releaseAll(false);onChange?.({...stage.snapshot(),trackingReset:true});}},{signal:abort.signal});
     }
     function update(frame,time,viewer,floor,trackedHands){
         if(disposed || !stage.active)return;const cpuStarted=performance.now();const dt=lastTime===null?0:(time-lastTime)/1000;lastTime=time;hands=trackedHands || [];inputs.length=0;controllers.length=0;
+        updateXRInputRuntime(frame,space,time,time);
         for(const source of session?.inputSources || []){
             const uiBlocked=panelRouting.occupied(source);
-            let pose=null,ray=null;try{pose=frame.getPose(source.gripSpace || source.targetRaySpace,space);ray=controllerRayFromPose(frame.getPose(source.targetRaySpace,space),source.handedness);}catch{}
-            if(source.hand){const state=hands.find(h=>h.source===source)?.state,wrist=state?.rawJoints.get('wrist'),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');
+            let pose=null,ray=null;try{pose=frame.getPose(source.gripSpace || source.targetRaySpace,space);ray=xrInputRay(frame,source,space);}catch{}
+            if(source.hand){const state=hands.find(h=>h.source===source)?.state || handTrackingState(frame,source,space),wrist=state?.rawJoints.get('wrist'),index=state?.rawJoints.get('index-finger-tip'),thumb=state?.rawJoints.get('thumb-tip');
                 if(!state?.tracked || !wrist || !index || !thumb){comfortPinches.delete(source);inputs.push({source,matrix:null});continue;}
                 if(!stage.handsEnabled && state.pinch && !comfortPinches.get(source))stage.select(state.pointer,source);comfortPinches.set(source,Boolean(state.pinch));
                 wristMatrix.fromArray(wrist.matrix);wristRotation.setFromRotationMatrix(wristMatrix);
@@ -52,7 +58,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 const gripPoint=trackedPalmPoint(state.rawJoints);if(!gripPoint){inputs.push({source,matrix:null});continue;}
                 let handMatrix=handMatrices.get(source);if(!handMatrix){handMatrix=new THREE.Matrix4();handMatrices.set(source,handMatrix);}handMatrix.compose(gripPoint,wristRotation,unitScale);
                 inputs.push({source,matrix:handMatrix.elements,ray:state.pointer,tip:index,fist,down:Boolean(state.pinch || fist),trigger:Boolean(state.pinch),uiBlocked});
-            }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0),uiBlocked};inputs.push(input);if(input.matrix){if(stage.controllerHandsVisible)input.ray=handOutline?.controllerPointer?.(input) || input.ray;controllers.push(input);}}
+            }else {const runtime=xrInputRuntime(session),sdk=runtime?.controllerState(source),down=Boolean(forceGrip.get(source) || (runtime?sdk?.down:source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55)),trigger=Boolean(forceTrigger.get(source) || (runtime?sdk?.trigger:source.gamepad?.buttons?.[0]?.pressed)),input={source,matrix:runtime?sdk?.matrix || null:pose?.transform.matrix || null,handPose:sdk?.handPose,backend:runtime?.backend,ray,down,trigger,grip:Math.max(down?1:0,runtime?sdk?.grip || 0:source.gamepad?.buttons?.[1]?.value || 0),uiBlocked};inputs.push(input);if(input.matrix){if(stage.controllerHandsVisible && !runtime)input.ray=handOutline?.controllerPointer?.(input) || input.ray;controllers.push(input);}}
         }
         stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError(),handsReady:nativeHandsReady,presentationReady:Boolean(renderer && !pendingRenderer && !rebuild),renderRevision:rendererRevision});revealTime+=Math.max(0,Math.min(.1,dt));
         if(rebuild && renderer && !pendingRenderer && renderer.coversScene()){retainedRevisions++;rebuild=false;rendererRevision=stage.sceneRevision;}
@@ -65,7 +71,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
         updateCpuMs=performance.now()-cpuStarted;if(dt>0){frameSamples.push(dt*1000);if(frameSamples.length>120)frameSamples.shift();}
         for(const input of inputs)if(pointerEnabled && !input.source.hand && input.ray && !stage.exiting){const leafPoint=input.down?stage.heldLeafPoint(input.source.handedness):null;input.pointerHit=leafPoint?{kind:'zinnia-leaf',worldPoint:leafPoint}:nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray));}
     }
-    return {stage,bind,update,get performance(){const sorted=[...frameSamples].sort((a,b)=>a-b);return {updateCpuMs,rendererRebuilds,retainedRevisions,frameP95Ms:sorted[Math.floor(sorted.length*.95)] || 0,samples:sorted.length,renderer:renderer?.stats};},get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
+    return {stage,bind,update,get performance(){const sorted=[...frameSamples].sort((a,b)=>a-b);return {inputBackend:xrInputRuntime(session)?.backend || 'webxr',updateCpuMs,rendererRebuilds,retainedRevisions,frameP95Ms:sorted[Math.floor(sorted.length*.95)] || 0,samples:sorted.length,renderer:renderer?.stats};},get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
         draw(view,handRenderer){handOutline=handRenderer;if(!stage.active)return;nativeHandsReady=Boolean(handRenderer?.ready);const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);stage.trials.drawPeek(gl,view);
             const reveal=stage.controllerHandReveal;visibleControllers.length=0;if(stage.controllerHandsVisible)for(const input of controllers)if((reveal[input.source.handedness] || 0)>0)visibleControllers.push(input);
             handRenderer?.draw(view,hands,{filled:true,controllers:visibleControllers,controllerOpacity:stage.controllerHandOpacity*opacity,trackedOpacity:stage.trackedHandOpacity*opacity,controllerReveal:reveal});

@@ -49,12 +49,15 @@ export const XR_HAND_JOINT_CONNECTIONS = Object.freeze([
 ]);
 
 import * as THREE from '../vendor/three.module.min.js';
+import { updateXRInputRuntime } from './xrInputRuntime.js';
 
 const handSamples = new WeakMap();
 const handFrameTokens=new WeakMap();
 let handFrameSequence=0;
-export function beginHandTrackingFrame(frame,time=performance.now()){
-    handFrameTokens.set(frame,{sequence:++handFrameSequence,time});
+export function beginHandTrackingFrame(frame,time=performance.now(),referenceSpace){
+    const sequence=++handFrameSequence;
+    handFrameTokens.set(frame,{sequence,time});
+    if(referenceSpace)updateXRInputRuntime(frame,referenceSpace,time,sequence);
 }
 const handJointNames = [...new Set(XR_HAND_JOINT_CONNECTIONS.flat())];
 // One sample per XR frame, shared by visuals, pokes and pinch routing. Missing
@@ -62,6 +65,9 @@ const handJointNames = [...new Set(XR_HAND_JOINT_CONNECTIONS.flat())];
 export function handTrackingState(frame, source, referenceSpace) {
     const hand = source?.hand;
     if (!hand || !frame || !referenceSpace) return null;
+    const sdkToken=handFrameTokens.get(frame);
+    const runtime=updateXRInputRuntime(frame,referenceSpace,sdkToken?.time ?? performance.now(),sdkToken?.sequence);
+    if(runtime)return runtime.handState(source,XR_HAND_JOINT_CONNECTIONS);
     const lastSample=handSamples.get(source);let previous = lastSample;
     const token=handFrameTokens.get(frame),time=token?.time ?? (globalThis.performance?.now?.() || Date.now());
     // Some XR runtimes reuse the XRFrame wrapper. Object identity alone must
@@ -153,4 +159,15 @@ export function controllerRayFromPose(pose, handedness = 'right') {
         direction: { x: x / length, y: y / length, z: z / length },
         handedness
     };
+}
+
+// IWSDK's persistent primary ray space is the canonical pose for both hands
+// and controllers. Event handlers sample the event frame, never a previous ray.
+export function xrInputRay(frame, source, referenceSpace) {
+    if (!frame || !source || !referenceSpace) return null;
+    const token=handFrameTokens.get(frame);
+    const runtime=updateXRInputRuntime(frame,referenceSpace,token?.time ?? performance.now(),token?.sequence);
+    if(runtime)return runtime.ray(source);
+    const space=source.targetRaySpace || source.gripSpace;
+    return space?controllerRayFromPose(frame.getPose(space,referenceSpace),source.handedness || 'right'):null;
 }

@@ -1,3 +1,5 @@
+import { attachXRInputRuntime, prepareXRInputRuntime } from './xrInputRuntime.js';
+
 export const WEBXR_SESSION_MODES = Object.freeze(['immersive-ar', 'immersive-vr']);
 export const PREFERRED_XR_FRAME_RATE = 90;
 
@@ -116,6 +118,12 @@ export async function requestImmersiveArSession(domOverlayRoot, { requireDomOver
     if (!window.isSecureContext) throw new Error('WebXR requires a secure HTTPS connection.');
     if (requireDomOverlay && !domOverlayRoot) throw new Error('Creator AR requires a DOM overlay root.');
 
+    const requestedInput = new URLSearchParams(globalThis.location?.search || '').get('xrInput');
+    const useSDK = requestedInput === 'iwsdk' || (requestedInput !== 'legacy' && isQuestHeadsetBrowser());
+    // Resolve the lazy SDK bundle before granting a session. Failed loads must
+    // not strand a compositor or silently run the former hand implementation.
+    const inputFactory = useSDK ? await prepareXRInputRuntime() : null;
+
     const support = await detectWebXRSessionSupport();
     const modes = WEBXR_SESSION_MODES.filter(mode => support[mode]);
     if (!modes.length) {
@@ -132,6 +140,10 @@ export async function requestImmersiveArSession(domOverlayRoot, { requireDomOver
                     await session.end().catch(() => {});
                     throw new Error('This WebXR session did not enable the Creator AR control overlay.');
                 }
+                if (inputFactory) {
+                    try { await attachXRInputRuntime(session, { factory: inputFactory }); }
+                    catch (error) { await session.end().catch(() => {}); throw error; }
+                }
                 // Refresh negotiation must not delay creation of the XR layer
                 // or the first session frame. Some runtimes settle this request
                 // only after their compositor has started rendering.
@@ -142,6 +154,7 @@ export async function requestImmersiveArSession(domOverlayRoot, { requireDomOver
                 const blendMode = session.environmentBlendMode || '';
                 return {
                     session,
+                    inputBackend: useSDK ? 'iwsdk' : 'webxr',
                     mode,
                     frameRate,
                     blendMode,

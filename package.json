@@ -7,6 +7,7 @@
     "start": "node tools/persistence-server.mjs",
     "build": "node tools/build-hosted.mjs",
     "build:frontend": "node tools/build-hosted.mjs --frontend-only",
+    "build:iwsdk-preview": "npm --prefix iwsdk run build && node tools/build-hosted.mjs --frontend-only --with-iwsdk",
     "test": "node --test tests/*.test.mjs"
   },
   "devDependencies": {

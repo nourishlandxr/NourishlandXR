@@ -1,5 +1,69 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';import {welcomePracticeVisualGuide} from '../app/services/welcomeComfortOptions.js';
 function withoutTextures(bytes){const length=bytes.readUInt32LE(12),json=JSON.parse(bytes.subarray(20,20+length).toString().trim());delete json.images;delete json.textures;for(const m of json.materials||[]){delete m.extensions;delete m.normalTexture;delete m.occlusionTexture;delete m.emissiveTexture;if(m.pbrMetallicRoughness){delete m.pbrMetallicRoughness.baseColorTexture;delete m.pbrMetallicRoughness.metallicRoughnessTexture;}}const text=Buffer.from(JSON.stringify(json)),padded=Buffer.alloc(Math.ceil(text.length/4)*4,32);text.copy(padded);const tail=bytes.subarray(20+length),header=Buffer.alloc(20);header.writeUInt32LE(0x46546c67);header.writeUInt32LE(2,4);header.writeUInt32LE(20+padded.length+tail.length,8);header.writeUInt32LE(padded.length,12);header.writeUInt32LE(0x4e4f534a,16);return Buffer.concat([header,padded,tail]);}
+import * as GrabSDK from '../iwsdk/grabSdk.js';
+import {createTutorialInteractionOwner} from '../app/services/iwsdkTutorialInteraction.js';
+
+test('existing tutorial fruit uses SDK capture through basket, two-hand ownership, plate, UI blocking and tracking loss',async()=>{
+ const saved=Object.fromEntries(['document','fetch','Image','ProgressEvent'].map(key=>[key,globalThis[key]]));let stage,owner;
+ const warnings=console.warn;console.warn=()=>{};
+ globalThis.document={createElement:()=>({getContext:()=>new Proxy({measureText:text=>({width:String(text).length*12}),createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(target,key)=>target[key]||(()=>{})})})};
+ globalThis.Image=class{set src(value){this.onerror?.();}};globalThis.ProgressEvent=class{constructor(type,props){Object.assign(this,props);}};
+ globalThis.fetch=async request=>new Response(withoutTextures(fs.readFileSync(new URL(request.url||request))),{status:200,headers:{'Content-Length':'1'}});
+ const runtime={backend:'iwsdk',input:{gazePointer:{pointer:{id:-1},getHeldByHand:()=>null}}};
+ try{
+  owner=createTutorialInteractionOwner(runtime,GrabSDK);
+  const feedback=[];
+  stage=createWelcomePracticeScene({embedded:true,getFruitInteractionOwner:()=>owner,
+   voice:{status:()=>({playing:false,paused:false,muted:true}),speak(){},stop(){},unlock(){}},
+   loadZinnia:async()=>({scene:new THREE.Group()}),onFeedback:kind=>feedback.push(kind)});
+  await stage.loading;await stage.loadPracticeAssets();
+  const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
+  const right={handedness:'right'},left={handedness:'left'};
+  stage.start(viewer,0);stage.previewLesson('fruit');
+  const tick=(...inputs)=>stage.update(.02,{viewer,floor:0,inputs});tick();tick();
+  const body=stage.bodies.find(value=>value.id==='peach');assert.ok(body.visible && body.basketed);
+  const pose=position=>new THREE.Matrix4().makeTranslation(position.x,position.y,position.z).premultiply(stage.root.matrixWorld).elements;
+  const input=(source,position,down=false,extra={})=>({source,matrix:pose(position),down,trigger:false,...extra});
+  tick(input(right,body.position));tick(input(right,body.position,true));
+  assert.equal(owner.held(right)?.id,body.id);assert.ok(stage.snapshot().held.includes(body.id));assert.equal(body.basketed,false);
+  tick(input(right,{...body.position,y:.65},true));
+  const heldPosition={...body.position};tick(input(right,heldPosition,true),input(left,heldPosition,true));
+  assert.equal(owner.held(right)?.id,body.id,'second hand cannot steal the SDK handle');
+  assert.notEqual(owner.held(left)?.id,body.id);assert.ok(stage.isHolding(right));
+  tick(input(right,{x:-.52,y:.65,z:-.12},true));tick(input(right,{x:-.52,y:.18,z:-.12},true));
+  tick(input(right,{x:-.52,y:.18,z:-.12}));
+  assert.equal(owner.held(right),null);assert.equal(body.held,false);assert.ok(stage.snapshot().basket.plated.includes(body.id));assert.ok(body.anchored);
+  assert.equal(feedback.filter(value=>value==='grab').length,1,'one feedback event per capture');
+  // A hand source uses the same SDK handle, then tracking loss drops safely.
+  stage.resetObjects();stage.setInputMode('hands');tick();tick();
+  const hand={handedness:'right',hand:{}};
+  tick(input(hand,body.position));tick(input(hand,body.position,true));assert.equal(owner.held(hand)?.id,body.id);
+  tick(input(hand,{...body.position,y:.65},true));tick({source:hand,matrix:null,down:true});
+  assert.equal(owner.held(hand),null);assert.equal(body.held,false);
+  tick(input(hand,body.position,true));assert.equal(owner.held(hand),null,'still-held gesture after loss cannot recapture');
+  tick(input(hand,body.position));tick(input(hand,body.position,true));assert.equal(owner.held(hand)?.id,body.id);
+  tick(input(hand,body.position,true,{uiBlocked:true}));assert.equal(owner.held(hand),null);assert.equal(body.held,false);
+  tick(input(hand,body.position,true));assert.equal(owner.held(hand),null,'panel release cannot leak a held gesture into fruit');
+  tick(input(hand,body.position));tick(input(hand,body.position,true));assert.equal(owner.held(hand)?.id,body.id);
+  stage.releaseAll(false);assert.deepEqual(owner.snapshot().held,[]);assert.equal(body.held,false);
+  tick(input(hand,body.position,true));assert.equal(owner.held(hand),null,'cancel requires a fresh open/close');
+  stage.releaseAll(false);stage.setInputMode('controllers');
+  for(const [lesson,id] of [['packet','seed-packet'],['water','watering-can'],['harvest','strawberry-pot']]){
+   stage.previewLesson(lesson);tick();tick();
+   const tool=stage.bodies.find(value=>value.id===id);assert.ok(tool?.visible,`${id} is authored and visible`);
+   // Contact the pot's exposed lower side, not fruit attached above its rim.
+   const contact=id==='strawberry-pot'?{...tool.position,x:tool.position.x+.06,y:tool.position.y-.025}:tool.position;
+   tick(input(right,contact));tick(input(right,contact,true));
+   assert.equal(owner.held(right)?.id,id,`${id} uses actual SDK ownership`);
+   assert.ok(stage.snapshot().held.includes(id));
+   const destination={x:tool.position.x+.12,y:tool.position.y+.25,z:tool.position.z};
+   tick(input(right,destination,true));assert.ok(tool.position.y>.15,`${id} follows its SDK handle`);
+   tick(input(right,destination));assert.equal(owner.held(right),null);assert.equal(tool.held,false);
+   stage.releaseAll(false);
+  }
+  stage.destroy();stage=null;owner.dispose();owner.dispose();
+ }finally{stage?.destroy();owner?.dispose();await new Promise(resolve=>setTimeout(resolve,30));console.warn=warnings;for(const [key,value]of Object.entries(saved))globalThis[key]=value;}
+});
 test('real whole/cut meshes open once, plate independently, and reset through XR input',async()=>{
  const saved=Object.fromEntries(['document','fetch','Image','ProgressEvent'].map(k=>[k,globalThis[k]]));let stage;const warnings=console.warn;
  globalThis.document={createElement:()=>({getContext:()=>new Proxy({measureText:text=>({width:String(text).length*12}),createLinearGradient:()=>({addColorStop(){}})},{get:(target,key)=>target[key]||(()=>{})})})};globalThis.Image=class{set src(v){this.onerror?.();}};globalThis.ProgressEvent=class{constructor(type,props){Object.assign(this,props);}};

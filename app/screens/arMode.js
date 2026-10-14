@@ -56,7 +56,7 @@ import { isTrackedHeadsetInputSource, QUEST_SPATIAL_BELT_ACTIONS, QUEST_SPECIAL_
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { showArSafetyDialog } from '../services/arOnboarding.js';
-import { controllerRayEnd, controllerRayFromPose, handTrackingState, beginHandTrackingFrame, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, xrInputRay, handTrackingState, beginHandTrackingFrame, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createXRHandOutline } from '../services/xrHandOutline.js';
 import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction.js';
 import { createSpatialDashboardMirror, spatialDashboardPanelFromViewer, spatialDashboardPanelMatrix, spatialDashboardRayHit } from '../services/spatialDashboardMirror.js';
@@ -2457,7 +2457,7 @@ function controllerRecentlyUsed(source, pose, time) {
 }
 
 function updateControllerRay(frame, time = performance.now()) {
-    beginHandTrackingFrame(frame,time);
+    beginHandTrackingFrame(frame,time,refSpace);
     latestControllerRay = null;
     latestHandState = null;
     latestTrackedHandStates = [];
@@ -2477,7 +2477,7 @@ function updateControllerRay(frame, time = performance.now()) {
             const controllerSpaces = [source.targetRaySpace, source.gripSpace].filter(Boolean);
             const pose = controllerSpaces.map(space => frame.getPose(space, refSpace)).find(candidate => candidate?.transform?.matrix);
             if (!pose) continue;
-            const ray = controllerRayFromPose(pose, source.handedness || 'right');
+            const ray = xrInputRay(frame,source,refSpace);
             if (!ray) continue;
             if (!availableControllerRay) availableControllerRay = ray;
             if (controllerRecentlyUsed(source, pose, time)) {

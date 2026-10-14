@@ -1,0 +1,41 @@
+{
+  "name": "nourishlandxr-iwsdk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run build:input && npm run pimo:sync && iwsdk dev restart --open --foreground",
+    "dev:quest": "npm run build:input && npm run pimo:sync && iwsdk dev up --no-open",
+    "dev:runtime": "vite",
+    "dev:down": "iwsdk dev down",
+    "dev:status": "iwsdk dev status",
+    "reference:status": "iwsdk reference status",
+    "reference:warmup": "iwsdk reference warmup",
+    "build": "npm run pimo:sync && vite build",
+    "build:input": "vite build --config vite.input.config.js",
+    "pimo:sync": "node ../tools/sync-iwsdk-pimo.mjs",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@iwsdk/core": "1.0.1",
+    "@iwsdk/xr-input": "1.0.1",
+    "@pmndrs/uikit": "^1.0.74",
+    "@pmndrs/uikit-horizon": "^1.0.74",
+    "@pmndrs/uikit-lucide": "^1.0.74",
+    "three": "npm:super-three@0.181.0"
+  },
+  "devDependencies": {
+    "@iwsdk/cli": "1.0.1",
+    "@iwsdk/reference": "1.0.1",
+    "@iwsdk/vite-plugin-dev": "1.0.1",
+    "linkedom": "^0.18.13",
+    "vite": "^7.1.4"
+  },
+  "overrides": {
+    "sharp": "0.35.4",
+    "three": "npm:super-three@0.181.0"
+  },
+  "engines": {
+    "node": ">=20.19.0 <21.0.0-0 || >=22.12.0 <23.0.0-0 || >=24.0.0"
+  }
+}

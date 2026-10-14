@@ -123,6 +123,9 @@ import {zinniaVoiceState} from '../services/zinniaVoiceCoordinator.js';
 import {nearestWelcomePointerHit} from '../services/welcomePointerTarget.js';
 import {createProjectNarration} from '../services/projectNarration.js';
 let demoProjectVoice=null;
+import {xrInputRuntime} from '../services/xrInputRuntime.js';
+import {createDemoSDKSession} from '../services/iwsdkDemoSession.js';
+let demoSDK=null;
 import {welcomeTutorialEnabled,setWelcomeTutorialEnabled} from '../services/welcomeTutorialSettings.js';
 let welcomePractice=null,welcomePracticeVoice=null,welcomePracticeCompleted=false;
 let developerLab=null,developerLabReturn=false;
@@ -186,7 +189,7 @@ import { demoContentFor, demoPlantMedia, simulatedAreaLinkMarkup, simulatedPlant
 import { allowArScreenRotation, releaseArScreenRotation } from '../services/arScreenOrientation.js';
 import { renderArIntroductionPreparation, shouldSkipArIntroductionPreparation, showArSafetyDialog } from '../services/arOnboarding.js';
 import { recordArDiagnostic, recordArFailure } from '../services/arNote.js';
-import { controllerRayEnd, controllerRayFromPose, createControllerYSkipTracker, handTrackingState, beginHandTrackingFrame, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
+import { controllerRayEnd, controllerRayFromPose, xrInputRay, createControllerYSkipTracker, handTrackingState, beginHandTrackingFrame, XR_LASER_POINTER_CONFIG } from '../services/xrPointer.js';
 import { createXRHandOutline } from '../services/xrHandOutline.js';
 import { createHandSurfaceInteraction } from '../services/handSurfaceInteraction.js';
 import { hitTotemPoint } from '../services/spatialTotemCards.js';
@@ -595,6 +598,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    demoSDK?.dispose();demoSDK=null;
     demoZinniaNoteDraft=null;
     clearDemoZinniaDiscovery();
     demoParagraphSequence?.cancel();demoParagraphSequence=null;demoProjectVoice?.destroy();demoProjectVoice=null;
@@ -4432,7 +4436,39 @@ function demoRecordAtPointer() {
     return adjustable[0] || null;
 }
 
+function updateDemoSDK(frame,time){
+    const runtime=xrInputRuntime(frame.session);if(!runtime?.createDemoInteractions)return;
+    if(welcomePractice?.active){demoSDK?.reset();return;}
+    if(!demoSDK){
+        demoSDK=createDemoSDKSession(runtime,{voice:demoProjectVoice,
+            onGrab:(record,source)=>{demoHeldIndex=markers.indexOf(record);demoGrabInputSource=source;pulseDemoHaptics(source,true);},
+            onRelease:(_record,source)=>{if(source===demoGrabInputSource){releaseHeldDemoRecord();demoGrabInputSource=null;}}});
+        const owner=demoSDK;
+        frame.session.addEventListener('visibilitychange',()=>{if(frame.session.visibilityState!=='visible')owner.reset();});
+        frame.session.addEventListener('end',()=>{owner.dispose();if(demoSDK===owner)demoSDK=null;},{once:true});
+    }
+    const enabled=!welcomePractice?.active && !placementReady && !arWelcomeIntroPending && !demoKnowledgeIsModal() && !demoWebModeOpen && !livingPeekActive && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE;
+    const records=markers.filter(record=>record.id && record.position && record.demoInteractive!==false && demoAreaVisible(record) && !record.demoMapPiece && ['plant','zone','note'].includes(record.demoType)).map(record=>{
+        const radius=(DEMO_ORB_MATERIALS[record.demoOrbColor]?.radius || (record.demoType==='plant'?.068:.09))*(sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1);
+        return {record,halfSize:record.demoType==='zone'?{x:.095,y:demoTotemHalfHeight(record),z:.075}:record.demoType==='note'?{x:.2*DEMO_NOTE_IMMERSIVE_SCALE.x,y:.08*DEMO_NOTE_IMMERSIVE_SCALE.y,z:.012}:{x:radius,y:radius,z:radius}};
+    });
+    const inputs=[];
+    for(const source of frame.session.inputSources){
+        const ray=runtime.ray(source),blocked=source.hand && infoPanel?.isHandInteracting(source) || infoPanel?.getHeldInputSource()===source || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || knowledgeRenderer?.grabbedSource===source || livingPeekConsumedSources.has(source);
+        if(source.hand){const state=latestTrackedHandStates.find(entry=>entry.source===source)?.state,point=orbPinchPoint(state),wrist=state?.rawJoints.get('wrist');
+            if(!state?.tracked || !point || !wrist)continue;const matrix=Array.from(wrist.matrix);matrix[12]=point.x;matrix[13]=point.y;matrix[14]=point.z;
+            inputs.push({source,matrix,down:Boolean(state.pinch),uiBlocked:blocked});
+        }else {const state=runtime.controllerState(source);if(!state)continue;
+            const target=ray?infoPanel?.hit(ray):null,marker=ray?records.map(({record})=>demoRecordRayHit(record,ray)).filter(Boolean).sort((a,b)=>a.distance-b.distance)[0]:null;
+            inputs.push({source,...state,rayMatrix:runtime.input.xrOrigin.raySpaces[source.handedness]?.matrixWorld.elements,uiBlocked:blocked || Boolean(target && (!marker || target.distance<marker.distance))});
+        }
+    }
+    const zinnia=introWorldAnchor?introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition):null;
+    const status=demoProjectVoice?.status() || {};
+    demoSDK.update(frame,time,{records,inputs,enabled,viewer:viewerMatrix,zinnia,bee:getSpatialVisualSettings().insects?ambientBeeFlowerVisits.find(visitor=>visitor.flightPosition)?.flightPosition:null,muted:status.muted || demoFeedback?.volumes().fx===0,paused:status.paused});
+}
 function updateHeldDemoRecordPosition(frame=null) {
+    if(demoSDK?.owns(demoGrabInputSource))return;
     if (simulatedMode || demoHeldIndex < 0) return;
     const record = markers[demoHeldIndex];
     const ray = demoPointerWorldRay();
@@ -4528,6 +4564,7 @@ function beginPointerDemoHold(event) {
 }
 
 function beginControllerDemoHold(preferredTarget=null,frame=null) {
+    if(demoSDK && !preferredTarget?.record?.demoMapPiece)return false;
     if (placementReady || demoHeldIndex >= 0 || demoHoldTimer && !preferredTarget?.record?.demoMapPiece) return false;
     if(preferredTarget?.record?.demoMapPiece){clearTimeout(demoHoldTimer);demoHoldTimer=null;}
     const profile=demoInfoTarget();
@@ -4546,6 +4583,7 @@ function beginControllerDemoHold(preferredTarget=null,frame=null) {
 }
 
 function beginHandDemoGrab(inputSource=null) {
+    if(demoSDK)return false;
     if (placementReady || demoHeldIndex >= 0) return false;
     const state=latestTrackedHandStates.find(entry=>entry.source===inputSource)?.state,contact=orbPinchPoint(state);
     const nearby=contact?markers.map((record,index)=>({record,index,distance:record.position?Math.hypot(contact.x-record.position.x,contact.y-record.position.y,contact.z-record.position.z):Infinity})).filter(t=>t.record.demoType==='plant' && t.record.demoInteractive!==false && demoAreaVisible(t.record) && t.distance<.16).sort((a,b)=>a.distance-b.distance)[0]:null;
@@ -5137,7 +5175,7 @@ function demoControllerInputSource() {
 }
 
 function updateDemoControllerRay(frame,time=performance.now()) {
-    beginHandTrackingFrame(frame,time);
+    beginHandTrackingFrame(frame,time,referenceSpace);
     latestControllerRay = null;
     latestHandState = null;
     latestTrackedHandStates = [];
@@ -5153,7 +5191,7 @@ function updateDemoControllerRay(frame,time=performance.now()) {
     demoPointerRays=latestTrackedHandStates.filter(entry=>entry.state.pointer).map(entry=>({source:entry.source,ray:entry.state.pointer}));
     for(const source of sources.filter(source=>!source.hand && source.targetRayMode==='tracked-pointer')){
         const space=source.targetRaySpace || source.gripSpace;
-        const ray=space?controllerRayFromPose(frame.getPose(space,referenceSpace),source.handedness || 'right'):null;
+        const ray=space?xrInputRay(frame,source,referenceSpace):null;
         if(ray)demoPointerRays.push({source,ray});
     }
     const activeHand = latestTrackedHandStates.find(entry => entry.state.pinch && entry.state.pointer)
@@ -5171,7 +5209,7 @@ function updateDemoControllerRay(frame,time=performance.now()) {
     if (!source) return;
     const controllerSpace = source.targetRaySpace || source.gripSpace;
     const pose = controllerSpace ? frame.getPose(controllerSpace, referenceSpace) : null;
-    latestControllerRay = controllerRayFromPose(pose, source.handedness || 'right');
+    latestControllerRay = xrInputRay(frame,source,referenceSpace);
 }
 
 function demoControllerRayForInputEvent(event) {
@@ -5179,7 +5217,7 @@ function demoControllerRayForInputEvent(event) {
     if (!source || source.hand || !referenceSpace) return null;
     const sourceSpace = source.targetRaySpace || source.gripSpace;
     const pose = sourceSpace ? event.frame?.getPose?.(sourceSpace, referenceSpace) : null;
-    return controllerRayFromPose(pose, source.handedness || 'right');
+    return xrInputRay(event.frame,source,referenceSpace);
 }
 
 function captureDemoInputEventRay(event) {
@@ -6837,7 +6875,7 @@ async function startImmersive() {
                 lastViewerPoseAt = _time;zinniaVoiceBar?.update(viewerMatrix);
             });
             if(livingPeekActive && livingPeekPose){
-                beginHandTrackingFrame(frame,_time);
+                beginHandTrackingFrame(frame,_time,referenceSpace);
                 for(const source of session.inputSources){if(!source.hand)continue;const state=handTrackingState(frame,source,referenceSpace);const previous=livingPeekPinches.get(source);livingPeekPinches.set(source,Boolean(state?.pinch));if(state?.pinch && previous===false){livingPeekConsumedSources.set(source,'hand');closeLivingPeek();livingPeekSuppressUntil=performance.now()+600;break;}}
                 const layer=frame.session.renderState.baseLayer;
                 if(layer&&pose){gl.bindFramebuffer(gl.FRAMEBUFFER,layer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
@@ -6854,6 +6892,7 @@ async function startImmersive() {
                 groundYEstimate = demoGroundBaseY(hitMatrix, viewerMatrix, groundYEstimate);
             });
             runXrFrameStep('controller update',()=>updateDemoControllerRay(frame,_time));
+            runXrFrameStep('SDK demo ownership',()=>updateDemoSDK(frame,_time));
             if(welcomePractice?.active){
                 arWelcomeClock.tick(Date.now(),session.visibilityState!=='hidden');
                 runXrFrameStep('welcome practice input',()=>welcomePractice.update(frame,_time,viewerMatrix,calibratedDemoGroundY(),latestTrackedHandStates));

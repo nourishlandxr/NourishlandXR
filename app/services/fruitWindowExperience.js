@@ -8,6 +8,8 @@ import {createFruitWindowXR} from './fruitWindowXR.js';
 import {localizedCanvasContext,translateNxrText as t,translateApp} from './i18n.js';
 import {spatialStick} from './spatialStick.js';
 import {handTrackingState} from './xrPointer.js';
+import {xrInputRuntime} from './xrInputRuntime.js';
+import {createFruitWindowSDKPhysics} from './fruitWindowSDKPhysics.js';
 
 const assets=new URL('../assets/fruit-window/',import.meta.url);
 const vector=point=>new THREE.Vector3(point.x,point.y,point.z);
@@ -62,6 +64,9 @@ export function createFruitWindowExperience({root=document.body,identity={},show
     const arrowTip=new THREE.Mesh(new THREE.ConeGeometry(.009,.022,8),arrowMaterial);arrowTip.rotation.z=Math.PI;arrow.add(arrowTip);
     const arrowStem=new THREE.Mesh(new THREE.CylinderGeometry(.003,.003,.018,6),arrowMaterial);arrowStem.position.y=.018;arrow.add(arrowStem);content.add(arrow);arrow.visible=false;
     let asset=null,frame=null,xr=null,xrGl=null,session=null,space=null,shown=true,destroyed=false,loadVersion=0,placed=false,lastTime=0,raf=0,activeSpecies=null,hover=null,leaves=[],hoverOffsets=[],identityValue=identity,identityKey='',hoverAmount=0,hoverNodes=[];
+    let sdkPhysics=null;
+    const disposeSDKPhysics=()=>{sdkPhysics?.dispose();sdkPhysics=null;};
+    function updateSDKPhysics(time){sdkPhysics?.update(asset,fruitHold.holds,time);}
     const pointers=new Map(),selections=new Set(),handPinches=new Map(),castCache=new Map();let rayMeshes=[],hoverCastAt=-Infinity,pointerSnapshot=null,loading=false,lastControlState='',hoverSampleAt=-Infinity,modelDirty=true,arrowSampleAt=-Infinity,modelUpdates=0,boundsUpdates=0;
     let dockPose=null,magnetized=true,fadeStartedAt=null,fadeTimer=0;
     const fadeOpacity=time=>fadeStartedAt===null?1:Math.max(0,1-(time-fadeStartedAt)/550);
@@ -283,7 +288,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         },
         canAction(name){return Boolean(asset)&&(name!=='play'||Boolean(asset.clips.Development))&&(!['pick','open','close'].includes(name)||asset.canPick)&&(name!=='pick'||!asset.picked)&&(name!=='return'||asset.picked);},
         attach(gl){if(gl===xrGl)return;xrGl=gl;element.hidden=Boolean(gl)||!shown;if(gl&&raf){cancelAnimationFrame(raf);raf=0;}restoreXR();if(!gl&&shown&&!raf)raf=requestAnimationFrame(tick);},
-        bindSession(next,referenceSpace){grips.reset();fruitHold.reset();handPinches.clear();session=next;space=referenceSpace;placed=false;},
+        bindSession(next,referenceSpace){grips.reset();fruitHold.reset();handPinches.clear();disposeSDKPhysics();const physics=xrInputRuntime(next)?.createTutorialPhysics?.();if(physics)sdkPhysics=createFruitWindowSDKPhysics(physics,THREE,{content,visibleBounds:fruitWindowVisibleBounds,onChange:()=>{modelDirty=true;}});session=next;space=referenceSpace;placed=false;next.addEventListener('end',disposeSDKPhysics,{once:true});},
         updateSpatial(pose,time,inputRay,xrFrame,canUse=()=>true){
             if(!shown||!xrGl)return;
             castCache.clear();
@@ -310,7 +315,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
                 fruitHold.update(source,localSourcePose(transform));modelDirty=true;
             }updateRip();}
             if(time-hoverCastAt>=100){hoverCastAt=time;const ray=inputRay?.origin&&inputRay.direction?localRay(inputRay):null;hover=ray?cast(ray).map(hit=>({hit,kind:botanicalHit(hit)})).find(value=>value.kind)||null:null;}
-            advance(time);
+            updateSDKPhysics(time);advance(time);
         },
         handleEvent(event){
             if(!shown||fadeStartedAt!==null||!xrGl||!space)return false;const source=event.inputSource;
@@ -343,6 +348,7 @@ export function createFruitWindowExperience({root=document.body,identity={},show
         rebase(matrix){anchor.position.applyMatrix4(new THREE.Matrix4().fromArray(matrix));anchor.quaternion.premultiply(new THREE.Quaternion().setFromRotationMatrix(new THREE.Matrix4().fromArray(matrix)));grips.reset();},
         destroy(){if(destroyed)return;destroyed=true;globalThis.removeEventListener?.('nxr-languagechange',languageChanged);loadVersion++;api.hide({immediate:true});resize.disconnect();xr?.destroy();orbit.dispose();asset?.dispose();disposeScene(frame);disposeScene(branchSupports);for(const handle of [...handles,...beams,nameplate,plaque,playButton]){handle.geometry.dispose();handle.material.dispose();}nameTexture.dispose();playTexture.dispose();arrowTip.geometry.dispose();arrowStem.geometry.dispose();arrowMaterial.dispose();handleMaterial.dispose();renderer.dispose();element.remove();}
     };
+    const destroyExperience=api.destroy;api.destroy=()=>{disposeSDKPhysics();destroyExperience();};
     function languageChanged(){translateApp(element);describeContext();if(activeSpecies)labelWindow(activeSpecies);if(statusCopy){status.textContent=statusCopy();element.dataset.status=status.textContent;}onState();}
     globalThis.addEventListener?.('nxr-languagechange',languageChanged);translateApp(element);
     api.show(identity);return api;

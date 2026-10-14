@@ -1,12 +1,15 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execFileSync } from 'node:child_process';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const webDist = path.join(dist, 'xr');
 const apiDist = path.join(dist, 'xr-api');
 const frontendOnly = process.argv.includes('--frontend-only');
+const includeIwsdkPreview = process.argv.includes('--with-iwsdk');
+const iwsdkDist = path.join(root, 'iwsdk', 'dist');
 const packageData = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const builtAt = new Date().toISOString();
 const commit = String(process.env.GITHUB_SHA || 'local').slice(0, 12);
@@ -19,6 +22,11 @@ try {
 } catch {}
 const buildVersion = simpleVersion;
 const protectedDirectoryNames = new Set(['workspace', 'xr-api', 'nourishland-data']);
+
+// Build the standalone SDK input bridge for the existing NLXR routes, including
+// direct `node tools/build-hosted.mjs` callers. The test scene stays opt-in.
+execFileSync(process.execPath, [path.join(root, 'iwsdk', 'node_modules', 'vite', 'bin', 'vite.js'),
+    'build', '--config', 'vite.input.config.js'], { cwd: path.join(root, 'iwsdk'), stdio: 'inherit' });
 const frontendEntries = [
     'index.html',
     'main.js',
@@ -73,9 +81,18 @@ function copyFrontendAssets() {
     }
 }
 
+if (includeIwsdkPreview) {
+    if (!fs.existsSync(path.join(iwsdkDist, 'index.html'))) {
+        throw new Error('IWSDK preview is not built. Run npm --prefix iwsdk run build first.');
+    }
+    assertSafeFrontendTree(iwsdkDist);
+}
 fs.mkdirSync(dist, { recursive: true });
 recreateDirectory(webDist);
 copyFrontendAssets();
+if (includeIwsdkPreview) {
+    fs.cpSync(iwsdkDist, path.join(webDist, 'iwsdk'), { recursive: true });
+}
 fs.copyFileSync(path.join(root, 'deploy', 'xr.htaccess'), path.join(webDist, '.htaccess'));
 const indexPath = path.join(webDist, 'index.html');
 const versionQuery = encodeURIComponent(buildVersion);
@@ -101,6 +118,7 @@ fs.writeFileSync(path.join(webDist, 'services', 'buildInfo.js'), `export const B
 
 console.log(`Frontend: ${webDist}`);
 console.log(`Build: ${buildVersion}`);
+if (includeIwsdkPreview) console.log('IWSDK preview: /xr/iwsdk/ (opt-in; existing demo unchanged)');
 if (!frontendOnly) {
     recreateDirectory(apiDist);
     const apiServer = fs.readFileSync(path.join(root, 'tools', 'persistence-server.mjs'), 'utf8')

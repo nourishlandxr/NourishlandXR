@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {parseGlb,accessorData} from './demoBeeModel.js';
-import {controllerHandParents,controllerHandFlexAxes,controllerHandJointPoses,controllerHandGripMatrix,controllerHandPointer} from './xrControllerHandPose.js';
+import {controllerHandParents,controllerHandFlexAxes,controllerHandJointPoses,controllerHandGripMatrix,controllerHandPointer,handJointPointer} from './xrControllerHandPose.js';
 
 // Meta-contributed generic-hand assets, vendored from WebXR Input Profiles.
 // A quiet rim over passthrough, using the same tracked joints as interaction.
@@ -39,11 +39,11 @@ export function createXRHandOutline(gl){
     }).catch(error=>{if(!disposed)console.warn('Hand outline:',error.message);});
     return {
         get ready(){return rigs.has('left') && rigs.has('right');},
-        controllerPointer(input){return controllerHandPointer(rigs.get(input.source.handedness),input);},
+        controllerPointer(input){if(input.backend==='iwsdk')return handJointPointer(input.handPose);return controllerHandPointer(rigs.get(input.source.handedness),input);},
         draw(view,entries,{filled=false,controllers=[],controllerOpacity=1,trackedOpacity=1,controllerReveal=null}={}){
             if(disposed)return false;
             const ready=entries.filter(({source,state})=>state?.tracked && state.visualConfidence>0 && performance.now()-state.time<100 && rigs.has(source.handedness) && rigs.get(source.handedness).names.every(name=>state.rawJoints.has(name)));
-            for(const input of controllers)if(input.matrix && rigs.has(input.source.handedness) && !ready.some(entry=>entry.source.handedness===input.source.handedness))ready.push({source:input.source,controller:input});
+            for(const input of controllers)if(input.matrix && rigs.has(input.source.handedness) && (input.backend!=='iwsdk' || rigs.get(input.source.handedness).names.every(name=>input.handPose?.has(name))) && !ready.some(entry=>entry.source.handedness===input.source.handedness))ready.push({source:input.source,controller:input});
             if(!ready.length)return false;
             const depth=gl.isEnabled(gl.DEPTH_TEST),blend=gl.isEnabled(gl.BLEND),cull=gl.isEnabled(gl.CULL_FACE),mask=gl.getParameter(gl.DEPTH_WRITEMASK),cullMode=gl.getParameter(gl.CULL_FACE_MODE);
             gl.enable(gl.DEPTH_TEST);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.enable(gl.CULL_FACE);gl.cullFace(gl.BACK);gl.depthMask(filled);gl.useProgram(program);
@@ -52,7 +52,10 @@ export function createXRHandOutline(gl){
             for(const {source,state,controller} of ready){
                 const rig=rigs.get(source.handedness),sample=controller || state;
                 if(rig.sample!==sample){
-                    if(controller){
+                    const sdkJoints=controller?.handPose || state?.visualJoints;
+                    if(sdkJoints && rig.names.every(name=>sdkJoints.has(name))){
+                        rig.names.forEach((name,i)=>rig.matrix.fromArray(sdkJoints.get(name).matrix).multiply(rig.inverse[i]).toArray(rig.matrices,i*16));
+                    }else if(controller){
                         const base=controllerHandGripMatrix(rig,controller.matrix);
                         const joints=controllerHandJointPoses(rig,controller);
                         rig.names.forEach((name,i)=>rig.matrix.copy(base).multiply(joints[i]).multiply(rig.inverse[i]).toArray(rig.matrices,i*16));

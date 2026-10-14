@@ -37,7 +37,7 @@ test('each offset widget faces the user, and sparse options occupy the card',()=
 test('XR skips painting the hidden desktop Living Frame canvas from startup',()=>{
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8'),body=source.slice(source.indexOf('function paintWelcomeLayer(now) {'),source.indexOf('function paintWelcomeLayer(now) {')+source.slice(source.indexOf('function paintWelcomeLayer(now) {')).indexOf('const spatialState='));
  vm.runInNewContext(body+'}',{arWelcomeCanvas:{getContext(){throw Error('Hidden canvas must not paint');}},simulatedMode:false});
- const context=vm.createContext({arWelcomeCanvas:{},simulatedMode:false});vm.runInContext(body+'}',context);vm.runInContext('paintWelcomeLayer(0)',context);
+ const context=vm.createContext({arWelcomeCanvas:{},demoSDK:null,simulatedMode:false});vm.runInContext(body+'}',context);vm.runInContext('paintWelcomeLayer(0)',context);
 });
 test('native map redraws every XR view while reusing mesh uploads and cached material colours',()=>{
  const previous=globalThis.document;globalThis.document={createElement:()=>({width:0,height:0})};
@@ -59,7 +59,7 @@ test('held Totem follows its captured ray depth and validates its contact before
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
  const body=source.slice(source.indexOf('function updateHeldDemoRecordPosition('),source.indexOf('function captureDemoGrabPose('));
  const record={demoMapPiece:true,demoGrabDepth:.95,position:{x:.15,y:1.0085,z:-1},groundBaseY:.91};let origin={x:2,y:2,z:-1};
- const context=vm.createContext({simulatedMode:false,demoHeldIndex:0,markers:[record],demoPointerWorldRay:()=>({x:0,y:-1,z:0}),demoPointerWorldOrigin:()=>origin,demoLivingMapOrigin:{x:0,y:1,z:-1},demoLivingMapOrientation:{x:0,y:0,z:0,w:1},livingMapRayPoint,livingMapHeldContact,demoTotemHalfHeight:()=>.095});
+ const context=vm.createContext({demoSDK:null,simulatedMode:false,demoHeldIndex:0,markers:[record],demoPointerWorldRay:()=>({x:0,y:-1,z:0}),demoPointerWorldOrigin:()=>origin,demoLivingMapOrigin:{x:0,y:1,z:-1},demoLivingMapOrientation:{x:0,y:0,z:0,w:1},livingMapRayPoint,livingMapHeldContact,demoTotemHalfHeight:()=>.095});
  vm.runInContext(body,context);vm.runInContext('updateHeldDemoRecordPosition()',context);
  assert.equal(record.position.x,2);assert.equal(record.position.y,1.05);assert.equal(record.demoMapDropValid,false,'off-map carry cannot place at a stale contact');
  origin={x:.2,y:2,z:-1};vm.runInContext('updateHeldDemoRecordPosition()',context);

@@ -1379,7 +1379,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /placementPointer\.addEventListener\('click', pressPlacementPointer\)/);
     const immersiveSelectHandler = source.slice(
         source.indexOf("session.addEventListener('select'"),
-        source.indexOf("session.addEventListener('end'")
+        source.indexOf("session.addEventListener('end'",source.indexOf("session.addEventListener('select'"))
     );
     assert.match(source, /function activateImmersiveDemoControl\(\)/);
     assert.match(source, /domOverlayEnabled = Boolean\(arSession\.domOverlay\)/);
