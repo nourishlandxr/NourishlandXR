@@ -1,0 +1,12 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Interactive fruit · runtime review</title>
+<style>body{margin:24px;background:#e9edde;color:#304334;font:16px system-ui}h1{font-size:24px}main{display:flex;flex-wrap:wrap;gap:16px}figure{margin:0;background:#f4f5ed;border-radius:12px;overflow:hidden}figcaption{padding:12px}canvas{display:block;width:280px;height:300px}#status{margin-bottom:20px}</style>
+<h1>Interactive fruit · optimized tutorial models</h1><p id="status">Loading actual runtime assets…</p><main></main>
+<script type="module">
+import * as THREE from '../../app/assets/fruit-window/vendor/three.module.js';
+import {GLTFLoader} from '../../app/assets/fruit-window/vendor/GLTFLoader.js';
+import {prepareTutorialFruit} from '../../app/services/tutorialFruitInteraction.js';
+import {setBananaPeel} from '../../app/services/welcomeInteractiveFruit.js';
+const loader=new GLTFLoader();
+async function card(name,id,progress){const figure=document.createElement('figure'),canvas=document.createElement('canvas'),caption=document.createElement('figcaption');caption.textContent=name;figure.append(canvas,caption);document.querySelector('main').append(figure);const gltf=await loader.loadAsync('../../app/assets/welcome-practice/interactive-fruit/'+id+'.glb'),prepared=prepareTutorialFruit(gltf.scene,.24,{normalized:true});if(progress)setBananaPeel({whole:prepared.group},progress);const renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setSize(280,300,false);renderer.setClearColor('#dce5d3');const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(36,280/300,.01,10);camera.position.set(.32,.15,.42);camera.lookAt(0,-.015,0);scene.add(new THREE.HemisphereLight(0xffffff,0x668060,2));const sun=new THREE.DirectionalLight(0xffffff,3);sun.position.set(2,4,4);scene.add(sun);scene.add(prepared.group);if(id.startsWith('apple'))prepared.group.rotation.y=Math.PI;renderer.render(scene,camera);canvas.dataset.loaded=id;}
+try{for(const args of [['Banana · whole','banana-peel',0],['Banana · halfway','banana-peel',.5],['Banana · peeled','banana-peel',1],['Apple · whole','apple-whole',0],['Apple · bitten','apple-bitten',0],['Apple · two bites','apple-eaten-2',0],['Apple · three bites','apple-eaten-3',0]])await card(...args);document.querySelector('#status').textContent='Ready · 512 px textures · full peel surfaces · matching whole and bitten apple';}catch(error){document.querySelector('#status').textContent=error.stack;}
+</script></html>

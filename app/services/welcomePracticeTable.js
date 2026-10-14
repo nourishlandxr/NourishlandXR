@@ -9,8 +9,8 @@ export function createWelcomePracticeTable(root){
  const group=new THREE.Group();group.name='Welcome practice table';root.add(group);const top=new THREE.Mesh(new THREE.BoxGeometry(width*2,.035,depth*2),new THREE.MeshStandardMaterial({map:texture,color:'#b2ac97',roughness:.85}));top.position.y=-.0175;group.add(top);
  const material=new THREE.MeshStandardMaterial({color:'#625b49',roughness:.86});
  for(const side of [-1,1]){
-  const edge=new THREE.Mesh(new THREE.BoxGeometry(width*2,.025,.018),material);edge.position.set(0,.0125,side*(depth-.009));group.add(edge);
-  const end=new THREE.Mesh(new THREE.BoxGeometry(.018,.025,depth*2),material);end.position.set(side*(width-.009),.0125,0);group.add(end);
+  const edge=new THREE.Mesh(new THREE.BoxGeometry(width*2,.045,.018),material);edge.position.set(0,.0225,side*(depth-.009));group.add(edge);
+  const end=new THREE.Mesh(new THREE.BoxGeometry(.018,.045,depth*2),material);end.position.set(side*(width-.009),.0225,0);group.add(end);
  }
  const stand=new THREE.Mesh(new THREE.CylinderGeometry(.045,.075,1,24),material);group.add(stand);
  const foot=new THREE.Mesh(new THREE.CylinderGeometry(.22,.25,.03,32),material);group.add(foot);

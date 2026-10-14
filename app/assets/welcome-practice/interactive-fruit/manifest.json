@@ -1,0 +1,39 @@
+[
+  {
+    "file": "banana-peel.glb",
+    "bytes": 634252,
+    "sourceHash": "177249f79bd0e8e5cd8072361023c3d9152f15b568e28394ec94734008642572",
+    "textureEdge": 512,
+    "peelPoses": 16
+  },
+  {
+    "file": "apple-whole.glb",
+    "bytes": 33080,
+    "sourceHash": "afce5680c06dc39b5c8e953605f12f72b43f26a7122e635ef2a493fff96b89d5",
+    "textureEdge": 512
+  },
+  {
+    "file": "apple-bitten.glb",
+    "bytes": 47836,
+    "sourceHash": "afce5680c06dc39b5c8e953605f12f72b43f26a7122e635ef2a493fff96b89d5",
+    "textureEdge": 512
+  },
+  {
+    "file": "apple-half.glb",
+    "bytes": 46256,
+    "sourceHash": "afce5680c06dc39b5c8e953605f12f72b43f26a7122e635ef2a493fff96b89d5",
+    "textureEdge": 512
+  },
+  {
+    "file": "apple-eaten-2.glb",
+    "bytes": 129200,
+    "sourceHash": "afce5680c06dc39b5c8e953605f12f72b43f26a7122e635ef2a493fff96b89d5",
+    "textureEdge": 512
+  },
+  {
+    "file": "apple-eaten-3.glb",
+    "bytes": 193192,
+    "sourceHash": "afce5680c06dc39b5c8e953605f12f72b43f26a7122e635ef2a493fff96b89d5",
+    "textureEdge": 512
+  }
+]

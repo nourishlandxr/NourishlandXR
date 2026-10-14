@@ -17,8 +17,8 @@ export function welcomeSpeechCaption(state,fallback=''){
     if(!state.hasPlayed)return fallback;
     const parts=welcomeSpeechPages(state.text),total=parts.reduce((sum,part)=>sum+part.weight,0);
     const progress=Math.max(0,Math.min(1,(state.elapsed || 0)/Math.max(.001,state.duration || 0)));
-    let end=0;for(const part of parts){end+=part.weight/total;if(progress<end)return part.text;}
-    return parts.at(-1)?.text || fallback;
+    let end=0;const shown=[];for(const part of parts){shown.push(part.text);end+=part.weight/total;if(progress<end)break;}
+    return shown.slice(-3).join('\n\n') || fallback;
 }
 
 export function welcomePracticeTablePose(viewer,frame,height){

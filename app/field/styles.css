@@ -1,0 +1,7 @@
+/* Field-owned presentation. The shared content styles are imported deliberately. */
+body[data-platform-interface=field]{padding-bottom:env(safe-area-inset-bottom)}
+body[data-platform-interface=field] .platform-header{background:#20392d;color:#fffef8;border-bottom:0}
+body[data-platform-interface=field] .platform-header .wordmark{color:#fffef8}
+body[data-platform-interface=field] .platform-nav{position:sticky;top:0;background:#f6f5ed;z-index:2}
+.field-shell-status{max-width:720px;margin:0 auto;padding:0 24px 24px;color:#4d624d;font:13px/1.6 system-ui,sans-serif}
+@media(max-width:600px){body[data-platform-interface=field] .platform-nav>a{font-size:13px;min-height:44px}.field-shell-status{padding:0 16px 24px}}

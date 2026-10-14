@@ -1,0 +1,434 @@
+{
+  "note": "RGBA8-equivalent decoded image size; not measured GPU residency. No mips, driver copies, compressed GPU formats or scene clones included.",
+  "assets": [
+    {
+      "file": "app/assets/welcome-practice/zinnia.glb",
+      "images": [],
+      "rgbaBytes": 0
+    },
+    {
+      "file": "app/assets/meta-hand-left.glb",
+      "images": [],
+      "rgbaBytes": 0
+    },
+    {
+      "file": "app/assets/meta-hand-right.glb",
+      "images": [],
+      "rgbaBytes": 0
+    },
+    {
+      "file": "app/assets/living-frame/living-frame-sd.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 601413,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 306791,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 255758,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 256,
+          "height": 256,
+          "encodedBytes": 3382,
+          "rgbaBytes": 262144
+        }
+      ],
+      "rgbaBytes": 3407872
+    },
+    {
+      "file": "app/assets/living-frame/living-frame-hd.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 601413,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 306791,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 255758,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 256,
+          "height": 256,
+          "encodedBytes": 3382,
+          "rgbaBytes": 262144
+        }
+      ],
+      "rgbaBytes": 3407872
+    },
+    {
+      "file": "app/assets/welcome-practice/strawberry.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 146680,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 4194304
+    },
+    {
+      "file": "app/assets/welcome-practice/dragonfly.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 203274,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 102794,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 5242880
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/peach.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 323614,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 335920,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 138220,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 44034,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 138284,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 20971520
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/peach-half.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 284754,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 114100,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 323614,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 335920,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 16777216
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/fig.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 50236,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 157990,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 8388608
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/fig-half.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 56034,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 185952,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 100938,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 512,
+          "height": 1024,
+          "encodedBytes": 64776,
+          "rgbaBytes": 2097152
+        },
+        {
+          "width": 512,
+          "height": 1024,
+          "encodedBytes": 45870,
+          "rgbaBytes": 2097152
+        }
+      ],
+      "rgbaBytes": 16777216
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/mango.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 248868,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 206410,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 17018,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 12582912
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/mango-half.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 207238,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 197934,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 17594,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 12582912
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/pomegranate.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 123572,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 37814,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 5242880
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/pomegranate-half.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 50220,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 64714,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 42160,
+          "rgbaBytes": 1048576
+        },
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 11266,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 4194304
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-whole.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 18580,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 1048576
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-half.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 34118,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 1048576
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-bitten.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 33142,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 1048576
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-eaten-2.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 33142,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 1048576
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-eaten-3.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 33142,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 1048576
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/carambola.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 61254,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 107746,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 8388608
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/carambola-half.glb",
+      "images": [
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 52064,
+          "rgbaBytes": 4194304
+        },
+        {
+          "width": 1024,
+          "height": 1024,
+          "encodedBytes": 84034,
+          "rgbaBytes": 4194304
+        }
+      ],
+      "rgbaBytes": 8388608
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/banana-peel.glb",
+      "images": [
+        {
+          "width": 512,
+          "height": 512,
+          "encodedBytes": 73924,
+          "rgbaBytes": 1048576
+        }
+      ],
+      "rgbaBytes": 1048576
+    }
+  ]
+}

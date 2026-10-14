@@ -170,6 +170,15 @@ async function bootstrap() {
     try {
         if (new URLSearchParams(location.search).has('reset-workers')) await unregisterServiceWorkersForTesting();
         const params = new URLSearchParams(window.location.search);
+        if (params.get('experience') === 'webxr-demo') {
+            const { renderWebxrDemoEntry } = await import('./screens/webxrDemoEntry.js');
+            renderWebxrDemoEntry(app, { onStart: () => window.openTemporaryArDemoWindow(), onHome: () => {
+                const url = new URL(location.href); url.searchParams.delete('experience');
+                history.replaceState(null, '', url); window.renderLaunchScreen();
+            } });
+            return;
+        }
+        if (params.get('creator') === '1') { await window.renderDemoProjects(); return; }
         if(params.has('chapters')){await window.openDemoChapters();return;}
         if(params.get('dev')==='lab'){await window.openDeveloperLab();return;}
         // Explicit development test only. Normal demo/visitor routes are unchanged.

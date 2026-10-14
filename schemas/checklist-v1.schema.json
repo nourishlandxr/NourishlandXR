@@ -1,0 +1,39 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://nourishland.org/schemas/checklist-v1.schema.json",
+  "title": "Nourishland personal checklist v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "projectId", "revision", "type", "title", "description", "publication", "scope", "steps"],
+  "$defs": {"id": {"type": "string", "pattern": "^[A-Za-z0-9_-]{1,160}$"}},
+  "properties": {
+    "schemaVersion": {"const": 1},
+    "id": {"$ref": "#/$defs/id"},
+    "projectId": {"$ref": "#/$defs/id"},
+    "revision": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "type": {"const": "checklist"},
+    "title": {"type": "string", "minLength": 1, "maxLength": 160, "pattern": "\\S"},
+    "description": {"type": "string", "maxLength": 4000},
+    "publication": {"const": "personal-draft"},
+    "scope": {
+      "type": "object", "additionalProperties": false, "required": ["siteId", "areaId"],
+      "properties": {"siteId": {"anyOf": [{"const": ""}, {"$ref": "#/$defs/id"}]}, "areaId": {"anyOf": [{"const": ""}, {"$ref": "#/$defs/id"}]}},
+      "if": {"properties": {"areaId": {"minLength": 1}}}, "then": {"properties": {"siteId": {"$ref": "#/$defs/id"}}}
+    },
+    "steps": {
+      "type": "array", "minItems": 1, "maxItems": 40,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["id", "instructions", "contentRefs", "requiredCapabilities", "completion"],
+        "properties": {
+          "id": {"$ref": "#/$defs/id"},
+          "instructions": {"type": "string", "minLength": 1, "maxLength": 1000, "pattern": "\\S"},
+          "contentRefs": {"type": "array", "maxItems": 20, "items": {"type": "object", "additionalProperties": false, "required": ["type", "id"], "properties": {"type": {"enum": ["knowledge", "specimen", "checkpoint"]}, "id": {"$ref": "#/$defs/id"}}}},
+          "requiredCapabilities": {"type": "array", "maxItems": 0},
+          "completion": {"type": "object", "additionalProperties": false, "required": ["type"], "properties": {"type": {"const": "self-report"}}}
+        }
+      },
+      "$comment": "Runtime validation additionally rejects duplicate step IDs."
+    }
+  }
+}

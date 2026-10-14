@@ -6,6 +6,7 @@ import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.j
 import {playWelcomePracticeFeedback} from '../app/services/welcomePracticeFeedback.js';
 import {welcomeHandMagicProgress,welcomeControllerMagicPlane} from '../app/services/welcomeControllerMagic.js';
 import {welcomeControllerLaserEnd} from '../app/services/welcomeControllerLaser.js';
+import {WELCOME_PRACTICE_LESSONS,WELCOME_PRACTICE_RESPONSES} from '../app/services/welcomePracticeContent.js';
 
 async function withAssets(run){
     const saved={document:globalThis.document,Image:globalThis.Image,fetch:globalThis.fetch,createImageBitmap:globalThis.createImageBitmap,self:globalThis.self};
@@ -16,6 +17,29 @@ async function withAssets(run){
     try{await run(requests);}finally{await new Promise(resolve=>setTimeout(resolve,30));Object.assign(globalThis,saved);}
 }
 const settle=async predicate=>{for(let i=0;i<100 && !predicate();i++)await new Promise(resolve=>setTimeout(resolve,5));assert.ok(predicate(),'bundled controllers must be ready');};
+
+test('every actionable tutorial step has spoken guidance while spawn effects stay silent',()=>{
+    const quiet=['frame','table-reveal','zinnia-reveal','virtual-hands-reveal','basket-reveal','practice-ready'];
+    for(const lesson of WELCOME_PRACTICE_LESSONS)if(quiet.includes(lesson.id))assert.equal(lesson.silent,true,lesson.id);else{assert.ok(lesson.spoken?.trim(),lesson.id);assert.notEqual(lesson.silent,true,lesson.id);}
+    assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='controls-orb-grab').spoken,/expandable Orb/);
+    assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='settings-open').spoken,/left thumbstick/);
+    assert.doesNotMatch(WELCOME_PRACTICE_RESPONSES.find(l=>l.id==='controls-stick-done').spoken,/flying/);
+});
+
+test('right-to-left guidance waits for current speech, plays once, and replay follows the current task',()=>withAssets(async()=>{
+    let playing=false;const spoken=[],voice={status:()=>({playing,available:true,paused:false}),speak:value=>{if(value){spoken.push(value);playing=true;}},stop(){playing=false;},unlock(){}};
+    const stage=createWelcomePracticeScene({voice,embedded:true});
+    try{
+        await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements,inputs=['left','right'].map((handedness,i)=>({source:{handedness,gamepad:{axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false}))}},matrix:new THREE.Matrix4().makeTranslation(i?.2:-.2,1.1,-.3).elements}));
+        const tick=(n=1,options={})=>{for(let i=0;i<n;i++)stage.update(.05,{viewer,floor:0,inputs,controllers:inputs,...options});};
+        stage.start(viewer,0);stage.previewLesson('controls-stick');spoken.length=0;tick(8,{presentationReady:false});assert.deepEqual(spoken,[]);tick(5);assert.equal(spoken.at(-1).id,'controls-stick');
+        for(const [x,y] of [[.8,.8],[-.8,.8],[-.8,-.8],[.8,-.8]]){inputs[1].source.gamepad.axes=[0,0,x,y];tick();}tick(30);assert.deepEqual(spoken.map(v=>v.id),['controls-stick'],'left instructions cannot interrupt right instructions');
+        playing=false;tick();assert.equal(spoken.at(-1).id,'controls-stick-left');playing=false;tick(30);assert.equal(spoken.filter(v=>v.id==='controls-stick-left').length,1);assert.equal(stage.phase,'controls-stick','wait for the left action');
+        stage.button('replay');assert.equal(spoken.at(-1).id,'controls-stick-left');
+        stage.previewLesson('laser-intro');spoken.length=0;tick(25);assert.deepEqual(spoken,[],'laser extension is silent');tick(12);assert.equal(spoken.at(-1).id,'laser-intro');
+        stage.previewLesson('virtual-hands-reveal');spoken.length=0;tick(50);assert.deepEqual(spoken,[],'hand spawn is silent');
+    }finally{stage.destroy();}
+}));
 
 test('real controller poses start with skins only, extend lasers, select Zinnia, then reveal hands before any fruit request',()=>withAssets(async requests=>{
     const feedback=[],spoken=[],voice={status:()=>({playing:false,paused:false,available:true,muted:false}),speak:value=>spoken.push(value),stop(){},unlock(){},pause(){},resume(){}};
@@ -28,15 +52,15 @@ test('real controller poses start with skins only, extend lasers, select Zinnia,
         stage.start(viewer,0);tick(.1);assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().controllerGuide.filter(e=>e.visible && e.tool==='standard').length,2);
         const fruitRequests=()=>requests.filter(url=>/fruits\/|strawberry\.glb|strawberry-packet\.jpg|dragonfly\.glb/.test(url));
         assert.deepEqual(fruitRequests(),[]);
-        stage.previewLesson('controls-trigger');tick(.05);for(const entry of stage.snapshot().controllerGuide.filter(e=>e.visible)){assert.equal(entry.labelScale,1);assert.ok(entry.connectorLength>0 && entry.connectorLength<.24);assert.deepEqual(entry.pose,inputs.find(i=>i.source.handedness===entry.id.split('/')[1]).matrix,'skin uses the current grip pose directly');}inputs[0].trigger=true;tick(.05);inputs[1].trigger=true;tick(.05);
+        stage.previewLesson('controls-trigger');tick(.25);for(const entry of stage.snapshot().controllerGuide.filter(e=>e.visible)){assert.equal(entry.labelScale,1);assert.ok(entry.connectorLength>0 && entry.connectorLength<.5);assert.deepEqual(entry.pose,inputs.find(i=>i.source.handedness===entry.id.split('/')[1]).matrix,'skin uses the current grip pose directly');}inputs[0].trigger=true;tick(.05);inputs[1].trigger=true;tick(.05);
         assert.equal(feedback.filter(f=>f.kind==='step').length,2);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'controls-grip');assert.equal(stage.zinniaMount.parent.visible,true);
         stage.previewLesson('laser-intro');tick(.7);assert.ok(stage.controllerLaserProgress>0 && stage.controllerLaserProgress<1);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().settingsAvailable,true);assert.equal(feedback.filter(f=>f.kind==='magic').length,2);
         stage.previewLesson('laser-zinnia');tick(.1);const eye=stage.zinniaMount.getObjectByName('Eye_L_expression'),point=new THREE.Box3().setFromObject(eye).getCenter(new THREE.Vector3()),ray={origin:{x:point.x,y:point.y,z:point.z+.45},direction:{x:0,y:0,z:-1}};
         assert.equal(stage.hit(ray)?.kind,'zinnia');assert.equal(stage.select(ray,inputs[1].source),true);assert.equal(stage.snapshot().laserConfirmed,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.touch.snapshot().reaction,'tickle');
-        stage.select(ray,inputs[1].source);assert.equal(feedback.filter(f=>f.kind==='step').length,3,'one selection produces one success');tick(1.3);assert.equal(stage.phase,'comfort');tick(.4);assert.equal(stage.controllerLasersVisible,false);
+        stage.select(ray,inputs[1].source);assert.equal(feedback.filter(f=>f.kind==='step').length,3,'one selection produces one success');tick(3);assert.equal(stage.phase,'comfort');tick(.4);assert.equal(stage.controllerLasersVisible,false);
         stage.previewLesson('virtual-hands-reveal');tick(.9);const first=stage.controllerHandReveal;assert.ok(first.left>0 && first.left<1);assert.equal(first.right,0);assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.objects.get('peach').visible,false);assert.deepEqual(fruitRequests(),[]);
         const frozen={...stage.controllerHandReveal};stage.button('pause');tick(1);assert.deepEqual(stage.controllerHandReveal,frozen);stage.button('pause');tick(5.2);assert.deepEqual(stage.controllerHandReveal,{left:1,right:1});assert.ok(feedback.some(f=>f.kind==='magic-charge'));assert.equal(stage.snapshot().controllerGuide.filter(e=>e.visible).length,0);
-        tick(2);assert.equal(stage.phase,'gloves');inputs.forEach(input=>{input.trigger=false;input.down=false;});tick(.05);inputs.forEach(input=>input.down=true);tick(.05);assert.equal(stage.snapshot().completed,false,'both hands must open again');inputs.forEach(input=>input.down=false);tick(.05);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'basket');assert.ok(fruitRequests().length>0);
+        tick(2);assert.equal(stage.phase,'gloves');inputs.forEach(input=>{input.trigger=false;input.down=false;});tick(.05);inputs.forEach(input=>input.down=true);tick(.05);assert.equal(stage.snapshot().completed,false,'both hands must open again');inputs.forEach(input=>input.down=false);tick(.05);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'basket');assert.ok(requests.some(url=>/fruit-collection|banana.glb/.test(url)));
     }finally{stage.destroy();}
 }));
 
@@ -66,18 +90,18 @@ test('fresh startup reaches the table and Zinnia before buttons, with no fruit d
 }));
 
 
-test('controller Orb walkthrough uses grip, trigger, face pairs and sticks without new speech or PIMO',()=>withAssets(async()=>{
+test('controller Orb walkthrough gives paced speech for grip, trigger, face pairs and sticks without PIMO',()=>withAssets(async()=>{
  const spoken=[],voice={status:()=>({playing:false,paused:false,available:true}),speak:value=>{if(value)spoken.push(value);},stop(){},unlock(){}};
  const stage=createWelcomePracticeScene({voice,embedded:true});
  try{await stage.loading;await settle(()=>stage.snapshot().controllerGuide.filter(e=>e.ready).length===2);
  const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements,inputs=['left','right'].map((handedness,i)=>({source:{handedness,profiles:['meta-quest-touch-plus'],gamepad:{buttons:Array.from({length:6},()=>({pressed:false,value:0})),axes:[0,0,0,0]}},matrix:new THREE.Matrix4().makeTranslation(i?.25:-.25,1.15,-.35).elements,down:false,trigger:false}));
  const tick=seconds=>{for(let i=0;i<Math.ceil(seconds/.05);i++)stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});};
- stage.start(viewer,0);stage.previewLesson('controls-trigger');spoken.length=0;tick(.1);inputs.forEach(i=>i.trigger=true);tick(.05);assert.equal(stage.snapshot().completed,true);assert.equal(stage.snapshot().controllerGuide.some(e=>e.visible && e.labelVisible),false);inputs.forEach(i=>i.trigger=false);tick(1.2);
- assert.equal(stage.phase,'controls-grip');tick(.05);inputs.forEach(i=>i.down=true);tick(.05);inputs.forEach(i=>i.down=false);tick(1.2);assert.equal(stage.phase,'controls-orb-grab');tick(.1);
- const point=new THREE.Vector3(...stage.snapshot().controlOrb.position);stage.root.localToWorld(point);inputs[1].matrix=new THREE.Matrix4().makeTranslation(point.x,point.y,point.z).elements;tick(.1);inputs[1].down=true;tick(.1);inputs[1].matrix=new THREE.Matrix4().makeTranslation(point.x+.13,point.y+.1,point.z).elements;tick(.1);inputs[1].down=false;tick(1.3);assert.equal(stage.phase,'controls-orb-open');assert.equal(stage.snapshot().controlOrb.moved,true);tick(.1);inputs[1].trigger=true;tick(.1);inputs[1].trigger=false;tick(1.2);assert.equal(stage.phase,'controls-face-first');
- for(const [index,phase,colour] of [[4,'controls-face-second',1],[5,'controls-stick',2]]){tick(.1);inputs.forEach(i=>i.source.gamepad.buttons[index]={pressed:true,value:1});tick(.1);assert.equal(stage.snapshot().controlOrb.colour,colour);inputs.forEach(i=>i.source.gamepad.buttons[index]={pressed:false,value:0});tick(1.2);assert.equal(stage.phase,phase);}
- for(const [x,y]of [[.8,.8],[-.8,.8],[-.8,-.8],[.8,-.8]]){inputs.forEach(i=>i.source.gamepad.axes=[0,0,x,y]);tick(.15);}assert.ok(stage.snapshot().controlOrb.rotation>0);inputs.forEach(i=>i.source.gamepad.axes=[0,0,0,0]);tick(1.2);assert.equal(stage.phase,'controls-stick-click');assert.deepEqual(spoken,[]);
- stage.previewLesson('settings-open');tick(.1);const labels=stage.snapshot().controllerGuide.filter(e=>e.labelVisible);assert.equal(labels.length,1);assert.match(labels[0].id,/right/);
+ stage.start(viewer,0);stage.previewLesson('controls-trigger');spoken.length=0;tick(.3);inputs.forEach(i=>i.trigger=true);tick(.05);assert.equal(stage.snapshot().completed,true);assert.equal(stage.snapshot().controllerGuide.some(e=>e.visible && e.labelVisible),false);inputs.forEach(i=>i.trigger=false);tick(1.2);
+ assert.equal(stage.phase,'controls-grip');tick(.3);inputs.forEach(i=>i.down=true);tick(.05);inputs.forEach(i=>i.down=false);tick(1.2);assert.equal(stage.phase,'controls-orb-grab');tick(.3);
+ const point=new THREE.Vector3(...stage.snapshot().controlOrb.position);stage.root.localToWorld(point);inputs[1].matrix=new THREE.Matrix4().makeTranslation(point.x,point.y,point.z).elements;tick(.3);inputs[1].down=true;tick(.3);inputs[1].matrix=new THREE.Matrix4().makeTranslation(point.x+.13,point.y+.1,point.z).elements;tick(.3);inputs[1].down=false;tick(1.3);assert.equal(stage.phase,'controls-orb-open');assert.equal(stage.snapshot().controlOrb.moved,true);tick(.3);inputs[1].trigger=true;tick(.3);inputs[1].trigger=false;tick(1.2);assert.equal(stage.phase,'controls-face-first');
+ for(const [index,phase,colour] of [[4,'controls-face-second',1],[5,'controls-stick',2]]){tick(.3);inputs.forEach(i=>i.source.gamepad.buttons[index]={pressed:true,value:1});tick(.3);assert.equal(stage.snapshot().controlOrb.colour,colour);inputs.forEach(i=>i.source.gamepad.buttons[index]={pressed:false,value:0});tick(1.2);assert.equal(stage.phase,phase);}
+ for(const hand of ['right','left'])for(const [x,y]of [[.8,.8],[-.8,.8],[-.8,-.8],[.8,-.8]]){inputs.find(i=>i.source.handedness===hand).source.gamepad.axes=[0,0,x,y];tick(.15);}assert.ok(stage.snapshot().controlOrb.rotation>0);inputs.forEach(i=>i.source.gamepad.axes=[0,0,0,0]);tick(1.2);assert.equal(stage.phase,'controls-stick-click');assert.ok(spoken.some(v=>v.id==='controls-orb-grab'));assert.equal(spoken.filter(v=>v.id==='controls-stick-left').length,1);assert.ok(spoken.every(v=>v.recorded===false && v.spokenOverride===true));
+ stage.previewLesson('settings-open');tick(.3);const labels=stage.snapshot().controllerGuide.filter(e=>e.labelVisible);assert.equal(labels.length,1);assert.match(labels[0].id,/left/);
  }finally{stage.destroy();}
 }));
 
@@ -98,8 +122,8 @@ test('tutorial speech waits for completed reveals and renderer readiness',()=>wi
 test('welcome screen and rim share a prepared fade before the tutorial introduction',()=>withAssets(async()=>{
  const voice={status:()=>({playing:false,paused:false,muted:true}),speak(){},stop(){}};const stage=createWelcomePracticeScene({voice,embedded:true});
  try{await stage.loading;assert.equal(stage.root.getObjectByName('Fruit selection highlight').visible,false);assert.equal(stage.root.getObjectByName('Dragonfly landing marker').visible,false);const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);const tick=(n,options={})=>{for(let i=0;i<n;i++)stage.update(.05,{viewer,floor:0,...options});};
- tick(60,{frameReady:false});assert.equal(stage.snapshot().frameOpacity,0);assert.equal(stage.snapshot().title,'Welcome to NourishlandXR');tick(10,{frameReady:true,presentationReady:false});assert.equal(stage.snapshot().frameOpacity,0);tick(12);assert.ok(stage.snapshot().frameOpacity>0 && stage.snapshot().frameOpacity<1);tick(25);assert.equal(stage.snapshot().frameOpacity,1);assert.equal(stage.phase,'title');tick(100);assert.equal(stage.phase,'arrival');assert.equal(stage.snapshot().title,'Your hands tutorial');
- stage.previewLesson('table');assert.equal(stage.snapshot().title,'');tick(100);assert.equal(stage.snapshot().title,'Your practice table');assert.ok(stage.root.getObjectByName('Welcome practice table white arrival glow').visible===false);
+ tick(60,{frameReady:false});assert.equal(stage.snapshot().frameOpacity,0);assert.equal(stage.snapshot().title,'Welcome to NourishlandXR');tick(10,{frameReady:true,presentationReady:false});assert.equal(stage.snapshot().frameOpacity,0);tick(12);assert.ok(stage.snapshot().frameOpacity>0 && stage.snapshot().frameOpacity<1);tick(25);assert.equal(stage.snapshot().frameOpacity,1);assert.equal(stage.phase,'title');tick(290);assert.equal(stage.phase,'arrival');assert.equal(stage.snapshot().title,'Make yourself comfortable');
+ stage.previewLesson('table');assert.equal(stage.snapshot().title,'Your practice table');tick(80);assert.equal(stage.snapshot().title,'Your practice table');tick(40);assert.equal(stage.snapshot().title,'');assert.ok(stage.root.getObjectByName('Welcome practice table white arrival glow').visible===false);
  stage.previewLesson('face');assert.equal(stage.snapshot().title,'');tick(100);assert.equal(stage.snapshot().title,'Meet Zinnia');assert.ok(stage.snapshot().caption);
  }finally{stage.destroy();}
 }));
@@ -115,6 +139,24 @@ test('basket speech waits through slow fruit download and a fresh renderer revis
 test('basket rim contact releases held fruit once and waits for a fresh grip',()=>withAssets(async()=>{
  const feedback=[],stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}},onFeedback:kind=>feedback.push(kind),loadFruit:async()=>({scene:new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),new THREE.MeshBasicMaterial())})});
  try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('grab');await stage.loadPracticeAssets();stage.update(.05,{viewer,floor:0});const body=stage.bodies.filter(b=>b.fruit).sort((a,b)=>(b.position.y+b.support)-(a.position.y+a.support))[0],source={handedness:'right'};const input=(point,down)=>{stage.root.updateMatrixWorld(true);const matrix=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(point.x,point.y,point.z)).elements;stage.update(.05,{viewer,floor:0,inputs:[{source,matrix,down,trigger:false}]});};
- const start={...body.position};input(start,false);input(start,true);assert.equal(stage.isHolding(source),true);input({...start,y:.65},true);input({x:.735,y:.65,z:-.16},true);input({x:.735,y:.06,z:-.16},true);assert.equal(stage.isHolding(source),false);assert.ok(body.position.y-body.support>=.10);assert.equal(feedback.filter(kind=>kind==='basket-contact').length,1);input(body.position,true);assert.equal(stage.isHolding(source),false,'held grip cannot reacquire a blocked fruit');}
+ const start={...body.position};input(start,false);input(start,true);assert.equal(stage.isHolding(source),true);input({...start,y:.65},true);input({x:.735,y:.65,z:-.16},true);input({x:.735,y:.06,z:-.16},true);assert.equal(stage.isHolding(source),false,JSON.stringify({body:body.position,support:body.support,held:stage.snapshot().held,feedback}));assert.ok(body.position.y-body.support>=.10);assert.equal(feedback.filter(kind=>kind==='basket-contact').length,1);input(body.position,true);assert.equal(stage.isHolding(source),false,'held grip cannot reacquire a blocked fruit');}
+ finally{stage.destroy();}
+}));
+
+test('table outline waits for any-button placement and commits on release',()=>withAssets(async()=>{
+ const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('table');const source={handedness:'right',gamepad:{buttons:Array.from({length:6},()=>({pressed:false}))}},input={source,matrix:viewer,ray:{origin:{x:0,y:1.6,z:-.75},direction:{x:0,y:-1,z:0}},down:false,trigger:false};const tick=()=>stage.update(.05,{viewer,floor:0,inputs:[input]});tick();assert.equal(stage.root.getObjectByName('Practice table placement outline').visible,true);assert.equal(stage.root.getObjectByName('Welcome practice table').visible,false);const height=stage.tableHeight;assert.ok(height<.67);source.gamepad.buttons[4].pressed=true;tick();input.ray.origin.x=.25;tick();assert.ok(stage.root.position.x>.2);source.gamepad.buttons[4].pressed=false;tick();assert.equal(stage.root.getObjectByName('Practice table placement outline').visible,false);for(let i=0;i<100;i++)tick();assert.equal(stage.root.getObjectByName('Welcome practice table').visible,true);}
+ finally{stage.destroy();}
+}));
+
+test('each actual fruit can lift clear of the packed basket without becoming stuck',()=>withAssets(async()=>{
+ const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('grab');await stage.loadPracticeAssets();const source={handedness:'right'};const input=(point,down)=>{stage.root.updateMatrixWorld(true);stage.update(.05,{viewer,floor:0,inputs:[{source,matrix:stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(point.x,point.y,point.z)).elements,down,trigger:false}]});};for(const id of ['peach','fig','mango','pomegranate','apple','carambola','banana']){stage.resetObjects();stage.update(.05,{viewer,floor:0});const body=stage.bodies.find(b=>b.id===id),start={...body.position};input(start,false);input(start,true);assert.ok(stage.snapshot().held.includes(id),id+' picked');for(let i=1;i<=12;i++)input({...start,y:start.y+i*.04},true);assert.ok(stage.snapshot().held.includes(id),id+' remains held');assert.ok(body.position.y>=start.y+.4,id+' lifted');input(body.position,false);}}
+ finally{stage.destroy();}
+}));
+
+test('Zinnia leaf dance locks matching hands before the spoken tickle and retraction',()=>withAssets(async()=>{
+ const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('laser-dance');stage.update(.05,{viewer,floor:0});const guide=stage.zinniaMount.children[0].userData.zinnia.guide,inputs=['left','right'].map((handedness,i)=>{const p=new THREE.Box3().setFromObject(guide.leaf(i?'R':'L')).getCenter(new THREE.Vector3());return {source:{handedness},matrix:new THREE.Matrix4().makeTranslation(p.x,p.y,p.z+.4).elements,ray:{origin:{x:p.x,y:p.y,z:p.z+.4},direction:{x:0,y:0,z:-1}},down:true,trigger:false};});stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.snapshot().leafContacts.length,2);assert.deepEqual(stage.snapshot().leafContacts.map(c=>c.hand),['left','right']);for(let i=0;i<90 && stage.phase==='laser-dance';i++)stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.phase,'laser-zinnia');assert.equal(stage.snapshot().leafContacts.length,0);stage.previewLesson('comfort');for(let i=0;i<10;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.controllerLasersVisible,false);}
  finally{stage.destroy();}
 }));

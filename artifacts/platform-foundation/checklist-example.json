@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "349b40fd-e142-4f1b-ac15-8cbf1b7dde3b",
+  "projectId": "test-garden",
+  "title": "Synthetic garden checklist",
+  "description": "Local verification only.",
+  "revision": 1,
+  "type": "checklist",
+  "publication": "personal-draft",
+  "scope": {
+    "siteId": "",
+    "areaId": ""
+  },
+  "steps": [
+    {
+      "id": "9cb6d3f6-0e73-43ac-b1ce-033d5d92a7b2",
+      "instructions": "Notice where light reaches the ground.",
+      "contentRefs": [],
+      "requiredCapabilities": [],
+      "completion": {
+        "type": "self-report"
+      }
+    },
+    {
+      "id": "927f8622-d9bc-49c6-82d1-ecee13858fec",
+      "instructions": "Look for evidence of regeneration.",
+      "contentRefs": [],
+      "requiredCapabilities": [],
+      "completion": {
+        "type": "self-report"
+      }
+    }
+  ]
+}

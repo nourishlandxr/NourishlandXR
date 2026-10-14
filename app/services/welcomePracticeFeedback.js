@@ -1,6 +1,7 @@
 // Use the same feedback contract in the actual XR scene and its preview.
 export function playWelcomePracticeFeedback(feedback,kind,source,intensity=1){
     if(!feedback)return;
+    if(kind==='bite'){feedback.sound('crunch');if(source)feedback.pulse(source,.32,75);return;}
     if(kind==='paint' || kind==='paint-stop'){if(feedback.painting)feedback.painting(source,kind==='paint');else if(source)feedback.pulse(source,kind==='paint'?.04:0,140);return;}
     if(kind==='basket-contact'){if(source)feedback.pulse(source,.18,45);return;}
     if(kind==='magic-charge'){if(source)feedback.pulse(source,Math.min(.9,.55+.35*intensity),105);return;}

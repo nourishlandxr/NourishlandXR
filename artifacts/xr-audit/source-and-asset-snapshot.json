@@ -1,0 +1,1011 @@
+{
+  "at": "2026-10-14T04:54:09.074Z",
+  "head": "1e0ab707a67c42070da3402a08f6b5d6a63a565c",
+  "version": "0.9599",
+  "note": "Dirty checkout snapshot; GLB counts are stored geometry, not per-frame visible stereo totals or measured GPU memory.",
+  "source": [
+    {
+      "file": "app/screens/arMode.js",
+      "bytes": 352837,
+      "lines": 6501,
+      "sha256": "1125be1c21c7a98f5781e5b3c649a8bf79364cf563151414d31b77b1e7e497c4"
+    },
+    {
+      "file": "app/screens/livingPaintingTest.js",
+      "bytes": 20231,
+      "lines": 167,
+      "sha256": "591b01cf5d83585db45d2b2bd727d3fc242198d6cb8349bf2d7d7351fa722dd2"
+    },
+    {
+      "file": "app/screens/spatialPaintStudio.js",
+      "bytes": 16225,
+      "lines": 55,
+      "sha256": "316e4d6897a9c3a6d900ef25d3a36b1e7edd22e09c009192999a23b4fe43d388"
+    },
+    {
+      "file": "app/screens/temporaryArDemo.js",
+      "bytes": 502703,
+      "lines": 7028,
+      "sha256": "a8a8d0a463ac48cec1c3f11b77eca4db451f71a95043a627df69a591a915fa9c"
+    },
+    {
+      "file": "app/services/buildInfo.js",
+      "bytes": 426,
+      "lines": 15,
+      "sha256": "7ea45e2c9935d6aab60a11fb3941fd4a24bbd19742097f4d1b3025c6afa6af18"
+    },
+    {
+      "file": "app/services/demoLivingMapDetail.js",
+      "bytes": 14590,
+      "lines": 179,
+      "sha256": "80d2f97630d0bd6fc5067fb155546a9f31eb570263535b953b1e2a2d3b3a24f9"
+    },
+    {
+      "file": "app/services/demoLivingMapGrip.js",
+      "bytes": 7802,
+      "lines": 97,
+      "sha256": "17b159bd40c134655f7845a7d470ba6dfe9470d15c9a57a5e1491fbb2de81d4b"
+    },
+    {
+      "file": "app/services/demoLivingMapHandles.js",
+      "bytes": 2341,
+      "lines": 33,
+      "sha256": "712a1eaa926b85fe9602dca5f329aaebb5bd1cacd952b16692aebd33e4b9bbde"
+    },
+    {
+      "file": "app/services/demoLivingMapModel.js",
+      "bytes": 10789,
+      "lines": 180,
+      "sha256": "95ceb45dc8e0d11965ab9881af0b60b2d3d1d5ffc0d2809a2ac679ac5d5777ba"
+    },
+    {
+      "file": "app/services/demoLivingMapPresentation.js",
+      "bytes": 1209,
+      "lines": 17,
+      "sha256": "986b592ae5f6fe5f0727295bbd30db333210e8069860a25bd353a5c0c8283c80"
+    },
+    {
+      "file": "app/services/demoLivingMapReveal.js",
+      "bytes": 5802,
+      "lines": 80,
+      "sha256": "c2e4a488c1f93332007e93189dfecded9d76e04088487a240096348b51b0f7b4"
+    },
+    {
+      "file": "app/services/demoLivingMapRoute.js",
+      "bytes": 3225,
+      "lines": 53,
+      "sha256": "6d37454ec3c537542d71400778d34772bbc90d049a8dc0634b3086edf462a093"
+    },
+    {
+      "file": "app/services/demoLivingMapScene.js",
+      "bytes": 31299,
+      "lines": 348,
+      "sha256": "054214dded1a285ac8e0a3f12fa4442d0afbb6fc149891ff3357686fd223cbd7"
+    },
+    {
+      "file": "app/services/demoLivingMapVisitors.js",
+      "bytes": 5520,
+      "lines": 64,
+      "sha256": "80cb30adbd163c10dd2e9ede6ebec79af66c198ea6c3a192975b1e49a274f0f4"
+    },
+    {
+      "file": "app/services/demoLivingMapXR.js",
+      "bytes": 23951,
+      "lines": 187,
+      "sha256": "56524e68aca597271549baa9a4354962cf85d28e7a9856964ea1d802505d1969"
+    },
+    {
+      "file": "app/services/demoXrInteraction.js",
+      "bytes": 1282,
+      "lines": 20,
+      "sha256": "52413333a41a4680d1e3fac4e71c6c4e4d99fc5a94abc8dab49e0e13226ece3f"
+    },
+    {
+      "file": "app/services/explorerMoleculeInteraction.js",
+      "bytes": 9672,
+      "lines": 84,
+      "sha256": "8494f655a453db400be952c3103ad890d79ffe4d2132f6fa9209dac8e5604008"
+    },
+    {
+      "file": "app/services/fruitWindowExperience.js",
+      "bytes": 42562,
+      "lines": 350,
+      "sha256": "620fdbe754ab8a4fe035a383a1523040ab658159c3f9f0ca295ea53fa0de8554"
+    },
+    {
+      "file": "app/services/fruitWindowInteraction.js",
+      "bytes": 7042,
+      "lines": 61,
+      "sha256": "bd2286825e5fd7f559604b4a5be6ec9bd7c061566a2e2a88172b020fd2c9a891"
+    },
+    {
+      "file": "app/services/fruitWindowXR.js",
+      "bytes": 7334,
+      "lines": 82,
+      "sha256": "d42eb39cf7669ffd7869f03e8ebfec1a166946b3546b35bfaf69de80b5d40729"
+    },
+    {
+      "file": "app/services/handPoke.js",
+      "bytes": 2955,
+      "lines": 40,
+      "sha256": "5fd097c1ec9188c8bc4e5d808f1b68211cbd04210d638f81c862f93f5046f52a"
+    },
+    {
+      "file": "app/services/handSurfaceInteraction.js",
+      "bytes": 3095,
+      "lines": 39,
+      "sha256": "864b8a91d39bf8fb9f7728411adbf1cac644681ad34ce079a4078550806bea79"
+    },
+    {
+      "file": "app/services/livingFrameArtwork.js",
+      "bytes": 4545,
+      "lines": 67,
+      "sha256": "189961389d7d0d7fea6a1595164ff705802ba02a5b360ee2b0587800d6fd0887"
+    },
+    {
+      "file": "app/services/livingFrameButton.js",
+      "bytes": 2685,
+      "lines": 31,
+      "sha256": "481f5687fec6a5103cbd4b0b5b2ffddc7fe19c86b2de4d1ce12e0fb93fe8ea28"
+    },
+    {
+      "file": "app/services/livingFrameModel.js",
+      "bytes": 8552,
+      "lines": 66,
+      "sha256": "483d1b2b9d7dc9e310e5dc3ef64cf2824cb207c7cfe5309dcdf274c4c08190ba"
+    },
+    {
+      "file": "app/services/livingFramePeekXR.js",
+      "bytes": 4381,
+      "lines": 37,
+      "sha256": "12f92c2a31e642dd5797c87c6b777a37fb32ec1d0b8e9faa81b24f218c56e2e9"
+    },
+    {
+      "file": "app/services/livingFramePlacement.js",
+      "bytes": 4975,
+      "lines": 63,
+      "sha256": "d4328b7d9a2a4a3c7e1c276028e866f5494887e8b5a9b0f5df4eabde054534dc"
+    },
+    {
+      "file": "app/services/livingFrameSurface.js",
+      "bytes": 4282,
+      "lines": 48,
+      "sha256": "239944445b285d51080c410ffdb8caacdb6dd619c66563bc044eeb50bfda6426"
+    },
+    {
+      "file": "app/services/livingFrameXR.js",
+      "bytes": 13178,
+      "lines": 77,
+      "sha256": "4e69bd26b3740df52540bfb9fe7e6671f44b7ab7174cf95ae0a4605466e75b87"
+    },
+    {
+      "file": "app/services/pimActivationHold.js",
+      "bytes": 5241,
+      "lines": 87,
+      "sha256": "afaeff8d4e204512b16e089058b26998c10d1a28a201b80caa464199b1f87b13"
+    },
+    {
+      "file": "app/services/pimInfoPanel.js",
+      "bytes": 199005,
+      "lines": 1757,
+      "sha256": "866ad6a44b5949f18c1aa40f391416b255c11bf64d43057770dd23de6b35dc67"
+    },
+    {
+      "file": "app/services/spatialControlLayout.js",
+      "bytes": 884,
+      "lines": 14,
+      "sha256": "243f8444810f869c04286a76e4e65f443eb379c4bbfe244e7e8234e52884a15a"
+    },
+    {
+      "file": "app/services/spatialDashboardMirror.js",
+      "bytes": 19762,
+      "lines": 461,
+      "sha256": "150fbfefef2738ce8517274d32d30d66461ef5d1429ce472a3c65a84061477dd"
+    },
+    {
+      "file": "app/services/spatialDataModel.js",
+      "bytes": 5694,
+      "lines": 159,
+      "sha256": "439aa809ea5db16dd5a5f810a535cdbea836255caf3354b5b4ab4dffa1445d05"
+    },
+    {
+      "file": "app/services/spatialDeviceAdapters.js",
+      "bytes": 1768,
+      "lines": 36,
+      "sha256": "34f570e2c7adf363abb0b7a61361b84caf499411a26bfde7e4c083f26e5c0fed"
+    },
+    {
+      "file": "app/services/spatialKnowledgePresentation.js",
+      "bytes": 6885,
+      "lines": 83,
+      "sha256": "ee2f4fdbe9a29908445eaf455e29ee9bf19b5b2c71a0571e54cff84890407a2a"
+    },
+    {
+      "file": "app/services/spatialMoveControl.js",
+      "bytes": 2060,
+      "lines": 29,
+      "sha256": "5582202143346ffd63d8aebbfe7b487c5b2a401e7cbe91a072205e7ac6e0ceb6"
+    },
+    {
+      "file": "app/services/spatialNoteEditor.js",
+      "bytes": 8202,
+      "lines": 80,
+      "sha256": "4f96d58c3612e7cdbef553bd300f693cd074d08171417c3e2cd4754131bf2fc8"
+    },
+    {
+      "file": "app/services/spatialNoteTemplates.js",
+      "bytes": 3840,
+      "lines": 92,
+      "sha256": "0acf9d25d2a2701de84b419bb2e3213d43de922c42b8d82bf60ed776116417d8"
+    },
+    {
+      "file": "app/services/spatialNotes.js",
+      "bytes": 4054,
+      "lines": 34,
+      "sha256": "9c6c69adf51c607a06c901de93c6615a78a9a1700d75816b35ed954274d3c6e0"
+    },
+    {
+      "file": "app/services/spatialObjectControls.js",
+      "bytes": 6397,
+      "lines": 63,
+      "sha256": "cc04ef1350c152c52be86bcc0d0056613eb3683f121cfb4e3d650a7df64b791f"
+    },
+    {
+      "file": "app/services/spatialObjectVisuals.js",
+      "bytes": 1648,
+      "lines": 43,
+      "sha256": "a38879beaf5e600e01741dca9690d74eaa23d765ae0a137412f7dbaff5a83476"
+    },
+    {
+      "file": "app/services/spatialPaintTip.js",
+      "bytes": 2324,
+      "lines": 17,
+      "sha256": "ec5cb137cdcd9ccadd2263bdf5dbc63f2090f6b5e07f0f6e76bfa0f224e69b7c"
+    },
+    {
+      "file": "app/services/spatialPaintV2.js",
+      "bytes": 8840,
+      "lines": 61,
+      "sha256": "b358e29ae18b7ef88bcd94d1469043760823e8da1a7bde81bd19f74d832ecfe3"
+    },
+    {
+      "file": "app/services/spatialPlacement.js",
+      "bytes": 717,
+      "lines": 21,
+      "sha256": "c8549eb613291540f49969edb74cad73e632efe8f91aa6d7474c38aa1205f684"
+    },
+    {
+      "file": "app/services/spatialPositioning.js",
+      "bytes": 4356,
+      "lines": 80,
+      "sha256": "9ad900777577d2a981949d6a31d1450f0b37b095c915a3004ba3eb47708200fb"
+    },
+    {
+      "file": "app/services/spatialPrismRenderer.js",
+      "bytes": 10898,
+      "lines": 218,
+      "sha256": "37a37c6de20ca659545b355122f1b1a7a6feab7cc7f5336a2addb1a3ecb0b8e2"
+    },
+    {
+      "file": "app/services/spatialRainRenderer.js",
+      "bytes": 6038,
+      "lines": 72,
+      "sha256": "397168e7a48e8a22e84ea96ba7e962e5e533893a942b88a16159a0b8565fca67"
+    },
+    {
+      "file": "app/services/spatialSphereRenderer.js",
+      "bytes": 24047,
+      "lines": 410,
+      "sha256": "caa9a6765935e1d8045a5550793cdde58e5db3f077b3a357dbbd0ded68fff97c"
+    },
+    {
+      "file": "app/services/spatialStick.js",
+      "bytes": 1056,
+      "lines": 18,
+      "sha256": "9e15c1e045b27be41b30c96ce5ffcb27b6634f0e688ef620b86c2383a08d8113"
+    },
+    {
+      "file": "app/services/spatialTetherRenderer.js",
+      "bytes": 15669,
+      "lines": 324,
+      "sha256": "4094d2bb2ab29a1ff39f9e20a8ec12b789e7d8517719370814268b9854404092"
+    },
+    {
+      "file": "app/services/spatialTotemCards.js",
+      "bytes": 30235,
+      "lines": 407,
+      "sha256": "b3bfbe29b7d217983e4f0652b44c841628c18cc0ee776acab4d66c81f6d5ae9a"
+    },
+    {
+      "file": "app/services/spatialTotemSculpture.js",
+      "bytes": 17102,
+      "lines": 249,
+      "sha256": "a3caf96de24257cdbd8c8962479d41478cd579a63af3ebd87bffdc4e5536175b"
+    },
+    {
+      "file": "app/services/spatialTriangleRenderer.js",
+      "bytes": 6793,
+      "lines": 156,
+      "sha256": "ac6ce52e5772a783585b2dd44958f5381e09e83e49db01f25675c416156f8f7d"
+    },
+    {
+      "file": "app/services/spatialVisualSettings.js",
+      "bytes": 7995,
+      "lines": 81,
+      "sha256": "ceadab6731e657efc8fcdc45c6f5b351999fe39ba0fd8091b158f79b76af3837"
+    },
+    {
+      "file": "app/services/spatialZinniaVoiceBar.js",
+      "bytes": 6874,
+      "lines": 54,
+      "sha256": "17198df72cd715006b4b13fd4abe8859fa7b9b4412118a57b3eda660704ecf8b"
+    },
+    {
+      "file": "app/services/welcomeBasketPacking.js",
+      "bytes": 1080,
+      "lines": 19,
+      "sha256": "7d572aee06e8fe133315ad0ec2ffc7b90f46906217f21af8130c2e2434a84ac5"
+    },
+    {
+      "file": "app/services/welcomeBayberryCluster.js",
+      "bytes": 1717,
+      "lines": 12,
+      "sha256": "1d23c25438cf33fec0d3d652d9161112bfbff77420529ae83eccf1df0fad671b"
+    },
+    {
+      "file": "app/services/welcomeComfortOptions.js",
+      "bytes": 13923,
+      "lines": 108,
+      "sha256": "03fa5cfbd9ab65915780c62dcd7f13d112f4bda57e6e77c55c01adcbe2ab735f"
+    },
+    {
+      "file": "app/services/welcomeControlOrb.js",
+      "bytes": 8313,
+      "lines": 50,
+      "sha256": "a59f6fc9f403e67eb5cdb49ae8c1364b00496856e34fbcdef0080792ba6bd3ae"
+    },
+    {
+      "file": "app/services/welcomeControlWarmup.js",
+      "bytes": 1651,
+      "lines": 12,
+      "sha256": "57f15e55d2aa9a53112849fe5f0cd00af26946fd55e81ecf386db4a43b84d079"
+    },
+    {
+      "file": "app/services/welcomeControllerGuide.js",
+      "bytes": 20257,
+      "lines": 101,
+      "sha256": "6eb7d536cd3b6261b34e483c30ada94213d493f94150ba0347c8950b48fda544"
+    },
+    {
+      "file": "app/services/welcomeControllerLaser.js",
+      "bytes": 992,
+      "lines": 14,
+      "sha256": "032512360140579c310647b4b2b8c68a3f9f8795ffcab63a103e3e2c69cf13c8"
+    },
+    {
+      "file": "app/services/welcomeControllerMagic.js",
+      "bytes": 1968,
+      "lines": 30,
+      "sha256": "f1c998f130870eb9a7cd8382eb8369770849c7fbc19e1a217b0b685d8f9895fe"
+    },
+    {
+      "file": "app/services/welcomeControllerSkin.js",
+      "bytes": 2390,
+      "lines": 31,
+      "sha256": "03cc633d4ac80e72bbf5a86e0fbdc4cfcf44744f0a094faa8d18767e168862da"
+    },
+    {
+      "file": "app/services/welcomeDragonflyModel.js",
+      "bytes": 2196,
+      "lines": 18,
+      "sha256": "b01b55a1f7905f81368f20fdae27a581df87dbf196002579c8a456f194a349a8"
+    },
+    {
+      "file": "app/services/welcomeFlightLesson.js",
+      "bytes": 4153,
+      "lines": 32,
+      "sha256": "88e7996fd37d8d3928c35fe0d66cfc783d83cef73f125441c62b4ad08b982c47"
+    },
+    {
+      "file": "app/services/welcomeFruitCollision.js",
+      "bytes": 2187,
+      "lines": 27,
+      "sha256": "b44113f2a0b3073ece8e3e08d64a29181bd4706ccaef79cd7bc3d3d2ccfc6815"
+    },
+    {
+      "file": "app/services/welcomeInputRouting.js",
+      "bytes": 604,
+      "lines": 12,
+      "sha256": "97eaca19bf5c1807947432996dfa0622bf892b1214cf88ffc2f924a7b2c9e610"
+    },
+    {
+      "file": "app/services/welcomeInteractiveFruit.js",
+      "bytes": 1861,
+      "lines": 32,
+      "sha256": "e1cfc87651dc8036248bd4f1325dc3510c7a54524fd40b818e1aa11aca3b34cf"
+    },
+    {
+      "file": "app/services/welcomeLearning.js",
+      "bytes": 520,
+      "lines": 21,
+      "sha256": "0f8d39d4b9696cc9faed2e5fa5fea79eae45a95c16177076e3691f7f7fbf39ba"
+    },
+    {
+      "file": "app/services/welcomeNarrationBank.js",
+      "bytes": 12597,
+      "lines": 3,
+      "sha256": "dcb6a70ff001f61da8c7f7c58ed367c97b2ad9801cc523c786c13b6b806b13fe"
+    },
+    {
+      "file": "app/services/welcomeNatureController.js",
+      "bytes": 2501,
+      "lines": 22,
+      "sha256": "937d5bfe4758fe5eb85b45e565e81fa0d55c9a5da119f4588d540a3515d2a02b"
+    },
+    {
+      "file": "app/services/welcomeObjectReveal.js",
+      "bytes": 2167,
+      "lines": 23,
+      "sha256": "03fe6e3f0ff927ad1eb34c60dbc29de417165e2a8fe4d52a622d7d5031cb583e"
+    },
+    {
+      "file": "app/services/welcomeOptionalGames.js",
+      "bytes": 6862,
+      "lines": 81,
+      "sha256": "2e598ef1d09077afd49e06724bad7622f13f82300f1eb8502654a17c5f779da2"
+    },
+    {
+      "file": "app/services/welcomePlantPractice.js",
+      "bytes": 19554,
+      "lines": 90,
+      "sha256": "9dbe6fdd3a31c96dfd309ece22dd9f605b9796fc2d5e3f511b9efe7636756b16"
+    },
+    {
+      "file": "app/services/welcomePointerTarget.js",
+      "bytes": 570,
+      "lines": 10,
+      "sha256": "3e77aa4cc2cf1e4a75332a9bdf98405b574dd7354c87d5cb57233750ddc7c8d5"
+    },
+    {
+      "file": "app/services/welcomePracticeContent.js",
+      "bytes": 16624,
+      "lines": 78,
+      "sha256": "26616bbeec6b0fa2b93e4127a2810eb734a22fed943c84df93a1d9741160ac72"
+    },
+    {
+      "file": "app/services/welcomePracticeFeedback.js",
+      "bytes": 1271,
+      "lines": 15,
+      "sha256": "a76a22b95fe2316329bfd9c13021c6e9fcfaad50ba0825605d29fe39cd95207c"
+    },
+    {
+      "file": "app/services/welcomePracticeFruitAssets.js",
+      "bytes": 1739,
+      "lines": 14,
+      "sha256": "996c3516bacd9d45ca3ebc31c339372f2111dad16045fe06b1eab9863378c2b9"
+    },
+    {
+      "file": "app/services/welcomePracticePhysics.js",
+      "bytes": 5068,
+      "lines": 58,
+      "sha256": "6b434900cdc1971005c615ab00211cc7f9cc1c660e01a31eb6358b3034e28655"
+    },
+    {
+      "file": "app/services/welcomePracticeProps.js",
+      "bytes": 9379,
+      "lines": 59,
+      "sha256": "d8ca8e03918a4ab8a0ed728ac56193f9f5f2c6f643f5a3d38f0b94bd1a5a6488"
+    },
+    {
+      "file": "app/services/welcomePracticeScene.js",
+      "bytes": 70934,
+      "lines": 341,
+      "sha256": "b91c9f3b5f8dfe79b1ee3b12a95d686d14da317a1a45642fd73f649ed150f0c5"
+    },
+    {
+      "file": "app/services/welcomePracticeTable.js",
+      "bytes": 2564,
+      "lines": 28,
+      "sha256": "981ecd421c6bc58b575c1366c72130a4eb26d64072ceb580e326a03ca6c33a0b"
+    },
+    {
+      "file": "app/services/welcomePracticeTrials.js",
+      "bytes": 37270,
+      "lines": 213,
+      "sha256": "9d707be3887f18d6011e52db0a9d22959fa09c4528929df45c70d2142bbd81a7"
+    },
+    {
+      "file": "app/services/welcomePracticeVoice.js",
+      "bytes": 8956,
+      "lines": 65,
+      "sha256": "5ab2ae5e25bb0acc4b28d0e449a22f9a2bc5a387c40676e9f54bd366d0eb4357"
+    },
+    {
+      "file": "app/services/welcomePracticeXR.js",
+      "bytes": 11089,
+      "lines": 78,
+      "sha256": "258e59a133f25a27a544f3370285a03de1d77fa50c646af9da112bf7b122d85e"
+    },
+    {
+      "file": "app/services/welcomeSoundIndicator.js",
+      "bytes": 2778,
+      "lines": 35,
+      "sha256": "1f8620874313c7c22d245c0fa7a31c7556a5583b7052d127fdc37fd57ef8093c"
+    },
+    {
+      "file": "app/services/welcomeSpeechPresentation.js",
+      "bytes": 1997,
+      "lines": 34,
+      "sha256": "69084bdd51307cf96855fcac23eccf4b71b4c6e248456911853d0ebe92933e57"
+    },
+    {
+      "file": "app/services/welcomeStrawberryPlant.js",
+      "bytes": 4887,
+      "lines": 33,
+      "sha256": "5480f8ef9c7463aeaf1a5a4c30ce77efa301fe63e7a75326700fe188049714aa"
+    },
+    {
+      "file": "app/services/welcomeTrialButterflies.js",
+      "bytes": 2844,
+      "lines": 32,
+      "sha256": "2b511ddb4eee65a3659778ebeab59692304a4da613a4ec78a9694095b21402b0"
+    },
+    {
+      "file": "app/services/welcomeTrialState.js",
+      "bytes": 2416,
+      "lines": 36,
+      "sha256": "a180eed1e288af1a5a20c43f72e279bc423c4718aa93e160757198b2a644d330"
+    },
+    {
+      "file": "app/services/welcomeTutorialSettings.js",
+      "bytes": 1491,
+      "lines": 23,
+      "sha256": "7bde65479f472424fac3e446b445dbc0e9561837a564e672e0f1ebf7d7507972"
+    },
+    {
+      "file": "app/services/welcomeVisitorIntroduction.js",
+      "bytes": 7800,
+      "lines": 38,
+      "sha256": "ef540c4382bfd416520460ec6aff64f0d873914a8fb8e52ebcb5d68382f79fda"
+    },
+    {
+      "file": "app/services/welcomeWaterStream.js",
+      "bytes": 1103,
+      "lines": 16,
+      "sha256": "df1b0a8d74dc7d5dd6c4d6592f4c4daf1768e5dbd6f0653f897d36d37abd9d76"
+    },
+    {
+      "file": "app/services/welcomeWristMenu.js",
+      "bytes": 9850,
+      "lines": 88,
+      "sha256": "3a864db3562e95a9d7f822a66dcde9a0aea5bcf1e1e8e4a09be5c57ba9ae818e"
+    },
+    {
+      "file": "app/services/welcomeZinniaGuide.js",
+      "bytes": 14413,
+      "lines": 109,
+      "sha256": "72cd86bb89973fe73cdfd90a1eacb9155d5801ab4d3b9a8585565ddc3d1116ed"
+    },
+    {
+      "file": "app/services/xrControllerHandPose.js",
+      "bytes": 5343,
+      "lines": 69,
+      "sha256": "466dbd61096acf3b5e5b13c12fa2649fe5ea4aa6072796b439080075c0c6bec8"
+    },
+    {
+      "file": "app/services/xrDirectInteraction.js",
+      "bytes": 2334,
+      "lines": 43,
+      "sha256": "1ddac5fb62adbb44c3ecd0477588d2f2ef988eacf63ca93bc6ec6069c0685941"
+    },
+    {
+      "file": "app/services/xrHandOutline.js",
+      "bytes": 8632,
+      "lines": 71,
+      "sha256": "148baed661704baebc47961c8755080aea388bf2eb1739a9f907389ee541af52"
+    },
+    {
+      "file": "app/services/xrMeshPointerContact.js",
+      "bytes": 1953,
+      "lines": 22,
+      "sha256": "08e1c33a42ba21b1579d120b16c16beab48f8ba94a95ab0c4a00fa9af32684f3"
+    },
+    {
+      "file": "app/services/xrPerformanceSettings.js",
+      "bytes": 6801,
+      "lines": 93,
+      "sha256": "b5222949f6b9a1d13a7c02a3b65191017f39cda6bcb2faf668ecd1ef2acf0133"
+    },
+    {
+      "file": "app/services/xrPointer.js",
+      "bytes": 9307,
+      "lines": 157,
+      "sha256": "514fdf69869072e9b21dbd137c6600543e456d9c52b2e3eb07966684666b7182"
+    },
+    {
+      "file": "app/services/xrWorldRebase.js",
+      "bytes": 1907,
+      "lines": 23,
+      "sha256": "a797146f710dae8d7906c45ceeefa3c485131bad679f742362e8b93eb39fb5db"
+    },
+    {
+      "file": "app/services/zinniaCharacter.js",
+      "bytes": 3353,
+      "lines": 40,
+      "sha256": "40b09d67a12efafac8adab100e88e9a68ad94defc5780f306685ed5e53246d41"
+    },
+    {
+      "file": "app/services/zinniaConversationInput.js",
+      "bytes": 4491,
+      "lines": 40,
+      "sha256": "ea000a446533b912ecbcb8d58ddfe354e1892cf2c38fd0ff14199ea1c4d5d2d4"
+    },
+    {
+      "file": "app/services/zinniaFramePerch.js",
+      "bytes": 7740,
+      "lines": 67,
+      "sha256": "ea7dc5a60f1f4a616c67dd7096f238a50609240a90870df3d27699abfd89b13d"
+    },
+    {
+      "file": "app/services/zinniaPlantDiscovery.js",
+      "bytes": 24859,
+      "lines": 217,
+      "sha256": "edb4459bec0cf9acf251910e85fc5dc3966b706cddd318baac639654546b126e"
+    },
+    {
+      "file": "app/services/zinniaReplyInterpretation.js",
+      "bytes": 531,
+      "lines": 6,
+      "sha256": "0424381a93b9bd6f5f16a8212bfd07a6fc33abb69f1fddec533260d085c4351a"
+    },
+    {
+      "file": "app/services/zinniaTouchReactions.js",
+      "bytes": 4482,
+      "lines": 54,
+      "sha256": "0820c2d0864cd6ea5dd7cfa55ce60cff28d128a40184fc8b315361712a8ce9fc"
+    },
+    {
+      "file": "app/services/zinniaVisitorSession.js",
+      "bytes": 271,
+      "lines": 5,
+      "sha256": "b5e1c5d09b12d5c90c43a7378a34c721a18398ed639b250f0a3d731eabb49ef4"
+    },
+    {
+      "file": "app/services/zinniaVoice.js",
+      "bytes": 8993,
+      "lines": 64,
+      "sha256": "8017b3eab8d8ce3ac9aa1b3de1547e4717cc8904719bf26a687ffa57e734b402"
+    },
+    {
+      "file": "app/services/zinniaVoiceCoordinator.js",
+      "bytes": 1335,
+      "lines": 19,
+      "sha256": "e3d22ca750297323350e82e0e3e6405e22dde710df3c9e619cd658ea3896bb3d"
+    },
+    {
+      "file": "app/vendor/three.core.min.js",
+      "bytes": 381124,
+      "lines": 7,
+      "sha256": "61ba0df005b05991361d040d8ff670e1aadfd0ce7aeebd1fdb0725957a8957de"
+    },
+    {
+      "file": "app/vendor/three.module.min.js",
+      "bytes": 338908,
+      "lines": 7,
+      "sha256": "e2b5ee6bccd38fd6d8a2428546b83c5f2426d84b152ef82be8055556e3b40eb6"
+    },
+    {
+      "file": "package.json",
+      "bytes": 321,
+      "lines": 13,
+      "sha256": "15c650b3d7b7753466e5c1adc1b6385748be572d528b59d39e770f5585ac6a1e"
+    },
+    {
+      "file": "tools/build-hosted.mjs",
+      "bytes": 5800,
+      "lines": 125,
+      "sha256": "9899801dcb3212e870df0384bd16411b9c9f317ee88212a40d7b1aa7427e50bf"
+    }
+  ],
+  "assets": [
+    {
+      "file": "app/assets/welcome-practice/zinnia.glb",
+      "bytes": 2168484,
+      "vertices": 34172,
+      "triangles": 51840,
+      "primitives": 113,
+      "meshes": 113,
+      "images": 0,
+      "animations": 1,
+      "skins": 0,
+      "morphTargets": 3,
+      "sha256": "9c94de2e6a1106fa402aeb00238cbf3062e1c86b4dfa43c803530f4daeb61ad0"
+    },
+    {
+      "file": "app/assets/meta-hand-left.glb",
+      "bytes": 94572,
+      "vertices": 1360,
+      "triangles": 2314,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 0,
+      "animations": 0,
+      "skins": 1,
+      "morphTargets": 0,
+      "sha256": "bc67783144944ea1cda54d9247885825ea5fb9d4651469fe7d00be517a5c2b87"
+    },
+    {
+      "file": "app/assets/meta-hand-right.glb",
+      "bytes": 94004,
+      "vertices": 1360,
+      "triangles": 2314,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 0,
+      "animations": 0,
+      "skins": 1,
+      "morphTargets": 0,
+      "sha256": "291790c14f7f88a7f9bd35330c47392ed8e8d395ae6728f4bb7089f1bc1f2b96"
+    },
+    {
+      "file": "app/assets/living-frame/living-frame-sd.glb",
+      "bytes": 11860472,
+      "vertices": 110574,
+      "triangles": 136356,
+      "primitives": 93,
+      "meshes": 93,
+      "images": 4,
+      "animations": 1,
+      "skins": 0,
+      "morphTargets": 2,
+      "sha256": "8318dbbdd145899536ead26d9607f1059a5e91ea94f484a5d9a1d6cf0815ea06"
+    },
+    {
+      "file": "app/assets/living-frame/living-frame-hd.glb",
+      "bytes": 18113564,
+      "vertices": 176868,
+      "triangles": 215452,
+      "primitives": 93,
+      "meshes": 93,
+      "images": 4,
+      "animations": 1,
+      "skins": 0,
+      "morphTargets": 2,
+      "sha256": "021df9b64564296ec988942ee3f340a94142af5aade9a6d3359b99a85f6a0485"
+    },
+    {
+      "file": "app/assets/welcome-practice/strawberry.glb",
+      "bytes": 383884,
+      "vertices": 5648,
+      "triangles": 9090,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 1,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "19829c07e9485f3da1b41b6750b6000b7358421b357fe486ba73eabcda1fe22f"
+    },
+    {
+      "file": "app/assets/welcome-practice/dragonfly.glb",
+      "bytes": 726404,
+      "vertices": 11010,
+      "triangles": 10311,
+      "primitives": 6,
+      "meshes": 6,
+      "images": 2,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "79779be072b6f87553bf15e6fb61750f2c5031dde551d82a35768b5788fb3b73"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/peach.glb",
+      "bytes": 1216112,
+      "vertices": 3906,
+      "triangles": 7602,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 5,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "55d9df918cccb8f342b2b035cb596aef26205a119b4998caa4ee1c561051b8b0"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/peach-half.glb",
+      "bytes": 1346204,
+      "vertices": 4775,
+      "triangles": 9063,
+      "primitives": 2,
+      "meshes": 2,
+      "images": 4,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "fc99895b6fd599b46dd0d7de5d5442ba5f03d8b449f393e6e23834b63127ca4b"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/fig.glb",
+      "bytes": 430328,
+      "vertices": 3684,
+      "triangles": 7142,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 2,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "06a33ad9e5d4349460918fa4732c060de4aa33663329ddaf9bb9038648dd498b"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/fig-half.glb",
+      "bytes": 696520,
+      "vertices": 4008,
+      "triangles": 7788,
+      "primitives": 2,
+      "meshes": 2,
+      "images": 5,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "3b043261186ce3eabfd8ee6e907832c8b6dae30c0a079a2800e2af23b5ca454d"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/mango.glb",
+      "bytes": 1324624,
+      "vertices": 14684,
+      "triangles": 24164,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 3,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "ec5a44f5f03df59127b4190a4db4fc161ac96514430a34c270bfedb64beb1575"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/mango-half.glb",
+      "bytes": 995760,
+      "vertices": 9855,
+      "triangles": 16244,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 3,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "74b36bdabec199ff379ce6ae700e542a6ab807348423c9544ba4c5251a2af691"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/pomegranate.glb",
+      "bytes": 173404,
+      "vertices": 229,
+      "triangles": 382,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 2,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "0b9ca30939efad44ef557b4807ef5466b8970e97e8dd449e7e536c6cf7037f0d"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/pomegranate-half.glb",
+      "bytes": 413108,
+      "vertices": 5811,
+      "triangles": 7426,
+      "primitives": 3,
+      "meshes": 3,
+      "images": 4,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "5ecd6f31ecd0af8ea8f2474edf8967d93ce19fd6161a2f332d4c8c36af0d0c4a"
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-whole.glb",
+      "bytes": 33080,
+      "vertices": 311,
+      "triangles": 482,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 1,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "0936f151f1179a8d8251fbb8140bfd337d060bfe8c6bd8cdbf3d50a1d6305076"
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-half.glb",
+      "bytes": 46256,
+      "vertices": 259,
+      "triangles": 366,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 1,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "8745e7fd941d2b1973043f303561c8920d8c14feb77af13023c9ed2a3a317190"
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-bitten.glb",
+      "bytes": 47836,
+      "vertices": 316,
+      "triangles": 488,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 1,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "ad1f75737bd9a467185f9097a898ddca93577a5da447cb4cbdbc085bb5595fcf"
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-eaten-2.glb",
+      "bytes": 129200,
+      "vertices": 2231,
+      "triangles": 3661,
+      "primitives": 2,
+      "meshes": 1,
+      "images": 1,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "8973dffb88d9b66c862fd982aa5e0a3d8883146be55b06d542dbfda635e24883"
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/apple-eaten-3.glb",
+      "bytes": 193192,
+      "vertices": 3769,
+      "triangles": 6126,
+      "primitives": 2,
+      "meshes": 1,
+      "images": 1,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "ece1b438d3cd6a0932fc17382dbfc3d0085fd6de2e131f9bb86670de62b70d2a"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/carambola.glb",
+      "bytes": 405704,
+      "vertices": 5674,
+      "triangles": 8860,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 2,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "e5e23de097a116922cd50f2618479bdd2073a0f3e82e680746cb3abfbe9d6ac7"
+    },
+    {
+      "file": "app/assets/welcome-practice/fruit-collection/carambola-half.glb",
+      "bytes": 289652,
+      "vertices": 3650,
+      "triangles": 5796,
+      "primitives": 1,
+      "meshes": 1,
+      "images": 2,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 0,
+      "sha256": "349dd6c3694cdf8353c0b42b192f1597afce7dd551b6da778f4f229ca227334c"
+    },
+    {
+      "file": "app/assets/welcome-practice/interactive-fruit/banana-peel.glb",
+      "bytes": 634252,
+      "vertices": 1231,
+      "triangles": 1500,
+      "primitives": 5,
+      "meshes": 1,
+      "images": 1,
+      "animations": 0,
+      "skins": 0,
+      "morphTargets": 16,
+      "sha256": "5e988d9b419a435ba145cd405cd06599b381eb5e08efb96725af6a5702a11f97"
+    }
+  ]
+}

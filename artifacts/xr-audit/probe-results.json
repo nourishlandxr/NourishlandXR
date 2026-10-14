@@ -1,0 +1,78 @@
+{
+  "handTracking": {
+    "full": {
+      "tracked": true,
+      "pinch": true,
+      "sequence": 1,
+      "visualConfidence": 1
+    },
+    "partial": {
+      "tracked": true,
+      "pinch": true,
+      "visualConfidence": 0,
+      "rawJoints": 24
+    },
+    "lost": {
+      "tracked": false,
+      "pinch": false
+    },
+    "restored": {
+      "tracked": true,
+      "pinch": true,
+      "sequence": 2
+    },
+    "note": "Nonessential joint loss hides the full hand renderer while interaction remains tracked; reacquisition can raise another pinch edge without a physical opening."
+  },
+  "handHandoff": {
+    "withPreviousHandPinchActive": 0,
+    "afterClearingGlobalEdge": 1,
+    "note": "Actual main-demo pinch polling loses the new hand edge when the previously active hand was also pinching."
+  },
+  "panelTimer": {
+    "initial": true,
+    "after701ms": false,
+    "note": "No button release was delivered. Real panel drag/slider ownership can override this timer; ordinary button gestures cannot."
+  },
+  "mapRecovery": {
+    "held": true,
+    "released": true,
+    "heldAfterRecovery": true,
+    "grabCount": 2,
+    "note": "Same pressed grip recaptures after tracking loss without release."
+  },
+  "textureCap": {
+    "requested": 1024,
+    "uploads": [
+      {
+        "width": 2048,
+        "height": 2048
+      }
+    ]
+  },
+  "emissive": {
+    "uniformNames": [
+      "projection",
+      "view",
+      "model",
+      "colour",
+      "alpha",
+      "textured",
+      "image",
+      "instanced",
+      "normalView",
+      "normalImage",
+      "normalMapped",
+      "normalScale",
+      "roughImage",
+      "roughMapped",
+      "roughness",
+      "metalness",
+      "unlit",
+      "magicPlane",
+      "magicProgress"
+    ],
+    "hasEmissiveUniform": false,
+    "floatUniformsChanged": false,
+    "note": "Changing only emissive/intensity has no shader input effect; this is how the control Orb toggles/pulses its light."
+  }
+}

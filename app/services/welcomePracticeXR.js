@@ -10,14 +10,14 @@ import {createWelcomeInputRouting} from './welcomeInputRouting.js';
 import {nearestWelcomePointerHit} from './welcomePointerTarget.js';
 
 export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onToolMenu=()=>{},onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null,getFramePose=()=>null}={}){
-    let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false,nativeHandsReady=false,rendererRevision=-1,pendingRevision=-1;
+    let handOutline=null;const frameSamples=[];let updateCpuMs=0;let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false,nativeHandsReady=false,rendererRevision=-1,pendingRevision=-1;
     const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
     const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onToolMenu,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose});
     const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:ray=>{
         const hit=nearestWelcomePointerHit(ray,onHit?.(ray),stage.hit(ray));return hit?.kind==='panel'?hit:null;
     }});
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}};
-    function eventRay(event){try{return controllerRayFromPose(event.frame.getPose(event.inputSource.targetRaySpace,space),event.inputSource.handedness);}catch{return inputs.find(i=>i.source===event.inputSource)?.ray || null;}}
+    function eventRay(event){if(stage.controllerHandsVisible){const ray=inputs.find(i=>i.source===event.inputSource)?.ray;if(ray)return ray;}try{return controllerRayFromPose(event.frame.getPose(event.inputSource.targetRaySpace,space),event.inputSource.handedness);}catch{return inputs.find(i=>i.source===event.inputSource)?.ray || null;}}
     function unbind(){abort?.abort();abort=null;stage.releaseAll(false);forceGrip.clear();forceTrigger.clear();curling.clear();comfortPinches.clear();session=null;}
     function bind(value,referenceSpace){unbind();void stage.preloadControllers([...value.inputSources].filter(source=>!source.hand));session=value;space=referenceSpace;voice?.unlock();abort=new AbortController();
         for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,event=>{
@@ -39,7 +39,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
         referenceSpace.addEventListener?.('reset',event=>{if(event.transform?.inverse?.matrix)stage.rebase(event.transform.inverse.matrix);else {stage.releaseAll(false);onChange?.({...stage.snapshot(),trackingReset:true});}},{signal:abort.signal});
     }
     function update(frame,time,viewer,floor,trackedHands){
-        if(disposed || !stage.active)return;const dt=lastTime===null?0:(time-lastTime)/1000;lastTime=time;hands=trackedHands || [];inputs=[];controllers=[];
+        if(disposed || !stage.active)return;const cpuStarted=performance.now();const dt=lastTime===null?0:(time-lastTime)/1000;lastTime=time;hands=trackedHands || [];inputs=[];controllers=[];
         for(const source of session?.inputSources || []){
             const uiBlocked=panelRouting.occupied(source);
             let pose=null,ray=null;try{pose=frame.getPose(source.gripSpace || source.targetRaySpace,space);ray=controllerRayFromPose(frame.getPose(source.targetRaySpace,space),source.handedness);}catch{}
@@ -51,7 +51,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
                 const fist=curl<(curling.get(source)?.105:.087);curling.set(source,fist);
                 const gripPoint=trackedPalmPoint(state.rawJoints);if(!gripPoint){inputs.push({source,matrix:null});continue;}
                 inputs.push({source,matrix:new THREE.Matrix4().compose(gripPoint,q,new THREE.Vector3(1,1,1)).elements,ray:state.pointer,tip:index,fist,down:Boolean(state.pinch || fist),trigger:Boolean(state.pinch),uiBlocked});
-            }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0),uiBlocked};inputs.push(input);if(input.matrix)controllers.push(input);}
+            }else {const down=Boolean(forceGrip.get(source) || source.gamepad?.buttons?.[1]?.pressed || source.gamepad?.buttons?.[1]?.value>.55),trigger=Boolean(forceTrigger.get(source) || source.gamepad?.buttons?.[0]?.pressed),input={source,matrix:pose?.transform.matrix || null,ray,down,trigger,grip:Math.max(down?1:0,source.gamepad?.buttons?.[1]?.value || 0),uiBlocked};inputs.push(input);if(input.matrix){if(stage.controllerHandsVisible)input.ray=handOutline?.controllerPointer?.(input) || input.ray;controllers.push(input);}}
         }
         stage.update(dt,{viewer,floor,hands,controllers,inputs,frameReady:isFrameReady(),frameError:getFrameError(),handsReady:nativeHandsReady,presentationReady:Boolean(renderer && !pendingRenderer && !rebuild),renderRevision:rendererRevision});revealTime+=Math.max(0,Math.min(.1,dt));
         if(!pendingRenderer && (!renderer || rebuild)){rebuild=false;pendingRevision=stage.snapshot().sceneRevision;pendingRenderer=createFruitWindowXR(gl,stage.scene,{alphaCompositing:true,progressive:true,welcomeMagic:true,visibleParentsOnly:true});}
@@ -60,15 +60,16 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
         // Tracked hands becoming available never turns off controller access.
         renderer?.update();renderer?.prepareNext();
         const pointerEnabled=stage.controllerLasersVisible || stage.snapshot().settingsAvailable;
-        for(const input of inputs)if(pointerEnabled && !input.source.hand && input.ray && !stage.exiting && !stage.isBrushHeld(input.source))input.pointerHit=nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray));
+        updateCpuMs=performance.now()-cpuStarted;if(dt>0){frameSamples.push(dt*1000);if(frameSamples.length>120)frameSamples.shift();}
+        const heldLeaves=stage.snapshot().leafContacts || [];for(const input of inputs)if(pointerEnabled && !input.source.hand && input.ray && !stage.exiting){const leaf=heldLeaves.find(hold=>hold.hand===input.source.handedness);input.pointerHit=leaf?.point?{kind:'zinnia-leaf',worldPoint:{x:leaf.point[0],y:leaf.point[1],z:leaf.point[2]}}:nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray));}
     }
-    return {stage,bind,update,get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
-        draw(view,handRenderer){if(!stage.active)return;nativeHandsReady=Boolean(handRenderer?.ready);const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);
+    return {stage,bind,update,get performance(){const sorted=[...frameSamples].sort((a,b)=>a-b);return {updateCpuMs,frameP95Ms:sorted[Math.floor(sorted.length*.95)] || 0,samples:sorted.length,renderer:renderer?.stats};},get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
+        draw(view,handRenderer){handOutline=handRenderer;if(!stage.active)return;nativeHandsReady=Boolean(handRenderer?.ready);const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);
             handRenderer?.draw(view,hands,{filled:true,controllers:stage.controllerHandsVisible?controllers.filter(input=>(stage.controllerHandReveal[input.source.handedness] || 0)>0):[],controllerOpacity:stage.controllerHandOpacity*opacity,trackedOpacity:stage.trackedHandOpacity*opacity,controllerReveal:stage.controllerHandReveal});
             for(const input of inputs){
                 if(input.source.hand || !input.ray || stage.exiting)continue;
                 const r=input.ray,hit=input.pointerHit;
-                if(!stage.controllerLasersVisible){if(stage.snapshot().settingsAvailable && hit?.worldPoint && ['panel','trial-control','voice-bar'].includes(hit.kind))drawSpatialPointerContact(gl,pointer,view,hit.worldPoint,.007,[.8,.96,1,.9*opacity]);continue;}
+                if(!stage.controllerLasersVisible){if(stage.snapshot().settingsAvailable && hit?.worldPoint && ['panel','trial-control','voice-bar'].includes(hit.kind)){const contact={x:hit.worldPoint.x-r.direction.x*.004,y:hit.worldPoint.y-r.direction.y*.004,z:hit.worldPoint.z-r.direction.z*.004};drawWelcomeControllerLaser(gl,pointer,view,r,contact,1,opacity);drawSpatialPointerContact(gl,pointer,view,contact,.009,[.8,.96,1,.9*opacity]);};continue;}
                 if(stage.trials.active==='painting' || stage.isBrushHeld(input.source))continue;
                 drawWelcomeControllerLaser(gl,pointer,view,r,hit?.worldPoint,stage.controllerLaserProgress,opacity);
             }

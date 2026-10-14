@@ -14,7 +14,7 @@ import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.j
 
 test('arrival reveals the table and Zinnia before controllers, then laser, settings, virtual hands and fruit',()=>{
     const before=(a,b)=>assert.ok(lessons.findIndex(l=>l.id===a)<lessons.findIndex(l=>l.id===b),`${a} precedes ${b}`);
-    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','conversation-bridge');before('conversation-bridge','controls-trigger');before('zinnia','controls-grip');before('controls-face-second','laser-intro');before('settings-close','laser-intro');before('laser-zinnia','comfort');before('settings-close','interaction-methods');before('interaction-methods','virtual-hands-reveal');before('virtual-hands-reveal','gloves');before('gloves','basket-reveal');before('grab','brush');before('brush','fruit');
+    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','conversation-bridge');before('conversation-bridge','controls-trigger');before('zinnia','controls-grip');before('controls-face-second','laser-intro');before('settings-close','laser-intro');before('laser-zinnia','comfort');before('settings-close','interaction-methods');before('interaction-methods','virtual-hands-reveal');before('virtual-hands-reveal','gloves');before('gloves','basket-reveal');before('grab','brush');before('fruit','brush');
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
     for(const clip of [...lessons,...responses].filter(c=>c.spoken && !c.liveVoice))assert.ok(fs.statSync(new URL('../app/'+(WELCOME_NARRATION_BANK?.base || 'assets/welcome-practice/voice/')+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
@@ -54,8 +54,8 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         const tick=(seconds,extra={})=>{for(let i=0;i<Math.ceil(seconds/.05);i++)stage.update(.05,{viewer,floor:0,...extra});};
         stage.start(viewer,0);tick(10,{frameReady:false});assert.equal(stage.phase,'frame');assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.snapshot().comfortVisible,false);
         assert.equal(stage.zinniaMount.parent.visible,false);
-        tick(.1,{frameReady:true});assert.equal(stage.phase,'frame');assert.ok(stage.snapshot().frameOpacity<1);tick(1.3,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,0);
-        tick(6);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/This hands tutorial/);assert.equal(spoken.at(-1).recorded,false);
+        tick(.1,{frameReady:true});assert.equal(stage.phase,'frame');assert.ok(stage.snapshot().frameOpacity<1);tick(1.3,{frameReady:true});assert.equal(stage.phase,'title');assert.equal(spoken.length,1);
+        tick(16);assert.equal(stage.phase,'arrival');assert.match(spoken.at(-1).spoken,/Make yourself comfortable/);assert.equal(spoken.at(-1).recorded,false);
         stage.previewLesson('table-reveal');tick(.1);assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.zinniaMount.parent.visible,false);
         stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.status,'ready');assert.ok(stage.zinniaMount.getObjectByName('Eye_L_expression'));assert.ok(stage.zinniaMount.getObjectByName('Pot'));
         stage.previewLesson('comfort');assert.equal(stage.snapshot().comfortVisible,true);stage.button('pause');tick(60);assert.equal(stage.phase,'comfort');assert.equal(stage.snapshot().voice.paused,true);stage.button('pause');
@@ -64,8 +64,8 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         const ray={origin:{x:position.x,y:position.y,z:position.z+.2},direction:{x:0,y:0,z:-1}},before={...orange.velocity};assert.equal(stage.select(ray,source),false);assert.deepEqual(orange.velocity,before);
         const pose=new THREE.Matrix4().makeTranslation(position.x,position.y,position.z).elements;
         tick(.05,{inputs:[{source,matrix:pose,down:false}]});tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
-        const lifted=[...pose];lifted[13]+=.5;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});const plateAbove=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.27,.65,.19)).elements;tick(.2,{inputs:[{source,matrix:plateAbove,down:true}]});const platePose=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.27,.18,.19)).elements;tick(.1,{inputs:[{source,matrix:platePose,down:true}]});tick(.1,{inputs:[{source,matrix:platePose,down:false}]});assert.equal(stage.snapshot().completed,true,JSON.stringify({held:stage.snapshot().held,fruit:orange.position,basket:stage.snapshot().basket}));
-        tick(3);assert.equal(stage.phase,'brush');
+        const lifted=[...pose];lifted[13]+=.5;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});const plateAbove=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(.02,.65,-.16)).elements;tick(.2,{inputs:[{source,matrix:plateAbove,down:true}]});const platePose=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(.02,.18,-.16)).elements;tick(.1,{inputs:[{source,matrix:platePose,down:true}]});tick(.1,{inputs:[{source,matrix:platePose,down:false}]});assert.equal(stage.snapshot().completed,true,JSON.stringify({held:stage.snapshot().held,fruit:orange.position,basket:stage.snapshot().basket}));
+        tick(3);assert.equal(stage.phase,'fruit');
         for(const hand of [false,true]){
             stage.previewLesson('water');tick(.1);
             const can=stage.bodies.find(b=>b.id==='watering-can'),source=hand?{handedness:'right',hand:{}}:{handedness:'right'};
@@ -113,14 +113,14 @@ test('demo narration recovers an audio-blocked clip on unlock but preserves an i
 });
 
 
-test('right thumbstick opens and closes tutorial settings once per fresh press and rewards each completed step',async()=>{
+test('left thumbstick opens and closes tutorial settings once per fresh press and rewards each completed step',async()=>{
  const oldDocument=globalThis.document,oldFetch=globalThis.fetch,oldImage=globalThis.Image,oldWarn=console.warn;
  globalThis.document=canvasDocument();globalThis.Image=class {set src(value){this.onerror?.();}};globalThis.fetch=async()=>{throw Error('local fixture');};console.warn=()=>{};
  let stage,opened=false;const toggles=[],feedback=[],voice={status:()=>({playing:false,paused:false}),speak(){},pause(){},resume(){},stop(){},unlock(){}};
  try{
   stage=createWelcomePracticeScene({voice,embedded:true,onToolMenu:()=>{opened=!opened;toggles.push(opened);},onFeedback:(kind,source)=>feedback.push({kind,source}),loadZinnia:async()=>{const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}});await stage.loading;
-  const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements,source={handedness:'right',profiles:[],gamepad:{buttons:Array.from({length:6},()=>({pressed:false})),axes:[]}},input={source,matrix:viewer,down:false,trigger:false};
+  const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements,source={handedness:'left',profiles:[],gamepad:{buttons:Array.from({length:6},()=>({pressed:false})),axes:[]}},input={source,matrix:viewer,down:false,trigger:false};
   const tick=()=>stage.update(.05,{viewer,floor:0,controllers:[input],inputs:[input]});stage.start(viewer,0);stage.previewLesson('settings-open');tick();source.gamepad.buttons[3].pressed=true;tick();assert.equal(opened,true);for(let i=0;i<8;i++)tick();assert.deepEqual(toggles,[true]);
-  source.gamepad.buttons[3].pressed=false;for(let i=0;i<50 && stage.phase!=='settings-close';i++)tick();assert.equal(stage.phase,'settings-close');source.gamepad.buttons[3].pressed=true;tick();assert.equal(opened,false);assert.deepEqual(toggles,[true,false]);assert.equal(feedback.filter(f=>f.kind==='lesson' && f.source===source).length,2);
+  source.gamepad.buttons[3].pressed=false;for(let i=0;i<50 && stage.phase!=='settings-close';i++)tick();assert.equal(stage.phase,'settings-close');source.gamepad.buttons[3].pressed=true;tick();assert.equal(opened,false);assert.deepEqual(toggles,[true,false]);for(let i=0;i<5;i++)tick();assert.equal(feedback.filter(f=>f.kind==='lesson' && f.source===source).length,2);
  }finally{stage?.destroy();globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.Image=oldImage;console.warn=oldWarn;}
 });

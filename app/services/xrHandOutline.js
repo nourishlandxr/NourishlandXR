@@ -39,6 +39,7 @@ export function createXRHandOutline(gl){
     }).catch(error=>{if(!disposed)console.warn('Hand outline:',error.message);});
     return {
         get ready(){return rigs.has('left') && rigs.has('right');},
+        controllerPointer(input){const rig=rigs.get(input.source.handedness);if(!rig || !input.matrix)return null;const base=controllerHandGripMatrix(rig,input.matrix),joints=controllerHandJointPoses(rig,input),tip=new THREE.Vector3().setFromMatrixPosition(joints[rig.names.indexOf('index-finger-tip')]).applyMatrix4(base),knuckle=new THREE.Vector3().setFromMatrixPosition(joints[rig.names.indexOf('index-finger-phalanx-proximal')]).applyMatrix4(base);return {origin:{x:tip.x,y:tip.y,z:tip.z},direction:tip.sub(knuckle).normalize()};},
         draw(view,entries,{filled=false,controllers=[],controllerOpacity=1,trackedOpacity=1,controllerReveal=null}={}){
             if(disposed)return false;
             const ready=entries.filter(({source,state})=>state?.tracked && state.visualConfidence>0 && performance.now()-state.time<100 && rigs.has(source.handedness) && rigs.get(source.handedness).names.every(name=>state.rawJoints.has(name)));

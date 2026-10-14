@@ -54,6 +54,11 @@ export function createDemoFeedback({resetSettings=false}={}) {
         const now=context.currentTime;
         if(now-lastSound<.065 && !(kind==='practice-reward' && ['practice-press','practice-success'].includes(lastSoundKind)))return;
         lastSound=now;lastSoundKind=kind;
+        if(kind==='crunch'){
+            const buffer=context.createBuffer(1,Math.floor(context.sampleRate*.22),context.sampleRate),data=buffer.getChannelData(0);
+            for(let i=0;i<data.length;i++){const t=i/context.sampleRate;data[i]=(Math.random()*2-1)*Math.exp(-t*22)*(.3+.7*Math.abs(Math.sin(t*145)));}
+            const noise=context.createBufferSource(),filter=context.createBiquadFilter(),gain=context.createGain();noise.buffer=buffer;filter.type='bandpass';filter.frequency.value=1800;filter.Q.value=.6;gain.gain.value=.28;noise.connect(filter);filter.connect(gain);gain.connect(fxGain);noise.start(now);noise.onended=()=>{noise.disconnect();filter.disconnect();gain.disconnect();};return;
+        }
         const notes=kind==='practice-magic'?[392,523,784,1046]:kind==='practice-success'?[880,1174]:kind==='practice-reward'?[523,659,784]:kind==='practice-press'?[740]:kind==='practice-water'?[392,523]:kind==='dice'?[130,196]:kind==='cell'?[1174,1761]:kind==='placement'?[330,660]:kind==='totem'?[440,660]:[620];
         const duration=kind==='menu' || kind==='practice-press'?.085:kind==='practice-magic'?.36:kind==='cell' || kind==='practice-reward'?.28:kind==='practice-success'?.12:.20;
         notes.forEach((frequency,index)=>{

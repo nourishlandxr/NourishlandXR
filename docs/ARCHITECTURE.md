@@ -1,5 +1,7 @@
 # NourishlandXR architecture
 
+The transition to four distinct interfaces is tracked in [the foundation audit and phased roadmap](platform-foundation.md). Desktop content uses `app/platform.html`; the independent Android-first entry is `app/field/index.html`. See [Field app ownership and offline boundaries](field-app.md). Existing WebXR and Creator routes remain available.
+
 ## Runtime
 
 NourishlandXR is a browser application built with native ES modules, HTML, and CSS. `app/main.js` coordinates screen modules under `app/screens/`; reusable UI and domain logic live in `app/components/` and `app/services/`. There is no client framework or bundling step: the hosted build copies the module tree and applies release metadata.

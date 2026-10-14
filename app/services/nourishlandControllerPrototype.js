@@ -1,6 +1,7 @@
+import {drawWristIcon} from './welcomeWristMenu.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 
-export const NOURISHLAND_TOOL_GRIP=Object.freeze({y:.045,z:.012,pitch:-.45});
+export const NOURISHLAND_TOOL_GRIP=Object.freeze({y:.045,z:.012,pitch:-1.2353981634});
 const authoredTip=new THREE.Vector3(0,.027,-.102).applyEuler(new THREE.Euler(NOURISHLAND_TOOL_GRIP.pitch,0,0)).add(new THREE.Vector3(0,NOURISHLAND_TOOL_GRIP.y,NOURISHLAND_TOOL_GRIP.z));
 export const NOURISHLAND_PAINT_TIP=Object.freeze({x:authoredTip.x,y:authoredTip.y,z:authoredTip.z});
 
@@ -20,7 +21,7 @@ function surfaceTexture(wood=false){
  * Controls and tool tip expose stable names for a later hardware adapter.
  */
 export function createNourishlandControllerPrototype({mode='paint',hand='right'}={}){
-    const group=new THREE.Group();group.name='Nourishland '+mode+' controller prototype';group.position.set(0,NOURISHLAND_TOOL_GRIP.y,NOURISHLAND_TOOL_GRIP.z);group.rotation.x=NOURISHLAND_TOOL_GRIP.pitch;
+    const group=new THREE.Group();group.name='Nourishland '+mode+' controller prototype';group.userData.handedness=hand;group.position.set(0,NOURISHLAND_TOOL_GRIP.y,NOURISHLAND_TOOL_GRIP.z);group.rotation.x=NOURISHLAND_TOOL_GRIP.pitch;
     const materials=new Set(),geometries=new Set(),textures=new Set();
     const wood=surfaceTexture(true),pearl=surfaceTexture(false);textures.add(wood);textures.add(pearl);
     const material=(color,roughness=.65,metalness=0)=>{const m=new THREE.MeshStandardMaterial({color,roughness,metalness});materials.add(m);return m;};
@@ -81,12 +82,12 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
     const stem=mesh(new THREE.CylinderGeometry(.005,.005,.008,16),gripMaterial,'Thumbstick stem',stick);stem.position.y=.004;
     oval('Thumbstick cap',accent,[0,.010,0],[.011,.003,.011],stick);
     const settingsRing=mesh(new THREE.TorusGeometry(.0135,.0011,6,32),material('#ed6259'),'Thumbstick settings function ring',stick);settingsRing.rotation.x=-Math.PI/2;settingsRing.position.y=.010;settingsRing.visible=false;
-    const buttons=[];
+    const buttons=[],legends=[];
     function button(text,x,z,r=.009){
         const node=new THREE.Group();node.name='Button '+text;node.position.set(x,.009,z);thumbCluster.add(node);
         oval('Button face',buttonMaterial,[0,0,0],[r,.005,r],node);
-        const c=document.createElement('canvas');c.width=c.height=64;const ctx=c.getContext('2d');ctx.font='600 44px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#413950';ctx.fillText(text,32,33);
-        const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;textures.add(map);
+        const c=document.createElement('canvas');c.width=c.height=64;const ctx=c.getContext('2d');ctx.font='600 44px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='#413950';if(mode==='paint' && ['A','B','X','Y'].includes(text))drawWristIcon(ctx,text==='B' || text==='Y'?'undo':'eraser',32,32,46);else ctx.fillText(text,32,33);
+        const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;textures.add(map);legends.push({canvas:c,map,text});
         const label=new THREE.MeshBasicMaterial({map,transparent:true,depthWrite:false,side:THREE.DoubleSide});materials.add(label);
         const face=mesh(new THREE.PlaneGeometry(r*1.55,r*1.55),label,'Button label',node);face.rotation.x=-Math.PI/2;face.position.y=.0053;buttons.push(node);
     }
@@ -106,7 +107,7 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
     const lights=[];for(let i=0;i<3;i++)lights.push(oval('Flight status light '+i,accent,[(i-1)*.009,.048,.023],[.0015,.001,.0015]));
     let currentMode=mode;
     function setMode(next){
-        currentMode=next==='insect'?'insect':'paint';const insect=currentMode==='insect';
+        currentMode=next==='insect'?'insect':'paint';const insect=currentMode==='insect';for(const {canvas,map,text} of legends){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,64,64);ctx.fillStyle='#413950';if(!insect && ['A','B','X','Y'].includes(text))drawWristIcon(ctx,text==='B' || text==='Y'?'undo':'eraser',32,32,46);else {ctx.font='600 44px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,32,33);}map.needsUpdate=true;}
         shell.map=deckMaterial.map=insect?wood:pearl;shell.color.set(insect?'#cfbba1':'#fff4df');deckMaterial.color.set(insect?'#c5ad92':'#f7eddf');
         gripMaterial.color.set(insect?'#56634b':'#aaa0ba');trim.color.set(insect?'#a18050':'#c9b58e');
         accent.color.set(insect?'#4387a9':'#91c7c2');accent.emissive.set(insect?'#346983':'#546d70');accent.emissiveIntensity=.15;

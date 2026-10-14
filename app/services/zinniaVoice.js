@@ -38,7 +38,7 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},
                     }catch(error){capabilities=null;if(!disposed && token===epoch){processing=false;status(error.name==='AbortError'?'Voice request timed out. Open Audio and choose Listen again.':error.message || 'The voice service could not finish the recording. Choose Listen again.','transcription');}}finally{if(token===epoch){processing=false;releaseZinniaVoice(owner);}}
                 };
                 // Frequent chunks preserve short replies and tolerate Quest stop timing.
-                recorder.start(250);timer=setTimeout(()=>finish(),Math.min(20,Number(cap.maximumSeconds)||20)*1000);
+                recorder.start(250);timer=setTimeout(()=>finish(),Math.min(8,Number(cap.maximumSeconds)||8)*1000);
                 const AudioContext=globalThis.AudioContext || globalThis.webkitAudioContext;
                 if(AudioContext){try{meter=new AudioContext();const analyser=meter.createAnalyser();analyser.fftSize=512;meter.createMediaStreamSource(stream).connect(analyser);const samples=new Uint8Array(analyser.fftSize);let lastSound=performance.now(),noise=.002;void meter.resume().catch(()=>{});meterTimer=setInterval(()=>{analyser.getByteTimeDomainData(samples);level=Math.sqrt(samples.reduce((sum,x)=>sum+((x-128)/128)**2,0)/samples.length);if(!heard)noise=Math.min(.012,noise*.97+level*.03);if(level>Math.max(.0035,noise*1.8)){heard=true;lastSound=performance.now();}if(heard && performance.now()-lastSound>700 && performance.now()-recordingStarted>700){clearInterval(meterTimer);finish();}},100);}catch{/* Recording still works when the XR browser cannot start a meter. */}}
                 status('');
@@ -51,7 +51,7 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},
         recognition.onresult=event=>{if(!disposed && token===epoch)onText(event.results[0][0].transcript);};
         recognition.onerror=()=>{if(token===epoch)status('I did not catch that. Check microphone permission and tap Speak again.');};
         recognition.onend=()=>{if(token!==epoch)return;release();recognition=null;};
-        try{recognition.start();status('');timer=setTimeout(()=>finish(),20000);}catch{release();status('Could not start the microphone. Tap Speak to retry.');}
+        try{recognition.start();status('');timer=setTimeout(()=>finish(),8000);}catch{release();status('Could not start the microphone. Tap Speak to retry.');}
     }
     function finish(){clearTimeout(timer);if(recorder?.state==='recording')recorder.stop();else if(recognition)recognition.stop();else if(listening){cancel();status('Listening stopped. Choose the microphone when you’re ready.');}}
     async function speak(text){

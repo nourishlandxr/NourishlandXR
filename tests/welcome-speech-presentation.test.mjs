@@ -4,7 +4,7 @@ import {welcomeSpeechCaption,welcomePracticeTablePose} from '../app/services/wel
 test('subtitles wait for playback and use the pauseable audio clock',()=>{
  const state={loading:true,hasPlayed:false,text:'Nice to meet you, Andre. What is your favourite fruit?',duration:10,elapsed:0};
  assert.equal(welcomeSpeechCaption(state,'Fallback'), '');state.loading=false;state.hasPlayed=true;
- assert.equal(welcomeSpeechCaption(state),'Nice to meet you, Andre.');state.elapsed=9;assert.equal(welcomeSpeechCaption(state),'What is your favourite fruit?');state.paused=true;assert.equal(welcomeSpeechCaption(state),'What is your favourite fruit?');
+ assert.equal(welcomeSpeechCaption(state),'Nice to meet you, Andre.');state.elapsed=9;assert.equal(welcomeSpeechCaption(state),'Nice to meet you, Andre.\n\nWhat is your favourite fruit?');state.paused=true;assert.equal(welcomeSpeechCaption(state),'Nice to meet you, Andre.\n\nWhat is your favourite fruit?');
 });
 test('table is reachable in front of the visitor, separated from the frame',()=>{
  const viewer=[1,0,0,0,0,1,0,0,0,0,1,0,2,1.6,3,1],frame={center:{x:2,y:1.6,z:1}};

@@ -23,6 +23,10 @@ const frontendEntries = [
     'index.html',
     'main.js',
     'entry.js',
+    'platform.html',
+    'platform.js',
+    'platform.css',
+    'field',
     'creator-studio.css',
     'creator-field-worker.js',
     'style.css',
@@ -79,6 +83,15 @@ const versionedIndex = fs.readFileSync(indexPath, 'utf8')
     .replace(/href="(style|pim|product-v2|living-objects|creator-workspace|note-widgets)\.css(?:\?v=[^"]*)?"/g, (_match,name) => `href="${name}.css?v=${versionQuery}"`)
     .replace(/src="(?:main|entry)\.js(?:\?v=[^"]*)?"/, `src="entry.js?v=${versionQuery}"`);
 fs.writeFileSync(indexPath, versionedIndex);
+const platformPath = path.join(webDist, 'platform.html');
+fs.writeFileSync(platformPath, fs.readFileSync(platformPath, 'utf8')
+    .replace('href="platform.css"', `href="platform.css?v=${versionQuery}"`)
+    .replace('src="platform.js"', `src="platform.js?v=${versionQuery}"`));
+const fieldPath = path.join(webDist, 'field', 'index.html');
+fs.writeFileSync(fieldPath, fs.readFileSync(fieldPath, 'utf8')
+    .replace('href="../platform.css"', `href="../platform.css?v=${versionQuery}"`)
+    .replace('href="styles.css"', `href="styles.css?v=${versionQuery}"`)
+    .replace('src="main.js"', `src="main.js?v=${versionQuery}"`));
 fs.writeFileSync(path.join(webDist, 'services', 'buildInfo.js'), `export const BUILD_INFO = Object.freeze(${JSON.stringify({
     version: buildVersion,
     commit,

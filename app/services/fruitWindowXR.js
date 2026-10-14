@@ -52,7 +52,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
         get ready(){return Boolean(renderer);},
         get stats(){return {...renderer?.stats,sourceMeshes:entries.length,instanceBatches:batches.length};},
         update(){
-            source.updateMatrixWorld(true);
+            const now=performance.now();source.updateMatrixWorld(true);
             for(const mesh of batches){mesh.visible=false;mesh.userData.poseChanged=false;}
             for(const entry of entries){
                 const {node,mesh,base,morph}=entry;mesh.visible=attached(node,true);
@@ -60,15 +60,15 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
                 else mesh.matrix.copy(node.matrixWorld);
                 if(entry.instanced){mesh.count=node.count;mesh.instanceColor=node.instanceColor;continue;}
                 if(!mesh.visible)continue;
-                const weights=node.morphTargetInfluences;
-                if(weights&&(!entry.weights||weights.some((value,i)=>value!==entry.weights[i]))){
+                const weights=welcomeMagic?node.morphTargetInfluences?.map(value=>Math.round(value*48)/48):node.morphTargetInfluences;
+                if(weights && (!welcomeMagic || !entry.morphAt || now-entry.morphAt>=1000/30) && (!entry.weights||weights.some((value,i)=>value!==entry.weights[i]))){
                     for(const name of ['position','normal']){
                         const attribute=mesh.geometry.attributes[name];if(!attribute||!morph[name]?.length)continue;
                         attribute.array.set(base[name]);
                         for(let i=0;i<weights.length;i++)if(weights[i]&&morph[name][i])for(let j=0;j<attribute.array.length;j++)attribute.array[j]+=weights[i]*(morph[name][i][j]-(entry.relative?0:base[name][j]));
                         attribute.needsUpdate=true;
                     }
-                    entry.weights=[...weights];
+                    entry.weights=[...weights];entry.morphAt=now;
                 }
             }
             for(const mesh of batches)if(mesh.userData.poseChanged)mesh.instanceMatrix.needsUpdate=true;

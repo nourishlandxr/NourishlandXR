@@ -22,11 +22,12 @@ export function controllerHandFlexAxes(names,parents,bind,wristIndex,side){
         const direction=position(child).sub(position(i)).normalize();
         // The thumb opposes across the palm. Reusing the fingers' flexion
         // plane sends its mirrored, angled chain sideways away from the grasp.
-        if(name.startsWith('thumb-'))return new THREE.Vector3().crossVectors(direction,centre.clone().sub(position(child))).normalize().transformDirection(bind[i].clone().invert());
+        if(name.startsWith('thumb-'))return new THREE.Vector3().crossVectors(direction,centre.clone().addScaledVector(palm,-.025).sub(position(child))).normalize().transformDirection(bind[i].clone().invert());
         return new THREE.Vector3().crossVectors(direction,palm).normalize().transformDirection(bind[i].clone().invert());
     });
 }
 
+const poseCache=new WeakMap();
 export function controllerHandJointPoses(rig,controller){
     const buttons=controller.source.gamepad?.buttons || [];
     // Capacitive contact and residual analogue values are not a closed hand.
@@ -39,17 +40,17 @@ export function controllerHandJointPoses(rig,controller){
     const trigger=pressure(buttons[0],Number(Boolean(controller.trigger)));
     const grip=pressure(buttons[1],controller.down===false?0:controller.grip??Number(Boolean(controller.down)));
     const thumb=Math.max(...buttons.slice(3).map(button=>pressure(button)),0);
-    const posed=[];
+    let cache=poseCache.get(rig);if(!cache){cache={local:rig.bind.map((m,i)=>rig.parents[i]<0?m.clone():rig.bind[rig.parents[i]].clone().invert().multiply(m)),posed:rig.bind.map(()=>new THREE.Matrix4()),done:new Uint8Array(rig.bind.length),turn:new THREE.Matrix4()};poseCache.set(rig,cache);}cache.done.fill(0);const posed=cache.posed;
     const poseJoint=i=>{
-        if(posed[i])return posed[i];
+        if(cache.done[i])return posed[i];
         const parent=rig.parents[i],name=rig.names[i],finger=name.split('-')[0];
-        const world=parent<0?rig.bind[i].clone():poseJoint(parent).clone().multiply(rig.bind[parent].clone().invert().multiply(rig.bind[i]));
-        const amount=finger==='thumb'?(name.includes('metacarpal')?.8:name.includes('proximal')?1.2:name.includes('distal')?.95:0):name.includes('proximal')?1.22:name.includes('intermediate')?1.5:name.includes('distal')?.9:0;
+        const world=posed[i];if(parent<0)world.copy(cache.local[i]);else world.multiplyMatrices(poseJoint(parent),cache.local[i]);
+        const amount=finger==='thumb'?(name.includes('metacarpal')?.8:name.includes('proximal')?.75:name.includes('distal')?.45:0):name.includes('proximal')?1.22:name.includes('intermediate')?1.5:name.includes('distal')?.9:0;
         const curl=finger==='thumb'?Math.max(thumb,grip*.95):finger==='index'?Math.max(trigger,grip):grip;
-        if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],amount*curl));
-        return posed[i]=world;
+        if(amount)world.multiply(cache.turn.makeRotationAxis(rig.flexAxes[i],amount*curl));
+        cache.done[i]=1;return world;
     };
-    return rig.names.map((name,i)=>poseJoint(i));
+    return rig.names.map((name,i)=>poseJoint(i).clone());
 }
 
 export function controllerHandGripMatrix(rig,controllerMatrix){

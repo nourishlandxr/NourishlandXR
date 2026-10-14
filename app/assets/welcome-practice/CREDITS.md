@@ -4,6 +4,15 @@ Controller guides use the official `@webxr-input-profiles/assets` 1.0.20 Quest T
 
 Models supplied by the project owner. Original files remain unchanged.
 
+## Interactive peel and bite models
+
+- Banana Peel — Nauman Hameed. [Original model](https://sketchfab.com/3d-models/banana-peel-3604a883a5c54bc28707253542139deb), [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Owner-supplied `banana_peel (1).glb`. Authored skin animation baked to 16 interpolated morph poses; base-colour texture resized to 512 pixels and JPEG encoded. This replaces the scanned banana in the tutorial, preserving the full fruit and peel surfaces.
+- Red Stylized Apples — Eleanie. [Original model](https://sketchfab.com/3d-models/red-stylized-apples-f3616642b74e46648586dfa008ece9ad), [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). Owner-supplied `red_stylized_apples (1).glb`. Matching whole, bitten and half states extracted with shared scale and supporting base; base-colour textures resized to 512 pixels and JPEG encoded, unused texture channels removed. Commercial use requires separate permission.
+
+`interactive-fruit/manifest.json` records original hashes and runtime sizes. Regenerate with `tools/prepare-interactive-fruit.mjs`; the runtime does not load the original 32 MB apple pack. The apple crunch is synthesized at interaction time and introduces no recorded narration.
+
+The second and third eaten apple states are adaptations of Eleanie’s supplied bitten mesh. Additional spherical cavities are carved offline by `tools/fruit-bite-geometry.mjs`, with fresh flesh surfaces and welded vertices. They retain the original attribution, shared fruit origin, and CC BY-NC 4.0 licence; they are not additional authored source models. The supplied sliced, peeled and rotten variants are not presented as bite stages.
+
 - Cara Cara Orange — inciprocal. [Original model](https://sketchfab.com/3d-models/cara-cara-orange-ad325912dc614f1596d2dad2d64524eb). Original metadata: Sketchfab Standard license. Tabletop derivative uses reduced texture resolution.
 - Lime (Game Ready / 2K PBR) — Meerschaum Digital. [Original model](https://sketchfab.com/3d-models/lime-game-ready-2k-pbr-d879c2985526427b96a39733dc2a075c). [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Tabletop derivative uses reduced texture resolution and JPEG encoding.
 - Banana 3D Scan — Arkify 3D. [Original model](https://sketchfab.com/3d-models/banana-3d-scan-b9214be998c746409dafa3755150fe8e). Original metadata: Sketchfab Standard license. Tabletop derivative uses mesh decimation and the complete source base-colour scan at 2K.

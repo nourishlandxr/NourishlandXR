@@ -24,7 +24,7 @@ test('Games are launched through the wrist, never loaded on startup, and have co
     assert.equal(trials.layer.children.length,0);assert.equal(trials.active,null);
     const stage={trials,snapshot:()=>({phase:'grab',voice:{},trials:trials.snapshot()}),button(){},paint:null,setInputMode:mode=>trials.command('mode:'+mode)};
     const menu=createWelcomeComfortOptions({stage});
-    assert.equal(menu.context().items.length,0);menu.act('toggle');assert.ok(menu.context().items.some(item=>item.action==='Comfort:games' && item.ariaLabel==='Games'));
+    assert.equal(menu.context().items.length,0);menu.act('toggle');assert.ok(menu.context().items.some(item=>item.action==='Comfort:games' && item.ariaLabel==='Optional games'));
     menu.act('games');const choices=menu.context().items;
     for(const id of ['dragonfly','strawberry'])assert.ok(choices.some(item=>item.action==='Comfort:game:'+id));
     menu.act('game:strawberry');trials.update(0,{visible:true});assert.equal(trials.active,'strawberry');assert.equal(trials.panel.visible,false,'new games use the existing wrist controls');
@@ -80,5 +80,5 @@ test('official controller textures survive loading; models follow grip pose with
     guide.update(.016,[{source,matrix}],'controls-trigger',matrix);assert.deepEqual(guide.snapshot()[0].highlighted,['trigger']);
     let textured=false;scene.traverse(node=>{for(const material of [node.material].flat().filter(Boolean))textured ||= Boolean(material.map);});assert.equal(textured,true);
     guide.update(.016,[{source,matrix}],'grab',matrix);assert.equal(guide.snapshot()[0].visible,true);assert.deepEqual(guide.snapshot()[0].highlighted,[]);assert.equal(scene.getObjectByName('Controller label connector').visible,false);
-    guide.update(.1,[{source,matrix}],'brush',matrix,false,1,'paint');assert.equal(guide.snapshot()[0].tool,'paint');assert.ok(scene.children[0].children.length>2);guide.update(.1,[{source,matrix}],'grab',matrix,false,1,'standard');assert.equal(guide.snapshot()[0].tool,'standard');assert.deepEqual(scene.children[0].matrix.elements,matrix);guide.update(.016,[],'hands',matrix);assert.equal(guide.snapshot()[0].visible,false);guide.destroy();
+    guide.update(.1,[{source,matrix}],'brush',matrix,false,1,'paint');assert.equal(guide.snapshot()[0].tool,'paint');assert.ok(scene.children.find(child=>child.name!=='Shared controller instruction').children.length>2);guide.update(.1,[{source,matrix}],'grab',matrix,false,1,'standard');assert.equal(guide.snapshot()[0].tool,'standard');assert.deepEqual(scene.children.find(child=>child.name!=='Shared controller instruction').matrix.elements,matrix);guide.update(.016,[],'hands',matrix);assert.equal(guide.snapshot()[0].visible,false);guide.destroy();
 }));

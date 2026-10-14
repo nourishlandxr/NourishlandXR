@@ -38,7 +38,7 @@ export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{},constrai
             const onTable=onPracticeTable(p.x,p.z,Math.min(.035,b.radius*.45)) && previousY-b.support>=-.012;
             const surface=onTable?0:floor;
             if(p.y-b.support<surface){p.y=surface+b.support;if(v.y<-.8)onImpact(b,-v.y);v.y=Math.abs(v.y)>.45?-v.y*b.bounce:0;
-                const damping=Math.exp(-(onTable?4.5:6)*s);v.x*=damping;v.z*=damping;b.angular.x*=damping;b.angular.y*=damping;b.angular.z*=damping;
+                const damping=Math.exp(-(onTable?(b.id==='ball'?.65:4.5):6)*s);v.x*=damping;v.z*=damping;b.angular.x*=damping;b.angular.y*=damping;b.angular.z*=damping;
                 if(Math.hypot(v.x,v.z)<.012){v.x=v.z=0;Object.assign(b.angular,{x:0,y:0,z:0});}
             }
             b.floorTime=surface===floor && p.y-b.support<=floor+.012?b.floorTime+s:0;
