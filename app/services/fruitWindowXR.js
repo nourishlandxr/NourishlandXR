@@ -8,7 +8,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
     const hiddenMatrix=new THREE.Matrix4().makeScale(0,0,0);
     function attached(node,visible=false){let parent=node;for(;parent;parent=parent.parent){if(visible && !parent.visible)return false;if(parent===source)return true;}return false;}
     function eligible(node){if(!visibleParentsOnly)return true;for(let parent=node.parent;parent && parent!==source;parent=parent.parent)if(parent.userData.welcomeAlwaysConvert)return attached(node);return attached(node.parent,true);}
-    const nodes=[];source.traverse(node=>{if(node.isMesh && eligible(node))nodes.push(node);});
+    const nodes=[],nodeResources=new WeakMap();source.traverse(node=>{if(node.isMesh && eligible(node)){nodes.push(node);nodeResources.set(node,{geometry:node.geometry,material:node.material});}});
     function* convert(){for(const node of nodes){
         if(!attached(node))continue;
         if(node.isInstancedMesh){
@@ -50,6 +50,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
     if(!progressive)prepareConversion();
     return {
         get ready(){return Boolean(renderer);},
+        coversScene(){let covered=true;source.traverse(node=>{if(!node.isMesh || !eligible(node))return;const resource=nodeResources.get(node);if(!resource || resource.geometry!==node.geometry || resource.material!==node.material)covered=false;});return covered;},
         get stats(){return {...renderer?.stats,sourceMeshes:entries.length,instanceBatches:batches.length};},
         update(){
             const now=performance.now();source.updateMatrixWorld(true);
@@ -60,7 +61,9 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
                 else mesh.matrix.copy(node.matrixWorld);
                 if(entry.instanced){mesh.count=node.count;mesh.instanceColor=node.instanceColor;continue;}
                 if(!mesh.visible)continue;
-                const weights=welcomeMagic?node.morphTargetInfluences?.map(value=>Math.round(value*48)/48):node.morphTargetInfluences;
+                const influences=node.morphTargetInfluences;
+                let weights=influences;
+                if(welcomeMagic && influences){if(!entry.quantizedWeights || entry.quantizedWeights.length!==influences.length)entry.quantizedWeights=new Float64Array(influences.length);weights=entry.quantizedWeights;for(let i=0;i<influences.length;i++)weights[i]=Math.round(influences[i]*48)/48;}
                 if(weights && (!welcomeMagic || !entry.morphAt || now-entry.morphAt>=1000/30) && (!entry.weights||weights.some((value,i)=>value!==entry.weights[i]))){
                     for(const name of ['position','normal']){
                         const attribute=mesh.geometry.attributes[name];if(!attribute||!morph[name]?.length)continue;
@@ -68,7 +71,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
                         for(let i=0;i<weights.length;i++)if(weights[i]&&morph[name][i])for(let j=0;j<attribute.array.length;j++)attribute.array[j]+=weights[i]*(morph[name][i][j]-(entry.relative?0:base[name][j]));
                         attribute.needsUpdate=true;
                     }
-                    entry.weights=[...weights];entry.morphAt=now;
+                    if(!entry.weights || entry.weights.length!==weights.length)entry.weights=new Float64Array(weights.length);entry.weights.set(weights);entry.morphAt=now;
                 }
             }
             for(const mesh of batches)if(mesh.userData.poseChanged)mesh.instanceMatrix.needsUpdate=true;

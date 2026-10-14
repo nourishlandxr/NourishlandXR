@@ -8,7 +8,7 @@ import {pimInfoContent} from '../app/services/pimInfoPanel.js';
 import {knowledgeExplorer,knowledgeExplorerAction,restoreKnowledgeDiscovery} from '../app/services/knowledgeExplorer.js';
 import {setPimoDeveloperOverride} from '../app/services/pimoSpatialCapabilities.js';
 import {ensureExplorerMolecule,explorerMoleculeIndex,selectExplorerNode,explorerMoleculeAction,explorerMoleculeView,explorerDetailDocument,explorerMoleculeSnapshot,restoreExplorerMolecule,explorerPuzzleSlot,explorerPuzzleFit,alignExplorerPuzzle,commitExplorerPuzzle,prepareExplorerConnection,chooseExplorerWing,createExplorerWing,removeExplorerWing,customizeExplorerOrganism,explorerNodePosition,EXPLORER_RECIPES,EXPLORER_RECIPE,EXPLORER_LIMIT,EXPLORER_BOND_RADIUS} from '../app/services/explorerMoleculeModel.js';
-import {hitExplorerMolecule,hitExplorerConnector,hitExplorerFacet,createExplorerMoleculeGeometry} from '../app/services/explorerMoleculeRenderer.js';
+import {hitExplorerMolecule,hitExplorerConnector,hitExplorerFacet,createExplorerMoleculeGeometry,createExplorerMoleculeRenderer} from '../app/services/explorerMoleculeRenderer.js';
 import {bindExplorerMoleculeInteraction} from '../app/services/explorerMoleculeInteraction.js';
 import {knowledgePoseMatrix,localObjectMatrix} from '../app/services/knowledgeObjectModel.js';
 
@@ -323,4 +323,23 @@ test('held Plant cells turn with the stick, change distance and retain the adjus
         assert.ok(distanceAfter<distanceBefore);assert.ok(object.rotation.y>0);
         source.gamepad.axes=[0,0,0,0];time=100;input.update(frame);assert.deepEqual(localObjectMatrix(object).elements,turned.elements);
     }finally{input.destroy();globalThis.performance=original;}
+});
+
+
+test('Explorer shares world nodes across stereo eyes and invalidates them on pose and frame changes',()=>{
+ const oldDocument=globalThis.document;
+ const context=new Proxy({measureText:text=>({width:text.length*12}),createLinearGradient:()=>({addColorStop(){}})},{get:(target,key)=>key in target?target[key]:()=>{}});
+ globalThis.document={createElement:()=>({getContext:()=>context})};
+ const gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getAttribLocation:()=>0,getUniformLocation:()=>({}),isEnabled:()=>false,getParameter:()=>16},{get(target,key){if(key in target)return target[key];if(key===key.toUpperCase())return key;if(key.startsWith('create'))return ()=>({});return ()=>{};}});
+ let renderer;
+ try{
+  renderer=createExplorerMoleculeRenderer(gl);const record=fixture(false),identity=new THREE.Matrix4().elements;
+  const view=x=>({projectionMatrix:identity,transform:{matrix:new THREE.Matrix4().makeTranslation(x,1.6,0).elements,inverse:{matrix:new THREE.Matrix4().makeTranslation(-x,-1.6,0).elements}}});
+  const pose={position:new THREE.Vector3(0,1,-1),right:new THREE.Vector3(1,0,0),up:new THREE.Vector3(0,1,0),normal:new THREE.Vector3(0,0,1)};
+  renderer.begin();const left=renderer.draw(view(-.032),record,knowledge,pose,1,10000),right=renderer.draw(view(.032),record,knowledge,pose,1,10000);
+  assert.ok(left.length>0);assert.equal(left[0].moleculeNode,right[0].moleculeNode,'both eyes reuse the same world node');
+  pose.position.x+=.2;const moved=renderer.draw(view(.032),record,knowledge,pose,1,10000);
+  assert.notEqual(moved[0].moleculeNode,right[0].moleculeNode);assert.ok(Math.abs(moved[0].moleculeNode.world.x-right[0].moleculeNode.world.x-.2)<1e-6);
+  const next=renderer.draw(view(.032),record,knowledge,pose,1,10016);assert.notEqual(next[0].moleculeNode,moved[0].moleculeNode,'next frame refreshes animated model data');
+ }finally{renderer?.destroy();globalThis.document=oldDocument;}
 });

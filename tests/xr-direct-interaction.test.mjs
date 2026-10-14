@@ -47,7 +47,7 @@ test('actual panel XR handler ignores grip, distant selection and hand pinch; ne
 });
 
 test('controller lasers are absent before the taught reveal, then render normally; virtual hands retain settings contact feedback',()=>{
-    const source=fs.readFileSync(new URL('../app/services/welcomePracticeXR.js',import.meta.url),'utf8'),start=source.indexOf('draw(view,handRenderer){'),end=source.indexOf('        },destroy',start);
+    const source=fs.readFileSync(new URL('../app/services/welcomePracticeXR.js',import.meta.url),'utf8'),start=source.indexOf('draw(view,handRenderer){'),end=source.indexOf('        },drawPointerOverlay',start);
     let lines=0,contacts=0;const stage={active:true,exitOpacity:1,controllerLaserProgress:.5,controllerLasersVisible:false,controllerHandsVisible:false,trials:{active:null},phase:'controls-trigger',snapshot:()=>({settingsAvailable:stage.phase==='fruit'}),isBrushHeld:()=>false,hit:()=>null};
     const controller={source:{handedness:'left',gamepad:{buttons:Array.from({length:6},()=>({pressed:false}))}},ray:{origin:{x:0,y:1,z:0},direction:{x:0,y:0,z:-1}}};
     const context={stage,revealTime:2,renderer:null,anchor:{},hands:[],controllers:[],inputs:[controller],onHit:()=>null,nearestWelcomePointerHit:()=>null,drawWelcomeControllerLaser:()=>lines++,drawSpatialPointerContact:()=>contacts++,gl:{},pointer:{}};

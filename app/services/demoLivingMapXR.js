@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.min.js';
-import {LIVING_MAP_WORLD_SCALE,livingMapRotation} from './demoLivingMapReveal.js';
+import {LIVING_MAP_WORLD_SCALE} from './demoLivingMapReveal.js';
 import {localizedCanvasContext,translateNxrText} from './i18n.js';
 import {currentGraphicsQuality} from './spatialVisualSettings.js';
 
@@ -40,7 +40,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
     const matrixAttributes=['i0','i1','i2','i3'].map(k=>gl.getAttribLocation(program,k));
     const instanceColourAttribute=gl.getAttribLocation(program,'ic');
     const surfaceMatrix=new THREE.Matrix4(),surfaceNormal=new THREE.Matrix3(),eyeMatrix=new THREE.Matrix4();
-    const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),materialColours=new WeakMap(),renderNodes=[];
+    const root=new THREE.Matrix4(),world=new THREE.Matrix4(),instance=new THREE.Matrix4(),renderPosition=new THREE.Vector3(),renderScale=new THREE.Vector3(),renderRotation=new THREE.Quaternion(),renderUp=new THREE.Vector3(0,1,0),materialColours=new WeakMap(),renderNodes=[];
     scene.traverse(node=>{if(node.isMesh || node.isLine)renderNodes.push(node);});if(detailed)renderNodes.sort((a,b)=>Number(Boolean(a.material?.transparent))-Number(Boolean(b.material?.transparent)) || a.renderOrder-b.renderOrder);let prepareIndex=0;
     function geometry(source){
         if(cache.has(source)){
@@ -72,17 +72,17 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         else {result.geometry.attributes.position.needsUpdate=true;result.geometry.attributes.normal.needsUpdate=true;}
         result.version=node.instanceMatrix.version;return result;
     }
-    function bindSurfaceMap(map,unit,uniform){
+    function bindSurfaceMap(map,unit,uniform,flip=map?.flipY){
         if(!map)return;
         let texture=textures.get(map);gl.activeTexture(gl.TEXTURE0+unit);
         if(!texture){texture=gl.createTexture();resources.push(['Texture',texture]);textures.set(map,texture);gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
         gl.bindTexture(gl.TEXTURE_2D,texture);
-        if(textureVersions.get(map)!==map.version){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,map.flipY);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);let image=map.image;
+        if(textureVersions.get(map)!==map.version){gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,flip);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);let image=map.image;
             const limit=Math.min(maxTextureSize,gl.getParameter(gl.MAX_TEXTURE_SIZE));
             const width=image?.width || 0,height=image?.height || 0;
             if(width>limit || height>limit){const ratio=limit/Math.max(width,height),canvas=document.createElement('canvas');canvas.width=Math.max(1,Math.round(width*ratio));canvas.height=Math.max(1,Math.round(height*ratio));canvas.getContext('2d').drawImage(image,0,0,canvas.width,canvas.height);image=canvas;}
             gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,image);textureVersions.set(map,map.version);}
-        gl.uniform1i(uniform,unit);
+        if(uniform!==null)gl.uniform1i(uniform,unit);
     }
     function drawNode(node,matrix,opacity,batch=null){
         if(node.isInstancedMesh && node.count===0)return;
@@ -110,12 +110,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
         if(detailed){const e=material.emissive,intensity=material.emissiveIntensity ?? 1;gl.uniform3f(uniforms.emissive,(e?.r || 0)*intensity,(e?.g || 0)*intensity,(e?.b || 0)*intensity);}
         gl.uniformMatrix4fv(uniforms.model,false,matrix.elements);
         gl.uniform1f(uniforms.textured,material.map?1:0);
-        if(material.map){
-            let texture=textures.get(material.map);
-            if(!texture){texture=gl.createTexture();resources.push(['Texture',texture]);textures.set(material.map,texture);gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);}
-            if(textureVersions.get(material.map)!==material.map.version){gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,detailed?material.map.flipY:true);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,false);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,material.map.image);textureVersions.set(material.map,material.map.version);}
-            gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,texture);gl.uniform1i(uniforms.image,0);
-        }
+        if(material.map)bindSurfaceMap(material.map,0,uniforms.image,detailed?material.map.flipY:true);
         if(detailed){
             if(welcomeMagic){const magic=material.userData?.welcomeMagic;gl.uniform1f(uniforms.magicProgress,magic?.progress ?? -2);gl.uniform4fv(uniforms.magicPlane,magic?.plane || [0,0,0,0]);}
             const detail=detailMaps && currentGraphicsQuality()!=='low';
@@ -141,14 +136,18 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
             // that appear only after placement. Both eyes share these buffers.
             if(prepareIndex>=renderNodes.length)return true;
             const node=renderNodes[prepareIndex++],batch=node.isInstancedMesh && !(instancing && node.userData.livingMapDynamic)?batchInstances(node):null;
-            geometry(batch?.geometry || node.geometry);return prepareIndex>=renderNodes.length;
+            geometry(batch?.geometry || node.geometry);
+            const active=gl.getParameter(gl.ACTIVE_TEXTURE);gl.activeTexture(gl.TEXTURE0);const bound=gl.getParameter(gl.TEXTURE_BINDING_2D),flip=gl.getParameter(gl.UNPACK_FLIP_Y_WEBGL),premultiply=gl.getParameter(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL);
+            try{for(const material of [node.material].flat().filter(Boolean))if(material.map)bindSurfaceMap(material.map,0,null,detailed?material.map.flipY:true);}finally{gl.bindTexture(gl.TEXTURE_2D,bound);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,flip);gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL,premultiply);gl.activeTexture(active);}
+            return prepareIndex>=renderNodes.length;
         },
         draw(view,origin,rotation,opacity,guidance=''){
             if(detailed)eyeMatrix.fromArray(view.transform.inverse.matrix);
             if(opacity<=0)return;
             const previousBuffer=gl.getParameter(gl.ARRAY_BUFFER_BINDING),restoreAttributes=saveAttributes();
             try{
-            root.compose(new THREE.Vector3(origin.x,origin.y-(fadeTransform ? .10*(1-opacity) : 0),origin.z),livingMapRotation(rotation),new THREE.Vector3().setScalar(worldScale*(fadeTransform ? .78+.22*opacity : 1)));
+            if(typeof rotation==='number')renderRotation.setFromAxisAngle(renderUp,rotation);else renderRotation.set(rotation.x,rotation.y,rotation.z,rotation.w).normalize();
+            root.compose(renderPosition.set(origin.x,origin.y-(fadeTransform ? .10*(1-opacity) : 0),origin.z),renderRotation,renderScale.setScalar(worldScale*(fadeTransform ? .78+.22*opacity : 1)));
             gl.useProgram(program);gl.enable(gl.DEPTH_TEST);gl.uniformMatrix4fv(uniforms.projection,false,view.projectionMatrix);gl.uniformMatrix4fv(uniforms.view,false,view.transform.inverse.matrix);
             for(const node of renderNodes){let visible=true;for(let parent=node;parent;parent=parent.parent)if(!parent.visible){visible=false;break;}if(!visible)continue;world.multiplyMatrices(root,node.matrixWorld);drawNode(node,world,opacity,node.isInstancedMesh && !(instancing && node.userData.livingMapDynamic)?batchInstances(node):null);}
             if(guidance){
@@ -156,7 +155,7 @@ export function createDemoLivingMapXR(gl,scene,{worldScale=LIVING_MAP_WORLD_SCAL
                 if(text!==lastGuidance){const ctx=localizedCanvasContext(cloudCanvas.getContext('2d'));ctx.clearRect(0,0,1024,160);ctx.fillStyle='rgba(19,48,37,.95)';ctx.beginPath();ctx.roundRect(4,4,1016,152,76);ctx.fill();ctx.strokeStyle='#b8d7a4';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#fff8e4';ctx.font='600 44px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(text,512,80,950);cloudTexture.needsUpdate=true;lastGuidance=text;}
                 // Guidance belongs to the landscape plate. It no longer billboards
                 // toward the headset, so head turns do not make it feel locked on.
-                world.compose(new THREE.Vector3(origin.x,origin.y+.32,origin.z),livingMapRotation(rotation),new THREE.Vector3(.30,.047,1));drawNode(cloud,world,opacity);
+                world.compose(renderPosition.set(origin.x,origin.y+.32,origin.z),renderRotation,renderScale.set(.30,.047,1));drawNode(cloud,world,opacity);
             }
             gl.depthMask(true);gl.disable(gl.BLEND);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);gl.activeTexture(gl.TEXTURE0);
             }finally{restoreAttributes();gl.bindBuffer(gl.ARRAY_BUFFER,previousBuffer);}

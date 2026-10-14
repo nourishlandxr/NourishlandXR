@@ -13,7 +13,7 @@ export function createWelcomePracticeProps(root,fruits,{onCollect=()=>{}}={}){
     const wall=new THREE.Mesh(new THREE.CylinderGeometry(.225,.22,.10,36,1,true),cloth);wall.position.y=.043;basket.add(wall);
     for(const y of [.014,.038,.08]){const band=new THREE.Mesh(new THREE.TorusGeometry(y===.08?.225:y===.014?.22:.223,.003,6,36),trim);band.rotation.x=Math.PI/2;band.position.y=y;basket.add(band);}
     const feedbackMaterial=new THREE.MeshBasicMaterial({color:'#ffe3a3',transparent:true,opacity:0,depthWrite:false}),feedbackRing=new THREE.Mesh(new THREE.TorusGeometry(.23,.0045,6,36),feedbackMaterial);feedbackRing.rotation.x=Math.PI/2;feedbackRing.position.y=.085;basket.add(feedbackRing);const practicePosition=new THREE.Vector3(.51,0,-.16),gardenPosition=new THREE.Vector3(.51,0,-.16);
-    const plate=new THREE.Group();plate.name='WelcomeFruitPlate';plate.position.set(.02,0,-.16);plate.visible=false;root.add(plate);
+    const plate=new THREE.Group();plate.name='WelcomeFruitPlate';plate.position.set(-.52,0,-.12);plate.visible=false;root.add(plate);
     const ceramic=new THREE.MeshStandardMaterial({map:ceramicTexture(),color:'#bcb9b0',roughness:1,metalness:0});
     const dish=new THREE.Mesh(new THREE.CylinderGeometry(.19,.187,.008,48),ceramic);dish.position.y=.005;plate.add(dish);
     const rim=new THREE.Mesh(new THREE.TorusGeometry(.186,.0035,8,48),ceramic);rim.rotation.x=Math.PI/2;rim.position.y=.009;plate.add(rim);

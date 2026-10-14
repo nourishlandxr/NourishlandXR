@@ -75,7 +75,8 @@ async function discover() {
 async function openProject(id) {
     state.view = 'discover'; state.area = state.record = null; context('Project content');
     await load(async signal => {
-        const [project, areas] = await Promise.all([client.project(id, signal), client.areas(id, signal)]); if (signal.aborted) return;
+        const shared=await client.shared(id,signal);if(signal.aborted)return;
+        const project=shared.project,areas=shared.areas.map(area=>({...area,siteName:shared.sites.find(site=>site.id===area.siteId)?.name||''}));
         state.project = project; context(project.name);
         history.replaceState(null, '', url('platform.html', { interface: mode, project: id }));
         content.innerHTML = `<h1>${html(project.name)}</h1><p>${html(project.description)}</p><h2>Areas</h2>${cards(areas, 'data-area')}${mode === 'desktop' ? `<p><a href="${url('index.html', { workspace: 'desktop', project: id })}">Open this project in Studio</a></p>` : ''}`;
@@ -85,7 +86,8 @@ async function openProject(id) {
 async function openArea(area) {
     state.area = area; state.record = null; context(`${state.project.name} / ${area.name}`);
     await load(async signal => {
-        const result = await client.records(state.project.id, area.siteId, area.id, signal); if (signal.aborted) return;
+        const shared=await client.shared(state.project.id,signal);if(signal.aborted)return;
+        const result={records:shared.records.filter(record=>record.siteId===area.siteId&&record.areaId===area.id),warnings:[]};
         state.records = result.records;
         content.innerHTML = `<h1>${html(area.name)}</h1><p>${html(area.description)}</p>${result.warnings.length ? '<p>Some project records need administrator review.</p>' : ''}<label class="content-search">Search this area<input type="search" data-search></label><div data-records></div>`;
         const show = query => {
@@ -100,7 +102,11 @@ async function openRecord(record) {
     state.record = record; context(`${state.area.name} / ${record.title}`);
     await load(async signal => {
         // Registry-only specimens have no marker profile; their published summary still works.
-        const profile = record.kind === 'plant' && record.markerId ? await client.profile(record, signal) : {};
+        const shared=await client.shared(record.projectId,signal);if(signal.aborted)return;
+        const latest=shared.records.find(item=>item.id===record.id);
+        if(!latest)throw new Error('This record is no longer available in the published project.');
+        record=latest;state.record=latest;
+        const profile = record.profile;
         if (signal.aborted) return;
         const text = [record.description, profile.description, profile.summary, profile.notes].filter(value => typeof value === 'string' && value.trim());
         content.innerHTML = `<article class="knowledge-record"><p class="eyebrow">${html(record.kind || 'Knowledge')}</p><h1>${html(record.title)}</h1><p><em>${html(record.scientificName || profile.scientific_name || '')}</em></p>${[...new Set(text)].map(value => `<p class="knowledge-text">${html(value)}</p>`).join('') || '<p>This published record has no description yet.</p>'}<dl><dt>Project</dt><dd>${html(state.project.name)}</dd><dt>Area</dt><dd>${html(state.area.name)}</dd>${record.knowledgeId ? `<dt>Knowledge reference</dt><dd>${html(record.knowledgeId)}</dd>` : ''}</dl>${mode === 'field' ? '<button type="button" data-observe>Record an observation</button>' : ''}</article>`;

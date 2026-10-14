@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "contract": "nourishland.shared-project",
+  "project": {
+    "id": "p",
+    "name": "Public project",
+    "description": ""
+  },
+  "sites": [
+    {
+      "id": "s",
+      "name": "Site",
+      "description": "",
+      "projectId": "p"
+    }
+  ],
+  "areas": [
+    {
+      "id": "a",
+      "name": "Area",
+      "description": "",
+      "projectId": "p",
+      "siteId": "s"
+    }
+  ],
+  "records": [
+    {
+      "recordId": "specimen-1",
+      "markerId": "marker-1",
+      "title": "Same species",
+      "kind": "plant",
+      "knowledgeId": "species",
+      "description": "Before update",
+      "scientificName": "",
+      "profile": {
+        "description": "After desktop update",
+        "pim": {
+          "nodes": [
+            {
+              "id": "public",
+              "status": "published"
+            }
+          ]
+        },
+        "common_name": "",
+        "scientific_name": "",
+        "revision": 1,
+        "modified": "2026-10-14T07:12:25.445Z"
+      },
+      "projectId": "p",
+      "siteId": "s",
+      "areaId": "a",
+      "id": "[\"p\",\"s\",\"a\",\"specimen-1\"]"
+    },
+    {
+      "recordId": "specimen-2",
+      "markerId": "marker-2",
+      "title": "Same species",
+      "kind": "plant",
+      "knowledgeId": "species",
+      "description": "Before update",
+      "scientificName": "",
+      "profile": {},
+      "projectId": "p",
+      "siteId": "s",
+      "areaId": "a",
+      "id": "[\"p\",\"s\",\"a\",\"specimen-2\"]"
+    },
+    {
+      "recordId": "totem",
+      "markerId": "totem",
+      "title": "Totem",
+      "kind": "area_checkpoint",
+      "knowledgeId": "",
+      "description": "",
+      "scientificName": "",
+      "profile": {},
+      "projectId": "p",
+      "siteId": "s",
+      "areaId": "a",
+      "id": "[\"p\",\"s\",\"a\",\"totem\"]"
+    }
+  ],
+  "revision": "sha256:34a3bb94debb542c7854c499fcb90223bc0162416668b5d5934725a5808fcc3f"
+}

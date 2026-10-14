@@ -18,7 +18,24 @@ export function welcomeSpeechCaption(state,fallback=''){
     const parts=welcomeSpeechPages(state.text),total=parts.reduce((sum,part)=>sum+part.weight,0);
     const progress=Math.max(0,Math.min(1,(state.elapsed || 0)/Math.max(.001,state.duration || 0)));
     let end=0;const shown=[];for(const part of parts){shown.push(part.text);end+=part.weight/total;if(progress<end)break;}
-    return shown.slice(-3).join('\n\n') || fallback;
+    return shown.join('\n\n') || fallback;
+}
+
+// Authored teaching copy remains readable while narration is loading. Paragraphs
+// accumulate without scrolling away; the screen layout measures their full height.
+export function welcomeLessonCaption(lesson,visibleAge=0){
+    const paragraphs=lesson.paragraphs || [lesson.caption || ''];
+    return paragraphs.slice(0,Math.min(paragraphs.length,1+Math.floor(Math.max(0,visibleAge)/3))).join('\n\n');
+}
+export function drawWelcomeText(ctx,{title='',layoutTitle=title,caption='',width=1160,center=700,top=220,bottom=820,titleSize=88,bodySize=54}={}){
+    const wrap=(text,size)=>{ctx.font=`500 ${size}px system-ui`;return String(text).split(/\n\s*\n/).flatMap((paragraph,index)=>{const lines=[''];for(const word of paragraph.trim().split(/\s+/)){const i=lines.length-1,next=lines[i]?lines[i]+' '+word:word;if(ctx.measureText(next).width>width && lines[i])lines.push(word);else lines[i]=next;}return index?['',...lines]:lines;});};
+    ctx.textAlign='center';ctx.textBaseline='middle';let heading=title?wrap(title,titleSize):[],size=bodySize,lines=wrap(caption,size);
+    const reservedHeading=(layoutTitle || title)?wrap(layoutTitle || title,titleSize):[];
+    const headingHeight=reservedHeading.length*(titleSize*1.12),gap=reservedHeading.length?54:0;
+    while(size>30 && headingHeight+gap+lines.length*size*1.35>bottom-top){size-=2;lines=wrap(caption,size);}
+    let y=top+titleSize/2;ctx.font=`500 ${titleSize}px system-ui`;for(const line of heading){ctx.fillText(line,center,y);y+=titleSize*1.12;}
+    y=top+headingHeight+gap+size/2;ctx.font=`500 ${size}px system-ui`;for(const line of lines){if(line)ctx.fillText(line,center,y);y+=size*1.35;}
+    return y;
 }
 
 export function welcomePracticeTablePose(viewer,frame,height){

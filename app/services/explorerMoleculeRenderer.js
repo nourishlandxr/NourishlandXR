@@ -96,8 +96,15 @@ export function createExplorerMoleculeRenderer(gl,{ray=()=>null}={}){
             if(!cached || cached.time!==time || cached.knowledge!==knowledge || cached.state!==record.explorerMolecule){cached={time,knowledge,field:explorerMoleculeView(record,knowledge,camera.distanceTo(rootPosition),time,motion?.matches),state:record.explorerMolecule};frameFields.set(record,cached);}
             const field=cached.field,matrix=base.clone().multiply(localObjectMatrix(field.state.root)),projection=new THREE.Matrix4().fromArray(view.projectionMatrix).multiply(new THREE.Matrix4().fromArray(view.transform.inverse.matrix));
             const right=new THREE.Vector3().setFromMatrixColumn(cameraMatrix,0).normalize(),up=new THREE.Vector3().setFromMatrixColumn(cameraMatrix,1).normalize(),normal=new THREE.Vector3().setFromMatrixColumn(cameraMatrix,2).normalize(),scale=field.state.root.scale;
-            const rootRotation=new THREE.Quaternion().setFromRotationMatrix(matrix.clone().scale(new THREE.Vector3(1/scale,1/scale,1/scale)));
-            const nodes=field.nodes.map(n=>({...n,world:vec(n.position).applyMatrix4(matrix),worldRadius:n.radius*scale,worldLength:(n.length || 0)*scale,worldRotation:rootRotation.clone().multiply(n.rotation?new THREE.Quaternion(n.rotation.x,n.rotation.y,n.rotation.z,n.rotation.w):new THREE.Quaternion())})),byId=new Map(nodes.map(n=>[n.id,n]));
+            // World transforms and lookup tables are identical for both eyes.
+            // Rebuild when the frame field or object pose changes; keep camera
+            // projection and label orientation specific to the current eye.
+            if(!cached.worldMatrix || !cached.worldMatrix.equals(matrix)){
+                const rootRotation=new THREE.Quaternion().setFromRotationMatrix(matrix.clone().scale(new THREE.Vector3(1/scale,1/scale,1/scale)));
+                cached.nodes=field.nodes.map(n=>({...n,world:vec(n.position).applyMatrix4(matrix),worldRadius:n.radius*scale,worldLength:(n.length || 0)*scale,worldRotation:rootRotation.clone().multiply(n.rotation?new THREE.Quaternion(n.rotation.x,n.rotation.y,n.rotation.z,n.rotation.w):new THREE.Quaternion())}));
+                cached.byId=new Map(cached.nodes.map(n=>[n.id,n]));cached.worldMatrix=matrix.clone();
+            }
+            const nodes=cached.nodes,byId=cached.byId;
             field.state.renderedCount=nodes.filter(n=>!n.attachment&&!n.connector).length;field.state.renderedBonds=field.bonds.length;
             const depth=gl.isEnabled(gl.DEPTH_TEST),cull=gl.isEnabled(gl.CULL_FACE),blend=gl.isEnabled(gl.BLEND),mask=gl.getParameter(gl.DEPTH_WRITEMASK);
             gl.enable(gl.DEPTH_TEST);gl.enable(gl.CULL_FACE);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(opacity>.99);gl.useProgram(program);gl.uniform3fv(uniforms.camera,camera.toArray());

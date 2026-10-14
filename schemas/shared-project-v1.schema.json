@@ -1,0 +1,21 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "title":"Nourishland shared project v1",
+  "type":"object",
+  "required":["schemaVersion","contract","revision","project","sites","areas","records"],
+  "$defs":{
+    "id":{"type":"string","pattern":"^[A-Za-z0-9_-]{1,160}$"},
+    "optionalId":{"anyOf":[{"const":""},{"$ref":"#/$defs/id"}]},
+    "named":{"type":"object","required":["id","name","description"],"properties":{"id":{"$ref":"#/$defs/id"},"name":{"type":"string"},"description":{"type":"string"}}}
+  },
+  "properties":{
+    "schemaVersion":{"const":1},"contract":{"const":"nourishland.shared-project"},"revision":{"type":"string","pattern":"^sha256:[a-f0-9]{64}$"},
+    "project":{"$ref":"#/$defs/named"},
+    "sites":{"type":"array","items":{"allOf":[{"$ref":"#/$defs/named"},{"type":"object","required":["projectId"],"properties":{"projectId":{"$ref":"#/$defs/id"}}}]}},
+    "areas":{"type":"array","items":{"allOf":[{"$ref":"#/$defs/named"},{"type":"object","required":["projectId","siteId"],"properties":{"projectId":{"$ref":"#/$defs/id"},"siteId":{"$ref":"#/$defs/id"}}}]}},
+    "records":{"type":"array","items":{"type":"object","required":["id","recordId","projectId","siteId","areaId","markerId","title","kind","knowledgeId","description","scientificName","profile"],"properties":{
+      "id":{"type":"string"},"recordId":{"$ref":"#/$defs/id"},"projectId":{"$ref":"#/$defs/id"},"siteId":{"$ref":"#/$defs/id"},"areaId":{"$ref":"#/$defs/id"},"markerId":{"$ref":"#/$defs/optionalId"},"knowledgeId":{"$ref":"#/$defs/optionalId"},"title":{"type":"string"},"kind":{"type":"string"},"description":{"type":"string"},"scientificName":{"type":"string"},"profile":{"type":"object"}
+    }}}
+  },
+  "$comment":"Runtime validation additionally enforces expected project identity, parent relationships, duplicate scope IDs and exact record JSON tuple identities. Profiles preserve the existing filtered legacy format."
+}

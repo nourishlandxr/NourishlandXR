@@ -1,3 +1,4 @@
+import {drawWelcomeText} from '../services/welcomeSpeechPresentation.js';
 import {prepareZinniaMicrophone} from '../services/prepareZinniaMicrophone.js';
 import {directPanelPress} from '../services/xrDirectInteraction.js';
 import {DEMO_CHAPTERS} from '../services/demoChapters.js';
@@ -5522,8 +5523,7 @@ function drawIntroNoteContent(ctx) {
         const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=['frame','title','arrival'].includes(state.phase)?1:state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
         // The lesson title carries the introduction; avoid repeating the brand above it.
         if(state.activityFocus){ctx.fillStyle='#fffaf0';ctx.font=`500 39px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,830);lines.forEach((line,i)=>ctx.fillText(line,700,530+(i-(lines.length-1)/2)*54));ctx.restore();return;}
-        ctx.fillStyle='#fffaf0';const bottom=drawDemoHeading(ctx,state.title,700,370,900);ctx.textAlign='center';
-        ctx.font=`500 35px ${DEMO_PRESENTATION_FONT}`;wrappedTextureLines(ctx,state.caption,830).slice(0,4).forEach((line,i)=>ctx.fillText(line,700,bottom+110+i*48));
+        ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,width:830,top:300,bottom:800,titleSize:64,bodySize:35});
         ctx.restore();return;
     }
 
@@ -6600,7 +6600,7 @@ function drawDemoInputPointer(view,pointerSource) {
         color:latestTrackedHandStates.length ? [.78,.85,.84,handPinchActive ? .58 : .4] : [...XR_LASER_POINTER_CONFIG.color, XR_LASER_POINTER_CONFIG.alpha]
     });
     // An open contact ring replaces the hard-to-aim vertical tip.
-    if(surfacePoint)drawSpatialPointerContact(gl,tetherRenderer,view,end,surface.kind==='living-frame-rim'?.012:Math.max(.012,Math.min(.02,(surface.distance || 1)*.008)),surface.kind==='living-frame-rim'?[...XR_LASER_POINTER_CONFIG.color,XR_LASER_POINTER_CONFIG.alpha]:undefined);
+    if(surfacePoint)drawSpatialPointerContact(gl,tetherRenderer,view,end,surface.kind==='living-frame-rim'?.012:Math.max(.012,Math.min(.02,(surface.distance || 1)*.008)),surface.kind==='living-frame-rim'?[...XR_LASER_POINTER_CONFIG.color,XR_LASER_POINTER_CONFIG.alpha]:undefined,Boolean(surface.card?.comfort));
 
 }
 
@@ -6839,7 +6839,7 @@ async function startImmersive() {
                 infoPanel?.update(viewerMatrix,_time,latestControllerRay,frame,source=>welcomePractice?.stage.exiting || welcomePractice?.stage.isHolding(source));
                 const practiceLayer=frame.session.renderState.baseLayer;
                 if(practiceLayer && pose){gl.bindFramebuffer(gl.FRAMEBUFFER,practiceLayer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
-                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('comfort options render',()=>infoPanel?.draw(view));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));runXrFrameStep('Zinnia voice bar',()=>zinniaVoiceBar?.draw(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
+                    for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('comfort options render',()=>infoPanel?.draw(view));runXrFrameStep('settings contact overlay',()=>welcomePractice.drawPointerOverlay(view));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));runXrFrameStep('Zinnia voice bar',()=>zinniaVoiceBar?.draw(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
                     gl.disable(gl.SCISSOR_TEST);markXrFirstContentRendered();
                 }
                 if(xrRecoveryStatus==='failed')welcomePractice.stage.abort();

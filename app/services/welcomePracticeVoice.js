@@ -48,7 +48,7 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         }
         return liveCache.get(text);
     }
-    async function prepare(value){if(!value || muted || disposed || !context)return null;const request=()=>!value.recorded && (value.spokenOverride || value.id?.startsWith('fruit-name-'))?loadLive(value.spoken):load(value.id);const loaded=await request();return loaded || (value.recorded && !disposed && !muted?request():null);}
+    async function prepare(value){if(!value || muted || disposed || !context)return null;const exactClip=WELCOME_NARRATION_BANK.catalog?.[value.id]?.text===value.spoken;const request=()=>!value.recorded && !exactClip && (value.spokenOverride || value.id?.startsWith('fruit-name-'))?loadLive(value.spoken):load(value.id);const loaded=await request();return loaded || (value.recorded && !disposed && !muted?request():null);}
     async function speak(value){
         stop();lesson=value;unlock();if(!value || muted || disposed || !context){changed();return;}claimZinniaVoice(owner);
         const token=generation;loading=true;playing=true;changed();const loaded=await prepare(value);

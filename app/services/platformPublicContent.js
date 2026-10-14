@@ -1,4 +1,5 @@
 // Read-only adapter over the existing publication boundary. No demo imports.
+import { validateSharedProject } from './sharedProjectContract.js';
 const segment = value => encodeURIComponent(String(value));
 const list = value => {
     if (!Array.isArray(value)) throw new Error('The content service returned an invalid list.');
@@ -39,6 +40,7 @@ export function createPublicContentClient({ apiBase, fetcher = globalThis.fetch 
     const projectPath = id => `/projects/${segment(id)}`;
     const areaPath = (project, site, area) => `${projectPath(project)}/sites/${segment(site)}/places/${segment(area)}`;
     return {
+        shared: async (id, signal) => validateSharedProject(await read(`${projectPath(id)}/shared`,signal),id),
         projects: async signal => list(await read('/projects', signal)),
         project: (id, signal) => read(projectPath(id), signal),
         async areas(projectId, signal) {

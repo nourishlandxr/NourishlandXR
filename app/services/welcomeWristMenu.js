@@ -6,7 +6,7 @@ export function wristButtonAt(items,x,y){
         const r=item.radial,dx=x-r.x,dy=y-r.y,d=Math.hypot(dx,dy),angle=Math.atan2(dy,dx),center=(r.start+r.end)/2;
         const delta=Math.atan2(Math.sin(angle-center),Math.cos(angle-center));
         return d>=r.inner && d<=r.outer && Math.abs(delta)<=(r.end-r.start)/2;
-    }) || null;
+    }) || items.find(item=>!item.radial && x>=item.x-4 && x<=item.x+item.width+4 && y>=item.y-4 && y<=item.y+item.height+4) || null;
 }
 
 export function welcomeWristPose(matrix,context,forearmDirection=null){

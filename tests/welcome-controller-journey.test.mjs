@@ -83,7 +83,7 @@ test('fresh startup reaches the table and Zinnia before buttons, with no fruit d
  const stage=createWelcomePracticeScene({voice,embedded:true,onChange:state=>{if(phases.at(-1)!==state.phase)phases.push(state.phase);}});
  try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);
  for(let i=0;i<2400 && stage.phase!=='visitor-intro';i++)stage.update(.05,{viewer,floor:0,frameReady:true});
- assert.equal(stage.phase,'visitor-intro');assert.deepEqual(phases.filter(id=>!['frame'].includes(id)),['title','arrival','table','face','zinnia','living-frame','controls-intro','visitor-intro']);
+ assert.equal(stage.phase,'visitor-intro');assert.deepEqual(phases.filter(id=>!['frame'].includes(id)),['title','arrival','table','face','zinnia','living-frame','visitor-intro']);
  assert.equal(stage.zinniaMount.parent.visible,true);assert.ok(stage.root.children.some(child=>child.visible && child.name.toLowerCase().includes('table')));
  assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.snapshot().settingsAvailable,false);assert.equal(requests.some(url=>/fruit-collection/.test(url)),true,'preload fruit during conversation');
  }finally{stage.destroy();}
@@ -123,7 +123,7 @@ test('welcome screen and rim share a prepared fade before the tutorial introduct
  const voice={status:()=>({playing:false,paused:false,muted:true}),speak(){},stop(){}};const stage=createWelcomePracticeScene({voice,embedded:true});
  try{await stage.loading;assert.equal(stage.root.getObjectByName('Fruit selection highlight').visible,false);assert.equal(stage.root.getObjectByName('Dragonfly landing marker').visible,false);const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);const tick=(n,options={})=>{for(let i=0;i<n;i++)stage.update(.05,{viewer,floor:0,...options});};
  tick(60,{frameReady:false});assert.equal(stage.snapshot().frameOpacity,0);assert.equal(stage.snapshot().title,'Welcome to NourishlandXR');tick(10,{frameReady:true,presentationReady:false});assert.equal(stage.snapshot().frameOpacity,0);tick(12);assert.ok(stage.snapshot().frameOpacity>0 && stage.snapshot().frameOpacity<1);tick(25);assert.equal(stage.snapshot().frameOpacity,1);assert.equal(stage.phase,'title');tick(290);assert.equal(stage.phase,'arrival');assert.equal(stage.snapshot().title,'Make yourself comfortable');
- stage.previewLesson('table');assert.equal(stage.snapshot().title,'Your practice table');tick(80);assert.equal(stage.snapshot().title,'Your practice table');tick(40);assert.equal(stage.snapshot().title,'');assert.ok(stage.root.getObjectByName('Welcome practice table white arrival glow').visible===false);
+ stage.previewLesson('table');tick(5);assert.equal(stage.snapshot().title,'Your practice table');tick(80);assert.equal(stage.snapshot().title,'Your practice table');tick(40);assert.equal(stage.snapshot().title,'');assert.ok(stage.root.getObjectByName('Welcome practice table white arrival glow').visible===false);
  stage.previewLesson('face');assert.equal(stage.snapshot().title,'');tick(100);assert.equal(stage.snapshot().title,'Meet Zinnia');assert.ok(stage.snapshot().caption);
  }finally{stage.destroy();}
 }));

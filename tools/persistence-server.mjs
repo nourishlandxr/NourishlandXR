@@ -11,6 +11,7 @@ import { createProjectSpatialData } from '../app/services/spatialDataModel.js';
 import { createPigeonPeaTemplateProfile } from '../app/services/pigeonPeaTemplate.js';
 import { PIGEON_PEA_EXAMPLE } from '../app/services/pigeonPeaExample.js';
 import { daleysPlantMatchesQuery, normalizeDaleysPlantResult } from '../app/services/daleysPlant.js';
+import { validateSharedProject } from '../app/services/sharedProjectContract.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -1277,6 +1278,46 @@ function handleApi(req, res) {
         return true;
     }
 
+    const sharedMatch = pathname.match(/^\/api\/projects\/([^/]+)\/shared$/);
+    if(sharedMatch && req.method==='GET') {
+        const projectId=decodeURIComponent(sharedMatch[1]);
+        if(!isPublicHierarchy(projectId))return sendJson(res,404,{error:'Public project not found'});
+        const brief=(record,id)=>({id,name:String(record.name||id),description:String(record.description||'')});
+        const project=brief(readJson(path.join(getSitePath(projectId),'project.json'),{}),projectId);
+        const payload={schemaVersion:1,contract:'nourishland.shared-project',project,sites:[],areas:[],records:[]};
+        const directories=directory=>fs.existsSync(directory)?fs.readdirSync(directory,{withFileTypes:true}).filter(entry=>entry.isDirectory()&&isSafeId(entry.name)).map(entry=>entry.name).sort():[];
+        for(const siteId of directories(path.join(getSitePath(projectId),'sites'))) {
+            if(!isPublicHierarchy(projectId,siteId))continue;
+            const siteRoot=getCanonicalSitePath(projectId,siteId);
+            payload.sites.push({...brief(readJson(path.join(siteRoot,'site.json'),{}),siteId),projectId});
+            for(const areaId of directories(path.join(siteRoot,'places'))) {
+                if(!isPublicHierarchy(projectId,siteId,areaId))continue;
+                const areaRoot=path.join(siteRoot,'places',areaId);
+                payload.areas.push({...brief(readJson(path.join(areaRoot,'place.json'),{}),areaId),projectId,siteId});
+                const plants=resolvePlantsForPlace(projectId,siteId,areaId,true).plants;
+                const represented=new Set(plants.map(plant=>plant.markerId).filter(Boolean));
+                const profile=markerId=>{
+                    if(!markerId)return{};
+                    const markerRoot=path.join(areaRoot,'markers',assertSafeId(markerId));
+                    const marker=readJson(path.join(markerRoot,'marker.json'),null);
+                    return isPublic(marker)&&marker.type==='plant'?publicPlantProfile(readJson(path.join(markerRoot,'plant_profile.json'),{})):{};
+                };
+                const start=payload.records.length;
+                for(const plant of plants)payload.records.push({recordId:plant.instanceId,markerId:plant.markerId||'',title:String(plant.commonName||''),kind:'plant',knowledgeId:plant.plantId,description:String(plant.summary||''),scientificName:String(plant.scientificName||''),profile:profile(plant.markerId)});
+                for(const markerId of directories(path.join(areaRoot,'markers'))) {
+                    const marker=readJson(path.join(areaRoot,'markers',markerId,'marker.json'),null);
+                    if(!isPublic(marker)||represented.has(markerId))continue;
+                    payload.records.push({recordId:markerId,markerId,title:String(marker.name||markerId),kind:String(marker.type||'record'),knowledgeId:String(marker.plantId||''),description:String(marker.description||''),scientificName:'',profile:profile(markerId)});
+                }
+                for(let i=start;i<payload.records.length;i++)Object.assign(payload.records[i],{projectId,siteId,areaId,id:JSON.stringify([projectId,siteId,areaId,payload.records[i].recordId])});
+            }
+        }
+        const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+        const revision='sha256:'+crypto.createHash('sha256').update(JSON.stringify(canonical(payload))).digest('hex');
+        const response=validateSharedProject({...payload,revision},projectId);
+        res.setHeader('Cache-Control','no-store');
+        return sendJson(res,200,response);
+    }
     const projectMatch = pathname.match(/^\/api\/projects\/([^/]+)$/);
     if (projectMatch && req.method === 'GET') {
         const projectId = decodeURIComponent(projectMatch[1]);
@@ -1869,7 +1910,7 @@ server.on('error', error => {
     process.exitCode = 1;
 });
 server.listen(port, host, () => {
-    console.log(`Persistence server listening on http://${host}:${port}`);
+    console.log(`Persistence server listening on http://${host}:${server.address().port}`);
     console.log(`Workspace: ${workspaceDir}`);
     if (creatorAuthDisabled) console.warn('WARNING: Creator authentication disabled — testing mode');
 });

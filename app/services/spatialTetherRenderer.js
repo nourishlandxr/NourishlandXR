@@ -293,7 +293,7 @@ const contactUnitVertices = (()=>{
 })();
 
 // A camera-facing annulus makes contact readable without obscuring labels.
-export function drawSpatialPointerContact(gl, renderer, view, point, radius=.011, color=[.94,.91,.81,.9]) {
+export function drawSpatialPointerContact(gl, renderer, view, point, radius=.011, color=[.94,.91,.81,.9],overlay=false) {
     if(!renderer || !view?.transform?.matrix)return;
     let vertices=contactVertices.get(renderer);
     if(!vertices){vertices=new Float32Array(24*6*3);contactVertices.set(renderer,vertices);}
@@ -311,9 +311,10 @@ export function drawSpatialPointerContact(gl, renderer, view, point, radius=.011
     gl.uniformMatrix4fv(renderer.projectionLocation,false,view.projectionMatrix);
     gl.uniformMatrix4fv(renderer.viewLocation,false,view.transform.inverse.matrix);
     gl.uniform4fv(renderer.colorLocation,color);
-    gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);
+    const depthEnabled=overlay?(gl.isEnabled?.(gl.DEPTH_TEST) ?? true):true;
+    if(overlay)gl.disable(gl.DEPTH_TEST);else {gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);}gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.disable(gl.CULL_FACE);
-    gl.depthMask(false);gl.drawArrays(gl.TRIANGLES,0,vertices.length/3);gl.depthMask(true);
+    gl.depthMask(false);gl.drawArrays(gl.TRIANGLES,0,vertices.length/3);gl.depthMask(true);if(overlay && depthEnabled)gl.enable(gl.DEPTH_TEST);
 }
 
 export function destroySpatialTetherRenderer(gl, renderer) {

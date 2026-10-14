@@ -7,6 +7,10 @@ import {createPracticeBody,stepPracticeBodies,PRACTICE_TABLE_HALF_WIDTH} from '.
 import {createWelcomeVisitorIntroduction} from '../app/services/welcomeVisitorIntroduction.js';
 import {createDemoLivingMapXR} from '../app/services/demoLivingMapXR.js';
 import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';
+import {createFruitWindowXR} from '../app/services/fruitWindowXR.js';
+import {drawWelcomeText,welcomeLessonCaption} from '../app/services/welcomeSpeechPresentation.js';
+import {drawSpatialPointerContact} from '../app/services/spatialTetherRenderer.js';
+import {loadXRAssetBatch} from '../app/services/xrAssetQueue.js';
 
 test('steady room noise does not extend an already spoken reply to the recording limit',()=>{
  const endpoint=createVoiceEndpoint();for(let t=0;t<400;t+=50)assert.equal(endpoint.sample(.003,t),false);
@@ -72,3 +76,31 @@ test('cold favourite fruit loads into Zinnia hand and survives until actual repl
  stage.update(.05,{viewer,floor:0,presentationReady:true});await Promise.resolve();await Promise.resolve();assert.equal(stage.conversation.state().phase,'complete');assert.equal(fruit.parent.name,'Zinnia micro-fruit hand socket L');assert.equal(playing,true);assert.ok(stage.scene.getObjectByName(fruit.name),'speaking must not hide the fruit at audio start');
  }finally{playing=false;stage.destroy();}
 }));
+test('wrapped headings reserve their full height and authored paragraphs never scroll away',()=>{
+ const draws=[],ctx={font:'',measureText(text){return {width:text.length*parseFloat(this.font.split(' ')[1])*.55};},fillText(text,x,y){draws.push({text,y,size:parseFloat(this.font.split(' ')[1])});}};
+ drawWelcomeText(ctx,{title:'Make yourself comfortable',caption:'Pause here to adjust your headset.\n\nClear your space or change your lighting.',width:620,top:100,bottom:850});
+ const heading=draws.filter(d=>d.size===88),body=draws.filter(d=>d.size!==88);assert.ok(heading.length>1);assert.ok(body[0].y-body[0].size/2>heading.at(-1).y+44);assert.ok(body.at(-1).y<850);
+ const lesson={paragraphs:['Welcome.','Explore plants.','Practise with us.']};assert.equal(welcomeLessonCaption(lesson,0),'Welcome.');assert.equal(welcomeLessonCaption(lesson,7),'Welcome.\n\nExplore plants.\n\nPractise with us.');
+});
+test('visibility-only changes retain native resources while new meshes require preparation',()=>{
+ const saved=globalThis.document;globalThis.document={createElement:()=>({getContext:()=>({drawImage(){}})})};const uploads=[],attrs=['p','n','uv','c','i0','i1','i2','i3','ic'];
+ const gl=new Proxy({getExtension:()=>null,getShaderParameter:()=>true,getProgramParameter:()=>true,getParameter:()=>4096,getAttribLocation:(_p,key)=>attrs.indexOf(key),getUniformLocation:(_p,key)=>key,bufferData:()=>uploads.push(1)},{get:(t,k)=>k in t?t[k]:k===k.toUpperCase()?k:k.startsWith('create')?()=>({}):()=>{}});
+ const scene=new THREE.Scene(),mesh=new THREE.Mesh(new THREE.BoxGeometry(),new THREE.MeshBasicMaterial());scene.add(mesh);let renderer;
+ try{renderer=createFruitWindowXR(gl,scene);while(!renderer.prepareNext()){}renderer.update();const count=uploads.length;assert.equal(renderer.coversScene(),true);mesh.visible=false;renderer.update();assert.equal(renderer.coversScene(),true);mesh.visible=true;renderer.update();assert.equal(uploads.length,count);scene.add(new THREE.Mesh(mesh.geometry,mesh.material));assert.equal(renderer.coversScene(),false);}
+ finally{renderer?.destroy();mesh.geometry.dispose();mesh.material.dispose();globalThis.document=saved;}
+});
+test('table handle sits outside the near rim and the plate clears Zinnia',()=>withAssets(async()=>{
+ const stage=createWelcomePracticeScene({embedded:true});try{await stage.loading;const handle=stage.scene.getObjectByName('Table height grip'),plate=stage.scene.getObjectByName('WelcomeFruitPlate');assert.ok(handle.position.z>.45);assert.ok(handle.getObjectByName('Rounded table pull handle').geometry.isBufferGeometry);assert.ok(plate.position.x<-.4);assert.ok(Math.hypot(plate.position.x,plate.position.z)>.5);}finally{stage.destroy();}
+}));
+test('slow speech loading cannot consume a lesson heading or replace authored instructions',()=>withAssets(async()=>{
+ let loading=true;const voice={status:()=>({loading,playing:loading,hasPlayed:false,available:true}),speak(){},stop(){},unlock(){},prepare(){}};const stage=createWelcomePracticeScene({embedded:true,voice});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('title');for(let i=0;i<240;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.snapshot().title,'Welcome to NourishlandXR');assert.match(stage.snapshot().caption,/living world/);loading=false;for(let i=0;i<90;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.snapshot().title,'Welcome to NourishlandXR');for(let i=0;i<20;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.snapshot().title,'');assert.match(stage.snapshot().caption,/living world/);}finally{stage.destroy();}
+}));
+test('settings contact ring draws above square buttons and restores depth testing',()=>{
+ let depth=true,atDraw=null;const gl=new Proxy({isEnabled:()=>depth,enable:key=>{if(key==='DEPTH_TEST')depth=true;},disable:key=>{if(key==='DEPTH_TEST')depth=false;},drawArrays:()=>{atDraw=depth;}},{get:(t,k)=>k in t?t[k]:k===k.toUpperCase()?k:()=>{}}),matrix=new THREE.Matrix4().elements;
+ drawSpatialPointerContact(gl,{}, {projectionMatrix:matrix,transform:{matrix,inverse:{matrix}}},{x:0,y:1,z:-1},.009,undefined,true);assert.equal(atDraw,false);assert.equal(depth,true);
+});
+test('fruit asset queue limits concurrent parsing and supports cancellation between models',async()=>{
+ let active=0,peak=0;const loaded=[];await loadXRAssetBatch([1,2,3,4,5],async id=>{active++;peak=Math.max(active,peak);await Promise.resolve();loaded.push(id);active--;});assert.equal(loaded.length,5);assert.equal(peak,2);
+ let cancelled=false,calls=0;await loadXRAssetBatch([1,2,3],async()=>{calls++;cancelled=true;},{concurrency:1,cancelled:()=>cancelled});assert.equal(calls,1);
+});

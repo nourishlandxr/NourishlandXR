@@ -7,7 +7,7 @@ import {mergeGeometries} from '../assets/fruit-window/vendor/BufferGeometryUtils
 export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=>{},load=url=>new GLTFLoader().loadAsync(url)}={}){
     const holder=new THREE.Group();holder.name='ZinniaWelcomeGuide';holder.visible=true;root.add(holder);
     let model=null,mixer=null,disposed=false,ready=false,age=0,phase='',level=0,rewardAge=10,ack=null,ackAge=10,smileNow=.45,eyeSmile=.65,mouthOpen=0,mouthRound=0,mouthWide=0,mouthNarrow=0,mouthClosed=0,blink=0,cueId=null,cueIntent='explain',presentingFruit=false;
-    const parts={},fruitSockets={},petals=[],target=new THREE.Vector3(),worldTarget=new THREE.Vector3(),local=new THREE.Vector3(),bodyTarget=new THREE.Vector3(),gazeEuler=new THREE.Euler(),gazeQuaternion=new THREE.Quaternion(),armQuaternion=new THREE.Quaternion();let bodyYaw=0,bodyPitch=0,bodyLean=0;
+    const parts={},fruitSockets={},petals=[],target=new THREE.Vector3(),worldTarget=new THREE.Vector3(),local=new THREE.Vector3(),bodyTarget=new THREE.Vector3(),gazeEuler=new THREE.Euler(),gazeQuaternion=new THREE.Quaternion(),armQuaternion=new THREE.Quaternion(),armEuler=new THREE.Euler(),armDirection=new THREE.Vector3(),armTarget=new THREE.Vector3();let bodyYaw=0,bodyPitch=0,bodyLean=0;
     const wrapper=node=>{const pivot=new THREE.Group();pivot.position.copy(node.position);node.parent.add(pivot);pivot.add(node);node.position.set(0,0,0);return pivot;};
     function dispose(object){object.traverse(n=>{n.geometry?.dispose();for(const material of [n.material].flat().filter(Boolean))material.dispose();});}
     const loading=load(new URL('../assets/welcome-practice/zinnia.glb',import.meta.url).href).then(gltf=>{
@@ -94,13 +94,13 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         for(const name of ['Eyebrow_L','Eyebrow_R']){const brow=parts[name];if(!brow)continue;brow.morphTargetInfluences[brow.morphTargetDictionary.Smile]=attentive?.2+mouthOpen*.25:smileNow*.5;brow.morphTargetInfluences[brow.morphTargetDictionary.Sad]=0;}
         const mouth=parts.Mouth_speech;if(mouth){const map=mouth.morphTargetDictionary;for(const [key,value] of [['Smile',smileNow*(1-mouthOpen)],['Sad',0],['Open',mouthOpen*(1-mouthRound)],['Round',mouthOpen*mouthRound],['Wide',mouthWide],['Narrow',mouthNarrow],['Closed',mouthClosed]])mouth.morphTargetInfluences[map[key]]=value;}
         for(const side of ['L','R']){const pivot=parts['Leaf_arm_'+side]?.userData.guidePivot;if(!pivot)continue;const q=armQuaternion.identity(),sign=side==='L'?-1:1;
-            if(leafTargets?.[side]){local.copy(leafTargets[side]);pivot.parent.worldToLocal(local).sub(pivot.position);q.setFromUnitVectors(new THREE.Vector3(sign,.1,.2).normalize(),local.normalize());}
-            else if(presentingFruit && side==='L')q.setFromEuler(new THREE.Euler(-.08,.04,.32));
-            else if(celebrating){const fade=Math.min(1,rewardAge*3)*Math.max(0,Math.min(1,(2.4-rewardAge)*3)),angle=(1.05+.34*Math.sin(rewardAge*Math.PI*5))*fade;q.setFromEuler(new THREE.Euler(0,side==='L'?angle:-angle,-sign*.2*fade));}
-            else if(lesson==='fruit' && level>.025){const peel=cue?.id?.includes(':banana:'),spread=.25+.5*(.5+.5*Math.sin(age*2));q.setFromEuler(new THREE.Euler(peel?spread*.7:0,-sign*spread,peel?sign*.4:-sign*.18));}
-            else if(task){local.copy(worldTarget);pivot.parent.worldToLocal(local).sub(pivot.position);const selected=holder.worldToLocal(worldTarget.clone()).x>=0?'R':'L';if(side===selected)q.setFromUnitVectors(new THREE.Vector3(sign,.1,.2).normalize(),local.normalize());}
-            else if(lesson==='zinnia' || cueIntent==='greet')q.setFromEuler(new THREE.Euler(0,-sign*.25,sign*(.32+.06*Math.sin(age*3))));
-            else if(cue && level>.025)q.setFromEuler(new THREE.Euler(0,-sign*(.12+.08*Math.sin(age*2.4)),sign*.12));
+            if(leafTargets?.[side]){local.copy(leafTargets[side]);pivot.parent.worldToLocal(local).sub(pivot.position);q.setFromUnitVectors(armDirection.set(sign,.1,.2).normalize(),local.normalize());}
+            else if(presentingFruit && side==='L')q.setFromEuler(armEuler.set(-.08,.04,.32));
+            else if(celebrating){const fade=Math.min(1,rewardAge*3)*Math.max(0,Math.min(1,(2.4-rewardAge)*3)),angle=(1.05+.34*Math.sin(rewardAge*Math.PI*5))*fade;q.setFromEuler(armEuler.set(0,side==='L'?angle:-angle,-sign*.2*fade));}
+            else if(lesson==='fruit' && level>.025){const peel=cue?.id?.includes(':banana:'),spread=.25+.5*(.5+.5*Math.sin(age*2));q.setFromEuler(armEuler.set(peel?spread*.7:0,-sign*spread,peel?sign*.4:-sign*.18));}
+            else if(task){local.copy(worldTarget);pivot.parent.worldToLocal(local).sub(pivot.position);const selected=holder.worldToLocal(armTarget.copy(worldTarget)).x>=0?'R':'L';if(side===selected)q.setFromUnitVectors(armDirection.set(sign,.1,.2).normalize(),local.normalize());}
+            else if(lesson==='zinnia' || cueIntent==='greet')q.setFromEuler(armEuler.set(0,-sign*.25,sign*(.32+.06*Math.sin(age*3))));
+            else if(cue && level>.025)q.setFromEuler(armEuler.set(0,-sign*(.12+.08*Math.sin(age*2.4)),sign*.12));
             pivot.quaternion.slerp(q,1-Math.exp(-7*dt));
         }
     }

@@ -1,0 +1,50 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawn } from 'node:child_process';
+import { validateSharedProject } from '../app/services/sharedProjectContract.js';
+import { createPublicContentClient } from '../app/services/platformPublicContent.js';
+
+test('shared public response preserves identities, publication boundaries, read-only storage and refreshed content',async()=>{
+    const directory=fs.mkdtempSync(path.join(os.tmpdir(),'nl-shared-'));
+    const write=(file,value)=>{const target=path.join(directory,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,JSON.stringify(value));};
+    write('p/project.json',{id:'p',name:'Public project',visibility:'public'});
+    write('private/project.json',{id:'private',visibility:'draft'});
+    write('p/sites/s/site.json',{id:'s',name:'Site',visibility:'public'});
+    write('p/sites/hidden/site.json',{id:'hidden',visibility:'hidden'});
+    write('p/sites/s/places/a/place.json',{id:'a',name:'Area',visibility:'public'});
+    write('p/sites/s/places/hidden/place.json',{id:'hidden',visibility:'hidden'});
+    write('plant-library/plants.json',{version:1,plants:[{id:'species',commonName:'Same species',summary:'Before update',visibility:'public'}]});
+    write('p/sites/s/plant-instances.json',{version:1,instances:[1,2].map(n=>({id:`specimen-${n}`,plantId:'species',placeId:'a',markerId:`marker-${n}`,visibility:'public'}))});
+    for(const n of [1,2])write(`p/sites/s/places/a/markers/marker-${n}/marker.json`,{id:`marker-${n}`,type:'plant',visibility:'public',field_work:{private:'SECRET'}});
+    write('p/sites/s/places/a/markers/marker-1/plant_profile.json',{description:'Public description',pim:{nodes:[{id:'public',status:'published'},{id:'secret',status:'draft'}],importQueue:['SECRET']}});
+    write('p/sites/s/places/a/markers/private/marker.json',{id:'private',type:'plant',visibility:'hidden',description:'SECRET'});
+    write('p/sites/s/places/a/markers/totem/marker.json',{id:'totem',type:'area_checkpoint',name:'Totem',visibility:'public'});
+    const before=fs.readdirSync(path.join(directory,'p/sites/s/places')).sort();
+    const child=spawn(process.execPath,['tools/persistence-server.mjs'],{cwd:path.resolve(import.meta.dirname,'..'),env:{...process.env,PORT:'0',HOST:'127.0.0.1',NOURISHLAND_WORKSPACE_DIR:directory},stdio:['ignore','pipe','pipe']});
+    let logs='';child.stderr.on('data',chunk=>{logs+=chunk;});
+    try {
+        const base=await new Promise((resolve,reject)=>{const timeout=setTimeout(()=>reject(Error(logs||'Server timeout')),15000);child.stdout.on('data',chunk=>{logs+=chunk;const match=logs.match(/http:\/\/127\.0\.0\.1:(\d+)/);if(match&&match[1]!=='0'){clearTimeout(timeout);resolve(match[0]);}});child.once('exit',()=>{clearTimeout(timeout);reject(Error(logs));});});
+        const client=createPublicContentClient({apiBase:base+'/api'});
+        const first=await client.shared('p');
+        assert.equal(first.records.length,3);assert.equal(first.areas.length,1);assert.equal(first.sites.length,1);
+        assert.equal(first.records[0].knowledgeId,first.records[1].knowledgeId);
+        assert.notEqual(first.records[0].id,first.records[1].id);
+        assert.doesNotMatch(JSON.stringify(first),/SECRET|field_work|"secret"/);
+        assert.deepEqual(fs.readdirSync(path.join(directory,'p/sites/s/places')).sort(),before);
+        assert.equal((await client.shared('p')).revision,first.revision);
+        write('p/sites/s/site.json',{visibility:'public',name:'Site',id:'s'});
+        assert.equal((await client.shared('p')).revision,first.revision,'JSON property order is not a content update');
+        const denied=await fetch(base+'/api/projects/private/shared?view=visitor');assert.equal(denied.status,404);
+        const profileResponse=await fetch(base+'/api/projects/p/sites/s/places/a/markers/marker-1/plant-profile',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({description:'After desktop update'})});
+        assert.equal(profileResponse.status,200);
+        const refreshed=await client.shared('p');assert.notEqual(refreshed.revision,first.revision);
+        assert.equal(refreshed.records.find(record=>record.recordId==='specimen-1').profile.description,'After desktop update');
+        assert.deepEqual(refreshed.records.map(record=>record.id),first.records.map(record=>record.id));
+        fs.mkdirSync(path.resolve('artifacts/platform-foundation'),{recursive:true});
+        fs.writeFileSync(path.resolve('artifacts/platform-foundation/shared-project-example.json'),JSON.stringify(refreshed,null,2));
+        for(const bad of [{...first,schemaVersion:2},{...first,project:{...first.project,id:'another'}},{...first,records:[{...first.records[0],siteId:'unknown'}]},{...first,records:[first.records[0],first.records[0]]}])assert.throws(()=>validateSharedProject(bad,'p'));
+    } finally {if(child.exitCode===null)await new Promise(resolve=>{child.once('exit',resolve);child.kill();});fs.rmSync(directory,{recursive:true,force:true});}
+});
