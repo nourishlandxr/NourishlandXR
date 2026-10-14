@@ -107,9 +107,10 @@ if (!frontendOnly) {
         .replaceAll("../app/services/", './app/services/');
     fs.writeFileSync(path.join(apiDist, 'server.mjs'), apiServer);
     fs.copyFileSync(path.join(root, 'tools', 'zipArchive.mjs'), path.join(apiDist, 'zipArchive.mjs'));
-    for(const file of ['zinniaVoiceServer.mjs','zinniaInterpretation.mjs','zinniaPreviewProxy.mjs'])fs.copyFileSync(path.join(root,'tools',file),path.join(apiDist,file));
+    for(const file of ['zinniaVoiceServer.mjs','zinniaInterpretation.mjs','zinniaPreviewProxy.mjs','projectAccess.mjs'])fs.copyFileSync(path.join(root,'tools',file),path.join(apiDist,file));
+    fs.writeFileSync(path.join(apiDist,'projectChecklists.mjs'), fs.readFileSync(path.join(root,'tools','projectChecklists.mjs'),'utf8').replaceAll('../app/services/', './app/services/'));
     const apiServices = ['spatialDataModel.js', 'daleysPlant.js', 'pigeonPeaTemplate.js', 'pigeonPeaExample.js', 'pigeonPeaPim.js', 'plantTrialContent.js', 'pimCellIllustrations.js', 'pimModel.js', 'pimCompass.js'];
-    apiServices.push('sharedProjectContract.js');
+    apiServices.push('sharedProjectContract.js', 'checklistContract.js');
     const apiServiceDist = path.join(apiDist, 'app', 'services');
     fs.mkdirSync(apiServiceDist, { recursive: true });
     apiServices.forEach(fileName => fs.copyFileSync(path.join(root, 'app', 'services', fileName), path.join(apiServiceDist, fileName)));

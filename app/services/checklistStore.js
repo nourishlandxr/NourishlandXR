@@ -1,8 +1,11 @@
 import { validateChecklist, parseChecklist } from './checklistContract.js';
+import { validatePublishedChecklist } from './publishedChecklistContract.js';
 export const CHECKLIST_LIBRARY_KEY = 'nourishland.personal-checklists.v1';
 export const CHECKLIST_PROGRESS_KEY = 'nourishland.checklist-progress.v1';
 export const checklistKey = experience => JSON.stringify([experience.projectId, experience.id]);
-export const progressKey = experience => JSON.stringify([experience.projectId, experience.id, experience.revision]);
+export const progressKey = experience => JSON.stringify([experience.projectId, experience.id, experience.revision, ...(experience.publication === 'published' ? ['published'] : [])]);
+const validateProgressExperience = experience => experience?.publication === 'published'
+    ? validatePublishedChecklist(experience, experience.projectId) : validateChecklist(experience);
 function read(storage, key, property) {
     const raw = storage.getItem(key);
     if (raw === null) return [];
@@ -44,12 +47,12 @@ function readProgress(storage) {
     return items;
 }
 export function checklistProgress(experience, storage = globalThis.localStorage) {
-    validateChecklist(experience);
+    validateProgressExperience(experience);
     const ids=new Set(experience.steps.map(step=>step.id));
     return (readProgress(storage).find(item=>item.key===progressKey(experience))?.completedStepIds || []).filter(id=>ids.has(id));
 }
 export function setChecklistStep(experience, stepId, complete, storage = globalThis.localStorage) {
-    validateChecklist(experience);
+    validateProgressExperience(experience);
     if (typeof complete !== 'boolean' || !experience.steps.some(step=>step.id===stepId)) throw new Error('Unknown checklist activity.');
     const items=readProgress(storage),key=progressKey(experience),previous=checklistProgress(experience,storage),completed=new Set(previous);
     if(complete)completed.add(stepId);else completed.delete(stepId);

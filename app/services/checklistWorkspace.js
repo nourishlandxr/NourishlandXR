@@ -1,5 +1,6 @@
 import { createChecklist, CHECKLIST_MAX_BYTES } from './checklistContract.js';
 import { readChecklists, saveChecklist, importChecklist, exportChecklist, checklistProgress, setChecklistStep } from './checklistStore.js';
+import { renderProjectChecklistWorkspace } from './projectChecklistWorkspace.js';
 const html = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]);
 
 export function renderChecklistWorkspace(root, { mode, projectId = '', scope = {siteId:'',areaId:''}, status, onDirty = () => {} }) {
@@ -15,6 +16,10 @@ export function renderChecklistWorkspace(root, { mode, projectId = '', scope = {
         let items; try { items=library(); } catch(error) {root.innerHTML='<h1>Personal checklists</h1><p>Saved checklist data needs attention. Existing data has been preserved.</p>';status(error.message);return;}
         root.innerHTML=`<h1>Personal checklists</h1><p>Observation activities you can follow without XR, location tracking or an account.</p><p>These are personal drafts, not official published project experiences. Completion is your own record.</p>${mode==='desktop'?'<button type="button" data-create-checklist>Create a checklist draft</button>':''}<label class="checklist-import">Import a checklist file<input type="file" accept="application/json,.json" data-import-checklist></label><div class="content-grid">${items.map((item,index)=>`<button type="button" class="content-card" data-checklist="${index}"><span>Personal draft · revision ${item.revision}</span><strong>${html(item.title)}</strong><p>${html(item.description)}</p><small>Project reference: ${html(item.projectId)} · ${item.steps.length} activities</small></button>`).join('')||'<p>No personal checklists saved yet.</p>'}</div>`;
         root.querySelector('[data-create-checklist]')?.addEventListener('click',author);
+        const projectButton = document.createElement('button');
+        projectButton.type = 'button'; projectButton.textContent = 'Project checklists';
+        projectButton.onclick = () => renderProjectChecklistWorkspace(root, { mode, projectId, status, onDirty, onBack: listing });
+        root.querySelector('h1').after(projectButton);
         root.querySelectorAll('[data-checklist]').forEach(button=>button.onclick=()=>open(items[Number(button.dataset.checklist)]));
         root.querySelector('[data-import-checklist]').onchange=async event=>{
             const input=event.target,file=input.files?.[0];if(!file)return;

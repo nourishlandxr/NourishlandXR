@@ -1,4 +1,6 @@
 import http from 'http';
+import { createProjectAccess, projectRole } from './projectAccess.mjs';
+import { handleProjectChecklists } from './projectChecklists.mjs';
 import {handleZinniaVoice} from './zinniaVoiceServer.mjs';
 import {handleZinniaPreview} from './zinniaPreviewProxy.mjs';
 import fs from 'fs';
@@ -20,6 +22,9 @@ const production = process.env.NODE_ENV === 'production';
 const creatorPassword = process.env.NOURISHLAND_CREATOR_PASSWORD || '';
 const sessionSecret = process.env.NOURISHLAND_SESSION_SECRET || '';
 const creatorAuthDisabled = String(process.env.NOURISHLAND_CREATOR_AUTH_DISABLED || '').trim().toLowerCase() === 'true';
+const accessRegistryFile = process.env.NOURISHLAND_ACCESS_FILE ? path.resolve(process.env.NOURISHLAND_ACCESS_FILE) : '';
+if (accessRegistryFile && (accessRegistryFile === rootDir || accessRegistryFile.startsWith(rootDir + path.sep))) throw new Error('Access registry must be outside the repository and web root');
+const projectAccess = createProjectAccess({ registryFile: accessRegistryFile, secret: sessionSecret, bootstrapPassword: creatorPassword, developmentOpen: !production && !accessRegistryFile });
 const publicOrigin = (process.env.NOURISHLAND_PUBLIC_ORIGIN || 'https://nourishland.org').replace(/\/$/, '');
 const MAX_JSON_BODY_BYTES = 1 * 1024 * 1024;
 const MAX_IMPORT_BYTES = 25 * 1024 * 1024;
@@ -146,17 +151,6 @@ function normalizeApiPath(pathname) {
     return pathname;
 }
 
-function parseCookies(req) {
-    return Object.fromEntries(String(req.headers.cookie || '').split(';').map(part => part.trim()).filter(Boolean).map(part => {
-        const index = part.indexOf('=');
-        return [decodeURIComponent(part.slice(0, index)), decodeURIComponent(part.slice(index + 1))];
-    }));
-}
-
-function signSession(expires) {
-    return `${expires}.${crypto.createHmac('sha256', sessionSecret).update(String(expires)).digest('hex')}`;
-}
-
 function loginClientKey(req) {
     return String(req.socket?.remoteAddress || 'unknown');
 }
@@ -189,23 +183,11 @@ function clearLoginFailures(req) {
     loginFailures.delete(loginClientKey(req));
 }
 
-function hasCreatorSession(req) {
-    if (!production) return true;
-    if (creatorAuthDisabled) return true;
-    const token = parseCookies(req).nourishland_creator;
-    if (!token || !sessionSecret) return false;
-    const [expiresText, signature] = token.split('.');
-    const expires = Number(expiresText);
-    if (!Number.isFinite(expires) || expires <= Date.now() || !signature) return false;
-    const expected = signSession(expires).split('.')[1];
-    const left = Buffer.from(signature, 'hex');
-    const right = Buffer.from(expected, 'hex');
-    return left.length === right.length && crypto.timingSafeEqual(left, right);
-}
+function hasCreatorSession(req) { return Boolean(projectAccess.identity(req)); }
 
 function setSessionCookie(res, value, maxAge) {
     const secure = production ? '; Secure' : '';
-    res.setHeader('Set-Cookie', `nourishland_creator=${encodeURIComponent(value)}; Path=/xr-api/; HttpOnly; SameSite=Strict${secure}; Max-Age=${maxAge}`);
+    res.setHeader('Set-Cookie', `nourishland_creator=${encodeURIComponent(value)}; Path=${production ? '/xr-api/' : '/api/'}; HttpOnly; SameSite=Strict${secure}; Max-Age=${maxAge}`);
 }
 
 function isAllowedOrigin(req) {
@@ -948,6 +930,44 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     }
 }
 
+function publicIdentity(identity) { return identity ? { id: identity.id, platformAdmin: identity.platformAdmin, projects: identity.projects } : null; }
+function buildPublicSnapshot(projectId) {
+        if(!isPublicHierarchy(projectId))return null;
+        const brief=(record,id)=>({id,name:String(record.name||id),description:String(record.description||'')});
+        const project=brief(readJson(path.join(getSitePath(projectId),'project.json'),{}),projectId);
+        const payload={schemaVersion:1,contract:'nourishland.shared-project',project,sites:[],areas:[],records:[]};
+        const directories=directory=>fs.existsSync(directory)?fs.readdirSync(directory,{withFileTypes:true}).filter(entry=>entry.isDirectory()&&isSafeId(entry.name)).map(entry=>entry.name).sort():[];
+        for(const siteId of directories(path.join(getSitePath(projectId),'sites'))) {
+            if(!isPublicHierarchy(projectId,siteId))continue;
+            const siteRoot=getCanonicalSitePath(projectId,siteId);
+            payload.sites.push({...brief(readJson(path.join(siteRoot,'site.json'),{}),siteId),projectId});
+            for(const areaId of directories(path.join(siteRoot,'places'))) {
+                if(!isPublicHierarchy(projectId,siteId,areaId))continue;
+                const areaRoot=path.join(siteRoot,'places',areaId);
+                payload.areas.push({...brief(readJson(path.join(areaRoot,'place.json'),{}),areaId),projectId,siteId});
+                const plants=resolvePlantsForPlace(projectId,siteId,areaId,true).plants;
+                const represented=new Set(plants.map(plant=>plant.markerId).filter(Boolean));
+                const profile=markerId=>{
+                    if(!markerId)return{};
+                    const markerRoot=path.join(areaRoot,'markers',assertSafeId(markerId));
+                    const marker=readJson(path.join(markerRoot,'marker.json'),null);
+                    return isPublic(marker)&&marker.type==='plant'?publicPlantProfile(readJson(path.join(markerRoot,'plant_profile.json'),{})):{};
+                };
+                const start=payload.records.length;
+                for(const plant of plants)payload.records.push({recordId:plant.instanceId,markerId:plant.markerId||'',title:String(plant.commonName||''),kind:'plant',knowledgeId:plant.plantId,description:String(plant.summary||''),scientificName:String(plant.scientificName||''),profile:profile(plant.markerId)});
+                for(const markerId of directories(path.join(areaRoot,'markers'))) {
+                    const marker=readJson(path.join(areaRoot,'markers',markerId,'marker.json'),null);
+                    if(!isPublic(marker)||represented.has(markerId))continue;
+                    payload.records.push({recordId:markerId,markerId,title:String(marker.name||markerId),kind:String(marker.type||'record'),knowledgeId:String(marker.plantId||''),description:String(marker.description||''),scientificName:'',profile:profile(markerId)});
+                }
+                for(let i=start;i<payload.records.length;i++)Object.assign(payload.records[i],{projectId,siteId,areaId,id:JSON.stringify([projectId,siteId,areaId,payload.records[i].recordId])});
+            }
+        }
+        const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
+        const revision='sha256:'+crypto.createHash('sha256').update(JSON.stringify(canonical(payload))).digest('hex');
+        const response=validateSharedProject({...payload,revision},projectId);
+        return response;
+}
 function handleApi(req, res) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = normalizeApiPath(url.pathname);
@@ -967,7 +987,7 @@ function handleApi(req, res) {
     if(handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isAllowedOrigin}))return true;
 
     if (pathname === '/api/auth/session' && req.method === 'GET') {
-        return sendJson(res, 200, { authenticated: hasCreatorSession(req), required: production && !creatorAuthDisabled, authDisabled: creatorAuthDisabled });
+        return sendJson(res, 200, { authenticated: hasCreatorSession(req), required: production || Boolean(accessRegistryFile), authDisabled: creatorAuthDisabled, identity: publicIdentity(projectAccess.identity(req)) });
     }
     if (pathname === '/api/health' && req.method === 'GET') {
         return sendJson(res, 200, {
@@ -1001,18 +1021,15 @@ function handleApi(req, res) {
             res.setHeader('Retry-After', String(rate.retryAfter));
             return sendJson(res, 429, { error: 'Too many failed login attempts. Try again later.' });
         }
-        readRequestJson(req, (error, data) => {
+        readRequestJson(req, async (error, data) => {
             if (error) return sendJson(res, error.statusCode || 400, { error: error.message });
-            const supplied = Buffer.from(String(data.password || ''));
-            const expected = Buffer.from(creatorPassword);
-            if (!creatorPassword || supplied.length !== expected.length || !crypto.timingSafeEqual(supplied, expected)) {
-                recordLoginFailure(req);
-                return sendJson(res, 401, { error: 'Invalid Creator password' });
-            }
-            clearLoginFailures(req);
-            const expires = Date.now() + sessionTtlMs;
-            setSessionCookie(res, signSession(expires), Math.floor(sessionTtlMs / 1000));
-            return sendJson(res, 200, { authenticated: true });
+            try {
+                const identity = await projectAccess.login(data);
+                if (!identity) { recordLoginFailure(req); return sendJson(res, 401, { error: 'Invalid Creator credentials' }); }
+                clearLoginFailures(req);
+                setSessionCookie(res, projectAccess.token(identity, Date.now() + sessionTtlMs), Math.floor(sessionTtlMs / 1000));
+                return sendJson(res, 200, { authenticated: true, identity: publicIdentity(identity) });
+            } catch { return sendJson(res, 503, { error: 'Project authentication is unavailable' }); }
         });
         return true;
     }
@@ -1033,6 +1050,20 @@ function handleApi(req, res) {
     if (writeRequest && !isAllowedOrigin(req)) {
         return sendJson(res, 403, { error: 'Request origin is not allowed' });
     }
+
+    const identity = projectAccess.identity(req);
+    const scopedProject = pathname.match(/^\/api\/projects\/([^/]+)/);
+    const projectId = scopedProject ? decodeURIComponent(scopedProject[1]) : '';
+    const checklistRoute = /^\/api\/projects\/[^/]+\/checklists(?:\/|$)/.test(pathname);
+    if (writeRequest || !visitor || /^\/api\/projects\/[^/]+\/export$/.test(pathname)) {
+        if (projectId && projectId !== 'import') {
+            const role = projectRole(identity, projectId);
+            if (!role || (writeRequest && !checklistRoute && role !== 'admin')) return sendJson(res, 403, { error: 'Project permission required; legacy content writes require an administrator' });
+        } else if (!identity?.platformAdmin && !(pathname === '/api/projects' && req.method === 'GET')) {
+            return sendJson(res, 403, { error: 'Platform administrator required' });
+        }
+    }
+    if (handleProjectChecklists(req, res, pathname, { visitor, access: projectAccess, sendJson, readRequestJson, readJson, writeJson, getProjectPath: getSitePath, publicSnapshot: buildPublicSnapshot })) return true;
 
     if (pathname === '/api/plant-library' && req.method === 'GET') {
         const result = loadPlantRegistryData();
@@ -1261,7 +1292,7 @@ function handleApi(req, res) {
     }
 
     if (pathname === '/api/projects' && req.method === 'GET') {
-        sendJson(res, 200, listProjects(visitor));
+        sendJson(res, 200, listProjects(visitor).filter(project => visitor || projectRole(identity, project.id)));
         return true;
     }
 
@@ -1281,42 +1312,8 @@ function handleApi(req, res) {
     const sharedMatch = pathname.match(/^\/api\/projects\/([^/]+)\/shared$/);
     if(sharedMatch && req.method==='GET') {
         const projectId=decodeURIComponent(sharedMatch[1]);
-        if(!isPublicHierarchy(projectId))return sendJson(res,404,{error:'Public project not found'});
-        const brief=(record,id)=>({id,name:String(record.name||id),description:String(record.description||'')});
-        const project=brief(readJson(path.join(getSitePath(projectId),'project.json'),{}),projectId);
-        const payload={schemaVersion:1,contract:'nourishland.shared-project',project,sites:[],areas:[],records:[]};
-        const directories=directory=>fs.existsSync(directory)?fs.readdirSync(directory,{withFileTypes:true}).filter(entry=>entry.isDirectory()&&isSafeId(entry.name)).map(entry=>entry.name).sort():[];
-        for(const siteId of directories(path.join(getSitePath(projectId),'sites'))) {
-            if(!isPublicHierarchy(projectId,siteId))continue;
-            const siteRoot=getCanonicalSitePath(projectId,siteId);
-            payload.sites.push({...brief(readJson(path.join(siteRoot,'site.json'),{}),siteId),projectId});
-            for(const areaId of directories(path.join(siteRoot,'places'))) {
-                if(!isPublicHierarchy(projectId,siteId,areaId))continue;
-                const areaRoot=path.join(siteRoot,'places',areaId);
-                payload.areas.push({...brief(readJson(path.join(areaRoot,'place.json'),{}),areaId),projectId,siteId});
-                const plants=resolvePlantsForPlace(projectId,siteId,areaId,true).plants;
-                const represented=new Set(plants.map(plant=>plant.markerId).filter(Boolean));
-                const profile=markerId=>{
-                    if(!markerId)return{};
-                    const markerRoot=path.join(areaRoot,'markers',assertSafeId(markerId));
-                    const marker=readJson(path.join(markerRoot,'marker.json'),null);
-                    return isPublic(marker)&&marker.type==='plant'?publicPlantProfile(readJson(path.join(markerRoot,'plant_profile.json'),{})):{};
-                };
-                const start=payload.records.length;
-                for(const plant of plants)payload.records.push({recordId:plant.instanceId,markerId:plant.markerId||'',title:String(plant.commonName||''),kind:'plant',knowledgeId:plant.plantId,description:String(plant.summary||''),scientificName:String(plant.scientificName||''),profile:profile(plant.markerId)});
-                for(const markerId of directories(path.join(areaRoot,'markers'))) {
-                    const marker=readJson(path.join(areaRoot,'markers',markerId,'marker.json'),null);
-                    if(!isPublic(marker)||represented.has(markerId))continue;
-                    payload.records.push({recordId:markerId,markerId,title:String(marker.name||markerId),kind:String(marker.type||'record'),knowledgeId:String(marker.plantId||''),description:String(marker.description||''),scientificName:'',profile:profile(markerId)});
-                }
-                for(let i=start;i<payload.records.length;i++)Object.assign(payload.records[i],{projectId,siteId,areaId,id:JSON.stringify([projectId,siteId,areaId,payload.records[i].recordId])});
-            }
-        }
-        const canonical=value=>Array.isArray(value)?value.map(canonical):value&&typeof value==='object'?Object.fromEntries(Object.keys(value).sort().map(key=>[key,canonical(value[key])])):value;
-        const revision='sha256:'+crypto.createHash('sha256').update(JSON.stringify(canonical(payload))).digest('hex');
-        const response=validateSharedProject({...payload,revision},projectId);
-        res.setHeader('Cache-Control','no-store');
-        return sendJson(res,200,response);
+        const response=buildPublicSnapshot(projectId);
+        return sendJson(res,response ? 200 : 404,response || {error:'Public project not found'});
     }
     const projectMatch = pathname.match(/^\/api\/projects\/([^/]+)$/);
     if (projectMatch && req.method === 'GET') {
@@ -1865,6 +1862,7 @@ const server = http.createServer((req, res) => {
     const requestUrl = req.url;
     const requestPathname = new URL(requestUrl, `http://${req.headers.host}`).pathname;
     const safePath = requestPathname === '/app' || requestPathname === '/app/' ? '/app/index.html' : requestPathname;
+    if (!safePath.startsWith('/app/') && !safePath.startsWith('/tools/preview-')) { sendJson(res, 404, { error: 'File not found' }); return; }
     const publicRoot = path.resolve(rootDir);
     const filePath = path.resolve(publicRoot, safePath.replace(/^\//, ''));
     if (filePath !== publicRoot && !filePath.startsWith(`${publicRoot}${path.sep}`)) {
@@ -1898,10 +1896,10 @@ const server = http.createServer((req, res) => {
 
 const port = process.env.PORT || 8000;
 const host = process.env.HOST || '127.0.0.1';
-if (production && (!creatorPassword || sessionSecret.length < 32)) {
-    throw new Error('Production requires NOURISHLAND_CREATOR_PASSWORD and a NOURISHLAND_SESSION_SECRET of at least 32 characters');
+if ((production || accessRegistryFile) && ((!creatorPassword && !accessRegistryFile) || sessionSecret.length < 32)) {
+    throw new Error('Authenticated mode requires a Creator password or private access registry, and a session secret of at least 32 characters');
 }
-if (production && creatorAuthDisabled) {
+if ((production || accessRegistryFile) && creatorAuthDisabled) {
     throw new Error('Production cannot run with NOURISHLAND_CREATOR_AUTH_DISABLED=true');
 }
 server.requestTimeout = 30000;

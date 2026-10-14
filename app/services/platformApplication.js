@@ -5,6 +5,8 @@ import { createPublicContentClient } from './platformPublicContent.js';
 import { readJournal, saveJournalDraft, journalExport } from './fieldJournal.js';
 import { renderChecklistWorkspace } from './checklistWorkspace.js';
 import { fieldShellMarkup, fieldLauncherMarkup } from './fieldShell.js';
+import { fieldToolsMarkup, fieldDashboardMarkup } from './fieldTools.js';
+import { readChecklists } from './checklistStore.js';
 
 // Both entries deliberately reuse public content views; each owns its startup/lifecycle.
 export async function renderPlatformApplication({ mode = 'desktop' } = {}) {
@@ -44,12 +46,26 @@ function context(text) {
     document.body.dataset.fieldView=state.view;
     if(mode==='field')window.scrollTo(0,0);
     app.querySelectorAll('[data-view]').forEach(button => button.setAttribute('aria-current', button.dataset.view === state.view ? 'page' : 'false'));
-    app.querySelector('[data-action=refresh]').hidden = ['home','journal','checklists'].includes(state.view);
+    app.querySelector('[data-action=refresh]').hidden = ['home','journal','checklists','dashboard','tools'].includes(state.view);
 }
 function home() {
     state.request?.abort();state.view='home';status('');context('');
     history.replaceState(null,'',url('platform.html',{interface:mode}));
     content.innerHTML=fieldLauncherMarkup({studioUrl:url('index.html',{creator:'1'}),contentUrl:url('platform.html',{interface:'desktop'}),xrUrl:url('index.html',{experience:'webxr-demo'})});
+}
+function fieldUtility(view, selected = '') {
+    if(mode!=='field')return discover();
+    state.request?.abort();state.view=view;status('');context(view==='tools'?'Handy tools':'Dashboard');
+    history.replaceState(null,'',url('platform.html',{interface:mode,view}));
+    if(view==='tools') {
+        content.innerHTML=fieldToolsMarkup(selected);
+        content.querySelectorAll('[data-preview-tool]').forEach(button=>button.onclick=()=>fieldUtility('tools',button.dataset.previewTool));
+    } else {
+        let journalCount=0,checklistCount=0,storageError='';
+        try {journalCount=readJournal().length;checklistCount=readChecklists().length;}
+        catch(error){storageError=error.message;}
+        content.innerHTML=fieldDashboardMarkup({projectName:state.project?.name,journalCount,checklistCount,storageError});
+    }
 }
 async function load(task) {
     state.request?.abort();
@@ -134,10 +150,10 @@ function journal() {
         } catch (error) { status(error.message); }
     };
 }
-function checklists() {
+function checklists(projectId = state.project?.id || '') {
     state.request?.abort();state.view='checklists';context('Personal checklists');status('');
-    history.replaceState(null,'',url('platform.html',{interface:mode,project:state.project?.id,view:'checklists'}));
-    renderChecklistWorkspace(content,{mode,projectId:state.project?.id||'',scope:{siteId:state.area?.siteId||'',areaId:state.area?.id||''},status,onDirty:dirty=>{checklistDirty=dirty;}});
+    history.replaceState(null,'',url('platform.html',{interface:mode,project:projectId,view:'checklists'}));
+    renderChecklistWorkspace(content,{mode,projectId,scope:{siteId:state.area?.siteId||'',areaId:state.area?.id||''},status,onDirty:dirty=>{checklistDirty=dirty;}});
 }
 function hasUnsavedObservation() {
     if(checklistDirty){status('Save your checklist draft before changing tools.');return true;}
@@ -148,6 +164,7 @@ function hasUnsavedObservation() {
 }
 app.querySelector('[data-action=back]').onclick = () => {
     if (hasUnsavedObservation()) return;
+    if(['dashboard','tools'].includes(state.view))return home();
     if(state.view==='checklists'){checklistDirty=false;return state.project?openProject(state.project.id):discover();}
     if (state.view === 'journal') { state.view = 'discover'; return state.record ? openRecord(state.record) : state.project ? openProject(state.project.id) : discover(); }
     if (state.record) return openArea(state.area);
@@ -159,11 +176,13 @@ app.querySelector('[data-action=refresh]').onclick = () => state.record ? openRe
 app.addEventListener('click',event=>{
     const button=event.target.closest('[data-view]');if(!button||!app.contains(button))return;
     if (hasUnsavedObservation()) return;
+    if(['dashboard','tools'].includes(button.dataset.view))return fieldUtility(button.dataset.view);
     return button.dataset.view === 'home' ? home() : button.dataset.view === 'journal' ? journal() : button.dataset.view==='checklists'?checklists():discover();
 });
 window.addEventListener('beforeunload', event => { if (checklistDirty || state.view === 'journal' && content.querySelector('textarea')?.value.trim()) { event.preventDefault(); event.returnValue = ''; } });
 window.addEventListener('pagehide', () => state.request?.abort());
-if (params.get('view') === 'checklists') checklists();
+if(mode==='field'&&['dashboard','tools'].includes(params.get('view')))fieldUtility(params.get('view'));
+else if (params.get('view') === 'checklists') checklists(params.get('project') || '');
 else if (mode === 'field' && params.get('view') === 'journal') {
     journal();
     if (navigator.onLine === false) status('Offline. Your saved journal is available; project downloads are not connected yet.');

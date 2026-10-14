@@ -1,0 +1,36 @@
+{
+  "phase": 3,
+  "version": "0.9620",
+  "status": "local implementation verified",
+  "webTests": {
+    "fullSuite": 984,
+    "passed": 984,
+    "finalFocused": 25
+  },
+  "build": {
+    "frontend": true,
+    "backend": true
+  },
+  "browserChecks": [
+    "Desktop editor sign-in and server draft submission",
+    "Editor draft revision save",
+    "Administrator approval",
+    "Field published revision read and local progress",
+    "Welcome V0.9620 badge"
+  ],
+  "unity": {
+    "reportedChecks": 198,
+    "publishedReadIntegration": true,
+    "deviceVerified": false,
+    "apkInstalled": false
+  },
+  "deployment": false,
+  "productionAccountsProvisioned": false,
+  "remaining": [
+    "Backend and frontend release",
+    "Private production account configuration",
+    "Physical Quest and Android acceptance",
+    "Native authenticated writes deferred"
+  ],
+  "documentation": "docs/project-publishing.md"
+}

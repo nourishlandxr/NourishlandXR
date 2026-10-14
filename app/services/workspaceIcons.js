@@ -1,4 +1,6 @@
 const DASHBOARD_ICON_PATHS = Object.freeze({
+    tools: '<path d="m4 20 9-9M14 4a5 5 0 0 0 6 6l-4 4-6-6zM3 4l5 5M3 3l3 1-2 2z"/>',
+    ruler: '<path d="M3 8h18v8H3zM7 8v4M11 8v3M15 8v4M19 8v3"/>',
     plant: '<path d="M12 21V10M12 15C5 15 3 11 3 6c6 0 9 3 9 9Zm0-4c0-5 3-8 9-8 0 5-3 8-9 8Z"/>',
     note: '<path d="M5 3h10l4 4v14H5zM15 3v5h4M8 12h8M8 16h6"/>',
     checklist: '<rect x="4" y="3" width="16" height="18" rx="2"/><path d="m7 8 1.5 1.5L11 7M13 8h4M7 14l1.5 1.5L11 13M13 14h4"/>',

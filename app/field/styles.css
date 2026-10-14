@@ -44,3 +44,11 @@ body[data-field-view=home] .field-launcher h1{font:500 clamp(31px,8.5vw,44px)/1.
 body[data-field-view=home] .field-dock{background:#102b23e8;border-color:#c0d6ac22;color:#d5e2c6;}body[data-field-view=home] .field-dock button{color:#becdb5;}body[data-field-view=home] .field-dock button[aria-current=page]{background:#dce7cc;color:#23492f;}
 @media(min-width:600px){.field-tool-icon{width:82px;height:82px;}.field-tool{min-height:118px;}.field-launcher-intro{padding-top:32px;}.field-tool-grid{gap:28px;}}
 @media(prefers-reduced-motion:reduce){.field-tool-icon{transition:none;}}
+
+.field-submenu h1,.field-tool-detail h1{font:500 32px/1.15 Georgia,serif;letter-spacing:-.03em;color:#193c30;margin:16px 0;}
+.field-submenu-grid{display:grid;gap:12px;margin:24px 0;}
+.field-submenu-card{display:flex;align-items:center;gap:16px;width:100%;min-height:82px;padding:18px;border:1px solid #d4dfcf;border-radius:20px;background:#fafbf4;color:#234b37;text-align:left;}
+.field-submenu-card>.dashboard-inline-icon{width:28px;height:28px;flex:none;}.field-submenu-card>.dashboard-inline-icon:last-child{margin-left:auto;width:20px;}
+.field-submenu-card span{display:grid;gap:7px;}.field-submenu-card strong{font-size:16px;}.field-submenu-card small{font-size:12px;line-height:1.5;color:#526951;}
+.field-submenu-card:hover,.field-submenu-card:focus-visible{border-color:#4e7957;background:#eff5e8;}.field-preview-visual{min-height:210px;display:grid;place-items:center;background:radial-gradient(circle,#dce8ce,#eff3e7);border-radius:25px;margin:24px 0;}.field-preview-visual svg{width:100px;height:100px;color:#456b45;}
+.field-preview-label{padding:14px;border:1px dashed #7d9275;border-radius:14px;font-size:13px;line-height:1.6;}.field-dashboard-note{font-size:12px;line-height:1.7;color:#526951;}

@@ -9,7 +9,9 @@ export function fieldShellMarkup({ version, target }) {
 }
 export function fieldLauncherMarkup({ studioUrl, contentUrl, xrUrl }) {
     const tools=[
+        {view:'dashboard',icon:'grid',label:'Dashboard',tone:'mint'},
         {view:'discover',icon:'explore',label:'Discover',tone:'sage'},
+        {view:'tools',icon:'tools',label:'Handy tools',tone:'sky'},
         {view:'checklists',icon:'checklist',label:'Checklists',tone:'honey'},
         {view:'journal',icon:'note',label:'Journal',tone:'clay'},
         {href:xrUrl,icon:'ar',label:'WebXR',tone:'lavender'},

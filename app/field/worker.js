@@ -7,7 +7,8 @@ const SHELL = [
     './index.html', './main.js', './styles.css', './manifest.json', './icon.svg', './icon-192.png', './icon-512.png',
     '../platform.css', '../services/platformApplication.js', '../services/apiClient.js', '../services/buildInfo.js',
     '../services/workspaceIcons.js', '../services/platformPublicContent.js', '../services/fieldJournal.js',
-    '../services/checklistWorkspace.js', '../services/checklistContract.js', '../services/checklistStore.js', '../services/fieldShell.js', '../services/sharedProjectContract.js'
+    '../services/checklistWorkspace.js', '../services/checklistContract.js', '../services/checklistStore.js', '../services/fieldShell.js', '../services/fieldTools.js', '../services/sharedProjectContract.js',
+    '../services/projectChecklistWorkspace.js', '../services/publishedChecklistContract.js'
 ].map(file => new URL(file, scope).href);
 const assetPaths = new Set(SHELL.map(file => new URL(file).pathname));
 

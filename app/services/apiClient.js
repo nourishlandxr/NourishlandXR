@@ -21,19 +21,20 @@ export async function apiFetch(url, options = {}) {
 }
 
 export async function ensureCreatorAuthentication() {
-    if (!HOSTED_MODE) return true;
     const status = await apiFetch(`${API_BASE}/auth/session`);
     if (!status.ok) throw new Error(`Authentication check failed (${status.status})`);
     const session = await status.json();
     creatorAuthDisabled = session.authDisabled === true;
     if (session.authenticated) return true;
 
+    const username = window.prompt('Creator account name (leave blank for the existing administrator login)');
+    if (username === null) return false;
     const password = window.prompt('Creator password');
     if (password === null) return false;
     const response = await apiFetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
+        body: JSON.stringify({ username: username.trim(), password })
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `Creator login failed (${response.status})`);
@@ -42,7 +43,6 @@ export async function ensureCreatorAuthentication() {
 }
 
 export async function logoutCreatorAuthentication() {
-    if (!HOSTED_MODE) return true;
     const response = await apiFetch(`${API_BASE}/auth/logout`, { method: 'POST' });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `Creator logout failed (${response.status})`);
