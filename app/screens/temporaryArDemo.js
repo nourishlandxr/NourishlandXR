@@ -5388,16 +5388,13 @@ function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight, opening=false) {
     text=demoLocalizedText(text);
     const paragraphs = String(text || '').split(/\n\n/);
     // Every slide uses the Intro 1.2 template size, not its own shrinking rule.
-    const reference=demoLocalizedText(DEMO_QUICK_ACCESS_COPY['INTRO 1.2']).split(/\n\n/);
-    for (let fontSize = 68; fontSize >= 32; fontSize -= 1) {
-        const lineHeight = Math.round(fontSize * 1.22);
-        const paragraphGap = Math.round(fontSize * (opening ? .85 : .38));
+    for (let fontSize = opening?68:48; fontSize >= 32; fontSize -= 1) {
+        const lineHeight = Math.round(fontSize * 1.3);
+        const paragraphGap = Math.round(fontSize * .8);
         ctx.font = `600 ${fontSize}px "Manrope", "Segoe UI Variable", Inter, system-ui, sans-serif`;
         const paragraphLines = paragraphs.map(paragraph => wrappedTextureLines(ctx, paragraph, maxWidth));
-        const referenceLines=opening?paragraphLines:reference.map(paragraph=>wrappedTextureLines(ctx,paragraph,maxWidth));
-        const totalHeight = referenceLines.reduce((height, lines) => height + lines.length * lineHeight, 0)
-            + Math.max(0, referenceLines.length - 1) * paragraphGap;
-        if (totalHeight<=(opening?maxHeight:360) || fontSize===32) {
+        const totalHeight=opening?paragraphLines.reduce((height,lines)=>height+lines.length*lineHeight,0)+Math.max(0,paragraphLines.length-1)*paragraphGap:Math.max(0,...paragraphLines.map(lines=>lines.length*lineHeight));
+        if (totalHeight<=maxHeight || fontSize===32) {
             return { fontSize, lineHeight, paragraphGap, paragraphLines };
         }
     }
@@ -5580,7 +5577,7 @@ function drawIntroNoteContent(ctx) {
         const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=['frame','title','arrival'].includes(state.phase)?1:state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
         // The lesson title carries the introduction; avoid repeating the brand above it.
         if(state.activityFocus && !state.title){ctx.fillStyle='#fffaf0';ctx.font=`500 39px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,830);lines.forEach((line,i)=>ctx.fillText(line,700,530+(i-(lines.length-1)/2)*54));ctx.restore();return;}
-        ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,width:900,top:260,bottom:850,titleSize:88,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
+        ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,layoutCaption:state.layoutCaption,width:900,top:260,bottom:850,titleSize:88,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
         ctx.restore();return;
     }
 

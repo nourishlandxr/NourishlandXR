@@ -1544,7 +1544,6 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /@media \(max-width:620px\) \{[\s\S]*\.tryit-guided-choice\.is-welcome-board \{[^}]*width:100vw;[^}]*height:100dvh;[^}]*min-height:100svh;[^}]*border-radius:0;/);
     assert.match(styles, /\.tryit-guided-choice\.is-copy-ready \.tryit-board-text-window \{ opacity:1; \}/);
     assert.match(styles, /font-size:calc\(clamp\(1\.08rem,min\(3\.2vw,2\.55vh\),1\.55rem\) \+ 2px\)/);
-    assert.match(source, /const reference=demoLocalizedText\(DEMO_QUICK_ACCESS_COPY\['INTRO 1\.2'\]\)/);
     assert.doesNotMatch(source, /introTextPageTransition|resolveIntroTextPage/);
     assert.match(source, /ctx\.globalAlpha=1/);
     assert.match(source, /paragraphs:openingParagraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime/);

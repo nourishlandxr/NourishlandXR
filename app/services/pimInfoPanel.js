@@ -1344,6 +1344,12 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             .then(owner=>{if(token!==wristToken || fruitDestroyed || fruitSession!==session){owner?.dispose();return;}sdkWrist=owner;})
             .catch(error=>{sdkWristError=error.message;console.warn('IWSDK wrist menu:',error.message);}).finally(()=>{sdkWristPending=null;});
     }
+    function disableSdkWrist(error){
+        sdkWristError=error.message;
+        const owner=sdkWrist;sdkWrist=null;
+        try{owner?.dispose();}catch{}
+        console.warn('IWSDK wrist menu fallback:',sdkWristError);
+    }
     function hit(ray){const fruitTarget=fruitWindow?.hit(ray);if(detached)return fruitTarget || null;if(comfortContext && sdkWrist?.ready)return sdkWrist.hit(ray);if(!pose || !renderer)return fruitTarget || null;const sdkTarget=sdkDemoHit(ray),nativeTarget=renderer.hit(ray),target=sdkTarget && (!nativeTarget || sdkTarget.distance<=nativeTarget.distance+.01)?sdkTarget:nativeTarget;if(target?.card.hidden && Math.hypot(target.localX/target.width,target.localY/target.height)>.44)return fruitTarget || null;if(comfortContext && target?.card.id==='control' && !targetButtonAtRay(target))return fruitTarget || null;return fruitTarget && (!target || fruitTarget.distance<target.distance)?fruitTarget:target;}
     const controlsForTarget=target=>target?.card?.lowerCompanion==='view'?panelViewControls(sceneVisibility()):target?.card?.guides?guidesControls():target?.card?.explorer?explorerControls():target?.card?.settings?settingsControls():(headset?spatialControls():controls());
     const targetButtonAtRay=target=>{
@@ -1600,7 +1606,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 next=welcomeWristPose(wristMatrix,comfortContext,forearmDirection);
             }
             if(!next)return;heading=next.anchorHeading;if(comfortContext && headset){pose=next;firstPlacement=false;spatialMove=null;spatialGrabPending=null;}
-            if(comfortContext && sdkWrist?.ready){const t=panelIntroductionAt===null?1:Math.max(0,Math.min(1,(time-panelIntroductionAt)/1500));sdkWrist.setOpacity(panelOpacity*t*t*(3-2*t));sdkWrist.setContext(detached?null:comfortContext,detached?null:pose);sdkWrist.update(xrFrame,time,touchBlocked===true);lastTime=time;return;}
+            if(comfortContext && sdkWrist?.ready){try{const t=panelIntroductionAt===null?1:Math.max(0,Math.min(1,(time-panelIntroductionAt)/1500));sdkWrist.setOpacity(panelOpacity*t*t*(3-2*t));sdkWrist.setContext(detached?null:comfortContext,detached?null:pose);sdkWrist.update(xrFrame,time,touchBlocked===true);lastTime=time;return;}catch(error){disableSdkWrist(error);}}
             const grab=sliderGrab || spatialMove || spatialGrabPending;
             let heldTransform=null,handMoveRay=null;
             if(spatialMove?.panel==='settings' && grab?.source?.hand && xrFrame){const state=handTrackingState(xrFrame,grab.source,grab.referenceSpace);if(!state?.tracked || !state.pinch)finishSettingsDock();}
@@ -1658,7 +1664,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         rebase(matrix){fruitWindow?.rebase(matrix);for(const surface of new Set([pose,explorerPose,settingsPose,mediaPose,...Object.values(lowerPoses)]))rebaseXrPose(surface,matrix);spatialMove=null;spatialGrabPending=null;sliderGrab=null;},
         draw(view){
             fruitWindow?.draw(view);
-            if(comfortContext && sdkWrist?.ready){if(!detached)sdkWrist.draw(view);return;}
+            if(comfortContext && sdkWrist?.ready){try{if(!detached)sdkWrist.draw(view);return;}catch(error){disableSdkWrist(error);}}
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',comfort:comfortContext,limo:selection?.limo,infoOpacity,headset,hidden,panelGuidance:guidanceAction==='ToggleMedia',tab,height:comfortContext?(comfortContext.height || 700):hidden?1000:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',guidancePhase:guidanceAction?Math.floor(lastTime/180):0,fadeDuration:introduction?1500:450,controls:comfortContext?.items || (headset?spatialControls():controls()),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(readingTrail()):'',lines:p[page],performanceReadout:performanceSettings?.label || '',hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:'',metadata:metadata()};

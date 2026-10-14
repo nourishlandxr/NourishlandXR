@@ -1,0 +1,7 @@
+# Welcome opening and comfort-render recovery
+
+The SDK wrist menu could propagate an exception into the shared `comfort options render` frame step, which aborts the welcome practice. Its update/draw now disables a failed SDK owner and continues with the native wrist menu for the same session. The SDK adapter restores the native framebuffer, eye viewport, scissor and GL state even when initialization or target setup fails.
+
+The welcome recording was missing from the active bank; the six following opening recordings were stale. Seven saved Marin recordings now exactly match the current opening scripts. Existing tutorial and favourite-fruit recordings are retained. Headings stay visible throughout automatic opening slides, paragraph reveal follows the decoded playback clock, and each opening slide holds for 1.2 seconds after narration. Muted playback uses reading time. Font sizing reserves the complete text, avoiding jumps as paragraphs appear. Main-demo paragraphs use consistent spacing and fit the actual reading window.
+
+Chrome WebGL verification exercised actual SDK drawing, native comfort drawing and an injected SDK draw failure across three later XR frames: one failed owner was disposed, native rendering continued, no page errors, GL error 0. All seven new clips decoded; the real voice player started the 13.104-second welcome with `audible: true`. The six-slide contact sheet was visually checked for spacing and clipping. This is browser verification; physical Quest playback and wrist interaction remain unverified.

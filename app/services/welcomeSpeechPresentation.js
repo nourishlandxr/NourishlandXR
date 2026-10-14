@@ -23,18 +23,28 @@ export function welcomeSpeechCaption(state,fallback=''){
 
 // Authored teaching copy remains readable while narration is loading. Paragraphs
 // accumulate without scrolling away; the screen layout measures their full height.
-export function welcomeLessonCaption(lesson,visibleAge=0){
+export function welcomeLessonCaption(lesson,visibleAge=0,voiceState=null){
     const paragraphs=lesson.paragraphs || [lesson.caption || ''];
+    if(voiceState && lesson.paragraphs){
+        const spoken=lesson.spoken || paragraphs.join(' '),duration=voiceState.hasPlayed?voiceState.duration:Math.max(5,spoken.split(/\s+/).length/2.6);
+        const age=voiceState.loading?0:voiceState.hasPlayed?voiceState.elapsed:visibleAge;
+        const progress=Math.min(1,Math.max(0,(age || 0)/Math.max(.001,duration || 0)));
+        const normalize=text=>String(text).replace(/\s+/g,' ').trim();
+        const script=normalize(spoken);
+        const count=paragraphs.filter((paragraph,index)=>index===0 || progress>=Math.max(0,script.indexOf(normalize(paragraph)))/Math.max(1,script.length)).length;
+        return paragraphs.slice(0,count).join('\n\n');
+    }
     return paragraphs.slice(0,Math.min(paragraphs.length,1+Math.floor(Math.max(0,visibleAge)/3))).join('\n\n');
 }
-export function drawWelcomeText(ctx,{title='',layoutTitle=title,caption='',width=1160,center=700,top=220,bottom=820,titleSize=96,bodySize=54,headingFont='"Bauhaus Chez", "Fraunces", Georgia, serif',bodyFont='"Manrope", "Segoe UI Variable", system-ui, sans-serif'}={}){
+export function drawWelcomeText(ctx,{title='',layoutTitle=title,caption='',layoutCaption=caption,width=1160,center=700,top=220,bottom=820,titleSize=96,bodySize=54,headingFont='"Bauhaus Chez", "Fraunces", Georgia, serif',bodyFont='"Manrope", "Segoe UI Variable", system-ui, sans-serif'}={}){
     const wrap=(text,size,font=bodyFont)=>{ctx.font=`${font===headingFont?600:500} ${size}px ${font}`;return String(text).split(/\n\s*\n/).flatMap((paragraph,index)=>{const lines=[''];for(const word of paragraph.trim().split(/\s+/)){const i=lines.length-1,next=lines[i]?lines[i]+' '+word:word;if(ctx.measureText(next).width>width && lines[i])lines.push(word);else lines[i]=next;}return index?['',...lines]:lines;});};
     ctx.textAlign='center';ctx.textBaseline='middle';let heading=title?wrap(title,titleSize,headingFont):[],size=bodySize,lines=wrap(caption,size);
     const reservedHeading=(layoutTitle || title)?wrap(layoutTitle || title,titleSize,headingFont):[];
-    const headingHeight=reservedHeading.length*(titleSize*1.16),gap=reservedHeading.length?60:0;
-    while(size>30 && headingHeight+gap+lines.reduce((height,line)=>height+size*(line?1.5:.75),0)>bottom-top){size-=2;lines=wrap(caption,size);}
+    const headingHeight=reservedHeading.length*(titleSize*1.16),gap=reservedHeading.length?48:0;
+    while(size>30 && headingHeight+gap+wrap(layoutCaption,size).reduce((height,line)=>height+size*(line?1.3:.8),0)>bottom-top){size-=2;}
+    lines=wrap(caption,size);
     let y=top+titleSize/2;ctx.font=`600 ${titleSize}px ${headingFont}`;for(const line of heading){ctx.fillText(line,center,y);y+=titleSize*1.16;}
-    y=top+headingHeight+gap+size/2;ctx.font=`500 ${size}px ${bodyFont}`;for(const line of lines){if(line)ctx.fillText(line,center,y);y+=size*(line?1.5:.75);}
+    y=top+headingHeight+gap+size/2;ctx.font=`500 ${size}px ${bodyFont}`;for(const line of lines){if(line)ctx.fillText(line,center,y);y+=size*(line?1.3:.8);}
     return y;
 }
 

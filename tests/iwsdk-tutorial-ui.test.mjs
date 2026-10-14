@@ -6,6 +6,23 @@ import {createTutorialUIOwner} from '../app/services/iwsdkTutorialUI.js';
 import {DOMParser,parseHTML} from '../iwsdk/node_modules/linkedom/esm/index.js';
 import {handIndexCanPoke} from '../app/services/handPoke.js';
 
+test('a wrist renderer initialization or target failure restores the native XR GL state',()=>{
+    for(const phase of ['initialization','target']){
+        const original={framebuffer:{native:true},program:{native:true},vao:{native:true},viewport:[450,0,450,700],scissor:[451,2,448,698]};
+        const state={...original},values={FRAMEBUFFER_BINDING:original.framebuffer,CURRENT_PROGRAM:original.program,VERTEX_ARRAY_BINDING:original.vao,VIEWPORT:original.viewport,SCISSOR_BOX:original.scissor,DEPTH_WRITEMASK:true,DEPTH_FUNC:513,BLEND_SRC_RGB:770,BLEND_DST_RGB:771,BLEND_SRC_ALPHA:1,BLEND_DST_ALPHA:771};
+        const gl=new Proxy({canvas:{},drawingBufferWidth:900,drawingBufferHeight:700,getParameter:key=>values[key],isEnabled:()=>true,enable(){},disable(){},depthMask(){},depthFunc(){},blendFuncSeparate(){},bindFramebuffer(_key,value){state.framebuffer=value;},useProgram(value){state.program=value;},bindVertexArray(value){state.vao=value;},viewport(...value){state.viewport=value;},scissor(...value){state.scissor=value;}},{get:(target,key)=>key in target?target[key]:String(key)});
+        class Renderer{constructor(){state.framebuffer={wrong:true};if(phase==='initialization')throw Error('Initialization failed');this.xr={};this.properties={remove(){}};}resetState(){}setRenderTargetFramebuffer(){state.scissor=[0,0,1,1];throw Error('Target failed');}dispose(){}}
+        const panel=new sdk.Group(),element=()=>({setProperties(){},addEventListener(){},removeEventListener(){}});
+        panel.requireElementById=element;panel.document={rootElement:{setProperties(){}}};panel.dispose=()=>{};
+        class Pointer{toggleSubPointer(){}update(){}dispose(){}}
+        const owner=createTutorialUIOwner({input:{xrOrigin:new sdk.XROrigin()}},{...sdk,MultiPointer:Pointer,WebGLRenderer:Renderer,configureUIKitRenderer(){}},panel,{gl});
+        try{owner.setContext({width:.2,height:700,items:[]},{center:new sdk.Vector3(),right:new sdk.Vector3(1,0,0),up:new sdk.Vector3(0,1,0),normal:new sdk.Vector3(0,0,1)});
+            assert.throws(()=>owner.draw({}),/failed/i);
+            assert.deepEqual(state,original,phase+' must restore the native swapchain and second-eye viewport');
+        }finally{owner.dispose();}
+    }
+});
+
 test('actual UIKitML wrist asset lays out controls and accepts one SDK ray click',async()=>{
     const savedDocument=globalThis.document,savedParser=globalThis.DOMParser,savedTextureLoad=sdk.TextureLoader.prototype.loadAsync;
     // This fixture proves layout/input, not font rasterisation or GPU drawing.

@@ -51,6 +51,13 @@ test('long headings wrap using the same display size and never compress their gl
  vm.runInContext(helper+';drawDemoHeading(ctx,"Long heading second line");',scope);
  assert.equal(drawn.length,2);assert.ok(drawn.every(row=>row.font.startsWith('500 72px') && row.args.length===3));assert.equal(drawn[1].args[2]-drawn[0].args[2],80);
 });
+test('demo paragraphs use a consistent font and fit the available reading window',()=>{
+ const helper=source.slice(source.indexOf('function fitIntroBodyLayout('),source.indexOf('function introReadingWindow('));
+ const scope=vm.createContext({demoLocalizedText:value=>value,wrappedTextureLines:(_ctx,text)=>text.split('|')});vm.runInContext(helper,scope);
+ const short=scope.fitIntroBodyLayout({},'One line.\n\nNext paragraph.',900,350),long=scope.fitIntroBodyLayout({},'One|Two|Three|Four|Five|Six',900,350);
+ assert.equal(short.fontSize,48);assert.equal(short.paragraphGap,Math.round(48*.8));
+ assert.ok(long.paragraphLines[0].length*long.lineHeight<=350);
+});
 test('paused sample contains greenery and later spatial frames retain their growth clock',()=>{
  const painted=[],ctx={save(){},restore(){},globalAlpha:1},scene={draw:(_ctx,elapsed,reduced)=>painted.push({elapsed,reduced})},rect={x:0,y:0,width:100,height:100};
  drawLivingMapPreview(ctx,scene,0,false,rect);assert.deepEqual(painted,[{elapsed:0,reduced:true}]);

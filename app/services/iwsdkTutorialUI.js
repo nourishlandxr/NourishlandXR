@@ -106,17 +106,18 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
         handleEvent(event){if(!context || !['selectstart','selectend'].includes(event.type) || !hit(runtime.ray(event.inputSource)))return false;queued.push({type:event.type,source:event.inputSource});return true;},
         draw(view){
             if(disposed || !panel.visible || !gl)return;
-            const framebuffer=gl.getParameter(gl.FRAMEBUFFER_BINDING),viewport=gl.getParameter(gl.VIEWPORT);
+            const framebuffer=gl.getParameter(gl.FRAMEBUFFER_BINDING),viewport=gl.getParameter(gl.VIEWPORT),scissor=gl.getParameter(gl.SCISSOR_BOX);
             const flags=[gl.BLEND,gl.DEPTH_TEST,gl.CULL_FACE,gl.SCISSOR_TEST].map(flag=>[flag,gl.isEnabled(flag)]);
             const depthWrite=gl.getParameter(gl.DEPTH_WRITEMASK),depthFunc=gl.getParameter(gl.DEPTH_FUNC),program=gl.getParameter(gl.CURRENT_PROGRAM),vao=gl.getParameter(gl.VERTEX_ARRAY_BINDING);
             const blend=[gl.BLEND_SRC_RGB,gl.BLEND_DST_RGB,gl.BLEND_SRC_ALPHA,gl.BLEND_DST_ALPHA].map(flag=>gl.getParameter(flag));
+            try{
             if(!renderer){renderer=new WebGLRenderer({canvas:gl.canvas,context:gl,alpha:true,antialias:false});sdk.configureUIKitRenderer(renderer);}
             renderer.autoClear=false;renderer.xr.enabled=false;
             target ||= new WebGLRenderTarget(gl.drawingBufferWidth,gl.drawingBufferHeight,{depthBuffer:false,stencilBuffer:false});
             renderer.resetState();target.viewport.set(...viewport);target.scissor.set(...viewport);target.scissorTest=true;
             renderer.setRenderTargetFramebuffer(target,framebuffer);renderer.setRenderTarget(target);
             camera.projectionMatrix.fromArray(view.projectionMatrix);camera.projectionMatrixInverse.copy(camera.projectionMatrix).invert();camera.matrix.fromArray(view.transform.matrix);camera.updateMatrixWorld(true);
-            try{renderer.render(scene,camera);}finally{renderer.resetState();gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.viewport(...viewport);
+            renderer.render(scene,camera);}finally{renderer?.resetState();gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.viewport(...viewport);gl.scissor(...scissor);
                 for(const [flag,enabled]of flags)enabled?gl.enable(flag):gl.disable(flag);gl.depthMask(depthWrite);gl.depthFunc(depthFunc);gl.blendFuncSeparate(...blend);gl.useProgram(program);gl.bindVertexArray(vao);}
         },
         snapshot:()=>({backend:'iwsdk-uikitml',visible:panel.visible,actions:slots.filter(slot=>slot.item).map(slot=>slot.item.action),hovered:[...hover.values()].map(slot=>slot.item?.action)}),
