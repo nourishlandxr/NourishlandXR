@@ -81,6 +81,11 @@ test('spatial Control Panel keeps reading actions in the main card and companion
     assert.match(read('app/living-objects.css'), /data-lim-surface="true"\] ~ \.tryit-context-trigger:not\(\[hidden\]\)/);
 });
 
+test('comfort options renderer receives the positioned wrist-menu items', () => {
+    const panelSource=read('app/services/pimInfoPanel.js');
+    assert.match(panelSource, /controls:comfortContext\?\.items \|\| \(headset\?spatialControls\(\):controls\(\)\)/);
+});
+
 test('Try It Now immersive placement resolves the shared AR distance without stalling', () => {
     const viewer = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 2, 1.5, 4, 1]);
     const position = demoPlacementPosition(viewer, { x: 0, y: -0.25, z: -1 });
