@@ -401,16 +401,29 @@ function beginXrFirstContentWatchdog(){
     xrRecoveryDetail='';
     xrDisabledFrameSteps=new Set();
     xrReportedFailurePhases=new Set();
-    xrFirstContentWatchdog=setTimeout(()=>{
-        if(xrFirstContentRendered || !session)return;
-        reportDemoRenderFailure(new Error('No spatial content rendered before the startup deadline.'),'first-frame watchdog');
-    },XR_FIRST_CONTENT_TIMEOUT_MS);
+    const watchedSession=session;
+    let elapsed=0,lastCheck=performance.now(),wasVisible=!['hidden','visible-blurred'].includes(session?.visibilityState);
+    const check=()=>{
+        if(xrFirstContentRendered || !session || session!==watchedSession)return;
+        const now=performance.now(),visible=!['hidden','visible-blurred'].includes(session.visibilityState);
+        if(visible && wasVisible)elapsed+=Math.max(0,now-lastCheck);
+        lastCheck=now;wasVisible=visible;
+        if(elapsed>=XR_FIRST_CONTENT_TIMEOUT_MS){
+            reportDemoRenderFailure(new Error('No spatial content rendered before the startup deadline.'),'first-frame watchdog');return;
+        }
+        xrFirstContentWatchdog=setTimeout(check,100);
+    };
+    xrFirstContentWatchdog=setTimeout(check,100);
 }
 
 function markXrFirstContentRendered(){
     if(xrFirstContentRendered)return;
     xrFirstContentRendered=true;
-    if(xrRecoveryStatus!=='failed')xrRecoveryStatus='ready';
+    if(xrRecoveryStatus==='failed' && xrReportedFailurePhases.size===1 && xrReportedFailurePhases.has('first-frame watchdog')){
+        xrReportedFailurePhases.delete('first-frame watchdog');xrRecoveryDetail='';demoRenderFailureReported=false;
+        if(xrRecoveryTexture && gl){gl.deleteTexture(xrRecoveryTexture);xrRecoveryTexture=null;}
+        xrRecoveryStatus='ready';
+    }else if(xrRecoveryStatus!=='failed')xrRecoveryStatus='ready';
     clearTimeout(xrFirstContentWatchdog);xrFirstContentWatchdog=null;
     recordArDiagnostic('Temporary demo first spatial frame',{mode:sessionMode});
 }
@@ -6809,7 +6822,7 @@ async function startImmersive() {
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
             session.requestAnimationFrame(draw);
-            if(session.visibilityState==='hidden' || session.visibilityState==='visible-blurred'){demoPerformance.tick(_time);return;}
+            if(session.visibilityState==='hidden'){demoPerformance.tick(_time);return;}
             measureXrFrame=getSpatialVisualSettings().showFps || session.frameRate>90 || getSpatialVisualSettings().graphicsQuality==='auto';
             const cpuStarted=measureXrFrame?performance.now():0;
             demoPerformance.tick(_time);
