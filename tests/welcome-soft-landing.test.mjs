@@ -49,7 +49,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
     let stage;
     try{
         const spoken=[],voice={status:()=>({playing:false,paused:false,muted:true}),speak:clip=>{if(clip)spoken.push(clip);},stop(){},unlock(){},pause(){},resume(){}};
-        stage=createWelcomePracticeScene({voice,embedded:true,loadZinnia:async()=>{const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}});await stage.loading;
+        stage=createWelcomePracticeScene({voice,embedded:true,loadFruit:async()=>({scene:new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),new THREE.MeshBasicMaterial())}),loadZinnia:async()=>{const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));return new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'');}});await stage.loading;
         const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
         const tick=(seconds,extra={})=>{for(let i=0;i<Math.ceil(seconds/.05);i++)stage.update(.05,{viewer,floor:0,...extra});};
         stage.start(viewer,0);tick(10,{frameReady:false});assert.equal(stage.phase,'frame');assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.snapshot().comfortVisible,false);
@@ -59,12 +59,12 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         stage.previewLesson('table-reveal');tick(.1);assert.equal(stage.objects.get('peach').visible,false);assert.equal(stage.zinniaMount.parent.visible,false);
         stage.previewLesson('zinnia-reveal');tick(4);assert.equal(stage.zinniaMount.parent.visible,true);assert.equal(stage.zinniaMount.children[0].userData.zinnia.status,'ready');assert.ok(stage.zinniaMount.getObjectByName('Eye_L_expression'));assert.ok(stage.zinniaMount.getObjectByName('Pot'));
         stage.previewLesson('comfort');assert.equal(stage.snapshot().comfortVisible,true);stage.button('pause');tick(60);assert.equal(stage.phase,'comfort');assert.equal(stage.snapshot().voice.paused,true);stage.button('pause');
-        stage.previewLesson('grab');tick(2);
-        const orange=stage.bodies.find(b=>b.id==='peach'),source={handedness:'right'},position=new THREE.Vector3(orange.position.x,orange.position.y,orange.position.z).applyMatrix4(stage.root.matrixWorld);
+        stage.previewLesson('grab');await stage.loadPracticeAssets();tick(2);
+        const orange=stage.bodies.filter(b=>b.fruit).sort((a,b)=>(b.position.y+b.support)-(a.position.y+a.support))[0],source={handedness:'right'},position=new THREE.Vector3(orange.position.x,orange.position.y,orange.position.z).applyMatrix4(stage.root.matrixWorld);
         const ray={origin:{x:position.x,y:position.y,z:position.z+.2},direction:{x:0,y:0,z:-1}},before={...orange.velocity};assert.equal(stage.select(ray,source),false);assert.deepEqual(orange.velocity,before);
         const pose=new THREE.Matrix4().makeTranslation(position.x,position.y,position.z).elements;
         tick(.05,{inputs:[{source,matrix:pose,down:false}]});tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
-        const lifted=[...pose];lifted[13]+=.12;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});const platePose=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.27,.18,.19)).elements;tick(.1,{inputs:[{source,matrix:platePose,down:true}]});tick(.1,{inputs:[{source,matrix:platePose,down:false}]});assert.equal(stage.snapshot().completed,true);
+        const lifted=[...pose];lifted[13]+=.5;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});const plateAbove=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.27,.65,.19)).elements;tick(.2,{inputs:[{source,matrix:plateAbove,down:true}]});const platePose=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.27,.18,.19)).elements;tick(.1,{inputs:[{source,matrix:platePose,down:true}]});tick(.1,{inputs:[{source,matrix:platePose,down:false}]});assert.equal(stage.snapshot().completed,true,JSON.stringify({held:stage.snapshot().held,fruit:orange.position,basket:stage.snapshot().basket}));
         tick(3);assert.equal(stage.phase,'brush');
         for(const hand of [false,true]){
             stage.previewLesson('water');tick(.1);

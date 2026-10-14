@@ -6,7 +6,7 @@ export function handleZinniaPreview(req,res,pathname,{enabled=false,production=f
     const origin=req.headers.origin;
     if(!local || origin && origin!==`http://${req.headers.host}`){sendJson(res,403,{error:'Voice preview is limited to this local preview.'});return true;}
     const route=pathname.slice('/api/zinnia/'.length);
-    if(!(route==='capabilities' && req.method==='GET' || ['transcribe','speech'].includes(route) && req.method==='POST')){sendJson(res,404,{error:'Voice route not found.'});return true;}
+    if(!(route==='capabilities' && req.method==='GET' || ['transcribe','speech','interpret'].includes(route) && req.method==='POST')){sendJson(res,404,{error:'Voice route not found.'});return true;}
     async function forward(body){
         try{
             const upstream=await fetchImpl('https://nourishland.org/xr-api/zinnia/'+route,{method:req.method,headers:{Origin:'https://nourishland.org',...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{}),signal:AbortSignal.timeout(route==='speech'?95000:40000)});

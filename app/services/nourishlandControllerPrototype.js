@@ -1,6 +1,8 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 
-export const NOURISHLAND_PAINT_TIP=Object.freeze({x:0,y:.027,z:-.102});
+export const NOURISHLAND_TOOL_GRIP=Object.freeze({y:.045,z:.012,pitch:-.45});
+const authoredTip=new THREE.Vector3(0,.027,-.102).applyEuler(new THREE.Euler(NOURISHLAND_TOOL_GRIP.pitch,0,0)).add(new THREE.Vector3(0,NOURISHLAND_TOOL_GRIP.y,NOURISHLAND_TOOL_GRIP.z));
+export const NOURISHLAND_PAINT_TIP=Object.freeze({x:authoredTip.x,y:authoredTip.y,z:authoredTip.z});
 
 function surfaceTexture(wood=false){
     const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
@@ -18,7 +20,7 @@ function surfaceTexture(wood=false){
  * Controls and tool tip expose stable names for a later hardware adapter.
  */
 export function createNourishlandControllerPrototype({mode='paint',hand='right'}={}){
-    const group=new THREE.Group();group.name='Nourishland '+mode+' controller prototype';
+    const group=new THREE.Group();group.name='Nourishland '+mode+' controller prototype';group.position.set(0,NOURISHLAND_TOOL_GRIP.y,NOURISHLAND_TOOL_GRIP.z);group.rotation.x=NOURISHLAND_TOOL_GRIP.pitch;
     const materials=new Set(),geometries=new Set(),textures=new Set();
     const wood=surfaceTexture(true),pearl=surfaceTexture(false);textures.add(wood);textures.add(pearl);
     const material=(color,roughness=.65,metalness=0)=>{const m=new THREE.MeshStandardMaterial({color,roughness,metalness});materials.add(m);return m;};
@@ -78,6 +80,7 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
     const stickBase=mesh(new THREE.CylinderGeometry(.011,.012,.002,24),trim,'Thumbstick collar',stick);
     const stem=mesh(new THREE.CylinderGeometry(.005,.005,.008,16),gripMaterial,'Thumbstick stem',stick);stem.position.y=.004;
     oval('Thumbstick cap',accent,[0,.010,0],[.011,.003,.011],stick);
+    const settingsRing=mesh(new THREE.TorusGeometry(.0135,.0011,6,32),material('#ed6259'),'Thumbstick settings function ring',stick);settingsRing.rotation.x=-Math.PI/2;settingsRing.position.y=.010;settingsRing.visible=false;
     const buttons=[];
     function button(text,x,z,r=.009){
         const node=new THREE.Group();node.name='Button '+text;node.position.set(x,.009,z);thumbCluster.add(node);
@@ -92,7 +95,7 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
     button('∞',handed*.003,.017,.006);
     const crystalMaterial=material('#4387a9',.25,.18);crystalMaterial.emissive.set('#408ab9');
     const jewel=mesh(new THREE.OctahedronGeometry(.012,0),crystalMaterial,'Flight crystal');jewel.position.set(0,.029,-.087);jewel.scale.set(.67,.8,1.5);
-    const tip=new THREE.Group();tip.name='Precision paint tip';tip.position.copy(NOURISHLAND_PAINT_TIP);group.add(tip);
+    const tip=new THREE.Group();tip.name='Precision paint tip';tip.position.set(0,.027,-.102);group.add(tip);
     const pigment=material('#82c7bb',.4,.1);pigment.emissive.set('#82c7bb');pigment.emissiveIntensity=.28;
     const triangle=tube('Precision triangle',[[0,.012,0],[-.009,-.005,0],[.009,-.005,0],[0,.012,0]],.0011,pigment,tip);
     const centre=mesh(new THREE.ConeGeometry(.003,.005,3),pigment,'Precise contact point',tip);centre.rotation.x=Math.PI/2;
@@ -116,5 +119,5 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
         tip.visible=!insect;lights.forEach(light=>light.visible=insect);shell.needsUpdate=deckMaterial.needsUpdate=true;
     }
     setMode(mode);
-    return {group,tip,setMode,setColour(colour){pigment.color.set(colour);pigment.emissive.set(colour);},setBrush(brush){const isSpray=brush==='spray';triangle.visible=centre.visible=!isSpray;spray.visible=dots.visible=isSpray;},update(time,{trigger=0,squeeze=0,stickX=0,stickY=0,buttons:inputButtons=[],flying=false,speed=0}={}){triggerPivot.rotation.x=trigger*.30;grip.position.x=(hand==='left'?1:-1)*(.024-squeeze*.0015);stick.rotation.set(stickY*.18,0,-stickX*.18);buttons.forEach((button,i)=>button.position.y=.009-(inputButtons[[5,4,3][i]]?.value || 0)*.002);crystalMaterial.emissiveIntensity=flying?.45+Math.min(1,speed)*.65:.04;crystalMaterial.color.set(flying?'#72c8ef':'#32617b');pigment.emissiveIntensity=.22+trigger*.35;},get mode(){return currentMode;},dispose(){group.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}};
+    return {group,tip,setMode,setSettingsUnlocked(value){settingsRing.visible=Boolean(value);},setColour(colour){pigment.color.set(colour);pigment.emissive.set(colour);},setBrush(brush){const isSpray=brush==='spray';triangle.visible=centre.visible=!isSpray;spray.visible=dots.visible=isSpray;},update(time,{trigger=0,squeeze=0,stickX=0,stickY=0,buttons:inputButtons=[],flying=false,speed=0}={}){triggerPivot.rotation.x=trigger*.30;grip.position.x=(hand==='left'?1:-1)*(.024-squeeze*.0015);stick.rotation.set(stickY*.18,0,-stickX*.18);buttons.forEach((button,i)=>button.position.y=.009-(inputButtons[[5,4,3][i]]?.value || 0)*.002);crystalMaterial.emissiveIntensity=flying?.45+Math.min(1,speed)*.65:.04;crystalMaterial.color.set(flying?'#72c8ef':'#32617b');pigment.emissiveIntensity=.22+trigger*.35;},get mode(){return currentMode;},dispose(){group.removeFromParent();geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}};
 }

@@ -42,13 +42,13 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         if(!context || WELCOME_NARRATION_BANK?.provider!=='OpenAI')return Promise.resolve(null);
         if(!liveCache.has(text)){
             if(liveCache.size>=maxCached)liveCache.delete(liveCache.keys().next().value);
-            const request=new AbortController(),cancel=()=>request.abort(),timer=setTimeout(cancel,45000);abort.signal.addEventListener('abort',cancel,{once:true});
+            const request=new AbortController(),cancel=()=>request.abort(),timer=setTimeout(cancel,15000);abort.signal.addEventListener('abort',cancel,{once:true});
             const base=globalThis.NOURISHLAND_CONFIG?.apiBase || (globalThis.location?.pathname.startsWith('/xr/')?'/xr-api':'/api');
             liveCache.set(text,fetch(base+'/zinnia/speech',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text}),signal:request.signal}).then(response=>{if(!response.ok)throw Error('Speech unavailable');return response.arrayBuffer();}).then(bytes=>context?.decodeAudioData(bytes)).catch(()=>{liveCache.delete(text);return null;}).finally(()=>{clearTimeout(timer);abort.signal.removeEventListener('abort',cancel);}));
         }
         return liveCache.get(text);
     }
-    async function prepare(value){if(!value || muted || disposed || !context)return null;const request=()=>!value.recorded && (value.spokenOverride || value.id?.startsWith('fruit-name-'))?loadLive(value.spoken):load(value.id);const loaded=await request();return loaded || (!disposed && !muted?request():null);}
+    async function prepare(value){if(!value || muted || disposed || !context)return null;const request=()=>!value.recorded && (value.spokenOverride || value.id?.startsWith('fruit-name-'))?loadLive(value.spoken):load(value.id);const loaded=await request();return loaded || (value.recorded && !disposed && !muted?request():null);}
     async function speak(value){
         stop();lesson=value;unlock();if(!value || muted || disposed || !context){changed();return;}claimZinniaVoice(owner);
         const token=generation;loading=true;playing=true;changed();const loaded=await prepare(value);

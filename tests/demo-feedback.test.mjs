@@ -23,3 +23,12 @@ test('demo music streams, touch tones release resources, haptics throttle and st
         feedback.pulse(source,.2,500);tick(1560,{sources:[]});assert.deepEqual(pulses.at(-1),[0,1],'disconnect immediately stops an active pulse');feedback.destroy();assert.equal(paused,1);assert.equal(closed,1);assert.equal(audio.src,'');feedback.start();assert.equal(plays,1);
     }finally{globalThis.Audio=originalAudio;globalThis.AudioContext=originalContext;}
 });
+
+
+test('painting sustains a quiet tone and low haptic level until release',t=>{
+ const saved={Audio:globalThis.Audio,AudioContext:globalThis.AudioContext};let now=0,tones=0;const gains=[],pulses=[];t.mock.method(performance,'now',()=>now);
+ globalThis.Audio=class{play(){return Promise.resolve();}pause(){}removeAttribute(){}load(){}};globalThis.AudioContext=class{state='running';currentTime=0;destination={};resume(){return Promise.resolve();}close(){return Promise.resolve();}createGain(){return {connect(){},disconnect(){},gain:{value:0,setTargetAtTime:value=>gains.push(value)}};}createOscillator(){tones++;return {frequency:{},connect(){},disconnect(){},start(){},stop(){}};}};
+ const source={gamepad:{hapticActuators:[{pulse:(...args)=>{pulses.push(args);return Promise.resolve();}}]}},feedback=createDemoFeedback();
+ try{feedback.start();for(let i=0;i<20;i++){now=i*20;feedback.painting(source,true);}assert.equal(tones,1,'one continuous oscillator, no repeated notes');assert.ok(pulses.every(([strength,duration])=>strength<=.05 && duration>=120));feedback.painting(source,false);assert.deepEqual(pulses.at(-1),[0,1]);assert.equal(gains.at(-1),0);}
+ finally{feedback.destroy();Object.assign(globalThis,saved);}
+});

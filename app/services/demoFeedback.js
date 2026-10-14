@@ -2,6 +2,7 @@
 export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .20, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.24, beeApproachDuration:50 });
 export function createDemoFeedback({resetSettings=false}={}) {
     let music=null, context=null,fxGain=null, lastSound=-Infinity,lastSoundKind=null, lastTick=-Infinity, destroyed=false;
+    const paintSources=new Map();let paintTone=null,paintTimer=null;
     const encounters=new WeakMap(),encounterPulseUntil=new WeakMap();
     let nextBeeBuzz=-Infinity;
     const levels={music:DEMO_FEEDBACK.musicVolume,fx:.35,haptics:true};
@@ -31,6 +32,14 @@ export function createDemoFeedback({resetSettings=false}={}) {
             result?.catch?.(()=>{});
             if(strength){pulsing.add(source);pulseEnds.set(source,performance.now()+duration);}else pulsing.delete(source);
         } catch {}
+    }
+    function painting(source,active=true){
+        if(destroyed)return;const now=performance.now();
+        if(!active){if(source){paintSources.delete(source);pulse(source,0,1);}else {for(const input of paintSources.keys())pulse(input,0,1);paintSources.clear();}}
+        else if(source){const old=paintSources.get(source);paintSources.set(source,{at:now,pulseAt:old?.pulseAt ?? -Infinity});if(!old || now-old.pulseAt>=60){pulse(source,.04,140);paintSources.get(source).pulseAt=now;}}
+        if(paintSources.size && context?.state==='running' && !paintTone){const oscillator=context.createOscillator(),gain=context.createGain();oscillator.type='sine';oscillator.frequency.value=165;gain.gain.value=0;oscillator.connect(gain);gain.connect(fxGain);oscillator.start();paintTone={oscillator,gain};}
+        if(paintTone)paintTone.gain.gain.setTargetAtTime(paintSources.size?.018:0,context.currentTime,.04);
+        if(paintSources.size && !paintTimer)paintTimer=setInterval(()=>{for(const [input,state] of paintSources)if(performance.now()-state.at>220){paintSources.delete(input);pulse(input,0,1);}if(!paintSources.size){clearInterval(paintTimer);paintTimer=null;if(paintTone){const tone=paintTone;paintTone=null;tone.gain.gain.setTargetAtTime(0,context.currentTime,.025);tone.oscillator.stop(context.currentTime+.12);tone.oscillator.onended=()=>{tone.oscillator.disconnect();tone.gain.disconnect();};}}},80);
     }
     function start() {
         if(destroyed)return;
@@ -80,10 +89,11 @@ export function createDemoFeedback({resetSettings=false}={}) {
         }
     }
     function destroy() {
+        clearInterval(paintTimer);painting(null,false);paintTone?.oscillator.stop();paintTone=null;
         for(const source of pulsing)pulse(source,0,1);
         destroyed=true;music?.pause();if(music){music.removeAttribute('src');music.load();}music=null;
         context?.close()?.catch(()=>{});context=null;
     }
     const status=()=>({playing:Boolean(music && !music.paused),ready:music?.readyState || 0,error:music?.error?.code || 0,touchReady:context?.state==='running'});
-    return {start,sound,pulse,tick,destroy,status,setVolume,setHaptics,setNarrating,volumes:()=>({...levels})};
+    return {start,sound,pulse,painting,tick,destroy,status,setVolume,setHaptics,setNarrating,volumes:()=>({...levels})};
 }

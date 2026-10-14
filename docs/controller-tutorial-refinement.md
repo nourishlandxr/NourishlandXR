@@ -80,3 +80,28 @@ No new audio assets are generated for this refinement.
 - For local voice tests, launch node tools/persistence-server.mjs --hosted-voice-preview. The opt-in loopback-only bridge uses the existing hosted voice routes, without copying keys. Normal local server mode and production stay unchanged.
 
 - Circle flash: initialise both the fruit highlight and dragonfly landing marker hidden before the first renderer build, and exclude the landing marker from arrival glow copies. The fruit plate still arrives with the fruit activity.
+
+## Refinement request: hands, fruit, tools and conversations
+
+- Full virtual fist including thumb opposition and index curl on grip.
+- Actual fruit models and renderer ready before basket speech; preload during earlier conversation.
+- Fruit collision with other fruit, basket wall and rim; stop/release on contact with feedback.
+- Taller stem, proportional leaves, elastic gaze/body, shorter Zinnia reveal.
+- Smaller Orb with grip/open/colour/rotation skills retained after introduction.
+- Free sentence name/fruit replies, shorter recording turnaround, consistent voice and coordinated prompts.
+- Correct brush grip alignment and move its palette to the side.
+- Trigger callout on the trigger-facing side; permanent red stick-function ring after menu introduction.
+- Fine plain line as default paint; subtle continuous buzz and sound only while drawing.
+- Wrist/settings access stays unlocked; learned tools remain available.
+- Say each fruit instruction once; keep concise current text guidance and avoid repeat names/tips on every pickup.
+- Verify three conversation journeys: introduction/confirmation/fruit, correction/retry, cancel/restart and plant/Note continuation.
+
+## Verification and release notes for V0.9591
+
+- Browser confirms all seven real fruit assets report ready, and the basket is visible with no console errors.
+- Both virtual fists were visually checked in the preview. Actual controller fit, vibration strength and microphone turnaround still require Quest checks.
+- Zinnia stem stretches 32 percent above the pot, the flower head keeps its round proportions, leaf arms are enlarged, and total character height is 0.48 m. Her reveal is 2.4 s plus a 0.4 s settle.
+- Learned Orb skills survive lesson changes and object reset; settings stays unlocked. Direct preview jumps select standard controllers for a consistent starting view.
+- Conversation fallback uses a strict, grounded name/fruit extraction schema only when local sentence parsing cannot resolve the reply. It cancels on retry, skip, restart and disposal.
+- The new /zinnia/interpret endpoint is included in the API build. A frontend-only production deployment does not activate that endpoint; API release is required for the fallback. Existing hosted transcription and speech routes remain compatible.
+- OpenAI schema reference: https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=chat

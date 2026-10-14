@@ -1,3 +1,4 @@
+import {separateFruitBodies} from './welcomeFruitCollision.js';
 // Four lightweight rigid bodies, with a circular support surface and floor.
 // Fixed substeps and bounded throw speeds keep gravity stable in XR.
 export const PRACTICE_TABLE_RADIUS=.9;
@@ -45,7 +46,7 @@ export function stepPracticeBodies(bodies,dt,{floor=-.8,onImpact=()=>{},constrai
             if(b.floorTime>5 || Math.hypot(p.x,p.z)>3.5 || p.y<floor-1)resetPracticeBody(b);
         }
         for(let i=0;i<bodies.length;i++)for(let j=i+1;j<bodies.length;j++){
-            const a=bodies[i],b=bodies[j];if(!a.visible || !b.visible || a.held || b.held || a.basketed || b.basketed || a.anchored || b.anchored)continue;
+            const a=bodies[i],b=bodies[j];if(a.fruit && b.fruit){if(a.visible && b.visible)separateFruitBodies(a,b);continue;}if(!a.visible || !b.visible || a.held || b.held || a.basketed || b.basketed || a.anchored || b.anchored)continue;
             const dx=b.position.x-a.position.x,dy=b.position.y-a.position.y,dz=b.position.z-a.position.z,d=Math.hypot(dx,dy,dz),r=a.radius+b.radius;
             if(d>=r || d<.00001)continue;const nx=dx/d,ny=dy/d,nz=dz/d,penetration=(r-d)*.5;
             a.position.x-=nx*penetration;a.position.y-=ny*penetration;a.position.z-=nz*penetration;b.position.x+=nx*penetration;b.position.y+=ny*penetration;b.position.z+=nz*penetration;

@@ -11,15 +11,15 @@ export function conversationConfirmation(value){
 }
 export function conversationSkip(value){return /^(?:(?:please|actually|zinnia)[, ]+)*(?:skip(?: this| my name)?|continue(?: without (?:my|a) name)?|(?:i'd|i would) rather not(?: say| share)?|(?:i )?don't want to (?:say|share)(?: my name)?|never mind|cancel|stop)(?:[, ]+(?:please|thanks|thank you))?[.!?]*$/i.test(conversationText(value));}
 export function spokenVisitorName(value){
-    const text=conversationText(value),explicit=text.match(/\b(?:my name(?: is|'s)|(?:you can|you may|please) call me|call me|i go by|i(?: am|'m) called|i(?: am|'m)|it(?: is|'s))\s+(.+)/i);
-    let name=trim(explicit?explicit[1]:text.replace(/^(?:hi|hello|hey)(?: there| zinnia)?[,! ]+/i,''));
-    name=trim(name.split(/\s+(?:and|but|because|thanks|thank you|nice to meet you)\b|[.!?;,]/i)[0]);
-    if(/\b(?:name|call|hello|hey|yes|no|thanks|thank|please|know|hear|listening|understand|fruit|favourite|favorite)\b/i.test(name))return '';
+    const text=conversationText(value),explicit=text.match(/\b(?:my name(?: is|'s)|(?:you can|you may|please) call me|(?:my friends|people|everyone|everybody|they|most people) (?:usually )?call me|call me|(?:i )?(?:prefer|like) to be called|(?:i am |i'm )?known as|i go by|i(?: am|'m) called|i(?: am|'m)|it(?: is|'s))\s+(.+)/i);
+    let name=trim(explicit?explicit[1]:text.replace(/^(?:well[, ]+|actually[, ]+)+/i,'').replace(/^(?:hi|hello|hey)(?: there| zinnia)?[,! ]+/i,''));
+    name=trim(name.split(/\s+(?:and|but|because|although|though|thanks|thank you|nice to meet you)\b|[.!?;,]/i)[0]);
+    if(/\b(?:name|call|hello|hey|yes|no|thanks|thank|please|know|hear|listening|understand|fruit|favourite|favorite|sure|maybe|sorry|something|anything|nothing|feeling|doing|fine|happy|don't|not)\b/i.test(name))return '';
     return /^[\p{L}][\p{L}\p{M} '\-]{0,49}$/u.test(name) && name.split(/\s+/).length<=4?name:'';
 }
 const fruits=['passion fruit','star fruit','dragon fruit','pineapple','strawberry','pomegranate','carambola','passionfruit','dragonfruit','watermelon','blueberry','raspberry','blackberry','mango','peach','banana','apple','orange','papaya','avocado','fig','pear','grape','lychee','durian','jackfruit','guava','cherry','plum','apricot','kiwi','lemon','lime','mandarin','nectarine','persimmon'];
 export function spokenFavouriteFruit(value){
-    let text=conversationText(value).toLowerCase();
+    let text=conversationText(value).toLowerCase();if(/^(?:i (?:do not|don't) know|not sure|no idea|anything|nothing|no preference)[.!?]*$/.test(text))return '';
     const preference=text.match(/(?:i (?:really )?(?:prefer|love|like|enjoy)(?: eating)?|my favou?rite(?: fruit)?(?: (?:is|has to be|would be|would have to be))?)\s+(.+)/i);
     if(preference)text=preference[1];
     for(const fruit of fruits){const plural=fruit.endsWith('y')?fruit.slice(0,-1)+'ies':fruit==='mango'?'mango(?:es|s)?':fruit+'(?:s|es)?';if(new RegExp('\\b('+fruit+'|'+plural+')\\b','i').test(text))return fruit;}

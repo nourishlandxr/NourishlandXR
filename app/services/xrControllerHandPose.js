@@ -44,8 +44,8 @@ export function controllerHandJointPoses(rig,controller){
         if(posed[i])return posed[i];
         const parent=rig.parents[i],name=rig.names[i],finger=name.split('-')[0];
         const world=parent<0?rig.bind[i].clone():poseJoint(parent).clone().multiply(rig.bind[parent].clone().invert().multiply(rig.bind[i]));
-        const amount=finger==='thumb'?(name.includes('metacarpal')?.65:name.includes('proximal')?1.05:name.includes('distal')?.8:0):name.includes('proximal')?.85:name.includes('intermediate')?1.05:name.includes('distal')?.65:0;
-        const curl=finger==='thumb'?Math.max(thumb,grip*.95):finger==='index'?trigger:grip;
+        const amount=finger==='thumb'?(name.includes('metacarpal')?.8:name.includes('proximal')?1.2:name.includes('distal')?.95:0):name.includes('proximal')?1.22:name.includes('intermediate')?1.5:name.includes('distal')?.9:0;
+        const curl=finger==='thumb'?Math.max(thumb,grip*.95):finger==='index'?Math.max(trigger,grip):grip;
         if(amount)world.multiply(new THREE.Matrix4().makeRotationAxis(rig.flexAxes[i],amount*curl));
         return posed[i]=world;
     };

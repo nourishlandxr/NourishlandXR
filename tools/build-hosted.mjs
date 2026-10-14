@@ -94,7 +94,7 @@ if (!frontendOnly) {
         .replaceAll("../app/services/", './app/services/');
     fs.writeFileSync(path.join(apiDist, 'server.mjs'), apiServer);
     fs.copyFileSync(path.join(root, 'tools', 'zipArchive.mjs'), path.join(apiDist, 'zipArchive.mjs'));
-    fs.copyFileSync(path.join(root, 'tools', 'zinniaVoiceServer.mjs'), path.join(apiDist, 'zinniaVoiceServer.mjs'));
+    for(const file of ['zinniaVoiceServer.mjs','zinniaInterpretation.mjs','zinniaPreviewProxy.mjs'])fs.copyFileSync(path.join(root,'tools',file),path.join(apiDist,file));
     const apiServices = ['spatialDataModel.js', 'daleysPlant.js', 'pigeonPeaTemplate.js', 'pigeonPeaExample.js', 'pigeonPeaPim.js', 'plantTrialContent.js', 'pimCellIllustrations.js', 'pimModel.js', 'pimCompass.js'];
     const apiServiceDist = path.join(apiDist, 'app', 'services');
     fs.mkdirSync(apiServiceDist, { recursive: true });

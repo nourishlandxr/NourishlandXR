@@ -54,7 +54,7 @@ test('actual hand skeletons curl toward mirrored palms and preserve finger lengt
         const indexOpen=position(open,rig,'index-finger-tip'),indexClosed=position(trigger,rig,'index-finger-tip');
         assert.ok(indexOpen.distanceTo(indexClosed)>.055,'trigger alone bends the index finger');
         assert.ok(position(open,rig,'middle-finger-tip').distanceTo(position(trigger,rig,'middle-finger-tip'))<1e-8);
-        assert.ok(indexOpen.distanceTo(position(grip,rig,'index-finger-tip'))<1e-8,'grip leaves the index available for trigger');
+        assert.ok(indexOpen.distanceTo(position(grip,rig,'index-finger-tip'))>.055,'grip closes the index as part of a full fist');
         movements.push(position(grip,rig,'middle-finger-tip').x-position(open,rig,'middle-finger-tip').x);
         for(let i=0;i<rig.names.length;i++)if(rig.parents[i]>=0){const parent=rig.parents[i],distance=poses=>new THREE.Vector3().setFromMatrixPosition(poses[i]).distanceTo(new THREE.Vector3().setFromMatrixPosition(poses[parent]));assert.ok(Math.abs(distance(open)-distance(grip))<1e-7);}
     }

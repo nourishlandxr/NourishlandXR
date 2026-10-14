@@ -61,7 +61,7 @@ test('fresh startup reaches the table and Zinnia before buttons, with no fruit d
  for(let i=0;i<2400 && stage.phase!=='visitor-intro';i++)stage.update(.05,{viewer,floor:0,frameReady:true});
  assert.equal(stage.phase,'visitor-intro');assert.deepEqual(phases.filter(id=>!['frame'].includes(id)),['title','arrival','table','face','zinnia','living-frame','controls-intro','visitor-intro']);
  assert.equal(stage.zinniaMount.parent.visible,true);assert.ok(stage.root.children.some(child=>child.visible && child.name.toLowerCase().includes('table')));
- assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.snapshot().settingsAvailable,false);assert.equal(requests.some(url=>/fruits\/|strawberry\.glb/.test(url)),false);
+ assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.snapshot().settingsAvailable,false);assert.equal(requests.some(url=>/fruit-collection/.test(url)),true,'preload fruit during conversation');
  }finally{stage.destroy();}
 }));
 
@@ -87,10 +87,10 @@ test('tutorial speech waits for completed reveals and renderer readiness',()=>wi
  try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('table');spoken.length=0;
  for(let i=0;i<130;i++)stage.update(.05,{viewer,floor:0,presentationReady:false});assert.deepEqual(spoken,[]);assert.equal(stage.phase,'table');assert.equal(stage.snapshot().waitingForPresentation,true);
  stage.update(.05,{viewer,floor:0,presentationReady:true});assert.equal(spoken.at(-1).id,'table');assert.equal(stage.snapshot().waitingForPresentation,false);
- stage.previewLesson('face');spoken.length=0;for(let i=0;i<65;i++)stage.update(.05,{viewer,floor:0,presentationReady:true});assert.deepEqual(spoken,[],'Zinnia remains silent during her 3.6-second spawn');
+ stage.previewLesson('face');spoken.length=0;for(let i=0;i<45;i++)stage.update(.05,{viewer,floor:0,presentationReady:true});assert.deepEqual(spoken,[],'Zinnia remains silent during her 2.4-second spawn');
  for(let i=0;i<20;i++)stage.update(.05,{viewer,floor:0,presentationReady:true});assert.equal(spoken.at(-1).id,'face','introduction starts after the glow and settling pause');
- stage.previewLesson('basket');spoken.length=0;for(let i=0;i<25;i++)stage.update(.05,{viewer,floor:0,presentationReady:true});assert.deepEqual(spoken,[]);
- for(let i=0;i<50;i++)stage.update(.05,{viewer,floor:0,presentationReady:true});assert.equal(spoken.at(-1).id,'basket');assert.ok(stage.objects.get('peach').visible,'fruit remains pickable even while its model is loading');
+ stage.previewLesson('basket');await stage.loadPracticeAssets();spoken.length=0;for(let i=0;i<25;i++)stage.update(.05,{viewer,floor:0,presentationReady:true});assert.deepEqual(spoken,[]);
+ for(let i=0;i<50;i++)stage.update(.05,{viewer,floor:0,presentationReady:true});assert.equal(spoken.at(-1).id,'basket');assert.ok(stage.objects.get('peach').visible,'real fruit is pickable once models are ready');
  }finally{stage.destroy();}
 }));
 
@@ -102,4 +102,19 @@ test('welcome screen and rim share a prepared fade before the tutorial introduct
  stage.previewLesson('table');assert.equal(stage.snapshot().title,'');tick(100);assert.equal(stage.snapshot().title,'Your practice table');assert.ok(stage.root.getObjectByName('Welcome practice table white arrival glow').visible===false);
  stage.previewLesson('face');assert.equal(stage.snapshot().title,'');tick(100);assert.equal(stage.snapshot().title,'Meet Zinnia');assert.ok(stage.snapshot().caption);
  }finally{stage.destroy();}
+}));
+
+
+test('basket speech waits through slow fruit download and a fresh renderer revision',()=>withAssets(async()=>{
+ let release;const gate=new Promise(done=>release=done),spoken=[];const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false}),speak:value=>{if(value)spoken.push(value.id);},stop(){}},loadFruit:async()=>{await gate;return {scene:new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),new THREE.MeshBasicMaterial())};}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('basket');for(let i=0;i<300;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.phase,'basket');assert.equal(spoken.includes('basket'),false);assert.equal(stage.objects.get('peach').visible,false);release();await stage.loadPracticeAssets();const oldRevision=stage.snapshot().sceneRevision;for(let i=0;i<80;i++)stage.update(.05,{viewer,floor:0,renderRevision:oldRevision});assert.ok(stage.snapshot().sceneRevision>oldRevision);assert.equal(spoken.includes('basket'),false,'newly visible fruit must be included in renderer');stage.update(.05,{viewer,floor:0,renderRevision:stage.snapshot().sceneRevision});assert.equal(spoken.at(-1),'basket');assert.equal(stage.objects.get('peach').visible,true);}
+ finally{release();stage.destroy();}
+}));
+
+
+test('basket rim contact releases held fruit once and waits for a fresh grip',()=>withAssets(async()=>{
+ const feedback=[],stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}},onFeedback:kind=>feedback.push(kind),loadFruit:async()=>({scene:new THREE.Mesh(new THREE.SphereGeometry(.05,8,6),new THREE.MeshBasicMaterial())})});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('grab');await stage.loadPracticeAssets();stage.update(.05,{viewer,floor:0});const body=stage.bodies.filter(b=>b.fruit).sort((a,b)=>(b.position.y+b.support)-(a.position.y+a.support))[0],source={handedness:'right'};const input=(point,down)=>{stage.root.updateMatrixWorld(true);const matrix=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(point.x,point.y,point.z)).elements;stage.update(.05,{viewer,floor:0,inputs:[{source,matrix,down,trigger:false}]});};
+ const start={...body.position};input(start,false);input(start,true);assert.equal(stage.isHolding(source),true);input({...start,y:.65},true);input({x:.735,y:.65,z:-.16},true);input({x:.735,y:.06,z:-.16},true);assert.equal(stage.isHolding(source),false);assert.ok(body.position.y-body.support>=.10);assert.equal(feedback.filter(kind=>kind==='basket-contact').length,1);input(body.position,true);assert.equal(stage.isHolding(source),false,'held grip cannot reacquire a blocked fruit');}
+ finally{stage.destroy();}
 }));

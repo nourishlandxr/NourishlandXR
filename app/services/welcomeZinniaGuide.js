@@ -12,9 +12,12 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
     function dispose(object){object.traverse(n=>{n.geometry?.dispose();for(const material of [n.material].flat().filter(Boolean))material.dispose();});}
     const loading=load(new URL('../assets/welcome-practice/zinnia.glb',import.meta.url).href).then(gltf=>{
         if(disposed){dispose(gltf.scene);return;}
-        model=gltf.scene;model.name='Zinnia';model.updateMatrixWorld(true);
+        model=gltf.scene;model.name='Zinnia';
+        // Extend the stem above its pot while keeping the flower head round.
+        const stemRoot=model.getObjectByName('Body_sway_root'),flower=model.getObjectByName('Head_nod_root');if(stemRoot){stemRoot.scale.y*=1.32;if(flower)flower.scale.y/=1.32;for(const side of ['L','R']){const arm=model.getObjectByName('Leaf_arm_'+side);if(arm){arm.scale.set(1.18,1/1.32,1.18);}}}
+        model.updateMatrixWorld(true);
         const pot=model.getObjectByName('Pot'),saucer=model.getObjectByName('Saucer');if(pot && saucer){const p=new THREE.Box3().setFromObject(pot),dish=new THREE.Box3().setFromObject(saucer);saucer.position.y+=p.min.y-dish.max.y-.006;}
-        model.traverse(node=>{if(node.isMesh && /^(Pot|Saucer|Soil|Rolled_pot_lip)$/.test(node.name))node.material.userData.frontFaceOnly=true;});model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),centre=box.getCenter(new THREE.Vector3());model.position.sub(new THREE.Vector3(centre.x,box.min.y,centre.z));model.scale.setScalar(.42/size.y);model.position.multiplyScalar(.42/size.y);holder.add(model);
+        model.traverse(node=>{if(node.isMesh && /^(Pot|Saucer|Soil|Rolled_pot_lip)$/.test(node.name))node.material.userData.frontFaceOnly=true;});model.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),centre=box.getCenter(new THREE.Vector3());model.position.sub(new THREE.Vector3(centre.x,box.min.y,centre.z));model.scale.setScalar(.48/size.y);model.position.multiplyScalar(.48/size.y);holder.add(model);
         model.traverse(node=>{if(['Head_nod_root','Body_sway_root','Leaf_arm_L','Leaf_arm_R','Mouth_speech','Eye_L_expression','Eye_R_expression','Eyebrow_L','Eyebrow_R'].includes(node.name))parts[node.name]=node;});
         const head=parts.Head_nod_root;
         // Bake individual petal poses into material batches. Keep irregular
@@ -64,7 +67,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         else if(viewer)worldTarget.set(viewer[12],viewer[13],viewer[14]);
         else worldTarget.set(0,1.5,1).applyMatrix4(root.matrixWorld);
         const body=parts.Body_sway_root?.userData.guidePivot;
-        if(body && !paused){bodyTarget.copy(worldTarget);body.parent.worldToLocal(bodyTarget).sub(body.position);const yaw=THREE.MathUtils.clamp(Math.atan2(bodyTarget.x,bodyTarget.z),-1,1),pitch=THREE.MathUtils.clamp(Math.atan2(bodyTarget.y,Math.hypot(bodyTarget.x,bodyTarget.z)),-.65,.65);bodyYaw=THREE.MathUtils.damp(bodyYaw,yaw*.22,4,dt);bodyPitch=THREE.MathUtils.damp(bodyPitch,-pitch*.18,4,dt);bodyLean=THREE.MathUtils.damp(bodyLean,-Math.sin(yaw)*.11,4,dt);body.rotation.set(bodyPitch,bodyYaw,bodyLean+Math.sin(age*1.4)*(.008+level*.018));}
+        if(body && !paused){bodyTarget.copy(worldTarget);body.parent.worldToLocal(bodyTarget).sub(body.position);const yaw=THREE.MathUtils.clamp(Math.atan2(bodyTarget.x,bodyTarget.z),-1,1),pitch=THREE.MathUtils.clamp(Math.atan2(bodyTarget.y,Math.hypot(bodyTarget.x,bodyTarget.z)),-.65,.65);bodyYaw=THREE.MathUtils.damp(bodyYaw,yaw*.30,5,dt);bodyPitch=THREE.MathUtils.damp(bodyPitch,-pitch*.24,5,dt);bodyLean=THREE.MathUtils.damp(bodyLean,-Math.sin(yaw)*.17,5,dt);body.rotation.set(bodyPitch+Math.sin(age*1.7)*.012,bodyYaw,bodyLean+Math.sin(age*1.4)*(.015+level*.025));}
         const head=parts.Head_nod_root?.userData.guidePivot;
         if(head){local.copy(worldTarget);head.parent.worldToLocal(local).sub(head.position);let yaw=THREE.MathUtils.clamp(Math.atan2(local.x,local.z),-1.05,1.05),pitch=THREE.MathUtils.clamp(Math.atan2(local.y,Math.hypot(local.x,local.z)),-.65,.65);
             if(ackAge<1.8){const fade=Math.min(1,ackAge*6)*Math.max(0,Math.min(1,(1.8-ackAge)*5)),wave=Math.sin(ackAge*Math.PI*3.4)*fade;if(ack==='no')yaw+=wave*.32;else pitch+=wave*.23;}

@@ -1,3 +1,4 @@
+import {interpretZinniaReply} from './zinniaInterpretation.mjs';
 export const ZINNIA_VOICE_PROFILE=Object.freeze({"model":"gpt-4o-mini-tts","voice":"marin","response_format":"mp3","instructions":"Speak as Zinnia, a friendly, kind 23-year-old female flower welcoming someone to her garden. Use a light, warm, youthful voice with a gentle smile and natural conversational energy. Sound caring and approachable. Speak natural American English at an ordinary comfortable pace, with smooth word joins and soft, clear word endings. Keep the vocal weight light. Read the supplied script exactly once, in order, without repeating words, syllables or sentences or adding any extra speech. Avoid a deep solemn narrator tone, exaggerated character acting, whispering or long deliberate pauses."});
 export const ZINNIA_VOICE_DELIVERY='v14-friendly-marin-1';
 // Paid voice routes are explicitly enabled on the server, never with a browser key.
@@ -6,8 +7,8 @@ export function handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isA
     if(!pathname.startsWith('/api/zinnia/'))return false;
     const enabled=process.env.NOURISHLAND_ZINNIA_VOICE_ENABLED==='true' && Boolean(process.env.OPENAI_API_KEY);
     res.setHeader('Cache-Control','no-store');
-    if(pathname==='/api/zinnia/capabilities' && req.method==='GET'){sendJson(res,200,{enabled,voice:'AI-generated',maximumSeconds:20});return true;}
-    if(!['/api/zinnia/transcribe','/api/zinnia/speech'].includes(pathname) || req.method!=='POST'){sendJson(res,404,{error:'Voice route not found.'});return true;}
+    if(pathname==='/api/zinnia/capabilities' && req.method==='GET'){sendJson(res,200,{enabled,voice:'AI-generated',maximumSeconds:20,interpretation:true});return true;}
+    if(!['/api/zinnia/transcribe','/api/zinnia/speech','/api/zinnia/interpret'].includes(pathname) || req.method!=='POST'){sendJson(res,404,{error:'Voice route not found.'});return true;}
     if(!enabled){sendJson(res,503,{error:'Zinnia voice is not configured on the server.'});return true;}
     const origin=String(req.headers.origin || '');
     const localOrigin=origin===`http://${req.headers.host}` || origin===`https://${req.headers.host}`;

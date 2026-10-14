@@ -1,3 +1,4 @@
+import {fruitExtents,constrainFruitNeighbours} from './welcomeFruitCollision.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {welcomeBasketSlot} from './welcomeBasketPacking.js';
 import {createPracticeBody} from './welcomePracticePhysics.js';
@@ -25,11 +26,14 @@ export function createWelcomePracticeProps(root,fruits,{onCollect=()=>{}}={}){
         Object.assign(slot,best);body.basketed=true;collected.add(body.id);snap(body);flash=1;onCollect(body);return true;}
     function snap(body){const slot=slots[body.id];Object.assign(body.position,{x:basket.position.x+slot.x,y:slot.y || .018+body.halfSize.y,z:basket.position.z+slot.z});Object.assign(body.velocity,{x:0,y:0,z:0});Object.assign(body.rotation,slot.rotation || {x:0,y:0,z:0,w:1});Object.assign(body.angular,{x:0,y:0,z:0});body.support=slot.halfSize?.y || body.halfSize.y;}
     function constrainBasket(body,next,old=body.position){
-        if(!basket.visible || body.plantAttached || !fruits.includes(body))return next;
-        const r=body.radius,low=Math.min(old.y,next.y)-body.support,high=Math.max(old.y,next.y)+body.support;
+        if(body.plantAttached || !fruits.includes(body))return next;
+        constrainFruitNeighbours(body,next,old,fruits);if(!basket.visible)return next;
+        const h=fruitExtents(body),r=Math.hypot(h.x,h.z),low=Math.min(old.y,next.y)-h.y,high=Math.max(old.y,next.y)+h.y;
+        const distance=Math.hypot(next.x-basket.position.x,next.z-basket.position.z);if(old.y-h.y>=.10 && next.y-h.y<.105 && distance+r>.213 && distance-r<.23){next.y=.105+h.y;return next;}
         if(low>.10 || high<0)return next;
         const ox=old.x-basket.position.x,oz=old.z-basket.position.z,inside=Math.hypot(ox,oz)<.225;
-        const dx=next.x-old.x,dz=next.z-old.z,limit=inside?Math.max(.03,.22-r):.225+r;
+        const dx=next.x-old.x,dz=next.z-old.z,radial=Math.hypot(ox,oz),support=radial>1e-6?(Math.abs(ox)*h.x+Math.abs(oz)*h.z)/radial:Math.max(h.x,h.z),inner=-support+Math.sqrt(support*support+.217*.217-h.x*h.x-h.z*h.z),limit=inside?Math.max(.025,inner):.231+r;
+        if(next.y-h.y>.105 && next.y>=old.y && Math.hypot(dx,dz)<.003)return next;
         const a=dx*dx+dz*dz,b=2*(ox*dx+oz*dz),c=ox*ox+oz*oz-limit*limit,disc=b*b-4*a*c;
         if(a>.000001 && disc>=0){const t=(-b+(inside?1:-1)*Math.sqrt(disc))/(2*a);if(t>=0 && t<=1){next.x=old.x+dx*Math.max(0,t-.001);next.z=old.z+dz*Math.max(0,t-.001);}}
         return next;
@@ -50,5 +54,5 @@ export function createWelcomePracticeProps(root,fruits,{onCollect=()=>{}}={}){
         body.plateSlot=slot;body.plated=true;body.anchored=true;body.basketed=false;plated.add(body.id);Object.assign(body.position,{x:plate.position.x+slot.x,y:slot.y+.012,z:plate.position.z+slot.z});Object.assign(body.rotation,slot.rotation);Object.assign(body.velocity,{x:0,y:0,z:0});Object.assign(body.angular,{x:0,y:0,z:0});onCollect(body);return true;}
     function stockBasket(){const packed=[];for(const body of fruits.filter(b=>initial.includes(b.id))){if(body.held || body.plated)continue;const slot=welcomeBasketSlot(body,packed,slots[body.id]);if(slot){Object.assign(slots[body.id],slot);body.basketed=true;packed.push({body,slot});snap(body);Object.assign(body.home,body.position);}}}
     function update(phase,pilot,dt=0,other=null){const gardening=['packet','seed','water','grow','harvest','explore'].includes(phase);basket.position.lerp(gardening?gardenPosition:practicePosition,1-Math.exp(-dt*5));flash=Math.max(0,flash-dt);feedbackRing.visible=flash>0;feedbackMaterial.opacity=flash*.85;feedbackRing.scale.setScalar(1+(1-flash)*.18);basket.visible=['grab','gloves','basket','basket-reveal','fruit','fly','hands','packet','seed','water','grow','harvest','explore'].includes(phase);remoteBody.visible=false;remote.visible=false;if(['basket-reveal','grab','fruit','fly','hands'].includes(phase))plateRevealed=true;plate.visible=plateRevealed;for(const body of fruits){if((['harvest','explore'].includes(phase) && body.id.startsWith('strawberry-')) && !body.held && !body.basketed && body.velocity.y<=0 && body.position.y<.18)place(body);if(body.basketed)snap(body);}}
-    return {constrainBasket,basket,plate,remote,stockBasket,placeOnPlate,addFruit(body){fruits.push(body);},addHarvest(bodies){fruits.push(...bodies);bodies.forEach((b,i)=>slots[b.id]={x:(i-1)*.05,z:i%2?.035:-.025});},get harvestComplete(){return fruits.filter(b=>b.id.startsWith('strawberry-') && collected.has(b.id)).length===3;},body:remoteBody,place,remove,update,get nextFruit(){return initial.find(id=>!plated.has(id));},get full(){return initial.every(id=>collected.has(id));},snapshot:()=>({plated:[...plated],collected:[...collected],full:initial.every(id=>collected.has(id)),harvestCount:[...collected].filter(id=>id.startsWith('strawberry-')).length,plateVisible:plate.visible}),reset(){plateRevealed=false;plate.visible=false;collected.clear();plated.clear();for(const body of fruits){body.basketed=false;body.plated=false;body.anchored=false;body.named=false;}}};
+    return {constrainBasket,basket,plate,remote,stockBasket,placeOnPlate,addFruit(body){fruits.push(body);},addHarvest(bodies){for(const body of bodies)body.fruit=true;fruits.push(...bodies);bodies.forEach((b,i)=>slots[b.id]={x:(i-1)*.05,z:i%2?.035:-.025});},get harvestComplete(){return fruits.filter(b=>b.id.startsWith('strawberry-') && collected.has(b.id)).length===3;},body:remoteBody,place,remove,update,get nextFruit(){return initial.find(id=>!plated.has(id));},get full(){return initial.every(id=>collected.has(id));},snapshot:()=>({plated:[...plated],collected:[...collected],full:initial.every(id=>collected.has(id)),harvestCount:[...collected].filter(id=>id.startsWith('strawberry-')).length,plateVisible:plate.visible}),reset(){plateRevealed=false;plate.visible=false;collected.clear();plated.clear();for(const body of fruits){body.basketed=false;body.plated=false;body.anchored=false;body.named=false;}}};
 }
