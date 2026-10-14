@@ -1,0 +1,87 @@
+name: Repair Zinnia voice API
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zinnia-voice-api
+  cancel-in-progress: false
+
+jobs:
+  repair-voice:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify voice modules
+        run: |
+          node --check tools/zinniaVoiceServer.mjs
+          node --check tools/zinniaInterpretation.mjs
+          node --test tests/zinnia-voice-server.test.mjs tests/zinnia-reply-interpretation.test.mjs tests/zinnia-microphone-turns.test.mjs
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTARMADA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HOSTARMADA_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/nourishland_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/nourishland_deploy ~/.ssh/known_hosts
+      - name: Update only the two voice modules and restart Passenger
+        env:
+          REMOTE_HOST: ${{ secrets.HOSTARMADA_HOST }}
+          REMOTE_PORT: ${{ secrets.HOSTARMADA_SSH_PORT }}
+          REMOTE_USER: ${{ secrets.HOSTARMADA_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$REMOTE_HOST"
+          [[ "$REMOTE_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          API_ROOT="/home/$REMOTE_USER/nourishland-xr-api"
+          STAGE="$API_ROOT/.zinnia-voice-$GITHUB_SHA"
+          SSH_COMMAND="ssh -i ~/.ssh/nourishland_deploy -p ${REMOTE_PORT:-22} -o BatchMode=yes"
+          $SSH_COMMAND "$REMOTE_USER@$REMOTE_HOST" "test -f '$API_ROOT/server.mjs' && test -f '$API_ROOT/zinniaVoiceServer.mjs' && test -w '$API_ROOT' && mkdir -m 700 '$STAGE'"
+          rsync --archive --compress --checksum -e "$SSH_COMMAND" tools/zinniaVoiceServer.mjs tools/zinniaInterpretation.mjs "$REMOTE_USER@$REMOTE_HOST:$STAGE/"
+          $SSH_COMMAND "$REMOTE_USER@$REMOTE_HOST" "sh -s -- '$API_ROOT' '$STAGE' '$GITHUB_SHA'" <<'SH'
+          set -eu
+          root="$1"; stage="$2"; revision="$3"
+          test "$stage" = "$root/.zinnia-voice-$revision"
+          grep -q 'zinniaVoiceServer.mjs' "$root/server.mjs"
+          backup="$root/.zinnia-backup-$revision"
+          mkdir -m 700 "$backup"
+          for file in zinniaVoiceServer.mjs zinniaInterpretation.mjs; do
+            if test -f "$root/$file"; then cp -p "$root/$file" "$backup/$file"; fi
+            test -s "$stage/$file"
+          done
+          for file in zinniaVoiceServer.mjs zinniaInterpretation.mjs; do
+            chmod 644 "$stage/$file"
+            mv "$stage/$file" "$root/$file"
+          done
+          rmdir "$stage"
+          mkdir -p "$root/tmp"
+          touch "$root/tmp/restart.txt"
+          SH
+      - name: Verify public voice without a Creator login
+        run: |
+          set -euo pipefail
+          ready=false
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent --show-error https://nourishland.org/xr-api/zinnia/capabilities | jq -e '.enabled == true and .interpretation == true' >/dev/null; then ready=true; break; fi
+            sleep 2
+          done
+          test "$ready" = true
+          for origin in https://nourishland.org https://www.nourishland.org; do
+            code=$(curl --silent --show-error --output /tmp/zinnia-route-check.json --write-out '%{http_code}' --header "Origin: $origin" --header 'Content-Type: application/json' --data '{"audio":"AA","mime":"audio/webm"}' https://nourishland.org/xr-api/zinnia/transcribe)
+            test "$code" = 413
+          done
+          curl --fail --silent --show-error --header 'Origin: https://www.nourishland.org' --header 'Content-Type: application/json' --data '{"text":"Call me Test Sample","context":"name"}' https://nourishland.org/xr-api/zinnia/interpret | jq -e '.name == "Test Sample" and .fruit == null'

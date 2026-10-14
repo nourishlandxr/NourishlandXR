@@ -3,6 +3,15 @@ export const ZINNIA_VOICE_PROFILE=Object.freeze({"model":"gpt-4o-mini-tts","voic
 export const ZINNIA_VOICE_DELIVERY='v14-friendly-marin-1';
 // Paid voice routes are explicitly enabled on the server, never with a browser key.
 const clients=new Map();let daily={day:'',count:0};
+export function isZinniaVoiceOriginAllowed(req,isAllowedOrigin){
+    const origin=String(req.headers.origin || '');if(!origin)return false;
+    if(process.env.NODE_ENV!=='production')return isAllowedOrigin(req) && ['http://'+req.headers.host,'https://'+req.headers.host].includes(origin);
+    if(isAllowedOrigin(req))return true;
+    try{
+        const requested=new URL(origin),configured=new URL(process.env.NOURISHLAND_PUBLIC_ORIGIN || 'https://nourishland.org');
+        return requested.origin===origin && requested.protocol===configured.protocol && requested.port===configured.port && requested.hostname.replace(/^www\./,'')===configured.hostname.replace(/^www\./,'');
+    }catch{return false;}
+}
 export function handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isAllowedOrigin}){
     if(!pathname.startsWith('/api/zinnia/'))return false;
     const enabled=process.env.NOURISHLAND_ZINNIA_VOICE_ENABLED==='true' && Boolean(process.env.OPENAI_API_KEY);
@@ -10,9 +19,7 @@ export function handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isA
     if(pathname==='/api/zinnia/capabilities' && req.method==='GET'){sendJson(res,200,{enabled,voice:'AI-generated',maximumSeconds:20,interpretation:true});return true;}
     if(!['/api/zinnia/transcribe','/api/zinnia/speech','/api/zinnia/interpret'].includes(pathname) || req.method!=='POST'){sendJson(res,404,{error:'Voice route not found.'});return true;}
     if(!enabled){sendJson(res,503,{error:'Zinnia voice is not configured on the server.'});return true;}
-    const origin=String(req.headers.origin || '');
-    const localOrigin=origin===`http://${req.headers.host}` || origin===`https://${req.headers.host}`;
-    if(!origin || !isAllowedOrigin(req) || (process.env.NODE_ENV!=='production' && !localOrigin)){sendJson(res,403,{error:'Request origin is not allowed.'});return true;}
+    if(!isZinniaVoiceOriginAllowed(req,isAllowedOrigin)){sendJson(res,403,{error:'Request origin is not allowed.'});return true;}
     const now=Date.now(),day=new Date(now).toISOString().slice(0,10),id=req.socket.remoteAddress || 'unknown';
     if(daily.day!==day){daily={day,count:0};clients.clear();}
     const bucket=clients.get(id) || {start:now,count:0};if(now-bucket.start>60000){bucket.start=now;bucket.count=0;}
@@ -21,6 +28,11 @@ export function handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isA
     readRequestJson(req,async(error,data)=>{
         if(error){sendJson(res,error.statusCode || 400,{error:error.message});return;}
         try{
+            if(pathname.endsWith('/interpret')){
+                const text=String(data.text || '').trim(),context=data.context;
+                if(!text || text.length>600 || !['name','fruit'].includes(context))return sendJson(res,400,{error:'Invalid visitor reply.'});
+                return sendJson(res,200,await interpretZinniaReply(text,context));
+            }
             let body,endpoint,headers={Authorization:'Bearer '+process.env.OPENAI_API_KEY};
             if(pathname.endsWith('/transcribe')){
                 const mime=String(data.mime || '').split(';')[0],extension={'audio/webm':'webm','audio/mp4':'mp4','audio/ogg':'ogg','audio/wav':'wav'}[mime];
