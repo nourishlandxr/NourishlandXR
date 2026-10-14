@@ -1550,7 +1550,7 @@ function showGuidedChoice(html, onClick = () => {}, options = {}) {
             options.onTextComplete?.();
         }
     };
-    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[fullText],isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:()=>{if(narrationRevision!==demoNarrationRevision)return;if(paragraph)paragraph.textContent=fullText;introBoardVisibleBody=fullText;introBoardTextureDirty=true;},onComplete:finishTyping});
+    demoParagraphSequence=createDemoVoiceTextFlow({completeNarration:true,cueForParagraph:demoZinniaCue,paragraphs:[fullText],isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:()=>{if(narrationRevision!==demoNarrationRevision)return;if(paragraph)paragraph.textContent=fullText;introBoardVisibleBody=fullText;introBoardTextureDirty=true;},onComplete:finishTyping});
     skipDemoNarration=()=>demoParagraphSequence?.finish();
     demoParagraphSequence.start();
     if(options.persistent || demoFastSkipActive)finishTyping();
@@ -1594,7 +1594,7 @@ function demoNarrationPresentationReady(text,requestedAt){
 }
 function narrateDemoFrame(text){
     demoParagraphSequence?.cancel();
-    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:[String(text || '')],isReady:demoNarrationPresentationReady,voice:demoProjectVoice});
+    demoParagraphSequence=createDemoVoiceTextFlow({completeNarration:true,cueForParagraph:demoZinniaCue,paragraphs:[String(text || '')],isReady:demoNarrationPresentationReady,voice:demoProjectVoice});
     demoParagraphSequence.start();
 }
 function clearDemoNarration({preserveAction=false}={}) {
@@ -1774,7 +1774,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
         continueButton.onclick = null;
     }
     syncDemoPanelActions();
-    demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,spokenSummary:options.spokenSummary || (quickAccessCopy?guidedDemoStep(options.stepLabel)?.main:undefined),readingTime:demoParagraphReadingTime,onChange:event=>{
+    demoParagraphSequence=createDemoVoiceTextFlow({completeNarration:true,cueForParagraph:demoZinniaCue,paragraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{
         if(narrationRevision!==demoNarrationRevision)return;
         if(continueButton)continueButton.hidden=true;
         typing=true;
@@ -2431,13 +2431,13 @@ function showArWelcomeShowcase() {
         syncDemoPanelActions();
         panel.classList.add('is-typing');paintOpeningCopy('');
         if(demoFastSkipActive)finishOpeningCopy();
-        else{demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{openingTyping=true;openingParagraphIndex=event.index+1;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:finishOpeningCopy});demoParagraphSequence.start();}
+        else{demoParagraphSequence=createDemoVoiceTextFlow({completeNarration:true,cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{openingTyping=true;openingParagraphIndex=event.index+1;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,openingParagraphIndex).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:finishOpeningCopy});demoParagraphSequence.start();}
     };
     rememberDemoSlide({stepLabel:'INTRO 1.1',title:introBoardTitle,body:introBoardBody,buttonLabel:'Continue',onContinue:beginOpeningCopy,kind:'welcome'});
     const waitingButton=appRoot?.querySelector('[data-tryit-intro-continue]');if(waitingButton){waitingButton.hidden=true;waitingButton.disabled=false;waitingButton.textContent='Continue';waitingButton.onclick=()=>{if(waitingButton.hidden)return;suppressSessionSelectUntil=performance.now()+700;clearDemoNarration();beginOpeningCopy();};}syncDemoPanelActions();
     const waitForOpeningCopy=()=>{
         if(!arWelcomeShowcaseActive || !arWelcomeOpeningActive)return;
-        if(arWelcomeClock.elapsed>=DEMO_WELCOME_TITLE_HOLD_MS && !demoParagraphSequence){demoParagraphSequence=createDemoVoiceTextFlow({cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{introOpeningCopySkipped=false;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,event.index+1).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:()=>{introBoardTextureDirty=true;const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.onclick=beginOpeningCopy;}syncDemoPanelActions();}});demoParagraphSequence.start();}
+        if(arWelcomeClock.elapsed>=DEMO_WELCOME_TITLE_HOLD_MS && !demoParagraphSequence){demoParagraphSequence=createDemoVoiceTextFlow({completeNarration:true,cueForParagraph:demoZinniaCue,paragraphs:openingParagraphs,isReady:demoNarrationPresentationReady,voice:demoProjectVoice,readingTime:demoParagraphReadingTime,onChange:event=>{introOpeningCopySkipped=false;introBoardParagraphFadeTimes[event.index]=event.startedAt;introBoardVisibleBody=openingParagraphs.slice(0,event.index+1).join('\n\n');paintOpeningCopy(introBoardVisibleBody);introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next)next.hidden=true;},onComplete:()=>{introBoardTextureDirty=true;const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.onclick=beginOpeningCopy;}syncDemoPanelActions();}});demoParagraphSequence.start();}
         if(demoParagraphSequence?.snapshot().completed){
             introBoardVisibleBody=introBoardBody;introBoardTextureDirty=true;
             const button=appRoot?.querySelector('[data-tryit-intro-continue]');if(button){button.hidden=false;button.disabled=false;button.textContent='Continue';button.onclick=beginOpeningCopy;}syncDemoPanelActions();return;

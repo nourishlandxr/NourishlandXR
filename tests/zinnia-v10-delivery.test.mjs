@@ -24,7 +24,8 @@ test('demo presentation retains recording boundaries and independent animation o
  const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
  const board=source.slice(source.indexOf('function showIntroBoard('),source.indexOf('function syncDemoStageControls('));
  assert.doesNotMatch(board,/length>180/);
- assert.match(board,/quickAccessCopy\?guidedDemoStep\(options.stepLabel\)\?\.main/);
+ assert.match(board,/completeNarration:true/);
+ assert.doesNotMatch(board,/spokenSummary:/);
  assert.doesNotMatch(source,/createZinniaFramePerch\(\{character:welcomePractice/);
  assert.match(source,/zinniaFramePerch\.attach\(gl\);zinniaFramePerch\.show\(\)/);
 });

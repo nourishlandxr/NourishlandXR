@@ -3,9 +3,8 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {createHash} from 'node:crypto';
-import {DEMO_GUIDED_STEPS} from '../app/features/ar-demo/demoJourneyContent.js';
-import {normalizeNarrationText} from '../app/services/projectNarration.js';
 import {DEMO_NARRATION_BANK as previousBank} from '../app/services/demoNarrationBank.js';
+import {demoNarrationContent} from './demo-narration-content.mjs';
 const key=text=>{let h=2166136261;for(const c of text){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return 'z-'+(h>>>0).toString(16);};
 const serverArg=process.argv.find(a=>a.startsWith('--server='));
 const server=serverArg?new URL(serverArg.slice(9)):null;
@@ -13,14 +12,8 @@ if(server && server.protocol!=='https:' && !['127.0.0.1','localhost'].includes(s
 const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const profile=ZINNIA_VOICE_PROFILE;
 const requestGap=Math.max(5200,Number(process.argv.find(arg=>arg.startsWith('--gap-ms='))?.slice(9)) || 5200);
-// Fruit Window screens are authored in the runtime rather than the chapter
-// list. Include them so WebXR and Unity do not leave these chapters silent.
-const runtime=await fs.readFile(path.join(root,'app/screens/temporaryArDemo.js'),'utf8');
-const fruitStart=runtime.indexOf('function showDemoFruitDiscovery('),fruitEnd=runtime.indexOf('function showDemoPanelIntroduction(',fruitStart);
-if(fruitStart<0 || fruitEnd<fruitStart)throw Error('Fruit Window narration source changed.');
-const fruitCopy=[...runtime.slice(fruitStart,fruitEnd).matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(match=>match[1].replaceAll('\\n','\n'));
-const fruitScreens=['Look closely at the plant','PIMO is now closed'].map(prefix=>{const text=fruitCopy.find(text=>text.startsWith(prefix));if(!text)throw Error('Missing Fruit Window narration: '+prefix);return text;});
-const clips=[...new Map([...DEMO_GUIDED_STEPS.map(step=>step.main),...fruitScreens].flatMap(main=>main.split(/\n\n+/).map(part=>{const text=normalizeNarrationText(part);return [key(text),{id:key(text),text,spoken:text.replace(/NourishlandXR/g,'Nourishland X R').replace(/\bPIMO\b/g,'plant information').replace(/\bLIMO\b/g,'learning pathway')}];}))).values()];
+// Include runtime narrative bodies as well as the authored chapter sequence.
+const clips=demoNarrationContent().map(text=>({id:key(text),text,spoken:text.replace(/NourishlandXR/g,'Nourishland X R').replace(/\bPIMO\b/g,'plant information').replace(/\bLIMO\b/g,'learning pathway')}));
 const hash=createHash('sha256').update(JSON.stringify({profile,clips:clips.map(({id,spoken})=>({id,spoken}))})).digest('hex').slice(0,16);
 const bankName='openai-'+hash,relative='assets/demo-narration/'+bankName+'/',directory=path.join(root,'app',relative);
 if(process.argv.includes('--plan')){console.log(JSON.stringify({provider:'OpenAI',voice:profile.voice,clips:clips.length,characters:clips.reduce((n,c)=>n+c.spoken.length,0),bank:relative,requires:'OPENAI_API_KEY',activation:'Only after all clips have been generated'},null,2));process.exit(0);}

@@ -15,6 +15,12 @@ test('pause holds text after audio ends; replay resets text and speech to the cu
 test('microphone handover holds the paragraph and global replay stays with the Frame',()=>{const h=harness(),incidental={cancel(){},status:()=>({playing:true}),replay(){throw Error('Wrong replay target');}};try{h.flow.start();h.interrupt();h.tick(10000);assert.equal(h.events.length,1);claimZinniaVoice(incidental);replayZinniaVoice();assert.equal(h.events.at(-1).index,0);assert.equal(h.spoken.length,2);h.flow.cancel();h.tick(10000);assert.equal(h.done,0);}finally{h.flow.cancel();forgetZinniaVoice(incidental);}});
 test('voice leads with a bounded explanation while the Frame retains supporting detail',()=>{const text='Here is the main idea. Here is how you can try it. Detailed references remain in the Frame. More supporting information.';assert.equal(spokenFrameLead(text),'Here is the main idea. Here is how you can try it.');});
 
+test('full demo narration reads the displayed paragraph instead of a summary or truncated lead',()=>{
+ const paragraph='Here is the main idea. Here is how you can try it. Detailed references remain in the Frame. More supporting information.';let spoken;
+ const flow=createDemoVoiceTextFlow({paragraphs:[paragraph],completeNarration:true,spokenSummary:'Different authored explanation.',voice:{speak(text){spoken=text;}},setTimer:()=>1,clearTimer(){}});
+ try{flow.start();assert.equal(spoken,paragraph);}finally{flow.cancel();}
+});
+
 test('a short bundled opening keeps its approved recording without synthesis',()=>{const opening=Object.values(PROJECT_NARRATION_CATALOG)[0].text;assert.equal(spokenFrameLead(opening+' Supporting detail belongs in the Frame.'),opening);});
 
 test('an unavailable audio device leaves the Frame readable and able to continue',()=>{

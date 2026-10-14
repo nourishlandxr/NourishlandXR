@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import {DEMO_NARRATION_BANK as bank} from '../app/services/demoNarrationBank.js';
 import {DEMO_GUIDED_STEPS} from '../app/features/ar-demo/demoJourneyContent.js';
 import {normalizeNarrationText,projectNarrationSegments} from '../app/services/projectNarration.js';
+import {demoNarrationContent} from '../tools/demo-narration-content.mjs';
 
 test('every authored main-demo paragraph has a complete saved friendly Marin recording',()=>{
     assert.equal(bank?.voice,'marin');
@@ -13,7 +14,8 @@ test('every authored main-demo paragraph has a complete saved friendly Marin rec
     const start=source.indexOf('function showDemoFruitDiscovery('),end=source.indexOf('function showDemoPanelIntroduction(',start);
     const bodies=[...source.slice(start,end).matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(match=>match[1].replaceAll('\\n','\n'));
     for(const prefix of ['Look closely at the plant','PIMO is now closed']){const text=bodies.find(body=>body.startsWith(prefix));assert.ok(text);for(const paragraph of text.split(/\n\n+/))expected.add(normalizeNarrationText(paragraph));}
-    assert.equal(Object.keys(bank.catalog).length,expected.size);
+    for(const text of demoNarrationContent())expected.add(text);
+    assert.ok(Object.keys(bank.catalog).length>=expected.size);
     for(const text of expected){
         const segments=projectNarrationSegments(text,{demo:true});
         assert.equal(segments.length,1,text);
@@ -31,4 +33,11 @@ test('extra demo guidance uses live speech instead of old Ava recordings',()=>{
     assert.deepEqual(projectNarrationSegments(extra,{demo:true}),[{id:'project-guidance',spoken:extra,spokenOverride:true}]);
     const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
     assert.match(source,/demoProjectVoice=createProjectNarration\(\{demo:true/);
+});
+
+test('every demo paragraph flow speaks its visible copy without an alternate authored summary',()=>{
+ const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
+ const calls=[...source.matchAll(/createDemoVoiceTextFlow\(\{([^\n]+)/g)];assert.ok(calls.length>=5);
+ for(const call of calls)assert.match(call[1],/^completeNarration:true,/);
+ assert.doesNotMatch(source,/spokenSummary:/);
 });

@@ -2,7 +2,7 @@ import {setZinniaVoiceContext} from './zinniaVoiceCoordinator.js';
 import {DEMO_NARRATION_BANK} from './demoNarrationBank.js';
 import {PROJECT_NARRATION_CATALOG} from './projectNarrationCatalog.js';
 
-// Voice introduces the current idea; the Frame retains its full explanation.
+// Legacy previews can use a spoken lead; the demo opts into complete narration.
 export function spokenFrameLead(text){
     // Preserve a short bundled introduction rather than synthesizing a fragment.
     const normalized=String(text || '').replace(/[’‘]/g,"'").replace(/[–—]/g,', ').replace(/\s+/g,' ').trim();
@@ -14,7 +14,7 @@ export function spokenFrameLead(text){
     let result='';for(const sentence of sentences.slice(0,2)){if(result && (result+sentence).split(/\s+/).length>55)break;result+=sentence;}
     return result.trim();
 }
-export function createDemoVoiceTextFlow({paragraphs,voice,spokenSummary,readingTime=text=>Math.max(2200,text.split(/\s+/).length*250),cueForParagraph=()=>null,onChange=()=>{},onComplete=()=>{},isReady=()=>true,now=()=>performance.now(),setTimer=setTimeout,clearTimer=clearTimeout}={}){
+export function createDemoVoiceTextFlow({paragraphs,voice,spokenSummary,completeNarration=false,readingTime=text=>Math.max(2200,text.split(/\s+/).length*250),cueForParagraph=()=>null,onChange=()=>{},onComplete=()=>{},isReady=()=>true,now=()=>performance.now(),setTimer=setTimeout,clearTimer=clearTimeout}={}){
     const items=paragraphs.filter(Boolean);let index=-1,paused=false,cancelled=false,completed=false,timer=null,deadline=0,remaining=0,duration=0,readDone=false,audioDone=false,interrupted=false,revision=0,startedAt=0,waiting=false,waitingSince=0,releaseContext=null;
     const status=()=>({playing:!paused && !cancelled && !completed && index>=0,paused,listening:false});
     function clear(){if(timer!==null)clearTimer(timer);timer=null;}
@@ -23,7 +23,7 @@ export function createDemoVoiceTextFlow({paragraphs,voice,spokenSummary,readingT
     function pauseText(){if(paused || cancelled || completed)return;paused=true;if(timer!==null)remaining=Math.max(0,deadline-now());clear();}
     function resumeText(){if(!paused || cancelled || completed)return;paused=false;if(waiting)show(index);else{schedule();advance();}}
     function narrate(){audioDone=false;const token=++revision;
-        const text=spokenSummary?(index===0?spokenSummary:''):spokenFrameLead(items[index]);
+        const text=completeNarration?items[index]:spokenSummary?(index===0?spokenSummary:''):spokenFrameLead(items[index]);
         if(!voice || !text){audioDone=true;advance();return;}
         voice.speak(text,{onComplete(){if(token!==revision || cancelled)return;audioDone=true;advance();},onState(state){if(token!==revision || cancelled)return;if(state.paused)pauseText();else if(state.playing && paused && !interrupted)resumeText();},onInterrupt(){if(token!==revision || cancelled)return;interrupted=true;pauseText();},onReplay:replay});
     }

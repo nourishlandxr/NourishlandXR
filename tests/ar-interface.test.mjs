@@ -1439,7 +1439,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.doesNotMatch(source, /Show the centre aim|Name your Plant/);
     assert.match(styles, /\.tryit-guided-choice h2 \{ color: #fff !important;/);
     assert.match(source, /createDemoVoiceTextFlow/);
-    assert.match(source, /createDemoVoiceTextFlow\(\{cueForParagraph:demoZinniaCue,paragraphs:\[fullText\]/);
+    assert.match(source, /createDemoVoiceTextFlow\(\{completeNarration:true,cueForParagraph:demoZinniaCue,paragraphs:\[fullText\]/);
     assert.match(styles, /\.tryit-guided-choice\.is-typing p\.is-current::after/);
     assert.match(source, /record\.tutorialStage === demoStage/);
     assert.match(source, /record\.awaitingProfileReveal = true;[\s\S]*pointer\?\.setAttribute\('hidden', ''\);[\s\S]*pointer\?\.classList\.remove\('is-revealing', 'is-ready'\)/);
