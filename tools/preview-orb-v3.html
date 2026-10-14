@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Orb V3 · optional study</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#e9edde;color:#354a3a;font:15px system-ui}main{max-width:920px;margin:auto;padding:22px}h1{font-size:23px;font-weight:500;margin:0 0 8px}p{line-height:1.5}nav{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:20px 0}label{display:flex;align-items:center;gap:7px}select{font:inherit;padding:9px;border:1px solid #9bab97;border-radius:5px;background:#f5f6ed;color:inherit}input[type=checkbox]{width:20px;height:20px}canvas{width:100%;height:460px;display:block;background:radial-gradient(ellipse,#eff1e6,#ccd6c5);touch-action:none}small{color:#596e5c}footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:15px}#errors{color:#9a3028}
+</style></head><body><main>
+<h1>Orb V3 · organic cells</h1><small id="version"></small>
+<p>The circular shell opens just enough to glimpse its core. Drag to rotate and compare with the current Living sphere.</p>
+<nav><label>Orb <select id="model" aria-label="Orb style"><option value="v3">Orb V3 · test</option><option value="living">Living sphere · current</option></select></label><label><input type="checkbox" id="open">Open core</label><label>Graphics <select id="quality" aria-label="Graphics quality"><option value="low">Low</option><option value="medium" selected>Medium</option><option value="high">High</option></select></label></nav>
+<canvas id="orb" aria-label="Optional organic Plant Orb, drag to rotate" tabindex="0"></canvas>
+<footer><span id="state" role="status">Closed · fitted shell</span><span>Production WebGL renderer · local test</span></footer><p id="errors" role="alert"></p>
+<script type="module">
+import {createSpatialSphereRenderer,drawSpatialOrb,destroySpatialSphereRenderer} from '../app/services/spatialSphereRenderer.js';
+import {setSpatialVisualSettings} from '../app/services/spatialVisualSettings.js';
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+document.getElementById('version').textContent='V'+BUILD_INFO.version+' · optional preview';
+const canvas=document.getElementById('orb'),style=document.getElementById('model'),open=document.getElementById('open'),quality=document.getElementById('quality');
+const identity=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
+const key={},position={x:0,y:0,z:0};let renderer,gl,yaw=.35,drag=null,disposed=false;
+function caption(){document.getElementById('state').textContent=(open.checked?'Open · small core glimpse':'Closed · fitted shell')+' · '+(style.value==='v3'?'18 unequal rounded cells':'12 matching cells');}
+style.onchange=caption;open.onchange=caption;quality.onchange=()=>setSpatialVisualSettings({graphicsQuality:quality.value});
+canvas.onpointerdown=event=>{drag=event.clientX;canvas.setPointerCapture(event.pointerId);};canvas.onpointermove=event=>{if(drag!==null){yaw+=(event.clientX-drag)*.008;drag=event.clientX;}};canvas.onpointerup=canvas.onpointercancel=()=>{drag=null;};
+canvas.onkeydown=event=>{if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();yaw+=event.key==='ArrowLeft'?-.12:.12;}};
+try{
+gl=canvas.getContext('webgl2',{antialias:true,alpha:true}) || canvas.getContext('webgl',{antialias:true,alpha:true});if(!gl)throw Error('WebGL unavailable');
+renderer=createSpatialSphereRenderer(gl);setSpatialVisualSettings({graphicsQuality:quality.value});caption();
+function frame(time){if(disposed)return;try{
+const rect=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio,1.5),width=Math.round(rect.width*ratio),height=Math.round(rect.height*ratio);if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;}
+const aspect=canvas.width/canvas.height,f=1/Math.tan(.57/2),near=.05,far=20,inverse=new Float32Array(identity);inverse[14]=-3;
+const view={projectionMatrix:new Float32Array([f/aspect,0,0,0,0,f,0,0,0,0,(far+near)/(near-far),-1,0,0,2*far*near/(near-far),0]),transform:{inverse:{matrix:inverse}}};
+gl.viewport(0,0,canvas.width,canvas.height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+drawSpatialOrb(gl,renderer,view,position,.58,{type:'plant',model:style.value,pimoOpen:open.checked,animationKey:key,rotationY:yaw,time:time/1000});
+canvas.dataset.gl=String(gl.getError());canvas.dataset.opening=String(renderer.livingStates.get(key)?.opening || 0);canvas.dataset.model=style.value;canvas.dataset.buffers=Object.keys(renderer.modelBuffers).filter(key=>key.startsWith('v3:')).join(',');
+requestAnimationFrame(frame);
+}catch(error){document.getElementById('errors').textContent=error.message;console.error(error);}}
+requestAnimationFrame(frame);
+}catch(error){document.getElementById('errors').textContent=error.message;console.error(error);}
+window.addEventListener('pagehide',()=>{disposed=true;destroySpatialSphereRenderer(gl,renderer);},{once:true});
+</script></main></body></html>

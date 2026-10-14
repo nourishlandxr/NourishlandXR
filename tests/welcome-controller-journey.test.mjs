@@ -52,7 +52,7 @@ test('real controller poses start with skins only, extend lasers, select Zinnia,
         stage.start(viewer,0);tick(.1);assert.equal(stage.controllerLasersVisible,false);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().controllerGuide.filter(e=>e.visible && e.tool==='standard').length,2);
         const fruitRequests=()=>requests.filter(url=>/fruits\/|strawberry\.glb|strawberry-packet\.jpg|dragonfly\.glb/.test(url));
         assert.deepEqual(fruitRequests(),[]);
-        stage.previewLesson('controls-trigger');tick(.25);for(const entry of stage.snapshot().controllerGuide.filter(e=>e.visible)){assert.equal(entry.labelScale,1);assert.ok(entry.connectorLength>0 && entry.connectorLength<.5);assert.deepEqual(entry.pose,inputs.find(i=>i.source.handedness===entry.id.split('/')[1]).matrix,'skin uses the current grip pose directly');}inputs[0].trigger=true;tick(.05);inputs[1].trigger=true;tick(.05);
+        stage.previewLesson('controls-trigger');tick(.25);assert.equal(stage.snapshot().controllerGuide.filter(e=>e.labelVisible).length,1,'only the current button gets a balloon');for(const entry of stage.snapshot().controllerGuide.filter(e=>e.labelVisible)){assert.ok(entry.labelScale>0 && entry.labelScale<=1);assert.ok(entry.connectorLength>0 && entry.connectorLength<.5);assert.deepEqual(entry.pose,inputs.find(i=>i.source.handedness===entry.id.split('/')[1]).matrix,'skin uses the current grip pose directly');}inputs[0].trigger=true;tick(.05);inputs[1].trigger=true;tick(.05);
         assert.equal(feedback.filter(f=>f.kind==='step').length,2);assert.equal(stage.snapshot().completed,true);tick(2);assert.equal(stage.phase,'controls-grip');assert.equal(stage.zinniaMount.parent.visible,true);
         stage.previewLesson('laser-intro');tick(.7);assert.ok(stage.controllerLaserProgress>0 && stage.controllerLaserProgress<1);assert.equal(stage.controllerHandsVisible,false);assert.equal(stage.snapshot().settingsAvailable,true);assert.equal(feedback.filter(f=>f.kind==='magic').length,2);
         stage.previewLesson('laser-zinnia');tick(.1);const eye=stage.zinniaMount.getObjectByName('Eye_L_expression'),point=new THREE.Box3().setFromObject(eye).getCenter(new THREE.Vector3()),ray={origin:{x:point.x,y:point.y,z:point.z+.45},direction:{x:0,y:0,z:-1}};
@@ -159,4 +159,28 @@ test('Zinnia leaf dance locks matching hands before the spoken tickle and retrac
  const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}}});
  try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('laser-dance');stage.update(.05,{viewer,floor:0});const guide=stage.zinniaMount.children[0].userData.zinnia.guide,inputs=['left','right'].map((handedness,i)=>{const p=new THREE.Box3().setFromObject(guide.leaf(i?'R':'L')).getCenter(new THREE.Vector3());return {source:{handedness},matrix:new THREE.Matrix4().makeTranslation(p.x,p.y,p.z+.4).elements,ray:{origin:{x:p.x,y:p.y,z:p.z+.4},direction:{x:0,y:0,z:-1}},down:true,trigger:false};});stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.snapshot().leafContacts.length,2);assert.deepEqual(stage.snapshot().leafContacts.map(c=>c.hand),['left','right']);for(let i=0;i<90 && stage.phase==='laser-dance';i++)stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.phase,'laser-zinnia');assert.equal(stage.snapshot().leafContacts.length,0);stage.previewLesson('comfort');for(let i=0;i<10;i++)stage.update(.05,{viewer,floor:0});assert.equal(stage.controllerLasersVisible,false);}
  finally{stage.destroy();}
+}));
+
+test('introduced leaf holding remains available in controllers, virtual hands and tracked hands',()=>withAssets(async()=>{
+ const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);
+  for(const mode of ['controllers','gloves','hands']){
+   stage.previewLesson('comfort');stage.setInputMode(mode);stage.update(.05,{viewer,floor:0});
+   const guide=stage.zinniaMount.children[0].userData.zinnia.guide,p=new THREE.Box3().setFromObject(guide.leaf('R')).getCenter(new THREE.Vector3());
+   const source={handedness:'right',hand:mode==='hands'?{}:null},near=mode!=='controllers',origin=p.clone().add(new THREE.Vector3(0,0,near?0:.4));
+   const input={source,matrix:new THREE.Matrix4().makeTranslation(origin.x,origin.y,origin.z).elements,ray:{origin,direction:new THREE.Vector3(0,0,-1)},down:true,trigger:false};
+   stage.update(.05,{viewer,floor:0,inputs:[input],controllers:source.hand?[]:[input]});
+   assert.equal(stage.snapshot().leafContacts.length,1,mode);assert.equal(stage.isHolding(source),true,mode+' owns its input');
+   input.down=false;stage.update(.05,{viewer,floor:0,inputs:[input]});assert.equal(stage.snapshot().leafContacts.length,0);
+  }
+ }finally{stage.destroy();}
+}));
+
+test('Zinnia keeps the Orb as her focus during its spoken lesson and waves at exit',()=>withAssets(async()=>{
+ let playing=true;const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing,paused:false,muted:false}),speechLevel:()=>.4,unlock(){},speak(){playing=true;},stop(){playing=false;}}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('controls-orb-grab');playing=true;
+  for(let i=0;i<70;i++)stage.update(.03,{viewer,floor:0});
+  const head=stage.zinniaMount.getObjectByName('Head_nod_root').userData.guidePivot;assert.ok(new THREE.Euler().setFromQuaternion(head.quaternion).y<-.1,'gaze follows the Orb to the left during speech');
+  stage.button('skip');for(let i=0;i<25;i++)stage.update(.03,{viewer,floor:0});const guide=stage.zinniaMount.children[0].userData.zinnia.guide;assert.equal(guide.snapshot().gesture,'farewell');assert.ok(guide.leaf('R').userData.guidePivot.quaternion.angleTo(new THREE.Quaternion())>.4);
+ }finally{stage.destroy();}
 }));

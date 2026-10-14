@@ -1,23 +1,36 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {PRACTICE_TABLE_HALF_WIDTH as width,PRACTICE_TABLE_HALF_DEPTH as depth} from './welcomePracticePhysics.js';
-// A single reusable texture, with quiet grain rather than a bright flat surface.
+// Table V2: bevels supply real edge highlights; one bounded wood texture
+// supplies the surface detail in the native Quest renderer as well as Three.
+function roundedOutline(w,d,r){const p=new THREE.Shape(),x=w/2,z=d/2;p.moveTo(-x+r,-z);p.lineTo(x-r,-z);p.quadraticCurveTo(x,-z,x,-z+r);p.lineTo(x,z-r);p.quadraticCurveTo(x,z,x-r,z);p.lineTo(-x+r,z);p.quadraticCurveTo(-x,z,-x,z-r);p.lineTo(-x,-z+r);p.quadraticCurveTo(-x,-z,-x+r,-z);return p;}
+function roundedSlab(shape,height,bevel){return new THREE.ExtrudeGeometry(shape,{depth:height-bevel*2,bevelEnabled:true,bevelSize:bevel,bevelThickness:bevel,bevelSegments:2,steps:1,curveSegments:6});}
 export function createWelcomePracticeTable(root){
- const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;const ctx=canvas.getContext('2d');ctx.fillStyle='#796c56';ctx.fillRect(0,0,1024,512);
- for(let y=0;y<512;y+=2){ctx.strokeStyle=`rgba(91,57,31,${.035+.025*(1+Math.sin(y*.17))})`;ctx.lineWidth=1;ctx.beginPath();for(let x=0;x<=1024;x+=12){const yy=y+2.7*Math.sin(x*.011+y*.063)+.8*Math.sin(x*.04+y);x?ctx.lineTo(x,yy):ctx.moveTo(x,yy);}ctx.stroke();}
- for(const y of [128,256,384]){ctx.fillStyle='rgba(76,48,25,.10)';ctx.fillRect(0,y,1024,1);}
- const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
- const group=new THREE.Group();group.name='Welcome practice table';root.add(group);const top=new THREE.Mesh(new THREE.BoxGeometry(width*2,.035,depth*2),new THREE.MeshStandardMaterial({map:texture,color:'#b2ac97',roughness:.85}));top.position.y=-.0175;group.add(top);
- const material=new THREE.MeshStandardMaterial({color:'#625b49',roughness:.86});
- for(const side of [-1,1]){
-  const edge=new THREE.Mesh(new THREE.BoxGeometry(width*2,.045,.018),material);edge.position.set(0,.0225,side*(depth-.009));group.add(edge);
-  const end=new THREE.Mesh(new THREE.BoxGeometry(.018,.045,depth*2),material);end.position.set(side*(width-.009),.0225,0);group.add(end);
+ const canvas=document.createElement('canvas');canvas.width=1024;canvas.height=512;const ctx=canvas.getContext('2d');
+ ctx.fillStyle='#9b805d';ctx.fillRect(0,0,1024,512);
+ for(let row=0;row<8;row++){
+  ctx.fillStyle=['#a78d67','#aa916d','#9f8662','#af9571'][row%4];ctx.fillRect(0,row*64,1024,64);
+  for(let y=0;y<64;y++){
+   ctx.strokeStyle=y%5===0?'rgba(67,45,23,.15)':'rgba(234,211,165,.12)';ctx.lineWidth=y%5===0 ? .8 : .5;ctx.beginPath();
+   for(let x=0;x<=1024;x+=8){const knot=(x-240-row*67)/90,wave=2.2*Math.sin(x*.009+row*1.7)+1.2*Math.sin(x*.028+y*.13)+4*Math.exp(-knot*knot)*Math.sin(y*.11);const yy=row*64+y+wave;x?ctx.lineTo(x,yy):ctx.moveTo(x,yy);}ctx.stroke();
+  }
+  ctx.fillStyle='rgba(55,38,22,.17)';ctx.fillRect(0,row*64,1024,1);
  }
+ const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=4;
+ const group=new THREE.Group();group.name='Welcome practice table';group.userData.tableVersion=2;root.add(group);
+ const geometry=roundedSlab(roundedOutline(width*2-.012,depth*2-.012,.048),.035,.006);
+ // Explicit top UVs preserve long grain across the full tabletop; extrude's
+ // default world-unit UVs crop a canvas texture on a table under two metres.
+ const uv=geometry.attributes.uv,pos=geometry.attributes.position;for(let i=0;i<uv.count;i++)uv.setXY(i,(pos.getX(i)+width)/(width*2),(pos.getY(i)+depth)/(depth*2));
+ const top=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({map:texture,color:'#ffffff',roughness:.66,metalness:0}));top.name='Table V2 rounded timber top';top.rotation.x=-Math.PI/2;top.position.y=-.029;group.add(top);
+ const material=new THREE.MeshStandardMaterial({color:'#46523c',roughness:.72,metalness:.05});
+ const rimShape=roundedOutline(width*2-.006,depth*2-.006,.051),hole=roundedOutline(width*2-.044,depth*2-.044,.032);rimShape.holes.push(hole);
+ const edge=new THREE.Mesh(roundedSlab(rimShape,.045,.003),material);edge.name='Table V2 continuous rounded retaining rim';edge.rotation.x=-Math.PI/2;edge.position.y=.003;group.add(edge);
  const stand=new THREE.Mesh(new THREE.CylinderGeometry(.045,.075,1,24),material);group.add(stand);
  const foot=new THREE.Mesh(new THREE.CylinderGeometry(.22,.25,.03,32),material);group.add(foot);
  const landing=new THREE.Mesh(new THREE.TorusGeometry(.11,.003,6,40),new THREE.MeshBasicMaterial({color:'#9caa83',transparent:true,opacity:.35,depthWrite:false}));landing.name='Dragonfly landing marker';landing.visible=false;landing.userData.skipArrivalGlow=true;landing.rotation.x=Math.PI/2;landing.position.set(-.43,.005,-.20);group.add(landing);
  const revealMaterials=[top.material,material];
  const grip=new THREE.Group();grip.name='Table height grip';grip.position.set(0,-.018,depth+.035);group.add(grip);
- const handleMaterial=new THREE.MeshStandardMaterial({color:'#a9ac97',roughness:.7,metalness:.15});
+ const handleMaterial=new THREE.MeshStandardMaterial({color:'#b19c6a',roughness:.5,metalness:.25});
  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(-.09,0,-.035),new THREE.Vector3(-.09,0,.025),new THREE.Vector3(-.065,0,.045),new THREE.Vector3(.065,0,.045),new THREE.Vector3(.09,0,.025),new THREE.Vector3(.09,0,-.035)]);
  const handle=new THREE.Mesh(new THREE.TubeGeometry(curve,32,.008,8,false),handleMaterial);handle.name='Rounded table pull handle';grip.add(handle);revealMaterials.push(handleMaterial);
  function setHeight(height){

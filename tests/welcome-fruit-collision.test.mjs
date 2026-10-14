@@ -9,3 +9,9 @@ test('resting fruit separates from plated fruit and coincident fruit centres',()
  const a=fruit('a'),b=fruit('b');a.anchored=true;stepPracticeBodies([a,b],.01);assert.equal(fruitOverlaps(a,a.position,b),false);assert.deepEqual(a.position,{x:0,y:.06,z:0});
  const c=fruit('c'),d=fruit('d');stepPracticeBodies([c,d],.01);assert.equal(fruitOverlaps(c,c.position,d),false);
 });
+
+test('contact preserves upward and sideways movement along a neighbouring fruit',()=>{
+ const a=fruit('a',-.3),b=fruit('b'),next={x:.3,y:.12,z:.03};
+ constrainFruitNeighbours(a,next,a.position,[a,b]);
+ assert.equal(fruitOverlaps(a,next,b),false);assert.ok(next.y>.115);assert.ok(next.z>.025);
+});

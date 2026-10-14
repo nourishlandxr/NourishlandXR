@@ -5,7 +5,8 @@ export const ORB_MODELS = Object.freeze({
     basic:Object.freeze({label:'Basic',latitudeBands:24,longitudeBands:32,roughness:.5,metalness:.03,detail:0}),
     improved:Object.freeze({label:'Improved',latitudeBands:32,longitudeBands:48,roughness:.28,metalness:.08,detail:1}),
     advanced:Object.freeze({label:'Advanced',latitudeBands:32,longitudeBands:48,roughness:.34,metalness:.05,detail:2}),
-    living:Object.freeze({label:'Living sphere',roughness:.72,metalness:0,detail:0})
+    living:Object.freeze({label:'Living sphere',roughness:.72,metalness:0,detail:0}),
+    v3:Object.freeze({label:'Orb V3 · test',roughness:.72,metalness:0,detail:0})
 });
 // Budgets are independent of object style and XR refresh rate.
 export const GRAPHICS_PRESETS=Object.freeze({

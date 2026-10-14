@@ -1,3 +1,4 @@
+import {createOrganicOrbGeometry} from './organicOrbGeometry.js';
 import {createLivingSphereGeometry} from './livingSphereGeometry.js';
 import {ORB_MODELS,GRAPHICS_PRESETS,currentGraphicsQuality,currentGraphicsPreset,currentOrbModel} from './spatialVisualSettings.js';
 import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
@@ -60,6 +61,7 @@ export function createUvSphereGeometry(latitudeBands = 12, longitudeBands = 16) 
 // Each model has its own reusable geometry, with the same interaction centre.
 export function createPlantOrbGeometry(model='improved',quality='medium') {
     if(model==='living')return createLivingSphereGeometry(quality);
+    if(model==='v3')return createOrganicOrbGeometry(quality);
     const budget=GRAPHICS_PRESETS[quality] || GRAPHICS_PRESETS.medium;
     const geometry=createUvSphereGeometry(budget.orbLatitude,budget.orbLongitude);
     if(model!=='advanced')return geometry;
@@ -221,6 +223,15 @@ export function createSpatialSphereRenderer(gl) {
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, geometry.indices, gl.STATIC_DRAW);
 
     const modelBuffers={};
+    function prepareOptionalModel(model,quality){
+        const key=model+':'+quality;if(model!=='v3' || modelBuffers[key])return;
+        const shape=createPlantOrbGeometry(model,quality),vertices=gl.createBuffer(),indices=gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER,vertices);gl.bufferData(gl.ARRAY_BUFFER,shape.vertices,gl.STATIC_DRAW);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,indices);gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,shape.indices,gl.STATIC_DRAW);
+        // Reuse the standard circular rim; this option adds only one shell mesh.
+        const rim=modelBuffers['living:'+quality];
+        modelBuffers[key]={vertexBuffer:vertices,indexBuffer:indices,indexCount:shape.indices.length,stride:10,crownVertexBuffer:rim.crownVertexBuffer,crownIndexBuffer:rim.crownIndexBuffer,crownIndexCount:rim.crownIndexCount,sharedCrown:true};
+    }
     for(const quality of Object.keys(GRAPHICS_PRESETS))for(const model of ['basic','improved','advanced','living']){
         const shape=createPlantOrbGeometry(model,quality),vertices=gl.createBuffer(),indices=gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER,vertices);gl.bufferData(gl.ARRAY_BUFFER,shape.vertices,gl.STATIC_DRAW);
@@ -245,7 +256,7 @@ export function createSpatialSphereRenderer(gl) {
         program,
         livingStates:new WeakMap(),
         cellAxisLocation:gl.getAttribLocation(program,'cellAxis'),cellIdLocation:gl.getAttribLocation(program,'cellId'),cellOpeningLocation:gl.getUniformLocation(program,'cellOpening'),livingShellLocation:gl.getUniformLocation(program,'livingShell'),coreGlowLocation:gl.getUniformLocation(program,'coreGlow'),
-        modelBuffers,
+        modelBuffers,prepareOptionalModel,
         vertexBuffer,
         indexBuffer,
         indexCount: geometry.indices.length,
@@ -271,6 +282,7 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     if(material.billboard && material.rotation){const a=material.rotation,c=Math.cos(a),s=Math.sin(a);for(let row=0;row<3;row++){const x=model[row],y=model[4+row];model[row]=x*c+y*s;model[4+row]=y*c-x*s;}}
     const modelView = multiplyMatrices(viewMatrix, model);
     gl.useProgram(renderer.program);
+    renderer.prepareOptionalModel?.(material.orbModel,currentGraphicsQuality());
     const buffers=renderer.modelBuffers[material.orbModel] || renderer.modelBuffers[material.orbModel+':'+currentGraphicsQuality()] || renderer;
     gl.bindBuffer(gl.ARRAY_BUFFER, material.crown ? buffers.crownVertexBuffer : buffers.vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);
@@ -279,7 +291,7 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     gl.enableVertexAttribArray(renderer.normalLocation);
     gl.vertexAttribPointer(renderer.normalLocation, 3, gl.FLOAT, false, stride*4, 12);
     for(const [location,size,offset] of [[renderer.cellAxisLocation,3,24],[renderer.cellIdLocation,1,36]]){if(stride===10){gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,size,gl.FLOAT,false,40,offset);}else {gl.disableVertexAttribArray(location);if(size===3)gl.vertexAttrib3f(location,0,0,0);else gl.vertexAttrib1f(location,0);}}
-    gl.uniform1f(renderer.cellOpeningLocation,material.opening || 0);gl.uniform1f(renderer.livingShellLocation,material.orbModel==='living'&&!material.crown?1:0);gl.uniform1f(renderer.coreGlowLocation,material.coreGlow || 0);
+    gl.uniform1f(renderer.cellOpeningLocation,material.opening || 0);gl.uniform1f(renderer.livingShellLocation,['living','v3'].includes(material.orbModel)&&!material.crown?1:0);gl.uniform1f(renderer.coreGlowLocation,material.coreGlow || 0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, material.crown ? buffers.crownIndexBuffer : buffers.indexBuffer);
     gl.uniformMatrix4fv(renderer.projectionLocation, false, projectionMatrix);
     gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
@@ -316,13 +328,13 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(true);
 
-    if(plant && model==='living'){
+    if(plant && ['living','v3'].includes(model)){
         const now=options.time ?? performance.now()/1000,key=options.animationKey || position,target=options.pimoOpen===true || options.knowledge?.state==='expanded'?1:0;
         const state=renderer.livingStates.get(key) || {at:now,opening:target};
-        if(state.at!==now){const dt=Math.min(.1,Math.max(0,now-state.at));state.opening+=(target-state.opening)*(1-Math.exp(-dt/ .32));state.at=now;}renderer.livingStates.set(key,state);
+        if(state.at!==now){const dt=Math.min(.1,Math.max(0,now-state.at));state.opening+=(target-state.opening)*(1-Math.exp(-dt/ .32));state.at=now;}if(model==='v3' && Math.abs(target-state.opening)<.001)state.opening=target;renderer.livingStates.set(key,state);
         const soft=authoredColor.map((c,i)=>c*.72+[.88,.87,.80][i]*.28);
         drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.94,{orbModel:'basic',color:authoredColor,alpha:.98,roughness:.8,emissive:.18,rotationY:options.rotationY || 0,coreGlow:.12+state.opening*(.15+.08*(.5+.5*Math.sin(now*2.8))),opacity:options.opacity});
-        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:'living',color:soft,alpha:.98,roughness:.72,emissive:moving?.18:targeted?.12:.04,rotationY:options.rotationY || 0,opening:state.opening,opacity:options.opacity});
+        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:model,color:soft,alpha:.98,roughness:.72,emissive:moving?.18:targeted?.12:.04,rotationY:options.rotationY || 0,opening:state.opening*(model==='v3'?.72:1),opacity:options.opacity});
         gl.enable(gl.CULL_FACE);return;
     }
 
@@ -391,7 +403,7 @@ export function destroySpatialSphereRenderer(gl, renderer) {
     gl.deleteBuffer(renderer.indexBuffer);
     gl.deleteBuffer(renderer.crownVertexBuffer);
     gl.deleteBuffer(renderer.crownIndexBuffer);
-    for(const buffers of Object.values(renderer.modelBuffers || {})){gl.deleteBuffer(buffers.vertexBuffer);gl.deleteBuffer(buffers.indexBuffer);if(buffers.crownVertexBuffer)gl.deleteBuffer(buffers.crownVertexBuffer);if(buffers.crownIndexBuffer)gl.deleteBuffer(buffers.crownIndexBuffer);}
+    for(const buffers of Object.values(renderer.modelBuffers || {})){gl.deleteBuffer(buffers.vertexBuffer);gl.deleteBuffer(buffers.indexBuffer);if(!buffers.sharedCrown && buffers.crownVertexBuffer)gl.deleteBuffer(buffers.crownVertexBuffer);if(!buffers.sharedCrown && buffers.crownIndexBuffer)gl.deleteBuffer(buffers.crownIndexBuffer);}
     gl.deleteProgram(renderer.program);
 }
 

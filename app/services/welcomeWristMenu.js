@@ -1,4 +1,5 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
+import {WRIST_ICON_CANDIDATE} from './welcomeIconCandidate.js';
 
 export function wristButtonAt(items,x,y){
     return items.find(item=>{
@@ -22,6 +23,12 @@ export function welcomeWristPose(matrix,context,forearmDirection=null){
 
 // Vector icons remain crisp in the XR canvas and do not depend on emoji fonts.
 export function drawWristIcon(ctx,id,x,y,size){
+    const artwork=WRIST_ICON_CANDIDATE[id];
+    if(artwork && typeof Path2D!=='undefined'){
+        ctx.save();ctx.translate(x-size/2,y-size/2);ctx.scale(size/24,size/24);
+        ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=2;ctx.lineCap=ctx.lineJoin='round';
+        ctx.stroke(new Path2D(artwork.path));ctx.restore();return;
+    }
     ctx.save();ctx.translate(x,y);ctx.scale(size/2,size/2);ctx.lineWidth=.12;ctx.lineCap=ctx.lineJoin='round';ctx.strokeStyle=ctx.fillStyle;ctx.beginPath();
     const line=(a,b,c,d)=>{ctx.moveTo(a,b);ctx.lineTo(c,d);};
     const circle=(x,y,r,fill=false)=>{ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,Math.PI*2);if(fill)ctx.fill();};

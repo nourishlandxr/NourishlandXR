@@ -233,6 +233,7 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         ...frameControls(446),
 
         ...(performanceSettings?[...rateControls,choice('ShowFps',performanceSettings.showFps?'On':'Off','fps','FPS / CPU readout',620,540,404)]:[]),
+        {...choice('OrbModel',ORB_MODELS[orbModel]?.label || 'Living sphere','orb-model','Plant Orb',690,56,888),height:46},
         choice('SettingsHelp','Help','help','',746,56,888),close];
     return [
         slider('InfoOpacity','info-opacity','Main / Control glass',infoOpacity,0,1,.01,104),

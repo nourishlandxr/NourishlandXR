@@ -1,0 +1,41 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zinnia · live demo render check</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#e9edde;color:#354a3a;font:15px system-ui}main{max-width:1050px;margin:auto;padding:20px}h1{font-size:22px;font-weight:500;margin:0 0 8px}nav{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:18px 0}button{width:44px;height:44px;border:1px solid #9bab97;border-radius:50%;background:#f6f7ee;color:#354a3a;font-size:21px;cursor:pointer}select{font:inherit;padding:10px;border:1px solid #9bab97;border-radius:5px;background:#f6f7ee;color:inherit}label{display:flex;gap:8px;align-items:center}input{max-width:160px}canvas{width:100%;height:520px;display:block;background:radial-gradient(ellipse,#e4e9dc,#b6c6ad);touch-action:none}p{line-height:1.5}small{color:#596e5c}output{display:block;margin:14px 0;font-variant-numeric:tabular-nums}#error{color:#94372b}</style></head><body><main>
+<h1>Zinnia · actual demo audio and native renderer</h1><small id="version"></small>
+<nav><button id="play" aria-label="Play recorded demo narration" title="Play recorded demo narration">▶</button><button id="pause" aria-label="Pause narration" title="Pause narration">Ⅱ</button><button id="replay" aria-label="Replay narration" title="Replay narration">↻</button><label>View <select id="view" aria-label="Camera view"><option value="close">Zinnia and branch joint</option><option value="frame">Whole Living Frame</option></select></label><label>Frame <select id="detail" aria-label="Living Frame detail"><option value="sd">SD</option><option value="hd">HD</option></select></label><label>Viewer <input type="range" id="viewer" aria-label="Viewer position" min="-.8" max=".8" step=".05" value="0"></label><label>Frame height <input type="range" id="height" aria-label="Frame height" min="-.3" max=".3" step=".05" value="0"></label></nav>
+<canvas id="scene" aria-label="Animated Zinnia on the demo porch; select her for a reaction"></canvas>
+<output id="state" role="status">Loading the real frame and character…</output><p id="copy"></p><small>Saved demo recording → measured audio level → character morphs → native WebGL. Select Zinnia to check reactions.</small><p id="error" role="alert"></p>
+<script type="module">
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createLivingFrameModel} from '../app/services/livingFrameModel.js';
+import {createZinniaFramePerch} from '../app/services/zinniaFramePerch.js';
+import {createProjectNarration} from '../app/services/projectNarration.js';
+import {createDemoVoiceTextFlow} from '../app/services/demoVoiceTextFlow.js';
+import {DEMO_NARRATION_BANK} from '../app/services/demoNarrationBank.js';
+import {setSpatialVisualSettings} from '../app/services/spatialVisualSettings.js';
+import {setWelcomeNarrationSettings} from '../app/services/welcomePracticeVoice.js';
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+const canvas=document.getElementById('scene'),error=document.getElementById('error'),state=document.getElementById('state');
+document.getElementById('version').textContent='V'+BUILD_INFO.version+' · local integration check';
+const gl=canvas.getContext('webgl2',{alpha:true,antialias:true}),camera=new THREE.PerspectiveCamera(45,1,.02,20);
+const voice=createProjectNarration({demo:true,isVisible:()=>!document.hidden}),perch=createZinniaFramePerch({getVoice:()=>voice}),frame=createLivingFrameModel();
+let flow=null,disposed=false,lastLabel='',maxMouth=0,maxAudio=0;const frameMatrix=new THREE.Matrix4(),lastView={};
+const text=Object.values(DEMO_NARRATION_BANK.catalog)[0].text;document.getElementById('copy').textContent=text;
+setSpatialVisualSettings({livingFrameQuality:'sd'});frame.setContext(gl);void frame.select('sd');perch.attach(gl);perch.show(performance.now(),{immediate:true});
+function play(){voice.unlock();setWelcomeNarrationSettings({enabled:true});flow?.cancel();maxMouth=maxAudio=0;flow=createDemoVoiceTextFlow({paragraphs:[text],voice,isReady:()=>frame.ready && perch.presentationReady,cueForParagraph:()=>({intent:'explain'}),onChange:event=>document.getElementById('copy').textContent=event.paragraph});flow.start();}
+document.getElementById('play').onclick=play;document.getElementById('replay').onclick=play;document.getElementById('pause').onclick=()=>{if(voice.status().paused){flow?.resume();}else flow?.pause();};document.getElementById('detail').onchange=event=>setSpatialVisualSettings({livingFrameQuality:event.target.value});
+canvas.onpointerup=event=>{const rect=canvas.getBoundingClientRect(),point=new THREE.Vector3((event.clientX-rect.left)/rect.width*2-1,1-(event.clientY-rect.top)/rect.height*2,.5).unproject(camera),ray={origin:camera.position,direction:point.sub(camera.position).normalize()},hit=perch.hit(ray,frameMatrix.elements);if(hit)perch.react(hit);};
+function draw(time){if(disposed)return;try{
+const rect=canvas.getBoundingClientRect(),ratio=Math.min(devicePixelRatio,1.5),width=Math.round(rect.width*ratio),height=Math.round(rect.height*ratio);if(canvas.width!==width || canvas.height!==height){canvas.width=width;canvas.height=height;camera.aspect=width/height;camera.updateProjectionMatrix();}
+const x=Number(document.getElementById('viewer').value),y=Number(document.getElementById('height').value),close=document.getElementById('view').value==='close';
+camera.position.set((close?1.15:.2)+x,close?.18:.1,close?1.4:3.8);camera.lookAt(close?.87:.2,close?-.01:0,close?.22:0);camera.updateMatrixWorld();
+frameMatrix.makeTranslation(0,y,0);const view={projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}};Object.assign(lastView,view);
+gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.viewport(0,0,width,height);gl.clearColor(0,0,0,0);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+frame.update(650000,{show:true,reduced:true,frameToken:time});frame.drawXR(view,frameMatrix.elements);perch.matchRim(frame.scene);perch.draw(view,frameMatrix.elements,time,[],camera.matrixWorld.elements);
+const snapshot=perch.snapshot(),animation=snapshot.animation || {};maxMouth=Math.max(maxMouth,animation.mouthOpen || 0);maxAudio=Math.max(maxAudio,snapshot.voice.speechLevel || 0);
+canvas.dataset.zinnia=JSON.stringify({...snapshot,maxMouth,maxAudio,gl:gl.getError()});canvas.dataset.frameReady=String(frame.ready);
+const label=(snapshot.ready?'Ready':'Loading')+' · '+(snapshot.voice.audible?'Recorded audio playing':snapshot.voice.paused?'Paused':'Idle')+' · mouth '+(animation.mouthOpen || 0).toFixed(2)+' · audio '+(snapshot.voice.speechLevel || 0).toFixed(2)+' · '+(snapshot.reaction || 'no touch');if(label!==lastLabel){lastLabel=label;state.textContent=label;}
+document.getElementById('pause').textContent=voice.status().paused?'▶':'Ⅱ';document.getElementById('pause').ariaLabel=voice.status().paused?'Resume narration':'Pause narration';
+requestAnimationFrame(draw);
+}catch(cause){error.textContent=cause.message;console.error(cause);}}
+requestAnimationFrame(draw);window.addEventListener('pagehide',()=>{disposed=true;flow?.cancel();voice.destroy();perch.destroy();frame.destroy();},{once:true});
+</script></main></body></html>

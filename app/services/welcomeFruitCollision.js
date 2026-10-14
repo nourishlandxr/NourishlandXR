@@ -6,12 +6,22 @@ export function fruitExtents(body){
         z:Math.abs(2*(x*z-y*w))*h.x+Math.abs(2*(y*z+x*w))*h.y+Math.abs(1-2*(x*x+y*y))*h.z};
 }
 export function constrainFruitNeighbours(body,next,old,fruits){
-    const h=fruitExtents(body),delta={x:next.x-old.x,y:next.y-old.y,z:next.z-old.z};let earliest=1;
-    for(const other of fruits){if(other===body || !other.visible || other.plantAttached)continue;const k=fruitExtents(other);let enter=0,exit=1,inside=true;
-        for(const axis of ['x','y','z']){const r=h[axis]+k[axis]+.004,o=old[axis]-other.position[axis],d=delta[axis];inside &&= Math.abs(o)<r;if(Math.abs(d)<1e-8){if(Math.abs(o)>=r){exit=-1;break;}}else {const a=(-r-o)/d,b=(r-o)/d;enter=Math.max(enter,Math.min(a,b));exit=Math.min(exit,Math.max(a,b));}}
-        if(!inside && enter<=exit && exit>=0 && enter>=0 && enter<earliest)earliest=Math.max(0,enter-.002);
+    const h=fruitExtents(body),position={...old},remaining={x:next.x-old.x,y:next.y-old.y,z:next.z-old.z};
+    // Sweep to the first surface, then preserve tangential motion. A contact
+    // must never freeze the vertical lift needed to remove fruit from a pile.
+    for(let pass=0;pass<3;pass++){
+        let earliest=1,normal=null;
+        for(const other of fruits){if(other===body || !other.visible || other.plantAttached)continue;
+            const k=fruitExtents(other);let enter=0,exit=1,inside=true,axisHit=null;
+            for(const axis of ['x','y','z']){const r=h[axis]+k[axis]+.004,o=position[axis]-other.position[axis],d=remaining[axis];inside &&= Math.abs(o)<r;
+                if(Math.abs(d)<1e-8){if(Math.abs(o)>=r){exit=-1;break;}}
+                else {const a=(-r-o)/d,b=(r-o)/d,near=Math.min(a,b);if(near>enter){enter=near;axisHit=axis;}exit=Math.min(exit,Math.max(a,b));}}
+            if(!inside && axisHit && enter<=exit && exit>=0 && enter>=0 && enter<earliest){earliest=Math.max(0,enter-.002);normal=axisHit;}
+        }
+        for(const axis of ['x','y','z']){position[axis]+=remaining[axis]*earliest;remaining[axis]*=1-earliest;}
+        if(!normal)break;remaining[normal]=0;
     }
-    if(earliest<1)for(const axis of ['x','y','z'])next[axis]=old[axis]+delta[axis]*earliest;
+    Object.assign(next,position);
     return next;
 }
 export function fruitOverlaps(body,position,other){

@@ -77,7 +77,7 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
     const frontTrigger=mesh(new THREE.ExtrudeGeometry(paddleShape,{depth:.0035,bevelEnabled:true,bevelSize:.0015,bevelThickness:.0015,bevelSegments:3,curveSegments:12}),gripMaterial,'Curved index trigger paddle',triggerPivot);frontTrigger.rotation.x=.24;
     const triggerCollar=oval('Trigger hinge housing',shell,[0,.007,-.031],[.017,.007,.009]);
     const grip=oval('Side squeeze paddle',gripMaterial,[-handed*.024,-.049,.002],[.004,.020,.014]);
-    const stick=new THREE.Group();stick.name='Thumbstick';stick.position.set(-handed*.015,.008,-.019);thumbCluster.add(stick);
+    const stick=new THREE.Group();stick.name='Thumbstick';stick.position.set(handed*.015,.008,-.019);thumbCluster.add(stick);
     const stickBase=mesh(new THREE.CylinderGeometry(.011,.012,.002,24),trim,'Thumbstick collar',stick);
     const stem=mesh(new THREE.CylinderGeometry(.005,.005,.008,16),gripMaterial,'Thumbstick stem',stick);stem.position.y=.004;
     oval('Thumbstick cap',accent,[0,.010,0],[.011,.003,.011],stick);
@@ -91,8 +91,8 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
         const label=new THREE.MeshBasicMaterial({map,transparent:true,depthWrite:false,side:THREE.DoubleSide});materials.add(label);
         const face=mesh(new THREE.PlaneGeometry(r*1.55,r*1.55),label,'Button label',node);face.rotation.x=-Math.PI/2;face.position.y=.0053;buttons.push(node);
     }
-    button(hand==='left'?'Y':'B',handed*.015,-.024,.008);
-    button(hand==='left'?'X':'A',handed*.023,-.004,.008);
+    button(hand==='left'?'Y':'B',-handed*.015,-.024,.008);
+    button(hand==='left'?'X':'A',-handed*.023,-.004,.008);
     button('∞',handed*.003,.017,.006);
     const crystalMaterial=material('#4387a9',.25,.18);crystalMaterial.emissive.set('#408ab9');
     const jewel=mesh(new THREE.OctahedronGeometry(.012,0),crystalMaterial,'Flight crystal');jewel.position.set(0,.029,-.087);jewel.scale.set(.67,.8,1.5);

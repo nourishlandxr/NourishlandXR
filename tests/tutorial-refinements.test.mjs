@@ -73,7 +73,7 @@ test('cold favourite fruit loads into Zinnia hand and survives until actual repl
  for(let i=0;i<200 && !stage.scene.getObjectByName('Zinnia favourite micro-fruit: apple');i++)await new Promise(resolve=>setTimeout(resolve,5));
  const fruit=stage.scene.getObjectByName('Zinnia favourite micro-fruit: apple');assert.ok(fruit,'cold asset must be awaited instead of skipped');assert.ok(stage.conversation.state().processing);
  playing=false;for(let i=0;i<10;i++)stage.update(.05,{viewer,floor:0,presentationReady:false});await Promise.resolve();assert.equal(stage.conversation.state().phase,'fruit','narration waits for the rendered reveal');
- stage.update(.05,{viewer,floor:0,presentationReady:true});await Promise.resolve();await Promise.resolve();assert.equal(stage.conversation.state().phase,'complete');assert.equal(fruit.parent.name,'Zinnia micro-fruit hand socket L');assert.equal(playing,true);assert.ok(stage.scene.getObjectByName(fruit.name),'speaking must not hide the fruit at audio start');
+ stage.update(.05,{viewer,floor:0,presentationReady:true});await Promise.resolve();await Promise.resolve();assert.equal(stage.conversation.state().phase,'complete');assert.equal(fruit.parent.name,'Zinnia centred two-leaf fruit cradle');assert.equal(playing,true);assert.ok(stage.scene.getObjectByName(fruit.name),'speaking must not hide the fruit at audio start');
  }finally{playing=false;stage.destroy();}
 }));
 test('wrapped headings reserve their full height and authored paragraphs never scroll away',()=>{

@@ -1,11 +1,12 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} from './zinniaCharacter.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
+import {playZinniaGiggle,unlockZinniaTouchAudio} from './zinniaTouchReactions.js';
 import {zinniaVoiceState,zinniaSpeechLevel,zinniaCharacterCue} from './zinniaVoiceCoordinator.js';
 
 // Kept inside the frame silhouette. Totems occupy the space beside the frame.
 // Keep the branch root close to the lower-right edge of the native rim. The
-// branch begins at local (+.10,-.12), so this anchor puts that joint just
+// branch begins at local (-.055,-.10), so this anchor puts that joint just
 // inside the rim volume while the perch itself stays in front of the frame.
 export const ZINNIA_FRAME_PERCH=Object.freeze({x:.91,y:-.18,z:.32,width:.19,depth:.16});
 export function createZinniaFramePerch({character:initialCharacter=null,getVoice=()=>null}={}){
@@ -16,12 +17,12 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
     // reused on tubes: its unused white regions would bleach the branch.
     const wood=new THREE.MeshStandardMaterial({color:'#4c3320',roughness:.92});
     const branch=(points,radius)=>{const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const mesh=new THREE.Mesh(new THREE.TubeGeometry(curve,14,radius,8,false),wood);home.add(mesh);};
-    branch([[.10,-.12,-.16],[.12,-.07,-.20],[.065,-.028,-.08],[0,-.018,.015],[-.095,-.025,.025]],.021);
-    branch([[.10,-.12,-.16],[.11,-.065,-.10],[.045,-.024,-.055],[-.055,-.018,-.045],[-.10,-.028,-.02]],.013);
+    branch([[-.055,-.10,-.24],[.12,-.07,-.20],[.065,-.028,-.08],[0,-.018,.015],[-.095,-.025,.025]],.021);
+    branch([[-.055,-.10,-.24],[.11,-.065,-.10],[.045,-.024,-.055],[-.055,-.018,-.045],[-.10,-.028,-.02]],.013);
     const characterMount=new THREE.Group();characterMount.name='Authored Zinnia return mount';home.add(characterMount);
     let character=initialCharacter || createZinniaCharacter();character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);
-    let glContext=null,renderer=null,started=null,disposed=false,lastFrame=null,instant=false,rimMaterialId=null,presentationDrawnAt=null,hitBounds=null;
-    function watchCharacter(value){void value.userData.zinnia.ready.then(ready=>{if(!ready || disposed || character!==value)return;presentationDrawnAt=null;hitBounds=null;renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true}):null;});}
+    let glContext=null,renderer=null,started=null,disposed=false,lastFrame=null,instant=false,rimMaterialId=null,presentationDrawnAt=null,hitBounds=null,lastVoice={};
+    function watchCharacter(value){void value.userData.zinnia.ready.then(ready=>{if(!ready || disposed || character!==value)return;presentationDrawnAt=null;hitBounds=null;renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true,welcomeMagic:true}):null;});}
     watchCharacter(character);
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}};
     function update(view,matrix,time=performance.now(),inputs=[]){
@@ -33,9 +34,19 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         const sharedActive=Boolean(shared.playing || shared.paused || shared.listening);
         const voice=sharedActive?shared:(directState || shared),cue=zinniaCharacterCue();
         const speechLevel=voice.paused?0:Math.max(sharedActive?zinniaSpeechLevel():0,direct?.speechLevel?.() || 0);
+        lastVoice={playing:Boolean(voice.playing),audible:voice.audible ?? speechLevel>.002,paused:Boolean(voice.paused),listening:Boolean(voice.listening),speechLevel};
         animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
     }
-    return {scene,root,characterMount,update,get presentationReady(){return character.userData.zinnia?.status==='ready' && presentationDrawnAt!==null && performance.now()-presentationDrawnAt>=300;},
+    return {scene,root,characterMount,update,
+        snapshot:()=>({voice:{...lastVoice},animation:character.userData.zinnia?.guide?.snapshot(),reaction:character.userData.zinnia?.touch?.snapshot().reaction,ready:character.userData.zinnia?.status==='ready'}),
+        react(hit){
+            if(disposed || character.userData.zinnia?.status!=='ready' || !hit?.worldPoint)return false;
+            unlockZinniaTouchAudio();character.updateWorldMatrix(true,false);
+            const point=character.worldToLocal(new THREE.Vector3().copy(hit.worldPoint)),kind=point.y>.43?'pat':'tickle';
+            character.userData.zinnia.touch.react(kind);character.userData.zinnia.guide.acknowledge('yes');
+            if(kind==='tickle' && !lastVoice.playing && !lastVoice.audible)playZinniaGiggle();
+            return true;
+        },get presentationReady(){return character.userData.zinnia?.status==='ready' && presentationDrawnAt!==null && performance.now()-presentationDrawnAt>=300;},
         hit(ray,matrix){
             if(disposed || started===null || !renderer || !ray?.origin || !ray.direction)return null;
             if(matrix){root.matrix.fromArray(matrix);root.updateWorldMatrix(true,false);}
@@ -52,9 +63,9 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
             const point=localPoint.applyMatrix4(root.matrixWorld),distance=point.distanceTo(new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z));
             return {kind:'zinnia',id:'zinnia',distance,point,worldPoint:point};
         },
-        matchRim(frameScene){let material=null;frameScene?.traverse(node=>{for(const candidate of [node.material].flat().filter(Boolean))if(candidate.name==='Brown lower soil')material ||= candidate;});if(!material || material.uuid===rimMaterialId)return;rimMaterialId=material.uuid;wood.copy(material);wood.map=null;wood.color.set('#4c3320');wood.name='Living Frame branch';renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true}):null;},
+        matchRim(frameScene){let material=null;frameScene?.traverse(node=>{for(const candidate of [node.material].flat().filter(Boolean))if(candidate.name==='Brown lower soil')material ||= candidate;});if(!material || material.uuid===rimMaterialId)return;rimMaterialId=material.uuid;wood.copy(material);wood.map=null;wood.color.set('#4c3320');wood.name='Living Frame branch';renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true,welcomeMagic:true}):null;},
         adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;hitBounds=null;character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
-        attach(gl){glContext=gl;presentationDrawnAt=null;renderer?.destroy();renderer=createFruitWindowXR(gl,scene,{alphaCompositing:true});},
+        attach(gl){glContext=gl;presentationDrawnAt=null;renderer?.destroy();renderer=createFruitWindowXR(gl,scene,{alphaCompositing:true,welcomeMagic:true});},
         show(time=performance.now(),{immediate=false}={}){started=time;instant=immediate;presentationDrawnAt=null;},
         draw(view,matrix,time=performance.now(),inputs=[],viewer=null){
             if(disposed || started===null || !renderer)return;

@@ -107,3 +107,33 @@ test('bundled Zinnia batches every petal and separates the saucer while keeping 
  const targetWorld=new THREE.Vector3(.7,.4,.3);for(let i=0;i<90;i++)animateZinniaCharacter(root,i*.03,false,{targetWorld});const state=root.userData.zinnia.guide.snapshot();assert.ok(Math.abs(state.bodyYaw)>.03);assert.ok(Math.abs(state.bodyLean)>.02);
  }finally{disposeZinniaCharacter(root);}
 });
+
+test('centred fruit cradle stays clear of both leaves and both hands support it',async()=>{
+ const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
+ const root=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await root.userData.zinnia.ready;
+ const guide=root.userData.zinnia.guide;guide.presentFruit();
+ try{
+  const viewer=new THREE.Matrix4().makeTranslation(0,.42,1).elements;
+  for(let i=0;i<120;i++)animateZinniaCharacter(root,i*.03,false,{viewer,contacts:[]});root.updateMatrixWorld(true);
+  const socket=guide.fruitSocket(),fruit=socket.getWorldPosition(new THREE.Vector3());
+  assert.equal(socket,guide.fruitSocket('L'));assert.equal(socket,guide.fruitSocket('R'));assert.equal(socket.parent,root);
+  const leaves=['L','R'].map(side=>new THREE.Box3().setFromObject(guide.leaf(side))),centres=leaves.map(box=>box.getCenter(new THREE.Vector3()));
+  assert.ok(centres[0].x<fruit.x && centres[1].x>fruit.x,'leaves flank the fruit');
+  for(let i=0;i<2;i++){assert.ok(centres[i].y<fruit.y-.04);assert.ok(leaves[i].max.y<fruit.y-.025,'most of the 8.5 cm fruit clears the leaves');assert.ok(centres[i].distanceTo(fruit)<.13);}
+  guide.releaseFruit();assert.equal(guide.snapshot().presentingFruit,false);
+ }finally{disposeZinniaCharacter(root);}
+});
+
+test('greeting and farewell wave once, freeze on pause and return to rest',async()=>{
+ const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
+ const root=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await root.userData.zinnia.ready;
+ let time=0;const guide=root.userData.zinnia.guide,viewer=new THREE.Matrix4().makeTranslation(0,.42,1).elements;
+ try{for(const intent of ['greet','farewell']){
+  const cue={id:intent,intent};for(let i=0;i<30;i++)animateZinniaCharacter(root,time+=.03,false,{cue,viewer,contacts:[]});
+  assert.equal(guide.snapshot().gesture,intent);const right=guide.leaf('R').userData.guidePivot,left=guide.leaf('L').userData.guidePivot;
+  assert.ok(right.quaternion.angleTo(new THREE.Quaternion())>.5);if(intent==='farewell')assert.ok(left.quaternion.angleTo(new THREE.Quaternion())>.5);
+  const pose=right.quaternion.clone(),age=guide.snapshot().gestureAge;for(let i=0;i<10;i++)animateZinniaCharacter(root,time+=.03,false,{cue,viewer,paused:true,contacts:[]});
+  assert.equal(guide.snapshot().gestureAge,age);assert.ok(right.quaternion.angleTo(pose)<.000001);
+  for(let i=0;i<170;i++)animateZinniaCharacter(root,time+=.03,false,{cue,viewer,contacts:[]});assert.equal(guide.snapshot().gesture,null);assert.ok(right.quaternion.angleTo(new THREE.Quaternion())<.01);
+ }}finally{disposeZinniaCharacter(root);}
+});

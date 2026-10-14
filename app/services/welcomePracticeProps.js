@@ -28,14 +28,14 @@ export function createWelcomePracticeProps(root,fruits,{onCollect=()=>{}}={}){
     function constrainBasket(body,next,old=body.position){
         if(body.plantAttached || !fruits.includes(body))return next;
         body.basketContact=false;constrainFruitNeighbours(body,next,old,body.held?fruits.filter(other=>other.held || other.anchored):fruits);if(!basket.visible)return next;
-        const h=fruitExtents(body),r=Math.hypot(h.x,h.z),low=Math.min(old.y,next.y)-h.y,high=Math.max(old.y,next.y)+h.y;
+        const h=fruitExtents(body),r=Math.max(h.x,h.z),low=Math.min(old.y,next.y)-h.y,high=Math.max(old.y,next.y)+h.y;
         const distance=Math.hypot(next.x-basket.position.x,next.z-basket.position.z);if(old.y-h.y>=.10 && next.y-h.y<.105 && distance+r>.213 && distance-r<.23){next.y=.105+h.y;body.basketContact=true;return next;}
         if(low>.10 || high<0)return next;
         const ox=old.x-basket.position.x,oz=old.z-basket.position.z,inside=Math.hypot(ox,oz)<.225;
         const dx=next.x-old.x,dz=next.z-old.z,radial=Math.hypot(ox,oz),support=radial>1e-6?(Math.abs(ox)*h.x+Math.abs(oz)*h.z)/radial:Math.max(h.x,h.z),inner=-support+Math.sqrt(support*support+.217*.217-h.x*h.x-h.z*h.z),limit=inside?Math.max(.025,inner):.231+r;
         if(next.y-h.y>.105 && next.y>=old.y && Math.hypot(dx,dz)<.003)return next;
         const a=dx*dx+dz*dz,b=2*(ox*dx+oz*dz),c=ox*ox+oz*oz-limit*limit,disc=b*b-4*a*c;
-        if(a>.000001 && disc>=0){const t=(-b+(inside?1:-1)*Math.sqrt(disc))/(2*a);if(t>=0 && t<=1){next.x=old.x+dx*Math.max(0,t-.001);next.z=old.z+dz*Math.max(0,t-.001);body.basketContact=true;}}
+        if(a>.000001 && disc>=0){const t=(-b+(inside?1:-1)*Math.sqrt(disc))/(2*a);if(t>=0 && t<=1 && old.y+(next.y-old.y)*t-h.y<.105){next.x=old.x+dx*Math.max(0,t-.001);next.z=old.z+dz*Math.max(0,t-.001);body.basketContact=true;}}
         return next;
     }
     function remove(body){

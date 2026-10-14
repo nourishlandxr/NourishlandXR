@@ -1562,7 +1562,7 @@ function demoZinniaCue(text){
     else if(/\b(orb|plant choice|choose a plant)\b/i.test(text))targetWorld=markers.find(record=>record.id===demoFramePlantChoiceOrbId)?.position;
     else if(/\btotem\b/i.test(text))targetWorld=markers.find(record=>record.demoType==='zone' && !record.demoNarrativeFaded)?.position;
     else if(/living frame|this frame/i.test(text) && introWorldAnchor)targetWorld=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
-    const intent=/\b(well done|all fruit gathered|you did it)\b/i.test(text)?'celebrate':/\b(hello|welcome|hi there)\b/i.test(text)?'greet':'explain';
+    const intent=/\b(goodbye|good bye|bye for now|see you|farewell)\b/i.test(text)?'farewell':/\b(well done|all fruit gathered|you did it)\b/i.test(text)?'celebrate':/\b(hello|welcome|hi there)\b/i.test(text)?'greet':'explain';
     return {targetWorld,intent};
 }
 // Audio and paragraph progression start only after their visible presentation.
@@ -2081,11 +2081,17 @@ function demoZinniaPointerHit(ray=latestControllerRay){
     const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
     return zinniaFramePerch?.hit(ray,livingFramePose(board).matrix) || null;
 }
+function activateDemoZinniaAtPointer(source){
+    const hit=resolveDemoCellTarget();if(hit?.kind!=='zinnia')return false;
+    if(!zinniaFramePerch?.react(hit))return false;
+    demoFeedback?.pulse(source,.25,60);return true;
+}
 function resolveDemoCellTarget(){
     const panel=infoPanel?.hit(latestControllerRay);
     const note=demoNoteHit(latestControllerRay);
     return nearestDemoXrTarget([
         demoLivingFrameRimHit(),
+        demoZinniaPointerHit(),
         note?{kind:'note',id:note.card?.id,distance:note.distance,target:note}:null,
         panel ? {kind:'panel',id:panel.card?.id || 'control-panel',distance:panel.distance,target:panel} : null,
         butterflyRayTarget(),
@@ -5917,7 +5923,7 @@ function drawDemoZinnia(view,frameMatrix){
     if(welcomePractice?.active)return;
     const inputs=[...latestTrackedHandStates.filter(entry=>entry.state?.tracked).map(entry=>({source:entry.source,tip:entry.state.rawJoints.get('index-finger-tip')})),...demoPointerRays.filter(entry=>!entry.source?.hand).map(entry=>({source:entry.source,ray:entry.ray,trigger:Boolean(entry.source?.gamepad?.buttons?.[0]?.pressed)}))];
     zinniaFramePerch?.matchRim(livingFrameModel?.scene);
-    zinniaFramePerch?.draw(view,frameMatrix,introFrameToken,inputs,viewerMatrix);
+    zinniaFramePerch?.draw(view,frameMatrix,introFrameToken || performance.now(),inputs,viewerMatrix);
 }
 
 function drawHexagon(ctx, x, y, radius, fill, stroke, lineWidth = 2) {
@@ -6697,6 +6703,7 @@ async function startImmersive() {
             if(xrRecoveryStatus==='failed'){returnToWelcome();return;}
             captureDemoInputEventRay(event);
             if(zinniaVoiceBar?.select(latestControllerRay))return;
+            if(activateDemoZinniaAtPointer(event.inputSource))return;
             if(resolveDemoCellTarget()?.kind==='living-frame-rim')return;
             if(butterflyTriggerSources.has(event.inputSource)){butterflyTriggerSources.delete(event.inputSource);return;}
             // The dedicated LIM listener normally consumes this event first.
@@ -6943,7 +6950,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     clearSessionState();
     developerLab=developerStation;demoStartChapter=chapter;demoChaptersOpen=false;if(chapter)setWelcomeTutorialEnabled(chapter==='tutorial');
     demoPeekPortal=createPeekPortalExperience();
-    if(!livingMapPreviewRecords && !refinementPreview)resetSpatialVisualSettings();
+    if(!livingMapPreviewRecords && !refinementPreview){resetSpatialVisualSettings();setSpatialVisualSettings({orbModel:'v3'});}
     demoCellOpacity=getSpatialVisualSettings().cellOpacity;demoHandMode=developerLab?.input==='controllers'?'pointer':'outline';if(!developerLab)demoHandMode=getSpatialVisualSettings().handMode;
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;

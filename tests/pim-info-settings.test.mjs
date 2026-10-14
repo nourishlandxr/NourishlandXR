@@ -62,7 +62,7 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.equal(graphics.find(item=>item.action==='RainQuality').label,'HQ');
     assert.equal(graphics.find(item=>item.action==='GraphicsQuality:high').label,'High');
     assert.equal(graphics.find(item=>item.action==='GraphicsQuality:high').selected,true);
-    assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality:auto','GraphicsQuality:low','GraphicsQuality:medium','GraphicsQuality:high','RainQuality','Insects','LivingFrame:off','LivingFrame:sd','LivingFrame:hd','SettingsHelp','CloseSettings']);
+    assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality:auto','GraphicsQuality:low','GraphicsQuality:medium','GraphicsQuality:high','RainQuality','Insects','LivingFrame:off','LivingFrame:sd','LivingFrame:hd','OrbModel','SettingsHelp','CloseSettings']);
     assert.ok(performance.find(item=>item.action==='RefreshRate').y<performance.find(item=>item.action==='ShowFps').y);
     assert.equal(quest.find(item=>item.action==='HandMode').label,'Hand tracking');
     for(const items of [desktop,quest])assert.equal(items.find(item=>item.action==='HeroDice'),undefined,'the retired Floor dice control must not return');

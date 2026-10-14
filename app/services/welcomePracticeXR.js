@@ -66,7 +66,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
         for(const input of inputs)if(pointerEnabled && !input.source.hand && input.ray && !stage.exiting){const leafPoint=stage.heldLeafPoint(input.source.handedness);input.pointerHit=leafPoint?{kind:'zinnia-leaf',worldPoint:leafPoint}:nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray));}
     }
     return {stage,bind,update,get performance(){const sorted=[...frameSamples].sort((a,b)=>a-b);return {updateCpuMs,rendererRebuilds,retainedRevisions,frameP95Ms:sorted[Math.floor(sorted.length*.95)] || 0,samples:sorted.length,renderer:renderer?.stats};},get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
-        draw(view,handRenderer){handOutline=handRenderer;if(!stage.active)return;nativeHandsReady=Boolean(handRenderer?.ready);const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);
+        draw(view,handRenderer){handOutline=handRenderer;if(!stage.active)return;nativeHandsReady=Boolean(handRenderer?.ready);const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);stage.trials.drawPeek(gl,view);
             const reveal=stage.controllerHandReveal;visibleControllers.length=0;if(stage.controllerHandsVisible)for(const input of controllers)if((reveal[input.source.handedness] || 0)>0)visibleControllers.push(input);
             handRenderer?.draw(view,hands,{filled:true,controllers:visibleControllers,controllerOpacity:stage.controllerHandOpacity*opacity,trackedOpacity:stage.trackedHandOpacity*opacity,controllerReveal:reveal});
             for(const input of inputs){

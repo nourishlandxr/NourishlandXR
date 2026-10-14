@@ -82,3 +82,27 @@ test('runtime palette selects colours directly and drags brush width through con
  for(const x of [80,370]){const ray=rayAt(x,348),target=trial.hit(ray);assert.match(target?.id || '',/^width:/);trial.update(.016,{visible:true,inputs:[wrist,{source,matrix,ray,trigger:true}]});}
  assert.ok(trial.snapshot().paint.width>.015);assert.equal(trial.snapshot().strokes,0,'panel drags do not paint');trial.destroy();
 }));
+
+test('larger tic-tac-toe board has exactly nine selectable cells',()=>withCanvas(()=>{
+ const root=new THREE.Group(),trial=createWelcomePracticeTrials(root);trial.open('tic-tac-toe');
+ const board=root.getObjectByName('Wooden Tic-Tac-Toe board');assert.equal(board.children.filter(n=>n.isMesh).length,5,'plank and four dividers');
+ const size=new THREE.Vector3();new THREE.Box3().setFromObject(board).getSize(size);assert.ok(size.x>=.54 && size.z>=.54);
+ for(let row=0;row<3;row++)for(let col=0;col<3;col++){
+  const point=board.localToWorld(new THREE.Vector3((col-1)*.18,.5,(row-1)*.18));
+  const hit=trial.hit({origin:point,direction:new THREE.Vector3(0,-1,0)});assert.equal(hit?.id,'cell:'+(row*3+col));
+ }
+ trial.destroy();
+}));
+
+test('Peek frame keeps its 60 by 40 cm dimensions and follows a grip in all modes',()=>withCanvas(()=>{
+ for(const mode of ['controllers','gloves','hands']){
+  const root=new THREE.Group(),trial=createWelcomePracticeTrials(root);trial.open('peek-frame');trial.command('mode:'+mode);
+  const frame=root.getObjectByName('Grabbable 60 by 40 cm Peek frame'),size=new THREE.Box3().setFromObject(frame).getSize(new THREE.Vector3());
+  assert.ok(Math.abs(size.x-.6)<.001 && Math.abs(size.y-.4)<.001);
+  const source={handedness:'right',hand:mode==='hands'?{}:null};
+  trial.update(.05,{visible:true,inputs:[inputAt(root,source,0,.4,.04)]});
+  trial.update(.05,{visible:true,inputs:[inputAt(root,source,0,.4,.04,true)]});
+  trial.update(.05,{visible:true,inputs:[inputAt(root,source,.2,.5,.04,true)]});
+  assert.ok(frame.position.x>.19);assert.ok(frame.position.y>.49);trial.destroy();
+ }
+}));
