@@ -162,7 +162,7 @@ test('Zinnia leaf dance locks matching hands before the spoken tickle and retrac
 }));
 
 test('introduced leaf holding remains available in controllers, virtual hands and tracked hands',()=>withAssets(async()=>{
- const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}}});
+ const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){},unlock(){}}});
  try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);
   for(const mode of ['controllers','gloves','hands']){
    stage.previewLesson('comfort');stage.setInputMode(mode);stage.update(.05,{viewer,floor:0});
@@ -171,7 +171,7 @@ test('introduced leaf holding remains available in controllers, virtual hands an
    const input={source,matrix:new THREE.Matrix4().makeTranslation(origin.x,origin.y,origin.z).elements,ray:{origin,direction:new THREE.Vector3(0,0,-1)},down:true,trigger:false};
    stage.update(.05,{viewer,floor:0,inputs:[input],controllers:source.hand?[]:[input]});
    assert.equal(stage.snapshot().leafContacts.length,1,mode);assert.equal(stage.isHolding(source),true,mode+' owns its input');
-   input.down=false;stage.update(.05,{viewer,floor:0,inputs:[input]});assert.equal(stage.snapshot().leafContacts.length,0);
+   input.down=false;input.trigger=true;stage.releaseLeaf(source);assert.equal(stage.heldLeafPoint('right'),null,'grip release frees the pointer immediately while trigger remains held');stage.update(.05,{viewer,floor:0,inputs:[input]});assert.equal(stage.snapshot().leafContacts.length,0);
   }
  }finally{stage.destroy();}
 }));
@@ -182,5 +182,13 @@ test('Zinnia keeps the Orb as her focus during its spoken lesson and waves at ex
   for(let i=0;i<70;i++)stage.update(.03,{viewer,floor:0});
   const head=stage.zinniaMount.getObjectByName('Head_nod_root').userData.guidePivot;assert.ok(new THREE.Euler().setFromQuaternion(head.quaternion).y<-.1,'gaze follows the Orb to the left during speech');
   stage.button('skip');for(let i=0;i<25;i++)stage.update(.03,{viewer,floor:0});const guide=stage.zinniaMount.children[0].userData.zinnia.guide;assert.equal(guide.snapshot().gesture,'farewell');assert.ok(guide.leaf('R').userData.guidePivot.quaternion.angleTo(new THREE.Quaternion())>.4);
+ }finally{stage.destroy();}
+}));
+
+test('basket and fruit remain at full size when narrated exploration advances to pickup',()=>withAssets(async()=>{
+ const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true}),speak(){},stop(){}}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('basket');await stage.loadPracticeAssets();
+  for(let i=0;i<80;i++)stage.update(.05,{viewer,floor:0});const fruit=stage.objects.get('apple'),basket=stage.root.getObjectByName('WelcomePracticeBasket');assert.equal(fruit.visible,true);assert.equal(basket.visible,true);const position=fruit.position.clone();
+  stage.previewLesson('grab');stage.update(.01,{viewer,floor:0});assert.equal(fruit.scale.x,1,'pickup lesson must not regrow previously presented fruit');assert.equal(basket.visible,true);assert.ok(fruit.position.distanceTo(position)<.005);
  }finally{stage.destroy();}
 }));

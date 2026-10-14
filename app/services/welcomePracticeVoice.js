@@ -4,7 +4,7 @@ import {claimZinniaVoice,releaseZinniaVoice,forgetZinniaVoice,isLastZinniaVoice}
 const settingsKey='nlxr.welcome-narration.v1';
 export function getWelcomeNarrationSettings(){try{return {enabled:true,volume:1.24,...JSON.parse(globalThis.localStorage?.getItem(settingsKey) || '{}'),echo:0};}catch{return {enabled:true,volume:1.24,echo:0};}}
 export function setWelcomeNarrationSettings(change){const next={...getWelcomeNarrationSettings(),...change};next.enabled=next.enabled!==false;next.volume=Math.max(0,Math.min(2,Number(next.volume)||0));next.echo=0;try{globalThis.localStorage?.setItem(settingsKey,JSON.stringify(next));}catch{}globalThis.dispatchEvent?.(new Event('nlxr-narration-change'));return next;}
-export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded=()=>{},onInterrupt=()=>{},onReplay,assetBase=new URL(WELCOME_NARRATION_BANK?'../'+WELCOME_NARRATION_BANK.base:'../assets/welcome-practice/voice/',import.meta.url),initialId='arrival',maxCached=8,fetchCache='no-cache'}={}){
+export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded=()=>{},onInterrupt=()=>{},onReplay,assetBase=new URL(WELCOME_NARRATION_BANK?'../'+WELCOME_NARRATION_BANK.base:'../assets/welcome-practice/voice/',import.meta.url),initialId='title',maxCached=8,fetchCache='no-cache'}={}){
     const Context=globalThis.AudioContext || globalThis.webkitAudioContext;
     let context=null,gain=null,current=null,buffer=null,offset=0,startedAt=0,generation=0,muted=!getWelcomeNarrationSettings().enabled,playing=false,paused=false,disposed=false,lesson=null,loading=false,hasPlayed=false,playbackDuration=0;
     let analyser=null,wave=null,fallbackSpeaking=false,fallbackQueued=false,awaitingAudioUnlock=false;
@@ -48,7 +48,7 @@ export function createWelcomePracticeVoice({enabled=true,onChange=()=>{},onEnded
         }
         return liveCache.get(text);
     }
-    async function prepare(value){if(!value || muted || disposed || !context)return null;const exactClip=WELCOME_NARRATION_BANK.catalog?.[value.id]?.text===value.spoken;const request=()=>!value.recorded && !exactClip && (value.spokenOverride || value.id?.startsWith('fruit-name-'))?loadLive(value.spoken):load(value.id);const loaded=await request();return loaded || (value.recorded && !disposed && !muted?request():null);}
+    async function prepare(value){if(!context)unlock();if(!value || muted || disposed || !context)return null;const exactClip=WELCOME_NARRATION_BANK.catalog?.[value.id]?.text===value.spoken;const request=()=>!value.recorded && !exactClip && (value.spokenOverride || value.id?.startsWith('fruit-name-'))?loadLive(value.spoken):load(value.id);const loaded=await request();return loaded || (value.recorded && !disposed && !muted?request():null);}
     async function speak(value){
         stop();lesson=value;unlock();if(!value || muted || disposed || !context){changed();return;}claimZinniaVoice(owner);
         const token=generation;loading=true;playing=true;changed();const loaded=await prepare(value);

@@ -20,7 +20,7 @@ test('supplied peel changes actual vertices in native XR, preserves progress and
         assert.ok(Math.abs(prepared.halfSize.y-.095)<.001,'closed collision size excludes all future peel poses');
         const root=new THREE.Group();root.add(prepared.group);renderer=createFruitWindowXR(gl,root);
         const identity=new THREE.Matrix4().elements,view={projectionMatrix:identity,transform:{inverse:{matrix:identity}}},anchor={position:new THREE.Vector3(),quaternion:new THREE.Quaternion()};
-        renderer.prepareNext();renderer.update();renderer.draw(view,anchor);
+        while(!renderer.prepareNext()){}renderer.update();renderer.draw(view,anchor);
         const closed=calls.filter(call=>call[0]==='bufferData').map(call=>call[2]).filter(Array.isArray);calls.length=0;
         setBananaPeel(variant,.4);assert.equal(setBananaPeel(variant,.2),false);assert.equal(variant.peel,.4);
         setBananaPeel(variant,1);renderer.update();renderer.draw(view,anchor);

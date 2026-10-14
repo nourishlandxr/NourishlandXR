@@ -49,7 +49,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
     function prepareConversion(){const started=performance.now();let result;do{result=conversion.next();}while(!result.done && (!progressive || performance.now()-started<2));return result.done;}
     if(!progressive)prepareConversion();
     return {
-        get ready(){return Boolean(renderer);},
+        get ready(){return Boolean(renderer?.ready);},
         coversScene(){let covered=true;source.traverse(node=>{if(!node.isMesh || !eligible(node))return;const resource=nodeResources.get(node);if(!resource || resource.geometry!==node.geometry || resource.material!==node.material)covered=false;});return covered;},
         get stats(){return {...renderer?.stats,sourceMeshes:entries.length,instanceBatches:batches.length};},
         update(){
@@ -77,7 +77,7 @@ export function createFruitWindowXR(gl,source,{alphaCompositing=false,progressiv
             for(const mesh of batches)if(mesh.userData.poseChanged)mesh.instanceMatrix.needsUpdate=true;
             scene.updateMatrixWorld(true);
         },
-        draw(view,anchor,opacity=1){renderer?.draw(view,anchor.position,anchor.quaternion,opacity);},
+        draw(view,anchor,opacity=1){if(!renderer?.ready)return;renderer.draw(view,anchor.position,anchor.quaternion,opacity);},
         prepareNext(){if(disposed)return false;if(!renderer){if(!prepareConversion())return false;}if(!progressive)return renderer.prepareNext();const started=performance.now();let ready;do{ready=renderer.prepareNext();}while(!ready && performance.now()-started<2);return ready;},
         destroy(){disposed=true;conversion.return();renderer?.destroy();for(const batch of batches)batch.dispose();for(const entry of entries)if(entry.instanced)entry.mesh.dispose();for(const geometry of new Set(entries.map(entry=>entry.mesh.geometry)))geometry.dispose();sharedGeometry.clear();}
     };

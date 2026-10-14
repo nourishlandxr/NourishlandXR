@@ -32,7 +32,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
             if(type==='selectstart'){forceTrigger.set(event.inputSource,true);if(!event.inputSource.hand)stage.select(eventRay(event),event.inputSource);}
             else if(type==='selectend')forceTrigger.set(event.inputSource,false);
             else if(type==='squeezestart')forceGrip.set(event.inputSource,true);
-            else if(type==='squeezeend')forceGrip.set(event.inputSource,false);
+            else if(type==='squeezeend'){forceGrip.set(event.inputSource,false);stage.releaseLeaf(source);}
         },{capture:true,signal:abort.signal});
         session.addEventListener('visibilitychange',()=>{if(session.visibilityState!=='visible'){stage.releaseAll(false);visibilityPaused=!voice?.status().paused;voice?.pause();lastTime=null;forceGrip.clear();forceTrigger.clear();}else {voice?.unlock();if(visibilityPaused)voice?.resume();visibilityPaused=false;}},{signal:abort.signal});
         session.addEventListener('inputsourceschange',event=>{if(event.removed?.length)stage.releaseAll(false);for(const source of event.removed || []){forceGrip.delete(source);forceTrigger.delete(source);curling.delete(source);comfortPinches.delete(source);}},{signal:abort.signal});
@@ -63,7 +63,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
         renderer?.update();renderer?.prepareNext();
         const pointerEnabled=stage.controllerLasersVisible || stage.settingsAvailable;
         updateCpuMs=performance.now()-cpuStarted;if(dt>0){frameSamples.push(dt*1000);if(frameSamples.length>120)frameSamples.shift();}
-        for(const input of inputs)if(pointerEnabled && !input.source.hand && input.ray && !stage.exiting){const leafPoint=stage.heldLeafPoint(input.source.handedness);input.pointerHit=leafPoint?{kind:'zinnia-leaf',worldPoint:leafPoint}:nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray));}
+        for(const input of inputs)if(pointerEnabled && !input.source.hand && input.ray && !stage.exiting){const leafPoint=input.down?stage.heldLeafPoint(input.source.handedness):null;input.pointerHit=leafPoint?{kind:'zinnia-leaf',worldPoint:leafPoint}:nearestWelcomePointerHit(input.ray,onHit?.(input.ray),stage.hit(input.ray));}
     }
     return {stage,bind,update,get performance(){const sorted=[...frameSamples].sort((a,b)=>a-b);return {updateCpuMs,rendererRebuilds,retainedRevisions,frameP95Ms:sorted[Math.floor(sorted.length*.95)] || 0,samples:sorted.length,renderer:renderer?.stats};},get active(){return stage.active;},start(viewer,floor){if(disposed)return;lastTime=null;revealTime=0;stage.start(viewer,floor);},
         draw(view,handRenderer){handOutline=handRenderer;if(!stage.active)return;nativeHandsReady=Boolean(handRenderer?.ready);const t=Math.min(1,revealTime/1.1),opacity=t*t*(3-2*t)*stage.exitOpacity;renderer?.draw(view,anchor,opacity);stage.trials.drawPeek(gl,view);

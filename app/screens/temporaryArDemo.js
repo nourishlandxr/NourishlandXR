@@ -7,7 +7,7 @@ import {WELCOME_PRACTICE_LESSONS} from '../services/welcomePracticeContent.js';
 import {requireDeveloperLabSession,developerToolsEnabled} from '../services/developerLabAccess.js';
 import {livingMapPreviewRecords as developerLabRecords} from '../services/developerLabFixtures.js';
 import {createLimoSpatialExperience} from '../services/limoSpatialExperience.js';
-import {createLivingFrameModel} from '../services/livingFrameModel.js';
+import {prepareLivingFrameModel,createLivingFrameModel} from '../services/livingFrameModel.js';
 import {createPeekPortalExperience} from '../services/peekPortalExperience.js';
 let demoPeekPortal=null,demoViewOpen=false,demoPeekPending=false;
 async function openDemoPeek({onComplete=null,continueLabel='Back to scene'}={}){
@@ -1574,7 +1574,7 @@ function demoNarrationPresentationReady(text,requestedAt){
     if(!introBoardVisible)return true;
     if(demoPresentationPaintedAt<requestedAt)return false;
     if(zinniaFramePerch && !zinniaFramePerch.presentationReady)return false;
-    if(getSpatialVisualSettings().livingFrame!==false && getSpatialVisualSettings().livingFrameQuality!=='off' && !livingFrameModel?.entranceReady)return false;
+    if(getSpatialVisualSettings().livingFrame!==false && getSpatialVisualSettings().livingFrameQuality!=='off' && !livingFrameModel?.error && !livingFrameModel?.entranceReady)return false;
     if(introBoardStep==='UTILITY 1.1' && demoLivingMapScene && !demoLivingMapXR?.ready)return false;
     if(/photograph|reference photo|image panel|fruit discovery window|fruit window/i.test(text) && infoPanel?.presentationReady===false)return false;
     return true;
@@ -2529,7 +2529,7 @@ function showArWelcomeShowcase() {
     arWelcomeUnlockTimer=setTimeout(unlockWelcome,180);
     setGuide(DEMO_QUICK_ACCESS_COPY['INTRO 1.1']);
     if(developerLab){activateDeveloperStation();return;}
-    if(demoStartChapter && demoStartChapter!=='tutorial'){const chapter=demoStartChapter;demoStartChapter=null;activateDemoChapter(chapter);return;}
+    if(demoStartChapter && demoStartChapter!=='tutorial'){if(viewerMatrix){const chapter=demoStartChapter;demoStartChapter=null;activateDemoChapter(chapter);}return;}
     if(welcomePractice && !welcomePracticeCompleted){
         clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
         arWelcomeOpeningActive=false;introOpeningCopySkipped=true;limMeshVisible=false;
@@ -5528,8 +5528,8 @@ function drawIntroNoteContent(ctx) {
     if(welcomePractice?.active){
         const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=['frame','title','arrival'].includes(state.phase)?1:state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
         // The lesson title carries the introduction; avoid repeating the brand above it.
-        if(state.activityFocus){ctx.fillStyle='#fffaf0';ctx.font=`500 39px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,830);lines.forEach((line,i)=>ctx.fillText(line,700,530+(i-(lines.length-1)/2)*54));ctx.restore();return;}
-        ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,width:830,top:300,bottom:800,titleSize:64,bodySize:35});
+        if(state.activityFocus && !state.title){ctx.fillStyle='#fffaf0';ctx.font=`500 39px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,830);lines.forEach((line,i)=>ctx.fillText(line,700,530+(i-(lines.length-1)/2)*54));ctx.restore();return;}
+        ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,width:900,top:260,bottom:850,titleSize:88,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
         ctx.restore();return;
     }
 
@@ -5884,6 +5884,7 @@ function drawIntroSpatial(view) {
             AR_PHONE_COMFORT.boardScale[1] * (arWelcomeShowcaseActive ? 2100/1080 : 1),
             welcomePractice?.active?welcomePractice.stage.snapshot().frameOpacity:arWelcomeShowcaseActive ? 1 : easedNote
         );
+        demoPresentationPaintedAt=performance.now();
     }
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
     const controlLabel = session && !domOverlayEnabled && continueButton && sessionMode !== 'immersive-vr' && !continueButton.hidden
@@ -6818,6 +6819,7 @@ async function startImmersive() {
             catch(error){reportDemoRenderFailure(error,'viewer pose');return;}
             if (pose) runXrFrameStep('viewer transform',()=>{
                 viewerMatrix = Float32Array.from(pose.transform.matrix);
+                if(demoStartChapter && demoStartChapter!=='tutorial'){const chapter=demoStartChapter;demoStartChapter=null;activateDemoChapter(chapter);}
                 latestDemoView = pose.views?.[0] || null;
                 lastViewerPoseAt = _time;zinniaVoiceBar?.update(viewerMatrix);
             });
@@ -6929,6 +6931,7 @@ export function openTemporaryArDemoWindow(app) {
         app.querySelector('[data-desktop-learning-book]')?.addEventListener('click',()=>renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()}),{once:true});
         app.querySelector('[data-desktop-ar-back]')?.addEventListener('click',()=>window.renderLaunchScreen?.(),{once:true});return;
     }
+    void prepareLivingFrameModel().catch(error=>console.warn('Living Frame preparation:',error));
     prepareArAssets({experience:'demo'}).catch(error=>console.warn('AR preparation:',error));
     if (shouldSkipArIntroductionPreparation()) return startTemporaryArDemo(app);
     renderArIntroductionPreparation(app, {
@@ -6956,7 +6959,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
     demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});
     demoProjectVoice=createProjectNarration({demo:true,isVisible:()=>session?session.visibilityState!=='hidden':!document.hidden,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
-    {welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();void welcomePracticeVoice.preload();}
+    {welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();for(const lesson of WELCOME_PRACTICE_LESSONS.filter(value=>!value.silent && !value.optional).slice(0,3))void welcomePracticeVoice.prepare({...lesson,spokenOverride:true,recorded:false});}
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = livingMapPreviewRecords || refinementPreview || developerLab && !developerLab.xr ? false : await startImmersive();
@@ -6964,6 +6967,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     if (!immersive) {
         renderInterface(true);
         viewerMatrix = new Float32Array([1,0,0,0, 0,1,0,0, 0,0,1,0, 0,0,0,1]);
+        if(demoStartChapter && demoStartChapter!=='tutorial'){const chapter=demoStartChapter;demoStartChapter=null;activateDemoChapter(chapter);}
         // Only the standalone development preview supplies records. Normal
         // demo visitors reach this scene through the Totem connection step.
         if(livingMapPreviewRecords){
@@ -7019,6 +7023,7 @@ function activateDeveloperStation(){
 
 function activateDemoChapter(id){
  if(!DEMO_CHAPTERS.some(chapter=>chapter.id===id))return;
+ introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
  demoPeekPortal?.close();closeLivingPeek();clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
  arWelcomeIntroPending=false;arWelcomeOpeningActive=false;arWelcomeSettleStage=false;placementReady=false;
  infoPanel?.restore();infoPanel?.suspend(false);infoPanel?.setIntroduction(false);syncDemoPanelActions();

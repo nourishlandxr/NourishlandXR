@@ -79,7 +79,7 @@ test('cold favourite fruit loads into Zinnia hand and survives until actual repl
 test('wrapped headings reserve their full height and authored paragraphs never scroll away',()=>{
  const draws=[],ctx={font:'',measureText(text){return {width:text.length*parseFloat(this.font.split(' ')[1])*.55};},fillText(text,x,y){draws.push({text,y,size:parseFloat(this.font.split(' ')[1])});}};
  drawWelcomeText(ctx,{title:'Make yourself comfortable',caption:'Pause here to adjust your headset.\n\nClear your space or change your lighting.',width:620,top:100,bottom:850});
- const heading=draws.filter(d=>d.size===88),body=draws.filter(d=>d.size!==88);assert.ok(heading.length>1);assert.ok(body[0].y-body[0].size/2>heading.at(-1).y+44);assert.ok(body.at(-1).y<850);
+ const heading=draws.filter(d=>d.size===96),body=draws.filter(d=>d.size!==96);assert.ok(heading.length>1);assert.ok(body[0].y-body[0].size/2>heading.at(-1).y+44);assert.ok(body.at(-1).y<850);
  const lesson={paragraphs:['Welcome.','Explore plants.','Practise with us.']};assert.equal(welcomeLessonCaption(lesson,0),'Welcome.');assert.equal(welcomeLessonCaption(lesson,7),'Welcome.\n\nExplore plants.\n\nPractise with us.');
 });
 test('visibility-only changes retain native resources while new meshes require preparation',()=>{

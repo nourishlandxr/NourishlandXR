@@ -1,6 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {parseGlb,accessorData} from './demoBeeModel.js';
-import {controllerHandParents,controllerHandFlexAxes,controllerHandJointPoses,controllerHandGripMatrix} from './xrControllerHandPose.js';
+import {controllerHandParents,controllerHandFlexAxes,controllerHandJointPoses,controllerHandGripMatrix,controllerHandPointer} from './xrControllerHandPose.js';
 
 // Meta-contributed generic-hand assets, vendored from WebXR Input Profiles.
 // A quiet rim over passthrough, using the same tracked joints as interaction.
@@ -39,7 +39,7 @@ export function createXRHandOutline(gl){
     }).catch(error=>{if(!disposed)console.warn('Hand outline:',error.message);});
     return {
         get ready(){return rigs.has('left') && rigs.has('right');},
-        controllerPointer(input){const rig=rigs.get(input.source.handedness);if(!rig || !input.matrix)return null;const base=controllerHandGripMatrix(rig,input.matrix),joints=controllerHandJointPoses(rig,input),tip=new THREE.Vector3().setFromMatrixPosition(joints[rig.names.indexOf('index-finger-tip')]).applyMatrix4(base),knuckle=new THREE.Vector3().setFromMatrixPosition(joints[rig.names.indexOf('index-finger-phalanx-proximal')]).applyMatrix4(base);return {origin:{x:tip.x,y:tip.y,z:tip.z},direction:tip.sub(knuckle).normalize()};},
+        controllerPointer(input){return controllerHandPointer(rigs.get(input.source.handedness),input);},
         draw(view,entries,{filled=false,controllers=[],controllerOpacity=1,trackedOpacity=1,controllerReveal=null}={}){
             if(disposed)return false;
             const ready=entries.filter(({source,state})=>state?.tracked && state.visualConfidence>0 && performance.now()-state.time<100 && rigs.has(source.handedness) && rigs.get(source.handedness).names.every(name=>state.rawJoints.has(name)));

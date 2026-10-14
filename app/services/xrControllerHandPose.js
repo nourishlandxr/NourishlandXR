@@ -66,3 +66,11 @@ export function controllerHandGripMatrix(rig,controllerMatrix){
     const lateral=side==='left'?-.025:.025;
     return new THREE.Matrix4().fromArray(controllerMatrix).multiply(new THREE.Matrix4().makeTranslation(lateral,-.012,.035)).multiply(new THREE.Matrix4().makeRotationX(Math.PI/2-.32)).multiply(new THREE.Matrix4().makeTranslation(-palm.x,-palm.y,-palm.z));
 }
+
+// Aim follows the extended index bind pose, independently of trigger/grip
+// animation. The user's wrist still supplies the live position and direction.
+export function controllerHandPointer(rig,input){
+ if(!rig || !input.matrix)return null;
+ const base=controllerHandGripMatrix(rig,input.matrix),tip=new THREE.Vector3().setFromMatrixPosition(rig.bind[rig.names.indexOf('index-finger-tip')]).applyMatrix4(base),knuckle=new THREE.Vector3().setFromMatrixPosition(rig.bind[rig.names.indexOf('index-finger-phalanx-proximal')]).applyMatrix4(base);
+ return {origin:{x:tip.x,y:tip.y,z:tip.z},direction:tip.sub(knuckle).normalize()};
+}
