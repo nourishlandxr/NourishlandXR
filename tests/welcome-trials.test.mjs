@@ -61,7 +61,7 @@ test('the actual demo butterfly rig bakes finite independent wing morphs for bot
     const oldDocument=globalThis.document,oldFetch=globalThis.fetch,oldBitmap=globalThis.createImageBitmap;
     globalThis.document=canvasDocument();globalThis.createImageBitmap=async()=>({width:64,height:64});
     const bytes=fs.readFileSync(new URL('../app/assets/animated_butterfly.glb',import.meta.url));globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)});
-    try{const insects=await loadTrialButterflies();assert.equal(insects.length,4);assert.notEqual(insects[0].children[0].morphTargetInfluences,insects[1].children[0].morphTargetInfluences);
+    try{const insects=await loadTrialButterflies();assert.equal(insects.length,20);assert.equal(new Set(insects.map(model=>model.userData.butterflyColour)).size,20);assert.equal(new Set(insects.map(model=>model.children[0].material)).size,20);assert.notEqual(insects[0].children[0].morphTargetInfluences,insects[1].children[0].morphTargetInfluences);
         let moved=false;for(const mesh of insects[0].children){const base=mesh.geometry.attributes.position.array,morph=mesh.geometry.morphAttributes.position[0].array;assert.equal(base.length,morph.length);assert.ok(base.every(Number.isFinite));assert.ok(morph.every(Number.isFinite));moved ||= base.some((n,i)=>Math.abs(n-morph[i])>.001);}assert.equal(moved,true);
     }finally{globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.createImageBitmap=oldBitmap;}
 });

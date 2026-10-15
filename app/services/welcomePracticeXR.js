@@ -11,18 +11,18 @@ import {xrInputRuntime,updateXRInputRuntime} from './xrInputRuntime.js';
 import {createWelcomeInputRouting} from './welcomeInputRouting.js';
 import {nearestWelcomePointerHit} from './welcomePointerTarget.js';
 
-export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onToolMenu=()=>{},onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null,getFramePose=()=>null}={}){
+export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback,onSelect,onHit,onToolMenu=()=>{},onPanelOwns=()=>false,isFrameReady=()=>true,getFrameError=()=>null,getTrialPanelPose=()=>null,getFramePose=()=>null,getFXVolume=()=>1}={}){
     let handOutline=null;const frameSamples=[];let updateCpuMs=0,rendererRebuilds=0,retainedRevisions=0;let renderer=null,pendingRenderer=null,disposed=false,session=null,space=null,abort=null,lastTime=null,hands=[],controllers=[],inputs=[],rebuild=false,revealTime=0,visibilityPaused=false,nativeHandsReady=false,rendererRevision=-1,pendingRevision=-1;
     const forceGrip=new Map(),forceTrigger=new Map(),curling=new Map(),comfortPinches=new Map(),suppressed=new WeakMap(),pointer=createSpatialTetherRenderer(gl);
-    let fruitOwner=null,physicsOwner=null,audioOwner=null;
-    const stage=createWelcomePracticeScene({voice,onComplete,onChange,onFeedback,onToolMenu,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose,getFruitInteractionOwner:()=>fruitOwner,getPhysicsOwner:()=>physicsOwner,getAudioOwner:()=>audioOwner});
+    let fruitOwner=null,physicsOwner=null,audioOwner=null,butterflyOwner=null;
+    const stage=createWelcomePracticeScene({voice,getFXVolume,onComplete,onChange,onFeedback,onToolMenu,onAssets:()=>{rebuild=true;},embedded:true,onSelect,getTrialPanelPose,getFramePose,getFruitInteractionOwner:()=>fruitOwner,getPhysicsOwner:()=>physicsOwner,getAudioOwner:()=>audioOwner,getButterflyInteractionOwner:()=>butterflyOwner});
     const panelRouting=createWelcomeInputRouting({ownsPanel:onPanelOwns,holdsObject:source=>stage.isHolding(source),hitPanel:ray=>{
         const hit=nearestWelcomePointerHit(ray,onHit?.(ray),stage.hit(ray));return hit?.kind==='panel'?hit:null;
     }});
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}},handMatrices=new WeakMap(),wristMatrix=new THREE.Matrix4(),wristRotation=new THREE.Quaternion(),unitScale=new THREE.Vector3(1,1,1),overlayPoint=new THREE.Vector3(),visibleControllers=[],curlJointNames=['middle-finger-tip','ring-finger-tip','pinky-finger-tip'];
     function eventRay(event){if(stage.controllerHandsVisible && !xrInputRuntime(session)){const ray=inputs.find(i=>i.source===event.inputSource)?.ray;if(ray)return ray;}try{return xrInputRay(event.frame,event.inputSource,space);}catch{return null;}}
-    function unbind(){abort?.abort();abort=null;stage.releaseAll(false);fruitOwner?.dispose();fruitOwner=null;physicsOwner?.dispose();physicsOwner=null;audioOwner?.dispose();audioOwner=null;forceGrip.clear();forceTrigger.clear();curling.clear();comfortPinches.clear();session=null;}
-    function bind(value,referenceSpace){unbind();void stage.preloadControllers([...value.inputSources].filter(source=>!source.hand));session=value;space=referenceSpace;fruitOwner=xrInputRuntime(value)?.createTutorialInteractions?.() || null;physicsOwner=xrInputRuntime(value)?.createTutorialPhysics?.() || null;voice?.unlock();abort=new AbortController();
+    function unbind(){abort?.abort();abort=null;stage.releaseAll(false);fruitOwner?.dispose();fruitOwner=null;butterflyOwner?.dispose();butterflyOwner=null;physicsOwner?.dispose();physicsOwner=null;audioOwner?.dispose();audioOwner=null;forceGrip.clear();forceTrigger.clear();curling.clear();comfortPinches.clear();session=null;}
+    function bind(value,referenceSpace){unbind();void stage.preloadControllers([...value.inputSources].filter(source=>!source.hand));session=value;space=referenceSpace;fruitOwner=xrInputRuntime(value)?.createTutorialInteractions?.() || null;butterflyOwner=xrInputRuntime(value)?.createTutorialInteractions?.({scope:'tutorial-butterflies'}) || null;physicsOwner=xrInputRuntime(value)?.createTutorialPhysics?.() || null;voice?.unlock();abort=new AbortController();
         const binding=abort;
         void xrInputRuntime(value)?.createTutorialAudio?.(voice).then(owner=>{if(session!==value || binding.signal.aborted || disposed){owner?.dispose();return;}audioOwner=owner;}).catch(error=>console.warn('IWSDK tutorial audio:',error.message));
         for(const type of ['selectstart','selectend','select','squeezestart','squeezeend'])session.addEventListener(type,event=>{

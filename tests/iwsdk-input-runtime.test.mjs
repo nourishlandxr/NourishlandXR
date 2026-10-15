@@ -15,6 +15,8 @@ import { createTutorialInteractionOwner } from '../app/services/iwsdkTutorialInt
 import {createDemoSDKSession} from '../app/services/iwsdkDemoSession.js';
 import {bindExplorerMoleculeInteraction} from '../app/services/explorerMoleculeInteraction.js';
 import {createNoteSDKGrip} from '../app/services/noteSDKGrip.js';
+import {createButterflySDKGrip} from '../app/services/butterflySDKGrip.js';
+import {createWelcomeButterflyBucket} from '../app/services/welcomeButterflyBucket.js';
 import {knowledgeExplorer} from '../app/services/knowledgeExplorer.js';
 import {ensureExplorerMolecule,chooseExplorerWing,alignExplorerPuzzle} from '../app/services/explorerMoleculeModel.js';
 import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
@@ -99,6 +101,56 @@ async function loaded(predicate) {
     while (!predicate() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
     assert.ok(predicate(), 'official local hand asset must load and connect');
 }
+
+for(const hand of [false,true])test(`tutorial cup uses actual SDK ${hand?'pinch':'controller'} grip and releases sparkle once without stealing input`,async()=>{
+    const saved=globalThis.document;globalThis.document=createDocument();const f=fixture({hand});let owner,bucket,time=0,blocked=false,down=false,bursts=0;
+    if(!hand){f.source.profiles=['oculus-touch-v3'];f.source.gamepad={mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,touched:false,value:0}))};}
+    const runtime=await attachXRInputRuntime(f.session,{factory:()=>createNlxrInputBridge(f.session,sdk)});
+    owner=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'tutorial-butterfly-cup'});
+    const root=new THREE.Group(),position=new THREE.Vector3(-.28,.18,.08);
+    const setPosition=()=>{f.source.gripSpace.position=position.toArray();if(hand){for(const joint of f.source.hand.values())joint.position=position.toArray();}};setPosition();
+    bucket=createWelcomeButterflyBucket(root,{load:async()=>Array.from({length:20},()=>new THREE.Mesh(new THREE.SphereGeometry(1,4,3),new THREE.MeshBasicMaterial())),getContext:()=>({interactionOwner:owner,ready:false,onSparkle:()=>bursts++})});await bucket.loading;
+    const tick=()=>{runtime.update(f.frame,f.space,time+=20,time);bucket.update(.02,[{source:f.source,matrix:new THREE.Matrix4().setPosition(position).elements,pinchPoint:hand?position:null,trigger:down,down,uiBlocked:blocked}]);};
+    try{
+        tick();tick();down=true;tick();assert.equal(owner.held(f.source)?.id,'butterfly-cup');assert.equal(bucket.snapshot().backend,'iwsdk');assert.ok(bucket.isHolding(f.source));
+        const before=bucket.bucket.position.clone();position.y+=.2;setPosition();tick();assert.ok(Math.abs(bucket.bucket.position.y-before.y-.2)<1e-5);assert.equal(bursts,1);assert.ok(bucket.snapshot().sparkles.active>0);
+        tick();assert.equal(bursts,1,'holding the cup never retriggers its chime');
+        blocked=true;tick();assert.equal(bucket.isHolding(f.source),false);assert.equal(owner.held(f.source),null);blocked=false;tick();assert.equal(bucket.isHolding(f.source),false,'held input cannot recapture after a menu');
+        down=false;tick();bucket.releaseAll();assert.equal(bucket.snapshot().sparkles.active,0);assert.deepEqual(owner.snapshot().held,[]);
+        bucket.reset();position.fromArray(bucket.snapshot().insects[0].position);setPosition();tick();down=true;tick();
+        const insectId=owner.held(f.source)?.id;assert.ok(insectId?.startsWith('trial-butterfly-'),'individual butterflies also use SDK ownership');
+        const index=Number(insectId.replace('trial-butterfly-','')),start=bucket.snapshot().insects[index].position[0];position.x+=.12;setPosition();tick();
+        assert.ok(Math.abs(bucket.snapshot().insects[index].position[0]-start-.12)<1e-5);
+        down=false;tick();assert.equal(bucket.snapshot().insects[index].state,'flying');assert.equal(bucket.snapshot().released,1);
+        bucket.destroy();assert.deepEqual(owner.snapshot().held,[]);
+    }finally{bucket?.destroy();owner.dispose();runtime.dispose();globalThis.document=saved;}
+});
+
+for(const hand of [false,true])test(`butterfly SDK ${hand?'pinch':'controller'} capture preserves flight position and cancels once on lost input`,async()=>{
+    const saved=globalThis.document;globalThis.document=createDocument();const f=fixture({hand});let owner,grip,time=0;
+    if(!hand){f.source.profiles=['oculus-touch-v3'];f.source.gamepad={mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,touched:false,value:0}))};}
+    const runtime=await attachXRInputRuntime(f.session,{factory:()=>createNlxrInputBridge(f.session,sdk)});
+    runtime.createDemoInteractions=()=>owner=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'butterfly-test',distance:!hand});
+    const insect={seed:9,position:hand?{x:.0225,y:1.15,z:-.2}:{x:.03,y:1.2,z:-1.2}},cancelled=[];
+    grip=createButterflySDKGrip(f.session,f.space,{onCancel:item=>cancelled.push(item.seed)});
+    const tick=()=>beginHandTrackingFrame(f.frame,time+=20,f.space);
+    try{
+        tick();if(hand){assert.equal(grip.begin(insect,f.source,f.frame),false);f.emit('selectstart');tick();}
+        assert.equal(grip.begin(insect,f.source,f.frame),true);
+        assert.ok([...owner.grab.queries.handles.entities].some(entity=>entity.hasComponent(GrabSDK.Grabbed)));
+        let point=grip.update(insect,f.frame);assert.ok(Math.hypot(point.x-insect.position.x,point.y-insect.position.y,point.z-insect.position.z)<1e-5,'catch never teleports');
+        assert.equal(grip.begin({...insect,seed:10},f.source,f.frame),false,'one source cannot capture two insects');
+        if(hand)for(const joint of f.source.hand.values())joint.position[0]+=.2;
+        else{f.source.gripSpace.position[0]+=.2;f.source.targetRaySpace.position[0]+=.2;}
+        tick();point=grip.update(insect,f.frame);assert.ok(Math.abs(point.x-insect.position.x-.2)<1e-5);
+        if(hand)f.missing.add(f.source.hand.get('index-finger-tip'));else f.missing.add(f.source.gripSpace);
+        tick();assert.equal(grip.update(insect,f.frame),null);assert.deepEqual(cancelled,[9]);assert.equal(grip.owns(insect),false);grip.update(insect,f.frame);assert.deepEqual(cancelled,[9]);
+        f.missing.clear();if(hand){f.emit('selectend');tick();f.emit('selectstart');}tick();
+        insect.position.x+=.2;assert.equal(grip.begin(insect,f.source,f.frame),true);
+        f.session.visibilityState='visible-blurred';f.emit('visibilitychange');assert.deepEqual(cancelled,[9,9]);assert.equal(grip.owns(insect),false);
+        f.emit('end');assert.equal(grip.begin(insect,f.source,f.frame),false);grip.dispose();grip.dispose();
+    }finally{grip?.dispose();runtime.dispose();globalThis.document=saved;}
+});
 
 test('placed Note SDK controller grips preserve pickup and release on tracking loss, blur, removal and end',async()=>{
     const saved=globalThis.document;globalThis.document=createDocument();const f=fixture({hand:false});let owner,note;

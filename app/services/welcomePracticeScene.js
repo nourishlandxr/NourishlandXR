@@ -62,7 +62,7 @@ function createDragonfly(){
 
 // The scene/state are shared by native WebXR and the desktop visual preview.
 // The anchor stays in the world; moving one's head never moves the table.
-export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=>{},onFeedback=()=>{},onToolMenu=()=>{},onAssets=()=>{},embedded=false,onSelect=()=>false,loadZinnia,loadFruit,createVisitorVoice,getTrialPanelPose=()=>null,getFramePose=()=>null,getFruitInteractionOwner=()=>null,getPhysicsOwner=()=>null,getAudioOwner=()=>null}={}){
+export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=>{},onFeedback=()=>{},onToolMenu=()=>{},onAssets=()=>{},embedded=false,onSelect=()=>false,loadZinnia,loadFruit,createVisitorVoice,getTrialPanelPose=()=>null,getFramePose=()=>null,getFruitInteractionOwner=()=>null,getPhysicsOwner=()=>null,getAudioOwner=()=>null,getButterflyInteractionOwner=()=>null,getFXVolume=()=>1}={}){
     let textAge=0,textPresented=false;let sceneRevision=0,preparedPhase='';
     const notifyAssets=()=>{sceneRevision++;onAssets();};
     const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);root.visible=false;
@@ -112,8 +112,11 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     const reveals={table:null,zinnia:null,basket:null};
     let dragonOwner=null,dragonOffset=null,dragonVelocity=new THREE.Vector3(),dragonManual=false,dragonPhase=Math.random()*Math.PI*2,dragonHeading=0,successCuePlayed=false,lastActionSource=null,wasPouring=false,microFruitDisplay=null,microFruitAge=0,microFruitTargetScale=null;
     const activeGrabs=new Map(),inputEdges=new Map(),point=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),worldInverse=new THREE.Matrix4(),pendingEvents=new Set();
-    let guidedTrial=null,inputChoiceUnlocked=welcomeInputChoiceUnlocked(),practiceGroup=null;let trialVisibility=null,trialVoiceWasPaused=false,controllerTool='standard',trialPreviousTool='standard',paintReady=false,lastPaintFeedback=-Infinity,paintingSource=null;
-    const trials=createWelcomePracticeTrials(root,{wristControls:true,onAssets:notifyAssets,onFeedback,getControllerTool:()=>controllerTool,getPanelPose:getTrialPanelPose,onOpen:()=>{
+    let guidedTrial=null,inputChoiceUnlocked=welcomeInputChoiceUnlocked(),practiceGroup=null,butterflyViewer=null;let trialVisibility=null,trialVoiceWasPaused=false,controllerTool='standard',trialPreviousTool='standard',paintReady=false,lastPaintFeedback=-Infinity,paintingSource=null;
+    const trials=createWelcomePracticeTrials(root,{wristControls:true,onAssets:notifyAssets,onFeedback,getControllerTool:()=>controllerTool,getPanelPose:getTrialPanelPose,
+        getButterflyContext:()=>({viewer:butterflyViewer,interactionOwner:getButterflyInteractionOwner(),onSparkle:position=>getAudioOwner()?.sparkle?.(position,{volume:getFXVolume()}),ready:!pendingLessonSpeech && !voice?.status().playing && !voice?.status().loading,zinniaPerch:zinniaCharacter.userData.zinnia.guide.butterflyPerch?.()}),
+        onButterflyZinnia:stage=>zinniaCharacter.userData.zinnia.guide.setButterflyStage?.(stage),
+        onButterflyCue:spoken=>voice?.speak({id:'butterfly-gentle-shake',spoken,spokenOverride:true,recorded:false}),onOpen:()=>{
         gameReplay?.cancel();replayOffered=false;trialPreviousTool=controllerTool;controllerTool='standard';paintReady=false;releaseAll(false);if(!trialVisibility){trialVisibility=new Map(root.children.filter(child=>child!==trials.layer && child!==trials.panel).map(child=>[child,child.visible]));trialVoiceWasPaused=Boolean(voice?.status().paused);if(!guidedTrial)voice?.pause();}
         for(const child of trialVisibility.keys())if(child!==table && !(guidedTrial && child===zinniaPot))child.visible=false;tableReveal.update(4.4);notifyAssets();lastSignature='';
     },onClose:()=>{gameReplay?.cancel();controllerTool=trialPreviousTool;paintReady=false;for(const [child,visible] of trialVisibility || [])child.visible=visible;trialVisibility=null;inputEdges.clear();notifyAssets();if(!trialVoiceWasPaused && !tutorialPaused)voice?.resume();lastSignature='';paint();}});
@@ -272,6 +275,8 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     }
 
     function update(dt,{viewer,floor,hands=[],controllers=[],inputs=[],frameReady=true,frameError=null,handsReady=true,presentationReady=true,renderRevision=null}={}){
+        butterflyViewer=viewer;
+        if(trials.active==='butterflies')getAudioOwner()?.update(dt,elapsed,{viewer,muted:Boolean(voice?.status().muted) || getFXVolume()<=0,paused:tutorialPaused,visible:active && !exiting});
         const focusId={brush:'magic-brush','paint-pot':'pot-spray',grab:lastPickedFruit || 'peach',fruit:lastPickedFruit || 'peach',packet:'seed-packet',seed:'seed',water:'watering-can'}[phase()];
         const introduced=trials.active?trials.layer:phase().startsWith('controls-')?root.getObjectByName('Controller practice Orb V3'):['basket','basket-reveal'].includes(phase())?props.basket:phase()==='table-reveal'?table:['grow','harvest'].includes(phase())?root.getObjectByName('WelcomeStrawberryPot'):focusId?objects.get(focusId):null;
         focusLighting.update(dt,{guide:zinniaCharacter,element:introduced?.visible?introduced:null,enabled:active && !exiting,revision:sceneRevision,radius:trials.active ? .26 : .13,reducedMotion:globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches});

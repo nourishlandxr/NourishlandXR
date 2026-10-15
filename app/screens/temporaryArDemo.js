@@ -201,6 +201,7 @@ import {mountSpatialNoteEditor} from '../services/noteEditorDialog.js';
 import {focusSpatialObjectControls} from '../services/spatialObjectControls.js';
 import {renderedTotemStyle} from '../services/totemAppearance.js';
 import {createNoteSpatialRenderer} from '../services/noteSpatialRenderer.js';
+import {createButterflySDKGrip} from '../services/butterflySDKGrip.js';
 import {captureDemoScene,restoreDemoScene} from '../services/demoSceneHistory.js';
 let demoNoteRenderer=null;
 const demoPlacedNoteViews=new Map(),demoPlacedNoteDomViews=new Map();
@@ -470,7 +471,7 @@ let arWelcomeUnlockTimer=null, arWelcomeLayer=null, arWelcomeCanvas=null;
 let livingFrameModel=null;
 let demoLivingFramePreviewClock=null;
 let nativeConnectionState=null,nativeLimHoldPointer=null,nativeConnectionEffect=null,nativeConnectionEffectLastAt=0;
-let butterflyCompanions=[];
+let butterflyCompanions=[],butterflySDK=null;
 let ambientBeeAvoidanceTime=[];
 let ambientEncounterSeed=Math.floor(Math.random()*10000);
 let ambientCanvas=null,ambientBeeModel=null,ambientBeeSpriteTexture=null,ambientBeeSpriteUploadedAt=-Infinity,ambientBeesStartedAt=NaN,ambientBeeCount=1,ambientBeeScreens=new Set(),ambientWorldAnchor=null,ambientWorldFrame=null,ambientEncounterOrigin=null,ambientBeeAvoidance=[],ambientBeeReturn=[],ambientBeeFlowerVisits=[],ambientLastPaint=0;
@@ -601,6 +602,7 @@ function demoPimPanel(record, pose = record?.informationPose) {
     });
 }
 function clearSessionState() {
+    butterflySDK?.dispose();butterflySDK=null;
     demoSDK?.dispose();demoSDK=null;
     demoZinniaNoteDraft=null;
     clearDemoZinniaDiscovery();
@@ -4908,6 +4910,7 @@ function drawDemoKnowledge(view) {
 }
 
 function renderInterface(simulated) {
+    butterflySDK?.dispose();butterflySDK=null;
     demoLimoUnlocked=false;
     for(const insect of butterflyCompanions){insect.model?.destroy();insect.canvas?.remove();}butterflyCompanions=[];
     ambientBeeModel?.destroy();ambientBeeModel=null;
@@ -4929,7 +4932,7 @@ function renderInterface(simulated) {
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
     const demoRoot=appRoot.querySelector('.tryit-demo');if(demoRoot){demoRoot.dataset.rainStyle=demoRainStyle;demoRoot.dataset.rainIntensity=demoRainIntensity<=0?'off':demoRainIntensity<1?'light':demoRainIntensity>1?'heavy':'normal';}
-    demoLimo?.close({notify:false});demoLimo=null;demoLimoReturn=null;infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,getVoiceControls:()=>({allowPause:!welcomePractice?.active,available:Boolean(welcomePractice?.stage.conversation || demoZinniaDiscovery),listening:zinniaVoiceState().listening,paused:zinniaVoiceState().paused}),onRestartTutorial:restartWelcomeTutorial,onPracticeGame:resumeWelcomeGame,onInputMethodChange:mode=>{if(setWelcomeInputMethod(mode)){demoInputMethod=mode;demoHandMode=mode==='hands'?'outline':'pointer';}},getInputMethod:()=>demoInputMethod,gamesAvailable:()=>Boolean(welcomePractice),inputChoiceAvailable:()=>Boolean(welcomePractice && welcomeInputChoiceUnlocked()),onDeveloperLab:developerToolsEnabled()?openLabFromDemo:null,allowPanelGrip:()=>true,directInteractionOnly:()=>false,inputOccupied:source=>welcomePractice?.stage.isHolding(source) || livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{if(welcomePractice?.active)return false;captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:(_action,source)=>{demoFeedback?.sound('menu');pulseDemoHaptics(source || demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onLimoAction:openDemoLimo,limoAvailable:()=>demoLimoUnlocked,onUtilityAction:handleDemoPanelAction});
+    demoLimo?.close({notify:false});demoLimo=null;demoLimoReturn=null;infoPanel?.destroy(); demoPanelActionSignature='';elementPanelActionSignature=''; infoPanel = createPimInfoPanel({root:appRoot,headset:!simulated,phoneAR:phoneArPanel,simpleDesktop:simulated,rainIntensity:demoRainIntensity,rainStyle:demoRainStyle,cellOpacity:demoCellOpacity,handMode:demoHandMode,panelHints:DEMO_PANEL_HINTS,onGraphicsQuality:()=>{introBoardTextureDirty=true;paintWelcomeLayer(performance.now());updateSimulatedMarkers();},onPerformanceAction:handleDemoPerformanceAction,onFloorOffset:updateDemoFloor,onTotemModel:()=>{for(const record of markers)record.totemCardsRefreshed=0;updateSimulatedMarkers();},onInfoOpacity:()=>{introBoardTextureDirty=true;},onExplorerAction:(record,action)=>{if(action.startsWith('KnowledgeMode:') && action!=='KnowledgeMode:explore' && record.tutorialStage==='plant' && !record.demoProfileInteracted){record.demoPimoLesson=knowledgeExplorer(record).mode==='tag'?'tag':'curiosity';showPersistentPimPrompt(record);}knowledgeRenderer?.clear(record);if((action==='KnowledgeResume' && record.knowledgeExplorer?.mode!=='explore' || action==='KnowledgeMode:curiosity') && record.demoSelectedNodeId)showDemoInfo(record,record.demoSelectedNodeId);refreshDemoPimProfile(record);},demoSound:demoFeedback,getVoiceControls:()=>({allowPause:!welcomePractice?.active,available:Boolean(welcomePractice?.stage.conversation || demoZinniaDiscovery),listening:zinniaVoiceState().listening,paused:zinniaVoiceState().paused}),onRestartTutorial:restartWelcomeTutorial,onPracticeGame:resumeWelcomeGame,onInputMethodChange:mode=>{if(setWelcomeInputMethod(mode)){demoInputMethod=mode;demoHandMode=mode==='hands'?'outline':'pointer';}},getInputMethod:()=>demoInputMethod,gamesAvailable:()=>Boolean(welcomePractice),inputChoiceAvailable:()=>Boolean(welcomePractice && welcomeInputChoiceUnlocked()),onDeveloperLab:developerToolsEnabled()?openLabFromDemo:null,allowPanelGrip:()=>true,directInteractionOnly:()=>false,inputOccupied:source=>welcomePractice?.stage.isHolding(source) || livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source),onGripEvent:event=>{if(welcomePractice?.active)return false;captureDemoInputEventRay(event);if(event.type==='squeezestart')return butterflyGripStart(event.inputSource,event.frame);const held=butterflyCompanions.find(insect=>insect.heldSource===event.inputSource);if(held){releaseDemoButterfly(held);return true;}return false;},onGrab:source=>pulseDemoHaptics(source,true),onInteract:(_action,source)=>{demoFeedback?.sound('menu');pulseDemoHaptics(source || demoGrabInputSource || limInputSource);},onHandMode:value=>{demoHandMode=value;},onRainIntensity:value=>{demoRainIntensity=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainIntensity=value<=0?'off':value<1?'light':value>1?'heavy':'normal';},onRainStyle:value=>{demoRainStyle=value;const demo=appRoot?.querySelector('.tryit-demo');if(demo)demo.dataset.rainStyle=value;},onCellOpacity:value=>{demoCellOpacity=value;appRoot?.querySelectorAll('.plant-knowledge-map').forEach(map=>map.style.setProperty('--pim-cell-opacity',String(value)));if(arWelcomeShowcaseActive)introBoardTextureDirty=true;if(!knowledgeRenderer)for(const record of markers.filter(item=>item.demoType==='plant'))refreshDemoRecord(record);},onMove:refreshSimulatedPlacementAim,onEdit:(record,path)=>openDemoKnowledge(record,path,true),onPathwayAction:handlePathwayAction,onModuleAction:handleLearningModuleAction,onLimoAction:openDemoLimo,limoAvailable:()=>demoLimoUnlocked,onUtilityAction:handleDemoPanelAction});
     if(!simulated)publishDemoPerformance();
     infoPanel.setPanelHints(DEMO_PANEL_HINTS);
     if(!simulated)for(const variant of BUTTERFLY_VARIANTS){
@@ -5155,7 +5158,7 @@ function setupRenderer() {
     triangleRenderer = createSpatialTriangleRenderer(gl);knowledgeRenderer=createKnowledgeSpatialRenderer(gl,{ray:()=>latestControllerRay,tether:tetherRenderer});
     // The interaction toy now has a purpose on the welcome table. The loose
     // Hero Dice no longer competes with the plant/Control panel journey.
-    if((developerLab?.id==='toys' || !developerLab) && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getTrialPanelPose:()=>infoPanel?.spatialPose,getFramePose:()=>{if(!introWorldAnchor)return null;const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);return livingFramePose(billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor));},
+    if((developerLab?.id==='toys' || !developerLab) && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getFXVolume:()=>demoFeedback?.volumes().fx ?? 1,getTrialPanelPose:()=>infoPanel?.spatialPose,getFramePose:()=>{if(!introWorldAnchor)return null;const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);return livingFramePose(billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor));},
         onToolMenu:kind=>welcomeComfort?.act(kind==='input'?'input-open':kind==='general'?'toggle':kind.startsWith('colour-')?kind:'controller-toggle'),onFeedback:(kind,source,intensity)=>playWelcomePracticeFeedback(demoFeedback,kind,source,intensity),
         onChange:state=>{syncDemoVoiceBar();syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
         isFrameReady:()=>Boolean(livingFrameModel?.ready && introNoteTexture),getFrameError:()=>livingFrameModel?.error,
@@ -5272,6 +5275,7 @@ const butterflyPinchStates=new WeakMap(),butterflyGestureSources=new WeakSet();
 const butterflyTriggerSources=new WeakSet();
 function butterflyHeldBy(source){return Boolean(source && (butterflyGestureSources.has(source) || butterflyCompanions.some(insect=>insect.heldSource===source)));}
 function releaseDemoButterfly(insect){
+    butterflySDK?.release(insect);insect.sdkDepthOffset=0;
     const perch=infoPanel?.getPerchPose(insect.side),position=insect.handPosition || insect.position;
     const frameHit=introWorldAnchor?welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080):null;
     const hits=latestControllerRay?[infoPanel?.hit(latestControllerRay),frameHit?{...frameHit,perchFrame:true}:null,knowledgeRenderer?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay),demoNoteHit(latestControllerRay)].filter(Boolean):[];
@@ -5292,21 +5296,45 @@ function butterflyRayTarget(){
  const ray=latestControllerRay;if(!ray)return null;let nearest=null;
  for(const insect of butterflyCompanions){if(insect.heldSource || !insect.position)continue;const p=insect.position,dx=p.x-ray.origin.x,dy=p.y-ray.origin.y,dz=p.z-ray.origin.z,t=dx*ray.direction.x+dy*ray.direction.y+dz*ray.direction.z;if(t<0 || t>2.5 || nearest && t>=nearest.distance)continue;const error=Math.hypot(dx-ray.direction.x*t,dy-ray.direction.y*t,dz-ray.direction.z*t);if(error<.08)nearest={kind:'butterfly',id:'butterfly-'+insect.seed,distance:t,insect,point:p};}return nearest;
 }
-function butterflyGripStart(source){
+function beginButterflySDK(insect,source,frame){
+ if(!frame?.session || !xrInputRuntime(frame.session)?.createDemoInteractions)return null;
+ butterflySDK ||= createButterflySDKGrip(frame.session,referenceSpace,{onCancel:releaseDemoButterfly});
+ return butterflySDK.begin(insect,source,frame);
+}
+function butterflyGripStart(source,frame){
+ if(butterflyHeldBy(source) || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return false;
+ if(demoLivingMapGrip?.owns(source) || knowledgeRenderer?.grabbedSource===source || heroDiceToy?.heldSource===source || [...demoPlacedNoteViews.values()].some(note=>note.renderer.heldSource===source) || demoHeldIndex>=0 && demoGrabInputSource===source)return false;
  const target=resolveDemoCellTarget();if(target?.kind!=='butterfly')return false;
+ const sdk=beginButterflySDK(target.insect,source,frame);if(sdk===false)return false;
  const nearest=target.insect;nearest.heldSource=source;nearest.controllerDistance=target.distance;nearest.handPosition={...nearest.position};nearest.releasedPerch=false;return true;
 }
-function pollButterflyPinches(){
+function pollButterflyPinches(frame){
     for(const insect of butterflyCompanions)if(insect.heldSource?.hand && !latestTrackedHandStates.some(entry=>entry.source===insect.heldSource)){releaseDemoButterfly(insect);}
     for(const {source,state} of latestTrackedHandStates){
-        if(demoLivingMapGrip?.owns(source))continue;
+        if(demoLivingMapGrip?.owns(source) || infoPanel?.isHandInteracting(source) || knowledgeRenderer?.grabbedSource===source || [...demoPlacedNoteViews.values()].some(note=>note.renderer.heldSource===source))continue;
         const thumb=state.rawJoints.get('thumb-tip'),index=state.rawJoints.get('index-finger-tip');if(!thumb || !index)continue;
         const point={x:(thumb.x+index.x)/2,y:(thumb.y+index.y)/2,z:(thumb.z+index.z)/2};
         if(!state.pinch)butterflyGestureSources.delete(source);
         const held=butterflyCompanions.find(insect=>insect.heldSource===source),previous=butterflyPinchStates.get(source);butterflyPinchStates.set(source,state.pinch);
         if(held && !state.pinch){releaseDemoButterfly(held);}
-        else if(state.pinch && previous===false && !held){const insect=butterflyCompanions.find(item=>!item.heldSource && item.position && Math.hypot(item.position.x-point.x,item.position.y-point.y,item.position.z-point.z)<.12);if(insect){butterflyGestureSources.add(source);insect.heldSource=source;insect.handOffset={x:insect.position.x-point.x,y:insect.position.y-point.y,z:insect.position.z-point.z};}}
-        const attached=butterflyCompanions.find(insect=>insect.heldSource===source);if(attached)attached.handPosition={x:point.x+attached.handOffset.x,y:point.y+attached.handOffset.y,z:point.z+attached.handOffset.z};
+        else if(state.pinch && previous===false && !held){const insect=butterflyCompanions.find(item=>!item.heldSource && item.position && Math.hypot(item.position.x-point.x,item.position.y-point.y,item.position.z-point.z)<.12);if(insect && beginButterflySDK(insect,source,frame)!==false){butterflyGestureSources.add(source);insect.heldSource=source;insect.handOffset={x:insect.position.x-point.x,y:insect.position.y-point.y,z:insect.position.z-point.z};}}
+        const attached=butterflyCompanions.find(insect=>insect.heldSource===source);if(attached && !butterflySDK?.owns(attached))attached.handPosition={x:point.x+attached.handOffset.x,y:point.y+attached.handOffset.y,z:point.z+attached.handOffset.z};
+    }
+}
+function updateButterflyGrips(frame,time){
+    if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE || demoKnowledgeIsModal() || demoWebModeOpen){for(const insect of butterflyCompanions)if(insect.heldSource)releaseDemoButterfly(insect);for(const {source,state}of latestTrackedHandStates)butterflyPinchStates.set(source,Boolean(state.pinch));return;}
+    pollButterflyPinches(frame);
+    for(const insect of butterflyCompanions){
+        const source=insect.heldSource;if(!source)continue;
+        const elapsed=insect.depthUpdatedAt?Math.max(0,Math.min(60,time-insect.depthUpdatedAt)):16;insect.depthUpdatedAt=time;
+        const point=butterflySDK?.owns(insect)?butterflySDK.update(insect,frame):null;
+        if(!insect.heldSource)continue;
+        if(source.hand){if(point)insect.handPosition=point;continue;}
+        const ray=demoControllerRayForInputEvent({frame,inputSource:source});if(!ray){releaseDemoButterfly(insect);continue;}
+        const axes=source.gamepad?.axes || [],previous=insect.controllerDistance;
+        insect.controllerDistance=Math.max(.25,Math.min(2.5,previous+spatialDepthDelta(axes.length>2?axes[3]:axes[1],elapsed)));
+        insect.sdkDepthOffset=(insect.sdkDepthOffset || 0)+insect.controllerDistance-previous;
+        insect.handPosition=point?{x:point.x+ray.direction.x*insect.sdkDepthOffset,y:point.y+ray.direction.y*insect.sdkDepthOffset,z:point.z+ray.direction.z*insect.sdkDepthOffset}:{x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};
     }
 }
 
@@ -6742,7 +6770,7 @@ async function startImmersive() {
             if(event.inputSource?.hand)return;
             if(demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return;
             captureDemoInputEventRay(event);
-            if(!demoKnowledgeWorkspace && !placementReady && butterflyGripStart(event.inputSource)){butterflyTriggerSources.add(event.inputSource);event.stopImmediatePropagation?.();return;}
+            if(!demoKnowledgeWorkspace && !placementReady && butterflyGripStart(event.inputSource,event.frame)){butterflyTriggerSources.add(event.inputSource);event.stopImmediatePropagation?.();return;}
             // If the capture-phase LIM listener is unavailable, still keep a
             // trigger aimed at the mesh out of the plant grab state machine.
             const pressedCell=resolveDemoCellTarget();
@@ -6786,7 +6814,7 @@ async function startImmersive() {
             captureDemoInputEventRay(event);
             if(demoNoteOwnsPointer() && demoNoteHit(latestControllerRay)?.noteRenderer.beginGrab(latestControllerRay,event.inputSource,event.frame)){event.stopImmediatePropagation();return;}
             if(event.inputSource?.hand || arWelcomeIntroPending || placementReady || demoKnowledgeIsModal() || demoWebModeOpen)return;
-            captureDemoInputEventRay(event);if(butterflyGripStart(event.inputSource))return;
+            captureDemoInputEventRay(event);if(butterflyGripStart(event.inputSource,event.frame))return;
             const target=demoRecordAtPointer(),panelTarget=resolveDemoCellTarget(),signHit=totemCardsRenderer?.hit(latestControllerRay);
             if(panelTarget?.kind==='panel' && (!target || panelTarget.distance<=target.hit.distance) || signHit && (!target || signHit.distance<=target.hit.distance))return;
             demoGrabInputSource=event.inputSource;beginControllerDemoHold(null,event.frame);
@@ -6852,7 +6880,7 @@ async function startImmersive() {
                 if(note.root.hidden || !demoAreaVisible(note.record) || note.record.demoHiddenForLimo || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE || demoKnowledgeIsModal()){note.renderer.releaseGrab(note.renderer.heldSource);continue;}
                 const ray=demoControllerRayForInputEvent({frame,inputSource:note.renderer.heldSource});note.renderer.updateGrab(ray,frame);
             }
-            runXrFrameStep('butterfly pinch',()=>{pollButterflyPinches();for(const insect of butterflyCompanions){if(!insect.heldSource || insect.heldSource.hand)continue;const elapsed=insect.depthUpdatedAt?Math.max(0,Math.min(60,_time-insect.depthUpdatedAt)):16;insect.depthUpdatedAt=_time;const ray=demoControllerRayForInputEvent({frame,inputSource:insect.heldSource});if(!ray){releaseDemoButterfly(insect);continue;}const axes=insect.heldSource.gamepad?.axes || [];insect.controllerDistance=Math.max(.25,Math.min(2.5,insect.controllerDistance+spatialDepthDelta(axes.length>2?axes[3]:axes[1],elapsed)));insect.handPosition={x:ray.origin.x+ray.direction.x*insect.controllerDistance,y:ray.origin.y+ray.direction.y*insect.controllerDistance,z:ray.origin.z+ray.direction.z*insect.controllerDistance};}});
+            runXrFrameStep('butterfly pinch',()=>updateButterflyGrips(frame,_time));
             runXrFrameStep('controller skip',pollDemoControllerSkip);
             runXrFrameStep('PIM hover',syncDemoPimHover);
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));

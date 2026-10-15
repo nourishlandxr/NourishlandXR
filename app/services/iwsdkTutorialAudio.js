@@ -10,7 +10,7 @@ export function tutorialSoundUrl(kind){
     let seed=771,filtered=0;
     for(let i=0;i<count;i++){
         seed=(Math.imul(seed,1664525)+1013904223)>>>0;filtered=.9*filtered+.1*(seed/4294967296*2-1);
-        const t=i/rate,fade=Math.min(1,i/160,(count-i)/160),value=kind==='water'?filtered*.7:Math.sin(t*Math.PI*2*165)*.12+Math.sin(t*Math.PI*2*330)*.035;
+        const t=i/rate,fade=Math.min(1,i/160,(count-i)/160),value=kind==='sparkle'?[660,880,1100,1320].reduce((sum,hz,n)=>{const age=t-n*.12;return sum+(age>0?Math.sin(age*Math.PI*2*hz)*Math.exp(-age*7)*.10:0);},0):kind==='water'?filtered*.7:Math.sin(t*Math.PI*2*165)*.12+Math.sin(t*Math.PI*2*330)*.035;
         view.setInt16(44+i*2,Math.round(value*fade*32767),true);
     }
     let binary='';for(const byte of bytes)binary+=String.fromCharCode(byte);
@@ -22,28 +22,31 @@ export async function createTutorialAudioOwner(runtime,voice,sdk=AudioSDK,{scope
     const {InteractionWorld,AudioSystem,AudioSource,AudioUtils,AssetManager,AudioAssetLoader,LoadingManager,Scene,Group,EventDispatcher,AudioContext,PositionalAudio,Matrix4}=sdk;
     AudioContext.setContext(context);
     AudioAssetLoader.init(new LoadingManager());
-    const sounds=scope==='demo'?{bee:tutorialSoundUrl('insect')}:{water:tutorialSoundUrl('water'),insect:tutorialSoundUrl('insect')};
+    const sounds=scope==='demo'?{bee:tutorialSoundUrl('insect')}:{water:tutorialSoundUrl('water'),insect:tutorialSoundUrl('insect'),sparkle:tutorialSoundUrl('sparkle')};
     await Promise.all(Object.values(sounds).map(url=>AssetManager.loadAudio(url)));
     const world=new InteractionWorld({entityCapacity:8});world.scene=new Scene();
     const head=new Group();world.scene.add(head);world.player={head};world.renderer={xr:new EventDispatcher()};
     world.registerComponent(AudioSource);world.registerSystem(AudioSystem);
     const system=world.getSystem(AudioSystem),speech=new PositionalAudio(system.listener);
     speech.setRefDistance(1);speech.setRolloffFactor(.35);speech.setMaxDistance(20);world.scene.add(speech);
-    const records=new Map(),matrix=new Matrix4();let disposed=false,connected=false;
+    const records=new Map(),matrix=new Matrix4();let disposed=false,connected=false,audible=false;
     for(const [id,src]of Object.entries(sounds)){
         const mesh=new Group();world.scene.add(mesh);const entity=world.createEntity();entity.object3D=mesh;
-        entity.addComponent(AudioSource,{src,positional:true,loop:true,autoplay:false,volume:id==='water'?.10:.035,refDistance:.5,rolloffFactor:1.2,maxDistance:8});
+        entity.addComponent(AudioSource,{src,positional:true,loop:id!=='sparkle',autoplay:false,volume:id==='water'?.10:id==='sparkle'?.14:.035,refDistance:.5,rolloffFactor:1.2,maxDistance:8});
         records.set(id,{mesh,entity,playing:false});
     }
     const releaseSpeech=voice.setSpatialOutput?.({connect(node){if(disposed)return;speech.setNodeSource(node);connected=true;}});
-    const suspend=()=>{for(const record of records.values()){AudioUtils.stop(record.entity);record.playing=false;}world.update(0,0);};
+    const suspend=()=>{audible=false;for(const record of records.values()){AudioUtils.stop(record.entity);record.playing=false;}world.update(0,0);};
     return {
         backend:'iwsdk-spatial-audio',world,system,
+        sparkle(position,{volume=1}={}){const record=records.get('sparkle');if(disposed || !audible || !record || !position || volume<=0)return false;record.entity.setValue(AudioSource,'volume',.14*Math.max(0,Math.min(1,volume)));record.mesh.position.copy(position);AudioUtils.stop(record.entity);world.update(0,0);AudioUtils.play(record.entity);record.playing=true;world.scene.updateMatrixWorld(true);world.update(0,0);return true;},
         update(dt,time,{viewer,zinnia,water,insect,watering=false,flying=false,paused=false,muted=false,visible=true}={}){
             if(disposed)return;
+            audible=visible && !paused && !muted;
             if(viewer)matrix.fromArray(viewer).decompose(head.position,head.quaternion,head.scale);
             if(zinnia)speech.position.copy(zinnia);
             for(const [id,record]of records){
+                if(id==='sparkle'){if(!audible){AudioUtils.stop(record.entity);record.playing=false;}continue;}
                 const position=id==='water'?water:insect;if(position)record.mesh.position.copy(position);
                 const playing=visible && !paused && !muted && (id==='water'?watering:flying);
                 if(playing!==record.playing){playing?AudioUtils.play(record.entity):AudioUtils.stop(record.entity);record.playing=playing;}

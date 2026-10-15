@@ -13,7 +13,7 @@ import {NOURISHLAND_PAINT_TIP} from './nourishlandControllerPrototype.js';
 const colours=['#86e7d0','#e8a1d0','#ffd47c','#9eb8ff','#ffffff'];
 const v=()=>new THREE.Vector3();
 export function trialTerrainHeight(x,z){return .012+.10*Math.exp(-((x+.105)**2+(z+.11)**2)/.006)+.055*Math.exp(-((x-.13)**2+(z+.09)**2)/.004);}
-export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},onClose=()=>{},onFeedback=()=>{},getPanelPose=()=>null,getControllerTool=()=>'paint',wristControls=false}={}){
+export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},onClose=()=>{},onFeedback=()=>{},getPanelPose=()=>null,getControllerTool=()=>'paint',wristControls=false,getButterflyContext=()=>({}),onButterflyCue=()=>{},onButterflyZinnia=()=>{}}={}){
     const state=createWelcomeTrialState(),layer=new THREE.Group(),panel=new THREE.Group();root.add(layer,panel);layer.name='Optional welcome trials';layer.visible=false;panel.name='Welcome trial list';panel.visible=false;
     const canvas=document.createElement('canvas');canvas.width=900;canvas.height=900;
     const texture=new THREE.CanvasTexture(canvas),panelMesh=new THREE.Mesh(new THREE.PlaneGeometry(.24,.24),new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide}));panel.add(panelMesh);panelMesh.renderOrder=25;panel.position.set(-.91,.49,-.12);
@@ -40,7 +40,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             for(const [w,h,x,y] of [[.60,.02,0,.19],[.60,.02,0,-.19],[.02,.36,-.29,0],[.02,.36,.29,0]]){const rail=new THREE.Mesh(new THREE.BoxGeometry(w,h,.025),wood);rail.position.set(x,y,0);peekFrame.add(rail);}
         }
         if(['dragonfly','strawberry'].includes(id))games.set(id,createWelcomeOptionalGame(id,group,{onAssets,onFeedback}));
-        if(id==='butterflies')games.set(id,createWelcomeButterflyBucket(group,{onAssets,onFeedback}));
+        if(id==='butterflies')games.set(id,createWelcomeButterflyBucket(group,{onAssets,onFeedback,getContext:getButterflyContext,onCue:onButterflyCue,onZinnia:onButterflyZinnia}));
         if(id==='garden'){
             disk=new THREE.Group();disk.name='Trial empty Living Disk';disk.position.set(.08,.06,.02);group.add(disk);
             // The demo's round miniature, timber rim and plant geometry, with
@@ -67,8 +67,8 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         if(id==='tic-tac-toe')games.set(id,createWelcomeTicTacToe(group,{onAssets,onFeedback,onChange:()=>{signature='';}}));
         onAssets();
     }
-    function open(id,{mode}={}){if(!WELCOME_TRIALS.some(trial=>trial.id===id))return false;releaseAll();state.open(id);if(mode)state.setMode(mode);else if(['butterflies','tic-tac-toe'].includes(id))state.setMode('hands');build(id);layer.visible=true;for(const [key,group] of groups)group.visible=key===id;onOpen();signature='';return true;}
-    function close(){if(!state.active)return;releaseAll();state.close();layer.visible=false;onClose();signature='';}
+    function open(id,{mode}={}){if(!WELCOME_TRIALS.some(trial=>trial.id===id))return false;releaseAll();state.open(id);if(mode)state.setMode(mode);else if(['butterflies','tic-tac-toe'].includes(id))state.setMode('hands');build(id);if(id==='butterflies')games.get(id)?.reset();layer.visible=true;for(const [key,group] of groups)group.visible=key===id;onOpen();signature='';return true;}
+    function close(){if(!state.active)return;releaseAll();if(state.active==='butterflies')onButterflyZinnia('rest');state.close();layer.visible=false;onClose();signature='';}
     function command(id){
         if(id.startsWith('open:'))return open(id.slice(5));
         if(id.startsWith('cell:'))return playTicCell(Number(id.slice(5)));
@@ -102,7 +102,7 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
         const ctx=canvas.getContext('2d');ctx.clearRect(0,0,900,900);ctx.fillStyle='rgba(24,47,40,.96)';ctx.beginPath();ctx.roundRect(0,0,900,900,40);ctx.fill();ctx.fillStyle='#eef3dc';ctx.font='bold 42px system-ui';ctx.textAlign='left';ctx.fillText(snap.active==='painting'?'MARKING TOOLS':'ACTIVITY TOOLS',40,65);ctx.font='25px system-ui';ctx.fillText(snap.active?'Your lesson is waiting here.':'Load a trial whenever you like.',40,108);
         const rowHeight=Math.min(66,Math.floor(600/Math.ceil(rows.length/2)));rows.forEach((row,i)=>{row.left=24+(i%2)*438;row.right=row.left+414;row.top=140+Math.floor(i/2)*rowHeight;row.bottom=row.top+rowHeight-8;ctx.fillStyle=row.colour || (row.id==='close'?'#6a8660':'#355c4a');ctx.beginPath();ctx.roundRect(row.left,row.top,414,rowHeight-8,9);ctx.fill();ctx.fillStyle=row.colour && row.colour!=='#263b32'?'#152b23':'#e0e7d8';ctx.font='26px system-ui';ctx.fillText(row.label,row.left+16,row.top+30,382);if(row.slider){ctx.strokeStyle='#a7cab6';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(row.left+16,row.bottom-12);ctx.lineTo(row.right-16,row.bottom-12);ctx.stroke();ctx.fillStyle='#eef3dc';ctx.beginPath();ctx.arc(row.left+16+(row.right-row.left-32)*(snap.width-.001)/.019,row.bottom-12,7,0,Math.PI*2);ctx.fill();}});
 
-        const hints=snap.active==='butterflies'?['Lift the cup to release butterflies.','Close both fists: invite them to land.','Open your hands to let them fly.']:snap.active==='garden'?['Grab wisps; bring them into the cloud.','Hold a card; trigger / pinch to make a seed.','Release seeds onto the disk.','Cloud: grip + trigger, or close your fist.','Squeeze above planted seeds to grow them.']:snap.active==='painting'?[MARKING_BRUSHES[snap.brush]?.purpose || 'Make a marking in space.','Trigger / pinch to draw; release to finish.','Water · Vine · Earth · Firefly']:snap.active==='peek-frame'?['Grip the frame to move it.','Lean into the picture to explore its depth.']:snap.active==='tic-tac-toe'?games.get('tic-tac-toe').hints():['Optional play and practice.','The guided tutorial stays unchanged.'];
+        const hints=snap.active==='butterflies'?games.get('butterflies').hints():snap.active==='garden'?['Grab wisps; bring them into the cloud.','Hold a card; trigger / pinch to make a seed.','Release seeds onto the disk.','Cloud: grip + trigger, or close your fist.','Squeeze above planted seeds to grow them.']:snap.active==='painting'?[MARKING_BRUSHES[snap.brush]?.purpose || 'Make a marking in space.','Trigger / pinch to draw; release to finish.','Water · Vine · Earth · Firefly']:snap.active==='peek-frame'?['Grip the frame to move it.','Lean into the picture to explore its depth.']:snap.active==='tic-tac-toe'?games.get('tic-tac-toe').hints():['Optional play and practice.','The guided tutorial stays unchanged.'];
         ctx.fillStyle='#d0dfc4';ctx.font='25px system-ui';hints.forEach((line,i)=>ctx.fillText(line,35,780+i*30,830));if(error){ctx.fillStyle='#ffc7a5';ctx.fillText(error,35,885,830);}texture.needsUpdate=true;
     }
     function panelPoint(point){if(!panel.visible)return null;panel.updateWorldMatrix(true,false);const p=point.clone().applyMatrix4(panel.matrixWorld.clone().invert());if(Math.abs(p.x)>.12 || Math.abs(p.y)>.12 || Math.abs(p.z)>.035)return null;const x=(.5+p.x/.24)*900,y=(.5-p.y/.24)*900;const row=rows.find(row=>x>=row.left && x<=row.right && y>=row.top && y<=row.bottom);return row?.slider?'width:'+(.001+.019*THREE.MathUtils.clamp((x-row.left-22)/(row.right-row.left-44),0,1)):row?.id || null;}

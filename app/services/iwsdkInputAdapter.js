@@ -15,8 +15,8 @@ export const createNlxrInput = (session, options) => {
         freeHandPose: VIRTUAL_HAND_FIST_POSE,
         Scene, PerspectiveCamera, Matrix4, Quaternion, Group }, options);
     const owners=new Set(),disposeInput=runtime.dispose;let disposed=false;
-    runtime.createTutorialInteractions = () => {
-        const owner=createTutorialInteractionOwner(runtime,GrabSDK),dispose=owner.dispose;
+    runtime.createTutorialInteractions = options => {
+        const owner=createTutorialInteractionOwner(runtime,GrabSDK,options),dispose=owner.dispose;
         owners.add(owner);owner.dispose=()=>{dispose();owners.delete(owner);};return owner;
     };
     runtime.createDemoInteractions = ({scope='demo'}={}) => {

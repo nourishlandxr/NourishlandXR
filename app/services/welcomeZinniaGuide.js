@@ -9,6 +9,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
     let model=null,mixer=null,disposed=false,ready=false,age=0,phase='',level=0,rewardAge=10,ack=null,ackAge=10,smileNow=.45,eyeSmile=.65,mouthOpen=0,mouthRound=0,mouthWide=0,mouthNarrow=0,mouthClosed=0,blink=0,cueId=null,cueIntent='explain',presentingFruit=false;
     const parts={},fruitSockets={},leafCentres={},petals=[],target=new THREE.Vector3(),worldTarget=new THREE.Vector3(),local=new THREE.Vector3(),bodyTarget=new THREE.Vector3(),gazeEuler=new THREE.Euler(),gazeQuaternion=new THREE.Quaternion(),armQuaternion=new THREE.Quaternion(),armEuler=new THREE.Euler(),armDirection=new THREE.Vector3(),armTarget=new THREE.Vector3(),cradlePoint=new THREE.Vector3(),shoulderPoint=new THREE.Vector3();let bodyYaw=0,bodyPitch=0,bodyLean=0,gesture=null,gestureAge=10;
     const presentationSocket=new THREE.Group();presentationSocket.name='Zinnia centred two-leaf fruit cradle';root.add(presentationSocket);
+    let butterflyStage='rest',butterflyAge=0;
     const wrapper=node=>{const pivot=new THREE.Group();pivot.position.copy(node.position);node.parent.add(pivot);pivot.add(node);node.position.set(0,0,0);return pivot;};
     function dispose(object){object.traverse(n=>{n.geometry?.dispose();for(const material of [n.material].flat().filter(Boolean))material.dispose();});}
     const loading=load(new URL('../assets/welcome-practice/zinnia.glb',import.meta.url).href).then(gltf=>{
@@ -62,7 +63,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         // The tutorial owns visibility and its white silhouette reveal.
         if(!ready || disposed)return;
         if(!holder.visible){age=0;level=0;phase=lesson;return;}
-        dt=Math.max(0,Math.min(.06,dt));age+=dt;rewardAge+=dt;ackAge+=dt;gestureAge+=dt;mixer.update(dt);
+        dt=Math.max(0,Math.min(.06,dt));age+=dt;rewardAge+=dt;ackAge+=dt;gestureAge+=dt;butterflyAge+=dt;mixer.update(dt);
         if(lesson!==phase){phase=lesson;rewardAge=10;ackAge=10;if(lesson==='zinnia')acknowledge('yes');}
         if(cue && cue.id!==cueId){cueId=cue.id;cueIntent=cue.intent || 'explain';rewardAge=10;ackAge=10;if(cueIntent==='celebrate')celebrate();else if(cueIntent==='acknowledge')acknowledge('yes');else if(['greet','farewell'].includes(cueIntent))wave(cueIntent);}
         // Preserve the authored shape; the reveal fades materials rather than scaling it.
@@ -105,6 +106,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
         for(const side of ['L','R']){const pivot=parts['Leaf_arm_'+side]?.userData.guidePivot;if(!pivot)continue;const q=armQuaternion.identity(),sign=side==='L'?-1:1;
             if(leafTargets?.[side]){local.copy(leafTargets[side]);pivot.parent.worldToLocal(local).sub(pivot.position);q.setFromUnitVectors(armDirection.set(sign,.1,.2).normalize(),local.normalize());}
             else if(lesson==='living-frame' && task && side==='R'){armTarget.copy(worldTarget);pivot.parent.worldToLocal(armTarget).sub(pivot.position);q.setFromUnitVectors(armDirection.set(sign,.1,.2).normalize(),armTarget.normalize());}
+            else if(butterflyStage!=='rest' && side==='R'){const shake=butterflyStage==='shake'?Math.sin(butterflyAge*13)*.16:0;q.setFromEuler(armEuler.set(-.1,-.4+shake,1+shake*.4));}
             else if(presentingFruit){armTarget.set(sign*.027,-.075,-.016);presentationSocket.localToWorld(armTarget);pivot.parent.worldToLocal(armTarget).sub(pivot.position);q.setFromUnitVectors(leafCentres[side],armTarget.normalize());}
             else if(gesture && gestureAge<2.8){const envelope=THREE.MathUtils.smoothstep(gestureAge,0,.35)*(1-THREE.MathUtils.smoothstep(gestureAge,2.2,2.8)),waving=side==='R' || gesture==='farewell',sway=Math.sin(gestureAge*7+sign*.4);if(waving)q.setFromEuler(armEuler.set(-.12*envelope,-sign*(.25+.15*sway)*envelope,sign*(1.05+.22*sway)*envelope));}
             else if(celebrating){const fade=Math.min(1,rewardAge*3)*Math.max(0,Math.min(1,(2.4-rewardAge)*3)),angle=(1.05+.34*Math.sin(rewardAge*Math.PI*5))*fade;q.setFromEuler(armEuler.set(0,side==='L'?angle:-angle,-sign*.2*fade));}
@@ -114,5 +116,5 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
             pivot.quaternion.slerp(q,1-Math.exp(-7*dt));
         }
     }
-    return {holder,leaf(side){return parts['Leaf_arm_'+side];},fruitSocket(side='L'){return fruitSockets[side] || null;},presentFruit(){presentingFruit=true;rewardAge=10;acknowledge('yes');},releaseFruit(){presentingFruit=false;},loading,update,celebrate,acknowledge,wave,snapshot:()=>({ready,visible:holder.visible,visibleAge:age,phase,cueId,cueIntent,bodyYaw,bodyPitch,bodyLean,gesture:gestureAge<2.8?gesture:null,gestureAge,petalBatches:petals.length,speaking:level>.02,speechLevel:level,eyeSmile,mouthOpen,mouthRound,mouthWide,mouthNarrow,mouthClosed,blink,celebrating:rewardAge<2.4,presentingFruit}),destroy(){disposed=true;mixer?.stopAllAction();}};
+    return {holder,setButterflyStage(stage){if(stage!==butterflyStage){butterflyStage=stage;butterflyAge=0;}},butterflyPerch(){const leaf=parts.Leaf_arm_R;if(!ready || !leaf)return null;leaf.updateWorldMatrix(true,false);const point=new THREE.Box3().setFromObject(leaf).getCenter(new THREE.Vector3());point.y+=.008;return {point,q:leaf.getWorldQuaternion(new THREE.Quaternion())};},leaf(side){return parts['Leaf_arm_'+side];},fruitSocket(side='L'){return fruitSockets[side] || null;},presentFruit(){presentingFruit=true;rewardAge=10;acknowledge('yes');},releaseFruit(){presentingFruit=false;},loading,update,celebrate,acknowledge,wave,snapshot:()=>({ready,butterflyStage,butterflyAge,visible:holder.visible,visibleAge:age,phase,cueId,cueIntent,bodyYaw,bodyPitch,bodyLean,gesture:gestureAge<2.8?gesture:null,gestureAge,petalBatches:petals.length,speaking:level>.02,speechLevel:level,eyeSmile,mouthOpen,mouthRound,mouthWide,mouthNarrow,mouthClosed,blink,celebrating:rewardAge<2.4,presentingFruit}),destroy(){disposed=true;mixer?.stopAllAction();}};
 }

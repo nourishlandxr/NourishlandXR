@@ -7,6 +7,19 @@ import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} fro
 import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
 import {createZinniaFramePerch,ZINNIA_FRAME_PERCH} from '../app/services/zinniaFramePerch.js';
 
+test('Zinnia butterfly perch follows the real leaf and her gentle shake changes its world pose',async()=>{
+    const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));
+    const character=createZinniaCharacter({load:()=>new GLTFLoader().parseAsync(bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength),'')});await character.userData.zinnia.ready;
+    const guide=character.userData.zinnia.guide;
+    try{
+        guide.setButterflyStage('perch');for(let i=0;i<40;i++)guide.update(.05,{lesson:'butterflies'});
+        const first=guide.butterflyPerch();assert.ok(first && first.point.toArray().every(Number.isFinite));
+        guide.setButterflyStage('shake');for(let i=0;i<8;i++)guide.update(.05,{lesson:'butterflies'});
+        const moving=guide.butterflyPerch();assert.ok(first.point.distanceTo(moving.point)>.001 || first.q.angleTo(moving.q)>.01);
+        guide.setButterflyStage('rest');assert.equal(guide.snapshot().butterflyStage,'rest');
+    }finally{disposeZinniaCharacter(character);}
+});
+
 test('demo character resets a previous lesson clock and uploads facial morphs through the XR renderer',async(t)=>{
     let frameTime=0;t.mock.method(performance,'now',()=>frameTime);
     const bytes=fs.readFileSync(new URL('../app/assets/welcome-practice/zinnia.glb',import.meta.url));

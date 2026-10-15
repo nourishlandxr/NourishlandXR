@@ -8,7 +8,7 @@ import {unlockWelcomeInputChoice,welcomeInputChoiceUnlocked} from '../app/servic
 import {prepareBananaHalf,tryBananaBite} from '../app/services/welcomeBananaBite.js';
 import {panelSettingsControls} from '../app/services/pimInfoPanel.js';
 
-test('butterfly pinch releases to a brief flight and perches follow current real joints',async()=>{
+test('butterfly pinch releases to brief flight without inventing missing hand perches',async()=>{
  const root=new THREE.Group();root.position.set(1,.8,-2);root.rotation.y=.7;root.updateMatrixWorld(true);
  const bucket=createWelcomeButterflyBucket(root,{load:async()=>Array.from({length:4},()=>new THREE.Mesh(new THREE.SphereGeometry(1,6,4),new THREE.MeshBasicMaterial()))});await bucket.loading;
  const source={handedness:'left',hand:{}},input={source,trigger:false};
@@ -16,8 +16,7 @@ test('butterfly pinch releases to a brief flight and perches follow current real
  try{const first=new THREE.Vector3(...bucket.snapshot().insects[0].position);move(first,false);move(first,true);assert.equal(bucket.snapshot().insects[0].state,'held');move(first.clone().add(new THREE.Vector3(0,.15,0)),true);move(first,false);assert.equal(bucket.snapshot().released,1);assert.equal(bucket.snapshot().insects[0].state,'flying');
  const p=root.localToWorld(new THREE.Vector3(.10,.35,.10));input.joints=new Map([['index-finger-phalanx-proximal',p]]);
  for(let i=0;i<30;i++)bucket.update(.05,[input]);assert.equal(bucket.snapshot().insects[0].state,'flying','flight is visible before landing');
- for(let i=0;i<100;i++)bucket.update(.05,[input]);assert.equal(bucket.snapshot().insects[0].state,'landed');assert.equal(bucket.snapshot().complete,true);assert.ok(new THREE.Vector3(...bucket.snapshot().insects[0].position).distanceTo(new THREE.Vector3(.10,.357,.10))<.012);
- p.x+=.12;for(let i=0;i<20;i++)bucket.update(.05,[input]);assert.ok(bucket.snapshot().insects[0].position[0]>.17,'perch moves with the real joint');bucket.update(.05,[]);assert.equal(bucket.snapshot().insects[0].state,'flying');
+ for(let i=0;i<100;i++)bucket.update(.05,[input]);assert.equal(bucket.snapshot().insects[0].state,'flying');assert.equal(bucket.snapshot().complete,false,'one joint is not a tracked open hand');bucket.update(.05,[]);assert.equal(bucket.snapshot().insects[0].state,'flying');
  move(new THREE.Vector3(...bucket.snapshot().insects[0].position),true);assert.equal(bucket.snapshot().insects[0].state,'flying','tracking recovery requires a released pinch first');
  }finally{bucket.destroy();}
 });
