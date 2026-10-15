@@ -12,6 +12,12 @@ test('Footer grows with introduced elements and uses state rather than open/clos
     assert.equal(buttons.length,4);assert.ok(buttons.every(item=>item.y===752));
 });
 test('Welcome badge renders the current build version',()=>{const app={innerHTML:''};renderLaunchScreen(app);assert.ok(app.innerHTML.includes('>'+`V${BUILD_INFO.version}`+' · '));});
+test('Welcome offers saved Quest report without a URL query',()=>{
+ const original=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+ Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:key=>key==='nourishland-xr-quest-tutorial-capture'?'{"lessons":[]}':null}});
+ try{const app={innerHTML:''};renderLaunchScreen(app);assert.match(app.innerHTML,/data-quest-report>Quest report<\/button>/);}
+ finally{if(original)Object.defineProperty(globalThis,'localStorage',original);else delete globalThis.localStorage;}
+});
 test('minimized XR panel preserves footer identity and hidden state',()=>{
  const [button]=spatialPanelControls({hidden:true,items:[{action:'Restore',label:'PANEL',kind:'visibility',selected:false}]});
  assert.equal(button.label,'PANEL');assert.equal(button.kind,'visibility');assert.equal(button.selected,false);
