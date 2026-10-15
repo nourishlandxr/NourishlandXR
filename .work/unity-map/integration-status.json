@@ -1,0 +1,60 @@
+{
+  "nativeVersion": "0.2.26",
+  "androidVersionCode": 27,
+  "sourceInstalled": true,
+  "isolatedRuntimeCompilation": "passed",
+  "isolatedEditorCompilation": "passed",
+  "modelChecks": 17,
+  "renderedEditorChecks": "not run: existing project is open",
+  "questBuild": "not built",
+  "deviceInstall": "not performed",
+  "websiteVersion": "0.9648",
+  "websiteBuild": "passed",
+  "welcomeBadge": "V0.9648 · Local preview",
+  "files": [
+    {
+      "path": "Assets/NLXR/Scripts/ProjectLivingMapData.cs",
+      "sha256": "15848db9fc50f014d7aff2b7082aacf5da060df3db09dd16ef2da59b16a6f7e8"
+    },
+    {
+      "path": "Assets/NLXR/Scripts/NativeProjectLivingMap.cs",
+      "sha256": "ec43e3a33d0ee692d74972e43f132dc6e25a93da96f1f96cf53088c536e99ff0"
+    },
+    {
+      "path": "Assets/NLXR/Scripts/NativeJourneyProjectMap.cs",
+      "sha256": "a5a550341ad5b316b0626969040f561380004229611a6e6ad10671f6d6b97e37"
+    },
+    {
+      "path": "Assets/NLXR/Scripts/NativeJourney.cs",
+      "sha256": "d950d3cb2e32cd794766efccfd0568ac2452e9835f671a90714c6bf0f42e70a7"
+    },
+    {
+      "path": "Assets/NLXR/Scripts/NativeJourneySharedProject.cs",
+      "sha256": "24c0f81b8c263275de85e86cd8f06aea6fb6efe13e0c0108921d86ada42fb6bd"
+    },
+    {
+      "path": "Assets/NLXR/Scripts/NativeJourneyCreate.cs",
+      "sha256": "ea55f5bff2863856af93d35803c10fc89f08cf5c7c59c6f20177f26ecf0b5774"
+    },
+    {
+      "path": "Assets/NLXR/Scripts/NativeJourneyCreatorInspector.cs",
+      "sha256": "014bfcb170c2d65ada9038215b2737dd0e47ee763a67bc0badec50c4c3634d08"
+    },
+    {
+      "path": "Assets/NLXR/Editor/ProjectLivingMapVerification.cs",
+      "sha256": "6d49db95cdba38f9853f3ebb7b89f6c591a362a1222f4320983160c224f366d4"
+    },
+    {
+      "path": "Assets/NLXR/Editor/ProjectSetup.cs",
+      "sha256": "2c205873d796e6fb3ca83317e213abc16fd9a5cb6cc21d14009ac75f052b015c"
+    },
+    {
+      "path": "ProjectSettings/ProjectSettings.asset",
+      "sha256": "a816476e1bd9e96dd2fe8df525a682a196064864e307c32bebf1ece42f110daf"
+    },
+    {
+      "path": "Documentation/PROJECT-LIVING-MAP.md",
+      "sha256": "354d3e839c7b728277e4a955e92a0337ca97ef3b7e09baf356f03eebee613655"
+    }
+  ]
+}

@@ -12,9 +12,10 @@ test('Zinnia selects seven individual illustrated icons without loading table fr
     for(const [id,[column,row]] of Object.entries(WELCOME_MICRO_FRUIT_CELLS)){
         const icon=await createWelcomeMicroFruitIcon(id,{fetchImage,decode});
         assert.equal(icon.children[0].material.transparent,true);
-        assert.deepEqual(regions.at(-1),[column*width/4,row*height/2,width/4,height/2]);
+        const uv=icon.children[0].geometry.attributes.uv;
+        assert.deepEqual([uv.getX(0),uv.getY(0),uv.getX(3),uv.getY(3)],[column/4,1-row/2,(column+1)/4,1-(row+1)/2]);
         icon.children[0].geometry.dispose();icon.children[0].material.map.dispose();icon.children[0].material.dispose();
     }
-    assert.equal(regions.length,7);assert.ok(requests.every(url=>url.endsWith('zinnia-hand-fruit-atlas.png')));
+    assert.equal(regions.length,0,'Quest can sample each icon directly from the authored atlas');assert.ok(requests.every(url=>url.endsWith('zinnia-hand-fruit-atlas.png')));
     assert.equal(await createWelcomeMicroFruitIcon('unknown',{fetchImage,decode}),null);
 });

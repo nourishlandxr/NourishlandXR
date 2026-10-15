@@ -1,15 +1,16 @@
 import {handIndexCanPoke} from './handPoke.js';
 
-const icons={settings:'Settings',repeat:'RotateCcw',controller:'Gamepad2',audio:'Volume2',mute:'VolumeX',lesson:'BookOpen',hand:'Hand',play:'Play',pause:'Pause',close:'X',back:'ChevronLeft',mic:'Mic',check:'Check',brush:'Paintbrush',undo:'Undo2',redo:'Redo2'};
+const icons={settings:'Settings',repeat:'RotateCcw',controller:'Gamepad2',games:'Gamepad2',firefly:'Gamepad2',audio:'Volume2',mute:'VolumeX',lesson:'BookOpen',hand:'Hand','virtual-hand':'Hand','tracked-hand':'Hand',play:'Play',pause:'Pause',motion:'Play',close:'X',clear:'X',back:'ChevronLeft',mic:'Mic',stop:'X',check:'Check',brush:'Paintbrush',colour:'Paintbrush',color:'Paintbrush',undo:'Undo2',redo:'Redo2'};
 // Actual UIKitML components and SDK touch/ray pointers, not a canvas facsimile.
-export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{},onValue=()=>{},occupied=()=>false}={}){
+export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{},onValue=()=>{},occupied=()=>false,variant='legacy'}={}){
     const {Scene,PerspectiveCamera,Matrix4,Vector3,MultiPointer,XROrigin,WebGLRenderer,WebGLRenderTarget}=sdk;
     const scene=new Scene(),camera=new PerspectiveCamera(),origin=new XROrigin();scene.add(origin,panel);
     panel.name='NLXR tutorial wrist';panel.visible=false;camera.matrixAutoUpdate=false;
     const pointers=Object.fromEntries(['left','right'].map(side=>[side,new MultiPointer(side,scene,camera,origin)]));
     for(const pointer of Object.values(pointers))pointer.toggleSubPointer('grab',false);
     scene.grabDescendants=[];scene.rayDescendants=[panel];scene.touchDescendants=[panel];
-    const slots=Array.from({length:48},(_,i)=>({button:panel.requireElementById('control-'+i),label:panel.requireElementById('label-'+i),slider:panel.requireElementById('slider-'+i),
+    const wristV2=variant==='wrist-v2';
+    const slots=Array.from({length:wristV2?24:48},(_,i)=>({button:panel.requireElementById('control-'+i),label:panel.requireElementById('label-'+i),slider:panel.requireElementById('slider-'+i),
         icons:Object.fromEntries(Object.values(icons).map(name=>[name,panel.requireElementById(`icon-${i}-${name}`)])),item:null}));
     const sources=new Map(),hover=new Map(),pressed=new Map(),queued=[],spentTouch=new Set(),blockedRay=new WeakSet(),cleanup=[];
     const transform=new Matrix4(),right=new Vector3(),up=new Vector3(),normal=new Vector3();
@@ -34,9 +35,11 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
     }
     function reset(){for(const pointer of Object.values(pointers))pointer.update(false,0,0);hover.clear();pressed.clear();queued.length=0;sources.clear();}
     function setContext(value,nextPose){
+        const sameContext=context===value;
         context=value;pose=nextPose;panel.visible=Boolean(value && nextPose);
         if(!panel.visible){reset();return;}
-        const next=JSON.stringify({height:value.height,items:value.items.map(({action,x,y,width,height,disabled,selected,icon,label,kind})=>({action,x,y,width,height,disabled,selected,icon,label,kind}))});
+        if(value.items.length>slots.length)throw Error('Wrist UI exceeds its available controls.');
+        const next=sameContext?signature:JSON.stringify({height:value.height,items:value.items.map(({action,x,y,width,height,disabled,selected,icon,label,kind})=>({action,x,y,width,height,disabled,selected,icon,label,kind}))});
         if(next!==signature){
             reset();signature=next;sliderValues.clear();
             // Keep the authored 1000-unit layout. Scaling the entire document also
@@ -45,9 +48,9 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
             for(const [i,slot]of slots.entries()){
                 const item=value.items[i];slot.item=item || null;slot.button.name=item?.action || 'unused-'+i;
                 slot.button.setProperties(item?{display:'flex',positionType:'absolute',positionLeft:item.x,positionTop:item.y,width:item.width,height:item.height,
-                    minWidth:0,minHeight:0,padding:0,disabled:Boolean(item.disabled),borderWidth:item.selected?6:3,borderColor:'#466b5c',backgroundColor:item.selected?'#bddcca':'#e1ebe6',hover:{backgroundColor:'#c7dfd3',color:'#172c25'},opacity:item.disabled?.4:1}: {display:'none'});
+                    minWidth:0,minHeight:0,padding:0,disabled:Boolean(item.disabled),...(wristV2?{borderRadius:Math.min(22,item.width/5,item.height/5),borderWidth:item.selected?6:3,borderColor:item.selected?'#dbf5e4':'#a9d5d5',backgroundColor:item.selected?'#316d69':'#28484c',hover:{backgroundColor:'#427773',color:'#ffffff'},opacity:item.disabled?.38:.9}:{borderWidth:item.selected?6:3,borderColor:'#466b5c',backgroundColor:item.selected?'#bddcca':'#e1ebe6',hover:{backgroundColor:'#c7dfd3',color:'#172c25'},opacity:item.disabled?.4:1})}: {display:'none'});
                 const icon=item && !item.text?icons[item.icon]:null;
-                slot.label.setProperties({display:item && !icon?'flex':'none',positionType:item?.kind==='slider'?'absolute':'relative',positionTop:item?.kind==='slider'?3:0,width:item?.kind==='slider'?'100%':'auto',text:item?.label || '',color:'#172c25',fontSize:25,textAlign:'center'});
+                slot.label.setProperties({display:item && !icon?'flex':'none',positionType:item?.kind==='slider'?'absolute':'relative',positionTop:item?.kind==='slider'?3:0,width:item?.kind==='slider'?'100%':'auto',text:item?.label || '',color:wristV2?'#f4fbfa':'#172c25',fontSize:25,textAlign:'center'});
                 for(const [name,element]of Object.entries(slot.icons))element.setProperties({display:name===icon?'flex':'none',width:item?Math.min(item.width,item.height)*.58:60,height:item?Math.min(item.width,item.height)*.58:60});
                 slot.slider.setProperties({display:item?.kind==='slider'?'flex':'none',positionType:'absolute',positionTop:35,height:item?.kind==='slider'?Math.max(48,item.height-40):48,value:item?.kind==='slider'?(item.value-item.min)/(item.max-item.min):0,
                     onValueChange:value=>{const item=slot.item;if(item?.kind!=='slider' || item.disabled)return;const raw=item.min+value*(item.max-item.min),step=item.step || .01;
@@ -105,7 +108,7 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
         }return null;
     }
     return {
-        backend:'iwsdk-uikitml',panel,scene,pointers,setContext,update,hit,
+        backend:wristV2?'iwsdk-uikitml-v2':'iwsdk-uikitml',panel,scene,pointers,setContext,update,hit,
         setOpacity(value){const next=Math.max(0,Math.min(1,value));if(next===opacity)return;opacity=next;panel.document.rootElement.setProperties({opacity});if(opacity<=.2)reset();},
         get ready(){return !disposed;},
         owns:source=>Boolean(panel.visible && opacity>.2 && source && [...hover.keys()].some(id=>sourceFor(id)===source)),
@@ -126,7 +129,7 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
             renderer.render(scene,camera);}finally{renderer?.resetState();gl.bindFramebuffer(gl.FRAMEBUFFER,framebuffer);gl.viewport(...viewport);gl.scissor(...scissor);
                 for(const [flag,enabled]of flags)enabled?gl.enable(flag):gl.disable(flag);gl.depthMask(depthWrite);gl.depthFunc(depthFunc);gl.blendFuncSeparate(...blend);gl.useProgram(program);gl.bindVertexArray(vao);}
         },
-        snapshot:()=>({backend:'iwsdk-uikitml',visible:panel.visible,actions:slots.filter(slot=>slot.item).map(slot=>slot.item.action),hovered:[...hover.values()].map(slot=>slot.item?.action)}),
+        snapshot:()=>({backend:wristV2?'iwsdk-uikitml-v2':'iwsdk-uikitml',visible:panel.visible,actions:slots.filter(slot=>slot.item).map(slot=>slot.item.action),hovered:[...hover.values()].map(slot=>slot.item?.action)}),
         dispose(){if(disposed)return;reset();disposed=true;cleanup.forEach(fn=>fn());for(const pointer of Object.values(pointers))pointer.dispose();panel.dispose();panel.removeFromParent();
             // The XR swapchain framebuffer belongs to NLXR, never this adapter.
             if(target && renderer){renderer.properties.remove(target);target=null;}renderer?.dispose();scene.clear();}

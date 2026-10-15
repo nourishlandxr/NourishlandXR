@@ -32,8 +32,7 @@ test('every expanded control stays within its surface and has an accessible name
         menu.act('home');menu.act(action);const context=menu.context();for(const item of context.items){assert.ok(item.ariaLabel);assert.ok(item.x>=0 && item.y>=0);assert.ok(item.x+item.width<=1000);assert.ok(item.y+item.height<=context.height);}
     }paint.destroy();
 });
-test('ending the tutorial requires a second deliberate choice',()=>{
-    const {menu,paint,actions}=setup();menu.act('tutorial');menu.act('skip');assert.equal(menu.context().page,'confirm-end');assert.deepEqual(actions,[]);
-    menu.act('skip-cancel');assert.equal(menu.context().page,'tutorial');assert.deepEqual(actions,[]);
-    menu.act('skip');menu.act('skip-confirm');assert.deepEqual(actions,['skip']);paint.destroy();
+test('wrist tutorial actions omit the broken quit control',()=>{
+    const {menu,paint,actions}=setup();menu.act('tutorial');const context=menu.context();assert.equal(context.page,'tutorial');assert.ok(context.items.some(item=>item.action==='Comfort:replay'));
+    assert.equal(context.items.some(item=>/skip|end tutorial/.test(item.action+' '+item.label.toLowerCase())),false);menu.act('skip');assert.deepEqual(actions,[]);paint.destroy();
 });

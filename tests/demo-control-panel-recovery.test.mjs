@@ -10,7 +10,7 @@ const end=source.indexOf('function beginXrFirstContentWatchdog(',start);
 test('a transient Control panel draw error records its stack and retries without disabling the panel',()=>{
     let now=0,attempts=0;const errors=[];
     const context=vm.createContext({
-        xrDisabledFrameSteps:new Set(),xrFrameRetryAt:new Map(),measureXrFrame:false,
+        xrDisabledFrameSteps:new Set(),xrReportedFailurePhases:new Set(),xrFrameRetryAt:new Map(),xrPanelRenderFailures:0,measureXrFrame:false,
         performance:{now:()=>now},recordArFailure:(error,phase)=>errors.push({error,phase}),
         reportDemoRenderFailure:()=>assert.fail('Transient error must not disable the XR panel')
     });
@@ -18,19 +18,20 @@ test('a transient Control panel draw error records its stack and retries without
     const draw=()=>{if(++attempts===1)throw Error('temporary UIKit draw failure');};
     assert.equal(context.runXrFrameStep('Control panel render',draw),false);
     assert.equal(errors.length,1);assert.equal(errors[0].phase,'Control panel render');
-    now=999;assert.equal(context.runXrFrameStep('Control panel render',draw),false);assert.equal(attempts,1);
-    now=1000;assert.equal(context.runXrFrameStep('Control panel render',draw),true);
+    now=499;assert.equal(context.runXrFrameStep('Control panel render',draw),false);assert.equal(attempts,1);
+    now=500;assert.equal(context.runXrFrameStep('Control panel render',draw),true);
     assert.equal(context.xrDisabledFrameSteps.size,0);assert.equal(context.xrFrameRetryAt.size,0);
 });
 
-test('a repeat Control panel draw error still enters the existing recovery path',()=>{
+test('a repeat Control panel draw error backs off without blocking demo rendering',()=>{
     let now=0,reported=0;const context=vm.createContext({
-        xrDisabledFrameSteps:new Set(),xrFrameRetryAt:new Map(),measureXrFrame:false,
+        xrDisabledFrameSteps:new Set(),xrReportedFailurePhases:new Set(),xrFrameRetryAt:new Map(),xrPanelRenderFailures:0,measureXrFrame:false,
         performance:{now:()=>now},recordArFailure:()=>{},reportDemoRenderFailure:()=>reported++
     });
     vm.runInContext(source.slice(start,end),context);
     const draw=()=>{throw Error('persistent draw failure');};
     context.runXrFrameStep('Control panel render',draw);
-    now=1001;context.runXrFrameStep('Control panel render',draw);
-    assert.equal(reported,1);assert.equal(context.xrDisabledFrameSteps.has('Control panel render'),true);
+    now=501;context.runXrFrameStep('Control panel render',draw);
+    assert.equal(reported,0);assert.equal(context.xrDisabledFrameSteps.has('Control panel render'),false);
+    assert.equal(context.xrFrameRetryAt.get('Control panel render'),1501);
 });

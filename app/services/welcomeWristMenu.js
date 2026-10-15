@@ -10,11 +10,12 @@ export function wristButtonAt(items,x,y){
     }) || items.find(item=>!item.radial && x>=item.x-4 && x<=item.x+item.width+4 && y>=item.y-4 && y<=item.y+item.height+4) || null;
 }
 
-export function welcomeWristPose(matrix,context,forearmDirection=null){
+export function welcomeWristPose(matrix,context,forearmDirection=null,viewerMatrix=null){
     if(!matrix)return null;
     const wrist=new THREE.Matrix4().fromArray(matrix),rotation=new THREE.Quaternion().setFromRotationMatrix(wrist).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)));
     const normal=new THREE.Vector3(0,0,1).applyQuaternion(rotation),up=new THREE.Vector3(0,1,0).applyQuaternion(rotation);
     if(forearmDirection){const along=forearmDirection.clone().negate().addScaledVector(normal,forearmDirection.dot(normal));if(along.lengthSq()>.001)up.copy(along.normalize());}
+    if(viewerMatrix){const toViewer=new THREE.Vector3(viewerMatrix[12],viewerMatrix[13],viewerMatrix[14]).sub(new THREE.Vector3().setFromMatrixPosition(wrist));if(normal.dot(toViewer)<-.12)normal.negate();}
     const right=new THREE.Vector3().crossVectors(up,normal).normalize();up.crossVectors(normal,right).normalize();
     const offset=context.centerOffset || {x:0,y:0};
     const center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(up,(context.controllerMounted?.030:forearmDirection?-.11:-.17)+offset.y).addScaledVector(normal,context.controllerMounted?.055:.028).addScaledVector(right,context.controllerMounted?offset.x+.11:offset.x);

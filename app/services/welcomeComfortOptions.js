@@ -21,7 +21,7 @@ export function createWelcomeComfortOptions({stage,onReturn=null,onVisualChange=
         items.slice(1).forEach((button,i)=>{button.dock=true;button.worldBox={x:(i%2-.5)*.034,y:.020-Math.floor(i/2)*.034,size:.030};});
         if(opened && onReturn)items.push(item('return-demo','Return to demo','back',{worldBox:{x:.052,y:.059,size:.030}}));
         if(opened && state.inputChoiceUnlocked)items.push(...WELCOME_INPUT_METHODS.map((experience,i)=>item('input:'+experience.id,experience.label,experience.icon,{selected:state.inputMode===experience.id,worldBox:{x:(i-1)*.034,y:-.095,size:.030}})));
-        const titles={games:'Games',input:'Controllers',audio:'Audio',settings:'Comfort',tutorial:'Tutorial','confirm-end':'End tutorial?','paint-brush':'Marking brushes','paint-colour':'Colour','paint-options':'Brush settings'};
+        const titles={games:'Games',input:'Controllers',audio:'Audio',settings:'Comfort',tutorial:'Tutorial','paint-brush':'Marking brushes','paint-colour':'Colour','paint-options':'Brush settings'};
         const options=[];
         if(expanded)options.push(item('home','Close tools','close',{header:true}));
         if(state.gameReplay?.active)options.push(item('replay-round:yes','Play again',null,{text:true}),item('replay-round:no','Keep exploring',null,{text:true}));
@@ -38,8 +38,7 @@ export function createWelcomeComfortOptions({stage,onReturn=null,onVisualChange=
             options.push(...['auto','low','high'].map((quality,i)=>item('graphics:'+quality,['Auto','SD','HD'][i],null,{text:true,selected:visual.graphicsQuality===quality,worldBox:{x:.069+i*.050,y:.016,w:.046,h:.024}})));
             options.push(item('frame-height','Frame height','up',{kind:'slider',value:visual.livingFrameHeight,min:-1,max:1,step:.05,text:true,worldBox:{x:.122,y:-.027,w:.142,h:.034}}),item('table-height','Table height','up',{kind:'slider',value:visual.practiceTableHeight,min:-.2,max:.25,step:.025,text:true,worldBox:{x:.122,y:-.073,w:.142,h:.034}}));
         }
-        if(page==='tutorial')options.push(item('replay','Repeat last step','repeat'),item('reset','Reset objects','repeat'),item('skip','End tutorial',null,{text:true,primary:true}),item('next','Continue to demo',null,{text:true,disabled:state.phase!=='explore' || voice.playing || voice.paused}));
-        if(page==='confirm-end')options.push(item('skip-cancel','Keep learning',null,{text:true}),item('skip-confirm','End tutorial',null,{text:true,primary:true}));
+        if(page==='tutorial')options.push(item('replay','Repeat last step','repeat'),item('reset','Reset objects','repeat'),item('next','Continue to demo',null,{text:true,disabled:state.phase!=='explore' || voice.playing || voice.paused}));
         if(page==='paint-brush'){
             const choices=[...Object.entries(MARKING_BRUSHES).map(([id,brush])=>item('brush:'+id,brush.label,id,{selected:drawing.brush===id})),item('paint-page:colour','Colours','colour'),item('paint-page:options','Brush settings','settings'),item('paint:undo','Undo stroke','undo',{disabled:!drawing.canUndo})];
             const positions=[[.123,.012],[.102,-.020],[.144,-.020],[.085,-.052],[.161,-.052],[.083,-.091],[.123,-.091],[.163,-.091]];
@@ -95,9 +94,6 @@ export function createWelcomeComfortOptions({stage,onReturn=null,onVisualChange=
         else if(id==='game-reset')stage.trials.command('reset');
         else if(id==='game-close'){if(stage.snapshot().guidedTrial)return;stage.trials.close();page='home';}
         else if(id.startsWith('conversation:'))stage.conversation?.activate(id.slice(13));
-        else if(id==='skip'){page='confirm-end';opened=true;}
-        else if(id==='skip-cancel')page='tutorial';
-        else if(id==='skip-confirm')stage.button('skip');
         else if(['replay','mute','next'].includes(id))stage.button(id);
         else if(id==='reset')stage.resetObjects();
         else if(id.startsWith('tool:')){const tool=id.slice(5);if(tool==='insect' && !stage.snapshot().insectControllerAvailable)return;if(tool==='paint' && !['brush','fruit','paint-pot','grab'].includes(stage.snapshot().phase) && stage.trials.active!=='painting')stage.trials.open('painting');if(stage.setControllerTool?.(tool)!==false)page=tool==='paint'?'paint-brush':tool==='insect'?'controller-tools':'input';}

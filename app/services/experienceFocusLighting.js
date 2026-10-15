@@ -12,7 +12,7 @@ if(!originals.has(m) && m.emissive.r+m.emissive.g+m.emissive.b>.01)continue;if(!
   let target=enabled?(element || (!point?guide:null)):null;for(let parent=target;parent;parent=parent.parent)if(!parent.visible){target=null;break;}current=target;const active=collect(target);amount=THREE.MathUtils.damp(amount,target || point?1:0,5,Math.min(.1,Math.max(0,dt)));
   for(const [m,base] of originals){const desired=enabled && active.includes(m) ? .16 : 0;const value=THREE.MathUtils.damp(m.userData.teachingGlow || 0,desired,5,Math.min(.1,Math.max(0,dt)));m.userData.teachingGlow=value;m.emissive.copy(base.color).multiplyScalar(base.intensity).add(tint.copy(warm).multiplyScalar(value));m.emissiveIntensity=1;}
   const anchor=point || target?.getWorldPosition(new THREE.Vector3());if(anchor){root.position.copy(anchor);root.position.y+=.008;ring.scale.setScalar(radius);}
-  root.visible=enabled && Boolean(anchor);material.opacity=enabled?amount*((element || point) ? .28 : .18):0;
+  root.visible=false;material.opacity=0;
   return {target:element?'element':target?'zinnia':'none',amount,steady:reducedMotion};
  }
  return {root,update,refresh(){roots.clear();},snapshot:()=>({target:current?.name || null,opacity:material.opacity}),destroy(){if(disposed)return;disposed=true;for(const [m,base] of originals){m.emissive.copy(base.color);m.emissiveIntensity=base.intensity;delete m.userData.teachingGlow;}ring.geometry.dispose();material.dispose();root.removeFromParent();roots.clear();originals.clear();}};

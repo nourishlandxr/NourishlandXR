@@ -3,7 +3,7 @@ import {createPracticeBody,stepPracticeBodies} from '../app/services/welcomePrac
 import {constrainFruitNeighbours,fruitOverlaps} from '../app/services/welcomeFruitCollision.js';
 const fruit=(id,x=0)=>Object.assign(createPracticeBody(id,{x,radius:.05}),{visible:true,fruit:true,position:{x,y:.06,z:0}});
 test('fruit stops at another fruit even across one large held movement',()=>{
- const a=fruit('a',-.3),b=fruit('b');b.basketed=true;const next={x:.3,y:.06,z:0};constrainFruitNeighbours(a,next,a.position,[a,b]);assert.ok(next.x<-.1);assert.equal(fruitOverlaps(a,next,b),false);
+ const a=fruit('a',-.3),b=fruit('b');b.basketed=true;const next={x:.3,y:.06,z:0};constrainFruitNeighbours(a,next,a.position,[a,b]);assert.ok(next.x<-.09);assert.equal(fruitOverlaps(a,next,b),false);
 });
 test('resting fruit separates from plated fruit and coincident fruit centres',()=>{
  const a=fruit('a'),b=fruit('b');a.anchored=true;stepPracticeBodies([a,b],.01);assert.equal(fruitOverlaps(a,a.position,b),false);assert.deepEqual(a.position,{x:0,y:.06,z:0});
@@ -14,4 +14,10 @@ test('contact preserves upward and sideways movement along a neighbouring fruit'
  const a=fruit('a',-.3),b=fruit('b'),next={x:.3,y:.12,z:.03};
  constrainFruitNeighbours(a,next,a.position,[a,b]);
  assert.equal(fruitOverlaps(a,next,b),false);assert.ok(next.y>.115);assert.ok(next.z>.025);
+});
+test('contact is inset beneath fruit skin and banana cannot block another fruit',()=>{
+ const apple=fruit('apple'),banana=fruit('banana');
+ assert.equal(fruitOverlaps(apple,{x:.096,y:.06,z:0},apple),false,'contact ends before the full visible radius');
+ const next={x:.3,y:.06,z:0};apple.position.x=-.3;constrainFruitNeighbours(apple,next,apple.position,[banana]);assert.equal(next.x,.3);
+ assert.equal(fruitOverlaps(apple,banana.position,banana),false);
 });

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import {guidedDemoStep} from '../app/features/ar-demo/demoJourneyContent.js';
+import {DEMO_RETURN_WELCOME_PARAGRAPHS,guidedDemoStep} from '../app/features/ar-demo/demoJourneyContent.js';
 import {projectNarrationSegments} from '../app/services/projectNarration.js';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {createZinniaFramePerch} from '../app/services/zinniaFramePerch.js';
@@ -22,10 +22,11 @@ test('hidden DOM does not pause audible narration while the XR session is visibl
 
 test('main welcome uses saved professional narration instead of a live flower greeting',()=>{
     const a=main.indexOf('function showDemoCalmWelcome('),b=main.indexOf('function showArWelcomeShowcase',a);let displayed;
-    const scope={welcomePracticeCompleted:false,clearDemoNarration(){},clearTimeout(){},arWelcomeUnlockTimer:null,arWelcomeOpeningActive:true,arWelcomeIntroPending:false,limMeshVisible:true,guidedDemoStep,showIntroBoard:(...args)=>displayed=args};
+    const scope={welcomePracticeCompleted:false,clearDemoNarration(){},clearTimeout(){},arWelcomeUnlockTimer:null,arWelcomeOpeningActive:true,arWelcomeIntroPending:false,limMeshVisible:true,guidedDemoStep,DEMO_RETURN_WELCOME_PARAGRAPHS,showIntroBoard:(...args)=>displayed=args};
     vm.runInNewContext(main.slice(a,b)+';showDemoCalmWelcome({returning:false});',scope);
-    assert.doesNotMatch(displayed[1],/flower|face|keep you company/i);
-    for(const paragraph of displayed[1].split('\n\n'))assert.ok(projectNarrationSegments(paragraph,{demo:true}).every(clip=>clip.recorded),paragraph);
+    assert.deepEqual(Array.from(displayed[1]),Array.from(DEMO_RETURN_WELCOME_PARAGRAPHS));
+    assert.doesNotMatch(displayed[1].join(' '),/flower|face|keep you company/i);
+    for(const paragraph of displayed[1])assert.ok(projectNarrationSegments(paragraph,{demo:true}).every(clip=>clip.recorded),paragraph);
 });
 
 test('physical controller rays and panel selection survive outline hand mode',()=>{

@@ -1,0 +1,606 @@
+{
+  "provider": "OpenAI",
+  "voice": "marin",
+  "model": "gpt-4o-mini-tts",
+  "delivery": "v14-friendly-marin-1",
+  "instructions": "Speak as Zinnia, a friendly, kind 23-year-old female flower welcoming someone to her garden. Use a light, warm, youthful voice with a gentle smile and natural conversational energy. Sound caring and approachable. Speak natural American English at an ordinary comfortable pace, with smooth word joins and soft, clear word endings. Keep the vocal weight light. Read the supplied script exactly once, in order, without repeating words, syllables or sentences or adding any extra speech. Avoid a deep solemn narrator tone, exaggerated character acting, whispering or long deliberate pauses.",
+  "base": "assets/demo-narration/openai-f8a0f0a8d0240dfa/",
+  "clips": [
+    "z-84c48915",
+    "z-8d2349e0",
+    "z-6b48e992",
+    "z-8782cc7f",
+    "z-f6c3eb3d",
+    "z-b952c023",
+    "z-30de17cb",
+    "z-9875e3fb",
+    "z-186a8400",
+    "z-6c2b025e",
+    "z-3d53b765",
+    "z-f522c40f",
+    "z-9a762ed7",
+    "z-557f77d1",
+    "z-611f0251",
+    "z-d0d01451",
+    "z-e09860ce",
+    "z-c13828fa",
+    "z-b2c6d9d",
+    "z-82ebf935",
+    "z-40425030",
+    "z-8b56d804",
+    "z-5470894a",
+    "z-bc36f332",
+    "z-8d027f1",
+    "z-c4db4fcb",
+    "z-c275b0ed",
+    "z-93d5e1b3",
+    "z-6867ae26",
+    "z-2a08e078",
+    "z-a1a0649d",
+    "z-95336873",
+    "z-fad645e9",
+    "z-8f91c867",
+    "z-65d1b609",
+    "z-f4ca701e",
+    "z-1145ace4",
+    "z-1acc0381",
+    "z-3909fb41",
+    "z-9393cfd",
+    "z-ebf5fef2",
+    "z-732180dd",
+    "z-b2dbf266",
+    "z-1ffe23b1",
+    "z-9631df7e",
+    "z-c70387f",
+    "z-c0a59b0e",
+    "z-95034e45",
+    "z-82d93568",
+    "z-e3915e10",
+    "z-3d0d05de",
+    "z-cf70ff43",
+    "z-6e56b046",
+    "z-18ec6e75",
+    "z-151d17c0",
+    "z-ef84aa50",
+    "z-ca22b74e",
+    "z-63af7c7e",
+    "z-ef31cd4b",
+    "z-bd4bab06",
+    "z-fffa19a5",
+    "z-9cc324e3",
+    "z-2c4762dc",
+    "z-e8c4b292",
+    "z-a8e2b9d6",
+    "z-b7704413",
+    "z-38845773",
+    "z-b50cf0c6",
+    "z-5a31b117",
+    "z-67bb73da",
+    "z-5cc2a645",
+    "z-18d5a604",
+    "z-8863240b",
+    "z-de99af9b",
+    "z-a0a2eb1f",
+    "z-5b6733d6",
+    "z-b480cce8",
+    "z-1dd81d11",
+    "z-3f9ddd2d",
+    "z-3ec64a4e",
+    "z-42aa346e",
+    "z-b1639943",
+    "z-8e92f068",
+    "z-a6ff6cbf",
+    "z-52e52454",
+    "z-fdc2c027",
+    "z-bdd5395f",
+    "z-8961a754",
+    "z-ff3457c2",
+    "z-43c77e14",
+    "z-6994f774",
+    "z-6dd18d86",
+    "z-61fa1d5d",
+    "z-24b33416",
+    "z-36a47095",
+    "z-4f179446",
+    "z-d4f8f756",
+    "z-bc93a803",
+    "z-ab440a86"
+  ],
+  "catalog": {
+    "z-84c48915": {
+      "text": "A leaf catching the light. An insect moving between flowers. The shade beneath a tree.",
+      "spoken": "A leaf catching the light. An insect moving between flowers. The shade beneath a tree.",
+      "file": "z-84c48915.mp3"
+    },
+    "z-8d2349e0": {
+      "text": "Technology shapes where we place our attention. What if it helped us notice more of the living world?",
+      "spoken": "Technology shapes where we place our attention. What if it helped us notice more of the living world?",
+      "file": "z-8d2349e0.mp3"
+    },
+    "z-6b48e992": {
+      "text": "NourishlandXR helps us explore and learn through real places. Augmented reality brings useful information into your surroundings.",
+      "spoken": "NourishlandXR helps us explore and learn through real places. Augmented reality brings useful information into your surroundings.",
+      "file": "z-6b48e992.mp3"
+    },
+    "z-8782cc7f": {
+      "text": "In this demo, we'll explore Creator mode tools for building a learning place. The Living Frame will guide you through prepared examples.",
+      "spoken": "In this demo, we'll explore Creator mode tools for building a learning place. The Living Frame will guide you through prepared examples.",
+      "file": "z-8782cc7f.mp3"
+    },
+    "z-f6c3eb3d": {
+      "text": "A garden can become an outdoor classroom. A walk can reveal connections between plants, wildlife and the people who care for a place.",
+      "spoken": "A garden can become an outdoor classroom. A walk can reveal connections between plants, wildlife and the people who care for a place.",
+      "file": "z-f6c3eb3d.mp3"
+    },
+    "z-b952c023": {
+      "text": "Creator tools let you attach discoveries, observations and learning questions to that place.",
+      "spoken": "Creator tools let you attach discoveries, observations and learning questions to that place.",
+      "file": "z-b952c023.mp3"
+    },
+    "z-30de17cb": {
+      "text": "A Plant Orb connects a discovery to a position in your surroundings. Let's give the first one a place.",
+      "spoken": "A Plant Orb connects a discovery to a position in your surroundings. Let's give the first one a place.",
+      "file": "z-30de17cb.mp3"
+    },
+    "z-9875e3fb": {
+      "text": "In a real place, this Orb would sit beside the plant it describes.",
+      "spoken": "In a real place, this Orb would sit beside the plant it describes.",
+      "file": "z-9875e3fb.mp3"
+    },
+    "z-186a8400": {
+      "text": "Your first Orb represents Pigeon Pea, a shrub grown for food and for its useful roles in a garden. Its information begins with a compact Tag and opens into Curiosity.",
+      "spoken": "Your first Orb represents Pigeon Pea, a shrub grown for food and for its useful roles in a garden. Its information begins with a compact Tag and opens into Curiosity.",
+      "file": "z-186a8400.mp3"
+    },
+    "z-6c2b025e": {
+      "text": "Tag gives you the plant's identity at a glance. Curiosity reveals the connected information behind it.",
+      "spoken": "Tag gives you the plant's identity at a glance. Curiosity reveals the connected information behind it.",
+      "file": "z-6c2b025e.mp3"
+    },
+    "z-3d53b765": {
+      "text": "There are many ways to get to know a plant. You might wonder how it grows, what it can provide, how it supports other life, or why it suits a particular place.",
+      "spoken": "There are many ways to get to know a plant. You might wonder how it grows, what it can provide, how it supports other life, or why it suits a particular place.",
+      "file": "z-3d53b765.mp3"
+    },
+    "z-f522c40f": {
+      "text": "Let's follow one of those questions and see where it leads.",
+      "spoken": "Let's follow one of those questions and see where it leads.",
+      "file": "z-f522c40f.mp3"
+    },
+    "z-9a762ed7": {
+      "text": "The Uses branch includes ways people use this plant for food.",
+      "spoken": "The Uses branch includes ways people use this plant for food.",
+      "file": "z-9a762ed7.mp3"
+    },
+    "z-557f77d1": {
+      "text": "Fresh peas is one example of how Pigeon Pea can be used.",
+      "spoken": "Fresh peas is one example of how Pigeon Pea can be used.",
+      "file": "z-557f77d1.mp3"
+    },
+    "z-611f0251": {
+      "text": "You can keep exploring, or take a closer look at the related image.",
+      "spoken": "You can keep exploring, or take a closer look at the related image.",
+      "file": "z-611f0251.mp3"
+    },
+    "z-d0d01451": {
+      "text": "The Image panel shows the picture connected to what you selected. You can open it whenever you want a closer look.",
+      "spoken": "The Image panel shows the picture connected to what you selected. You can open it whenever you want a closer look.",
+      "file": "z-d0d01451.mp3"
+    },
+    "z-e09860ce": {
+      "text": "You have explored Tag, Curiosity and the Fruit Discovery Window. The Orbs are tucked away for now, but the Control Panel can bring them back.",
+      "spoken": "You have explored Tag, Curiosity and the Fruit Discovery Window. The Orbs are tucked away for now, but the Control Panel can bring them back.",
+      "file": "z-e09860ce.mp3"
+    },
+    "z-c13828fa": {
+      "text": "As you meet more elements, their controls will appear here too.",
+      "spoken": "As you meet more elements, their controls will appear here too.",
+      "file": "z-c13828fa.mp3"
+    },
+    "z-b2c6d9d": {
+      "text": "Every plant brings a different story. This time, you can choose which plant the Orb represents.",
+      "spoken": "Every plant brings a different story. This time, you can choose which plant the Orb represents.",
+      "file": "z-b2c6d9d.mp3"
+    },
+    "z-82ebf935": {
+      "text": "This second Orb begins without a plant identity. Choose one, and its information can grow from there.",
+      "spoken": "This second Orb begins without a plant identity. Choose one, and its information can grow from there.",
+      "file": "z-82ebf935.mp3"
+    },
+    "z-40425030": {
+      "text": "Thousands of plants, thousands of living stories. Zinnia can find a plant you're curious about and open a starting point for discovery. Its information can grow as more knowledge is added.",
+      "spoken": "Thousands of plants, thousands of living stories. Zinnia can find a plant you're curious about and open a starting point for discovery. Its information can grow as more knowledge is added.",
+      "file": "z-40425030.mp3"
+    },
+    "z-8b56d804": {
+      "text": "A plant profile tells part of a story. A Note lets someone leave an observation, a reminder or a message for another person to discover later.",
+      "spoken": "A plant profile tells part of a story. A Note lets someone leave an observation, a reminder or a message for another person to discover later.",
+      "file": "z-8b56d804.mp3"
+    },
+    "z-5470894a": {
+      "text": "A Note can hold a seasonal observation or a useful message for the next visitor.",
+      "spoken": "A Note can hold a seasonal observation or a useful message for the next visitor.",
+      "file": "z-5470894a.mp3"
+    },
+    "z-bc36f332": {
+      "text": "Someone visiting later can discover this message right where it belongs.",
+      "spoken": "Someone visiting later can discover this message right where it belongs.",
+      "file": "z-bc36f332.mp3"
+    },
+    "z-8d027f1": {
+      "text": "So far, we have explored plants, knowledge and a local message.",
+      "spoken": "So far, we have explored plants, knowledge and a local message.",
+      "file": "z-8d027f1.mp3"
+    },
+    "z-c4db4fcb": {
+      "text": "In a real place, these pieces can grow together.",
+      "spoken": "In a real place, these pieces can grow together.",
+      "file": "z-c4db4fcb.mp3"
+    },
+    "z-c275b0ed": {
+      "text": "An Area keeps them organised, with a Totem as its welcome point.",
+      "spoken": "An Area keeps them organised, with a Totem as its welcome point.",
+      "file": "z-c275b0ed.mp3"
+    },
+    "z-93d5e1b3": {
+      "text": "This Totem belongs to My area. Its signs help visitors find the plants and messages that belong here.",
+      "spoken": "This Totem belongs to My area. Its signs help visitors find the plants and messages that belong here.",
+      "file": "z-93d5e1b3.mp3"
+    },
+    "z-6867ae26": {
+      "text": "The Totem names the Area. Its signs point toward nearby plants and Notes, giving visitors a way to find what they want to explore.",
+      "spoken": "The Totem names the Area. Its signs point toward nearby plants and Notes, giving visitors a way to find what they want to explore.",
+      "file": "z-6867ae26.mp3"
+    },
+    "z-2a08e078": {
+      "text": "A larger place can hold several Areas, each with its own stories. Add Second Area to see how visitors can find their way between them.",
+      "spoken": "A larger place can hold several Areas, each with its own stories. Add Second Area to see how visitors can find their way between them.",
+      "file": "z-2a08e078.mp3"
+    },
+    "z-a1a0649d": {
+      "text": "Connect the Totems so each Area can point toward the other. Their plants and messages remain connected to their own locations.",
+      "spoken": "Connect the Totems so each Area can point toward the other. Their plants and messages remain connected to their own locations.",
+      "file": "z-a1a0649d.mp3"
+    },
+    "z-95336873": {
+      "text": "A sign on My area points toward the next destination, helping visitors find their way.",
+      "spoken": "A sign on My area points toward the next destination, helping visitors find their way.",
+      "file": "z-95336873.mp3"
+    },
+    "z-fad645e9": {
+      "text": "Plants, observations and directions can become part of one connected place. Next, see how this can support exploring, learning and planning on any land.",
+      "spoken": "Plants, observations and directions can become part of one connected place. Next, see how this can support exploring, learning and planning on any land.",
+      "file": "z-fad645e9.mp3"
+    },
+    "z-8f91c867": {
+      "text": "Plants, Notes and Areas can connect knowledge to any land , from school gardens and university campuses to farms and public landscapes.",
+      "spoken": "Plants, Notes and Areas can connect knowledge to any land , from school gardens and university campuses to farms and public landscapes.",
+      "file": "z-8f91c867.mp3"
+    },
+    "z-65d1b609": {
+      "text": "Explore what could grow here before anything is planted.",
+      "spoken": "Explore what could grow here before anything is planted.",
+      "file": "z-65d1b609.mp3"
+    },
+    "z-f4ca701e": {
+      "text": "Compare what to plant, the light, water, soil and climate each plant needs, and what it can provide , food, shade, habitat or support for the soil.",
+      "spoken": "Compare what to plant, the light, water, soil and climate each plant needs, and what it can provide , food, shade, habitat or support for the soil.",
+      "file": "z-f4ca701e.mp3"
+    },
+    "z-1145ace4": {
+      "text": "Visitors, teachers and students can use these questions to learn about a place. People planning a planting can use that knowledge to make informed choices.",
+      "spoken": "Visitors, teachers and students can use these questions to learn about a place. People planning a planting can use that knowledge to make informed choices.",
+      "file": "z-1145ace4.mp3"
+    },
+    "z-1acc0381": {
+      "text": "Learning Pathways turn discoveries into questions people can explore together. Here is an optional example.",
+      "spoken": "Learning Pathways turn discoveries into questions people can explore together. Here is an optional example.",
+      "file": "z-1acc0381.mp3"
+    },
+    "z-3909fb41": {
+      "text": "Explore a starting question, then connect two related LIMO cells. A new discovery opens between their ideas and can connect again to develop a deeper story.",
+      "spoken": "Explore a starting question, then connect two related LIMO cells. A new discovery opens between their ideas and can connect again to develop a deeper story.",
+      "file": "z-3909fb41.mp3"
+    },
+    "z-9393cfd": {
+      "text": "When two questions connect, a new discovery can appear between them. That discovery can become the start of another question.",
+      "spoken": "When two questions connect, a new discovery can appear between them. That discovery can become the start of another question.",
+      "file": "z-9393cfd.mp3"
+    },
+    "z-ebf5fef2": {
+      "text": "A learning question can connect to information about a real plant.",
+      "spoken": "A learning question can connect to information about a real plant.",
+      "file": "z-ebf5fef2.mp3"
+    },
+    "z-732180dd": {
+      "text": "Hold the plant detail and learning question together to make their connection.",
+      "spoken": "Hold the plant detail and learning question together to make their connection.",
+      "file": "z-732180dd.mp3"
+    },
+    "z-b2dbf266": {
+      "text": "A teacher could ask which plant part is used and what preparation is recorded. The connected plant detail gives learners a source to return to.",
+      "spoken": "A teacher could ask which plant part is used and what preparation is recorded. The connected plant detail gives learners a source to return to.",
+      "file": "z-b2dbf266.mp3"
+    },
+    "z-1ffe23b1": {
+      "text": "You have explored a small example. In a real place, plants, observations and local knowledge can grow together over time, creating something others can explore, learn from and contribute to.",
+      "spoken": "You have explored a small example. In a real place, plants, observations and local knowledge can grow together over time, creating something others can explore, learn from and contribute to.",
+      "file": "z-1ffe23b1.mp3"
+    },
+    "z-9631df7e": {
+      "text": "I'm up here now, beside the Living Frame. Welcome to NourishlandXR.",
+      "spoken": "I'm up here now, beside the Living Frame. Welcome to NourishlandXR.",
+      "file": "z-9631df7e.mp3"
+    },
+    "z-c70387f": {
+      "text": "We'll explore a few Creator tools with prepared examples. The frame will show each action as we go.",
+      "spoken": "We'll explore a few Creator tools with prepared examples. The frame will show each action as we go.",
+      "file": "z-c70387f.mp3"
+    },
+    "z-c0a59b0e": {
+      "text": "Name a plant to create a custom Orb. Zinnia listens after her prompt when your microphone is ready.",
+      "spoken": "Name a plant to create a custom Orb. Zinnia listens after her prompt when your microphone is ready.",
+      "file": "z-c0a59b0e.mp3"
+    },
+    "z-95034e45": {
+      "text": "Place the first Totem at the entrance. It will give visitors a starting point to explore this place.",
+      "spoken": "Place the first Totem at the entrance. It will give visitors a starting point to explore this place.",
+      "file": "z-95034e45.mp3"
+    },
+    "z-82d93568": {
+      "text": "An entrance and starting point has been added. Visitors can begin here and follow the connected Totems through the landscape.",
+      "spoken": "An entrance and starting point has been added. Visitors can begin here and follow the connected Totems through the landscape.",
+      "file": "z-82d93568.mp3"
+    },
+    "z-e3915e10": {
+      "text": "A checkpoint with information about this Area has been added. Its plant Orbs help visitors discover what grows here and how the plants connect.",
+      "spoken": "A checkpoint with information about this Area has been added. Its plant Orbs help visitors discover what grows here and how the plants connect.",
+      "file": "z-e3915e10.mp3"
+    },
+    "z-3d0d05de": {
+      "text": "A checkpoint has been added at the swale entrance. Visitors can follow the route to learn about water, planting and the work taking place in this Area.",
+      "spoken": "A checkpoint has been added at the swale entrance. Visitors can follow the route to learn about water, planting and the work taking place in this Area.",
+      "file": "z-3d0d05de.mp3"
+    },
+    "z-cf70ff43": {
+      "text": "The Orb keeps this plant's profile in the spatial map. The same published information can also be reached through an ordinary web view, so a headset is never required.",
+      "spoken": "The Orb keeps this plant's profile in the spatial map. The same published information can also be reached through an ordinary web view, so a headset is never required.",
+      "file": "z-cf70ff43.mp3"
+    },
+    "z-6e56b046": {
+      "text": "This plant can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "This plant can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-6e56b046.mp3"
+    },
+    "z-18ec6e75": {
+      "text": "Pigeon Pea can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Pigeon Pea can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-18ec6e75.mp3"
+    },
+    "z-151d17c0": {
+      "text": "Moringa can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Moringa can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-151d17c0.mp3"
+    },
+    "z-ef84aa50": {
+      "text": "Vetiver grass can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Vetiver grass can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-ef84aa50.mp3"
+    },
+    "z-ca22b74e": {
+      "text": "Acacia sp. can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Acacia sp. can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-ca22b74e.mp3"
+    },
+    "z-63af7c7e": {
+      "text": "Jackfruit can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Jackfruit can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-63af7c7e.mp3"
+    },
+    "z-ef31cd4b": {
+      "text": "Lychee can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Lychee can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-ef31cd4b.mp3"
+    },
+    "z-bd4bab06": {
+      "text": "Blue Quandong can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Blue Quandong can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-bd4bab06.mp3"
+    },
+    "z-fffa19a5": {
+      "text": "Finger Lime can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Finger Lime can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-fffa19a5.mp3"
+    },
+    "z-9cc324e3": {
+      "text": "Lemon Myrtle can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "spoken": "Lemon Myrtle can be explored here in the spatial map or opened as an ordinary Web Mode profile. This keeps the experience accessible to classrooms, visitors and people without XR equipment.",
+      "file": "z-9cc324e3.mp3"
+    },
+    "z-2c4762dc": {
+      "text": "Your discoveries remain saved in Learning cells. Continue to see how this learning belongs in a living place.",
+      "spoken": "Your discoveries remain saved in Learning cells. Continue to see how this learning belongs in a living place.",
+      "file": "z-2c4762dc.mp3"
+    },
+    "z-e8c4b292": {
+      "text": "Keep the demo open to return to the exact place you were exploring, or close it and return to the welcome screen.",
+      "spoken": "Keep the demo open to return to the exact place you were exploring, or close it and return to the welcome screen.",
+      "file": "z-e8c4b292.mp3"
+    },
+    "z-a8e2b9d6": {
+      "text": "Play development works for every fruit. Hold the fruit with two pointers and pull apart to inspect its halves and seeds. Choose another fruit below, or Continue.",
+      "spoken": "Play development works for every fruit. Hold the fruit with two pointers and pull apart to inspect its halves and seeds. Choose another fruit below, or Continue.",
+      "file": "z-a8e2b9d6.mp3"
+    },
+    "z-b7704413": {
+      "text": "Each fruit has its own shape and story. Compare its flower, developing fruit and ripe fruit, then look inside.",
+      "spoken": "Each fruit has its own shape and story. Compare its flower, developing fruit and ripe fruit, then look inside.",
+      "file": "z-b7704413.mp3"
+    },
+    "z-38845773": {
+      "text": "Look closely at the plant, its flowers and its fruit. The Fruit Discovery Window lets you follow its development and examine what is inside.",
+      "spoken": "Look closely at the plant, its flowers and its fruit. The Fruit Discovery Window lets you follow its development and examine what is inside.",
+      "file": "z-38845773.mp3"
+    },
+    "z-b50cf0c6": {
+      "text": "Connected learning moves from “what is this?” to “what could I do with this here?”",
+      "spoken": "Connected learning moves from “what is this?” to “what could I do with this here?”",
+      "file": "z-b50cf0c6.mp3"
+    },
+    "z-5a31b117": {
+      "text": "Follow this sign to the neighbouring Totem.",
+      "spoken": "Follow this sign to the neighbouring Totem.",
+      "file": "z-5a31b117.mp3"
+    },
+    "z-67bb73da": {
+      "text": "Tag gives you a compact identity for this plant. Continue to unfold its Curiosity cells.",
+      "spoken": "Tag gives you a compact identity for this plant. Continue to unfold its Curiosity cells.",
+      "file": "z-67bb73da.mp3"
+    },
+    "z-5cc2a645": {
+      "text": "Your chosen plant now has its own photograph and starter Plant cells. Explore its information, or continue to add a sample Note.",
+      "spoken": "Your chosen plant now has its own photograph and starter Plant cells. Explore its information, or continue to add a sample Note.",
+      "file": "z-5cc2a645.mp3"
+    },
+    "z-18d5a604": {
+      "text": "Complete the opening introduction to unlock these optional packages.",
+      "spoken": "Complete the opening introduction to unlock these optional packages.",
+      "file": "z-18d5a604.mp3"
+    },
+    "z-8863240b": {
+      "text": "Choose a brief demonstration package. It runs separately from the main tutorial.",
+      "spoken": "Choose a brief demonstration package. It runs separately from the main tutorial.",
+      "file": "z-8863240b.mp3"
+    },
+    "z-de99af9b": {
+      "text": "Package complete. This short cycle connected a goal, a few learning cells and guidance in the Control panel.",
+      "spoken": "Package complete. This short cycle connected a goal, a few learning cells and guidance in the Control panel.",
+      "file": "z-de99af9b.mp3"
+    },
+    "z-a0a2eb1f": {
+      "text": "A short guided demo of Plant Orbs, Areas and Notes.",
+      "spoken": "A short guided demo of Plant Orbs, Areas and Notes.",
+      "file": "z-a0a2eb1f.mp3"
+    },
+    "z-5b6733d6": {
+      "text": "Selected details and images open here. Use Settings to adjust the experience, Help for guidance, Back to revisit a page, or Hide for an unobstructed view.",
+      "spoken": "Selected details and images open here. Use Settings to adjust the experience, Help for guidance, Back to revisit a page, or Hide for an unobstructed view.",
+      "file": "z-5b6733d6.mp3"
+    },
+    "z-b480cce8": {
+      "text": "Pigeon Pea now has a location in this scene. This Plant Orb connects information to this plant in the real place.",
+      "spoken": "Pigeon Pea now has a location in this scene. This Plant Orb connects information to this plant in the real place.",
+      "file": "z-b480cce8.mp3"
+    },
+    "z-1dd81d11": {
+      "text": "Its information begins with a simple identity and opens into connected discoveries.",
+      "spoken": "Its information begins with a simple identity and opens into connected discoveries.",
+      "file": "z-1dd81d11.mp3"
+    },
+    "z-3f9ddd2d": {
+      "text": "Tell me what you want written. We will check your words together, then choose a colour.",
+      "spoken": "Tell me what you want written. We will check your words together, then choose a colour.",
+      "file": "z-3f9ddd2d.mp3"
+    },
+    "z-3ec64a4e": {
+      "text": "In a full Project, you can edit this Note or create your own. Notes can hold observations, instructions and other place-based knowledge.",
+      "spoken": "In a full Project, you can edit this Note or create your own. Notes can hold observations, instructions and other place-based knowledge.",
+      "file": "z-3ec64a4e.mp3"
+    },
+    "z-42aa346e": {
+      "text": "Point at the Second Area signage on your first Totem, then press the trigger.",
+      "spoken": "Point at the Second Area signage on your first Totem, then press the trigger.",
+      "file": "z-42aa346e.mp3"
+    },
+    "z-b1639943": {
+      "text": "The neighbouring Totem will appear. Its sign gives you a direction through the space.",
+      "spoken": "The neighbouring Totem will appear. Its sign gives you a direction through the space.",
+      "file": "z-b1639943.mp3"
+    },
+    "z-8e92f068": {
+      "text": "The neighbouring Totem is now visible.",
+      "spoken": "The neighbouring Totem is now visible.",
+      "file": "z-8e92f068.mp3"
+    },
+    "z-a6ff6cbf": {
+      "text": "Follow its sign to move through the real space. Each Totem welcomes you to its own Area, plants and Notes.",
+      "spoken": "Follow its sign to move through the real space. Each Totem welcomes you to its own Area, plants and Notes.",
+      "file": "z-a6ff6cbf.mp3"
+    },
+    "z-52e52454": {
+      "text": "Let's test adding these elements to the landscape.",
+      "spoken": "Let's test adding these elements to the landscape.",
+      "file": "z-52e52454.mp3"
+    },
+    "z-fdc2c027": {
+      "text": "Pigeon Pea and the learning mesh are available together. Their existing cells can form one connection.",
+      "spoken": "Pigeon Pea and the learning mesh are available together. Their existing cells can form one connection.",
+      "file": "z-fdc2c027.mp3"
+    },
+    "z-bdd5395f": {
+      "text": "The main action uses Uses. You can choose another prepared example here instead.",
+      "spoken": "The main action uses Uses. You can choose another prepared example here instead.",
+      "file": "z-bdd5395f.mp3"
+    },
+    "z-8961a754": {
+      "text": "Six starting questions surround the Living Frame. Connect related cells to reveal ten new investigations, then combine discoveries to develop a deeper story.",
+      "spoken": "Six starting questions surround the Living Frame. Connect related cells to reveal ten new investigations, then combine discoveries to develop a deeper story.",
+      "file": "z-8961a754.mp3"
+    },
+    "z-ff3457c2": {
+      "text": "Two related questions can reveal a new discovery around the Living Frame. That discovery can connect again, making a deeper story.",
+      "spoken": "Two related questions can reveal a new discovery around the Living Frame. That discovery can connect again, making a deeper story.",
+      "file": "z-ff3457c2.mp3"
+    },
+    "z-43c77e14": {
+      "text": "On a first visit, the map answers immediate questions: What is this? Why is it here? What can I notice or do next?",
+      "spoken": "On a first visit, the map answers immediate questions: What is this? Why is it here? What can I notice or do next?",
+      "file": "z-43c77e14.mp3"
+    },
+    "z-6994f774": {
+      "text": "For a school, the same place becomes a learning environment where students can observe, compare, record and return over time.",
+      "spoken": "For a school, the same place becomes a learning environment where students can observe, compare, record and return over time.",
+      "file": "z-6994f774.mp3"
+    },
+    "z-6dd18d86": {
+      "text": "For a garden, park or land steward, published knowledge, visitor guidance and local observations remain organised around the real landscape.",
+      "spoken": "For a garden, park or land steward, published knowledge, visitor guidance and local observations remain organised around the real landscape.",
+      "file": "z-6dd18d86.mp3"
+    },
+    "z-61fa1d5d": {
+      "text": "This prepared profile demonstrates plant information. A real project can use its own plant profiles.",
+      "spoken": "This prepared profile demonstrates plant information. A real project can use its own plant profiles.",
+      "file": "z-61fa1d5d.mp3"
+    },
+    "z-24b33416": {
+      "text": "A Totem gives an Area a clear welcome point for its signs and local information.",
+      "spoken": "A Totem gives an Area a clear welcome point for its signs and local information.",
+      "file": "z-24b33416.mp3"
+    },
+    "z-36a47095": {
+      "text": "Place an Orb beside Pigeon Pea, then ask Zinnia for its plant.",
+      "spoken": "Place an Orb beside Pigeon Pea, then ask Zinnia for its plant.",
+      "file": "z-36a47095.mp3"
+    },
+    "z-4f179446": {
+      "text": "Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.",
+      "spoken": "Aim the upright preview where the Totem should stand. Adjust depth with the joystick, then press the trigger.",
+      "file": "z-4f179446.mp3"
+    },
+    "z-d4f8f756": {
+      "text": "Choose a location and press the trigger to place the Note.",
+      "spoken": "Choose a location and press the trigger to place the Note.",
+      "file": "z-d4f8f756.mp3"
+    },
+    "z-bc93a803": {
+      "text": "Choose a location and tap the aiming circle to place the Note.",
+      "spoken": "Choose a location and tap the aiming circle to place the Note.",
+      "file": "z-bc93a803.mp3"
+    },
+    "z-ab440a86": {
+      "text": "Use the Notes button to create a new Note.",
+      "spoken": "Use the Notes button to create a new Note.",
+      "file": "z-ab440a86.mp3"
+    }
+  }
+}

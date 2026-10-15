@@ -95,5 +95,14 @@ test('actual UIKitML wrist asset lays out controls and accepts one SDK ray click
         frame.session.inputSources=[];owner.update(frame,940);assert.equal(owner.hit(ray),null,'source loss cannot leave a stale menu ray');
         owner.setContext(null,null);assert.equal(owner.hit(ray),null);assert.equal(owner.owns(right),false);
         owner.dispose();owner.dispose();assert.ok(panel.document.disposed);
+        const v2Source=await readFile(new URL('../iwsdk/public/ui/tutorial-wrist-v2.uikitml',import.meta.url),'utf8');
+        assert.equal([...v2Source.matchAll(/<Button id="control-\d+"/g)].length,24,'v2 keeps the same actions with half the legacy UI slots');
+        const v2Id='test-tutorial-wrist-v2';sdk.AssetManager.registerManifest({[v2Id]:{type:sdk.AssetType.UIKitML,url:'data:text/plain;charset=utf-8,'+encodeURIComponent(v2Source)}});
+        const v2Panel=await sdk.loadUIKitMLAsset(v2Id,{kit:'horizon'}),v2Owner=createTutorialUIOwner(runtime,sdk,v2Panel,{variant:'wrist-v2'});
+        try{v2Owner.setContext({width:.2,height:1000,anchorHand:'left',items:Array.from({length:24},(_,i)=>({action:'Action:'+i,label:'Action '+i,icon:'settings',x:50+i*30,y:100,width:80,height:80}))},sliderPose);
+            assert.equal(v2Owner.snapshot().backend,'iwsdk-uikitml-v2');
+            assert.equal(v2Owner.snapshot().actions.length,24);
+            assert.throws(()=>v2Owner.setContext({width:.2,height:1000,items:Array.from({length:25},(_,i)=>({action:'Action:'+i}))},sliderPose),/available controls/);
+        }finally{v2Owner.dispose();}
     }finally{owner?.dispose();if(!owner)panel?.dispose();await new Promise(resolve=>setTimeout(resolve,100));sdk.TextureLoader.prototype.loadAsync=savedTextureLoad;globalThis.document=savedDocument;globalThis.DOMParser=savedParser;}
 });

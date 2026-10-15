@@ -1,4 +1,8 @@
 // Guided narration from the reviewed demo.docx. Interaction handlers retain their existing mechanics.
+export const DEMO_RETURN_WELCOME_PARAGRAPHS = Object.freeze([
+    'I’m up here now, beside the Living Frame. Welcome to NourishlandXR.',
+    'We’ll explore a few Creator tools with prepared examples. The frame will show each action as we go.'
+]);
 export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "INTRO 1.1",
@@ -6,16 +10,16 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Take a moment to look around",
         "main": "A leaf catching the light. An insect moving between flowers. The shade beneath a tree.",
         "panel": "Hidden.",
-        "hint": "See how it works.",
+        "hint": "",
         "art": "opening"
     },
     {
         "id": "INTRO 1.2",
         "act": "Introduce the tool",
         "title": "Look closer with NourishlandXR",
-        "main": "Technology shapes where we place our attention. What if it helped us notice more of the living world?\n\nNourishlandXR is a tool for exploring and learning through real places. Augmented reality brings digital information into your surroundings.\n\nFollow a question, share an observation, or explore a planting possibility — then look back at the place with another layer of understanding.",
+        "main": "Technology shapes where we place our attention. What if it helped us notice more of the living world?\n\nNourishlandXR helps us explore and learn through real places. Augmented reality brings useful information into your surroundings.",
         "panel": "Hidden. A real garden project is a separate experience after the sample demo.",
-        "hint": "Let’s start.",
+        "hint": "",
         "art": "opening"
     },
     {
@@ -24,7 +28,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Get comfortable in this space",
         "main": "In this demo, we’ll explore Creator mode tools for building a learning place. The Living Frame will guide you through prepared examples.",
         "panel": "A compact panel with its companion image visible. Media, Controls and Settings are initially closed.",
-        "hint": "Continue to the first sample. Use Back to revisit a step.",
+        "hint": "",
         "art": null
     },
     {
@@ -33,7 +37,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Imagine a place to learn",
         "main": "A garden can become an outdoor classroom. A walk can reveal connections between plants, wildlife and the people who care for a place.\n\nCreator tools let you attach discoveries, observations and learning questions to that place.",
         "panel": "Keep the companion image available without repeating the main message.",
-        "hint": "Creator tools: Plant Orbs · Notes · Areas and Totems · Learning Pathways. Begin with one discovery.",
+        "hint": "",
         "art": "curiosity"
     },
     {
@@ -114,7 +118,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "A closer look",
         "main": "The Image panel shows the picture connected to what you selected. You can open it whenever you want a closer look.",
         "panel": "Open the selected cell or plant’s authored image. Media is a panel opener, visually distinct from demo progression actions.",
-        "hint": "Use Image in the Control Panel to show or hide the picture. Review it, then continue.",
+        "hint": "Use Image in the Control Panel to show or hide the picture.",
         "art": null
     },
     {
@@ -123,7 +127,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Keep the space clear",
         "main": "You have explored Tag, Curiosity and the Fruit Discovery Window. The Orbs are tucked away for now, but the Control Panel can bring them back.\n\nAs you meet more elements, their controls will appear here too.",
         "panel": "Demonstrate the growing visibility footer and the contextual Controls sub-panel after the automatic PIMO and FDW showcase. Keep all plant profiles closed.",
-        "hint": "Select ORB to show Orbs again. Green outline: visible · Red outline: hidden. Controls opens options for a selected object.",
+        "hint": "Select ORB to show Orbs again. Controls opens options for a selected object.",
         "art": null
     },
     {
@@ -177,7 +181,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "A message connected to place",
         "main": "Someone visiting later can discover this message right where it belongs.",
         "panel": "Selected Note content and existing Note controls.",
-        "hint": "Select the Note, then continue to organise the area.",
+        "hint": "Select the Note to read it.",
         "art": null
     },
     {
@@ -204,7 +208,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Find what belongs here",
         "main": "The Totem names the Area. Its signs point toward nearby plants and Notes, giving visitors a way to find what they want to explore.",
         "panel": "Existing Signs and Fade/Wake controls. Signs are already visible on arrival.",
-        "hint": "Try the controls if you like, then create Second Area.",
+        "hint": "",
         "art": "totem"
     },
     {
@@ -276,7 +280,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "A question to explore",
         "main": "Explore a starting question, then connect two related LIMO cells. A new discovery opens between their ideas and can connect again to develop a deeper story.",
         "panel": "Selected learning question. The connection catalogue contains ten authored combinations.",
-        "hint": "Explore a question, or connect LIMO cells.",
+        "hint": "",
         "art": "pathways"
     },
     {
@@ -321,7 +325,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Knowledge grows with a place",
         "main": "You have explored a small example. In a real place, plants, observations and local knowledge can grow together over time, creating something others can explore, learn from and contribute to.",
         "panel": "Finish the sample cleanly. Any available published project is a separate choice after returning to welcome.",
-        "hint": "Finish the sample demo to return to Welcome and explore a separate real garden project.",
+        "hint": "",
         "art": null
     }
 ]);

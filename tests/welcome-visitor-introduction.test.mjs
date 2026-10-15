@@ -1,4 +1,14 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {createWelcomeVisitorIntroduction,visitorName,favouriteFruitReply} from '../app/services/welcomeVisitorIntroduction.js';import {getZinniaVisitor,resetZinniaVisitor} from '../app/services/zinniaVisitorSession.js';
+import {ZINNIA_HEARS_YOU_LINE} from '../app/services/zinniaConversationInput.js';
+import {WELCOME_PRACTICE_LESSONS} from '../app/services/welcomePracticeContent.js';
+test('tutorial introduces voice before its name and fruit conversation',()=>{
+ const prompt=WELCOME_PRACTICE_LESSONS.find(lesson=>lesson.id==='visitor-intro');
+ assert.ok(prompt.spoken.startsWith(`${ZINNIA_HEARS_YOU_LINE} `));
+ assert.deepEqual(prompt.paragraphs,[ZINNIA_HEARS_YOU_LINE,'Before we play, what should I call you?']);
+ const dialog=createWelcomeVisitorIntroduction({createVoice:()=>({cancel(){},destroy(){}})});
+ try{dialog.begin();assert.ok(dialog.state().caption.startsWith(ZINNIA_HEARS_YOU_LINE));}
+ finally{dialog.destroy();}
+});
 test('current tutorial name acceptance still asks the favourite-fruit question without a confirmation screen',()=>{
  resetZinniaVisitor();let handlers;const spoken=[];
  const dialog=createWelcomeVisitorIntroduction({confirmNames:false,createVoice:value=>(handlers=value,{listen(){},finish(){},cancel(){},destroy(){}}),onSay:text=>spoken.push(text)});

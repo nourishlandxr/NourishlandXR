@@ -9075,7 +9075,9 @@ button.ar-square-action::before { display: none !important; }
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window {
     justify-items:center;
     text-align:center;
+    row-gap:clamp(22px,3vh,34px);
 }
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p + p {padding-top:0;border-top:0;}
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {
     width:min(100%,56ch);
     margin-inline:auto;
@@ -12032,7 +12034,7 @@ body:has(.app-surface) {
 .tryit-demo .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {grid-template-rows:auto auto minmax(0,1fr) auto;}
 .tryit-demo.is-simulated .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {height:min(48dvh,380px);}
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-key {align-self:end;border-top:1px solid rgba(220,239,149,.42);padding:10px 8px 2px;color:#e7f5bb;font:600 clamp(.9rem,2.5vw,1.08rem)/1.35 Manrope,"Segoe UI Variable",Inter,system-ui,sans-serif;text-align:center;text-wrap:balance;}
-.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-key::before {content:'KEY INSIGHT';display:block;margin-bottom:5px;font-size:.67rem;letter-spacing:.12em;color:#cde6bb;}
+.tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-key::before {content:'NEXT ACTION';display:block;margin-bottom:5px;font-size:.67rem;letter-spacing:.12em;color:#cde6bb;}
 .tryit-demo.is-simulated:is([data-demo-tutorial-step="pim"],[data-demo-tutorial-step="live-tag"]) .tryit-guided-choice.is-welcome-board.is-persistent-demo-board {height:min(32dvh,220px);max-height:min(32dvh,220px);}
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p {opacity:0;visibility:hidden;clip-path:none;transform:none;transition:none;}
 .tryit-demo .tryit-guided-choice.is-welcome-board .tryit-board-text-window p:is(.is-current,.is-revealed) {opacity:1;visibility:visible;clip-path:none;}

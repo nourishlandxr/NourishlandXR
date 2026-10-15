@@ -1,0 +1,8 @@
+{
+  "passed": true,
+  "checks": 17,
+  "scope": "Production map data and shared parser, standalone .NET with numeric and local-draft type shims",
+  "renderedAcceptance": false,
+  "physicalDeviceAcceptance": false,
+  "hostedAcceptance": false
+}

@@ -1502,7 +1502,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /button:'Begin with one discovery'/);
     assert.match(source, /hasPhoneScreenInput=Array\.from\(session\?\.inputSources \|\| \[\]\)/);
     assert.match(source, /phoneArPanel=Boolean\(!simulated && sessionMode==='immersive-ar'/);
-    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Creator tools: Plant Orbs/);
+    assert.match(fs.readFileSync(new URL('../app/features/ar-demo/demoJourneyContent.js', import.meta.url),'utf8'), /Creator tools let you attach discoveries/);
     assert.match(source, /limActivation\.start\(node\.key,performance\.now\(\),'xr-hold'\)/);
     assert.doesNotMatch(source, /Hold to open selected learning cell/);
     assert.doesNotMatch(livingStyles, /--lim-progress|is-lim-holding/);

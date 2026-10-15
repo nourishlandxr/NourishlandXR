@@ -1,6 +1,6 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 
-export const WELCOME_HAND_MAGIC=Object.freeze({delay:.20,duration:1.2,stagger:0});
+export const WELCOME_HAND_MAGIC=Object.freeze({delay:.04,duration:.52,stagger:0});
 const ease=t=>t*t*(3-2*t);
 export function welcomeHandMagicProgress(age,side){
     const offset=WELCOME_HAND_MAGIC.delay+(side==='right'?WELCOME_HAND_MAGIC.stagger:0);
@@ -14,12 +14,12 @@ export function welcomeControllerMagicPlane(matrix,min,max){
 
 // Small sparks follow the moving surface boundary. No surrounding bubble.
 export function createWelcomeControllerSparks(group,min,max){
-    const geometry=new THREE.IcosahedronGeometry(1,0),material=new THREE.MeshBasicMaterial({color:'#fff2b0',transparent:true,opacity:.95,depthWrite:false});
-    const sparks=new THREE.InstancedMesh(geometry,material,64);sparks.name='Magic sparks at controller transformation';sparks.frustumCulled=false;sparks.visible=false;group.add(sparks);
+    const geometry=new THREE.IcosahedronGeometry(1,0),material=new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.95,depthWrite:false});
+    const sparks=new THREE.InstancedMesh(geometry,material,32);sparks.name='Magic sparks at controller transformation';sparks.frustumCulled=false;sparks.visible=false;group.add(sparks);
     const pose=new THREE.Matrix4(),position=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3();
     return {update(progress,time){
         sparks.visible=progress>0 && progress<1;if(!sparks.visible)return;
-        for(let i=0;i<64;i++){
+        for(let i=0;i<32;i++){
             const angle=i*2.399963+time*.65,life=(time*1.4+i*.137)%1,radius=.027+life*.042;
             position.set(Math.cos(angle)*radius,min+(max-min)*progress+(life-.5)*.018,Math.sin(angle)*radius);
             scale.setScalar((.002+.0032*Math.sin(i*1.7)**2)*(1-life));pose.compose(position,rotation,scale);sparks.setMatrixAt(i,pose);

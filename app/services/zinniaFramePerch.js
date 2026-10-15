@@ -27,6 +27,7 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
     function watchCharacter(value){void value.userData.zinnia.ready.then(ready=>{if(!ready || disposed || character!==value)return;presentationDrawnAt=null;hitBounds=null;focusLighting.refresh();renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true,welcomeMagic:true}):null;});}
     watchCharacter(character);
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}};
+    const idleTarget=new THREE.Vector3();
     function update(view,matrix,time=performance.now(),inputs=[]){
         if(disposed)return;
         root.matrix.fromArray(matrix);root.updateMatrixWorld(true);
@@ -36,9 +37,14 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         const sharedActive=Boolean(shared.playing || shared.paused || shared.listening);
         const voice=sharedActive?shared:(directState || shared),cue=zinniaCharacterCue();
         const speechLevel=voice.paused?0:Math.max(sharedActive?zinniaSpeechLevel():0,direct?.speechLevel?.() || 0);
-        focusLighting.update(.016,{guide:character,point:cue.targetWorld || null,enabled:!disposed,revision:character.userData.zinnia?.status,reducedMotion:globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches});
+        const reducedMotion=globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+        const seconds=time/1000;
+        characterMount.position.set(reducedMotion?0:.018*Math.sin(seconds*.7),reducedMotion?0:.009*Math.sin(seconds*1.1),0);
+        characterMount.rotation.y=reducedMotion?0:.12*Math.sin(seconds*.43);
+        if(!cue.targetWorld)idleTarget.set(.12+.32*Math.sin(seconds*.38),.28+.14*Math.sin(seconds*.53),.7);
+        focusLighting.update(.016,{guide:character,point:cue.targetWorld || null,enabled:!disposed,revision:character.userData.zinnia?.status,reducedMotion});
         lastVoice={playing:Boolean(voice.playing),audible:voice.audible ?? speechLevel>.002,paused:Boolean(voice.paused),listening:Boolean(voice.listening),speechLevel};
-        animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
+        animateZinniaCharacter(character,seconds,voice.playing && !voice.paused,{...cue,target:cue.targetWorld?null:idleTarget,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.targetWorld || voice.listening),speechLevel});
     }
     return {scene,root,characterMount,update,
         snapshot:()=>({lighting:focusLighting.snapshot(),voice:{...lastVoice},animation:character.userData.zinnia?.guide?.snapshot(),reaction:character.userData.zinnia?.touch?.snapshot().reaction,ready:character.userData.zinnia?.status==='ready'}),

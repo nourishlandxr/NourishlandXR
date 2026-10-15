@@ -3,7 +3,7 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 export function prepareTutorialFruit(model,extent,{normalized=false}={}){
     model.updateMatrixWorld(true);const box=new THREE.Box3();
     if(normalized){const point=new THREE.Vector3();model.traverse(node=>{if(!node.isMesh)return;for(let i=0;i<node.geometry.attributes.position.count;i++){node.getVertexPosition(i,point);box.expandByPoint(point.applyMatrix4(node.matrixWorld));}});}else box.setFromObject(model);
-    const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),factor=normalized?extent:extent/Math.max(size.x,size.y,size.z);
+    const size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3()),factor=extent/Math.max(size.x,size.y,size.z,1e-6);
     const group=new THREE.Group(),offset=new THREE.Group();group.scale.setScalar(factor);offset.position.copy(center).negate();offset.add(model);group.add(offset);
     return {group,halfSize:{x:Math.max(.01,size.x*factor/2),y:Math.max(.012,size.y*factor/2),z:Math.max(.01,size.z*factor/2)},axis:['x','y','z'].sort((a,b)=>size[a]-size[b])[0]};
 }

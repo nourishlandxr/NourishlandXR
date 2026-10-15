@@ -13,12 +13,12 @@ export async function createWelcomeMicroFruitIcon(id,{fetchImage=fetch,decode=cr
     const response=await fetchImage(atlas,{signal:AbortSignal.timeout(20000)});
     if(!response.ok)throw new Error('Micro-fruit icon unavailable');
     const bytes=await response.arrayBuffer(),blob=new Blob([bytes],{type:'image/png'});
-    const full=await decode(blob),width=full.width/4,height=full.height/2;
-    const fruit=await decode(full,cell[0]*width,cell[1]*height,width,height);
-    full.close?.();
-    const texture=new THREE.Texture(fruit);texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;
+    const full=await decode(blob);
+    const texture=new THREE.Texture(full);texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;
     const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide});
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.085,.085),material);
+    const uv=mesh.geometry.attributes.uv,minU=cell[0]/4,maxU=(cell[0]+1)/4,minV=1-(cell[1]+1)/2,maxV=1-cell[1]/2;
+    uv.setXY(0,minU,maxV);uv.setXY(1,maxU,maxV);uv.setXY(2,minU,minV);uv.setXY(3,maxU,minV);uv.needsUpdate=true;
     mesh.name='Zinnia hand micro-fruit icon: '+id;mesh.renderOrder=24;
     const group=new THREE.Group();group.name=mesh.name;group.add(mesh);
     return group;

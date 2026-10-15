@@ -18,6 +18,7 @@ const onlyArg=process.argv.find(arg=>arg.startsWith('--only='));
 const only=onlyArg?new Set(onlyArg.slice(7).split(',')):null;
 const authoredClips=[...WELCOME_PRACTICE_LESSONS,...WELCOME_PRACTICE_RESPONSES,...Object.entries(WELCOME_FRUIT_ASSETS).flatMap(([id,fruit])=>[
     {id:'fruit-name-'+id,spoken:fruit.label},
+    {id:'fruit-grab-'+id,spoken:fruit.remark},
     {id:'fruit-pick-'+id,spoken:tutorialFruitPrompt(fruit,Boolean(fruit.halfUrl))},
     ...(fruit.halfUrl?[{id:'fruit-open-'+id,spoken:fruit.remark+' Place it on the plate.'}]:[])
 ])].filter(c=>c.spoken && !c.silent);

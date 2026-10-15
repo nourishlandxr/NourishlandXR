@@ -4,9 +4,17 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createZinniaPlantDiscovery,zinniaPlantButtons} from '../app/services/zinniaPlantDiscovery.js';
+import {ZINNIA_HEARS_YOU_LINE} from '../app/services/zinniaConversationInput.js';
 import {createWelcomeComfortOptions} from '../app/services/welcomeComfortOptions.js';
 import {panelSettingsControls} from '../app/services/pimInfoPanel.js';
 const flush=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+test('both demo voice questions show exactly the words Zinnia speaks before listening',async()=>{
+ for(const mode of ['plant','note']){
+  const spoken=[],dialog=createZinniaPlantDiscovery({mode,microphoneReady:()=>false,createVoice:()=>({speak:async value=>{spoken.push(value);return true;},listen(){throw Error('unexpected listening');},cancel(){},destroy(){}})});
+  try{dialog.begin();await flush();assert.equal(spoken.length,1);assert.equal(dialog.state().message,spoken[0]);assert.ok(spoken[0].startsWith(`${ZINNIA_HEARS_YOU_LINE} `));}
+  finally{dialog.destroy();}
+ }
+});
 test('only a nonempty microphone transcript removes the Moringa fallback for this demo session',async()=>{
  const saved=globalThis.sessionStorage,values=new Map();globalThis.sessionStorage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};let callbacks;
  const voice=handlers=>(callbacks=handlers,{speak:async()=>false,listen(){},cancel(){},destroy(){}});const discovery=createZinniaPlantDiscovery({mode:'note',createVoice:voice});

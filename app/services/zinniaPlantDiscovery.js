@@ -1,6 +1,6 @@
 import {drawDemoVoiceDetectionBar,mountDemoVoiceDetectionBar} from './demoVoiceDetectionBar.js';
 import {drawWristIcon} from './welcomeWristMenu.js';
-import {spokenPlantQuery,spokenNoteDraft,conversationConfirmation,conversationSkip} from './zinniaConversationInput.js';
+import {spokenPlantQuery,spokenNoteDraft,conversationConfirmation,conversationSkip,ZINNIA_HEARS_YOU_LINE} from './zinniaConversationInput.js';
 import {searchINaturalistPlants} from './inaturalistPlantSearch.js';
 import {resolvePlantPim} from './pimLegacyAdapter.js';
 import {pimToArKnowledge} from './pimModel.js';
@@ -193,7 +193,7 @@ export function createZinniaPlantDiscovery({onChange=()=>{},onReady=()=>{},onSpe
         emit({phase:'ready',voiceMessage:''});onReady(MORINGA_PROFILE);
     }
     const api={state:()=>state,search,select,confirm,receive,listen,speak:voice.speak,
-        begin(){if(!disposed)say(mode==='note'?'What would you like your Note to say?': 'Which plant would you like for your Orb?');},
+        begin(){if(!disposed)say(`${ZINNIA_HEARS_YOU_LINE} ${mode==='note'?'What would you like your Note to say?':'Which plant would you like for your Orb?'}`);},
         activate(action){if(action==='voice' && state.listening || action==='done' && !state.listening)return;if(action==='sample')useSample();else if(action==='voice')void listen();else if(action==='done')voice.finish();else if(action==='confirm')void confirm();else if(action==='retry'){emit({phase:'idle',query:'',results:[]});say(mode==='note'?'What would you like written?':'Which plant would you like?');}else if(action==='back')showResults();else if(action==='more'){page=(page+1)%Math.ceil(catalogue.length/3);showResults();}else if(action==='cancel')void receive('cancel');else if(action.startsWith('result:'))select(Number(action.split(':')[1]));else if(action.startsWith('color:'))chooseColor(action.slice(6));},
         destroy(){disposed=true;generation++;voiceTurn++;controller?.abort();voice.destroy();}};return api;
 }

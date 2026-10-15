@@ -1,6 +1,7 @@
 // Small, context-specific language helpers. Keep the user's actual names and
 // dictated words; remove conversational wrappers rather than treating a whole
 // sentence as the requested name, plant or Note.
+export const ZINNIA_HEARS_YOU_LINE='Did you know that I can actually hear you?';
 export const conversationText=value=>String(value || '').normalize('NFC').replace(/[’‘]/g,"'").trim();
 const trim=value=>value.replace(/^[\s,.:;!?"“”]+|[\s,.:;!?"“”]+$/g,'').trim();
 export function conversationConfirmation(value){

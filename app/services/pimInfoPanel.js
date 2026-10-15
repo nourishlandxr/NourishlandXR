@@ -333,7 +333,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, directInteractionOnly = () => false, allowPanelGrip = () => true, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, getVoiceControls=()=>null, onRestartTutorial=null,onDeveloperLab=null,onPracticeGame=null,onInputMethodChange=()=>{},getInputMethod=()=> 'controllers',gamesAvailable=()=>false,inputChoiceAvailable=()=>false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, preferNativeSpatialControls = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, directInteractionOnly = () => false, allowPanelGrip = () => true, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, getVoiceControls=()=>null, onRestartTutorial=null,onDeveloperLab=null,onPracticeGame=null,onInputMethodChange=()=>{},getInputMethod=()=> 'controllers',gamesAvailable=()=>false,inputChoiceAvailable=()=>false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
     let rayFilter=()=>true;
     let comfortContext=null,comfortContextSignature='',panelOpacity=1,panelIntroductionAt=null;
@@ -1348,7 +1348,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     function ensureSdkWrist(session){
         const runtime=xrInputRuntime(session);if(!runtime?.createTutorialUI || !fruitGl || sdkWristSession===session)return;
         sdkWristSession=session;const token=++wristToken;
-        sdkWristPending=runtime.createTutorialUI({gl:fruitGl,occupied:inputOccupied,onAction:(action,source)=>act(action,source),
+        sdkWristPending=runtime.createTutorialUI({gl:fruitGl,variant:'wrist-v2',occupied:inputOccupied,onAction:(action,source)=>act(action,source),
             onValue:(action,value)=>comfortContext?.onValue?.(action.replace(/^Comfort:/u,''),value)})
             .then(owner=>{if(token!==wristToken || fruitDestroyed || fruitSession!==session){owner?.dispose();return;}sdkWrist=owner;})
             .catch(error=>{sdkWristError=error.message;console.warn('IWSDK wrist menu:',error.message);}).finally(()=>{sdkWristPending=null;});
@@ -1612,7 +1612,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
                 if(leftHand && handReferenceSpace){const state=handTrackingState(xrFrame,leftHand,handReferenceSpace),wristJoint=state?.rawJoints.get('wrist'),knuckle=state?.rawJoints.get('index-finger-metacarpal');wristMatrix=state?.tracked?wristJoint?.matrix:null;if(wristJoint && knuckle)forearmDirection=new THREE.Vector3(wristJoint.x-knuckle.x,wristJoint.y-knuckle.y,wristJoint.z-knuckle.z).normalize();}
                 if(!wristMatrix && leftController && handReferenceSpace){try{wristMatrix=xrFrame.getPose(leftController.gripSpace,handReferenceSpace)?.transform.matrix || null;}catch{wristMatrix=null;}}
                 if(!wristMatrix){pose=null;sdkWrist?.setContext(null,null);lastTime=time;return;}
-                next=welcomeWristPose(wristMatrix,comfortContext,forearmDirection);
+                next=welcomeWristPose(wristMatrix,comfortContext,forearmDirection,matrix);
             }
             if(!next)return;heading=next.anchorHeading;if(comfortContext && headset){pose=next;firstPlacement=false;spatialMove=null;spatialGrabPending=null;}
             if(comfortContext && sdkWrist?.ready){try{const t=panelIntroductionAt===null?1:Math.max(0,Math.min(1,(time-panelIntroductionAt)/1500));sdkWrist.setOpacity(panelOpacity*t*t*(3-2*t));sdkWrist.setContext(detached?null:comfortContext,detached?null:pose);sdkWrist.update(xrFrame,time,touchBlocked===true);lastTime=time;return;}catch(error){disableSdkWrist(error);}}
@@ -1665,7 +1665,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             const nextHoverDescription=hoverButton ? controlDescription(hoverButton) : '';
             const nextHoverPanelId=hoverTarget?.card?.id || '';
             if(nextHoverDescription!==hoveredDescription || nextHoverPanelId!==hoveredPanelId){hoveredDescription=nextHoverDescription;hoveredPanelId=nextHoverPanelId;}
-            updateSdkDemoPanels(time);
+            // Demo panels already provide canvas hit targets. A separate UIKit
+            // scene for every companion card duplicates rendering in both eyes.
+            if(!preferNativeSpatialControls)updateSdkDemoPanels(time);
             fruitWindow?.updateSpatial(pose?{...pose,width:spatialDimensions().mainWidth}:null,time,inputRay,xrFrame,source=>!inputOccupied(source));lastTime=time;
         },
         recenter(){heading=null;pose=null;lowerPoses.view=lowerPoses.guides=null;lowerDomPositions.view=lowerDomPositions.guides=null;explorerPose=null;explorerPosition=null;mediaPose=mediaDetached?null:mediaPose;lastTime=0;manuallyPositioned=false;firstPlacement=false;spatialMove=null;spatialGrabPending=null;renderExplorer();},
@@ -1688,7 +1690,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             const cards=[card];if(!confirmation && !explorerClosed)cards.push(explorerCard);if(settingsOpen)cards.push(settingsCard);if(!confirmation && viewOpen)cards.push({id:'view',settings:true,viewOpen:true,lowerCompanion:'view',infoOpacity,height:viewHeight(),controls:panelViewControls(sceneVisibility()),hoverAction:hoveredPanelId==='view'?hoveredAction:''});if(!confirmation && guidesOpen)cards.push({id:'guides',guides:true,lowerCompanion:'guides',infoOpacity,height:guidesHeight(),title:guideContent().title,lines:guidePages()[guidePage] || [],controls:guidesControls(),hoverAction:hoveredPanelId==='guides'?hoveredAction:''});if(!hidden && !mediaCollapsed && preview?.image)cards.push(mediaCard);
             for(const card of cards)if(sdkDemoPanels.get(card.id)?.owner?.ready && !card.hidden && card.controls?.length<=48)card.sdkControls=true;
             renderer.begin();renderer.draw(view,{id:'companion'},pose.center,cards,'');renderer.end();
-            if(!comfortContext)for(const entry of sdkDemoPanels.values())entry.owner?.draw(view);
+            if(!comfortContext && !preferNativeSpatialControls)for(const entry of sdkDemoPanels.values())entry.owner?.draw(view);
         },hit,
         refreshExplorer({mode}={}){
             if(mode && availablePimoModes().includes(mode)){
@@ -1703,7 +1705,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         hitButton(ray){const target=hit(ray);return target?{...target,button:targetButtonAtRay(target)}:null;},
         activate(ray,source=null){if(fruitWindow?.activate(ray)){fruitControlsActive=true;explorerClosed=false;renderExplorer();return true;}const target=hit(ray);if(!target)return false;if(target.sdkUI)return true;const button=targetButtonAtRay(target);if(button && !slideAtTarget(button,target) && button.action!=='MoveMediaPanel')act(button.action,source);return true;},
         isHandInteracting(source){return Boolean(source && (sdkDemoOwns(source)||sdkWrist?.owns(source)||fruitWindow?.owns(source)||handContacts.get(source)));},
-        get sdkUIStatus(){return comfortContext?sdkWrist?.snapshot() || {pending:Boolean(sdkWristPending),error:sdkWristError}:{backend:'iwsdk-uikitml',panels:[...sdkDemoPanels].map(([id,entry])=>({id,pending:!entry.owner,error:entry.error,state:entry.owner?.snapshot(),surface:entry.surface?{center:entry.surface.center,right:entry.surface.right,up:entry.surface.up,normal:entry.surface.normal,width:entry.surface.width,height:entry.surface.height,controls:entry.surface.card.controls}:null}))};},
+        get sdkUIStatus(){return comfortContext?sdkWrist?.snapshot() || {pending:Boolean(sdkWristPending),error:sdkWristError}:preferNativeSpatialControls?{backend:'native-spatial',panels:[]}:{backend:'iwsdk-uikitml',panels:[...sdkDemoPanels].map(([id,entry])=>({id,pending:!entry.owner,error:entry.error,state:entry.owner?.snapshot(),surface:entry.surface?{center:entry.surface.center,right:entry.surface.right,up:entry.surface.up,normal:entry.surface.normal,width:entry.surface.width,height:entry.surface.height,controls:entry.surface.card.controls}:null}))};},
         hitPoint(point){return !pose || !renderer || detached?null:renderer.hitPoint(point,{front:.045,back:.025});},
         activateHand(ray,source,state){
             if(directInteractionOnly())return Boolean(hit(ray));

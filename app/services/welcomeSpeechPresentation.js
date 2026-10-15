@@ -36,15 +36,15 @@ export function welcomeLessonCaption(lesson,visibleAge=0,voiceState=null){
     }
     return paragraphs.slice(0,Math.min(paragraphs.length,1+Math.floor(Math.max(0,visibleAge)/3))).join('\n\n');
 }
-export function drawWelcomeText(ctx,{title='',layoutTitle=title,caption='',layoutCaption=caption,width=1160,center=700,top=220,bottom=820,titleSize=96,bodySize=54,headingFont='"Bauhaus Chez", "Fraunces", Georgia, serif',bodyFont='"Manrope", "Segoe UI Variable", system-ui, sans-serif'}={}){
+export function drawWelcomeText(ctx,{title='',layoutTitle=title,caption='',layoutCaption=caption,width=1160,center=700,top=220,bottom=820,titleSize=96,bodySize=54,paragraphGap=.8,headingFont='"Bauhaus Chez", "Fraunces", Georgia, serif',bodyFont='"Manrope", "Segoe UI Variable", system-ui, sans-serif'}={}){
     const wrap=(text,size,font=bodyFont)=>{ctx.font=`${font===headingFont?600:500} ${size}px ${font}`;return String(text).split(/\n\s*\n/).flatMap((paragraph,index)=>{const lines=[''];for(const word of paragraph.trim().split(/\s+/)){const i=lines.length-1,next=lines[i]?lines[i]+' '+word:word;if(ctx.measureText(next).width>width && lines[i])lines.push(word);else lines[i]=next;}return index?['',...lines]:lines;});};
     ctx.textAlign='center';ctx.textBaseline='middle';let heading=title?wrap(title,titleSize,headingFont):[],size=bodySize,lines=wrap(caption,size);
     const reservedHeading=(layoutTitle || title)?wrap(layoutTitle || title,titleSize,headingFont):[];
     const headingHeight=reservedHeading.length*(titleSize*1.16),gap=reservedHeading.length?48:0;
-    while(size>30 && headingHeight+gap+wrap(layoutCaption,size).reduce((height,line)=>height+size*(line?1.3:.8),0)>bottom-top){size-=2;}
+    while(size>30 && headingHeight+gap+wrap(layoutCaption,size).reduce((height,line)=>height+size*(line?1.3:paragraphGap),0)>bottom-top){size-=2;}
     lines=wrap(caption,size);
     let y=top+titleSize/2;ctx.font=`600 ${titleSize}px ${headingFont}`;for(const line of heading){ctx.fillText(line,center,y);y+=titleSize*1.16;}
-    y=top+headingHeight+gap+size/2;ctx.font=`500 ${size}px ${bodyFont}`;for(const line of lines){if(line)ctx.fillText(line,center,y);y+=size*(line?1.3:.8);}
+    y=top+headingHeight+gap+size/2;ctx.font=`500 ${size}px ${bodyFont}`;for(const line of lines){if(line)ctx.fillText(line,center,y);y+=size*(line?1.3:paragraphGap);}
     return y;
 }
 
