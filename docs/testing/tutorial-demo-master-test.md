@@ -1,6 +1,6 @@
-# Tutorial and demo master test — V0.9629
+# Tutorial and demo master test — V0.9631
 
-Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9629 on the welcome screen before testing. Use a fresh tab for the guided first-run check.
+Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9631 on the welcome screen before testing. Use a fresh tab for the guided first-run check.
 
 ## Expected sequence
 
@@ -33,10 +33,12 @@ Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9629 on the welcom
 
 ## Evidence and limits
 
-Local checks passed: 1,029 regression tests; frontend build V0.9629; 36 authored chapter text layouts within bounds; 204 saved recordings decoded successfully (93 tutorial, 111 demo); native butterfly, tic-tac-toe, fruit, brush and controller scenes rendered; welcome V0.9629 visible; no browser page errors. These checks do not replace physical Quest testing.
+Local checks passed: 1,029 regression tests; frontend build V0.9631; 36 authored chapter text layouts within bounds; 204 saved recordings decoded successfully (93 tutorial, 111 demo); native butterfly, tic-tac-toe, fruit, brush and controller scenes rendered; welcome V0.9631 visible; no browser page errors. These checks do not replace physical Quest testing.
 
 Local review: serve the repository and open tools/preview-demo-narration.html for chapter text plus exact paragraph recordings, or tools/preview-demo-experiences.html for the native practice renderer. These developer previews are not hosted product routes.
 
-Record headset/browser version, AR versus VR mode, input method, chapter/lesson, visible V0.9629 and any console error for each failure. Physical Quest results remain pending until this matrix is completed on-device.
+Record headset/browser version, AR versus VR mode, input method, chapter/lesson, visible V0.9631 and any console error for each failure. Physical Quest results remain pending until this matrix is completed on-device.
 
-V0.9629 additions: tutorial pause controls and their spoken instructions removed; all 36 chapter/111 runtime paragraph recording scripts match displayed body text exactly, including PIMO/LIMO; Notes readbacks page without truncating long dictation; the Moringa fallback disappears after a successful microphone transcript. Live transcription tested on root and www with approved synthetic Strawberry audio through actual browser MediaRecorder. This verifies the public service and browser recording path; physical Quest microphone permission/capture remains pending.
+V0.9631 additions: tutorial pause controls and their spoken instructions removed; all 36 chapter/111 runtime paragraph recording scripts match displayed body text exactly, including PIMO/LIMO; Notes readbacks page without truncating long dictation; the Moringa fallback disappears after a successful microphone transcript. Live transcription tested on root and www with approved synthetic Strawberry audio through actual browser MediaRecorder. This verifies the public service and browser recording path; physical Quest microphone permission/capture remains pending.
+
+V0.9631: Living Frame PEEK and optional picture-frame activity use the same native 3D Sun Garden as the demo. Verify lean/parallax, both-eye aperture clipping, moving the frame without restarting its reveal, and return to the original scene. Teaching lights highlight Zinnia when no element is introduced; they shift to the controller Orb, fruit, brush, active hand games and narrated demo element. Verify smooth focus transfer, no early Zinnia reveal, steady text, unchanged Orb LEDs and reduced-motion behaviour. Physical Quest results remain pending.

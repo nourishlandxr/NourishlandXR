@@ -1579,8 +1579,10 @@ function demoZinniaCue(text){
     // Point at the actual object mentioned by the current paragraph.
     let targetWorld=null;
     if(/living map|wooden map|map ring/i.test(text))targetWorld=demoLivingMapOrigin;
-    else if(/\b(orb|plant choice|choose a plant)\b/i.test(text))targetWorld=markers.find(record=>record.id===demoFramePlantChoiceOrbId)?.position;
+    else if(/\b(orb|plant choice|choose a plant)\b/i.test(text))targetWorld=(markers.find(record=>record.id===demoFramePlantChoiceOrbId) || markers.find(record=>record.demoType==='plant' && !record.demoNarrativeFaded))?.position;
     else if(/\btotem\b/i.test(text))targetWorld=markers.find(record=>record.demoType==='zone' && !record.demoNarrativeFaded)?.position;
+    else if(/\bnote\b/i.test(text))targetWorld=markers.find(record=>record.demoType==='note' && !record.demoNarrativeFaded)?.position;
+    else if(/control panel|\bmedia\b|\bcontrols\b|fruit window|fruit discovery/i.test(text))targetWorld=infoPanel?.spatialPose?.center || null;
     else if(/living frame|this frame/i.test(text) && introWorldAnchor)targetWorld=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);
     const intent=/\b(goodbye|good bye|bye for now|see you|farewell)\b/i.test(text)?'farewell':/\b(well done|all fruit gathered|you did it)\b/i.test(text)?'celebrate':/\b(hello|welcome|hi there)\b/i.test(text)?'greet':'explain';
     return {targetWorld,intent};

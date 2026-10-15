@@ -1,3 +1,4 @@
+import {createExperienceFocusLighting} from './experienceFocusLighting.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter} from './zinniaCharacter.js';
 import {createFruitWindowXR} from './fruitWindowXR.js';
@@ -20,9 +21,10 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
     branch([[-.055,-.10,-.24],[.12,-.07,-.20],[.065,-.028,-.08],[0,-.018,.015],[-.095,-.025,.025]],.021);
     branch([[-.055,-.10,-.24],[.11,-.065,-.10],[.045,-.024,-.055],[-.055,-.018,-.045],[-.10,-.028,-.02]],.013);
     const characterMount=new THREE.Group();characterMount.name='Authored Zinnia return mount';home.add(characterMount);
+    const focusLighting=createExperienceFocusLighting(scene);
     let character=initialCharacter || createZinniaCharacter();character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);
     let glContext=null,renderer=null,started=null,disposed=false,lastFrame=null,instant=false,rimMaterialId=null,presentationDrawnAt=null,hitBounds=null,lastVoice={};
-    function watchCharacter(value){void value.userData.zinnia.ready.then(ready=>{if(!ready || disposed || character!==value)return;presentationDrawnAt=null;hitBounds=null;renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true,welcomeMagic:true}):null;});}
+    function watchCharacter(value){void value.userData.zinnia.ready.then(ready=>{if(!ready || disposed || character!==value)return;presentationDrawnAt=null;hitBounds=null;focusLighting.refresh();renderer?.destroy();renderer=glContext?createFruitWindowXR(glContext,scene,{alphaCompositing:true,welcomeMagic:true}):null;});}
     watchCharacter(character);
     const anchor={position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}};
     function update(view,matrix,time=performance.now(),inputs=[]){
@@ -34,11 +36,12 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         const sharedActive=Boolean(shared.playing || shared.paused || shared.listening);
         const voice=sharedActive?shared:(directState || shared),cue=zinniaCharacterCue();
         const speechLevel=voice.paused?0:Math.max(sharedActive?zinniaSpeechLevel():0,direct?.speechLevel?.() || 0);
+        focusLighting.update(.016,{guide:character,point:cue.targetWorld || null,enabled:!disposed,revision:character.userData.zinnia?.status,reducedMotion:globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches});
         lastVoice={playing:Boolean(voice.playing),audible:voice.audible ?? speechLevel>.002,paused:Boolean(voice.paused),listening:Boolean(voice.listening),speechLevel};
         animateZinniaCharacter(character,time/1000,voice.playing && !voice.paused,{...cue,lesson:'demo-guide',cue,inputs,paused:voice.paused,viewer:view.transform.matrix,focused:Boolean(cue.focused || voice.listening),speechLevel});
     }
     return {scene,root,characterMount,update,
-        snapshot:()=>({voice:{...lastVoice},animation:character.userData.zinnia?.guide?.snapshot(),reaction:character.userData.zinnia?.touch?.snapshot().reaction,ready:character.userData.zinnia?.status==='ready'}),
+        snapshot:()=>({lighting:focusLighting.snapshot(),voice:{...lastVoice},animation:character.userData.zinnia?.guide?.snapshot(),reaction:character.userData.zinnia?.touch?.snapshot().reaction,ready:character.userData.zinnia?.status==='ready'}),
         react(hit){
             if(disposed || character.userData.zinnia?.status!=='ready' || !hit?.worldPoint)return false;
             unlockZinniaTouchAudio();character.updateWorldMatrix(true,false);
@@ -73,6 +76,6 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
             if(lastFrame!==time){lastFrame=time;update(viewer?{transform:{matrix:viewer}}:view,matrix,time,inputs);renderer.update();renderer.prepareNext();}
             const t=instant?1:Math.max(0,Math.min(1,(time-started)/1800));renderer.draw(view,anchor,t*t*(3-2*t));if(t>=1 && renderer.ready)presentationDrawnAt ??= performance.now();
         },
-        destroy(){if(disposed)return;disposed=true;disposeZinniaCharacter(character);renderer?.destroy();const geometries=new Set(),materials=new Set();scene.traverse(node=>{if(node.geometry)geometries.add(node.geometry);for(const material of [node.material].flat().filter(Boolean))materials.add(material);});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
+        destroy(){if(disposed)return;focusLighting.destroy();disposed=true;disposeZinniaCharacter(character);renderer?.destroy();const geometries=new Set(),materials=new Set();scene.traverse(node=>{if(node.geometry)geometries.add(node.geometry);for(const material of [node.material].flat().filter(Boolean))materials.add(material);});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());}
     };
 }

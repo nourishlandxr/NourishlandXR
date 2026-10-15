@@ -57,18 +57,13 @@ test('Peek choices share one bounded row and shake reactions vary per butterfly'
  assert.match(source,/ambientBeesStartedAt=0/);assert.match(source,/surface.kind==='living-frame-rim'\?\.012/);
 });
 
-test('peek clips each eye at the aperture, draws shared depth geometry and disposes resources',async()=>{
- const oldFetch=globalThis.fetch,oldBitmap=globalThis.createImageBitmap,calls=[];
- globalThis.fetch=async()=>({ok:true,blob:async()=>({})});globalThis.createImageBitmap=async()=>({width:1672,height:941,close(){calls.push(['closeBitmap']);}});
- const gl=new Proxy({getShaderParameter:()=>true,getProgramParameter:()=>true,getUniformLocation:(_p,name)=>name,getAttribLocation:(_p,name)=>name==='p'?0:1},{get(target,key){if(key in target)return target[key];if(key===key.toUpperCase())return key;if(key.startsWith('create'))return ()=>({});return (...args)=>calls.push([key,...args]);}});
- try{
-  const renderer=await createLivingFramePeekXR(gl),identity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
-  for(const x of [-.032,.032]){const transform=identity.slice();transform[12]=x;transform[14]=1.8;renderer.draw({projectionMatrix:identity,transform:{matrix:transform,inverse:{matrix:identity}}},{matrix:identity,radius:.832});}
-  assert.equal(calls.filter(call=>call[0]==='bufferData').length,1);assert.equal(calls.filter(call=>call[0]==='drawArrays').length,2);
-  const left=peekAperturePoint({x:2,y:1,z:-10},{x:-.032,y:0,z:1.8}),right=peekAperturePoint({x:2,y:1,z:-10},{x:.032,y:0,z:1.8});assert.notEqual(left.x,right.x);
-  renderer.destroy();for(const name of ['deleteBuffer','deleteTexture','deleteProgram'])assert.equal(calls.filter(call=>call[0]===name).length,1);
-  assert.equal(calls.filter(call=>call[0]==='closeBitmap').length,1);
- }finally{globalThis.fetch=oldFetch;globalThis.createImageBitmap=oldBitmap;}
+test('Living Frame peek uses the same 3D portal, keeps eye poses and releases it',async()=>{
+ const calls=[],gl={},portal={active:false,ready:Promise.resolve(true),setContext:value=>calls.push(['context',value]),begin(matrix,_exit,options){this.active=true;calls.push(['begin',matrix,options]);},setAnchor:matrix=>calls.push(['anchor',matrix]),drawNative:(_gl,view)=>calls.push(['eye',view.transform.matrix[12]]),destroy:()=>calls.push(['destroy'])};
+ const renderer=await createLivingFramePeekXR(gl,{createPortal:()=>portal}),identity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+ for(const x of [-.032,.032]){const matrix=identity.slice();matrix[12]=x;renderer.draw({projectionMatrix:identity,transform:{matrix,inverse:{matrix:identity}}},{matrix:identity,radius:.832});}
+ assert.deepEqual(calls.filter(c=>c[0]==='eye').map(c=>c[1]),[-.032,.032]);assert.equal(calls.filter(c=>c[0]==='begin').length,1);assert.equal(calls[0][1],gl);const moved=identity.slice();moved[12]=.2;renderer.draw({transform:{matrix:identity}},{matrix:moved,radius:.832});assert.equal(calls.filter(c=>c[0]==='begin').length,1,'moving the frame must not restart its fade or garden');assert.equal(calls.filter(c=>c[0]==='anchor').length,1);renderer.destroy();assert.equal(calls.at(-1)[0],'destroy');
+ const source=readFileSync(new URL('../app/services/livingFramePeekXR.js',import.meta.url),'utf8');assert.doesNotMatch(source,/property-painting|propertyDepth|createImageBitmap/);assert.match(source,/createPeekPortalExperience/);
+ const left=peekAperturePoint({x:2,y:1,z:-10},{x:-.032,y:0,z:1.8}),right=peekAperturePoint({x:2,y:1,z:-10},{x:.032,y:0,z:1.8});assert.notEqual(left.x,right.x);
 });
 
 test('direct PEEK hides the current DOM and restores its visibility without ending XR',async()=>{
