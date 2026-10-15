@@ -83,15 +83,8 @@ test('runtime palette selects colours directly and drags brush width through con
  assert.ok(trial.snapshot().paint.width>.015);assert.equal(trial.snapshot().strokes,0,'panel drags do not paint');trial.destroy();
 }));
 
-test('larger tic-tac-toe board has exactly nine selectable cells',()=>withCanvas(()=>{
- const root=new THREE.Group(),trial=createWelcomePracticeTrials(root);trial.open('tic-tac-toe');
- const board=root.getObjectByName('Wooden Tic-Tac-Toe board');assert.equal(board.children.filter(n=>n.isMesh).length,5,'plank and four dividers');
- const size=new THREE.Vector3();new THREE.Box3().setFromObject(board).getSize(size);assert.ok(size.x>=.54 && size.z>=.54);
- for(let row=0;row<3;row++)for(let col=0;col<3;col++){
-  const point=board.localToWorld(new THREE.Vector3((col-1)*.18,.5,(row-1)*.18));
-  const hit=trial.hit({origin:point,direction:new THREE.Vector3(0,-1,0)});assert.equal(hit?.id,'cell:'+(row*3+col));
- }
- trial.destroy();
+test('larger tic-tac-toe uses nine board cells and physical pieces rather than ray selection',()=>withCanvas(()=>{
+ const root=new THREE.Group(),trial=createWelcomePracticeTrials(root);trial.open('tic-tac-toe');const board=root.getObjectByName('Hand-tracked Tic-Tac-Toe board');assert.ok(board);assert.equal(trial.snapshot().game.cells.length,9);assert.equal(root.children.filter(n=>n.name.startsWith('Tic piece')).length,0);let pieces=0;root.traverse(n=>{if(n.name.startsWith('Tic piece'))pieces++;});assert.equal(pieces,10);const size=new THREE.Box3().setFromObject(board).getSize(new THREE.Vector3());assert.ok(size.x>.639 && size.z>.639);assert.equal(trial.hit({origin:new THREE.Vector3(0,1,0),direction:new THREE.Vector3(0,-1,0)}),null);trial.destroy();
 }));
 
 test('Peek frame keeps its 60 by 40 cm dimensions and follows a grip in all modes',()=>withCanvas(()=>{

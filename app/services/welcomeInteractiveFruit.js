@@ -12,7 +12,7 @@ export function setBananaPeel(variant,progress){
 
 export function resetInteractiveFruit(variant){
     variant.opened=false;variant.bitten=false;variant.bites=0;variant.peel=0;variant.mouthArmed=false;
-    variant.whole.visible=true;if(variant.half)variant.half.visible=false;if(variant.bite)variant.bite.visible=false;
+    if(variant.eaten){variant.eaten.traverse(n=>n.geometry?.dispose());variant.eaten.removeFromParent();variant.eaten=null;}variant.whole.visible=true;if(variant.half)variant.half.visible=false;if(variant.bite)variant.bite.visible=false;
     for(const state of variant.biteStates || [])state.visible=false;
     variant.whole.traverse(node=>node.morphTargetInfluences?.fill(0));
 }
@@ -25,7 +25,7 @@ export function tryAppleBite(variant,body,mouth,source,onFeedback){
     // or grab already touching the user's face.
     if(distance>.20)variant.mouthArmed=true;
     if(!variant.mouthArmed || distance>.105)return false;
-    variant.mouthArmed=false;variant.bitten=true;variant.bites=count+1;variant.whole.visible=false;
+    if(variant.biteHalfSizes?.[count]){body.halfSize={...variant.biteHalfSizes[count]};body.radius=Math.max(...Object.values(body.halfSize));}variant.mouthArmed=false;variant.bitten=true;variant.bites=count+1;variant.whole.visible=false;
     for(const [index,state] of states.entries())state.visible=index===count;
     onFeedback('bite',source);return true;
 }

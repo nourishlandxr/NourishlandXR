@@ -2,7 +2,7 @@
 export const WELCOME_TRIALS=Object.freeze([
     {id:'dragonfly',label:'Dragonfly Flight'},
     {id:'strawberry',label:'Strawberry Planting'},
-    {id:'butterflies',label:'Butterfly cup'},
+    {id:'butterflies',label:'Butterfly bucket'},
     {id:'garden',label:'Cloud + Living Disk'},
     {id:'painting',label:'Paint in space'},
     {id:'peek-frame',label:'Peek picture frame'},

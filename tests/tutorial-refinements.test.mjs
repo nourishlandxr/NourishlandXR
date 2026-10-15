@@ -90,7 +90,7 @@ test('visibility-only changes retain native resources while new meshes require p
  finally{renderer?.destroy();mesh.geometry.dispose();mesh.material.dispose();globalThis.document=saved;}
 });
 test('table handle sits outside the near rim and the plate clears Zinnia',()=>withAssets(async()=>{
- const stage=createWelcomePracticeScene({embedded:true});try{await stage.loading;const handle=stage.scene.getObjectByName('Table height grip'),plate=stage.scene.getObjectByName('WelcomeFruitPlate');assert.ok(handle.position.z>.45);assert.ok(handle.getObjectByName('Rounded table pull handle').geometry.isBufferGeometry);assert.ok(plate.position.x<-.4);assert.ok(Math.hypot(plate.position.x,plate.position.z)>.5);}finally{stage.destroy();}
+ const stage=createWelcomePracticeScene({embedded:true});try{await stage.loading;const handle=stage.scene.getObjectByName('Table height grip'),plate=stage.scene.getObjectByName('WelcomeFruitPlate');assert.ok(handle.position.z>.45);assert.ok(handle.getObjectByName('Rounded table pull handle').geometry.isBufferGeometry);assert.ok(Math.abs(plate.position.x)<.3 && plate.position.z>0);assert.ok(Math.hypot(plate.position.x-.02,plate.position.z+.28)>.40);}finally{stage.destroy();}
 }));
 test('slow speech loading cannot consume a lesson heading or replace authored instructions',()=>withAssets(async()=>{
  let loading=true;const voice={status:()=>({loading,playing:loading,hasPlayed:false,available:true}),speak(){},stop(){},unlock(){},prepare(){}};const stage=createWelcomePracticeScene({embedded:true,voice});
@@ -104,3 +104,18 @@ test('fruit asset queue limits concurrent parsing and supports cancellation betw
  let active=0,peak=0;const loaded=[];await loadXRAssetBatch([1,2,3,4,5],async id=>{active++;peak=Math.max(active,peak);await Promise.resolve();loaded.push(id);active--;});assert.equal(loaded.length,5);assert.equal(peak,2);
  let cancelled=false,calls=0;await loadXRAssetBatch([1,2,3],async()=>{calls++;cancelled=true;},{concurrency:1,cancelled:()=>cancelled});assert.equal(calls,1);
 });
+
+
+test('guided hand game unlocks all three experiences only after a round and switches without restarting',()=>withAssets(async()=>{
+ const saved=globalThis.sessionStorage,values=new Map();globalThis.sessionStorage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
+ let paused=0;const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,paused:false,available:true}),speak(){},stop(){},pause(){paused++;},resume(){},unlock(){}}});
+ try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('hand-game');
+ const tick=n=>{for(let i=0;i<n;i++)stage.update(.05,{viewer,floor:0});};tick(8);
+ assert.equal(stage.snapshot().guidedTrial,'hand-game');assert.equal(stage.trials.mode,'hands');assert.equal(paused,0,'guided game keeps the narration active');assert.equal(stage.snapshot().experiencesUnlocked,false);assert.equal(stage.switchExperience('controllers'),false);
+ for(let turn=0;turn<5 && !stage.trials.snapshot().game.finished;turn++){const cells=stage.trials.snapshot().game.cells;stage.trials.command('cell:'+cells.findIndex(c=>!c));tick(15);}
+ assert.equal(stage.snapshot().experiencesUnlocked,true);tick(26);assert.equal(stage.phase,'interaction-methods');
+ assert.equal(stage.switchExperience('controllers'),true);tick(2);assert.equal(stage.snapshot().controlOrb.visible,true);assert.equal(stage.snapshot().inputMode,'controllers');assert.equal(stage.controllerLasersVisible,true);
+ assert.equal(stage.switchExperience('gloves'),true);tick(2);assert.equal(stage.snapshot().controlOrb.visible,false);assert.equal(stage.snapshot().inputMode,'gloves');
+ assert.equal(stage.switchExperience('hands'),true);assert.equal(stage.trials.active,'butterflies');assert.equal(stage.trials.mode,'hands');stage.trials.close();assert.equal(stage.phase,'explore');
+ }finally{stage.destroy();globalThis.sessionStorage=saved;}
+}));

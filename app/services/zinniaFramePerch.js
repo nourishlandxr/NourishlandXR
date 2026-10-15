@@ -67,6 +67,7 @@ export function createZinniaFramePerch({character:initialCharacter=null,getVoice
         adoptCharacter(value){if(!value)return;characterMount.remove(character);disposeZinniaCharacter(character);character=value;hitBounds=null;character.visible=true;if(character.userData.zinnia){character.userData.zinnia.time=null;character.userData.zinnia.paused=false;if(character.userData.zinnia.guide?.holder)character.userData.zinnia.guide.holder.visible=true;}character.position.set(0,0,0);character.quaternion.identity();character.scale.setScalar(.75);characterMount.add(character);watchCharacter(character);},
         attach(gl){glContext=gl;presentationDrawnAt=null;renderer?.destroy();renderer=createFruitWindowXR(gl,scene,{alphaCompositing:true,welcomeMagic:true});},
         show(time=performance.now(),{immediate=false}={}){started=time;instant=immediate;presentationDrawnAt=null;},
+        hide(){started=null;},
         draw(view,matrix,time=performance.now(),inputs=[],viewer=null){
             if(disposed || started===null || !renderer)return;
             if(lastFrame!==time){lastFrame=time;update(viewer?{transform:{matrix:viewer}}:view,matrix,time,inputs);renderer.update();renderer.prepareNext();}

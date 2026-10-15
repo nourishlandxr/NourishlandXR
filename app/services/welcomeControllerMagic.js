@@ -1,6 +1,6 @@
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 
-export const WELCOME_HAND_MAGIC=Object.freeze({delay:.45,duration:4.2,stagger:.8});
+export const WELCOME_HAND_MAGIC=Object.freeze({delay:.20,duration:1.2,stagger:0});
 const ease=t=>t*t*(3-2*t);
 export function welcomeHandMagicProgress(age,side){
     const offset=WELCOME_HAND_MAGIC.delay+(side==='right'?WELCOME_HAND_MAGIC.stagger:0);

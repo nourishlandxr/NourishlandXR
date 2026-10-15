@@ -1,4 +1,11 @@
-// Conservative bounds include the full fruit graphics in their current pose.
+// Surface distance uses the fruit's oriented bounds, never its longest-axis sphere.
+export function fruitPointDistance(body,point){
+    const q=body.rotation || {x:0,y:0,z:0,w:1},x=point.x-body.position.x,y=point.y-body.position.y,z=point.z-body.position.z;
+    const tx=-2*(q.y*z-q.z*y),ty=-2*(q.z*x-q.x*z),tz=-2*(q.x*y-q.y*x);
+    const local={x:x+q.w*tx-q.y*tz+q.z*ty,y:y+q.w*ty-q.z*tx+q.x*tz,z:z+q.w*tz-q.x*ty+q.y*tx};
+    return Math.hypot(...['x','y','z'].map(axis=>Math.max(0,Math.abs(local[axis])-body.halfSize[axis])));
+}
+// Conservative support bounds include the graphics in their current pose.
 export function fruitExtents(body){
     const h=body.halfSize,{x,y,z,w}=body.rotation;
     return {x:Math.abs(1-2*(y*y+z*z))*h.x+Math.abs(2*(x*y-z*w))*h.y+Math.abs(2*(x*z+y*w))*h.z,

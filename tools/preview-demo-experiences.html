@@ -1,0 +1,18 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><title>Demo experience review</title>
+<style>body{margin:20px;background:#14251f;color:#f3f7ed;font:16px system-ui}nav{display:flex;gap:10px;flex-wrap:wrap}button{padding:10px;border-radius:8px;border:1px solid #9dbd9d;background:#294b3d;color:inherit}canvas{width:min(1100px,100%);height:auto;display:block;margin-top:20px}pre{white-space:pre-wrap;max-width:1100px}</style>
+<h1>Demo experiences · native renderer review</h1><nav id="activities"></nav><canvas id="view" width="1100" height="760"></canvas><pre id="status"></pre>
+<script type="module">
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';
+import {createFruitWindowXR} from '../app/services/fruitWindowXR.js';
+const gl=document.querySelector('canvas').getContext('webgl2',{alpha:false,preserveDrawingBuffer:true}),viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
+const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,muted:true,available:false}),stop(){},speak(){},unlock(){},pause(){},resume(){}}});
+const camera=new THREE.PerspectiveCamera(54,1100/760,.01,30);camera.position.set(0,1.6,.70);camera.lookAt(0,.70,-.85);camera.updateMatrixWorld(true);
+const view={projectionMatrix:camera.projectionMatrix.elements,transform:{inverse:{matrix:camera.matrixWorldInverse.elements}}};
+let renderer=null,pending=null,revision=-1,pendingRevision=-1,time=0,inputs=[];await stage.loading;stage.start(viewer,0);await stage.loadPracticeAssets();
+function tick(){stage.update(.016,{viewer,floor:0,inputs,controllers:inputs.filter(i=>!i.source.hand),hands:inputs.filter(i=>i.source.hand).map(i=>({source:i.source,state:{tracked:true}}))});
+ if(revision!==stage.sceneRevision && !pending){if(renderer?.coversScene())revision=stage.sceneRevision;else {pending=createFruitWindowXR(gl,stage.scene,{progressive:true,welcomeMagic:true,visibleParentsOnly:true});pendingRevision=stage.sceneRevision;}}
+ if(pending?.prepareNext()){renderer?.destroy();renderer=pending;pending=null;revision=pendingRevision;}renderer?.update();gl.viewport(0,0,1100,760);gl.clearColor(.08,.14,.11,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);renderer?.draw(view,{position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}});time++;if(time%20===0)document.querySelector('#status').textContent=JSON.stringify({phase:stage.phase,...stage.snapshot().trials,experiencesUnlocked:stage.snapshot().experiencesUnlocked},null,2);requestAnimationFrame(tick);}
+for(const [id,label] of [['controls-stick','Controllers · Orb'],['laser-dance','Controllers · Zinnia'],['fruit','Virtual hands · fruit'],['brush','Virtual hands · brush'],['butterflies','Hand tracking · butterflies'],['hand-game','Hand tracking · tic-tac-toe']]){const button=document.createElement('button');button.textContent=label;button.onclick=()=>stage.previewLesson(id);document.querySelector('#activities').append(button);}
+stage.previewLesson('butterflies');window.review={stage,THREE,setInputs:value=>inputs=value,snapshot:()=>stage.snapshot(),rendererReady:()=>Boolean(renderer?.ready && !pending && revision===stage.sceneRevision),rendererStats:()=>renderer?.stats};tick();
+</script></html>
