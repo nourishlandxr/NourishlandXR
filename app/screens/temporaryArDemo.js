@@ -5443,6 +5443,23 @@ function wrappedTextureLines(ctx, text, maxWidth) {
     return lines;
 }
 
+function drawDemoInstructionBand(ctx,copy){
+    if(!copy)return;
+    ctx.save();ctx.textAlign='center';ctx.textBaseline='top';
+    ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(260,796);ctx.lineTo(1140,796);ctx.stroke();
+    ctx.fillStyle='#dcf3c4';ctx.font=`600 23px ${DEMO_PRESENTATION_FONT}`;
+    ctx.fillText('NEXT ACTION',700,807,880);
+    let size=28,lines=[];
+    do{ctx.font=`500 ${size}px ${DEMO_PRESENTATION_FONT}`;lines=wrappedTextureLines(ctx,copy,860);size-=2;}while(lines.length>3 && size>=18);
+    const lineHeight=Math.min(29,Math.floor(88/Math.max(1,lines.length)));
+    ctx.font=`500 ${Math.min(size+2,lineHeight)}px ${DEMO_PRESENTATION_FONT}`;
+    lines=wrappedTextureLines(ctx,copy,860);
+    ctx.fillStyle='#e7f5bb';
+    lines.forEach((line,index)=>ctx.fillText(line,700,838+index*lineHeight,860));
+    ctx.restore();
+}
+
 function demoParagraphReadingTime(text){return Math.max(1900,String(text || '').trim().split(/\s+/).length*210);}
 function fitIntroBodyLayout(ctx, text, maxWidth, maxHeight, opening=false) {
     text=demoLocalizedText(text);
@@ -5680,14 +5697,7 @@ function drawIntroNoteContent(ctx) {
                 if(done){const width=ctx.measureText(label).width;ctx.strokeStyle='#dce6dc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(700-width/2-6,y);ctx.lineTo(700+width/2+6,y);ctx.stroke();}
             });
         }
-        if(introBoardNextGuideVisible && introBoardNextGuide){
-            ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
-            ctx.beginPath();ctx.moveTo(260,817);ctx.lineTo(1140,817);ctx.stroke();
-            ctx.fillStyle='#dcf3c4';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
-            ctx.fillText('NEXT ACTION',700,838,880);
-            ctx.fillStyle='#e7f5bb';ctx.font=`500 29px ${DEMO_PRESENTATION_FONT}`;
-            wrappedTextureLines(ctx,introBoardNextGuide,880).slice(0,3).forEach((line,index)=>ctx.fillText(line,700,872+index*33,880));
-        }
+        if(introBoardNextGuideVisible)drawDemoInstructionBand(ctx,introBoardNextGuide);
         ctx.restore();return;
     }
     // Give the copy the full readable centre of the glass screen without
@@ -5709,17 +5719,8 @@ function drawIntroNoteContent(ctx) {
     const title=opening?demoLocalizedText(guidedDemoStep('INTRO 1.1').title):introBoardTitle;
     const layoutCaption=demoLocalizedText(opening?DEMO_QUICK_ACCESS_COPY['INTRO 1.1']:introBoardStep==='INTRO 1.2'?DEMO_QUICK_ACCESS_COPY['INTRO 1.2']:introBoardBody);
     const caption=opening && !introOpeningCopySkipped && openingElapsed<DEMO_WELCOME_TITLE_HOLD_MS?'':introVisibleCopy();
-    drawWelcomeText(ctx,{title,caption,layoutCaption,width:960,top:330,bottom:introBoardNextGuideVisible && introBoardNextGuide?790:900,titleSize:56,bodySize:40,paragraphGap:1.5,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
-    if(introBoardNextGuideVisible && introBoardNextGuide){
-        ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
-        ctx.beginPath();ctx.moveTo(contentLeft,817);ctx.lineTo(contentLeft+contentWidth,817);ctx.stroke();
-        ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#dcf3c4';
-        ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
-        ctx.fillText('NEXT ACTION',contentCenter,829,contentWidth);
-        ctx.font=`500 30px ${DEMO_PRESENTATION_FONT}`;
-        const guideLines=wrappedTextureLines(ctx,introBoardNextGuide,contentWidth);
-        guideLines.slice(0,3).forEach((line,index)=>ctx.fillText(line,contentCenter,865+index*31,contentWidth));
-    }
+    drawWelcomeText(ctx,{title,caption,layoutCaption,width:960,top:330,bottom:introBoardNextGuideVisible && introBoardNextGuide?762:900,titleSize:56,bodySize:40,paragraphGap:1.5,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
+    if(introBoardNextGuideVisible)drawDemoInstructionBand(ctx,introBoardNextGuide);
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
     ctx.restore();
@@ -6421,7 +6422,7 @@ function drawMarker(view) {
             view,
             record.position,
             (material?.radius || (orbType === 'plant' ? .068 : .05)) * (sessionMode==='immersive-vr'?DEMO_QUEST_ORB_SCALE:1) * (record.demoAmbientNeighbour && record.demoInteractive===false ? .78 : 1) * (record.demoNativeChoice?Math.max(.05,Math.min(1,(performance.now()-(record.demoArriveAt || 0))/700)):1),
-            { type: orbType, rotationY:record.rotationY || 0, animationKey:record, pimoOpen:record.demoExpanded, color: orbType==='plant' ? demoPlantOrbColor(record) : material?.shell, ringColor: material?.ring, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, placementHighlight:record.demoPlacementHighlight || (orbType==='plant' && !record.demoAmbientNeighbour && orbMentioned),placementAge:performance.now()-(record.demoPlacementHighlightAt || 0), held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
+            { type: orbType, rotationY:record.rotationY || 0, animationKey:record, pimoOpen:record.demoExpanded, color: orbType==='plant' ? demoPlantOrbColor(record) : material?.shell, knowledge:orbType==='plant' ? demoOrbKnowledge(record) : null, placementHighlight:record.demoPlacementHighlight || (orbType==='plant' && !record.demoAmbientNeighbour && orbMentioned),placementAge:performance.now()-(record.demoPlacementHighlightAt || 0), held:demoHeldIndex===index, grabReady:demoGrabPreparingIndex===index, highlighted:signTargets.has(record.id) || orbType==='plant' && hoveredPlant===record || demoHeldIndex===index || demoGrabPreparingIndex===index, time:performance.now()/1000 }
         );
     });
     markers.forEach(record => {

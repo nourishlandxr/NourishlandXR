@@ -328,7 +328,7 @@ test('Spatial device wording is used in preparation and runtime status while Que
     assert.equal((translations.match(/'SPATIAL DEVICE CONTROLS':/g) || []).length, 2);
 });
 
-test('simulated and immersive plant orbs use the shared crowned renderer', () => {
+test('simulated and immersive Plant Orbs share the renderer without a bright perimeter crown', () => {
     const demo = read('app/screens/temporaryArDemo.js');
     const creator = read('app/screens/arMode.js');
     const renderer = read('app/services/spatialSphereRenderer.js');
@@ -336,7 +336,7 @@ test('simulated and immersive plant orbs use the shared crowned renderer', () =>
     assert.match(demo, /drawSpatialOrb\(/);
     assert.match(creator, /drawSpatialOrb\(/);
     assert.match(renderer, /export function drawSpatialOrb\(/);
-    assert.match(renderer, /export function createOrbCrownGeometry\(/);
+    assert.doesNotMatch(renderer.slice(renderer.indexOf('export function drawSpatialOrb(')), /ringColor:|radius \* \(selected \? 1\.04 : 1\)/);
     assert.match(styles, /\.tryit-sim-orb\.is-plant::before/);
     assert.match(DEMO_ORB_MATERIALS.pigeonPea.style,/--demo-orb-size:56px/);
     assert.match(creator, /shape === 4 \? \.72 : 1/);

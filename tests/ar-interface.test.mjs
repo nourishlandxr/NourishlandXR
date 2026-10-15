@@ -440,7 +440,10 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     assert.match(read('app/living-objects.css'), /\.tryit-sim-orb\.is-plant::after \{[\s\S]*content:none;[\s\S]*display:none;/);
     assert.match(sphereSource, /createUvSphereGeometry\(latitudeBands = 12, longitudeBands = 16\)/);
     assert.doesNotMatch(sphereSource, /uniform float time|uniform float motion|ribbonA|ribbonB/);
-    assert.match(sphereSource, /const ringColor = \(options\.ringColor \|\| PLANT_RING_COLOR\)\.map/);
+    assert.doesNotMatch(sphereSource, /const ringColor = \(options\.ringColor \|\| PLANT_RING_COLOR\)\.map/);
+    const orbDraw=sphereSource.slice(sphereSource.indexOf('export function drawSpatialOrb('));
+    assert.doesNotMatch(orbDraw, /ringColor:|radius \* \(selected \? 1\.04 : 1\)/,'immersive Plant Orbs have no persistent perimeter ring');
+    assert.doesNotMatch(sphereSource, /shaded \+= mix\(color, vec3\(0\.82, 0\.91, 0\.82\)/,'Orb edges do not add the pale Fresnel outline');
     assert.match(styles, /\.creator-ar-marker-hit-target\.is-arrow-marker \.creator-ar-special-symbol \{[\s\S]*background:transparent;[\s\S]*box-shadow:none;/);
     assert.match(styles, /\.creator-ar-arrow-grid \.creator-ar-symbol-marker \{[\s\S]*background:transparent !important;/);
     assert.match(explorerSource, /drawSpatialContent:[\s\S]*drawSpatialOrb/);
@@ -1373,7 +1376,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.equal(DEMO_ORB_MATERIALS.pigeonPea.radius,.065);
     assert.equal(DEMO_ORB_MATERIALS.green.radius,.074);
     assert.match(source, /drawSpatialTriangle\(gl, triangleRenderer/);
-    assert.match(source, /ringColor: material\?\.ring/);
+    assert.doesNotMatch(source, /ringColor: material\?\.ring/);
     assert.match(styles, /\.tryit-place\.creator-ar-placement-guide\.is-ready \{ z-index:12010;/);
     assert.doesNotMatch(styles, /\.tryit-guided-choice\.is-movement-tip/);
     assert.match(styles, /\.tryit-sim-marker\.is-demo-orb \{ z-index:12007; \}/);
@@ -1468,7 +1471,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /const width=Math\.round\(\(arWelcomeShowcaseActive\?2500:1400\)\*textureScale\),height=Math\.round\(\(arWelcomeShowcaseActive\?2100:1080\)\*textureScale\)/);
     assert.match(source, /if\(label\.height!==height\)label\.height=height/);
     assert.match(source, /drawWelcomeText\(ctx,\{title,caption,layoutCaption,width:960/);
-    assert.match(source, /if\(introBoardNextGuideVisible && introBoardNextGuide\)/);
+    assert.match(source, /function drawDemoInstructionBand\(ctx,copy\)/);
+    assert.match(source, /if\(introBoardNextGuideVisible\)drawDemoInstructionBand\(ctx,introBoardNextGuide\)/);
     assert.match(source, /function revealIntroBoardNextGuide\(\)/);
     assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);
     assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);

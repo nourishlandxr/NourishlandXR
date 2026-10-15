@@ -39,6 +39,13 @@ export function createWelcomePracticeTable(root){
   stand.scale.y=Math.max(.05,underside-footTop);stand.position.y=(underside+footTop)/2;
   foot.position.y=-height+.015;
  }
+ function alignFootToFloor(floorY){
+  if(!Number.isFinite(floorY))return;
+  root.updateMatrixWorld(true);
+  const origin=group.getWorldPosition(new THREE.Vector3());
+  const localFloor=group.worldToLocal(origin.setY(floorY));
+  setHeight(Math.max(.08,-localFloor.y));
+ }
  setHeight(.8);
- return {group,stand,foot,landing,grip,revealMaterials,setHeight};
+ return {group,stand,foot,landing,grip,revealMaterials,setHeight,alignFootToFloor};
 }

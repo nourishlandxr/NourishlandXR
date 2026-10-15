@@ -5,7 +5,6 @@ import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
 
 const DEFAULT_MARKER_COLOR = Object.freeze([0.39, 0.48, 0.23]);
 const DEFAULT_PLANT_COLOR = Object.freeze([0.55, 0.65, 0.49]);
-const PLANT_RING_COLOR = Object.freeze([0.88, 0.8, 0.56]);
 
 function compileShader(gl, type, source) {
     const shader = gl.createShader(type);
@@ -184,7 +183,9 @@ export function createSpatialSphereRenderer(gl) {
             shaded = mix(shaded, mix(color, vec3(0.88, 0.94, 0.9), 0.42), pearl * 0.09);
             shaded += mix(vec3(.26),color*.55+vec3(.14),metalness) * highlight * (livingShell>.5?.22:1.0);
             shaded = mix(shaded, vec3(0.93, 0.98, 0.9), emissive * (0.1 + diffuse * 0.18));
-            shaded += mix(color, vec3(0.82, 0.91, 0.82), 0.55) * rim * 0.23;
+            // Keep edge light in the shell colour; a pale Fresnel rim reads as
+            // an unwanted white outline on the small Quest Plant Orbs.
+            shaded += base * rim * (livingShell>.5 ? 0.035 : 0.10);
             if(botanicalDetail > .5){
                 float softRim=pow(1.0-facing,3.0);
                 shaded += vec3(.13,.18,.12)*softRim;
@@ -312,7 +313,6 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
     const plant = options.type === 'plant';
     const authoredColor = options.color || (plant ? DEFAULT_PLANT_COLOR : DEFAULT_MARKER_COLOR);
     const sourceColor=plant?authoredColor.map((value,index)=>value*.55+[.64,.69,.64][index]*.45):authoredColor;
-    const ringColor = (options.ringColor || PLANT_RING_COLOR).map((value,index)=>plant?value*.4+[.76,.80,.74][index]*.6:value);
     const visual=SPATIAL_OBJECT_VISUALS.orb;
     const model=plant?(ORB_MODELS[options.model]?options.model:currentOrbModel()):'basic';
     const appearance=ORB_MODELS[model];
@@ -367,16 +367,6 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
                 drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,light,radius*.065,{orbModel:'basic',detail:0,color:[.82,.89,.79],alpha:.66*fade,emissive:.35});
             }
         }
-        drawSpatialSphere(gl, renderer,
-            view.projectionMatrix, view.transform.inverse.matrix, position,
-            radius * (selected ? 1.04 : 1), {
-                crown:true,orbModel:model,billboard:true, halo:true, time, rotation:0, color:options.knowledge?.draftOnly ? [.72,.61,.38] : ringColor,
-                alpha:moving || selected ? visual.selectedRimAlpha : targeted ? visual.targetRimAlpha : visual.idleRimAlpha,
-                emissive:.2, opacity:options.opacity
-            });
-        if(model==='advanced' && currentGraphicsPreset().detail>1)drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.9,{
-            crown:true,orbModel:model,billboard:true,halo:true,time,color:[.49,.64,.44],alpha:targeted?.65:.36,opacity:options.opacity
-        });
         gl.depthMask(true);
     }
 

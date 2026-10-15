@@ -28,3 +28,10 @@ test('Table V2 preserves its support plane and bounded geometry at adjustable he
   for(const height of [.5,.8,1.1]){table.setHeight(height);root.updateMatrixWorld(true);const stand=new THREE.Box3().setFromObject(table.stand),foot=new THREE.Box3().setFromObject(table.foot);assert.ok(stand.max.y<bounds.min.y);assert.ok(foot.max.y<=stand.min.y+.001);}
  }finally{globalThis.document=saved;root.traverse(node=>{node.geometry?.dispose();node.material?.map?.dispose();node.material?.dispose();});}
 });
+
+test('table foot stays on the calibrated floor after vertical changes and recentering',()=>{
+ const saved=globalThis.document,ctx=new Proxy({},{get:()=>()=>{}});globalThis.document={createElement:()=>({getContext:()=>ctx})};
+ const root=new THREE.Group();let table;
+ try{table=createWelcomePracticeTable(root);for(const [rootY,floorY] of [[.8,0],[1.05,.2],[.63,-.12]]){root.position.y=rootY;root.rotation.y=.7;root.updateMatrixWorld(true);table.alignFootToFloor(floorY);root.updateMatrixWorld(true);const foot=new THREE.Box3().setFromObject(table.foot);assert.ok(Math.abs(foot.min.y-floorY)<.001,`foot rests on floor ${floorY}`);}}
+ finally{globalThis.document=saved;root.traverse(node=>{node.geometry?.dispose();node.material?.map?.dispose();node.material?.dispose();});}
+});
