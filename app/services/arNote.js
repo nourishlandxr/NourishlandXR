@@ -6,6 +6,7 @@ import { readingPositions, hitReadingPlant, visitorTrackingCopy } from './visito
 import { html } from './productExperience.js';
 import { createPlantKnowledgeResolver } from './spatialKnowledgePresentation.js';
 import {isDesktopLearningBookTarget,DESKTOP_AR_EXPLANATION} from './desktopLearningBookTarget.js';
+import {savedQuestTutorialReport} from './questTutorialCapture.js';
 
 let session=null, starting=false, resetReadingSpace=null, endingPromise=null;
 const diagnostics=[];
@@ -49,7 +50,8 @@ export function recordArDiagnostic(stage, details = {}){
 }
 export async function copyArDiagnostics(){
     const entries=[...getPersistedArDiagnostics(),...diagnostics];
-    await navigator.clipboard.writeText(entries.join('\n') || 'No AR diagnostics recorded.');
+    const questReport=savedQuestTutorialReport();
+    await navigator.clipboard.writeText([entries.join('\n'),questReport].filter(Boolean).join('\n\n') || 'No AR diagnostics recorded.');
 }
 export function isArActive(){return Boolean(session);}
 export function resetArPlacement(){resetReadingSpace?.();}

@@ -175,6 +175,7 @@ import { PIGEON_PEA_AR_KNOWLEDGE, PIGEON_PEA_EXAMPLE } from '../services/pigeonP
 import { currentNxrLanguage, translateNxrText, translateApp, localizedCanvasContext } from '../services/i18n.js';
 import { getSpatialVisualSettings, setSpatialVisualSettings, resetSpatialVisualSettings, currentGraphicsQuality, currentInfoOpacity, currentTotemModel, currentCellOpacity, currentRainQuality, RAIN_QUALITIES } from '../services/spatialVisualSettings.js';
 import { createXRPerformanceSettings } from '../services/xrPerformanceSettings.js';
+import {createQuestTutorialCapture} from '../services/questTutorialCapture.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
@@ -242,6 +243,7 @@ let demoKnowledgeWorkspace=null, demoKnowledgeRoot=null, demoKnowledgeMirror=nul
 let demoKnowledgeScrollAt=0;
 let appRoot = null;
 let session = null;
+let questTutorialCapture=null,lastQuestPracticeSampleAt=0,lastQuestPracticeSample=null;
 const demoPerformance=createXRPerformanceSettings({getSession:()=>session,alwaysReadout:true,publish:value=>infoPanel?.setXRPerformance(value)});
 let measureXrFrame=false;
 function publishDemoPerformance(){demoPerformance.publish();}
@@ -398,7 +400,7 @@ function runXrFrameStep(phase, operation) {
         reportDemoRenderFailure(error,phase);
         return false;
     }
-    finally{if(measureXrFrame)demoPerformance.recordCpuCost(phase,performance.now()-started);}
+    finally{if(measureXrFrame){const cost=performance.now()-started;demoPerformance.recordCpuCost(phase,cost);if(welcomePractice?.active)questTutorialCapture?.step(phase,cost);}}
 }
 
 function beginXrFirstContentWatchdog(){
@@ -6647,6 +6649,8 @@ async function startImmersive() {
         bindLimSessionInteractions(session);
         allowArScreenRotation();
         sessionMode = arSession.mode || 'immersive-ar';
+        questTutorialCapture=(isQuestHeadsetBrowser() || sessionMode==='immersive-vr')?createQuestTutorialCapture(session):null;
+        lastQuestPracticeSampleAt=0;lastQuestPracticeSample=null;
         domOverlayEnabled = Boolean(arSession.domOverlay);
         const transparentSession = arSession.passthrough !== false;
         canvas = document.createElement('canvas'); canvas.className = 'tryit-xr-canvas'; document.body.append(canvas);
@@ -6821,12 +6825,13 @@ async function startImmersive() {
         });
         session.addEventListener('squeezeend',event=>{if([...demoPlacedNoteViews.values()].some(note=>note.renderer.releaseGrab(event.inputSource))){event.stopImmediatePropagation();return;}if(event.inputSource===demoGrabInputSource){captureDemoInputEventRay(event);releaseHeldDemoRecord();suppressSessionSelectUntil=performance.now()+280;}for(const insect of butterflyCompanions)if(insect.heldSource===event.inputSource)releaseDemoButterfly(insect);});
         const launchedSession=session;
+        session.addEventListener('end',()=>{questTutorialCapture?.finish();questTutorialCapture=null;},{once:true});
         session.addEventListener('end', () => { void demoExitLifecycle.handleSessionEnd(launchedSession); },{once:true});
         const draw = (_time, frame) => {
             if (!session || frame.session !== session || !gl) return;
             session.requestAnimationFrame(draw);
-            if(session.visibilityState==='hidden'){demoPerformance.tick(_time);return;}
-            measureXrFrame=getSpatialVisualSettings().showFps || session.frameRate>90 || getSpatialVisualSettings().graphicsQuality==='auto';
+            if(session.visibilityState==='hidden'){questTutorialCapture?.pause();demoPerformance.tick(_time);return;}
+            measureXrFrame=Boolean(questTutorialCapture) || getSpatialVisualSettings().showFps || session.frameRate>90 || getSpatialVisualSettings().graphicsQuality==='auto';
             const cpuStarted=measureXrFrame?performance.now():0;
             demoPerformance.tick(_time);
             introFrameToken = _time;
@@ -6862,14 +6867,21 @@ async function startImmersive() {
                 arWelcomeClock.tick(Date.now(),session.visibilityState!=='hidden');
                 runXrFrameStep('welcome practice input',()=>welcomePractice.update(frame,_time,viewerMatrix,calibratedDemoGroundY(),latestTrackedHandStates));
                 if(welcomePractice?.active)infoPanel?.setOpacity(welcomePractice.stage.exitOpacity);
-                infoPanel?.update(viewerMatrix,_time,latestControllerRay,frame,source=>welcomePractice?.stage.exiting || welcomePractice?.stage.isHolding(source));
+                runXrFrameStep('comfort options update',()=>infoPanel?.update(viewerMatrix,_time,latestControllerRay,frame,source=>welcomePractice?.stage.exiting || welcomePractice?.stage.isHolding(source)));
                 const practiceLayer=frame.session.renderState.baseLayer;
                 if(practiceLayer && pose){gl.bindFramebuffer(gl.FRAMEBUFFER,practiceLayer.framebuffer);gl.clearColor(0,0,0,transparentSession?0:1);gl.enable(gl.SCISSOR_TEST);
                     for(const view of pose.views){const viewport=practiceLayer.getViewport(view);if(!viewport)continue;gl.viewport(viewport.x,viewport.y,viewport.width,viewport.height);gl.scissor(viewport.x,viewport.y,viewport.width,viewport.height);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);runXrFrameStep('welcome frame',()=>drawWelcomePracticeFrame(view));runXrFrameStep('welcome practice render',()=>welcomePractice.draw(view,handOutlineRenderer));runXrFrameStep('comfort options render',()=>infoPanel?.draw(view));runXrFrameStep('settings contact overlay',()=>welcomePractice.drawPointerOverlay(view));runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));runXrFrameStep('Zinnia voice bar',()=>zinniaVoiceBar?.draw(view));if(xrRecoveryStatus==='failed')runXrFrameStep('recovery surface',()=>drawXrRecoverySurface(view));}
                     gl.disable(gl.SCISSOR_TEST);markXrFirstContentRendered();
                 }
                 if(xrRecoveryStatus==='failed')welcomePractice.stage.abort();
-                if(measureXrFrame)demoPerformance.frameComplete(performance.now()-cpuStarted);return;
+                const cpuMs=measureXrFrame?performance.now()-cpuStarted:0;
+                if(measureXrFrame)demoPerformance.frameComplete(cpuMs);
+                if(questTutorialCapture){
+                    const phase=welcomePractice.stage.phase+(welcomePractice.stage.trials.active?` / ${welcomePractice.stage.trials.active}`:'');
+                    if(_time-lastQuestPracticeSampleAt>=1000 || !lastQuestPracticeSample || lastQuestPracticeSample.phase!==phase){lastQuestPracticeSample=welcomePractice.performance;lastQuestPracticeSample.phase=phase;lastQuestPracticeSampleAt=_time;}
+                    questTutorialCapture.frame(_time,phase,cpuMs,lastQuestPracticeSample);
+                }
+                return;
             }
             runXrFrameStep('landscape grab',()=>{demoLivingMapGrip?.update(frame);demoLivingMapScene?.setHeldHandles(demoLivingMapGrip?.heldHandles);if(demoLivingMapGrip?.active && !demoMapPlateGripped){demoMapPlateGripped=true;introBoardTextureDirty=true;}});
             for(const note of demoPlacedNoteViews.values())note.renderer.updateHandGrab(frame,{
@@ -6944,6 +6956,7 @@ async function startImmersive() {
         return true;
     } catch (error) {
         recordArFailure(error,'Temporary demo');
+        questTutorialCapture?.finish();questTutorialCapture=null;
         const active = session; session = null; clearSessionState(); active?.end().catch(() => {});
         return false;
     }
