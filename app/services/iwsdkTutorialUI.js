@@ -14,6 +14,7 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
     const sources=new Map(),hover=new Map(),pressed=new Map(),queued=[],spentTouch=new Set(),blockedRay=new WeakSet(),cleanup=[];
     const transform=new Matrix4(),right=new Vector3(),up=new Vector3(),normal=new Vector3();
     let context=null,pose=null,signature='',lastTime=null,disposed=false,renderer=null,target=null,opacity=1;
+    const sliderValues=new Map();
     const sourceFor=id=>sources.get(id);
     for(const slot of slots){
         const over=event=>{if(slot.item && !slot.item.disabled){hover.set(event.pointerId,slot);if(!slot.item.text && icons[slot.item.icon])slot.label.setProperties({display:'flex',positionType:'absolute',positionTop:slot.item.height+10,width:600,height:70,pointerEvents:'none',backgroundColor:'#e1ebe6'});}};
@@ -37,7 +38,7 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
         if(!panel.visible){reset();return;}
         const next=JSON.stringify({height:value.height,items:value.items.map(({action,x,y,width,height,disabled,selected,icon,label,kind})=>({action,x,y,width,height,disabled,selected,icon,label,kind}))});
         if(next!==signature){
-            reset();signature=next;
+            reset();signature=next;sliderValues.clear();
             // Keep the authored 1000-unit layout. Scaling the entire document also
             // scales Horizon's internal slider thumb, labels and control metrics.
             panel.document.rootElement.setProperties({width:1000,height:value.height});
@@ -55,7 +56,12 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
         }
         // Values change continuously while dragging: never reset pointer capture
         // merely because the native setting echoed a new slider value.
-        for(const [i,slot]of slots.entries()){slot.item=value.items[i] || null;if(slot.item?.kind==='slider')slot.slider.setProperties({value:(slot.item.value-slot.item.min)/(slot.item.max-slot.item.min)});}
+        for(let i=0;i<value.items.length;i++){
+            const slot=slots[i],item=value.items[i];slot.item=item;
+            if(item.kind!=='slider')continue;
+            const sliderValue=(item.value-item.min)/(item.max-item.min);
+            if(sliderValues.get(i)!==sliderValue){slot.slider.setProperties({value:sliderValue});sliderValues.set(i,sliderValue);}
+        }
         right.copy(nextPose.right);up.copy(nextPose.up);normal.copy(nextPose.normal);
         transform.makeBasis(right,up,normal);panel.quaternion.setFromRotationMatrix(transform);panel.position.copy(nextPose.center);panel.scale.setScalar(value.width/10);
     }
@@ -100,7 +106,7 @@ export function createTutorialUIOwner(runtime,sdk,panel,{gl=null,onAction=()=>{}
     }
     return {
         backend:'iwsdk-uikitml',panel,scene,pointers,setContext,update,hit,
-        setOpacity(value){opacity=Math.max(0,Math.min(1,value));panel.document.rootElement.setProperties({opacity});if(opacity<=.2)reset();},
+        setOpacity(value){const next=Math.max(0,Math.min(1,value));if(next===opacity)return;opacity=next;panel.document.rootElement.setProperties({opacity});if(opacity<=.2)reset();},
         get ready(){return !disposed;},
         owns:source=>Boolean(panel.visible && opacity>.2 && source && [...hover.keys()].some(id=>sourceFor(id)===source)),
         handleEvent(event){if(!context || !['selectstart','selectend'].includes(event.type) || !hit(runtime.ray(event.inputSource)))return false;queued.push({type:event.type,source:event.inputSource});return true;},

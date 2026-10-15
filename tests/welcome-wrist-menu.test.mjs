@@ -7,8 +7,8 @@ import {createSpatialPaintV2} from '../app/services/spatialPaintV2.js';
 
 function setup(){
     const paint=createSpatialPaintV2({markings:true}),trials={active:null,mode:'controllers',paint,open(id){this.active=id;},close(){this.active=null;},command(){}};
-    let controllerTool='standard';const stage={trials,paint,setControllerTool(tool){controllerTool=tool;},snapshot:()=>({phase:'brush',controllerTool,insectControllerAvailable:false,voice:{},trials:{active:trials.active},inputMode:'controllers'}),setInputMode(mode){trials.mode=mode;},button(){}};
-    return {menu:createWelcomeComfortOptions({stage}),paint};
+    let controllerTool='standard';const actions=[];const stage={trials,paint,setControllerTool(tool){controllerTool=tool;},snapshot:()=>({phase:'brush',controllerTool,insectControllerAvailable:false,voice:{},trials:{active:trials.active},inputMode:'controllers'}),setInputMode(mode){trials.mode=mode;},button(id){actions.push(id);}};
+    return {menu:createWelcomeComfortOptions({stage}),paint,actions};
 }
 test('right thumbstick opens and closes six 30mm targets in two columns down the forearm, with fixed right-side tools',()=>{
     const {menu,paint}=setup(),collapsed=menu.context();assert.equal(collapsed.items.length,0);assert.ok(collapsed.width<.03);
@@ -31,4 +31,9 @@ test('every expanded control stays within its surface and has an accessible name
     const {menu,paint}=setup();for(const action of ['games','input','audio','adjust','tutorial','paint-tools','paint-page:colour','paint-page:options']){
         menu.act('home');menu.act(action);const context=menu.context();for(const item of context.items){assert.ok(item.ariaLabel);assert.ok(item.x>=0 && item.y>=0);assert.ok(item.x+item.width<=1000);assert.ok(item.y+item.height<=context.height);}
     }paint.destroy();
+});
+test('ending the tutorial requires a second deliberate choice',()=>{
+    const {menu,paint,actions}=setup();menu.act('tutorial');menu.act('skip');assert.equal(menu.context().page,'confirm-end');assert.deepEqual(actions,[]);
+    menu.act('skip-cancel');assert.equal(menu.context().page,'tutorial');assert.deepEqual(actions,[]);
+    menu.act('skip');menu.act('skip-confirm');assert.deepEqual(actions,['skip']);paint.destroy();
 });

@@ -5618,7 +5618,13 @@ function drawIntroNoteContent(ctx) {
     if(welcomePractice?.active){
         const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=['frame','title','arrival'].includes(state.phase)?1:state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
         // The lesson title carries the introduction; avoid repeating the brand above it.
-        if(state.activityFocus && !state.title){ctx.fillStyle='#fffaf0';ctx.font=`500 39px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,830);lines.forEach((line,i)=>ctx.fillText(line,700,530+(i-(lines.length-1)/2)*54));ctx.restore();return;}
+        if(state.activityFocus){
+            if(state.title){ctx.fillStyle='#fffaf0';ctx.font=`500 63px ${DEMO_HEADING_FONT}`;ctx.fillText(state.title,700,330,900);}
+            if(state.voice?.playing && state.caption){ctx.fillStyle='#f7f4e9';ctx.font=`500 37px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,860).slice(0,3);lines.forEach((line,i)=>ctx.fillText(line,700,430+i*48));}
+            const keyInstructions={'controls-orb-grab':'Side grip: hold the Orb · Release: let go','controls-orb-open':'Trigger: open the Orb','controls-stick':'Move a thumbstick: roll the Orb','controls-stick-click':'Click each thumbstick: menu and options','settings-open':'Left thumbstick click: open settings','settings-close':'Left thumbstick click: close settings','laser-dance':'Hold both grips on Zinnia’s leaves','brush':'Right grip: pick up brush · Trigger: paint · Right-stick click: brush tools'};
+            const instruction=keyInstructions[state.phase] || state.layoutCaption || state.caption;if(instruction){ctx.fillStyle='#d6f1dc';ctx.font='600 34px system-ui';const lines=wrappedTextureLines(ctx,instruction,870).slice(0,3);lines.forEach((line,i)=>ctx.fillText(line,700,760+(i-(lines.length-1)/2)*44));}
+            ctx.restore();return;
+        }
         ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,layoutCaption:state.layoutCaption,width:900,top:260,bottom:850,titleSize:88,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
         ctx.restore();return;
     }

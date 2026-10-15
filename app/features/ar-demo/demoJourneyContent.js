@@ -4,7 +4,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "INTRO 1.1",
         "act": "Introduce the tool",
         "title": "Take a moment to look around",
-        "main": "A leaf catching the light. An insect moving between flowers. The shade beneath a tree.\n\nSmall things can invite us to pause and look closer.\n\nWhat catches your attention? What would you like to understand?",
+        "main": "A leaf catching the light. An insect moving between flowers. The shade beneath a tree.",
         "panel": "Hidden.",
         "hint": "See how it works.",
         "art": "opening"

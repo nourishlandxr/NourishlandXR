@@ -6,6 +6,13 @@ import {DEMO_GUIDED_STEPS} from '../app/features/ar-demo/demoJourneyContent.js';
 import {normalizeNarrationText,projectNarrationSegments} from '../app/services/projectNarration.js';
 import {demoNarrationContent} from '../tools/demo-narration-content.mjs';
 
+test('opening demo screen contains only its heading and first narrated paragraph',()=>{
+    const opening=DEMO_GUIDED_STEPS.find(step=>step.id==='INTRO 1.1');
+    assert.equal(opening.title,'Take a moment to look around');
+    assert.equal(opening.main,'A leaf catching the light. An insect moving between flowers. The shade beneath a tree.');
+    assert.equal(projectNarrationSegments(opening.main,{demo:true})[0].recorded,true);
+});
+
 test('every authored main-demo paragraph has a complete saved friendly Marin recording',()=>{
     assert.equal(bank?.voice,'marin');
     assert.equal(bank.provider,'OpenAI');
