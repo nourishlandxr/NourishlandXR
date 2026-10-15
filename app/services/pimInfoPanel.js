@@ -240,13 +240,13 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         {...choice('OrbModel',ORB_MODELS[orbModel]?.label || 'Living sphere','orb-model','Plant Orb',690,56,888),height:46},
         choice('SettingsHelp','Help','help','',746,56,888),close];
     return [
-        ...(inputChoiceAvailable?WELCOME_INPUT_METHODS.map((experience,i)=>({...choice('WelcomeInput:'+experience.id,'','experiences','',26,480+i*78,64),height:58,icon:experience.icon,ariaLabel:experience.label,description:experience.label,selected:inputMethod===experience.id})):[]),
+        ...(headset || inputChoiceAvailable?WELCOME_INPUT_METHODS.map((experience,i)=>({...choice('WelcomeInput:'+experience.id,'','experiences','',26,480+i*78,64),height:58,icon:experience.icon,ariaLabel:experience.label,description:experience.id==='hands'?'Hand tracking · put controllers down to use tracked hands.':experience.label,selected:inputMethod===experience.id})):[]),
         ...(gamesAvailable?[{...choice('WelcomeGames','','games','',26,714,64),height:58,icon:'games',ariaLabel:'Games',description:'Revisit the practice activities.'}]:[]),
         slider('InfoOpacity','info-opacity','Main / Control glass',infoOpacity,0,1,.01,104),
         slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),
         slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,264),
         slider('FloorOffset','floor','Floor height',floorOffset,-1.5,1.5,.01,344),
-        ...(headset?[choice('HandMode',handVisualMode==='pointer'?'Pointer':'Hand tracking','hands','Hands',424)]:[]),
+        ...(headset?[{...choice('LaserPointer',getSpatialVisualSettings().laserPointer?'On':'Off','laser','Laser pointer',424),selected:getSpatialVisualSettings().laserPointer}]:[]),
         {...choice('LivingFrame',LIVING_FRAME_QUALITIES[getSpatialVisualSettings().livingFrameQuality].label,'living-frame','Living Frame artwork',488,56,888),settingLabel:'',height:50},
 
         {...slider('LivingFrameHeight','living-frame-height','Frame height',getSpatialVisualSettings().livingFrameHeight,-1,1,.05,570),height:58},
@@ -566,7 +566,8 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
         if(action==='DeveloperLab'){onDeveloperLab?.();return;}
         if(action==='WelcomeGames'){gamesOpen=!gamesOpen;graphicsOpen=soundOpen=languageOpen=false;renderSettings();return;}
-        if(action.startsWith('WelcomeInput:') && inputChoiceAvailable()){onInputMethodChange(action.slice(13));renderSettings();return;}
+        if(action.startsWith('WelcomeInput:') && (headset || inputChoiceAvailable())){onInputMethodChange(action.slice(13));renderSettings();return;}
+        if(action==='LaserPointer'){setSpatialVisualSettings({laserPointer:!getSpatialVisualSettings().laserPointer});renderSettings();return;}
         if(action.startsWith('WelcomeGame:') && gamesAvailable()){settingsOpen=false;gamesOpen=false;renderSettings();onPracticeGame?.(action.slice(12));return;}
         if(action==='RestartTutorial'){settingsOpen=false;renderSettings();onRestartTutorial?.();return;}
         if(action==='Previous')page=0;

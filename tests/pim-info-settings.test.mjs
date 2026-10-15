@@ -55,7 +55,7 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     const performance=panelSettingsControls({graphicsOpen:true,headset:true,performanceSettings:{actual:120,supported:[72,90,120],showFps:true},demoSound:{music:.5,fx:.5,haptics:true}});
     const actions=['InfoOpacity','TextSize','SpatialScale','FloorOffset','LivingFrame','LivingFrameHeight','GraphicsMenu','SettingsHelp','CloseSettings'];
     assert.deepEqual(desktop.map(item=>item.action),actions);
-    assert.deepEqual(quest.map(item=>item.action),[...actions.slice(0,4),'HandMode',...actions.slice(4)]);
+    assert.deepEqual(quest.map(item=>item.action),['WelcomeInput:controllers','WelcomeInput:gloves','WelcomeInput:hands',...actions.slice(0,4),'LaserPointer',...actions.slice(4)]);
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').value,.5);
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').kind,'slider');
     assert.equal(desktop.find(item=>item.action==='InfoOpacity').settingLabel,'Main / Control glass');
@@ -64,7 +64,7 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
     assert.equal(graphics.find(item=>item.action==='GraphicsQuality:high').selected,true);
     assert.deepEqual(graphics.map(item=>item.action),['GraphicsMenu','GraphicsQuality:auto','GraphicsQuality:low','GraphicsQuality:medium','GraphicsQuality:high','RainQuality','Insects','LivingFrame:off','LivingFrame:sd','LivingFrame:hd','OrbModel','SettingsHelp','CloseSettings']);
     assert.ok(performance.find(item=>item.action==='RefreshRate').y<performance.find(item=>item.action==='ShowFps').y);
-    assert.equal(quest.find(item=>item.action==='HandMode').label,'Hand tracking');
+    assert.equal(quest.find(item=>item.action==='LaserPointer').label,'On');
     for(const items of [desktop,quest])assert.equal(items.find(item=>item.action==='HeroDice'),undefined,'the retired Floor dice control must not return');
     assert.equal(desktop.find(item=>item.action==='LivingFrame').label,'LF SD');
     for(const items of [desktop,quest]){
@@ -72,11 +72,11 @@ test('General and Graphics settings fit readable non-overlapping Quest hit regio
         assert.equal(frame.settingLabel,'');assert.equal(frame.width,888,'Living Frame uses the full row');
     }
     assert.equal(graphics.find(item=>item.action==='LivingFrame:sd').selected,true);
-    assert.equal(panelSettingsControls({headset:true,handVisualMode:'pointer'}).find(item=>item.action==='HandMode').label,'Pointer');
+    assert.equal(panelSettingsControls({headset:true,handVisualMode:'pointer'}).find(item=>item.action==='LaserPointer').label,'On');
     for(const items of [desktop,quest,graphics,performance]){
         for(const [index,a] of items.entries()){
             // The Settings surface reserves a separate Graphics status row.
-            assert.ok(a.width>=88 && a.height>=42 && a.x>=0 && a.x+a.width<=1000 && a.y>=0 && a.y+a.height<=840);
+            assert.ok(a.width>=(a.icon?64:88) && a.height>=42 && a.x>=0 && a.x+a.width<=1000 && a.y>=0 && a.y+a.height<=840);
             assert.ok(a.settingGroup && a.ariaLabel);
             for(const b of items.slice(index+1))assert.ok(a.x+a.width<=b.x || b.x+b.width<=a.x || a.y+a.height<=b.y || b.y+b.height<=a.y);
         }

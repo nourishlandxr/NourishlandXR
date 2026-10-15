@@ -1,9 +1,11 @@
-import {createSpatialTotemCards} from './spatialTotemCards.js';
+import {createSpatialTotemCards,hitTotemPoint} from './spatialTotemCards.js';
+import {handTrackingState} from './xrPointer.js';
 import {translateNxrText,localizedCanvasContext} from './i18n.js';
 import {createSpatialTetherRenderer,drawSpatialTether,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
 import {noteWidgetPlacement} from './spatialNotes.js';
 import {NOTE_WIDGET_FOOTPRINT_SCALE,NOTE_WIDGET_LAYOUT,wrapMeasuredText} from './demoTextWidgetLayout.js';
 import {turnSpatialAxes} from './spatialStick.js';
+import {createNoteSDKGrip} from './noteSDKGrip.js';
 export const NOTE_CARD_LAYOUT=Object.freeze({width:.86,height:.336,canvasWidth:1024,canvasHeight:400,buttonX:36,buttonY:240,columnStep:482,rowStep:40,buttonWidth:460,buttonHeight:36});
 export function noteAnchorPose(record,viewer){
     const center={...(record.position || {x:0,y:1,z:-1})};
@@ -36,7 +38,9 @@ export function resolveNoteCardButton(root,id,actionIndex,fallback){
 }
 // Spatial placement stays separate from widget behaviour. The DOM owns state,
 // and the native cards forward their actions to the same visitor controls.
-export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},onHold=()=>{},onSelect=()=>{},widgetPlacement=noteWidgetPlacement}={}){
+export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},onHold=()=>{},onSelect=()=>{},widgetPlacement=noteWidgetPlacement,session=null,space=null}={}){
+    const sdkGrip=session?createNoteSDKGrip(session,space):null;
+    const handEdges=new WeakMap();
     const tether=createSpatialTetherRenderer(gl),canvases=new Map(),pages=new Map(),widgetBirths=new Map(),styledWidgets=new WeakSet();let revision=0,pose=record.demoNotePose?{center:{...record.position},right:{...record.demoNotePose.right},up:{...record.demoNotePose.up}}:null,layout=[],openingAt=performance.now(),closingAt=null,wasExpanded=false;
     root.style.setProperty('--note-spatial-widget-width',`${230*NOTE_WIDGET_FOOTPRINT_SCALE}px`);root.style.setProperty('--note-spatial-widget-max-height',`${210*NOTE_WIDGET_FOOTPRINT_SCALE}px`);root.style.setProperty('--note-spatial-picker-max-height',`${170*NOTE_WIDGET_FOOTPRINT_SCALE}px`);
     const marker=record.marker || record,positions=new Map(Object.entries(record.demoNoteWidgetPositions || {})),widgetRotations=new Map(Object.entries(record.demoNoteWidgetRotations || {}));let held=null,selectionHold=null;
@@ -67,7 +71,7 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
     const renderer=createSpatialTotemCards(gl,{canvas,surfaces:()=>layout,containedFeedback:true});
     const api={
         draw(view,currentViewer=viewer){
-            if(root.hidden){held=null;selectionHold=null;return;}
+            if(root.hidden){sdkGrip?.reset();held=null;selectionHold=null;return;}
             if(!pose && currentViewer)pose=noteAnchorPose(record,currentViewer);
             if(!pose)return;
             if(held && !held.notified && performance.now()-held.startedAt>=650){held.notified=true;onHold(held.id);}
@@ -105,14 +109,29 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             }
         },
         hit:ray=>root.hidden?null:renderer.hit(ray),
-        beginGrab(ray,source){if(root.hidden)return false;const hit=renderer.hit(ray);if(!hit || !pose)return false;const surface=layout.find(item=>item.card.id===hit.card.id);if(!surface)return false;held={source,id:hit.card.id,startedAt:performance.now(),distance:hit.distance,offset:{x:surface.center.x-ray.origin.x-ray.direction.x*hit.distance,y:surface.center.y-ray.origin.y-ray.direction.y*hit.distance,z:surface.center.z-ray.origin.z-ray.direction.z*hit.distance}};return true;},
-        updateGrab(ray){if(!held || !pose || !ray)return;const center={x:ray.origin.x+ray.direction.x*held.distance+held.offset.x,y:ray.origin.y+ray.direction.y*held.distance+held.offset.y,z:ray.origin.z+ray.direction.z*held.distance+held.offset.z};if(held.id==='main'){pose.center=center;record.position={...center};}else {positions.set(held.id,{x:center.x-pose.center.x,y:center.y-pose.center.y,z:center.z-pose.center.z});record.demoNoteWidgetPositions=Object.fromEntries(positions);}},
+        updateHandGrab(frame,{enabled=true,occupied=()=>false}={}){
+            for(const source of frame.session.inputSources){
+                if(!source.hand)continue;
+                const state=handTrackingState(frame,source,space),down=Boolean(state?.tracked && state.pinch),previous=handEdges.get(source);
+                handEdges.set(source,down);
+                if(held?.source===source){if(!down || !enabled || root.hidden)api.releaseGrab(source);continue;}
+                if(!enabled || root.hidden || held || occupied(source) || !down || previous!==false)continue;
+                const index=state.rawJoints.get('index-finger-tip'),thumb=state.rawJoints.get('thumb-tip');if(!index || !thumb)continue;
+                const point={x:(index.x+thumb.x)/2,y:(index.y+thumb.y)/2,z:(index.z+thumb.z)/2};
+                const hit=hitTotemPoint(point,layout.filter(surface=>surface.opacity>.9),{front:.035,back:.025});
+                if(!hit)continue;const surface=layout.find(item=>item.card.id===hit.card.id);
+                if(sdkGrip?.begin(surface,source,frame)!==true)continue;
+                held={source,id:hit.card.id,sdk:true,depthOffset:0,startedAt:performance.now(),distance:0};
+            }
+        },
+        beginGrab(ray,source,frame){if(root.hidden || held)return false;const hit=renderer.hit(ray);if(!hit || !pose)return false;const surface=layout.find(item=>item.card.id===hit.card.id);if(!surface)return false;const sdk=sdkGrip?.begin(surface,source,frame);if(sdk===false)return false;held={source,id:hit.card.id,sdk:sdk===true,depthOffset:0,startedAt:performance.now(),distance:hit.distance,offset:{x:surface.center.x-ray.origin.x-ray.direction.x*hit.distance,y:surface.center.y-ray.origin.y-ray.direction.y*hit.distance,z:surface.center.z-ray.origin.z-ray.direction.z*hit.distance}};return true;},
+        updateGrab(ray,frame){if(!held || !pose)return;if(root.hidden || held.sdk && !sdkGrip.active){sdkGrip?.reset();held=null;return;}const world=held.sdk?sdkGrip.update(frame):null;if(held.sdk && !world || !held.sdk && !ray){sdkGrip?.reset();held=null;return;}const direction=ray?.direction || {x:0,y:0,z:0};const center=world?{x:world.elements[12]+direction.x*held.depthOffset,y:world.elements[13]+direction.y*held.depthOffset,z:world.elements[14]+direction.z*held.depthOffset}:{x:ray.origin.x+ray.direction.x*held.distance+held.offset.x,y:ray.origin.y+ray.direction.y*held.distance+held.offset.y,z:ray.origin.z+ray.direction.z*held.distance+held.offset.z};if(held.id==='main'){pose.center=center;record.position={...center};}else {positions.set(held.id,{x:center.x-pose.center.x,y:center.y-pose.center.y,z:center.z-pose.center.z});record.demoNoteWidgetPositions=Object.fromEntries(positions);}},
         getPerchPose(id='main',side='right'){if(root.hidden)return null;const surface=layout.find(item=>item.card.id===id) || layout[0];if(!surface)return null;const normal={x:surface.right.y*surface.up.z-surface.right.z*surface.up.y,y:surface.right.z*surface.up.x-surface.right.x*surface.up.z,z:surface.right.x*surface.up.y-surface.right.y*surface.up.x},offset=(side==='left'?-1:1)*surface.width*.35;return {...surface,normal,center:{x:surface.center.x+surface.right.x*offset+surface.up.x*surface.height/2+normal.x*.008,y:surface.center.y+surface.right.y*offset+surface.up.y*surface.height/2+normal.y*.008,z:surface.center.z+surface.right.z*offset+surface.up.z*surface.height/2+normal.z*.008}};},
         rotate(delta){if(!pose || !Number.isFinite(delta))return false;if(held?.id && held.id!=='main'){const surface=layout.find(item=>item.card.id===held.id);if(!surface)return false;const turned=turnSpatialAxes(widgetRotations.get(held.id) || surface,delta);widgetRotations.set(held.id,{right:turned.right,up:turned.up});record.demoNoteWidgetRotations=Object.fromEntries(widgetRotations);return true;}pose=turnSpatialAxes(pose,delta);record.demoNoteManualRotation=true;record.demoNotePose={right:{...pose.right},up:{...pose.up}};return true;},
-        adjustDepth(delta){if(!held)return false;held.distance=Math.max(.4,Math.min(2.5,held.distance+delta));return true;},
+        adjustDepth(delta){if(!held)return false;const previous=held.distance;held.distance=Math.max(.4,Math.min(2.5,held.distance+delta));if(held.sdk)held.depthOffset+=held.distance-previous;return true;},
         moveDepth(delta,currentViewer=viewer,id='main'){if(!pose || !currentViewer)return false;const offset=id==='main'?{x:0,y:0,z:0}:positions.get(id) || (()=>{const surface=layout.find(item=>item.card.id===id);return surface?{x:surface.center.x-pose.center.x,y:surface.center.y-pose.center.y,z:surface.center.z-pose.center.z}:null;})();if(!offset)return false;const center={x:pose.center.x+offset.x,y:pose.center.y+offset.y,z:pose.center.z+offset.z},direction={x:center.x-currentViewer[12],y:center.y-currentViewer[13],z:center.z-currentViewer[14]},distance=Math.hypot(direction.x,direction.y,direction.z);if(distance<.001)return false;const shift=(Math.max(.4,Math.min(2.5,distance+delta))-distance)/distance;for(const axis of ['x','y','z'])center[axis]+=direction[axis]*shift;if(id==='main'){pose.center=center;record.position={...center};}else{positions.set(id,{x:center.x-pose.center.x,y:center.y-pose.center.y,z:center.z-pose.center.z});record.demoNoteWidgetPositions=Object.fromEntries(positions);}return true;},
-        releaseGrab(source){if(held?.source!==source)return false;record.position={...pose.center};record.demoNoteWidgetPositions=Object.fromEntries(positions);held=null;return true;},
-        get heldSource(){return held?.source;},
+        releaseGrab(source){if(held?.source!==source)return false;sdkGrip?.reset();record.position={...pose.center};record.demoNoteWidgetPositions=Object.fromEntries(positions);held=null;return true;},
+        get heldSource(){if(held?.sdk && !sdkGrip.active)held=null;return held?.source;},
         beginSelection(ray,source){if(root.hidden)return false;const hit=renderer.hit(ray);if(!hit)return false;selectionHold={source,id:hit.card.id,startedAt:performance.now(),notified:false};return true;},
         endSelection(source){if(selectionHold?.source!==source)return false;const consumed=selectionHold.notified;selectionHold=null;return consumed;},
         activate(ray){if(root.hidden)return false;const hit=renderer.hit(ray);if(!hit)return false;onSelect(hit.card.id);const entry=canvases.get(hit.card.id),x=(hit.localX/hit.width+.5)*1024,y=(.5-hit.localY/hit.height)*400;
@@ -122,6 +141,6 @@ export function createNoteSpatialRenderer(gl,root,record,viewer,{onInput=()=>{},
             const button=target?resolveNoteCardButton(root,hit.card.id,target.actionIndex,target.button):null;
             if(button?.tagName==='INPUT'){onInput(button);return true;}if(button && !button.disabled)button.click();return true;
         },
-        destroy(){observer.disconnect();root.removeEventListener('load',imageLoaded,true);renderer.destroy();destroySpatialTetherRenderer(gl,tether);canvases.clear();}
+        destroy(){sdkGrip?.dispose();held=null;observer.disconnect();root.removeEventListener('load',imageLoaded,true);renderer.destroy();destroySpatialTetherRenderer(gl,tether);canvases.clear();}
     };return api;
 }

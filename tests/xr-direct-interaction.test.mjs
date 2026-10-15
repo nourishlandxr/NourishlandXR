@@ -25,7 +25,7 @@ test('SDK virtual-hand trigger curl cannot redirect hover, laser or menu press/r
         isHolding:()=>false,isBrushHeld:()=>false,hit:()=>null,heldLeafPoint:()=>null,
         select:value=>selected.push(value),update:(dt,{inputs})=>{latestInputs=inputs;},start(){},destroy(){}};
     const runtime={backend:'iwsdk',controllerState:()=>({matrix,trigger:controller.gamepad.buttons[0].pressed,down:false,grip:0,handPose:new Map()})};
-    const context={THREE,EventTarget,AbortController,performance,createWelcomeInputRouting,nearestWelcomePointerHit,
+    const context={THREE,EventTarget,AbortController,performance,createWelcomeInputRouting,nearestWelcomePointerHit,getSpatialVisualSettings:()=>({laserPointer:true}),
         createWelcomePracticeScene:()=>stage,createSpatialTetherRenderer:()=>({}),destroySpatialTetherRenderer(){},
         createFruitWindowXR:()=>({prepareNext:()=>true,update(){},draw(){},destroy(){},coversScene:()=>true}),
         xrInputRuntime:()=>legacy?null:runtime,updateXRInputRuntime(){},xrInputRay:()=>tracking?ray:null,
@@ -101,13 +101,14 @@ test('controller lasers are absent before the taught reveal, then render normall
     let lines=0,contacts=0;const stage={active:true,exitOpacity:1,controllerLaserProgress:.5,controllerLasersVisible:false,controllerHandsVisible:false,controllerHandReveal:{},trials:{active:null,drawPeek(){}},phase:'controls-trigger',snapshot:()=>({settingsAvailable:stage.phase==='fruit'}),isBrushHeld:()=>false,hit:()=>null};
     const controller={source:{handedness:'left',gamepad:{buttons:Array.from({length:6},()=>({pressed:false}))}},ray:{origin:{x:0,y:1,z:0},direction:{x:0,y:0,z:-1}}};
     Object.defineProperty(stage,'settingsAvailable',{get:()=>stage.phase==='fruit'});
-    const context={stage,revealTime:2,renderer:null,anchor:{},hands:[],controllers:[],visibleControllers:[],inputs:[controller],onHit:()=>null,nearestWelcomePointerHit:()=>null,drawWelcomeControllerLaser:()=>lines++,drawSpatialPointerContact:()=>contacts++,gl:{},pointer:{}};
+    const context={stage,revealTime:2,renderer:null,anchor:{},hands:[],controllers:[],visibleControllers:[],inputs:[controller],getSpatialVisualSettings:()=>({laserPointer:true}),onHit:()=>null,nearestWelcomePointerHit:()=>null,drawWelcomeControllerLaser:()=>lines++,drawSpatialPointerContact:()=>contacts++,gl:{},pointer:{}};
     const draw=vm.runInNewContext('({'+source.slice(start,end)+'}}).draw',context);
     draw({});assert.equal(lines,0);controller.source.gamepad.buttons[4].pressed=true;draw({});assert.equal(lines,0,'A/X never secretly enables a laser');
     stage.phase='laser-intro';stage.controllerLasersVisible=true;draw({});assert.equal(lines,1);
     stage.phase='fruit';stage.controllerLasersVisible=false;controller.pointerHit={kind:'panel',worldPoint:{x:0,y:1,z:-.6}};draw({});assert.equal(lines,2);assert.equal(contacts,1);
     stage.phase='controls-trigger';draw({});assert.equal(contacts,1,'early button practice has no pointer');
-    stage.phase='fruit';controller.source.hand={};draw({});assert.equal(lines,2);assert.equal(contacts,1);
+    stage.phase='fruit';controller.source.hand={};draw({});assert.equal(lines,3);assert.equal(contacts,2);
+    context.getSpatialVisualSettings=()=>({laserPointer:false});draw({});assert.equal(lines,3,'laser toggle hides hand beam');
 });
 
 test('open hands cannot poke; pointing with the other fingers curled can',()=>{

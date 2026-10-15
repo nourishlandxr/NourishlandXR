@@ -30,7 +30,7 @@ export function currentGraphicsPreset(){return GRAPHICS_PRESETS[currentGraphicsQ
 export function currentLivingFrameQuality(){return preferences.graphicsQuality==='auto'&&currentGraphicsQuality()==='low'&&preferences.livingFrameQuality==='hd'?'sd':preferences.livingFrameQuality;}
 export function currentRainQuality(){return preferences.graphicsQuality==='auto'&&currentGraphicsQuality()==='low'?'off':preferences.rainQuality;}
 const storageKey='nlxr.visual-preferences.v1';
-export function spatialVisualDefaults(){return {livingOrbRevision:1,cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,livingFrameHeight:0,practiceTableHeight:0,insects:true,heroDice:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'living',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};}
+export function spatialVisualDefaults(){return {laserPointer:true,livingOrbRevision:1,cellGlassRevision:1,totemDefaultRevision:2,handDefaultRevision:1,floorOffset:0,livingFrameHeight:0,practiceTableHeight:0,insects:true,heroDice:true,livingFrame:true,livingFrameQuality:'sd',eyeHeight:1.65,infoOpacity:INFO_GLASS.defaultOpacity,orbModel:'living',totemModel:'botanical',cellOpacity:.42,handMode:'outline',largeText:false,spatialScale:1,refreshRate:90,showFps:false,graphicsQuality:'auto',rainQuality:GRAPHICS_PRESETS[resolveGraphicsQuality()].rain};}
 let preferences=spatialVisualDefaults();
 function validated(change){
     const result={};
@@ -40,7 +40,7 @@ function validated(change){
     if(ORB_MODELS[change?.orbModel])result.orbModel=change.orbModel;
     if(TOTEM_MODELS[change?.totemModel])result.totemModel=change.totemModel;
     if(['pointer','outline'].includes(change?.handMode))result.handMode=change.handMode;
-    for(const key of ['largeText','showFps','insects','heroDice'])if(typeof change?.[key]==='boolean')result[key]=change[key];
+    for(const key of ['largeText','showFps','insects','heroDice','laserPointer'])if(typeof change?.[key]==='boolean')result[key]=change[key];
     if(LIVING_FRAME_QUALITIES[change?.livingFrameQuality]){result.livingFrameQuality=change.livingFrameQuality;result.livingFrame=change.livingFrameQuality!=='off';}
     else if(typeof change?.livingFrame==='boolean'){result.livingFrame=change.livingFrame;result.livingFrameQuality=change.livingFrame?'sd':'off';}
     if(['auto',60,72,90,120].includes(change?.refreshRate))result.refreshRate=change.refreshRate;
@@ -61,7 +61,7 @@ function syncVisualCss(){globalThis.document?.documentElement?.style.setProperty
 syncVisualCss();
 export function getSpatialVisualSettings(){return {heroDice:true,...preferences};}
 // A fresh demo restores experience controls, never project or notebook data.
-export function resetSpatialVisualSettings(){preferences=spatialVisualDefaults();adaptiveGraphicsQuality=null;syncVisualCss();try{globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}catch{}return getSpatialVisualSettings();}
+export function resetSpatialVisualSettings(){preferences={laserPointer:true,...spatialVisualDefaults()};adaptiveGraphicsQuality=null;syncVisualCss();try{globalThis.localStorage?.setItem(storageKey,JSON.stringify(preferences));}catch{}return getSpatialVisualSettings();}
 export function setSpatialVisualSettings(change){
     if(change?.graphicsQuality!==undefined)adaptiveGraphicsQuality=null;
     Object.assign(preferences,validated(change));

@@ -3,25 +3,31 @@ import {knowledgePoseMatrix,localObjectMatrix} from './knowledgeObjectModel.js';
 import {commitExplorerPuzzle,magnetExplorerPuzzle} from './explorerMoleculeModel.js';
 import {handTrackingState} from './xrPointer.js';
 import {spatialStick} from './spatialStick.js';
+import {xrInputRuntime} from './xrInputRuntime.js';
+import {createKnowledgeSDKGrip} from './knowledgeSDKGrip.js';
 
 // Object grabs and face presses have separate owners. An explicit Move action
 // also works on devices that expose a trigger/pinch but no grip button.
 export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=()=>true,onActivate=()=>{}}={}){
-    const abort=new AbortController(),suppressed=new WeakMap(),handPinches=new WeakMap(),holds=new Map(),claimedSources=new Set();let active=null,lastUpdate=null;const inputMatrices=new Map(),rayMatrices=new Map();
+    const abort=new AbortController(),suppressed=new WeakMap(),handPinches=new WeakMap(),holds=new Map(),claimedSources=new Set();let active=null,lastUpdate=null,sdkGrip=null,ended=false;const inputMatrices=new Map(),rayMatrices=new Map();
     const faceKey=t=>t?.object?.id+'|'+(t?.face?.faceId || 'context');
     function cancelHold(source){const held=holds.get(source);if(held){held.target.record.pimObjectPressProgress=0;holds.delete(source);}}
     const listen=(type,handler)=>session.addEventListener(type,handler,{capture:true,signal:abort.signal});
     function inputMatrix(source){return inputMatrices.get(source)?.clone() || null;}
     function targetFor(source){const m=rayMatrices.get(source);if(!m)return null;const inputRay={origin:new THREE.Vector3().setFromMatrixPosition(m),direction:new THREE.Vector3(0,0,-1).transformDirection(m)};const target=hit(source,inputRay);if(target)target.inputRay=inputRay;return target;}
     function begin(source,target,matrix,kind){
-        if(active || !target?.object || !matrix || !canGrab({...target,source}))return false;
+        if(ended || session.visibilityState!=='visible' || active || !target?.object || !matrix || !canGrab({...target,source}))return false;
         const basis=knowledgePoseMatrix(target.pose),world=basis.clone().multiply(localObjectMatrix(target.object));
-        cancelHold(source);active={source,target,kind,offset:matrix.clone().invert().multiply(world)};return true;
+        const runtime=xrInputRuntime(session);
+        if(!sdkGrip && runtime?.createDemoInteractions)sdkGrip=createKnowledgeSDKGrip(runtime);
+        if(sdkGrip && !sdkGrip.begin(source,target.object,world,matrix,rayMatrices.get(source)))return false;
+        cancelHold(source);active={source,target,kind,offset:matrix.clone().invert().multiply(world),sdk:Boolean(sdkGrip),sdkAdjustment:new THREE.Matrix4()};return true;
     }
     function finish(source,commit=false){
         if(!active || active.source!==source)return false;
         const target=active.target,{record,object,knowledge}=target,state=record.explorerMolecule;
-        const locked=commit && record.knowledgeExplorer.mode==='explore' && [state.pending,state.pendingConnector].includes(object) && commitExplorerPuzzle(record,knowledge);
+        sdkGrip?.reset();
+        const locked=commit && session.visibilityState==='visible' && canGrab({...target,source}) && record.knowledgeExplorer.mode==='explore' && [state.pending,state.pendingConnector].includes(object) && commitExplorerPuzzle(record,knowledge);
         suppressed.set(source,performance.now()+450);active=null;
         if(locked)onActivate({...target,node:{...target.node,explorerNodeId:state.selectedId,pending:false,connector:false,explorerAssembly:true},intentionalHold:true,inputSource:source});return true;
     }
@@ -37,9 +43,10 @@ export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=
     listen('select',event=>{if(claimedSources.has(event.inputSource) || holds.has(event.inputSource) || active?.source===event.inputSource || performance.now()<(suppressed.get(event.inputSource)||0)){event.stopImmediatePropagation();event.preventDefault();}});
     listen('inputsourceschange',event=>{if([...event.removed].includes(active?.source))finish(active.source);for(const source of event.removed){claimedSources.delete(source);cancelHold(source);inputMatrices.delete(source);rayMatrices.delete(source);}});
     listen('visibilitychange',()=>{if(session.visibilityState!=='visible'){for(const source of holds.keys())cancelHold(source);if(active)finish(active.source);}});
-    listen('end',()=>{for(const source of holds.keys())cancelHold(source);claimedSources.clear();active=null;inputMatrices.clear();rayMatrices.clear();});
+    listen('end',()=>{ended=true;for(const source of holds.keys())cancelHold(source);claimedSources.clear();active=null;sdkGrip?.dispose();inputMatrices.clear();rayMatrices.clear();});
     return {
         update(value){
+            if(ended)return;
             const now=performance.now(),elapsed=lastUpdate===null?16:now-lastUpdate;lastUpdate=now;
             if(active && (active.target.record.knowledgeExplorer.mode!=='explore' || ![active.target.record.explorerMolecule?.root,active.target.record.explorerMolecule?.pending,active.target.record.explorerMolecule?.pendingConnector,...Object.values(active.target.record.explorerMolecule?.wingObjects || {}),...Object.values(active.target.record.explorerMolecule?.nodeObjects || {})].includes(active.target.object)))finish(active.source);
             for(const source of session.inputSources || []){
@@ -63,13 +70,17 @@ export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=
                 if(amount===1){held.done=true;target.record.pimObjectPressProgress=0;onActivate({...target,inputSource:source,intentionalHold:true});}
             }
             if(!active)return;
+            if(session.visibilityState!=='visible' || !canGrab({...active.target,source:active.source})){finish(active.source);return;}
             const matrix=inputMatrix(active.source);if(!matrix){finish(active.source);return;}
-            const sourceMatrix=matrix.clone(),{record,object,pose,knowledge}=active.target,world=matrix.multiply(active.offset),basis=knowledgePoseMatrix(pose),worldPosition=new THREE.Vector3().setFromMatrixPosition(world),stick=spatialStick(active.source,elapsed);
+            const sdkWorld=active.sdk?sdkGrip.update(matrix,rayMatrices.get(active.source),elapsed/1000):null;
+            if(active.sdk && !sdkWorld){finish(active.source);return;}
+            const sourceMatrix=matrix.clone(),{record,object,pose,knowledge}=active.target,world=sdkWorld?sdkWorld.clone().multiply(active.sdkAdjustment):matrix.multiply(active.offset),basis=knowledgePoseMatrix(pose),worldPosition=new THREE.Vector3().setFromMatrixPosition(world),stick=spatialStick(active.source,elapsed);
             if(stick.yaw || stick.depth){
                 const rotation=new THREE.Quaternion(),scale=new THREE.Vector3();world.decompose(worldPosition,rotation,scale);
                 if(stick.yaw)rotation.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),stick.yaw));
                 if(stick.depth){const origin=new THREE.Vector3().setFromMatrixPosition(sourceMatrix),toward=origin.sub(worldPosition),distance=toward.length();if(distance>.01)worldPosition.addScaledVector(toward.normalize(),Math.min(stick.depth,Math.max(0,distance-.12)));}
                 world.compose(worldPosition,rotation,scale);active.offset.copy(sourceMatrix).invert().multiply(world);
+                if(sdkWorld)active.sdkAdjustment.copy(sdkWorld).invert().multiply(world);
             }
             if(Number.isFinite(record.knowledgeFloor))worldPosition.y=Math.max(worldPosition.y,record.knowledgeFloor+object.radius*object.scale+.01);world.setPosition(worldPosition);
             const local=basis.invert().multiply(world),position=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3();local.decompose(position,rotation,scale);
@@ -77,7 +88,8 @@ export function bindExplorerMoleculeInteraction(session,space,{hit,near,canGrab=
             magnetExplorerPuzzle(record,knowledge,object);
         },
         get active(){return active;},
-        destroy(){abort.abort();for(const source of holds.keys())cancelHold(source);claimedSources.clear();active=null;inputMatrices.clear();rayMatrices.clear();}
+        get backend(){return sdkGrip?'iwsdk':'native';},
+        destroy(){ended=true;abort.abort();sdkGrip?.dispose();for(const source of holds.keys())cancelHold(source);claimedSources.clear();active=null;inputMatrices.clear();rayMatrices.clear();}
     };
 }
 

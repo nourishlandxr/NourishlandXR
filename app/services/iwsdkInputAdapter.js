@@ -19,10 +19,10 @@ export const createNlxrInput = (session, options) => {
         const owner=createTutorialInteractionOwner(runtime,GrabSDK),dispose=owner.dispose;
         owners.add(owner);owner.dispose=()=>{dispose();owners.delete(owner);};return owner;
     };
-    runtime.createDemoInteractions = () => {
+    runtime.createDemoInteractions = ({scope='demo'}={}) => {
         if(disposed)return null;
-        const far=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'demo-controller',capacity:256,distance:true});
-        const near=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'demo-hand',capacity:256});
+        const far=createTutorialInteractionOwner(runtime,GrabSDK,{scope:scope+'-controller',capacity:256,distance:true});
+        const near=createTutorialInteractionOwner(runtime,GrabSDK,{scope:scope+'-hand',capacity:256});
         const owner={
             step(inputs,targets,options){
                 // Separate SDK targets avoid contradictory near-only/far-ray

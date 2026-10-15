@@ -31,7 +31,12 @@ export function createTutorialInteractionOwner(runtime, sdk, {scope='tutorial',c
     const transform=new Matrix4();let disposed=false,lastTime=0;
     const cancel=id=>{
         const record=records.get(id);if(!record)return;
-        const side=grab.getHolderHand(record.entity);if(side){const source=edges.get(side)?.source;if(source)blocked.add(source);}
+        const side=grab.getHolderHand(record.entity);if(side){
+            const source=edges.get(side)?.source;if(source)blocked.add(source);
+            // Release pointer capture as well as the ECS component. Otherwise
+            // a restored object can remain stuck to a cancelled input handle.
+            pointers[side].update(false,0,lastTime);
+        }
         grab.forceRelease(record.entity);
         if(record.entity.hasComponent(Grabbed))record.entity.removeComponent(Grabbed);
         for(const [source,hold] of holders)if(hold.id===id)holders.delete(source);
@@ -70,6 +75,9 @@ export function createTutorialInteractionOwner(runtime, sdk, {scope='tutorial',c
                     records.set(body.id,record={mesh,entity,body});
                 }
                 record.body=body;
+                // Hidden authored objects must stop owning input immediately,
+                // not merely disappear while the SDK retains their handle.
+                if(!body.visible)cancel(body.id);
                 const half=body.halfSize;
                 record.mesh.scale.set(Math.max(.008,half.x),Math.max(.008,half.y),Math.max(.008,half.z));
                 if(!record.entity.hasComponent(Grabbed)){
@@ -81,6 +89,10 @@ export function createTutorialInteractionOwner(runtime, sdk, {scope='tutorial',c
             world.scene.rayDescendants=distance?world.scene.grabDescendants:[];world.scene.touchDescendants=[];
             world.scene.updateMatrixWorld(true);
             for(const side of ['left','right']){
+                for(const value of inputs.filter(value=>value.source.handedness===side)){
+                    if(value.down && (!enabled || value.uiBlocked))blocked.add(value.source);
+                    else if(!value.down)blocked.delete(value.source);
+                }
                 const input=inputs.find(value=>value.source.handedness===side && value.matrix?.length===16 && Array.from(value.matrix).every(Number.isFinite) && !value.uiBlocked);
                 const previous=edges.get(side);
                 if(previous?.source && previous.source!==input?.source){

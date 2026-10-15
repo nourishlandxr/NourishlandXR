@@ -1,5 +1,6 @@
 import {drawWelcomeControllerLaser} from './welcomeControllerLaser.js';
 import {createSpatialTetherRenderer,drawSpatialPointerContact,destroySpatialTetherRenderer} from './spatialTetherRenderer.js';
+import {getSpatialVisualSettings} from './spatialVisualSettings.js';
 import {unlockZinniaTouchAudio} from './zinniaTouchReactions.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createWelcomePracticeScene} from './welcomePracticeScene.js';
@@ -76,7 +77,7 @@ export function createWelcomePracticeXR(gl,{voice,onComplete,onChange,onFeedback
             const reveal=stage.controllerHandReveal;visibleControllers.length=0;if(stage.controllerHandsVisible)for(const input of controllers)if((reveal[input.source.handedness] || 0)>0)visibleControllers.push(input);
             handRenderer?.draw(view,hands,{filled:stage.trials.active!=='butterflies',controllers:visibleControllers,controllerOpacity:stage.controllerHandOpacity*opacity,trackedOpacity:stage.trackedHandOpacity*opacity,controllerReveal:reveal});
             for(const input of inputs){
-                if(input.source.hand || !input.ray || stage.exiting)continue;
+                if(!getSpatialVisualSettings().laserPointer || !input.ray || stage.exiting)continue;
                 const r=input.ray,hit=input.pointerHit;
                 if(!stage.controllerLasersVisible){if(stage.settingsAvailable && hit?.worldPoint && ['panel','trial-control','voice-bar'].includes(hit.kind)){const contact={x:hit.worldPoint.x-r.direction.x*.004,y:hit.worldPoint.y-r.direction.y*.004,z:hit.worldPoint.z-r.direction.z*.004};drawWelcomeControllerLaser(gl,pointer,view,r,contact,1,opacity);drawSpatialPointerContact(gl,pointer,view,contact,.009,[.8,.96,1,.9*opacity],true);};continue;}
                 if(stage.trials.active==='painting' || stage.isBrushHeld(input.source))continue;

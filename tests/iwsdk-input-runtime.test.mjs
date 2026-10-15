@@ -13,6 +13,11 @@ import { VIRTUAL_HAND_FIST_POSE } from '../app/services/virtualHandFistPose.js';
 import * as GrabSDK from '../iwsdk/grabSdk.js';
 import { createTutorialInteractionOwner } from '../app/services/iwsdkTutorialInteraction.js';
 import {createDemoSDKSession} from '../app/services/iwsdkDemoSession.js';
+import {bindExplorerMoleculeInteraction} from '../app/services/explorerMoleculeInteraction.js';
+import {createNoteSDKGrip} from '../app/services/noteSDKGrip.js';
+import {knowledgeExplorer} from '../app/services/knowledgeExplorer.js';
+import {ensureExplorerMolecule,chooseExplorerWing,alignExplorerPuzzle} from '../app/services/explorerMoleculeModel.js';
+import {PIGEON_PEA_AR_KNOWLEDGE as knowledge} from '../app/services/pigeonPeaExample.js';
 
 // Exercise the installed SDK, with native XRFrame/session doubles. The canvas
 // stub is only for the SDK's unused cursor texture; it never supplies input.
@@ -94,6 +99,144 @@ async function loaded(predicate) {
     while (!predicate() && Date.now() < deadline) await new Promise(resolve => setTimeout(resolve, 5));
     assert.ok(predicate(), 'official local hand asset must load and connect');
 }
+
+test('placed Note SDK controller grips preserve pickup and release on tracking loss, blur, removal and end',async()=>{
+    const saved=globalThis.document;globalThis.document=createDocument();const f=fixture({hand:false});let owner,note;
+    f.source.profiles=['oculus-touch-v3'];f.source.gamepad={mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,touched:false,value:0}))};
+    const runtime=await attachXRInputRuntime(f.session,{factory:()=>createNlxrInputBridge(f.session,sdk)});
+    runtime.createDemoInteractions=()=>owner=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'note-test',distance:true});
+    const surface={card:{id:'main'},center:{x:.08,y:1.2,z:-1.2},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},width:.8,height:.3};
+    note=createNoteSDKGrip(f.session,f.space);
+    runtime.update(f.frame,f.space,20,1);
+    const begin=()=>{assert.equal(note.begin(surface,f.source,f.frame),true);assert.equal(note.active,true);assert.ok(owner.snapshot().held.length===1);};
+    try{
+        begin();let world=note.update(f.frame);assert.ok(Math.abs(world.elements[12]-.08)<1e-5,'offset pickup never snaps card to ray');
+        f.source.gripSpace.position[0]=.2;f.source.targetRaySpace.position[0]=.2;world=note.update(f.frame);assert.ok(Math.abs(world.elements[12]-.28)<1e-5);
+        note.reset();assert.equal(note.active,false);assert.deepEqual(owner.snapshot().held,[]);
+        begin();f.missing.add(f.source.gripSpace);assert.equal(note.update(f.frame),null);assert.equal(note.active,false);f.missing.clear();
+        begin();f.session.visibilityState='visible-blurred';f.emit('visibilitychange');assert.equal(note.active,false);assert.deepEqual(owner.snapshot().held,[]);assert.equal(note.begin(surface,f.source,f.frame),false);
+        f.session.visibilityState='visible';begin();
+        const removal=new Event('inputsourceschange');removal.removed=[f.source];f.session.dispatchEvent(removal);assert.equal(note.active,false);
+        begin();f.emit('end');assert.equal(note.active,false);assert.equal(owner.snapshot().targets,0);assert.equal(note.begin(surface,f.source,f.frame),false);
+        note.dispose();note.dispose();
+    }finally{note?.dispose();runtime.dispose();globalThis.document=saved;}
+});
+
+test('placed Notes use actual SDK near-hand pinch ownership without a distant ray fallback',async()=>{
+    const saved=globalThis.document;globalThis.document=createDocument();const f=fixture();let owner,note,time=0;
+    const runtime=await attachXRInputRuntime(f.session,{factory:()=>createNlxrInputBridge(f.session,sdk)});
+    runtime.createDemoInteractions=()=>owner=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'note-pinch-test'});
+    note=createNoteSDKGrip(f.session,f.space);
+    const surface={card:{id:'timer-widget'},center:{x:.0225,y:1.15,z:-.2},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},width:.3,height:.2};
+    const tick=()=>beginHandTrackingFrame(f.frame,time+=20,f.space);
+    try{
+        tick();assert.equal(note.begin(surface,f.source,f.frame),false,'open hand cannot acquire');
+        f.emit('selectstart');tick();assert.equal(note.begin(surface,f.source,f.frame),true);
+        assert.ok([...owner.grab.queries.handles.entities].some(entity=>entity.hasComponent(GrabSDK.Grabbed)));
+        for(const joint of f.source.hand.values())joint.position[0]+=.2;
+        tick();const moved=note.update(f.frame);assert.ok(Math.abs(moved.elements[12]-.2225)<1e-5);
+        f.emit('selectend');tick();assert.equal(note.update(f.frame),null);assert.equal(note.active,false);
+        f.emit('selectstart');tick();assert.equal(note.begin({...surface,center:{x:0,y:1.15,z:-1.5}},f.source,f.frame),false,'pinch never distance-grabs a Note');
+        surface.center.x+=.2;assert.equal(note.begin(surface,f.source,f.frame),true);
+        f.missing.add(f.source.hand.get('index-finger-tip'));tick();assert.equal(note.update(f.frame),null);assert.equal(note.active,false);
+    }finally{note?.dispose();runtime.dispose();globalThis.document=saved;}
+});
+
+for(const hand of [false,true])test(`native knowledge objects move through SDK ${hand?'tracked pinch':'controller grip'} ownership and cancel safely`,async()=>{
+    const saved=globalThis.document;globalThis.document=createDocument();
+    const f=fixture({hand});let owner,input,allowed=true,time=0;
+    if(!hand){f.source.profiles=['oculus-touch-v3'];f.source.gamepad={mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,touched:false,value:0}))};}
+    const runtime=await attachXRInputRuntime(f.session,{factory:()=>createNlxrInputBridge(f.session,sdk)});
+    runtime.createDemoInteractions=()=>owner=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'knowledge-test',distance:!hand});
+    const record={id:'pigeon-pea-knowledge'};knowledgeExplorer(record);record.knowledgeExplorer.mode='explore';ensureExplorerMolecule(record,knowledge);
+    const object=record.explorerMolecule.root,pose={position:hand?{x:.0225,y:1.15,z:-.2}:{x:0,y:1.2,z:-1.2},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:0,z:1}};
+    const target={record,knowledge,object,pose,node:{explorerNodeId:'core'},face:{faceId:'core'}};
+    input=bindExplorerMoleculeInteraction(f.session,f.space,{hit:()=>target,near:()=>target,canGrab:()=>allowed});
+    const tick=()=>{beginHandTrackingFrame(f.frame,time+=20,f.space);input.update(f.frame);};
+    const start=()=>{f.emit(hand?'selectstart':'squeezestart');tick();};
+    const end=()=>{f.emit(hand?'selectend':'squeezeend');tick();};
+    try{
+        tick();tick();start();assert.equal(input.backend,'iwsdk');assert.ok(input.active?.sdk);
+        assert.ok([...owner.grab.queries.handles.entities].some(entity=>entity.hasComponent(GrabSDK.Grabbed)),'native event acquired official SDK handle');
+        assert.ok(Math.hypot(object.position.x,object.position.y,object.position.z)<1e-5,'pickup retains the original object pose');
+        if(hand)for(const joint of f.source.hand.values())joint.position[0]+=.2;
+        else{f.source.gripSpace.position[0]+=.2;f.source.targetRaySpace.position[0]+=.2;}
+        tick();assert.ok(Math.abs(object.position.x-.2)<1e-5,'existing native object follows SDK transform');
+        if(!hand){
+            f.source.gamepad.axes[2]=1;f.source.gamepad.axes[3]=-1;tick();
+            const adjusted={...object.position},rotation={...object.rotation};
+            assert.ok(Math.abs(rotation.y)>.000001,'thumbstick turns the SDK-held object');
+            f.source.gamepad.axes[2]=0;f.source.gamepad.axes[3]=0;tick();
+            assert.ok(Math.hypot(object.position.x-adjusted.x,object.position.y-adjusted.y,object.position.z-adjusted.z)<1e-5,'centering the stick preserves its depth adjustment');
+            assert.ok(Math.abs(object.rotation.y-rotation.y)<1e-5,'centering preserves SDK rotation adjustment');
+        }
+        end();assert.equal(input.active,null);assert.deepEqual(owner.snapshot().held,[]);
+        // No release-only activation: a modal must cancel without committing.
+        // Restore the proxy's authored pose to the fixture ray/contact location.
+        object.position.x=0;
+        if(hand)for(const joint of f.source.hand.values())joint.position[0]-=.2;
+        else{f.source.gripSpace.position[0]-=.2;f.source.targetRaySpace.position[0]-=.2;}
+        // The native suppression window intentionally rejects immediate repeats.
+        await new Promise(resolve=>setTimeout(resolve,460));tick();start();assert.ok(input.active);
+        allowed=false;tick();assert.equal(input.active,null);assert.deepEqual(owner.snapshot().held,[]);
+        end();allowed=true;
+        f.emit('end');tick();assert.equal(owner.snapshot().targets,0);assert.equal(input.active,null);
+        input.destroy();input.destroy();
+    }finally{input?.destroy();runtime.dispose();globalThis.document=saved;}
+});
+
+test('SDK knowledge trigger grabs retain the two-release connector assembly contract',async()=>{
+    const saved=globalThis.document;globalThis.document=createDocument();const f=fixture({hand:false});let owner,input,time=0,target;
+    f.source.profiles=['oculus-touch-v3'];f.source.gamepad={mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,touched:false,value:0}))};
+    const runtime=await attachXRInputRuntime(f.session,{factory:()=>createNlxrInputBridge(f.session,sdk)});
+    runtime.createDemoInteractions=()=>owner=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'knowledge-puzzle-test',distance:true});
+    const record={id:'pigeon-pea-puzzle'};knowledgeExplorer(record);record.knowledgeExplorer.mode='explore';ensureExplorerMolecule(record,knowledge);assert.ok(chooseExplorerWing(record,knowledge,'uses'));
+    const pose={position:{x:0,y:0,z:0},right:{x:1,y:0,z:0},up:{x:0,y:1,z:0},normal:{x:0,y:0,z:1}};
+    input=bindExplorerMoleculeInteraction(f.session,f.space,{hit:()=>target,near:()=>null});
+    const tick=()=>{beginHandTrackingFrame(f.frame,time+=20,f.space);input.update(f.frame);};
+    try{
+        for(const phase of ['connector','piece']){
+            assert.equal(record.explorerMolecule.puzzle.phase,phase);assert.ok(alignExplorerPuzzle(record,knowledge));
+            const object=phase==='connector'?record.explorerMolecule.pendingConnector:record.explorerMolecule.pending;
+            target={record,knowledge,object,pose,node:{pending:true},face:{faceId:'pending-'+phase}};
+            const p=object.position;f.source.targetRaySpace.position=[p.x,p.y,p.z+.5];f.source.gripSpace.position=[p.x,p.y,p.z+.3];
+            tick();f.emit('selectstart');tick();assert.ok(input.active?.sdk);
+            assert.ok(owner.snapshot().held.length===1);
+            assert.equal(record.explorerMolecule.puzzle.phase,phase,'SDK capture alone never commits');
+            f.emit('selectend');tick();assert.equal(input.active,null);assert.deepEqual(owner.snapshot().held,[]);
+        }
+        assert.equal(record.explorerMolecule.puzzle,null);assert.ok(record.explorerMolecule.assembled.length>0);
+    }finally{input?.destroy();runtime.dispose();globalThis.document=saved;}
+});
+
+for(const distance of [false,true])test(`SDK ${distance?'distance':'near'} grabs require a fresh action after hidden targets or blocked input`,()=>{
+    const saved=globalThis.document;globalThis.document=createDocument();
+    const f=fixture({hand:false});f.source.profiles=['oculus-touch-v3'];
+    f.source.gamepad={mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,touched:false,value:0}))};
+    const runtime=createNlxrInputBridge(f.session,sdk),owner=createTutorialInteractionOwner(runtime,GrabSDK,{distance});
+    const body={id:'authored-object',position:{x:0,y:distance?1.2:1.1,z:distance?-1.2:-.15},rotation:{x:0,y:0,z:0,w:1},halfSize:{x:.055,y:.055,z:.055},visible:true};
+    let time=0,enabled=true,uiBlocked=false;
+    const press=down=>Object.assign(f.source.gamepad.buttons[1],{pressed:down,value:Number(down)});
+    const step=()=>{
+        runtime.update(f.frame,f.space,time+=20,time);
+        owner.step([{source:f.source,...runtime.controllerState(f.source),uiBlocked,rayMatrix:runtime.input.xrOrigin.raySpaces.right.matrixWorld.elements}],[body],{rootMatrix:new THREE.Matrix4().elements,dt:.02,time:time/1000,enabled});
+    };
+    const acquire=()=>{press(false);step();press(true);step();assert.equal(owner.held(f.source)?.id,body.id);};
+    try{
+        step();step();acquire();body.visible=false;step();
+        assert.equal(owner.held(f.source),null,'hidden target releases the actual SDK handle');
+        assert.ok([...owner.grab.queries.handles.entities].every(entity=>!entity.hasComponent(GrabSDK.Grabbed)));
+        body.visible=true;step();assert.equal(owner.held(f.source),null,'restoring does not recapture a held grip');
+        acquire();press(false);step();
+        for(const block of ['modal','disabled']){
+            uiBlocked=block==='modal';enabled=block!=='disabled';press(true);step();step();
+            assert.equal(owner.held(f.source),null);
+            uiBlocked=false;enabled=true;step();step();
+            assert.equal(owner.held(f.source),null,'press begun behind '+block+' requires release');
+            acquire();press(false);step();
+        }
+    }finally{owner.dispose();runtime.dispose();globalThis.document=saved;}
+});
 
 test('native demo session bridges real SDK hold poses by stable ID, and hiding cancels once',async()=>{
     const saved=globalThis.document;globalThis.document=createDocument();const f=fixture({hand:false});

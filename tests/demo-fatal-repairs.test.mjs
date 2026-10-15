@@ -30,10 +30,11 @@ test('main welcome uses saved professional narration instead of a live flower gr
 
 test('physical controller rays and panel selection survive outline hand mode',()=>{
     const a=main.indexOf('function drawDemoInputPointer('),b=main.indexOf('    const { origin, direction }',a);
-    const scope=vm.createContext({tetherRenderer:{},demoHandMode:'outline',latestControllerRay:{}});
+    const scope=vm.createContext({tetherRenderer:{},demoHandMode:'outline',latestControllerRay:{},getSpatialVisualSettings:()=>({laserPointer:true})});
     const pointer=vm.runInContext(main.slice(a,b)+'return true;} drawDemoInputPointer',scope);
     assert.equal(pointer({}, {targetRayMode:'tracked-pointer'}),true);
-    assert.equal(pointer({}, {hand:{}}),undefined);
+    assert.equal(pointer({}, {hand:{}}),true);
+    scope.getSpatialVisualSettings=()=>({laserPointer:false});assert.equal(pointer({}, {targetRayMode:'tracked-pointer'}),undefined);
     assert.match(main,/directInteractionOnly:\(\)=>false/);
     assert.doesNotMatch(main,/const loadBees=\(\)=>import/);
 });
