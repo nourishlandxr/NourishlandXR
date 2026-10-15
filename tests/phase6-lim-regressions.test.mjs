@@ -11,18 +11,12 @@ const demoSource = fs.readFileSync(new URL('../app/screens/temporaryArDemo.js', 
 const panelSource = fs.readFileSync(new URL('../app/services/pimInfoPanel.js', import.meta.url), 'utf8');
 const styles = fs.readFileSync(new URL('../app/style.css', import.meta.url), 'utf8');
 
-test('Phase 6 welcome copy is bounded to the compact note and scrolls only in the DOM copy', () => {
-    assert.match(demoSource, /const contentWidth = 880/);
-    assert.match(demoSource, /const titleWidth = 960/);
-    assert.ok(demoSource.indexOf('const titleWidth = 960') < demoSource.indexOf('if(openingElapsed!==null)'), 'opening copy initializes its title bounds before drawing');
-    assert.match(demoSource, /drawDemoHeading\(ctx,introBoardTitle,contentCenter,355,titleWidth\)/);
-    assert.match(demoSource, /DEMO_QUICK_ACCESS_COPY\['INTRO 1\.1'\]/);
-    assert.doesNotMatch(demoSource, /drawWrappedTextureText\(ctx, introBoardTitle/);
-    assert.doesNotMatch(demoSource, /↙ Control panel/);
-    assert.match(demoSource, /ctx\.textAlign = 'left'/);
-    assert.match(demoSource, /ctx\.font = `600 \$\{bodyLayout\.fontSize\}px/);
-    assert.match(demoSource, /ctx\.rect\(contentLeft, bodyTop - 8, contentWidth, bodyBottom - bodyTop \+ 12\)/);
-    assert.match(styles, /\.tryit-guided-choice\.is-welcome-board \.tryit-board-text-window[\s\S]*overflow-y:auto/);
+test('demo copy uses the tutorial bounded paragraph layout without scrolling earlier paragraphs away',()=>{
+ assert.match(demoSource,/drawWelcomeText\(ctx,\{title,caption,layoutCaption,width:960,top:330,bottom:/);
+ assert.match(demoSource,/DEMO_QUICK_ACCESS_COPY\['INTRO 1\.1'\]/);
+ const draw=demoSource.slice(demoSource.indexOf('function drawIntroNoteContent'),demoSource.indexOf('function drawIntroNoteContent')+18000);
+ assert.doesNotMatch(draw,/introReadingWindow\(/);
+ assert.match(styles,/\.tryit-guided-choice\.is-welcome-board \.tryit-board-text-window[\s\S]*overflow-y:auto/);
 });
 
 test('LIM hit targets use cell coordinates while the welcome panel keeps its own inset', () => {

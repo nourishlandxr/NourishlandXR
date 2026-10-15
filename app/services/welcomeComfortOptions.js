@@ -1,12 +1,12 @@
 import {getSpatialVisualSettings,setSpatialVisualSettings} from './spatialVisualSettings.js';
 import {getWelcomeNarrationSettings,setWelcomeNarrationSettings} from './welcomePracticeVoice.js';
-import {WELCOME_TRIALS} from './welcomeTrialState.js';
+import {WELCOME_GAMES} from './welcomeTrialState.js';
 import {MARKING_BRUSHES} from './creatorMarkingBrushes.js';
 import {PAINT_V2_COLOURS} from './spatialPaintV2.js';
-import {WELCOME_EXPERIENCES} from './welcomeExperienceUnlock.js';
+import {WELCOME_INPUT_METHODS} from './welcomeExperienceUnlock.js';
 
 // Left thumbstick toggles settings; hand tracking retains an icon entry.
-export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChange=()=>{}}={}){
+export function createWelcomeComfortOptions({stage,onReturn=null,onVisualChange=()=>{},onChange=()=>{}}={}){
     let page='home',opened=false;
     const paint=()=>stage.trials.active==='painting'?stage.trials.paint:stage.paint;
     const item=(id,label,icon,extra={})=>({action:'Comfort:'+id,label,ariaLabel:label,description:label,icon,kind:'utility',...extra});
@@ -19,15 +19,16 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         if(opened)items.push(item('reset','Reset objects','repeat',{accent:'#8bbdd4'}),item('input','Change controllers','controller',{selected:page==='input',accent:'#a4c3a0'}),item('audio','Audio','audio',{selected:page==='audio',accent:'#b8a6d2'}),item('adjust','Comfort settings','settings',{selected:page==='settings',accent:'#83bfae'}),item('tutorial','Tutorial actions','lesson',{selected:page==='tutorial',accent:'#cb9c8b'}),item('games','Optional games','games',{selected:page==='games',accent:'#c7ad76'}));
         items[0].worldBox={x:0,y:.059,size:.022};
         items.slice(1).forEach((button,i)=>{button.dock=true;button.worldBox={x:(i%2-.5)*.034,y:.020-Math.floor(i/2)*.034,size:.030};});
-        if(opened && state.experiencesUnlocked)items.push(...WELCOME_EXPERIENCES.map((experience,i)=>item('experience:'+experience.id,experience.label,experience.icon,{selected:(state.freeExperience || state.inputMode)===experience.id,worldBox:{x:(i-1)*.034,y:-.095,size:.030}})));
+        if(opened && onReturn)items.push(item('return-demo','Return to demo','back',{worldBox:{x:.052,y:.059,size:.030}}));
+        if(opened && state.inputChoiceUnlocked)items.push(...WELCOME_INPUT_METHODS.map((experience,i)=>item('input:'+experience.id,experience.label,experience.icon,{selected:state.inputMode===experience.id,worldBox:{x:(i-1)*.034,y:-.095,size:.030}})));
         const titles={games:'Games',input:'Controllers',audio:'Audio',settings:'Comfort',tutorial:'Tutorial','paint-brush':'Marking brushes','paint-colour':'Colour','paint-options':'Brush settings'};
         const options=[];
         if(expanded)options.push(item('home','Close tools','close',{header:true}));
         if(state.gameReplay?.active)options.push(item('replay-round:yes','Play again',null,{text:true}),item('replay-round:no','Keep exploring',null,{text:true}));
-        if(page==='games')options.push(...WELCOME_TRIALS.map(trial=>item('game:'+trial.id,trial.label,null,{selected:state.trials?.active===trial.id,text:true,disabled:Boolean(state.guidedTrial)})));
+        if(page==='games')options.push(...WELCOME_GAMES.map(trial=>item('game:'+trial.id,trial.label,null,{selected:state.trials?.active===trial.id,text:true,disabled:Boolean(state.guidedTrial)})));
         if(page==='input'){
             options.push(item('tool:standard','Standard controllers','controller',{selected:state.controllerTool==='standard'}),item('tool:paint','Precision paint','brush',{selected:state.controllerTool==='paint'}),item('tool:insect','Insect flight','firefly',{selected:state.controllerTool==='insect',disabled:!state.insectControllerAvailable}));
-            options.push(...['controllers','gloves','hands'].map((mode,i)=>item('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],['controller','hand','hand'][i],{selected:(state.trials?.active?stage.trials.mode:state.inputMode)===mode && state.controllerTool==='standard',disabled:state.experiencesUnlocked===false})));
+            options.push(...['controllers','gloves','hands'].map((mode,i)=>item('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],['controller','hand','hand'][i],{selected:(state.trials?.active?stage.trials.mode:state.inputMode)===mode && state.controllerTool==='standard',disabled:state.inputChoiceUnlocked===false})));
         }
         if(page==='audio'){
             options.push(item('pause',voice.paused?'Resume narration':'Pause narration',voice.paused?'play':'pause',{selected:voice.paused}),item('replay','Repeat narration','repeat'),item('mute',voice.muted?'Unmute voice':'Mute voice',voice.muted?'mute':'audio',{selected:voice.muted}),item('volume','Voice volume','audio',{kind:'slider',value:audio.volume,min:0,max:2,step:.05,text:true,worldBox:{x:.122,y:-.07,w:.142,h:.034}}));
@@ -60,7 +61,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         if(state.trials?.active && expanded){const y=Math.min(-.075,gridBottom-.020);options.push(item('game-reset','Reset activity','repeat',{worldBox:{x:.081,y,size:.027}}),item('game-close','Return to tutorial','back',{disabled:Boolean(state.guidedTrial),worldBox:{x:.162,y,size:.027}}));}
         const header=options.find(button=>button.header);if(header)header.worldBox={x:.184,y:.052,size:.027};
         const visibleOptions=expanded?options:[],all=[...items,...visibleOptions].filter(button=>state.settingsAvailable!==false && (button.action!=='Comfort:toggle' || state.inputMode==='hands' || opened));
-        const bounds=controllerMounted?{left:.043,right:.202,top:.109,bottom:Math.min(-.035,...visibleOptions.map(button=>button.worldBox.y-(button.worldBox.h || button.worldBox.size)/2-.004))}:opened?{left:state.experiencesUnlocked?-.052:-.034,right:expanded?.202:state.experiencesUnlocked?.052:.034,top:.073,bottom:Math.min(state.experiencesUnlocked?-.114:-.067,...visibleOptions.map(button=>button.worldBox.y-(button.worldBox.h || button.worldBox.size)/2-.004))}:{left:-.014,right:.014,top:.073,bottom:.045};
+        const bounds=controllerMounted?{left:.043,right:.202,top:.109,bottom:Math.min(-.035,...visibleOptions.map(button=>button.worldBox.y-(button.worldBox.h || button.worldBox.size)/2-.004))}:opened?{left:state.inputChoiceUnlocked?-.052:-.034,right:expanded?.202:state.inputChoiceUnlocked?.052:.034,top:.073,bottom:Math.min(state.inputChoiceUnlocked?-.114:-.067,...visibleOptions.map(button=>button.worldBox.y-(button.worldBox.h || button.worldBox.size)/2-.004))}:{left:-.014,right:.014,top:.073,bottom:.045};
         const width=bounds.right-bounds.left,height=Math.round((bounds.top-bounds.bottom)/width*1000),centerOffset={x:(bounds.left+bounds.right)/2,y:(bounds.top+bounds.bottom)/2};
         for(const button of all){const box=button.worldBox,w=box.w || box.size,h=box.h || box.size;Object.assign(button,{x:(box.x-w/2-bounds.left)/width*1000,y:(bounds.top-box.y-h/2)/width*1000,width:w/width*1000,height:h/width*1000,disabled:Boolean(button.disabled || state.exiting)});}
         for(const button of all)if(button.wheel){const cx=(.122-bounds.left)/width*1000,cy=(bounds.top+.020)/width*1000,angle=button.wheel.index*Math.PI/4-Math.PI/2;button.radial={x:cx,y:cy,inner:.027/width*1000,outer:.071/width*1000,start:angle-Math.PI/8,end:angle+Math.PI/8};}
@@ -78,6 +79,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
     }
     function act(id){
         if(stage.snapshot().exiting || stage.snapshot().settingsAvailable===false)return;
+        if(id==='return-demo'){onReturn?.();return;}
         if(id==='toggle'){opened=!opened;page='home';}
         else if(id==='colour-open'){opened=true;page='paint-colour';}
         else if(id==='colour-close'){opened=false;page='home';}
@@ -88,8 +90,7 @@ export function createWelcomeComfortOptions({stage,onVisualChange=()=>{},onChang
         else if(id==='paint-tools'){page=stage.snapshot().controllerTool!=='paint'?'input':page.startsWith('paint')?'home':'paint-brush';}
         else if(id.startsWith('paint-page:'))page='paint-'+id.slice(11);
         else if(id.startsWith('replay-round:'))stage.replayConversation?.activate(id.slice(13));
-        else if(id.startsWith('game:')){if(stage.snapshot().guidedTrial)return;stage.trials.open(id.slice(5));page='home';}
-        else if(id.startsWith('experience:')){if(!stage.snapshot().experiencesUnlocked)return;stage.switchExperience?.(id.slice(11));page='home';}
+        else if(id.startsWith('game:')){if(stage.snapshot().guidedTrial)return;(stage.openGame || stage.trials.open)(id.slice(5));page='home';}
         else if(id==='game-reset')stage.trials.command('reset');
         else if(id==='game-close'){if(stage.snapshot().guidedTrial)return;stage.trials.close();page='home';}
         else if(id.startsWith('conversation:'))stage.conversation?.activate(id.slice(13));

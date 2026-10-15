@@ -1466,11 +1466,9 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.deepEqual(AR_PHONE_COMFORT.boardScale,[5.6,10.8]);
     assert.match(source, /const width=Math\.round\(\(arWelcomeShowcaseActive\?2500:1400\)\*textureScale\),height=Math\.round\(\(arWelcomeShowcaseActive\?2100:1080\)\*textureScale\)/);
     assert.match(source, /if\(label\.height!==height\)label\.height=height/);
-    assert.match(source, /fitIntroBodyLayout\(ctx, narrative\?\.text \|\| \(introBoardStep==='INTRO 1.2'\?DEMO_QUICK_ACCESS_COPY\['INTRO 1.2'\]:introBoardBody\), contentWidth, bodyBottom - bodyTop\)/);
+    assert.match(source, /drawWelcomeText\(ctx,\{title,caption,layoutCaption,width:960/);
     assert.match(source, /if\(introBoardNextGuideVisible && introBoardNextGuide\)/);
     assert.match(source, /function revealIntroBoardNextGuide\(\)/);
-    assert.match(source, /wrappedTextureLines\(ctx, visibleParagraphs\[paragraphIndex\] \|\| '', contentWidth\)/);
-    assert.match(source, /for \(const \[lineIndex, line\] of visibleLines\.entries\(\)/);
     assert.doesNotMatch(source, /bodyParagraphs\.slice\(0, 3\)/);
     assert.match(styles, /\.tryit-board-text-window \{[^}]*min-height:0;[^}]*overflow:hidden;/);
     assert.match(source, /introLocalPosition\(introWorldAnchor, AR_PHONE_COMFORT\.boardPosition\)/);

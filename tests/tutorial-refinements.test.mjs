@@ -106,16 +106,20 @@ test('fruit asset queue limits concurrent parsing and supports cancellation betw
 });
 
 
-test('guided hand game unlocks all three experiences only after a round and switches without restarting',()=>withAssets(async()=>{
+test('guided hand game unlocks only input choice and hands off to the main demo',()=>withAssets(async()=>{
  const saved=globalThis.sessionStorage,values=new Map();globalThis.sessionStorage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
- let paused=0;const stage=createWelcomePracticeScene({embedded:true,voice:{status:()=>({playing:false,paused:false,available:true}),speak(){},stop(){},pause(){paused++;},resume(){},unlock(){}}});
+ let paused=0,completed=0;const stage=createWelcomePracticeScene({embedded:true,onComplete:()=>completed++,voice:{status:()=>({playing:false,paused:false,available:true}),speak(){},stop(){},pause(){paused++;},resume(){},unlock(){}}});
  try{await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.previewLesson('hand-game');
  const tick=n=>{for(let i=0;i<n;i++)stage.update(.05,{viewer,floor:0});};tick(8);
- assert.equal(stage.snapshot().guidedTrial,'hand-game');assert.equal(stage.trials.mode,'hands');assert.equal(paused,0,'guided game keeps the narration active');assert.equal(stage.snapshot().experiencesUnlocked,false);assert.equal(stage.switchExperience('controllers'),false);
+ assert.equal(stage.snapshot().guidedTrial,'hand-game');assert.equal(stage.trials.mode,'hands');assert.equal(paused,0);assert.equal(stage.snapshot().inputChoiceUnlocked,false);assert.equal(stage.setInputMode('controllers'),false);
  for(let turn=0;turn<5 && !stage.trials.snapshot().game.finished;turn++){const cells=stage.trials.snapshot().game.cells;stage.trials.command('cell:'+cells.findIndex(c=>!c));tick(15);}
- assert.equal(stage.snapshot().experiencesUnlocked,true);tick(26);assert.equal(stage.phase,'interaction-methods');
- assert.equal(stage.switchExperience('controllers'),true);tick(2);assert.equal(stage.snapshot().controlOrb.visible,true);assert.equal(stage.snapshot().inputMode,'controllers');assert.equal(stage.controllerLasersVisible,true);
- assert.equal(stage.switchExperience('gloves'),true);tick(2);assert.equal(stage.snapshot().controlOrb.visible,false);assert.equal(stage.snapshot().inputMode,'gloves');
- assert.equal(stage.switchExperience('hands'),true);assert.equal(stage.trials.active,'butterflies');assert.equal(stage.trials.mode,'hands');stage.trials.close();assert.equal(stage.phase,'explore');
+ assert.equal(stage.snapshot().inputChoiceUnlocked,true);tick(26);assert.equal(stage.phase,'interaction-methods');
+ assert.equal(stage.setInputMode('controllers'),true);assert.equal(stage.phase,'interaction-methods');assert.equal(stage.trials.active,null);
+ stage.setInputMode('gloves');assert.equal(stage.phase,'interaction-methods');assert.equal(stage.trials.active,null);assert.equal(stage.snapshot().inputMode,'gloves');
+ stage.setInputMode('hands');assert.equal(stage.trials.active,null);assert.equal(stage.phase,'interaction-methods');
+ tick(1200);assert.equal(completed,1,'closing narration hands off instead of remaining in explore');
+ stage.resumeGame('orb-dance');tick(2);assert.equal(stage.snapshot().controlOrb.visible,true);
+ assert.equal(stage.openGame('fruit-brush'),true);assert.equal(stage.snapshot().inputMode,'gloves');
+ assert.equal(stage.openGame('hand-play'),true);assert.equal(stage.trials.active,'butterflies');stage.trials.close();assert.equal(stage.phase,'explore');
  }finally{stage.destroy();globalThis.sessionStorage=saved;}
 }));

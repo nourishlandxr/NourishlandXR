@@ -1,4 +1,9 @@
 // Trial progress is independent of the guided lesson and can be revisited.
+export const WELCOME_PRACTICE_GROUPS=Object.freeze([
+    {id:'orb-dance',label:'Orb and dance with Zinnia',input:'controllers'},
+    {id:'fruit-brush',label:'Fruit, brush and special controllers',input:'gloves'},
+    {id:'hand-play',label:'Butterfly bucket and tic-tac-toe',input:'hands'}
+]);
 export const WELCOME_TRIALS=Object.freeze([
     {id:'dragonfly',label:'Dragonfly Flight'},
     {id:'strawberry',label:'Strawberry Planting'},
@@ -8,6 +13,7 @@ export const WELCOME_TRIALS=Object.freeze([
     {id:'peek-frame',label:'Peek picture frame'},
     {id:'tic-tac-toe',label:'Tic-Tac-Toe with Zinnia'}
 ]);
+export const WELCOME_GAMES=Object.freeze([...WELCOME_PRACTICE_GROUPS,...WELCOME_TRIALS]);
 export const TRIAL_INPUT_MODES=Object.freeze(['controllers','gloves','hands']);
 export const TRIAL_PLANT_CARDS=Object.freeze([
     {id:'strawberry',label:'Strawberry',role:'Low fruit layer',colour:'#c76b79',tree:false},

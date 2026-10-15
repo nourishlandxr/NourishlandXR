@@ -22,7 +22,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "SPACE 1.1",
         "act": "Meet the panel",
         "title": "Get comfortable in this space",
-        "main": "This demo uses prepared examples in the space around you. The Living Frame guides you through them.\n\nYour Control Panel keeps selected information and useful tools close by.\n\nTake your time. Continue when you are ready, and use Back to revisit a step.",
+        "main": "In this demo, we’ll explore the tools you can use in Creator mode to build a learning place. You’ll practise with prepared examples, guided by the Living Frame.\n\nYour Control Panel keeps selected information and useful tools close by.\n\nTake your time. Continue when you are ready, and use Back to revisit a step.",
         "panel": "A compact panel with its companion image visible. Media, Controls and Settings are initially closed.",
         "hint": "Continue to the first sample.",
         "art": null

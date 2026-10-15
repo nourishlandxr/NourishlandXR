@@ -1,4 +1,5 @@
-import {WELCOME_EXPERIENCES} from './welcomeExperienceUnlock.js';
+import {WELCOME_GAMES} from './welcomeTrialState.js';
+import {WELCOME_INPUT_METHODS} from './welcomeExperienceUnlock.js';
 import {createDirectPanelGesture} from './xrDirectInteraction.js';
 import {lowerCompanionLayout} from './lowerCompanionLayout.js';
 import {getWelcomeNarrationSettings,setWelcomeNarrationSettings} from './welcomePracticeVoice.js';
@@ -214,13 +215,14 @@ export function controlPanelHeight(lines,largeText=false,pathway=false,utilities
 }
 
 // One row model drives both the DOM companion and the Quest canvas/hit regions.
-export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='outline',spatialScale=1,performanceSettings=null,infoOpacity=.38,cellOpacity=.42,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,languageOpen=false,demoSound=null,voiceControls=null,tutorialAvailable=false,developerLabAvailable=false,experiencesAvailable=false}={}){
+export function panelSettingsControls({simpleDesktop=false,headset=false,largeText=false,handVisualMode='outline',spatialScale=1,performanceSettings=null,infoOpacity=.38,cellOpacity=.42,orbModel='improved',totemModel='botanical',rainEnabled=true,graphicsQuality=getSpatialVisualSettings().graphicsQuality,rainQuality=getSpatialVisualSettings().rainQuality,floorOffset=0,insects=getSpatialVisualSettings().insects,graphicsOpen=false,soundOpen=false,languageOpen=false,demoSound=null,voiceControls=null,tutorialAvailable=false,developerLabAvailable=false,inputChoiceAvailable=false,inputMethod='controllers',gamesAvailable=false,gamesOpen=false}={}){
     const choice=(action,label,group,title,y,x=540,width=404)=>({action,label,ariaLabel:title || label,settingGroup:group,settingLabel:title,x,y,width,height:58});
     const slider=(action,group,title,value,min,max,step,y)=>({...choice(action,'',group,title,y),kind:'slider',value,min,max,step});
     const includeLanguage=simpleDesktop || typeof document!=='undefined';
     const navigation=choice('GraphicsMenu',graphicsOpen?'‹ General':'Graphics ›','navigation','',100,56,888);
     const close={...choice('CloseSettings','Done','close','Close settings',26,806,138),kind:'settings-close'};
     const frameControls=y=>Object.entries(LIVING_FRAME_QUALITIES).map(([quality,item],index)=>({...choice('LivingFrame:'+quality,item.label,'living-frame','',y,56+index*300,288),selected:getSpatialVisualSettings().livingFrameQuality===quality}));
+    if(gamesOpen)return [choice('WelcomeGames','‹ General','navigation','',100,56,888),...WELCOME_GAMES.map((game,i)=>({...choice('WelcomeGame:'+game.id,game.label,'games','',202+Math.floor(i/2)*88,56+i%2*450,438),height:70})),close];
     if(languageOpen)return [choice('LanguageMenu','‹ General','navigation','',100,56,888),...[['en','English'],['pt-PT','Português (Portugal)'],['nl-NL','Nederlands']].map(([code,label],index)=>({...choice('Language:'+code,label,'language','Language',202+index*88,56,888),selected:currentNxrLanguage()===code})),close];
     if(soundOpen && demoSound)return [choice('SoundMenu','‹ General','navigation','',100,56,888),slider('MusicVolume','music','Music volume',demoSound.music,0,1,.01,202),slider('FxVolume','fx','FX volume',demoSound.fx,0,1,.01,290),choice('Haptics',demoSound.haptics?'On':'Off','haptics','Haptics',378),choice('Narration',getWelcomeNarrationSettings().enabled?'On':'Off','narration','Spoken guidance',466),slider('NarrationVolume','narration-volume','Voice volume',getWelcomeNarrationSettings().volume,0,2,.05,554),choice('NarrationReplay','↻ Replay','narration-replay','Replay Zinnia',642),choice('VoicePause',voiceControls?.paused?'▶ Resume':'Ⅱ Pause','voice-pause','Pause or resume Zinnia',714),...(voiceControls?.available?[choice('VoiceListen',voiceControls.listening?'■ Finish':'● Speak','voice-listen','Speak to Zinnia',786)]:[]),close];
     if(simpleDesktop)return [slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),choice('LanguageMenu','Language ›','language','',290,56,888),...frameControls(378),slider('LivingFrameHeight','living-frame-height','Living Frame height',getSpatialVisualSettings().livingFrameHeight||0,-1,1,.05,466),choice('SettingsHelp','Help','help','',570,56,888),close];
@@ -238,7 +240,8 @@ export function panelSettingsControls({simpleDesktop=false,headset=false,largeTe
         {...choice('OrbModel',ORB_MODELS[orbModel]?.label || 'Living sphere','orb-model','Plant Orb',690,56,888),height:46},
         choice('SettingsHelp','Help','help','',746,56,888),close];
     return [
-        ...(experiencesAvailable?WELCOME_EXPERIENCES.map((experience,i)=>({...choice('WelcomeExperience:'+experience.id,'','experiences','',26,480+i*78,64),height:58,icon:experience.icon,ariaLabel:experience.label,description:experience.label})):[]),
+        ...(inputChoiceAvailable?WELCOME_INPUT_METHODS.map((experience,i)=>({...choice('WelcomeInput:'+experience.id,'','experiences','',26,480+i*78,64),height:58,icon:experience.icon,ariaLabel:experience.label,description:experience.label,selected:inputMethod===experience.id})):[]),
+        ...(gamesAvailable?[{...choice('WelcomeGames','','games','',26,714,64),height:58,icon:'games',ariaLabel:'Games',description:'Revisit the practice activities.'}]:[]),
         slider('InfoOpacity','info-opacity','Main / Control glass',infoOpacity,0,1,.01,104),
         slider('TextSize','text','Text size',largeText?1:0,0,1,1,184),
         slider('SpatialScale','scale','Panel size',spatialScale,.85,1.2,.01,264),
@@ -330,7 +333,7 @@ function controlDescription(item={}){
 }
 
 let panelInstance=0;
-export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, directInteractionOnly = () => false, allowPanelGrip = () => true, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, getVoiceControls=()=>null, onRestartTutorial=null,onDeveloperLab=null,onExperienceSwitch=null,experiencesAvailable=()=>false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
+export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = () => true, root, headset = false, phoneAR = false, simpleDesktop = false, rainIntensity = 1, rainStyle = 'v2', cellOpacity = getSpatialVisualSettings().cellOpacity, handMode=getSpatialVisualSettings().handMode, rainEnabled=true, panelHints = [], onFloorOffset=()=>{}, onGraphicsQuality=()=>{}, onRainQuality=()=>{}, onPerformanceAction=()=>{}, onInfoOpacity=()=>{}, onOrbModel=()=>{}, onTotemModel=()=>{}, onHandMode=()=>{}, onRainIntensity = () => {}, onRainStyle = () => {}, onCellOpacity = () => {}, onGrab = () => {}, onGripEvent = () => false, inputOccupied = () => false, directInteractionOnly = () => false, allowPanelGrip = () => true, onInteract = () => {}, onExplorerAction = () => {}, demoSound=null, getVoiceControls=()=>null, onRestartTutorial=null,onDeveloperLab=null,onPracticeGame=null,onInputMethodChange=()=>{},getInputMethod=()=> 'controllers',gamesAvailable=()=>false,inputChoiceAvailable=()=>false, onEdit = () => {}, onPathwayAction = () => {}, onModuleAction = () => {}, onUtilityAction = () => {}, onMove = () => {} } = {}) {
     root?.classList.toggle('is-simple-desktop-ar',simpleDesktop);
     let rayFilter=()=>true;
     let comfortContext=null,panelOpacity=1,panelIntroductionAt=null;
@@ -397,7 +400,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
     const explorerElement=document.createElement('aside');explorerElement.className='nlxr-settings-companion nlxr-explorer-companion';explorerElement.setAttribute('aria-label','Knowledge options');explorerElement.hidden=true;root?.append(explorerElement);
     let confirmation=null,confirmationSnapshot=null;
     let objectContext=null,stageContext=null,panelShift=null,guidanceAction='',guidanceStartedAt=0,minimizedDragUntil=0;
-    let sliderGrab=null,finishingSliderSource=null,graphicsOpen=false,soundOpen=false,languageOpen=false;
+    let sliderGrab=null,finishingSliderSource=null,graphicsOpen=false,soundOpen=false,languageOpen=false,gamesOpen=false;
     let spatialMove=null,spatialGrabPending=null,finishingMoveSource=null,panelGestureSource=null,manuallyPositioned=false,firstPlacement=true,mediaPose=null,settingsPose=null;
     let removeXrControls=()=>{};
     let handReferenceSpace=null;
@@ -562,7 +565,9 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         if(action==='Narration'){setWelcomeNarrationSettings({enabled:!getWelcomeNarrationSettings().enabled});renderSettings();return;}
         if(action==='SettingsHelp'){settingsOpen=false;tab='Help';page=0;render(true);return;}
         if(action==='DeveloperLab'){onDeveloperLab?.();return;}
-        if(action.startsWith('WelcomeExperience:') && experiencesAvailable()){settingsOpen=false;renderSettings();onExperienceSwitch?.(action.slice(18));return;}
+        if(action==='WelcomeGames'){gamesOpen=!gamesOpen;graphicsOpen=soundOpen=languageOpen=false;renderSettings();return;}
+        if(action.startsWith('WelcomeInput:') && inputChoiceAvailable()){onInputMethodChange(action.slice(13));renderSettings();return;}
+        if(action.startsWith('WelcomeGame:') && gamesAvailable()){settingsOpen=false;gamesOpen=false;renderSettings();onPracticeGame?.(action.slice(12));return;}
         if(action==='RestartTutorial'){settingsOpen=false;renderSettings();onRestartTutorial?.();return;}
         if(action==='Previous')page=0;
         if(action==='Next')page=Math.min(pages().length-1,page+1);
@@ -670,7 +675,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
         panel.addEventListener('pointermove',event=>{if(!drag || drag.pointer!==event.pointerId)return;lowerDomPositions[id]={left:Math.max(8,Math.min(innerWidth-panel.offsetWidth-8,event.clientX-drag.x)),top:Math.max(8,Math.min(innerHeight-90,event.clientY-drag.y))};renderLowerCompanions();});
         panel.addEventListener('pointerup',()=>{drag=null;});panel.addEventListener('pointercancel',()=>{drag=null;});
     }
-    const settingsControls=()=>panelSettingsControls({simpleDesktop,headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,cellOpacity:meshCellOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,languageOpen,demoSound:demoSound?.volumes(),voiceControls:getVoiceControls?.(),tutorialAvailable:typeof onRestartTutorial==='function',developerLabAvailable:typeof onDeveloperLab==='function',experiencesAvailable:experiencesAvailable()});
+    const settingsControls=()=>panelSettingsControls({simpleDesktop,headset,handVisualMode,spatialScale,performanceSettings,infoOpacity,cellOpacity:meshCellOpacity,orbModel,totemModel,rainEnabled,graphicsQuality,rainQuality,largeText,floorOffset,graphicsOpen,soundOpen,languageOpen,demoSound:demoSound?.volumes(),voiceControls:getVoiceControls?.(),tutorialAvailable:typeof onRestartTutorial==='function',developerLabAvailable:typeof onDeveloperLab==='function',inputChoiceAvailable:inputChoiceAvailable(),inputMethod:getInputMethod(),gamesAvailable:gamesAvailable(),gamesOpen});
     function renderSettings(){
         renderExplorer();
         syncPanelOpenerButtons();
@@ -695,7 +700,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             settingsElement.style.top=Math.max(8,above?main.top-(media?.height || main.height)-12:main.top)+'px';
             settingsElement.style.bottom='auto';
         }else if(!renderer){settingsElement.style.removeProperty('left');settingsElement.style.removeProperty('top');settingsElement.style.removeProperty('bottom');}
-        settingsElement.innerHTML='<header><h2>'+(languageOpen?'Language':soundOpen?'Sound':graphicsOpen?'Graphics':'Settings')+'</h2><button type="button" class="nlxr-settings-close" aria-label="Close settings">Done</button></header><section><div class="nlxr-settings-actions"></div></section>';
+        settingsElement.innerHTML='<header><h2>'+(gamesOpen?'Games':languageOpen?'Language':soundOpen?'Sound':graphicsOpen?'Graphics':'Settings')+'</h2><button type="button" class="nlxr-settings-close" aria-label="Close settings">Done</button></header><section><div class="nlxr-settings-actions"></div></section>';
         settingsElement.querySelector('.nlxr-settings-close').addEventListener('click',()=>{settingsOpen=false;render(true);});
         const actions=settingsElement.querySelector('.nlxr-settings-actions');
         for(const item of settingsControls().filter(item=>item.action!=='CloseSettings')){
@@ -1206,7 +1211,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             for(const button of card.controls){const aimed=card.hoverAction===button.action;ctx.fillStyle=aimed?'rgba(210,235,224,.3)':'rgba(238,250,242,.13)';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,18);ctx.fill();ctx.fillStyle=button.disabled?'#889e95':'#fcfff4';ctx.font='650 28px Manrope, system-ui';ctx.fillText(button.label,button.x+18,button.y+14,button.width-36);}return c;
         }
         if(card.settings){
-            ctx.fillStyle='#fcfff7';ctx.font='700 42px Manrope, system-ui';ctx.fillText(card.viewOpen?'VIEW':card.languageOpen?'Language':card.soundOpen?'Sound':card.graphicsOpen?'Graphics':'Settings',56,30,700);
+            ctx.fillStyle='#fcfff7';ctx.font='700 42px Manrope, system-ui';ctx.fillText(card.gamesOpen?'Games':card.viewOpen?'VIEW':card.languageOpen?'Language':card.soundOpen?'Sound':card.graphicsOpen?'Graphics':'Settings',56,30,700);
             const groups=new Map();
             card.controls.forEach(button=>{if(button.settingLabel && !['CloseSettings','CloseView'].includes(button.action) && !groups.has(button.settingGroup))groups.set(button.settingGroup,{label:button.settingLabel,y:button.y,paired:['models','performance'].includes(button.settingGroup)});});
             groups.forEach(group=>{
@@ -1671,7 +1676,7 @@ export function createPimInfoPanel({ onLimoAction = () => {}, limoAvailable = ()
             if(!renderer || !pose || detached)return;const p=pages();page=Math.min(page,p.length-1);
             const pimPathSelected=hasPimPath(),plantMedia=Boolean(identity?.media?.image);
             const card={id:'control',comfort:comfortContext,limo:selection?.limo,infoOpacity,headset,hidden,panelGuidance:guidanceAction==='ToggleMedia',tab,height:comfortContext?(comfortContext.height || 700):hidden?1000:spatialHeight(),largeText,guided,grabState:spatialMove?.panel==='main'?'held':spatialGrabPending?.panel==='main'?'ready':hoveredPanelId==='control'?'hover':'',guidancePhase:guidanceAction?Math.floor(lastTime/180):0,fadeDuration:introduction?1500:450,controls:comfortContext?.items || (headset?spatialControls():controls()),hoverAction:hoveredPanelId==='control'?hoveredAction:'',railCollapsed,mediaCollapsed,pathway:pathwayContext,progress:progressState(),accent:selection?.mesh==='lim'?selection.accent:'',plant:identity?.plant || selection?.plant || 'Control panel',scientific:identity?.scientific || (identity?'Selected plant':''),title:panelHeading(),trail:tab==='Details'?(readingTrail()):'',lines:p[page],performanceReadout:performanceSettings?.label || '',hint:currentHint(),hoverHint:hoveredPanelId==='control'?hoveredDescription:'',page:'',metadata:metadata()};
-            const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,languageOpen,performanceMessage:performanceStatus(),infoOpacity,height:840,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
+            const settingsCard={id:'settings',settings:true,graphicsOpen,soundOpen,languageOpen,gamesOpen,performanceMessage:performanceStatus(),infoOpacity,height:840,controls:settingsControls(),hoverAction:hoveredPanelId==='settings'?hoveredAction:'',hoverHint:hoveredPanelId==='settings'?hoveredDescription:''};
             // Both eyes use the last XR update time, not different wall-clock samples.
             const imageFade=Math.min(1,Math.max(0,((lastTime || performance.now())-mediaFadeStartedAt)/(selection?.imageFadeMs || MEDIA_FADE_MS)));
             if(imageFade>=1)mediaPreviousImage=null;

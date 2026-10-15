@@ -4,7 +4,7 @@ import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {createWelcomeButterflyBucket} from '../app/services/welcomeButterflyBucket.js';
 import {createWelcomeGameReplay} from '../app/services/welcomeGameReplay.js';
 import {createWelcomePlacementGrab} from '../app/services/welcomePlacementGrab.js';
-import {unlockWelcomeExperiences,welcomeExperiencesUnlocked} from '../app/services/welcomeExperienceUnlock.js';
+import {unlockWelcomeInputChoice,welcomeInputChoiceUnlocked} from '../app/services/welcomeExperienceUnlock.js';
 import {prepareBananaHalf,tryBananaBite} from '../app/services/welcomeBananaBite.js';
 import {panelSettingsControls} from '../app/services/pimInfoPanel.js';
 
@@ -21,14 +21,14 @@ test('butterfly pinch releases to a brief flight and perches follow current real
  move(new THREE.Vector3(...bucket.snapshot().insects[0].position),true);assert.equal(bucket.snapshot().insects[0].state,'flying','tracking recovery requires a released pinch first');
  }finally{bucket.destroy();}
 });
-test('only a completed tic-tac-toe outcome unlocks the session experience switches',()=>{
+test('only a completed tic-tac-toe outcome unlocks the free input choice',()=>{
  const saved=globalThis.sessionStorage,values=new Map();globalThis.sessionStorage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
- try{assert.equal(unlockWelcomeExperiences({finished:false,winner:null}),false);assert.equal(welcomeExperiencesUnlocked(),false);assert.equal(unlockWelcomeExperiences({finished:true,draw:true}),true);assert.equal(welcomeExperiencesUnlocked(),true);}finally{globalThis.sessionStorage=saved;}
+ try{assert.equal(unlockWelcomeInputChoice({finished:false,winner:null}),false);assert.equal(welcomeInputChoiceUnlocked(),false);assert.equal(unlockWelcomeInputChoice({finished:true,draw:true}),true);assert.equal(welcomeInputChoiceUnlocked(),true);}finally{globalThis.sessionStorage=saved;}
 });
-test('the main demo settings expose three distinct compact experience controls after unlocking',()=>{
- const locked=panelSettingsControls({headset:true});assert.equal(locked.some(c=>c.action.startsWith('WelcomeExperience:')),false);
- const controls=panelSettingsControls({headset:true,experiencesAvailable:true}),switches=controls.filter(c=>c.action.startsWith('WelcomeExperience:'));
- assert.deepEqual(switches.map(c=>c.action),['WelcomeExperience:controllers','WelcomeExperience:gloves','WelcomeExperience:hands']);assert.equal(new Set(switches.map(c=>c.icon)).size,3);
+test('the main demo settings expose three distinct compact input controls after unlocking',()=>{
+ const locked=panelSettingsControls({headset:true});assert.equal(locked.some(c=>c.action.startsWith('WelcomeInput:')),false);
+ const controls=panelSettingsControls({headset:true,inputChoiceAvailable:true}),switches=controls.filter(c=>c.action.startsWith('WelcomeInput:'));
+ assert.deepEqual(switches.map(c=>c.action),['WelcomeInput:controllers','WelcomeInput:gloves','WelcomeInput:hands']);assert.equal(new Set(switches.map(c=>c.icon)).size,3);
  for(const control of switches){assert.ok(control.ariaLabel.length>10);assert.ok(control.width>=58 && control.height>=58);assert.equal(controls.some(other=>other!==control && control.x<other.x+other.width && control.x+control.width>other.x && control.y<other.y+other.height && control.y+control.height>other.y),false);}
 });
 test('placement follows the full controller pose and only commits on release',()=>{
@@ -46,3 +46,5 @@ test('replay waits until speech ends, accepts voice yes/no, and releases its mic
  const replay=createWelcomeGameReplay({createVoice:options=>(handlers=options,{listen(){listens++;},cancel(){cancels++;},destroy(){}}),onYes:()=>yes++,onNo:()=>no++});
  try{replay.begin();replay.update(1,false);assert.equal(listens,0);replay.update(.3,true);assert.equal(listens,1);handlers.onText('yes please');assert.equal(yes,1);replay.begin();replay.update(.3,true);handlers.onText('no thanks');assert.equal(no,1);assert.equal(replay.state().active,false);assert.ok(cancels>=2);}finally{replay.destroy();globalThis.sessionStorage=saved;}
 });
+
+test('Games lists practice activities independently of input unlock',()=>{const controls=panelSettingsControls({headset:true,gamesAvailable:true});assert.ok(controls.some(c=>c.action==='WelcomeGames'));assert.equal(controls.some(c=>c.action.startsWith('WelcomeInput:')),false);const games=panelSettingsControls({headset:true,gamesOpen:true});for(const id of ['orb-dance','fruit-brush','hand-play','tic-tac-toe'])assert.ok(games.some(c=>c.action==='WelcomeGame:'+id));});
