@@ -20,7 +20,7 @@ test('every authored main-demo paragraph has a complete saved friendly Marin rec
     const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
     const start=source.indexOf('function showDemoFruitDiscovery('),end=source.indexOf('function showDemoPanelIntroduction(',start);
     const bodies=[...source.slice(start,end).matchAll(/'((?:[^'\\]|\\.)*)'/g)].map(match=>match[1].replaceAll('\\n','\n'));
-    for(const prefix of ['Look closely at the plant','PIMO is now closed']){const text=bodies.find(body=>body.startsWith(prefix));assert.ok(text);for(const paragraph of text.split(/\n\n+/))expected.add(normalizeNarrationText(paragraph));}
+    for(const prefix of ['Look closely at the plant','Each fruit has its own shape']){const text=bodies.find(body=>body.startsWith(prefix));assert.ok(text);for(const paragraph of text.split(/\n\n+/))expected.add(normalizeNarrationText(paragraph));}
     for(const text of demoNarrationContent())expected.add(text);
     assert.ok(Object.keys(bank.catalog).length>=expected.size);
     for(const text of expected){

@@ -22,34 +22,34 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "SPACE 1.1",
         "act": "Meet the panel",
         "title": "Get comfortable in this space",
-        "main": "In this demo, we’ll explore the tools you can use in Creator mode to build a learning place. You’ll practise with prepared examples, guided by the Living Frame.\n\nYour Control Panel keeps selected information and useful tools close by.\n\nTake your time. Continue when you are ready, and use Back to revisit a step.",
+        "main": "In this demo, we’ll explore Creator mode tools for building a learning place. The Living Frame will guide you through prepared examples.",
         "panel": "A compact panel with its companion image visible. Media, Controls and Settings are initially closed.",
-        "hint": "Continue to the first sample.",
+        "hint": "Continue to the first sample. Use Back to revisit a step.",
         "art": null
     },
     {
         "id": "SPACE 1.2",
         "act": "Place a sample",
         "title": "Imagine a place to learn",
-        "main": "A garden can become an outdoor classroom. A walk can reveal connections between plants, wildlife and the people who care for a place.\n\nPlant Orbs open plant information. Notes hold observations and messages. Areas and Totems help people find their way.\n\nLearning Pathways connect discoveries with questions and activities. Together, these tools let a place grow with shared knowledge.",
+        "main": "A garden can become an outdoor classroom. A walk can reveal connections between plants, wildlife and the people who care for a place.\n\nCreator tools let you attach discoveries, observations and learning questions to that place.",
         "panel": "Keep the companion image available without repeating the main message.",
-        "hint": "Begin with one small discovery.",
+        "hint": "Creator tools: Plant Orbs · Notes · Areas and Totems · Learning Pathways. Begin with one discovery.",
         "art": "curiosity"
     },
     {
         "id": "SPACE 1.3",
         "act": "Place a sample",
         "title": "Begin with one small discovery",
-        "main": "Give your first discovery a location.\n\nChoose an open space and place a Plant Orb. This spatial tag connects what you learn to a position in your surroundings.",
+        "main": "A Plant Orb connects a discovery to a position in your surroundings. Let’s give the first one a place.",
         "panel": "Keep the image panel closed. Reveal the prepared Pigeon Pea image after placement at ELEMENTS 1.6.",
-        "hint": "Place the sample when you are ready.",
+        "hint": "Choose an open space in front of you, then place the sample Plant Orb.",
         "art": null
     },
     {
         "id": "ELEMENTS 1.5",
         "act": "Place a sample",
         "title": "Place the first Plant Orb",
-        "main": "Place the first Plant Orb in a comfortable spot in front of you. In a real place, its Orb would sit beside the plant.",
+        "main": "In a real place, this Orb would sit beside the plant it describes.",
         "panel": "Existing placement controls; media closed.",
         "hint": "Aim at an open space and use the placement control.",
         "art": null
@@ -58,16 +58,16 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.6",
         "act": "Open a profile",
         "title": "Your first plant to explore",
-        "main": "Your Orb is placed. This sample represents Pigeon Pea, a shrub grown for food and its useful roles in a garden.\n\nSelect the Orb to open its Tag, then unfold Curiosity to follow its connected information.",
+        "main": "Your first Orb represents Pigeon Pea, a shrub grown for food and for its useful roles in a garden. Its information begins with a compact Tag and opens into Curiosity.",
         "panel": "Selected plant identity. Curiosity is the standard presentation.",
-        "hint": "Select the Pigeon Pea Orb.",
+        "hint": "Select the Pigeon Pea Orb to open its Tag, then unfold Curiosity.",
         "art": null
     },
     {
         "id": "ELEMENTS 1.7",
         "act": "Open a profile",
         "title": "The compact Tag view",
-        "main": "Tag gives you the plant’s identity at a glance. Continue to unfold Curiosity and discover the connected information cells.",
+        "main": "Tag gives you the plant’s identity at a glance. Curiosity reveals the connected information behind it.",
         "panel": "Optional compact view, not a required lesson.",
         "hint": "Continue to Curiosity.",
         "art": null
@@ -85,7 +85,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "PIMO 1.2a",
         "act": "Find a useful detail",
         "title": "Follow Uses",
-        "main": "Select Culinary to discover the food examples.",
+        "main": "The Uses branch includes ways people use this plant for food.",
         "panel": "Uses information and its immediate child cells.",
         "hint": "Select Culinary.",
         "art": null
@@ -94,7 +94,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "PIMO 1.2b",
         "act": "Find a useful detail",
         "title": "Explore one use",
-        "main": "Select Fresh peas to see one way Pigeon Pea can be used.",
+        "main": "Fresh peas is one example of how Pigeon Pea can be used.",
         "panel": "Culinary information and its child cells.",
         "hint": "Select Fresh peas.",
         "art": null
@@ -112,25 +112,25 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "PANEL 1.1",
         "act": "Meet the panel tools",
         "title": "A closer look",
-        "main": "Want a closer look? The Image panel shows the image connected to your selection. Its label and the Control panel label are highlighted so you can find them. Use the Image button on the Control panel to show or hide the picture.",
+        "main": "The Image panel shows the picture connected to what you selected. You can open it whenever you want a closer look.",
         "panel": "Open the selected cell or plant’s authored image. Media is a panel opener, visually distinct from demo progression actions.",
-        "hint": "Review the image, then continue.",
+        "hint": "Use Image in the Control Panel to show or hide the picture. Review it, then continue.",
         "art": null
     },
     {
         "id": "PANEL 1.2",
         "act": "Meet the panel tools",
         "title": "Keep the space clear",
-        "main": "You have explored Tag, Curiosity and the Fruit Discovery Window. Your Orbs are now tucked away to make room for the next step.\n\nThe Control Panel footer brings elements back when you want them. Green outlines mean visible; red outlines mean hidden. Notes and Totems join this row as you meet them.\n\nControls opens the options for the object you select. Fruit Discovery Window has its own simple controls.",
+        "main": "You have explored Tag, Curiosity and the Fruit Discovery Window. The Orbs are tucked away for now, but the Control Panel can bring them back.\n\nAs you meet more elements, their controls will appear here too.",
         "panel": "Demonstrate the growing visibility footer and the contextual Controls sub-panel after the automatic PIMO and FDW showcase. Keep all plant profiles closed.",
-        "hint": "Select ORB to show your Orbs again. CONTROL PANEL collapses the panel to its small restore button.",
+        "hint": "Select ORB to show Orbs again. Green outline: visible · Red outline: hidden. Controls opens options for a selected object.",
         "art": null
     },
     {
         "id": "ELEMENTS 1.9",
         "act": "Compare profiles",
         "title": "Another plant, another story",
-        "main": "Every plant brings a different story. Place another Orb beside Pigeon Pea, then ask Zinnia to find a plant you want to explore.",
+        "main": "Every plant brings a different story. This time, you can choose which plant the Orb represents.",
         "panel": "Keep the first sample and its information available.",
         "hint": "Place a second Plant Orb.",
         "art": null
@@ -139,18 +139,18 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.11",
         "act": "Compare profiles",
         "title": "Place another Plant Orb",
-        "main": "Place a plain Orb beside Pigeon Pea. Then tell Zinnia a common or scientific plant name using the microphone, or enter the name in the Living Frame.",
+        "main": "This second Orb begins without a plant identity. Choose one, and its information can grow from there.",
         "panel": "Existing placement controls; media closed.",
-        "hint": "Place the second Orb, then choose its plant.",
+        "hint": "Place the second Orb. Say a common or scientific plant name into the microphone, or type it in the Living Frame.",
         "art": null
     },
     {
         "id": "ELEMENTS 1.12",
         "act": "Compare profiles",
         "title": "Thousands of plants. Thousands of stories.",
-        "main": "Thousands of plants. Thousands of living stories. Ask Zinnia to find a plant you are curious about. Confirm its species, see a reference photograph, and explore starter Plant cells built from available information. These Elements can grow as more knowledge is added.",
+        "main": "Thousands of plants, thousands of living stories. Zinnia can find a plant you’re curious about and open a starting point for discovery. Its information can grow as more knowledge is added.",
         "panel": "Selected plant information only; Curiosity remains standard.",
-        "hint": "Ask Zinnia for a plant, then confirm the species.",
+        "hint": "Name a plant for Zinnia, confirm the species, then explore its photograph and starter Plant cells.",
         "art": null
     },
     {
@@ -166,7 +166,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.16",
         "act": "Leave a message",
         "title": "Leave a message here",
-        "main": "Place this example Note beside the plants. In a real place, you could leave a seasonal observation or a useful message for the next visitor.",
+        "main": "A Note can hold a seasonal observation or a useful message for the next visitor.",
         "panel": "Existing Note placement controls. Prepared message: Two sample plant profiles are available here. Select either Orb to explore.",
         "hint": "Choose a location and place the Note.",
         "art": "note"
@@ -175,7 +175,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.17",
         "act": "Leave a message",
         "title": "A message connected to place",
-        "main": "Select the Note to read it. Someone visiting later can discover the message where it belongs.",
+        "main": "Someone visiting later can discover this message right where it belongs.",
         "panel": "Selected Note content and existing Note controls.",
         "hint": "Select the Note, then continue to organise the area.",
         "art": null
@@ -229,7 +229,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "ELEMENTS 1.21",
         "act": "Connect areas",
         "title": "Follow the direction",
-        "main": "Select the Second Area sign on My area. Its arrow points toward the destination, helping you see where to go next.",
+        "main": "A sign on My area points toward the next destination, helping visitors find their way.",
         "panel": "Remote Totem notification uses its existing white strip. No surrounding destination outline.",
         "hint": "Select the Second Area sign.",
         "art": null
@@ -249,7 +249,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Explore, learn and plan",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
-        "hint": "Aim at the central map grip and squeeze to carry the landscape with one hand. Move your hand to reposition it; use the joystick to turn it or adjust distance. Release to leave it in place. Place Totems onto the pulsing circles: entrance, open forest, then swales.",
+        "hint": "Grip the map centre to move it; use the joystick to turn or adjust distance. Release to place it. Set Totems on the pulsing entrance, forest and swale circles.",
         "art": null
     },
     {
@@ -265,9 +265,9 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "LEARNING 1.6",
         "act": "Learning pathways",
         "title": "An optional learning discovery",
-        "main": "Want to see how this can become a learning experience? Open Learning Pathways, or choose Finish without learning example in the Control Panel.",
+        "main": "Learning Pathways turn discoveries into questions people can explore together. Here is an optional example.",
         "panel": "Six starting questions surround the Living Frame. LIMO is the final feature.",
-        "hint": "Open the learning example.",
+        "hint": "Open Learning Pathways, or choose Finish without learning example in the Control Panel.",
         "art": "connection"
     },
     {
@@ -283,9 +283,9 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "LEARNING 1.8",
         "act": "Learning pathways",
         "title": "Build on what you discovered",
-        "main": "Connect Sun & shade with Plants & forest layers to reveal Who shades whom? Then connect that discovery with First steps & later roles.",
+        "main": "When two questions connect, a new discovery can appear between them. That discovery can become the start of another question.",
         "panel": "Both source cells remain visible. The new discovery and its strings follow the orbit around the Living Frame.",
-        "hint": "Choose a combination, then connect its source cells.",
+        "hint": "Connect Sun & shade with Plants & forest layers. Then connect Who shades whom? with First steps & later roles.",
         "art": null
     },
     {
@@ -295,7 +295,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "hint": "Select Uses.",
         "art": null,
         "title": "Choose the plant information",
-        "main": "Select Uses in Pigeon Pea to choose the information for this learning example."
+        "main": "A learning question can connect to information about a real plant."
     },
     {
         "id": "LEARNING 1.10",
@@ -304,7 +304,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "hint": "Hold Uses and Making.",
         "art": null,
         "title": "Connect a learning question",
-        "main": "Hold Uses and Making until the connection completes."
+        "main": "Hold the plant detail and learning question together to make their connection."
     },
     {
         "id": "LEARNING 1.11",
@@ -319,9 +319,9 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "id": "CLOSURE 1.1",
         "act": "Finish the sample",
         "title": "Knowledge grows with a place",
-        "main": "You have explored a small example. In a real place, plants, observations and local knowledge can grow together over time, creating something others can explore, learn from and contribute to.\n\nReturn to the welcome screen to discover a separate real garden project.",
+        "main": "You have explored a small example. In a real place, plants, observations and local knowledge can grow together over time, creating something others can explore, learn from and contribute to.",
         "panel": "Finish the sample cleanly. Any available published project is a separate choice after returning to welcome.",
-        "hint": "Finish the sample demo.",
+        "hint": "Finish the sample demo to return to Welcome and explore a separate real garden project.",
         "art": null
     }
 ]);

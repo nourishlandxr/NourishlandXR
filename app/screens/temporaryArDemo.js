@@ -794,16 +794,23 @@ function questControlGuide(message){
 
 function setIntroBoardNextGuide(message) {
     introBoardNextGuide=questControlGuide(message).trim();
-    introBoardNextGuideVisible=false;
+    introBoardNextGuideVisible=Boolean(introBoardNextGuide);
     infoPanel?.setContextualHint(introBoardNextGuide ? `HINT: ${introBoardNextGuide}` : '');
     introBoardTextureDirty=true;
-    const textWindow=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
-    if(!textWindow)return;
-    textWindow.querySelector('.tryit-board-next')?.remove();
+    const board=appRoot?.querySelector('[data-tryit-guided-choice]');
+    if(!board)return;
+    board.querySelector('.tryit-board-key')?.remove();
+    if(introBoardNextGuide && !welcomePractice?.active){
+        const key=document.createElement('div');
+        key.className='tryit-board-key';
+        key.setAttribute('role','note');
+        key.textContent=introBoardNextGuide;
+        board.append(key);
+    }
 }
 function revealIntroBoardNextGuide(){
     if(!introBoardNextGuide)return;
-    introBoardNextGuideVisible=false;introBoardTextureDirty=true;
+    introBoardNextGuideVisible=true;introBoardTextureDirty=true;
     infoPanel?.setContextualHint(`HINT: ${introBoardNextGuide}`);
 }
 
@@ -1183,9 +1190,9 @@ function showDemoFruitDiscovery(record,index=0,exampleId='carambola'){
     infoPanel?.setMediaCollapsed(false);infoPanel?.setExplorerOpen(true);
     infoPanel?.showFruitWindow({plant:identity.commonName,scientific:identity.scientificName},comparing?example.id:null,{mediaMode:comparing?'observation':'identity'});
     showIntroBoard(comparing?'Observe different fruits':'Fruit Discovery Window',comparing?
-        'PIMO is now closed so you can concentrate on fruit observation.\n\nChoose Star fruit, Mamey sapote, African peach or Chinese bayberry on the main Control Panel. Each fruit brings its own botanical picture and observation information to the panels.\n\nCompare the flower, developing fruit and ripe fruit. Hold the highlighted fruit with two pointers and pull apart to inspect its detail.':
-        'Look closely at the plant, its flowers and its fruit.\n\nPoint at an arrowed pod and hold Trigger to carry it. Hold it with the second pointer too, then pull your hands apart to open it. Use Play development in the window controls to follow flower-to-fruit development.',
-        'Continue',()=>comparing?continueAfterDemoPim(record):showDemoFruitDiscovery(record,1),{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:comparing?'FDW 1.2':'FDW 1.1',dynamicCopy:true,nextGuide:'Choose fruits on the main Control Panel. Hold both box grips to move it; joystick up/down adjusts distance. Release beside the panel to dock.'});
+        'Each fruit has its own shape and story. Compare its flower, developing fruit and ripe fruit, then look inside.':
+        'Look closely at the plant, its flowers and its fruit. The Fruit Discovery Window lets you follow its development and examine what is inside.',
+        'Continue',()=>comparing?continueAfterDemoPim(record):showDemoFruitDiscovery(record,1),{tutorialStep:DEMO_TUTORIAL_STEPS.PIM,stepLabel:comparing?'FDW 1.2':'FDW 1.1',dynamicCopy:true,nextGuide:comparing?'Choose a fruit in the Control Panel. Hold it with two pointers and pull apart. Use Play development to compare its stages.':'Hold Trigger on an arrowed pod, add a second pointer and pull apart. Use Play development to follow flower to fruit.'});
     syncDemoPanelActions();
 }
 
@@ -1773,7 +1780,7 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
             landscape.addEventListener('pointerup',event=>{if(down===null)return;down=null;if(moved || !demoLivingMapReady())return;const target=demoLivingMapPlacement.current(demoLivingMapElapsed());if(!target)return;const b=landscape.getBoundingClientRect();if(livingMapDropAccepted({x:(event.clientX-b.left)*landscape.width/b.width,y:(event.clientY-b.top)*landscape.height/b.height},demoLivingMapScene.project(target,{x:0,y:0,width:landscape.width,height:landscape.height}),landscape.width*.075))placeDemoMapTotem(true);});
         }
         const firstArrival = prepareTutorialBoard(board);
-        setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.'),{reveal:false});
+        setIntroBoardNextGuide(options.nextGuide!==undefined?options.nextGuide:(guidedDemoStep(options.stepLabel)?.hint || (buttonLabel?`Use ${demoLocalizedText(buttonLabel)} below.`:'Explore the visible cells for more detail.')));
         // Keep the large instruction surface visible without blocking the orb
         // underneath. The fixed Continue button remains interactive.
         board.classList.add('is-persistent-demo-board');
@@ -2620,8 +2627,8 @@ function showDemoTutorialMedia(key,content={}) {
 }
 
 const DEMO_ORIENTATION_STEPS = [
-    {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Continue',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
-    {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:'connectedAreas',button:'Begin with one discovery',nextGuide:'',paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]},
+    {code:'SPACE 1.1',title:guidedDemoStep('SPACE 1.1').title,art:null,button:'Continue',nextGuide:guidedDemoStep('SPACE 1.1').hint,paragraphs:[DEMO_GUIDED_COPY['SPACE 1.1']]},
+    {code:'SPACE 1.2',title:guidedDemoStep('SPACE 1.2').title,art:'connectedAreas',button:'Begin with one discovery',nextGuide:guidedDemoStep('SPACE 1.2').hint,paragraphs:[DEMO_GUIDED_COPY['SPACE 1.2']]},
     {code:'SPACE 1.3',title:guidedDemoStep('SPACE 1.3').title,art:null,button:'Place the first sample',nextGuide:guidedDemoStep('SPACE 1.3').hint,paragraphs:[DEMO_GUIDED_COPY['SPACE 1.3']]}
 ];
 
@@ -2630,7 +2637,7 @@ const POST_PLACEMENT_AREA_STEP = {
     nextGuide:'Select the Plant Orb to open its information. Hold controller grip to move it; release grip to place it. With hands, pinch to hold and release the pinch to place it.',
     paragraphs:[
         'Pigeon Pea now has a location in this scene. This Plant Orb connects information to this plant in the real place.',
-        'The Orb is interactive. Press it to explore its information, beginning with simple facts and deeper connected branches.'
+        'Its information begins with a simple identity and opens into connected discoveries.'
     ]
 };
 
@@ -3336,9 +3343,8 @@ async function startLimoCellConnections(){
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();
     infoPanel?.setLearningModules(null);infoPanel?.setPathwayContext(null);
     showIntroBoard('Connect ideas. Reveal a discovery.',[
-        'Choose one of ten combinations in the Control panel. Connect the two highlighted cells and watch a new discovery unfold around the Living Frame.',
-        'Start with Who shades whom? Then connect that discovery with First steps & later roles to explore how this place could change.'
-    ],'Finish the sample',showDemoClosingMessage,{tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.8',nextGuide:'Select a combination, then connect its two source cells.',keepPanel:true});
+        'Two related questions can reveal a new discovery around the Living Frame. That discovery can connect again, making a deeper story.'
+    ],'Finish the sample',showDemoClosingMessage,{tutorialStep:DEMO_TUTORIAL_STEPS.GUIDED,stepLabel:'LEARNING 1.8',nextGuide:'Choose a combination in the Control Panel. Connect its highlighted cells; try Who shades whom? first.',keepPanel:true});
     const previous=infoPanel.snapshot();if(!previous.selection?.limo)demoLimoReturn=previous;
     const experience=ensureDemoLimo();if(!experience.snapshot().context)await experience.open({context:demoLimoContext()});else experience.show();
     await experience.handle('connections');introBoardTextureDirty=true;
@@ -5670,6 +5676,14 @@ function drawIntroNoteContent(ctx) {
                 if(done){const width=ctx.measureText(label).width;ctx.strokeStyle='#dce6dc';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(700-width/2-6,y);ctx.lineTo(700+width/2+6,y);ctx.stroke();}
             });
         }
+        if(introBoardNextGuideVisible && introBoardNextGuide){
+            ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
+            ctx.beginPath();ctx.moveTo(260,817);ctx.lineTo(1140,817);ctx.stroke();
+            ctx.fillStyle='#dcf3c4';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
+            ctx.fillText('KEY INSIGHT',700,838,880);
+            ctx.fillStyle='#e7f5bb';ctx.font=`500 29px ${DEMO_PRESENTATION_FONT}`;
+            wrappedTextureLines(ctx,introBoardNextGuide,880).slice(0,3).forEach((line,index)=>ctx.fillText(line,700,872+index*33,880));
+        }
         ctx.restore();return;
     }
     // Give the copy the full readable centre of the glass screen without
@@ -5691,14 +5705,16 @@ function drawIntroNoteContent(ctx) {
     const title=opening?demoLocalizedText(guidedDemoStep('INTRO 1.1').title):introBoardTitle;
     const layoutCaption=demoLocalizedText(opening?DEMO_QUICK_ACCESS_COPY['INTRO 1.1']:introBoardStep==='INTRO 1.2'?DEMO_QUICK_ACCESS_COPY['INTRO 1.2']:introBoardBody);
     const caption=opening && !introOpeningCopySkipped && openingElapsed<DEMO_WELCOME_TITLE_HOLD_MS?'':introVisibleCopy();
-    drawWelcomeText(ctx,{title,caption,layoutCaption,width:960,top:330,bottom:introBoardNextGuideVisible && introBoardNextGuide?835:900,titleSize:56,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
+    drawWelcomeText(ctx,{title,caption,layoutCaption,width:960,top:330,bottom:introBoardNextGuideVisible && introBoardNextGuide?790:900,titleSize:56,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
     if(introBoardNextGuideVisible && introBoardNextGuide){
         ctx.strokeStyle='rgba(241,249,237,.23)';ctx.lineWidth=1.5;
-        ctx.beginPath();ctx.moveTo(contentLeft,865);ctx.lineTo(contentLeft+contentWidth,865);ctx.stroke();
-        ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#e7f5bb';
+        ctx.beginPath();ctx.moveTo(contentLeft,817);ctx.lineTo(contentLeft+contentWidth,817);ctx.stroke();
+        ctx.textAlign='center';ctx.textBaseline='top';ctx.fillStyle='#dcf3c4';
+        ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
+        ctx.fillText('KEY INSIGHT',contentCenter,829,contentWidth);
         ctx.font=`500 30px ${DEMO_PRESENTATION_FONT}`;
-        const guideLines=wrappedTextureLines(ctx,`Next · ${introBoardNextGuide}`,contentWidth);
-        guideLines.slice(0,2).forEach((line,index)=>ctx.fillText(line,contentCenter,875+index*29,contentWidth));
+        const guideLines=wrappedTextureLines(ctx,introBoardNextGuide,contentWidth);
+        guideLines.slice(0,3).forEach((line,index)=>ctx.fillText(line,contentCenter,865+index*31,contentWidth));
     }
     ctx.shadowColor = 'transparent';
     ctx.shadowBlur = 0;
