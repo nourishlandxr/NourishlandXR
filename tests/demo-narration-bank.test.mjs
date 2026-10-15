@@ -21,6 +21,7 @@ test('every authored main-demo paragraph has a complete saved friendly Marin rec
         assert.equal(segments.length,1,text);
         assert.equal(segments[0].recorded,true,text);
         const id=segments[0].id;
+        assert.equal(bank.catalog[id].spoken,text,'Recording input must exactly match the displayed paragraph');
         assert.ok(bank.clips.includes(id));
         const bytes=fs.readFileSync(new URL('../app/'+bank.base+bank.catalog[id].file,import.meta.url));
         assert.ok(bytes.length>1000,id);

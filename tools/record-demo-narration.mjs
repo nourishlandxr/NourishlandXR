@@ -13,7 +13,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const profile=ZINNIA_VOICE_PROFILE;
 const requestGap=Math.max(5200,Number(process.argv.find(arg=>arg.startsWith('--gap-ms='))?.slice(9)) || 5200);
 // Include runtime narrative bodies as well as the authored chapter sequence.
-const clips=demoNarrationContent().map(text=>({id:key(text),text,spoken:text.replace(/NourishlandXR/g,'Nourishland X R').replace(/\bPIMO\b/g,'plant information').replace(/\bLIMO\b/g,'learning pathway')}));
+const clips=demoNarrationContent().map(text=>({id:key(text),text,spoken:text}));
 const hash=createHash('sha256').update(JSON.stringify({profile,clips:clips.map(({id,spoken})=>({id,spoken}))})).digest('hex').slice(0,16);
 const bankName='openai-'+hash,relative='assets/demo-narration/'+bankName+'/',directory=path.join(root,'app',relative);
 if(process.argv.includes('--plan')){console.log(JSON.stringify({provider:'OpenAI',voice:profile.voice,clips:clips.length,characters:clips.reduce((n,c)=>n+c.spoken.length,0),bank:relative,requires:'OPENAI_API_KEY',activation:'Only after all clips have been generated'},null,2));process.exit(0);}
@@ -23,7 +23,7 @@ for(const clip of clips){
     if(!/^[a-z0-9-]+$/.test(clip.id))throw new Error('Invalid clip ID');
     const target=path.join(directory,clip.id+'.mp3');
     try{if((await fs.stat(target)).size>1000){console.log('Saved: '+clip.id);continue;}}catch{}
-    if(previousBank.voice===profile.voice && previousBank.delivery===ZINNIA_VOICE_DELIVERY && previousBank.instructions===profile.instructions && previousBank.catalog?.[clip.id]?.text===clip.text){
+    if(previousBank.voice===profile.voice && previousBank.delivery===ZINNIA_VOICE_DELIVERY && previousBank.instructions===profile.instructions && previousBank.catalog?.[clip.id]?.text===clip.text && previousBank.catalog?.[clip.id]?.spoken===clip.spoken){
         const saved=path.join(root,'app',previousBank.base,clip.id+'.mp3');
         if((await fs.stat(saved)).size>1000){await fs.copyFile(saved,target);console.log('Reused: '+clip.id);continue;}
     }

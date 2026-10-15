@@ -55,3 +55,18 @@ test('finish during the connection check cancels capture before microphone acces
  try{const pending=voice.listen();voice.finish();resolve({ok:true,json:async()=>({enabled:true})});await pending;assert.equal(captures,0);assert.equal(states.at(-1).listening,false);}
  finally{voice.destroy();globalThis.fetch=saved;if(descriptor)Object.defineProperty(globalThis,'navigator',descriptor);else delete globalThis.navigator;}
 });
+
+test('long dictated Note readback speaks and displays every word without the former 1200-character cut-off',async()=>{
+ let callbacks,playing=false;const spoken=[],shown=[],text=Array.from({length:320},(_,i)=>'word'+i).join(' ');
+ const voice=createZinniaVoice({onPrompt:part=>shown.push(part),createNarrator:handlers=>(callbacks=handlers,{unlock(){},stop(){playing=false;},status:()=>({playing,paused:false}),async speak(clip){playing=true;spoken.push(clip.spoken);queueMicrotask(()=>{playing=false;callbacks.onEnded();});},destroy(){}})});
+ try{assert.equal(await voice.speak(text),true);assert.equal(spoken.join(' '),text);assert.deepEqual(shown,spoken);assert.ok(spoken.every(part=>part.length<=220));}finally{voice.destroy();}
+});
+
+test('microphone metering publishes real measured levels while recording',async t=>{
+ const saved={fetch:globalThis.fetch,MediaRecorder:globalThis.MediaRecorder,AudioContext:globalThis.AudioContext},descriptor=Object.getOwnPropertyDescriptor(globalThis,'navigator'),states=[];const track={readyState:'live',stop(){}};
+ Object.defineProperty(globalThis,'navigator',{configurable:true,value:{mediaDevices:{getUserMedia:async()=>({getTracks:()=>[track],getAudioTracks:()=>[track]})}}});
+ globalThis.fetch=async()=>({ok:true,json:async()=>({enabled:true})});globalThis.MediaRecorder=class {static isTypeSupported(){return true;}start(){this.state='recording';}stop(){this.state='inactive';}};
+ globalThis.AudioContext=class {state='running';createAnalyser(){return {fftSize:512,getByteTimeDomainData:data=>data.fill(144)};}createMediaStreamSource(){return {connect(){}};}resume(){return Promise.resolve();}close(){return Promise.resolve();}};
+ t.mock.timers.enable({apis:['setInterval']});const voice=createZinniaVoice({createNarrator:()=>({stop(){},destroy(){},status:()=>({playing:false})}),onStatus:(_message,state)=>states.push(state)});
+ try{await voice.listen();t.mock.timers.tick(50);assert.ok(states.some(s=>s.listening && s.level>.1),'meter reports the captured signal instead of a decorative animation');}finally{voice.destroy();t.mock.timers.reset();Object.assign(globalThis,saved);if(descriptor)Object.defineProperty(globalThis,'navigator',descriptor);else delete globalThis.navigator;}
+});

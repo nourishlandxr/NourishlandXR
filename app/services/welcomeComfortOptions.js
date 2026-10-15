@@ -31,7 +31,7 @@ export function createWelcomeComfortOptions({stage,onReturn=null,onVisualChange=
             options.push(...['controllers','gloves','hands'].map((mode,i)=>item('input:'+mode,['Controllers','Virtual hands','Hand tracking'][i],['controller','hand','hand'][i],{selected:(state.trials?.active?stage.trials.mode:state.inputMode)===mode && state.controllerTool==='standard',disabled:state.inputChoiceUnlocked===false})));
         }
         if(page==='audio'){
-            options.push(item('pause',voice.paused?'Resume narration':'Pause narration',voice.paused?'play':'pause',{selected:voice.paused}),item('replay','Repeat narration','repeat'),item('mute',voice.muted?'Unmute voice':'Mute voice',voice.muted?'mute':'audio',{selected:voice.muted}),item('volume','Voice volume','audio',{kind:'slider',value:audio.volume,min:0,max:2,step:.05,text:true,worldBox:{x:.122,y:-.07,w:.142,h:.034}}));
+            options.push(item('replay','Repeat narration','repeat'),item('mute',voice.muted?'Unmute voice':'Mute voice',voice.muted?'mute':'audio',{selected:voice.muted}),item('volume','Voice volume','audio',{kind:'slider',value:audio.volume,min:0,max:2,step:.05,text:true,worldBox:{x:.122,y:-.07,w:.142,h:.034}}));
             if(stage.conversation){const listening=stage.conversation.state?.().listening;options.push(item('conversation:'+ (listening?'done':'voice'),listening?'Finish listening':'Listen again',listening?'stop':'mic'));options.push(...(stage.conversation.buttons?.() || []).map(button=>item('conversation:'+button.id,button.label,button.id==='confirm'?'check':'repeat')));}
         }
         if(page==='settings'){

@@ -1,6 +1,6 @@
-# Tutorial and demo master test — V0.9626
+# Tutorial and demo master test — V0.9629
 
-Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9626 on the welcome screen before testing. Use a fresh tab for the guided first-run check.
+Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9629 on the welcome screen before testing. Use a fresh tab for the guided first-run check.
 
 ## Expected sequence
 
@@ -19,9 +19,9 @@ Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9626 on the welcom
 | First six tutorial screens and first six demo screens | Consistent paragraph spacing; no overlap; saved welcome voice; no render error | Pending |
 | Demo narration | Each paragraph appears as its exact recording starts; earlier paragraphs remain readable | Pending |
 | Slow loading | Loading does not consume reading time or skip a paragraph | Pending |
-| Pause, resume, repeat | Pause holds paragraph; resume continues; repeat restarts current paragraph | Pending |
+| Demo pause, resume, repeat | Main demo pause holds paragraph; resume continues; repeat restarts current paragraph | Pending |
 | Back and Continue | No old narration or delayed text arrives on the new screen | Pending |
-| Mic prompt | Permission deferred until requested; approved speech works without login error; denial leaves controls usable | Pending |
+| Mic prompt | Permission deferred until requested; approved speech works without login error; Notes/custom Orb show microphone level, processing and error states; denial leaves controls usable | Pending |
 | Tic-tac-toe | Win, loss or draw unlocks input choice; unfinished game does not | Pending |
 | Games | Orb/dance, fruit/brush and butterfly/hand games are listed independently of input unlock | Pending |
 | Return from Games | Back icon restores exact demo chapter and visible paragraphs; interrupted narration resumes | Pending |
@@ -33,8 +33,10 @@ Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9626 on the welcom
 
 ## Evidence and limits
 
-Local checks passed: 1,029 regression tests; frontend build V0.9626; 36 authored chapter text layouts within bounds; 204 saved recordings decoded successfully (93 tutorial, 111 demo); native butterfly, tic-tac-toe, fruit, brush and controller scenes rendered; welcome V0.9626 visible; no browser page errors. These checks do not replace physical Quest testing.
+Local checks passed: 1,029 regression tests; frontend build V0.9629; 36 authored chapter text layouts within bounds; 204 saved recordings decoded successfully (93 tutorial, 111 demo); native butterfly, tic-tac-toe, fruit, brush and controller scenes rendered; welcome V0.9629 visible; no browser page errors. These checks do not replace physical Quest testing.
 
 Local review: serve the repository and open tools/preview-demo-narration.html for chapter text plus exact paragraph recordings, or tools/preview-demo-experiences.html for the native practice renderer. These developer previews are not hosted product routes.
 
-Record headset/browser version, AR versus VR mode, input method, chapter/lesson, visible V0.9626 and any console error for each failure. Physical Quest results remain pending until this matrix is completed on-device.
+Record headset/browser version, AR versus VR mode, input method, chapter/lesson, visible V0.9629 and any console error for each failure. Physical Quest results remain pending until this matrix is completed on-device.
+
+V0.9629 additions: tutorial pause controls and their spoken instructions removed; all 36 chapter/111 runtime paragraph recording scripts match displayed body text exactly, including PIMO/LIMO; Notes readbacks page without truncating long dictation; the Moringa fallback disappears after a successful microphone transcript. Live transcription tested on root and www with approved synthetic Strawberry audio through actual browser MediaRecorder. This verifies the public service and browser recording path; physical Quest microphone permission/capture remains pending.

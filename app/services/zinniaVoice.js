@@ -3,8 +3,9 @@ import {claimZinniaVoice,releaseZinniaVoice,forgetZinniaVoice} from './zinniaVoi
 import {createVoiceEndpoint} from './voiceEndpoint.js';
 
 export function zinniaApiBase(){return globalThis.NOURISHLAND_CONFIG?.apiBase || (globalThis.location?.pathname.startsWith('/xr/')?'/xr-api':'/api');}
+export function zinniaSpeechParts(text){const parts=[];let part='';for(const word of String(text).trim().split(/\s+/)){if(part && part.length+word.length+1>220){parts.push(part);part='';}part=part?part+' '+word:word;}if(part)parts.push(part);return parts;}
 // One microphone owner across Orbs and Notes. Audio stays in memory only.
-export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},createNarrator=createWelcomePracticeVoice}={}){
+export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},onPrompt=()=>{},createNarrator=createWelcomePracticeVoice}={}){
     let stream,recorder,recognition,timer,meter,meterTimer,disposed=false,epoch=0,request,capabilities,listening=false,processing=false,speechDone=null,recordingStarted=0,heard=false,level=0;
     const narrator=createNarrator({onInterrupt:()=>{listening=false;completeSpeech(false);},onEnded:()=>completeSpeech(true)});
     function completeSpeech(completed){const resolve=speechDone;speechDone=null;resolve?.(completed);}
@@ -41,7 +42,7 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},
                 // Frequent chunks preserve short replies and tolerate Quest stop timing.
                 recorder.start(250);timer=setTimeout(()=>finish(),Math.min(8,Number(cap.maximumSeconds)||8)*1000);
                 const AudioContext=globalThis.AudioContext || globalThis.webkitAudioContext;
-                if(AudioContext){try{meter=new AudioContext();const analyser=meter.createAnalyser();analyser.fftSize=512;meter.createMediaStreamSource(stream).connect(analyser);const samples=new Uint8Array(analyser.fftSize),endpoint=createVoiceEndpoint();void meter.resume().catch(()=>{});meterTimer=setInterval(()=>{analyser.getByteTimeDomainData(samples);level=Math.sqrt(samples.reduce((sum,x)=>sum+((x-128)/128)**2,0)/samples.length);const finished=endpoint.sample(level,performance.now());heard=endpoint.heard;if(finished){clearInterval(meterTimer);finish();}},50);}catch{/* Recording still works when the XR browser cannot start a meter. */}}
+                if(AudioContext){try{meter=new AudioContext();const analyser=meter.createAnalyser();analyser.fftSize=512;meter.createMediaStreamSource(stream).connect(analyser);const samples=new Uint8Array(analyser.fftSize),endpoint=createVoiceEndpoint();void meter.resume().catch(()=>{});meterTimer=setInterval(()=>{analyser.getByteTimeDomainData(samples);level=Math.sqrt(samples.reduce((sum,x)=>sum+((x-128)/128)**2,0)/samples.length);const finished=endpoint.sample(level,performance.now());heard=endpoint.heard;if(finished){clearInterval(meterTimer);finish();}else status('');},50);}catch{/* Recording still works when the XR browser cannot start a meter. */}}
                 status('');
             }catch(error){release();status(error.name==='NotAllowedError'?'Microphone permission was denied. Enable it for nourishland.org in Quest Browser settings.':error.name==='NotFoundError'?'Quest Browser could not find a microphone.':error.name==='NotReadableError'?'The microphone is busy. Close another app using it and choose Listen again.':error.message || 'Could not start the microphone. Choose Listen again.','microphone');}
             return;
@@ -57,7 +58,15 @@ export function createZinniaVoice({onText=()=>{},onStatus=()=>{},onSpeak=()=>{},
     function finish(){clearTimeout(timer);if(recorder?.state==='recording')recorder.stop();else if(recognition)recognition.stop();else if(listening){cancel();status('Listening stopped. Choose the microphone when you’re ready.');}}
     async function speak(text){
         if(!getWelcomeNarrationSettings().enabled || disposed)return;
-        cancel();onSpeak();narrator.unlock();const completed=new Promise(resolve=>{speechDone=resolve;});await narrator.speak({id:'zinnia-dialogue',spoken:String(text).slice(0,1200),spokenOverride:true});if(!narrator.status().playing && !narrator.status().paused)completeSpeech(true);return completed;
+        cancel();onSpeak();narrator.unlock();const token=epoch;
+        for(const part of zinniaSpeechParts(text)){
+            if(disposed || token!==epoch)return false;
+            onPrompt(part);const completed=new Promise(resolve=>{speechDone=resolve;});
+            await narrator.speak({id:'zinnia-dialogue',spoken:part,spokenOverride:true});
+            if(!narrator.status().playing && !narrator.status().paused)completeSpeech(true);
+            if(await completed!==true)return false;
+        }
+        return true;
     }
     const owner={cancel,status:()=>({playing:false,paused:false,listening,processing,level}),speechLevel:()=>0};
     const api={listen,finish,speak,audioLevel:()=>level,cancel,status:()=>listening || processing?owner.status():narrator.status(),speechLevel:narrator.speechLevel,pause:narrator.pause,resume:narrator.resume,destroy(){disposed=true;cancel();forgetZinniaVoice(owner);narrator.destroy();}};return api;
