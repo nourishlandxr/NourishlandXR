@@ -12,18 +12,18 @@ export function createWelcomeTicTacToe(root,{onFeedback=()=>{},onChange=()=>{}}=
     const board=new THREE.Group();board.name='Hand-tracked Tic-Tac-Toe board';board.position.set(0,.018,.10);root.add(board);
     const materials=['#9b7147','#68482f','#dce5d9','#b8d4d5','#d8eabb'].map(color=>new THREE.MeshStandardMaterial({color,roughness:.8}));
     const mesh=(geometry,material,parent=board)=>{const node=new THREE.Mesh(geometry,materials[material]);parent.add(node);return node;};
-    mesh(new THREE.BoxGeometry(.64,.022,.64),0);
-    for(const value of [-.105,.105]){const x=mesh(new THREE.BoxGeometry(.007,.006,.61),1);x.position.set(value,.015,0);const z=mesh(new THREE.BoxGeometry(.61,.006,.007),1);z.position.set(0,.015,value);}
-    const handle=mesh(new THREE.TorusGeometry(.047,.007,8,24),4);handle.name='Carry or turn game board';handle.rotation.x=-Math.PI/2;handle.position.set(0,.025,.34);
+    mesh(new THREE.BoxGeometry(.42,.022,.42),0);
+    for(const value of [-.0675,.0675]){const x=mesh(new THREE.BoxGeometry(.006,.006,.40),1);x.position.set(value,.015,0);const z=mesh(new THREE.BoxGeometry(.40,.006,.006),1);z.position.set(0,.015,value);}
+    const handle=mesh(new THREE.TorusGeometry(.038,.006,8,24),4);handle.name='Carry or turn game board';handle.rotation.x=-Math.PI/2;handle.position.set(0,.025,.23);
     const pieces=[];let cells=Array(9).fill(null),turn='X',replyAt=null,time=0,finished=false,lastRejected=false;
     const holds=new Map(),previous=new Map(),inverse=new THREE.Matrix4();
     for(const mark of ['X','O'])for(let i=0;i<5;i++){
         const group=new THREE.Group();group.name='Tic piece '+mark+' '+i;root.add(group);
-        if(mark==='X')for(const angle of [-Math.PI/4,Math.PI/4]){const bar=mesh(new THREE.BoxGeometry(.013,.012,.078),2,group);bar.rotation.y=angle;}
-        else {const ring=mesh(new THREE.TorusGeometry(.029,.006,8,28),3,group);ring.rotation.x=-Math.PI/2;}
-        const home=new THREE.Vector3(mark==='X'?-.46:.46,.025,-.27+i*.13);group.position.copy(home);pieces.push({id:mark+i,mark,mesh:group,home,cell:null});
+        if(mark==='X')for(const angle of [-Math.PI/4,Math.PI/4]){const bar=mesh(new THREE.BoxGeometry(.011,.012,.058),2,group);bar.rotation.y=angle;}
+        else {const ring=mesh(new THREE.TorusGeometry(.022,.005,8,28),3,group);ring.rotation.x=-Math.PI/2;}
+        const home=new THREE.Vector3(mark==='X'?-.30:.30,.025,-.20+i*.095);group.position.copy(home);pieces.push({id:mark+i,mark,mesh:group,home,cell:null});
     }
-    const center=index=>new THREE.Vector3((index%3-1)*.21,.028,(Math.floor(index/3)-1)*.21);
+    const center=index=>new THREE.Vector3((index%3-1)*.135,.028,(Math.floor(index/3)-1)*.135);
     function place(index,piece,source){
         if(finished || turn!=='X' || !piece || piece.mark!=='X' || piece.cell!==null || !Number.isInteger(index) || index<0 || index>8 || cells[index])return false;
         cells[index]='X';piece.cell=index;board.attach(piece.mesh);piece.mesh.position.copy(center(index));piece.mesh.quaternion.identity();
@@ -33,7 +33,7 @@ export function createWelcomeTicTacToe(root,{onFeedback=()=>{},onChange=()=>{}}=
         const hold=holds.get(source);if(!hold)return;holds.delete(source);
         if(hold.kind==='board')return;
         const piece=hold.piece;board.updateWorldMatrix(true,false);const point=board.worldToLocal(piece.mesh.getWorldPosition(new THREE.Vector3()));
-        const col=Math.round(point.x/.21)+1,row=Math.round(point.z/.21)+1,index=row*3+col;
+        const col=Math.round(point.x/.135)+1,row=Math.round(point.z/.135)+1,index=row*3+col;
         if(apply && col>=0 && col<3 && row>=0 && row<3 && point.y>-.035 && point.y<.15 && place(index,piece,source))return;
         root.attach(piece.mesh);piece.mesh.position.copy(piece.home);piece.mesh.quaternion.identity();lastRejected=apply;onFeedback('release',source);onChange();
     }

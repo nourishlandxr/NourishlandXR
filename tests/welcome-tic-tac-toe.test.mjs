@@ -11,7 +11,7 @@ test('tracked pinch carries a piece, releases once into the board and recovers o
  const root=new THREE.Group(),game=createWelcomeTicTacToe(root),source={handedness:'left',hand:{}};root.position.set(1,.8,-2);root.rotation.y=.5;root.updateMatrixWorld(true);
  const piece=game.pieces[0],input={source,trigger:false,matrix:null};
  const move=(point,down)=>{root.updateMatrixWorld(true);input.matrix=new THREE.Matrix4().makeTranslation(...root.localToWorld(point.clone()).toArray()).elements;input.trigger=down;game.update(.05,[input]);};
- try{move(piece.home,false);move(piece.home,true);assert.equal(game.snapshot().held,1);move(new THREE.Vector3(-.21,.07,-.195),true);move(new THREE.Vector3(-.21,.07,-.195),false);assert.equal(game.snapshot().cells[0],'X');game.update(.05,[input]);assert.equal(game.snapshot().cells.filter(Boolean).length,1);
+ try{move(piece.home,false);move(piece.home,true);assert.equal(game.snapshot().held,1);move(new THREE.Vector3(-.135,.07,-.035),true);move(new THREE.Vector3(-.135,.07,-.035),false);assert.equal(game.snapshot().cells[0],'X');game.update(.05,[input]);assert.equal(game.snapshot().cells.filter(Boolean).length,1);
  for(let i=0;i<15;i++)game.update(.05,[]);move(game.pieces[1].home,false);move(game.pieces[1].home,true);assert.equal(game.snapshot().held,1);game.update(.05,[]);assert.equal(game.snapshot().held,0);assert.ok(game.pieces[1].mesh.position.distanceTo(game.pieces[1].home)<1e-6);
  }finally{game.destroy();}
 });

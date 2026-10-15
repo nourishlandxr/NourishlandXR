@@ -3,7 +3,7 @@ import {createDemoButterflyTrialSource} from './demoButterflyModel.js';
 
 // Reuse the demo's attributed butterfly asset. Bake two wing poses as morphs
 // so the shared welcome XR renderer can animate it without a second GL context.
-export const WELCOME_BUTTERFLY_COUNT=20;
+export const WELCOME_BUTTERFLY_COUNT=8;
 export const WELCOME_BUTTERFLY_COLOURS=Object.freeze(Array.from({length:WELCOME_BUTTERFLY_COUNT},(_,i)=>'#'+new THREE.Color().setHSL(i/WELCOME_BUTTERFLY_COUNT,.72,.57+(i%3)*.035).getHexString()));
 export function colourTrialButterfly(model,index){
     const colour=WELCOME_BUTTERFLY_COLOURS[index%WELCOME_BUTTERFLY_COUNT];model.userData.butterflyColour=colour;

@@ -12,20 +12,24 @@ export function createWelcomeButterflyBucket(root,{onAssets=()=>{},onFeedback=()
     const handle=new THREE.Mesh(new THREE.TorusGeometry(.105,.005,8,32,Math.PI),material);bucket.add(handle);handle.position.y=.06;
     const rimMaterial=new THREE.MeshStandardMaterial({color:'#eedca5',emissive:'#ffc977',emissiveIntensity:.03,roughness:.65});
     const rim=new THREE.Mesh(new THREE.TorusGeometry(.10,.0035,6,32),rimMaterial);rim.rotation.x=Math.PI/2;rim.position.y=.075;bucket.add(rim);
+    const decoys=[bucket.clone(),bucket.clone()];for(const cup of decoys)root.add(cup);
+    const cups=[bucket,...decoys],cupSlots=[-.32,0,.32];
+    function placeCups(){const chosen=cupSlots.splice(Math.floor(Math.random()*cupSlots.length),1)[0];cupSlots.unshift(chosen);for(let i=0;i<cups.length;i++){cups[i].position.set(cupSlots[i],.08,.08);cups[i].rotation.set(Math.PI,0,0);}cupSlots.sort((a,b)=>a-b);}
+    placeCups();
     const sparkles=createButterflySparkles(root);
     let interactionOwner=null,emergenceAt=null;
     let insects=[],disposed=false,asset='loading',time=0,released=0,landed=0,burst=false;
     const holds=new Map(),edges=new Map(),hands=new Map(),inverse=new THREE.Matrix4();
     let settledAt=null,cueStarted=false,cueDone=false,cueFinishedAt=null,zinniaLandedAt=null,shakeAt=null,shaken=0,generation=0,perchSeed=Math.floor(Math.random()*24);
     const loading=Promise.resolve().then(load).then(models=>{insects=models.map((mesh,i)=>({mesh,state:'bucket',flyUntil:0,home:new THREE.Vector3(Math.cos(i*2.4)*.045,.01+Math.floor(i/5)*.014,Math.sin(i*2.4)*.045)}));
-        for(const insect of insects){insect.mesh.scale.setScalar(.026);root.add(insect.mesh);insect.mesh.position.copy(bucket.position).add(insect.home);}
+        for(const insect of insects){insect.mesh.scale.setScalar(.0195);insect.mesh.visible=false;root.add(insect.mesh);insect.mesh.position.copy(bucket.position).add(insect.home);}
         if(disposed){destroyModels();return;}asset='ready';onAssets();
     }).catch(error=>{if(!disposed){asset='error';console.warn('Butterfly bucket:',error.message);onAssets();}});
     function destroyModels(){const geometries=new Set(),materials=new Set(),textures=new Set();for(const {mesh} of insects){mesh.removeFromParent();mesh.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of [n.material].flat().filter(Boolean)){materials.add(m);if(m.map)textures.add(m.map);}});}geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());}
     const poseOf=input=>{const matrix=new THREE.Matrix4().fromArray(input.matrix);if(input.pinchPoint)matrix.setPosition(input.pinchPoint.x,input.pinchPoint.y,input.pinchPoint.z);return matrix.premultiply(inverse);};
     function fly(insect,source,credit=true){insect.state='flying';insect.flyStarted=time;insect.flyUntil=time+2.2;insect.emerging=false;insect.perch=null;if(credit){released++;onFeedback('release',source);}}
     function release(source,credit=true){const hold=holds.get(source);if(!hold)return;holds.delete(source);if(hold.sdk)interactionOwner?.cancel(hold.id);if(hold.insect)fly(hold.insect,source,credit);}
-    function emerge(source){if(burst)return;burst=true;emergenceAt=time;
+    function emerge(source){if(burst)return;burst=true;emergenceAt=time;for(const insect of insects)insect.mesh.visible=true;
         const point=new THREE.Vector3(0,.08,0).applyQuaternion(bucket.quaternion).add(bucket.position);sparkles.burst(point);getContext().onSparkle?.(root.localToWorld(point.clone()));
         onFeedback('magic',source);
     }
@@ -33,17 +37,17 @@ export function createWelcomeButterflyBucket(root,{onAssets=()=>{},onFeedback=()
         const owner=getContext().interactionOwner || null;
         if(owner!==interactionOwner){for(const source of [...holds.keys()])release(source,false);interactionOwner=owner;}
         if(!owner)return;
-        bucket.updateMatrix();const handlePoint=new THREE.Vector3(0,.10,0).applyQuaternion(bucket.quaternion).add(bucket.position);
-        const bodies=[{id:'butterfly-cup',position:handlePoint,rotation:bucket.quaternion,halfSize:{x:.055,y:.028,z:.035},visible:true},...insects.map((insect,i)=>({id:'trial-butterfly-'+i,position:insect.mesh.position,rotation:insect.mesh.quaternion,halfSize:{x:.025,y:.025,z:.025},visible:true}))];
+        for(const cup of cups)cup.updateMatrix();
+        const bodies=[...cups.map((cup,i)=>({id:i?'butterfly-cup-decoy-'+i:'butterfly-cup',position:new THREE.Vector3(0,-.073,0).applyQuaternion(cup.quaternion).add(cup.position),rotation:cup.quaternion,halfSize:{x:.055,y:.028,z:.035},visible:true})),...insects.map((insect,i)=>({id:'trial-butterfly-'+i,position:insect.mesh.position,rotation:insect.mesh.quaternion,halfSize:{x:.025,y:.025,z:.025},visible:insect.mesh.visible}))];
         const sdkInputs=inputs.filter(input=>input.matrix).map(input=>{const matrix=Array.from(input.matrix);if(input.source.hand && input.pinchPoint){matrix[12]=input.pinchPoint.x;matrix[13]=input.pinchPoint.y;matrix[14]=input.pinchPoint.z;}return {...input,matrix,down:Boolean(input.source.hand?input.trigger:input.down)};});
         owner.step(sdkInputs,bodies,{rootMatrix:root.matrixWorld.elements,dt,time,enabled:dt>0});
         for(const input of sdkInputs){const captured=owner.held(input.source);let hold=holds.get(input.source);
             if(hold?.sdk && (!captured || captured.id!==hold.id)){release(input.source,!input.uiBlocked && !input.down);hold=null;}
-            if(!captured)continue;const index=Number(captured.id.replace('trial-butterfly-','')),insect=captured.id==='butterfly-cup'?null:insects[index],mesh=insect?.mesh || bucket;
-            if(!hold){mesh.updateMatrix();const p=captured.id==='butterfly-cup'?handlePoint:mesh.position,q=mesh.quaternion,anchor=new THREE.Matrix4().compose(p,q,new THREE.Vector3(1,1,1));hold={sdk:true,id:captured.id,insect,mesh,offset:anchor.invert().multiply(mesh.matrix)};holds.set(input.source,hold);if(insect)insect.state='held';onFeedback('grab',input.source);}
+            if(!captured)continue;const index=Number(captured.id.replace('trial-butterfly-','')),insect=captured.id.startsWith('butterfly-cup')?null:insects[index],mesh=insect?.mesh || (captured.id==='butterfly-cup'?bucket:decoys[Number(captured.id.at(-1))-1]);
+            if(!hold){mesh.updateMatrix();const p=insect?mesh.position:new THREE.Vector3(0,-.073,0).applyQuaternion(mesh.quaternion).add(mesh.position),q=mesh.quaternion,anchor=new THREE.Matrix4().compose(p,q,new THREE.Vector3(1,1,1));hold={sdk:true,id:captured.id,insect,mesh,offset:anchor.invert().multiply(mesh.matrix)};holds.set(input.source,hold);if(insect)insect.state='held';onFeedback('grab',input.source);}
             const p=new THREE.Vector3(),q=new THREE.Quaternion();new THREE.Matrix4().fromArray(captured.matrix).decompose(p,q,new THREE.Vector3());
             new THREE.Matrix4().compose(p,q,new THREE.Vector3(1,1,1)).multiply(hold.offset).decompose(mesh.position,mesh.quaternion,mesh.scale);
-            if(!insect && bucket.position.y>.22)emerge(input.source);
+            if(mesh===bucket && bucket.position.y>.22)emerge(input.source);
         }
     }
     function perches(inputs,dt,context){const result=[];
@@ -71,16 +75,14 @@ export function createWelcomeButterflyBucket(root,{onAssets=()=>{},onFeedback=()
         sdkStep(inputs,dt);
         for(const input of usable){if(interactionOwner){edges.set(input.source,Boolean(input.trigger));continue;}const pose=poseOf(input),point=new THREE.Vector3().setFromMatrixPosition(pose),down=Boolean(input.trigger);let hold=holds.get(input.source);
             if(hold && !down){release(input.source);hold=null;}
-            if(!hold && down && edges.get(input.source)===false){const occupied=new Set([...holds.values()].map(h=>h.insect));const insect=insects.filter(i=>!occupied.has(i)).sort((a,b)=>a.mesh.position.distanceTo(point)-b.mesh.position.distanceTo(point)).find(i=>i.mesh.position.distanceTo(point)<.065);
-                const target=insect?.mesh || (point.distanceTo(bucket.position.clone().add(new THREE.Vector3(0,.10,0)))<.085 && ![...holds.values()].some(h=>!h.insect)?bucket:null);
+            if(!hold && down && edges.get(input.source)===false){const occupied=new Set([...holds.values()].map(h=>h.insect));const insect=insects.filter(i=>i.mesh.visible && !occupied.has(i)).sort((a,b)=>a.mesh.position.distanceTo(point)-b.mesh.position.distanceTo(point)).find(i=>i.mesh.position.distanceTo(point)<.065);
+                const target=insect?.mesh || cups.find(cup=>point.distanceTo(new THREE.Vector3(0,-.073,0).applyQuaternion(cup.quaternion).add(cup.position))<.085 && ![...holds.values()].some(h=>h.mesh===cup)) || null;
                 if(target){target.updateMatrix();hold={mesh:target,insect,offset:pose.clone().invert().multiply(target.matrix)};holds.set(input.source,hold);if(insect)insect.state='held';onFeedback('grab',input.source);}}
-            if(hold){pose.multiply(hold.offset).decompose(hold.mesh.position,hold.mesh.quaternion,hold.mesh.scale);if(!hold.insect && bucket.position.y>.22)emerge(input.source);}
+            if(hold){pose.multiply(hold.offset).decompose(hold.mesh.position,hold.mesh.quaternion,hold.mesh.scale);if(hold.mesh===bucket && bucket.position.y>.22)emerge(input.source);}
             edges.set(input.source,down);
         }
         const context=getContext(),targets=perches(usable,dt,context);
-        // Invite the whole flock after a short established flight, without
-        // requiring twenty individual pinch/release actions.
-        if(asset==='ready' && time>1 && !burst && context.ready!==false)emerge();
+        // The butterflies stay hidden until the visitor lifts the correct cup.
         for(const [i,insect]of insects.entries())if(insect.state==='bucket' && emergenceAt!==null && time-emergenceAt>i*.045){fly(insect,null,false);insect.emerging=true;}
         sparkles.update(dt,{reducedMotion:Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches)});
         const glow=emergenceAt===null?0:Math.max(0,1-(time-emergenceAt)/1.8);rimMaterial.emissiveIntensity=.03+.28*glow;
@@ -106,9 +108,9 @@ export function createWelcomeButterflyBucket(root,{onAssets=()=>{},onFeedback=()
             insect.mesh.traverse(n=>{if(n.morphTargetInfluences)n.morphTargetInfluences[0]=insect.state==='landed'?.08:.5+.5*Math.sin(time*22+i);});
         });
     }
-    function reset(){generation++;interactionOwner?.reset();sparkles.reset();rimMaterial.emissiveIntensity=.03;emergenceAt=null;holds.clear();edges.clear();hands.clear();released=landed=shaken=0;settledAt=shakeAt=cueFinishedAt=zinniaLandedAt=null;cueStarted=cueDone=false;onZinnia('rest');burst=false;time=0;bucket.position.set(-.28,.08,.08);bucket.quaternion.identity();for(const insect of insects){insect.state='bucket';insect.perch=null;insect.mesh.position.copy(bucket.position).add(insect.home);}}
-    return {bucket,loading,update,reset,targets:()=>[],picked(){},moved(){},released(){},act(){},releaseAll(){for(const source of holds.keys())release(source,false);edges.clear();interactionOwner?.reset();sparkles.reset();},isHolding:source=>holds.has(source),
-        hints:()=>asset==='error'?['Butterflies could not load. Reset the activity to retry.']:cueDone?['Gently shake your hands to let them take flight.']:['Open your hands wide near your face and hold them still.','Watch them settle along your hand’s outline.'],
-        snapshot:()=>({asset,backend:interactionOwner?'iwsdk':'native',sparkles:sparkles.snapshot(),released,landed,shaken,cueStarted,cueDone,complete:shaken>0 && shakeAt!==null && time-shakeAt>2,insects:insects.map(i=>({state:i.state,position:i.mesh.position.toArray(),perch:i.perch?{hand:i.perch.hand,joint:i.perch.joint}:null}))}),
-        destroy(){if(disposed)return;disposed=true;interactionOwner?.reset();sparkles.destroy();generation++;onZinnia('rest');holds.clear();destroyModels();bucket.removeFromParent();bucket.traverse(n=>n.geometry?.dispose());material.dispose();rimMaterial.dispose();}};
+    function reset(){generation++;interactionOwner?.reset();sparkles.reset();rimMaterial.emissiveIntensity=.03;emergenceAt=null;holds.clear();edges.clear();hands.clear();released=landed=shaken=0;settledAt=shakeAt=cueFinishedAt=zinniaLandedAt=null;cueStarted=cueDone=false;onZinnia('rest');burst=false;time=0;placeCups();for(const insect of insects){insect.state='bucket';insect.perch=null;insect.mesh.visible=false;insect.mesh.position.copy(bucket.position).add(insect.home);}}
+    return {bucket,cups,loading,update,reset,targets:()=>[],picked(){},moved(){},released(){},act(){},releaseAll(){for(const source of holds.keys())release(source,false);edges.clear();interactionOwner?.reset();sparkles.reset();},isHolding:source=>holds.has(source),
+        hints:()=>asset==='error'?['Butterflies could not load. Reset the activity to retry.']:!burst?['Lift the cups to discover where the butterflies are hiding.']:cueDone?['Gently shake your hands to let them take flight.']:['Open your hands wide near your face and hold them still.','Watch them settle along your hand’s outline.'],
+        snapshot:()=>({asset,backend:interactionOwner?'iwsdk':'native',sparkles:sparkles.snapshot(),released,landed,shaken,cueStarted,cueDone,burst,complete:shaken>0 && shakeAt!==null && time-shakeAt>2,cups:cups.map(cup=>cup.position.toArray()),insects:insects.map(i=>({state:i.state,position:i.mesh.position.toArray(),perch:i.perch?{hand:i.perch.hand,joint:i.perch.joint}:null}))}),
+        destroy(){if(disposed)return;disposed=true;interactionOwner?.reset();sparkles.destroy();generation++;onZinnia('rest');holds.clear();destroyModels();for(const cup of cups)cup.removeFromParent();bucket.traverse(n=>n.geometry?.dispose());material.dispose();rimMaterial.dispose();}};
 }

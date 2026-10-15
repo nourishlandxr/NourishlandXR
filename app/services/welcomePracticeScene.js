@@ -255,6 +255,14 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
         body.halfSize={...variants.halfSize};body.radius=Math.max(...Object.values(body.halfSize));body.support=practiceSupport(body);
         let part=fruitParts.get(body.id);if(!part){part=createPracticeBody(body.id+':half',{radius:body.radius,halfSize:variants.halfSize,bounce:.05});part.home={...body.home};fruitParts.set(body.id,part);bodies.push(part);practiceFruits.push(part);props.addFruit(part);const group=new THREE.Group(),half=variants.half.clone(true);half.visible=true;half.scale[variants.axis]*=-1;group.add(half);root.add(group);objects.set(part.id,group);}
         part.fruit=true;part.visible=true;part.held=false;part.anchored=false;part.plated=false;part.basketed=false;Object.assign(part.position,body.position);Object.assign(part.rotation,body.rotation);const separation=new THREE.Vector3();separation[variants.axis]=(body.halfSize[variants.axis]+part.halfSize[variants.axis]+.009);separation.applyQuaternion(new THREE.Quaternion(body.rotation.x,body.rotation.y,body.rotation.z,body.rotation.w));part.position.x+=separation.x;part.position.y+=separation.y;part.position.z+=separation.z;part.position.y=Math.max(practiceSupport(part),part.position.y);Object.assign(part.velocity,{x:0,y:0,z:0});
+        // A two-hand pull should leave one half in each hand. The second grip
+        // already owns the opening gesture, so transfer it to the new half.
+        const second=currentInputs.find(input=>input.source===source && input.matrix && input.down);
+        if(second && !activeGrabs.has(source)){
+            const pose=localPose(second.matrix),bodyMatrix=new THREE.Matrix4().compose(new THREE.Vector3(part.position.x,part.position.y,part.position.z),new THREE.Quaternion(part.rotation.x,part.rotation.y,part.rotation.z,part.rotation.w),one);
+            activeGrabs.set(source,{body:part,offset:pose.clone().invert().multiply(bodyMatrix),samples:[],started:elapsed,start:new THREE.Vector3(part.position.x,part.position.y,part.position.z),moved:0});
+            part.held=true;part.interactionSource=source;
+        }
         fruitMessage='Place your opened fruit on the plate.';fruitCue=null;zinniaCharacter.userData.zinnia.guide.celebrate();onFeedback('open',source);notifyAssets();return true;
     }
     const leafHints=['L','R'].map(side=>{const ring=new THREE.Mesh(new THREE.TorusGeometry(.035,.002,6,28),new THREE.MeshBasicMaterial({color:'#ffdf93',transparent:true,opacity:.65,depthWrite:false}));ring.name='Leaf grip target '+side;ring.visible=false;scene.add(ring);return ring;});let trialZinniaTime=0;

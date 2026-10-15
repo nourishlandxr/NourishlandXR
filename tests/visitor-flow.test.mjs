@@ -4,6 +4,7 @@ import path from 'node:path';
 import test from 'node:test';
 import { renderProjectEntry } from '../app/components/projectEntry.js';
 import { renderLaunchScreen } from '../app/screens/launch.js';
+import { BUILD_INFO } from '../app/services/buildInfo.js';
 import { scopedMarkerStorageId } from '../app/services/markerWorkflow.js';
 import { DEMO_SEQUENCE } from '../app/features/ar-demo/demoConfig.js';
 import { guidedDemoStep } from '../app/features/ar-demo/demoJourneyContent.js';
@@ -31,6 +32,7 @@ test('V2 welcome gives exploration priority while preserving creator and AR entr
  assert.match(app.innerHTML,/openTemporaryArDemoWindow/);
  assert.match(app.innerHTML,/data-v2-about>About<\/button>/);
  assert.match(app.innerHTML,/welcome-version-badge/);
+ assert.match(app.innerHTML,new RegExp(`V${BUILD_INFO.version.replaceAll('.','\\.')} ·`));
  assert.match(app.innerHTML,/v2-intro-sequence/);
  assert.doesNotMatch(app.innerHTML,/v2-intro-grid/);
  assert.ok(app.innerHTML.indexOf('renderV1Explorer') < app.innerHTML.indexOf('renderDemoProjects'));

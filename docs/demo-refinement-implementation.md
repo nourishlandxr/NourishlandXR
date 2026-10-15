@@ -12,9 +12,9 @@ Installed SDK: `@iwsdk/core` and `@iwsdk/xr-input` 1.0.1, with the existing nati
 2. **Virtual hands:** fruit, brush, and special controller interaction.
 3. **Hand tracking:** butterfly bucket, then tic-tac-toe.
 
-The bucket supports pinching/grabbing individual butterflies and releasing them to fly briefly, then perch along the live outline of a real tracked hand. Perches follow the current hand pose and recover from tracking loss. A visitor can also lift the bucket to release its flock.
+Three upside-down cups hide the butterfly flock. Only lifting the occupied cup starts a sparkle burst and reveals the butterflies. Visitors can then pinch/grab an individual butterfly and release it to fly briefly before it perches along the live outline of a tracked hand. Perches follow the current hand pose and recover from tracking loss.
 
-Completing one tic-tac-toe round (win, loss, or draw) unlocks all three experiences. Compact experience switches remain available and are suggested for the rest of the demo. A round in progress does not unlock them.
+Completing one tic-tac-toe round (win, loss, or draw) unlocks free choice of Controllers, Virtual hands, and Hand tracking. The activities remain separately available in Games. A round in progress does not unlock input choice.
 
 - [x] Opening: prepare frame and content texture together; reveal a complete surface before starting spoken text.
 - [x] Placement: glowing outline, persistent pose-relative grab, full translation and rotation, intentional release.
@@ -27,12 +27,12 @@ Completing one tic-tac-toe round (win, loss, or draw) unlocks all three experien
 - [x] Fruit: wooden board at right, central plate, geometry-derived grab bounds, stable cut pieces, banana peel/eating, apple bites and retained plate placement.
 - [x] Leaves: forgiving visible target, persistent grip, moving endpoint, bounded responsive pose for eight seconds.
 - [x] Hand tracking/game: controller-to-hand transition, grabbable pieces, board-relative snap/rotation, turn/win/draw rules and tracking-loss recovery.
-- [x] Butterfly bucket: pinch/grab, intentional release, brief flight, live hand-outline landing and tracking-loss recovery.
-- [x] One completed tic-tac-toe round unlocks all three switchable experiences for the remaining demo.
+- [x] Three-cup butterfly surprise: lift to reveal, pinch/grab, intentional release, brief flight, live hand-outline landing and tracking-loss recovery.
+- [x] One completed tic-tac-toe round unlocks free input-method choice; Games remain separate.
 - [x] Replay/closing: voice yes/no replay, closing summary after all three input methods, clear final navigation.
 - [x] Updated saved Zinnia audio matches the final flow.
 - [x] Focused interaction tests, complete suite, frontend build, rendered/browser verification and live version.
-- [ ] Physical Quest acceptance: check real hand perches, pinch alignment, table comfort, haptics and sustained frame rate on device.
+- [ ] Physical Quest acceptance: check cup lifting, real hand perches, pinch alignment, table comfort, haptics and sustained frame rate on device.
 
 ## Starting point
 

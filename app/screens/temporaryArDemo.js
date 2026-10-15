@@ -307,7 +307,7 @@ let demoRenderFailureReported = false;
 const XR_FIRST_CONTENT_TIMEOUT_MS=2500;
 const XR_RECOVERY_CODE='NLXR-XR-01';
 let xrRecoveryTexture=null,xrRecoveryCanvas=null,xrRecoveryStatus='starting',xrRecoveryDetail='';
-let xrFirstContentRendered=false,xrFirstContentWatchdog=null,xrDisabledFrameSteps=new Set(),xrReportedFailurePhases=new Set();
+let xrFirstContentRendered=false,xrFirstContentWatchdog=null,xrDisabledFrameSteps=new Set(),xrReportedFailurePhases=new Set(),xrFrameRetryAt=new Map();
 const meshRepository=createMeshRepository();
 const meshSourceResolver=createMeshSourceResolver({repository:meshRepository});
 const meshGenerator=createPlaceholderKnowledgeGenerator();
@@ -393,9 +393,15 @@ function reportDemoRenderFailure(error, phase = 'demo render') {
 
 function runXrFrameStep(phase, operation) {
     if(xrDisabledFrameSteps.has(phase))return false;
+    if((xrFrameRetryAt.get(phase) || 0)>performance.now())return false;
     const started=measureXrFrame?performance.now():0;
-    try { operation();return true; }
+    try { operation();xrFrameRetryAt.delete(phase);return true; }
     catch(error){
+        if(phase==='Control panel render' && !xrFrameRetryAt.has(phase)){
+            recordArFailure(error,phase);
+            xrFrameRetryAt.set(phase,performance.now()+1000);
+            return false;
+        }
         xrDisabledFrameSteps.add(phase);
         reportDemoRenderFailure(error,phase);
         return false;
@@ -410,6 +416,7 @@ function beginXrFirstContentWatchdog(){
     xrRecoveryDetail='';
     xrDisabledFrameSteps=new Set();
     xrReportedFailurePhases=new Set();
+    xrFrameRetryAt=new Map();
     const watchedSession=session;
     let elapsed=0,lastCheck=performance.now(),wasVisible=!['hidden','visible-blurred'].includes(session?.visibilityState);
     const check=()=>{
@@ -660,7 +667,7 @@ function clearSessionState() {
     clearTimeout(pointerPressTimer);
     clearTimeout(demoHoldTimer);
     clearTimeout(introNarrationTimer);
-    clearTimeout(xrFirstContentWatchdog);xrFirstContentWatchdog=null;xrFirstContentRendered=false;xrDisabledFrameSteps=new Set();xrReportedFailurePhases=new Set();xrRecoveryStatus='starting';xrRecoveryDetail='';
+    clearTimeout(xrFirstContentWatchdog);xrFirstContentWatchdog=null;xrFirstContentRendered=false;xrDisabledFrameSteps=new Set();xrReportedFailurePhases=new Set();xrFrameRetryAt=new Map();xrRecoveryStatus='starting';xrRecoveryDetail='';
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();

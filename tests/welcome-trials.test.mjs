@@ -61,7 +61,7 @@ test('the actual demo butterfly rig bakes finite independent wing morphs for bot
     const oldDocument=globalThis.document,oldFetch=globalThis.fetch,oldBitmap=globalThis.createImageBitmap;
     globalThis.document=canvasDocument();globalThis.createImageBitmap=async()=>({width:64,height:64});
     const bytes=fs.readFileSync(new URL('../app/assets/animated_butterfly.glb',import.meta.url));globalThis.fetch=async()=>({ok:true,arrayBuffer:async()=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength)});
-    try{const insects=await loadTrialButterflies();assert.equal(insects.length,20);assert.equal(new Set(insects.map(model=>model.userData.butterflyColour)).size,20);assert.equal(new Set(insects.map(model=>model.children[0].material)).size,20);assert.notEqual(insects[0].children[0].morphTargetInfluences,insects[1].children[0].morphTargetInfluences);
+    try{const insects=await loadTrialButterflies();assert.equal(insects.length,8);assert.equal(new Set(insects.map(model=>model.userData.butterflyColour)).size,8);assert.equal(new Set(insects.map(model=>model.children[0].material)).size,8);assert.notEqual(insects[0].children[0].morphTargetInfluences,insects[1].children[0].morphTargetInfluences);
         let moved=false;for(const mesh of insects[0].children){const base=mesh.geometry.attributes.position.array,morph=mesh.geometry.morphAttributes.position[0].array;assert.equal(base.length,morph.length);assert.ok(base.every(Number.isFinite));assert.ok(morph.every(Number.isFinite));moved ||= base.some((n,i)=>Math.abs(n-morph[i])>.001);}assert.equal(moved,true);
     }finally{globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.createImageBitmap=oldBitmap;}
 });
@@ -83,8 +83,8 @@ test('runtime palette selects colours directly and drags brush width through con
  assert.ok(trial.snapshot().paint.width>.015);assert.equal(trial.snapshot().strokes,0,'panel drags do not paint');trial.destroy();
 }));
 
-test('larger tic-tac-toe uses nine board cells and physical pieces rather than ray selection',()=>withCanvas(()=>{
- const root=new THREE.Group(),trial=createWelcomePracticeTrials(root);trial.open('tic-tac-toe');const board=root.getObjectByName('Hand-tracked Tic-Tac-Toe board');assert.ok(board);assert.equal(trial.snapshot().game.cells.length,9);assert.equal(root.children.filter(n=>n.name.startsWith('Tic piece')).length,0);let pieces=0;root.traverse(n=>{if(n.name.startsWith('Tic piece'))pieces++;});assert.equal(pieces,10);const size=new THREE.Box3().setFromObject(board).getSize(new THREE.Vector3());assert.ok(size.x>.639 && size.z>.639);assert.equal(trial.hit({origin:new THREE.Vector3(0,1,0),direction:new THREE.Vector3(0,-1,0)}),null);trial.destroy();
+test('compact tic-tac-toe uses nine board cells and physical pieces rather than ray selection',()=>withCanvas(()=>{
+ const root=new THREE.Group(),trial=createWelcomePracticeTrials(root);trial.open('tic-tac-toe');const board=root.getObjectByName('Hand-tracked Tic-Tac-Toe board');assert.ok(board);assert.equal(trial.snapshot().game.cells.length,9);assert.equal(root.children.filter(n=>n.name.startsWith('Tic piece')).length,0);let pieces=0;root.traverse(n=>{if(n.name.startsWith('Tic piece'))pieces++;});assert.equal(pieces,10);const size=new THREE.Box3().setFromObject(board).getSize(new THREE.Vector3());assert.ok(size.x>.419 && size.x<.43 && size.z>.48 && size.z<.50);assert.equal(trial.hit({origin:new THREE.Vector3(0,1,0),direction:new THREE.Vector3(0,-1,0)}),null);trial.destroy();
 }));
 
 test('Peek frame keeps its 60 by 40 cm dimensions and follows a grip in all modes',()=>withCanvas(()=>{

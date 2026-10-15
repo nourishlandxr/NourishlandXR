@@ -1,13 +1,13 @@
-# Tutorial and demo master test — V0.9631
+# Tutorial and demo master test — V0.9644
 
-Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9631 on the welcome screen before testing. Use a fresh tab for the guided first-run check.
+Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9644 on the welcome screen before testing. Use a fresh tab for the guided first-run check.
 
 ## Expected sequence
 
 1. Welcome to NourishlandXR begins with Zinnia’s saved voice. The Living Frame and guide appear before their narration proceeds. No first-frame watchdog or Comfort options render error.
 2. Controllers: Orb manipulation, controller practice and dancing with Zinnia.
 3. Virtual hands: fruit starts in the basket; pick it up, inspect it, cut supported fruit and place it on the plate. Try the brush and special controller interactions.
-4. Hand tracking: grab a butterfly from the bucket, release it, watch its brief flight, then watch it land on the outline of a real hand and follow that hand.
+4. Hand tracking: lift one of three cups to discover the hidden butterflies. Pinch one, release it, watch its brief flight, then watch it land on the outline of a real hand and follow that hand.
 5. Play one complete tic-tac-toe round. Only completing the round unlocks free choice of Controllers, Virtual hands and Hand tracking. Switching these changes input; it does not launch an activity.
 6. Zinnia explains that activities are in Games, suggests picking up the controllers, and continues into the main Nourishland demo after her recording finishes.
 7. The early spatial-tools explanation explicitly introduces the tools available in Creator mode.
@@ -33,11 +33,11 @@ Candidate: https://nourishland.org/xr/ (also www). Confirm V0.9631 on the welcom
 
 ## Evidence and limits
 
-Local checks passed: 1,029 regression tests; frontend build V0.9631; 36 authored chapter text layouts within bounds; 204 saved recordings decoded successfully (93 tutorial, 111 demo); native butterfly, tic-tac-toe, fruit, brush and controller scenes rendered; welcome V0.9631 visible; no browser page errors. These checks do not replace physical Quest testing.
+Local checks passed: 1,066 regression tests and frontend build V0.9644. The built welcome screen reads its badge from `BUILD_INFO.version`, and the built files contain 0.9644. The title and hands-ready recordings were regenerated with Zinnia's existing voice profile; the other tutorial clips were reused. These checks do not replace physical Quest testing.
 
 Local review: serve the repository and open tools/preview-demo-narration.html for chapter text plus exact paragraph recordings, or tools/preview-demo-experiences.html for the native practice renderer. These developer previews are not hosted product routes.
 
-Record headset/browser version, AR versus VR mode, input method, chapter/lesson, visible V0.9631 and any console error for each failure. Physical Quest results remain pending until this matrix is completed on-device.
+Record headset/browser version, AR versus VR mode, input method, chapter/lesson, visible V0.9644 and any console error for each failure. The V0.9640 Quest report showed a decline from about 83 callback FPS near arrival to 50 at fruit and 54 at brush, with GPU/compositor time unmeasured. Repeat those checkpoints on V0.9644 before calling performance repaired. If Control Panel render fails, copy its diagnostics stack; V0.9644 makes one transient retry, but the original device exception has not yet been identified.
 
 V0.9631 additions: tutorial pause controls and their spoken instructions removed; all 36 chapter/111 runtime paragraph recording scripts match displayed body text exactly, including PIMO/LIMO; Notes readbacks page without truncating long dictation; the Moringa fallback disappears after a successful microphone transcript. Live transcription tested on root and www with approved synthetic Strawberry audio through actual browser MediaRecorder. This verifies the public service and browser recording path; physical Quest microphone permission/capture remains pending.
 

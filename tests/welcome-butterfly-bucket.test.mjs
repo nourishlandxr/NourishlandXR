@@ -13,12 +13,19 @@ test('butterfly pinch releases to brief flight without inventing missing hand pe
  const bucket=createWelcomeButterflyBucket(root,{load:async()=>Array.from({length:4},()=>new THREE.Mesh(new THREE.SphereGeometry(1,6,4),new THREE.MeshBasicMaterial()))});await bucket.loading;
  const source={handedness:'left',hand:{}},input={source,trigger:false};
  const move=(point,down)=>{input.matrix=root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(...point.toArray())).elements;input.trigger=down;bucket.update(.05,[input]);};
- try{const first=new THREE.Vector3(...bucket.snapshot().insects[0].position);move(first,false);move(first,true);assert.equal(bucket.snapshot().insects[0].state,'held');move(first.clone().add(new THREE.Vector3(0,.15,0)),true);move(first,false);assert.equal(bucket.snapshot().released,1);assert.equal(bucket.snapshot().insects[0].state,'flying');
+ try{assert.equal(bucket.snapshot().cups.length,3);assert.equal(bucket.snapshot().burst,false);const cup=bucket.bucket.position.clone().add(new THREE.Vector3(0,.073,0));move(cup,false);move(cup,true);move(cup.clone().add(new THREE.Vector3(0,.2,0)),true);move(cup,false);assert.equal(bucket.snapshot().burst,true);const first=new THREE.Vector3(...bucket.snapshot().insects[0].position);move(first,false);move(first,true);assert.equal(bucket.snapshot().insects[0].state,'held');move(first.clone().add(new THREE.Vector3(0,.15,0)),true);move(first,false);assert.equal(bucket.snapshot().released,1);assert.equal(bucket.snapshot().insects[0].state,'flying');
  const p=root.localToWorld(new THREE.Vector3(.10,.35,.10));input.joints=new Map([['index-finger-phalanx-proximal',p]]);
  for(let i=0;i<30;i++)bucket.update(.05,[input]);assert.equal(bucket.snapshot().insects[0].state,'flying','flight is visible before landing');
  for(let i=0;i<100;i++)bucket.update(.05,[input]);assert.equal(bucket.snapshot().insects[0].state,'flying');assert.equal(bucket.snapshot().complete,false,'one joint is not a tracked open hand');bucket.update(.05,[]);assert.equal(bucket.snapshot().insects[0].state,'flying');
  move(new THREE.Vector3(...bucket.snapshot().insects[0].position),true);assert.equal(bucket.snapshot().insects[0].state,'flying','tracking recovery requires a released pinch first');
  }finally{bucket.destroy();}
+});
+test('three upside-down cups hide butterflies until the correct one is lifted',async()=>{
+ const root=new THREE.Group(),bucket=createWelcomeButterflyBucket(root,{load:async()=>Array.from({length:3},()=>new THREE.Mesh(new THREE.SphereGeometry(1,4,3),new THREE.MeshBasicMaterial()))});await bucket.loading;
+ const source={handedness:'right',hand:{}},input={source,trigger:false,matrix:new THREE.Matrix4().elements};
+ const move=(point,down)=>{input.matrix=new THREE.Matrix4().setPosition(point).elements;input.trigger=down;bucket.update(.05,[input]);};
+ const lift=cup=>{const point=cup.position.clone().add(new THREE.Vector3(0,.073,0));move(point,false);move(point,true);move(point.add(new THREE.Vector3(0,.2,0)),true);move(point,false);};
+ try{assert.equal(bucket.cups.length,3);assert.ok(bucket.cups.every(cup=>Math.abs(cup.rotation.x-Math.PI)<1e-6));for(let i=0;i<30;i++)bucket.update(.05,[]);assert.equal(bucket.snapshot().burst,false,'time alone cannot reveal the surprise');lift(bucket.cups[1]);assert.equal(bucket.snapshot().burst,false,'empty cup must not release butterflies');lift(bucket.bucket);assert.equal(bucket.snapshot().burst,true);assert.equal(bucket.snapshot().insects.length,3);}finally{bucket.destroy();}
 });
 test('only a completed tic-tac-toe outcome unlocks the free input choice',()=>{
  const saved=globalThis.sessionStorage,values=new Map();globalThis.sessionStorage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
@@ -34,6 +41,11 @@ test('placement follows the full controller pose and only commits on release',()
  const table=new THREE.Group();table.position.set(.2,.8,-1);const grab=createWelcomePlacementGrab(table),source={handedness:'right'};
  grab.begin(source,new THREE.Matrix4().makeTranslation(0,1,0).elements);const matrix=new THREE.Matrix4().makeRotationY(Math.PI/2).setPosition(.3,1.2,.1).elements;
  assert.equal(grab.update([{source,matrix,down:true}]),false);assert.ok(Math.abs(table.position.y-1)<1e-6);assert.ok(Math.abs(table.rotation.y-Math.PI/2)<1e-6);const position=table.position.clone();assert.equal(grab.update([{source,matrix,down:false}]),true);assert.equal(grab.owner,null);grab.update([{source,matrix:new THREE.Matrix4().elements,down:true}]);assert.deepEqual(table.position,position);
+});
+test('table stays level while a tilted controller positions it',()=>{
+ const table=new THREE.Group(),grab=createWelcomePlacementGrab(table),source={handedness:'right'};grab.begin(source,new THREE.Matrix4().elements);
+ const matrix=new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(.65,.4,-.5,'YXZ')).setPosition(.2,1.1,-.4).elements;
+ grab.update([{source,matrix,down:true}]);assert.ok(Math.abs(table.rotation.x)<1e-6);assert.ok(Math.abs(table.rotation.z)<1e-6);assert.ok(Math.abs(table.rotation.y)>.1);grab.cancel();
 });
 test('peeled banana keeps a geometrically smaller half and requires a deliberate mouth approach',()=>{
  const holder=new THREE.Group(),whole=new THREE.Group(),mesh=new THREE.Mesh(new THREE.BoxGeometry(.06,.24,.04),new THREE.MeshBasicMaterial());whole.add(mesh);holder.add(whole);holder.updateMatrixWorld(true);

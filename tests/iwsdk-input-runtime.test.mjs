@@ -107,9 +107,9 @@ for(const hand of [false,true])test(`tutorial cup uses actual SDK ${hand?'pinch'
     if(!hand){f.source.profiles=['oculus-touch-v3'];f.source.gamepad={mapping:'xr-standard',axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,touched:false,value:0}))};}
     const runtime=await attachXRInputRuntime(f.session,{factory:()=>createNlxrInputBridge(f.session,sdk)});
     owner=createTutorialInteractionOwner(runtime,GrabSDK,{scope:'tutorial-butterfly-cup'});
-    const root=new THREE.Group(),position=new THREE.Vector3(-.28,.18,.08);
+    const root=new THREE.Group(),position=new THREE.Vector3();
     const setPosition=()=>{f.source.gripSpace.position=position.toArray();if(hand){for(const joint of f.source.hand.values())joint.position=position.toArray();}};setPosition();
-    bucket=createWelcomeButterflyBucket(root,{load:async()=>Array.from({length:20},()=>new THREE.Mesh(new THREE.SphereGeometry(1,4,3),new THREE.MeshBasicMaterial())),getContext:()=>({interactionOwner:owner,ready:false,onSparkle:()=>bursts++})});await bucket.loading;
+    bucket=createWelcomeButterflyBucket(root,{load:async()=>Array.from({length:8},()=>new THREE.Mesh(new THREE.SphereGeometry(1,4,3),new THREE.MeshBasicMaterial())),getContext:()=>({interactionOwner:owner,ready:false,onSparkle:()=>bursts++})});await bucket.loading;position.copy(bucket.bucket.position).add(new THREE.Vector3(0,.073,0));setPosition();
     const tick=()=>{runtime.update(f.frame,f.space,time+=20,time);bucket.update(.02,[{source:f.source,matrix:new THREE.Matrix4().setPosition(position).elements,pinchPoint:hand?position:null,trigger:down,down,uiBlocked:blocked}]);};
     try{
         tick();tick();down=true;tick();assert.equal(owner.held(f.source)?.id,'butterfly-cup');assert.equal(bucket.snapshot().backend,'iwsdk');assert.ok(bucket.isHolding(f.source));
@@ -117,7 +117,7 @@ for(const hand of [false,true])test(`tutorial cup uses actual SDK ${hand?'pinch'
         tick();assert.equal(bursts,1,'holding the cup never retriggers its chime');
         blocked=true;tick();assert.equal(bucket.isHolding(f.source),false);assert.equal(owner.held(f.source),null);blocked=false;tick();assert.equal(bucket.isHolding(f.source),false,'held input cannot recapture after a menu');
         down=false;tick();bucket.releaseAll();assert.equal(bucket.snapshot().sparkles.active,0);assert.deepEqual(owner.snapshot().held,[]);
-        bucket.reset();position.fromArray(bucket.snapshot().insects[0].position);setPosition();tick();down=true;tick();
+        bucket.reset();position.copy(bucket.bucket.position).add(new THREE.Vector3(0,.073,0));setPosition();tick();down=true;tick();position.y+=.2;setPosition();tick();down=false;tick();bucket.releaseAll();position.fromArray(bucket.snapshot().insects[0].position);setPosition();tick();down=true;tick();
         const insectId=owner.held(f.source)?.id;assert.ok(insectId?.startsWith('trial-butterfly-'),'individual butterflies also use SDK ownership');
         const index=Number(insectId.replace('trial-butterfly-','')),start=bucket.snapshot().insects[index].position[0];position.x+=.12;setPosition();tick();
         assert.ok(Math.abs(bucket.snapshot().insects[index].position[0]-start-.12)<1e-5);
