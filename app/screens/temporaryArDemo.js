@@ -6649,7 +6649,7 @@ async function startImmersive() {
         bindLimSessionInteractions(session);
         allowArScreenRotation();
         sessionMode = arSession.mode || 'immersive-ar';
-        questTutorialCapture=(isQuestHeadsetBrowser() || sessionMode==='immersive-vr')?createQuestTutorialCapture(session):null;
+        questTutorialCapture=createQuestTutorialCapture(session);
         lastQuestPracticeSampleAt=0;lastQuestPracticeSample=null;
         domOverlayEnabled = Boolean(arSession.domOverlay);
         const transparentSession = arSession.passthrough !== false;

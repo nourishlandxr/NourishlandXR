@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createQuestTutorialCapture,renderQuestTutorialReport,savedQuestTutorialReport} from '../app/services/questTutorialCapture.js';
+import {createQuestTutorialCapture,questTutorialCaptureEnabled,renderQuestTutorialReport,savedQuestTutorialReport,setQuestTutorialCaptureEnabled} from '../app/services/questTutorialCapture.js';
 
 test('Quest capture keeps tutorial lessons separate and saves the report',()=>{
     const original={location:Object.getOwnPropertyDescriptor(globalThis,'location'),navigator:Object.getOwnPropertyDescriptor(globalThis,'navigator'),localStorage:Object.getOwnPropertyDescriptor(globalThis,'localStorage')};
@@ -50,4 +50,20 @@ test('saved Quest report can be reopened after the XR session has ended',()=>{
         assert.match(nodes['[data-report-status]'].textContent,/ready/);
         assert.match(root.innerHTML,/Quest performance report/);
     }finally{if(original)Object.defineProperty(globalThis,'localStorage',original);else delete globalThis.localStorage;}
+});
+
+test('persistent performance switch arms capture without a query or headset detection',()=>{
+    const original={location:Object.getOwnPropertyDescriptor(globalThis,'location'),navigator:Object.getOwnPropertyDescriptor(globalThis,'navigator'),localStorage:Object.getOwnPropertyDescriptor(globalThis,'localStorage')};
+    const values=new Map();
+    Object.defineProperty(globalThis,'location',{configurable:true,value:{search:''}});
+    Object.defineProperty(globalThis,'navigator',{configurable:true,value:{userAgent:'Generic XR browser'}});
+    Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:key=>values.get(key) || null,setItem:(key,value)=>values.set(key,value)}});
+    try{
+        assert.equal(questTutorialCaptureEnabled(),false);
+        assert.equal(setQuestTutorialCaptureEnabled(true),true);
+        assert.equal(questTutorialCaptureEnabled(),true);
+        assert.ok(createQuestTutorialCapture({frameRate:72}));
+        assert.equal(setQuestTutorialCaptureEnabled(false),false);
+        assert.equal(createQuestTutorialCapture({frameRate:72}),null);
+    }finally{for(const [key,descriptor] of Object.entries(original)){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else delete globalThis[key];}}
 });

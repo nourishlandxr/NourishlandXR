@@ -11,7 +11,7 @@ test('Footer grows with introduced elements and uses state rather than open/clos
     const buttons=spatialPanelControls({height:800,items:items.map(item=>({...item,kind:'visibility',action:'Utility:visibility:'+item.id}))});
     assert.equal(buttons.length,4);assert.ok(buttons.every(item=>item.y===752));
 });
-test('Welcome badge renders the current build version',()=>{const app={innerHTML:''};renderLaunchScreen(app);assert.ok(app.innerHTML.includes('>'+`V${BUILD_INFO.version}`+' · '));});
+test('Welcome badge renders the current build version',()=>{const app={innerHTML:''};renderLaunchScreen(app);assert.ok(app.innerHTML.includes('>'+`V${BUILD_INFO.version}`+' · '));assert.match(app.innerHTML,/Performance test: OFF/);});
 test('Welcome offers saved Quest report without a URL query',()=>{
  const original=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
  Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:key=>key==='nourishland-xr-quest-tutorial-capture'?'{"lessons":[]}':null}});

@@ -1,11 +1,24 @@
 import {BUILD_INFO} from './buildInfo.js';
 
 const STORAGE_KEY='nourishland-xr-quest-tutorial-capture';
+const SWITCH_KEY='nourishland-xr-performance-test';
 
 export function questTutorialCaptureEnabled(){
-    if(new URLSearchParams(location.search).get('questPerf')==='1')return true;
-    try{return JSON.parse(localStorage.getItem('nourishland-xr-settings') || '{}').developerDiagnostics===true;}
+    try{
+        const saved=localStorage.getItem(SWITCH_KEY);
+        if(saved==='on')return true;
+        if(saved==='off')return false;
+        return new URLSearchParams(globalThis.location?.search || '').get('questPerf')==='1'
+            || JSON.parse(localStorage.getItem('nourishland-xr-settings') || '{}').developerDiagnostics===true;
+    }
     catch{return false;}
+}
+
+export function setQuestTutorialCaptureEnabled(enabled){
+    const value=enabled?'on':'off';
+    localStorage.setItem(SWITCH_KEY,value);
+    if(localStorage.getItem(SWITCH_KEY)!==value)throw new Error('Browser storage did not save the performance setting.');
+    return enabled;
 }
 
 export function savedQuestTutorialReport(){
