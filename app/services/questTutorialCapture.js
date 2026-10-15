@@ -98,3 +98,18 @@ export function showQuestTutorialReport(){
     close.style.cssText='margin-top:8px;padding:9px 12px;border:1px solid #a9dcc5;border-radius:8px;background:transparent;color:#fff;cursor:pointer';close.onclick=()=>panel.remove();
     panel.append(message,document.createElement('br'),copy,close);document.body.append(panel);
 }
+
+export function renderQuestTutorialReport(root){
+    const report=savedQuestTutorialReport();
+    root.innerHTML=`<section class="screen settings-screen" data-quest-report style="max-width:760px;margin:0 auto;padding:24px">
+        <header class="page-header"><button type="button" class="icon-control" data-report-back aria-label="Back to welcome" title="Back to welcome">←</button><h1>Quest performance report</h1></header>
+        <div class="panel"><p data-report-status role="status"></p><button type="button" data-report-copy>Copy report</button><textarea readonly aria-label="Saved Quest performance report" style="display:block;width:100%;min-height:320px;margin-top:16px;box-sizing:border-box"></textarea></div>
+    </section>`;
+    const status=root.querySelector('[data-report-status]'),copy=root.querySelector('[data-report-copy]'),field=root.querySelector('textarea');
+    field.value=report;
+    if(!report){status.textContent='No Quest report is saved in this browser. Use the same Quest Browser profile that ran the tutorial.';copy.disabled=true;field.hidden=true;}
+    else status.textContent='Your saved tutorial measurement is ready. Copy it and paste it into the chat.';
+    copy.addEventListener('click',async()=>{try{await navigator.clipboard.writeText(field.value);status.textContent='Report copied. Paste it into the chat.';}
+        catch{field.focus();field.select();status.textContent='Clipboard access was blocked. The report is selected below; use the Browser copy command.';}});
+    root.querySelector('[data-report-back]').addEventListener('click',()=>{const url=new URL(location.href);url.searchParams.delete('questPerf');location.href=url.href;});
+}

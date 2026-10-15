@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createQuestTutorialCapture,savedQuestTutorialReport} from '../app/services/questTutorialCapture.js';
+import {createQuestTutorialCapture,renderQuestTutorialReport,savedQuestTutorialReport} from '../app/services/questTutorialCapture.js';
 
 test('Quest capture keeps tutorial lessons separate and saves the report',()=>{
     const original={location:Object.getOwnPropertyDescriptor(globalThis,'location'),navigator:Object.getOwnPropertyDescriptor(globalThis,'navigator'),localStorage:Object.getOwnPropertyDescriptor(globalThis,'localStorage')};
@@ -31,4 +31,23 @@ test('Quest capture keeps tutorial lessons separate and saves the report',()=>{
             else delete globalThis[key];
         }
     }
+});
+
+test('saved Quest report can be reopened after the XR session has ended',()=>{
+    const original=Object.getOwnPropertyDescriptor(globalThis,'localStorage');
+    const saved='{"kind":"Quest tutorial performance","visibleFrames":300}';
+    Object.defineProperty(globalThis,'localStorage',{configurable:true,value:{getItem:key=>key==='nourishland-xr-quest-tutorial-capture'?saved:null}});
+    try{
+        const nodes={
+            '[data-report-status]':{textContent:''},
+            '[data-report-copy]':{addEventListener(){}},
+            textarea:{value:'',hidden:false},
+            '[data-report-back]':{addEventListener(){}}
+        };
+        const root={innerHTML:'',querySelector:selector=>nodes[selector]};
+        renderQuestTutorialReport(root);
+        assert.equal(nodes.textarea.value,saved);
+        assert.match(nodes['[data-report-status]'].textContent,/ready/);
+        assert.match(root.innerHTML,/Quest performance report/);
+    }finally{if(original)Object.defineProperty(globalThis,'localStorage',original);else delete globalThis.localStorage;}
 });

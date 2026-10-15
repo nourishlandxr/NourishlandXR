@@ -170,6 +170,11 @@ async function bootstrap() {
     try {
         if (new URLSearchParams(location.search).has('reset-workers')) await unregisterServiceWorkersForTesting();
         const params = new URLSearchParams(window.location.search);
+        if(params.get('questPerf')==='report'){
+            const {renderQuestTutorialReport}=await import('./services/questTutorialCapture.js');
+            renderQuestTutorialReport(app);
+            return;
+        }
         if (params.get('experience') === 'webxr-demo') {
             const { renderWebxrDemoEntry } = await import('./screens/webxrDemoEntry.js');
             renderWebxrDemoEntry(app, { onStart: () => window.openTemporaryArDemoWindow(), onHome: () => {
