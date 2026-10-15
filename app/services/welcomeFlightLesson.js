@@ -5,8 +5,8 @@ export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}
  const rings=new THREE.Group();rings.visible=false;root.add(rings);const points=[new THREE.Vector3(-.43,.35,-.72),new THREE.Vector3(-.05,.45,-1.02),new THREE.Vector3(.36,.42,-.88)],entries=[];
  const geometry=new THREE.TorusGeometry(.17,.006,6,48);let previous=start;
  for(const point of points){const normal=point.clone().sub(previous).normalize(),material=new THREE.MeshBasicMaterial({color:'#ffe1a0',transparent:true,opacity:.28,depthWrite:false}),mesh=new THREE.Mesh(geometry,material);mesh.position.copy(point);mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),normal);rings.add(mesh);entries.push({point,normal,mesh});previous=point;}
- let count=0,heading=0,landed=false,airborne=false,landingTime=0,elapsed=0;
- function reset(){count=0;heading=0;landed=false;airborne=false;landingTime=0;velocity.set(0,0,0);dragon.group.position.copy(start);}
+ let count=0,heading=0,stickHeading=0,landed=false,airborne=false,landingTime=0,elapsed=0;
+ function reset(){count=0;heading=stickHeading=0;landed=false;airborne=false;landingTime=0;velocity.set(0,0,0);dragon.group.position.copy(start);dragon.group.rotation.set(0,0,0);}
  function update(dt,phase,pilot){
   elapsed+=dt;const lesson=phase==='fly',available=['fly','hands','packet','seed','water','grow','harvest','explore'].includes(phase);dragon.group.visible=available;rings.visible=lesson && count<entries.length;
   const before=dragon.group.position.clone(),position=dragon.group.position;
@@ -14,10 +14,18 @@ export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}
    velocity.copy(pilot.position).sub(position).divideScalar(Math.max(.001,dt));position.copy(pilot.position);airborne=true;
   }else if(pilot && !landed){
    const axes=pilot.source.gamepad?.axes || [],offset=axes.length>=4?2:0,dead=v=>Math.abs(v || 0)<.16?0:Math.sign(v)*(Math.abs(v)-.16)/.84;
-   heading-=dead(axes[offset])*dt*1.65;const vertical=-dead(axes[offset+1]),speed=(pilot.trigger?1:0)-(pilot.reverse?1:0);
-   desired.set(-Math.sin(heading)*speed*.65,vertical*.55,-Math.cos(heading)*speed*.65);
+   const steer=dead(axes[offset]),vertical=-dead(axes[offset+1]),speed=(pilot.trigger?1:0)-(pilot.reverse?1:0),aim=pilot.aim;
+   if(aim){
+    // Aim is the right controller's forward axis in table space. Its yaw
+    // steers the companion; pitching the hand changes altitude while flying.
+    stickHeading-=steer*dt*1.65;
+    const target=Math.atan2(-aim.x,-aim.z)+stickHeading;
+    heading+=Math.atan2(Math.sin(target-heading),Math.cos(target-heading))*(1-Math.exp(-dt*7));
+   }else heading-=steer*dt*1.65;
+   const handClimb=aim?Math.sign(aim.y)*Math.max(0,Math.abs(aim.y)-.12)/.88:0;
+   desired.set(-Math.sin(heading)*speed*.65,vertical*.55+handClimb*Math.abs(speed)*.42,-Math.cos(heading)*speed*.65);
    if(desired.lengthSq()>.001)airborne=true;
-   if(airborne){velocity.lerp(desired,1-Math.exp(-dt*8));delta.copy(velocity).multiplyScalar(dt);position.add(delta);position.x=THREE.MathUtils.clamp(position.x,-3.5,3.5);position.y=THREE.MathUtils.clamp(position.y,.035,2.2);position.z=THREE.MathUtils.clamp(position.z,-3.5,2.5);dragon.group.rotation.y=heading;}
+   if(airborne){velocity.lerp(desired,1-Math.exp(-dt*8));delta.copy(velocity).multiplyScalar(dt);position.add(delta);position.x=THREE.MathUtils.clamp(position.x,-3.5,3.5);position.y=THREE.MathUtils.clamp(position.y,.035,2.2);position.z=THREE.MathUtils.clamp(position.z,-3.5,2.5);dragon.group.rotation.y=heading;dragon.group.rotation.z=THREE.MathUtils.damp(dragon.group.rotation.z,aim?THREE.MathUtils.clamp(-(pilot.up?.x||0)*.28,-.28,.28):0,8,dt);}
   }else if(!landed && airborne){velocity.multiplyScalar(Math.exp(-dt*5));position.addScaledVector(velocity,dt);}
   else {position.copy(start);velocity.set(0,0,0);}
   if(lesson && airborne && count<entries.length){const entry=entries[count],a=before.clone().sub(entry.point).dot(entry.normal),b=position.clone().sub(entry.point).dot(entry.normal);if(a*b<=0 && Math.abs(a-b)>.0001){const cross=before.clone().lerp(position,a/(a-b));if(cross.distanceTo(entry.point)<.145){count++;onFeedback('ring',pilot?.source);}}}
@@ -27,5 +35,5 @@ export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}
   const flutter=airborne && !landed || Math.sin(elapsed*.9)>.90;
   dragon.wings.forEach(({pivot,side,front})=>{pivot.rotation.z=side*(.06+(flutter?Math.sin(elapsed*2*Math.PI*42+front*.24)*.52:Math.sin(elapsed*1.4)*.035));});
  }
- reset();return {reset,update,get complete(){return landed;},snapshot:()=>({rings:count,total:entries.length,landed,airborne,speed:Math.min(1,velocity.length()/.85),position:{x:dragon.group.position.x,y:dragon.group.position.y,z:dragon.group.position.z}}),get cue(){return count<entries.length?`Fly through the glowing ring. ${count} of ${entries.length}.`:'Bring the dragonfly back to its marked landing spot. Ease off the controls to land.';}};
+ reset();return {reset,update,get complete(){return landed;},snapshot:()=>({rings:count,total:entries.length,landed,airborne,speed:Math.min(1,velocity.length()/.85),position:{x:dragon.group.position.x,y:dragon.group.position.y,z:dragon.group.position.z}}),get cue(){return count<entries.length?`Fly through the glowing ring. ${count} of ${entries.length}.`:'Bring your flying companion back to its marked landing spot. Ease off the controls to land.';}};
 }

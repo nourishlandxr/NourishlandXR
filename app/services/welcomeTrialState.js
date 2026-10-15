@@ -1,7 +1,7 @@
 // Trial progress is independent of the guided lesson and can be revisited.
 export const WELCOME_PRACTICE_GROUPS=Object.freeze([
     {id:'orb-dance',label:'Orb and dance with Zinnia',input:'controllers'},
-    {id:'fruit-brush',label:'Fruit, brush and special controllers',input:'gloves'},
+    {id:'fruit-brush',label:'Fruit discovery',input:'gloves'},
     {id:'hand-play',label:'Butterfly bucket and tic-tac-toe',input:'hands'}
 ]);
 export const WELCOME_TRIALS=Object.freeze([

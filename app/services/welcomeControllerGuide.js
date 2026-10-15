@@ -3,6 +3,7 @@ import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
 import {createWelcomeControllerSkin} from './welcomeControllerSkin.js';
 import {createWelcomeControllerSparks,welcomeControllerMagicPlane} from './welcomeControllerMagic.js';
 import {createNourishlandControllerPrototype} from './nourishlandControllerPrototype.js';
+import {createBrushControllerV2} from './brushControllerV2.js';
 
 const supported=['meta-quest-touch-plus','oculus-touch-v3'];
 const actions={'controls-face':['a-button','b-button','x-button','y-button'],'controls-orb-grab':['squeeze'],'controls-orb-open':['trigger'],'controls-trigger':['trigger'],'controls-grip':['squeeze'],'controls-stick':['thumbstick'],'controls-stick-click':['thumbstick'],'controls-face-first':['a-button','x-button'],'controls-face-second':['b-button','y-button'],'settings-open':['thumbstick'],'settings-close':['thumbstick'],brush:['squeeze','trigger'],point:['trigger'],grab:['squeeze'],gloves:['squeeze'],fly:['trigger','squeeze','thumbstick'],fruit:['squeeze','trigger'],packet:['squeeze','trigger'],seed:['squeeze'],harvest:['squeeze'],water:['squeeze'],trial:['squeeze','trigger']};
@@ -53,11 +54,13 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             if(!profile || !['left','right'].includes(hand))continue;
             const entry=load(profile,hand);if(!entry.ready)continue;const handReveal=toolState.handReveal?.[hand] || 0;entry.handReveal=handReveal;if(handReveal>=1 && !(hand==='right' && tool==='paint') || opacity<.01){entry.sparks.update(0,elapsed);continue;}
             const nextTool=hand==='right' && ['paint','insect'].includes(tool)?tool:'standard';
-            if(nextTool!=='standard' && !entry.prototype){entry.prototype=createNourishlandControllerPrototype({mode:nextTool,hand});entry.group.add(entry.prototype.group);entry.prototype.tip.visible=false;onAssets();}
-            if(nextTool!==entry.tool){entry.tool=nextTool;if(nextTool!=='standard')entry.prototype.setMode(nextTool);}
-            entry.mix=THREE.MathUtils.clamp(entry.mix+(nextTool==='standard'?-1:1)*dt,0,1);
+            if(nextTool==='paint' && !entry.brushV2){entry.brushV2=createBrushControllerV2(entry.model);entry.group.add(entry.brushV2.group);onAssets();}
+            if(nextTool==='insect' && !entry.prototype){entry.prototype=createNourishlandControllerPrototype({mode:nextTool,hand});entry.group.add(entry.prototype.group);entry.prototype.tip.visible=false;onAssets();}
+            if(nextTool!==entry.tool){entry.tool=nextTool;if(nextTool==='insect')entry.prototype.setMode(nextTool);}
+            entry.mix=THREE.MathUtils.clamp(entry.mix+(nextTool==='insect'?1:-1)*dt*5,0,1);
             const blend=entry.mix*entry.mix*(3-2*entry.mix);
-            entry.skin.update(dt,'standard');entry.model.visible=blend<.999;
+            entry.skin.update(dt,nextTool==='paint'?'paint':'standard');entry.model.visible=blend<.999;
+            entry.brushV2?.update(nextTool==='paint',toolState.paintColour,input.source.gamepad?.buttons?.[1]?.value || (input.down?1:0));
             if(entry.prototype){
                 entry.prototype.group.visible=blend>.001;entry.prototype.group.scale.setScalar(.9+.1*blend);
                 const axes=input.source.gamepad?.axes || [],axisOffset=axes.length>=4?2:0;
@@ -66,7 +69,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
                 entry.prototype.tip.visible=false;
             }
             entry.group.visible=true;entry.group.matrix.fromArray(input.matrix);
-            const magic=handReveal>0?{progress:handReveal,plane:welcomeControllerMagicPlane(input.matrix,entry.magicBounds.min,entry.magicBounds.max)}:null;
+            const magic=handReveal>0 && nextTool==='standard'?{progress:handReveal,plane:welcomeControllerMagicPlane(input.matrix,entry.magicBounds.min,entry.magicBounds.max)}:null;
             for(const material of entry.originalMaterials)material.userData.welcomeMagic=magic;entry.sparks.update(handReveal,elapsed);
             const fadeTree=(tree,fade)=>{if(tree.userData.controllerFade===fade)return;tree.userData.controllerFade=fade;const materials=tree.userData.controllerFadeMaterials ||= (()=>{const result=new Set();tree.traverse(node=>{for(const m of [node.material].flat().filter(Boolean))result.add(m);});return [...result];})();for(const m of materials){m.userData.controllerBase??={opacity:m.opacity,transparent:m.transparent,depthWrite:m.depthWrite};const base=m.userData.controllerBase;m.opacity=base.opacity*fade;m.transparent=base.transparent || fade<1;m.depthWrite=base.depthWrite && fade>=1;}};
             fadeTree(entry.model,opacity*(1-blend));if(entry.prototype)fadeTree(entry.prototype.group,opacity*blend);
@@ -96,6 +99,6 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
 
         }
     }
-    return {update,preload(sources){return Promise.all(sources.map(source=>{const profile=(source.profiles || []).find(id=>supported.includes(id));return profile && ['left','right'].includes(source.handedness)?load(profile,source.handedness).promise:null;}));},snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,tool:e.tool || 'standard',handReveal:e.handReveal || 0,settingsRing:Boolean(e.stickFunction?.visible),labelVisible:Boolean(e.group.visible && e.label?.visible),text:e.text,connectorStart:e.link?.position.toArray(),labelScale:e.label?.scale.x || 1,connectorLength:e.link?.scale.y || 0,pose:e.group.matrix.elements.slice(),sparks:e.sparks?.snapshot?.() || (e.handReveal>0 && e.handReveal<1),highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;scene.remove(shared);shared.geometry.dispose();shared.material.dispose();sharedTexture.dispose();for(const {group,texture,skin,prototype,sparks} of entries.values()){prototype?.dispose();sparks?.destroy();skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
+    return {update,preload(sources){return Promise.all(sources.map(source=>{const profile=(source.profiles || []).find(id=>supported.includes(id));return profile && ['left','right'].includes(source.handedness)?load(profile,source.handedness).promise:null;}));},snapshot:()=>[...entries].map(([id,e])=>({id,ready:e.ready,failed:e.failed,visible:e.group.visible,tool:e.tool || 'standard',handReveal:e.handReveal || 0,settingsRing:Boolean(e.stickFunction?.visible),labelVisible:Boolean(e.group.visible && e.label?.visible),text:e.text,connectorStart:e.link?.position.toArray(),labelScale:e.label?.scale.x || 1,connectorLength:e.link?.scale.y || 0,pose:e.group.matrix.elements.slice(),sparks:e.sparks?.snapshot?.() || (e.handReveal>0 && e.handReveal<1),highlighted:e.highlights.filter(h=>h.glow.visible || h.confirmation.visible).map(h=>h.kind)})),destroy(){disposed=true;scene.remove(shared);shared.geometry.dispose();shared.material.dispose();sharedTexture.dispose();for(const {group,texture,skin,prototype,brushV2,sparks} of entries.values()){brushV2?.destroy();prototype?.dispose();sparks?.destroy();skin?.destroy();scene.remove(group);disposeModel(group);texture?.dispose();}entries.clear();pending.dispose();pressed.dispose();}};
 }
 function disposeModel(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of [n.material].flat().filter(Boolean)){materials.add(m);for(const v of Object.values(m))if(v?.isTexture)textures.add(v);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>{t.image?.close?.();t.dispose();});}

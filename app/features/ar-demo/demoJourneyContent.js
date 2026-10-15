@@ -250,7 +250,7 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "UTILITY 1.1",
         "act": "Explore, learn and plan",
-        "title": "Explore, learn and plan",
+        "title": "Your Interactive Map · IMAP",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
         "hint": "Grip the map centre to move it; use the joystick to turn or adjust distance. Release to place it. Set Totems on the pulsing entrance, forest and swale circles.",
@@ -332,3 +332,11 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
 
 export const DEMO_GUIDED_COPY = Object.freeze(Object.fromEntries(DEMO_GUIDED_STEPS.map(step=>[step.id,step.main])));
 export const guidedDemoStep = id => DEMO_GUIDED_STEPS.find(step=>step.id===id);
+
+// The demonstration is illustrative. Describe v2 as planned until the Creator
+// projection, customization and Explorer loading path have shipped together.
+export const DEMO_IMAP_INTRO_PARAGRAPHS=Object.freeze([
+    'This is the Interactive Map, or IMAP. It brings Areas, Totems and Plant Orbs into one view. Let’s explore this example.',
+    'We’re developing IMAP version two for Creator mode: a map that grows automatically as you add to your project.',
+    'The plan is to let you customize its layout and choose an Area or Orb to explore. This demonstration shows the idea; those Creator features are still being developed.'
+]);

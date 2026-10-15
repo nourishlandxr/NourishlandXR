@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import {createRequire} from 'node:module';
-import {DEMO_GUIDED_STEPS,DEMO_RETURN_WELCOME_PARAGRAPHS} from '../app/features/ar-demo/demoJourneyContent.js';
+import {DEMO_GUIDED_STEPS,DEMO_RETURN_WELCOME_PARAGRAPHS,DEMO_IMAP_INTRO_PARAGRAPHS} from '../app/features/ar-demo/demoJourneyContent.js';
 import {normalizeNarrationText} from '../app/services/projectNarration.js';
 import {livingMapPlacementCopy} from '../app/services/demoLivingMapPresentation.js';
 import {ZINNIA_PLANT_COPY} from '../app/services/zinniaPlantDiscovery.js';
@@ -16,6 +16,7 @@ export function demoNarrationContent(){
  const add=value=>{for(const part of String(value || '').split(/\n\n+/)){const text=normalizeNarrationText(part);if(text.split(/\s+/).length>=3 && !/[<>{}]|https?:/.test(text) && /[.!?]/.test(text))texts.add(text);}};
  for(const step of DEMO_GUIDED_STEPS)add(step.main);
  DEMO_RETURN_WELCOME_PARAGRAPHS.forEach(add);
+ DEMO_IMAP_INTRO_PARAGRAPHS.forEach(add);
  add(ZINNIA_PLANT_COPY);for(let count=0;count<=5;count++)add(livingMapPlacementCopy(count));
  const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
  const tree=parse(source,{ecmaVersion:'latest',sourceType:'module'}),bindings=new Map(),roots=[];

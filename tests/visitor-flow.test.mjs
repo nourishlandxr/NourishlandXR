@@ -560,7 +560,8 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(source, /'Add a sample Note'/);
     assert.match(source, /const directType = type === 'note' \? 'note' : 'sub_checkpoint'/);
     assert.doesNotMatch(source, /record\.type = 'note'/);
-    assert.match(source, /markers\.length >= DEMO_SEQUENCE\.length/);
+    assert.match(source, /markers\.some\(record => record\.tutorialStage === demoStage\)/);
+    assert.doesNotMatch(source, /markers\.length >= DEMO_SEQUENCE\.length/);
     assert.match(source, /createMinimalMarkerDraft/);
     assert.match(source, /relateMinimalMarkers/);
     assert.match(source, /const plantName = moringa \? 'Moringa Tree' : PIGEON_PEA_EXAMPLE\.commonName/);

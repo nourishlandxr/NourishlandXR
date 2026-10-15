@@ -12,9 +12,9 @@ import {welcomePracticeVisualGuide} from '../app/services/welcomeComfortOptions.
 import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
 import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.js';
 
-test('arrival reveals the table and Zinnia before controllers, then laser, settings, virtual hands and fruit',()=>{
+test('arrival leads through the two Orbs, brush and RC before tracked hands; fruit remains optional',()=>{
     const before=(a,b)=>assert.ok(lessons.findIndex(l=>l.id===a)<lessons.findIndex(l=>l.id===b),`${a} precedes ${b}`);
-    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','controls-intro');before('controls-intro','controls-trigger');before('controls-trigger','controls-grip');before('controls-grip','controls-face');before('controls-face','controls-stick');before('controls-stick','controls-stick-click');before('controls-stick-click','controls-orb-grab');before('settings-close','laser-intro');before('laser-zinnia','comfort');before('settings-close','interaction-methods');before('hand-game','interaction-methods');before('virtual-hands-reveal','gloves');before('gloves','basket-reveal');before('grab','brush');before('fruit','brush');
+    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','controls-intro');before('controls-intro','controls-trigger');before('controls-trigger','controls-grip');before('controls-grip','controls-orb-grab');before('controls-orb-open','controls-face');before('controls-face','controls-stick');before('controls-stick','controls-stick-click');before('controls-stick-click','settings-open');before('settings-close','laser-intro');before('laser-zinnia','comfort');before('settings-close','interaction-methods');before('hand-game','interaction-methods');before('virtual-hands-reveal','gloves');before('gloves','brush');before('brush','rc-choice');before('rc-choice','fly');before('fly','hands');assert.equal(lessons.find(l=>l.id==='fruit').optional,true);
     assert.equal(lessons.find(l=>l.id==='living-frame').spoken.match(/Living Frame/g)?.length,1,'Living Frame is introduced in one narration line');
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
@@ -66,7 +66,7 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         const pose=new THREE.Matrix4().makeTranslation(position.x,position.y,position.z).elements;
         tick(.05,{inputs:[{source,matrix:pose,down:false}]});tick(.1,{inputs:[{source,matrix:pose,down:true}]});assert.equal(stage.isHolding(source),true);
         const lifted=[...pose];lifted[13]+=.5;tick(1.6,{inputs:[{source,matrix:lifted,down:true}]});const plateAbove=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.23,.65,.10)).elements;tick(.2,{inputs:[{source,matrix:plateAbove,down:true}]});const platePose=stage.root.matrixWorld.clone().multiply(new THREE.Matrix4().makeTranslation(-.23,.18,.10)).elements;tick(.1,{inputs:[{source,matrix:platePose,down:true}]});tick(.1,{inputs:[{source,matrix:platePose,down:false}]});assert.equal(stage.snapshot().completed,true,JSON.stringify({held:stage.snapshot().held,fruit:orange.position,basket:stage.snapshot().basket}));
-        tick(3);assert.equal(stage.phase,'fruit');
+        tick(3);assert.equal(stage.phase,'brush','fruit pickup is now an optional Games activity');
         for(const hand of [false,true]){
             stage.previewLesson('water');tick(.1);
             const can=stage.bodies.find(b=>b.id==='watering-can'),source=hand?{handedness:'right',hand:{}}:{handedness:'right'};

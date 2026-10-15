@@ -57,16 +57,16 @@ test('optional shell buffers are lazy, reused between eyes and deleted once; clo
 });
 
 test('tutorial V3 uses the same compact opening and returns every cell exactly home',()=>{
-    const root=new THREE.Group(),orb=createWelcomeControlOrb(root),shell=orb.group.children[0];root.updateMatrixWorld(true);
-    const input={source:{handedness:'right',gamepad:{buttons:[]}},matrix:new THREE.Matrix4().makeTranslation(...orb.group.position.toArray()).elements,trigger:false,down:false};
+    const root=new THREE.Group(),orb=createWelcomeControlOrb(root),shell=orb.orbs.right.group.children[0];root.updateMatrixWorld(true);
+    const input={source:{handedness:'right',gamepad:{buttons:[]}},matrix:new THREE.Matrix4().makeTranslation(...orb.orbs.right.group.position.toArray()).elements,trigger:false,down:false};
     const tick=()=>orb.update(.05,'controls-orb-open',[input]);
     try{
         assert.equal(orb.snapshot().model,'v3');assert.equal(orb.snapshot().cells,18);assert.equal(shell.children.length,18);
         tick();input.trigger=true;tick();input.trigger=false;
-        for(let i=0;i<60;i++)tick();assert.equal(orb.snapshot().opening,1);
-        for(const mesh of shell.children)assert.ok(Math.abs(mesh.position.length()-.22*.72*orb.snapshot().radius)<1e-7);
+        for(let i=0;i<60;i++)tick();assert.equal(orb.orbs.right.snapshot().opening,1);
+        for(const mesh of shell.children)assert.ok(Math.abs(mesh.position.length()-.22*.72*orb.orbs.right.snapshot().radius)<1e-7);
         input.trigger=true;tick();input.trigger=false;for(let i=0;i<60;i++)tick();
-        assert.equal(orb.snapshot().opening,0);for(const mesh of shell.children)assert.equal(mesh.position.lengthSq(),0);
+        assert.equal(orb.orbs.right.snapshot().opening,0);for(const mesh of shell.children)assert.equal(mesh.position.lengthSq(),0);
         input.trigger=true;tick();for(let i=0;i<15;i++)tick();orb.reset();
         for(const mesh of shell.children)assert.equal(mesh.position.lengthSq(),0);
     }finally{orb.destroy();}

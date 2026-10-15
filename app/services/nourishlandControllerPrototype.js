@@ -2,8 +2,8 @@ import {drawWristIcon} from './welcomeWristMenu.js';
 import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 
 export const NOURISHLAND_TOOL_GRIP=Object.freeze({y:.045,z:.012,pitch:-1.2353981634});
-const authoredTip=new THREE.Vector3(0,.027,-.102).applyEuler(new THREE.Euler(NOURISHLAND_TOOL_GRIP.pitch,0,0)).add(new THREE.Vector3(0,NOURISHLAND_TOOL_GRIP.y,NOURISHLAND_TOOL_GRIP.z));
-export const NOURISHLAND_PAINT_TIP=Object.freeze({x:authoredTip.x,y:authoredTip.y,z:authoredTip.z});
+// V2 tip is forward of the official grip-space controller, clear of the fingers.
+export const NOURISHLAND_PAINT_TIP=Object.freeze({x:0,y:-.04,z:-.075});
 
 function surfaceTexture(wood=false){
     const canvas=document.createElement('canvas');canvas.width=canvas.height=256;
@@ -46,22 +46,13 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
     const deckRim=tube('Flush deck rim',edge,.0009,trim,thumbCluster);
     const thumbRest=oval('Inner thumb rest',gripMaterial,[-handed*.034,.006,.010],[.008,.003,.015],thumbCluster);
     const palmPad=oval('Palm cushioning',gripMaterial,[handed*.015,-.074,.032],[.014,.032,.005]);
-    function pointedHead(name,mat,width,length,height,y,z){
-        const shape=new THREE.Shape();shape.moveTo(0,-length);
-        shape.bezierCurveTo(width*.25,-length*.96,width,-length*.35,width,.008);
-        shape.quadraticCurveTo(width,.032,0,.034);shape.quadraticCurveTo(-width,.032,-width,.008);
-        shape.bezierCurveTo(-width,-length*.35,-width*.25,-length*.96,0,-length);
-        const node=mesh(new THREE.ExtrudeGeometry(shape,{depth:height,bevelEnabled:true,bevelThickness:.003,bevelSize:.003,bevelSegments:3,steps:1,curveSegments:18}),mat,name);
-        node.rotation.x=Math.PI/2;node.position.set(0,y,z);return node;
-    }
-    const paintNose=pointedHead('Tapered artist nose',shell,.022,.072,.016,.024,-.018);
-    const insectHead=pointedHead('Pointed leaf flight head',shell,.046,.085,.018,.023,-.018);
-    const insectLeaf=pointedHead('Leaf head centre',gripMaterial,.038,.079,.003,.027,-.018);
-    const paintLines=[],leafVeins=[];
+    function shortNose(name,mat,radius,length,y,baseZ){const geometry=new THREE.ConeGeometry(radius,length,10,1);geometry.rotateX(-Math.PI/2);const node=mesh(geometry,mat,name);node.position.set(0,y,baseZ-length/2);return node;}
+    const paintNose=shortNose('Controller-mounted precision point',shell,.004,.014,.029,-.024);
+    const insectNose=shortNose('Compact flight guide point',shell,.006,.018,.029,-.022);
+    const paintLines=[],flightMarks=[];
     for(const side of [-1,1]){
-        paintLines.push(tube('Paint nose inlay',[[side*.020,.027,-.020],[side*.014,.028,-.052],[side*.003,.027,-.084]],.001,ribbons[side===1?0:1]));
-        leafVeins.push(tube('Flight leaf edge',[[0,.028,-.103],[side*.021,.028,-.074],[side*.042,.028,-.035],[side*.031,.028,.002]],.001,trim));
-        for(let i=0;i<3;i++)leafVeins.push(tube('Flight leaf vein',[[0,.031,-.085+i*.022],[side*.014,.031,-.072+i*.022],[side*(.021+i*.005),.030,-.061+i*.022]],.0007,trim));
+        paintLines.push(tube('Paint point accent',[[0,.030,-.027],[side*.002,.030,-.032],[0,.030,-.037]],.00045,ribbons[side===1?0:1]));
+        flightMarks.push(tube('Flight guide accent',[[0,.031,-.026],[side*.003,.031,-.031],[0,.031,-.036]],.00055,trim));
     }
     for(let side of [-1,1]){
         oval('Soft grip insert',gripMaterial,[side*.022,-.073,.010],[.003,.031,.018]);
@@ -95,8 +86,8 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
     button(hand==='left'?'X':'A',-handed*.023,-.004,.008);
     button('∞',handed*.003,.017,.006);
     const crystalMaterial=material('#4387a9',.25,.18);crystalMaterial.emissive.set('#408ab9');
-    const jewel=mesh(new THREE.OctahedronGeometry(.012,0),crystalMaterial,'Flight crystal');jewel.position.set(0,.029,-.087);jewel.scale.set(.67,.8,1.5);
-    const tip=new THREE.Group();tip.name='Precision paint tip';tip.position.set(0,.027,-.102);group.add(tip);
+    const jewel=mesh(new THREE.OctahedronGeometry(.005,0),crystalMaterial,'Flight status light');jewel.position.set(0,.039,-.024);jewel.scale.set(.8,.8,1.1);
+    const tip=new THREE.Group();tip.name='Precision paint tip';tip.position.set(0,.029,-.038);group.add(tip);
     const pigment=material('#82c7bb',.4,.1);pigment.emissive.set('#82c7bb');pigment.emissiveIntensity=.28;
     const triangle=tube('Precision triangle',[[0,.012,0],[-.009,-.005,0],[.009,-.005,0],[0,.012,0]],.0011,pigment,tip);
     const centre=mesh(new THREE.ConeGeometry(.003,.005,3),pigment,'Precise contact point',tip);centre.rotation.x=Math.PI/2;
@@ -115,7 +106,7 @@ export function createNourishlandControllerPrototype({mode='paint',hand='right'}
         topShell.scale.set(insect?.044:.041,.019,insect?.043:.040);thumbDeck.scale.set(.040,.007,.039);deckRim.scale.set(1,1,1);
         body.scale.set(1,1,1);
         paintNose.visible=!insect;paintLines.forEach(n=>n.visible=!insect);
-        insectHead.visible=insectLeaf.visible=jewel.visible=insect;leafVeins.forEach(n=>n.visible=insect);
+        insectNose.visible=jewel.visible=insect;flightMarks.forEach(n=>n.visible=insect);
         frontTrigger.scale.x=1;
         tip.visible=!insect;lights.forEach(light=>light.visible=insect);shell.needsUpdate=deckMaterial.needsUpdate=true;
     }

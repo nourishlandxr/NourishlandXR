@@ -39,6 +39,7 @@ import {selectKnowledgeObjectFace} from '../services/knowledgeObjectModel.js';
 import {createDemoVoiceTextFlow} from '../services/demoVoiceTextFlow.js';
 import {demoPlantOrbColor} from '../services/demoPlantChoices.js';
 import {ZINNIA_PLANT_COPY,applyZinniaNote,createZinniaPlantDiscovery,applyDiscoveredPlant,zinniaPlantButtons,drawZinniaPlantDiscovery,mountZinniaPlantDiscovery} from '../services/zinniaPlantDiscovery.js';
+import {drawDemoVoiceDetectionBar} from '../services/demoVoiceDetectionBar.js';
 let demoFramePlantChoiceOrbId='';
 let demoZinniaDiscovery=null,demoZinniaView=null;
 let demoZinniaNoteDraft=null;
@@ -46,7 +47,7 @@ import {orbPinchPoint,openPalmUnderOrb} from '../services/demoOrbHands.js';
 let demoPalmOrb=null,demoPalmStartedAt=0,demoPalmCooldownUntil=0;
 import {mountDemoNativePlantChooser} from '../services/demoNativePlantChooser.js';
 import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
-import {DEMO_GUIDED_COPY,DEMO_RETURN_WELCOME_PARAGRAPHS,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
+import {DEMO_GUIDED_COPY,DEMO_RETURN_WELCOME_PARAGRAPHS,DEMO_IMAP_INTRO_PARAGRAPHS,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
 import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress,LIVING_MAP_ORB_SETTLE_MS} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
 import {livingMapReveal,drawLivingMapPreview,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapHeldContact,livingMapRotation,livingMapTotemRayHit,LIVING_MAP_REVEAL_READY_MS} from '../services/demoLivingMapReveal.js';
@@ -139,6 +140,7 @@ import {shiftDemoAreaToFloor} from '../services/demoFloorPlacement.js';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../services/demoFeedback.js';
 let demoFeedback=null,demoFeedbackInputSource=null,demoFeedbackLastTick=-Infinity;
 import {BEE_COUNT} from '../services/demoAmbientLife.js';
+import {mountDemoBeeModel} from '../services/demoBeeModel.js';
 import {demoButterflyPose,butterflyDropSurface} from '../services/demoButterflyPose.js';
 import {BUTTERFLY_VARIANTS,butterflyPanelPerch,butterflySocialOffset,butterflySocialPoint} from '../services/demoButterflyFlock.js';
 import {arAssetsReady,prepareArAssets} from '../services/arAssetPreparation.js';
@@ -1613,6 +1615,11 @@ function demoZinniaCue(text){
 // Audio and paragraph progression start only after their visible presentation.
 // Reset/cancel of the flow also cancels its readiness polling on Back/Next.
 let demoPresentationPaintedAt=-Infinity;
+async function waitForDemoPromptPresentation(){
+    if(simulatedMode || !session || !introBoardVisible)return;
+    const requestedAt=performance.now();
+    for(let attempt=0;attempt<20 && demoPresentationPaintedAt<requestedAt;attempt++)await new Promise(resolve=>setTimeout(resolve,50));
+}
 function demoNarrationPresentationReady(text,requestedAt){
     if(!gl || simulatedMode)return true;
     if(session?.visibilityState==='hidden')return false;
@@ -2125,7 +2132,9 @@ function currentLimPointerCell(){return currentLimPointerTarget()?.node || null;
 function demoLivingFrameRimHit(ray=latestControllerRay){
     if(!introWorldAnchor || !introBoardVisible || !arWelcomeSharedBoard || getSpatialVisualSettings().livingFrame===false)return null;
     const centre=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),board=billboardMatrix(centre,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor);
-    const pose=livingFramePose(board);return livingFrameModel?.ready?livingFrameModel.hit(ray,pose.matrix):livingFrameRimHit(ray,pose);
+    // The stable rim bounds are enough for pointer interaction. Raycasting every
+    // animated model mesh while the pointer hovers can starve the XR frame loop.
+    return livingFrameRimHit(ray,livingFramePose(board));
 }
 function demoZinniaPointerHit(ray=latestControllerRay){
     if(welcomePractice?.active || !introWorldAnchor || !introBoardVisible || !arWelcomeSharedBoard)return null;
@@ -2355,7 +2364,7 @@ function showArWelcomeShowcase() {
         showIntroBoard('Imagine a place to learn',DEMO_QUICK_ACCESS_COPY['INTRO 1.2'],'Let’s start',()=>runArWelcomeTutorial(0),{stepLabel:'INTRO 1.2',dynamicCopy:true,nextGuide:''});
         introBoardTextureDirty=true;syncDemoPanelActions();return;
     }
-    arWelcomeLayer?.remove();arWelcomeLayer=null;ambientBeeModel?.destroy();ambientBeeModel=null;
+    arWelcomeLayer?.remove();arWelcomeLayer=null;
 
     introOpeningCopySkipped=false;
     document.fonts?.load(`500 ${DEMO_HEADING_SIZE}px ${DEMO_HEADING_FONT}`).then(()=>{introBoardTextureDirty=true;introTextureUploadedAt=-Infinity;}).catch(()=>{});
@@ -2729,7 +2738,7 @@ function showDemoNativePlantChooser(orb){
     clearDemoZinniaDiscovery();
     showIntroBoard('Ask Zinnia',ZINNIA_PLANT_COPY,'',null,{stepLabel:'ELEMENTS 1.12',historyPhase:'chooser',dynamicCopy:true,nextGuide:'Name a plant after Zinnia’s prompt, then confirm your choice.'});
     demoFramePlantChoiceOrbId=orb.id;introBoardTextureDirty=true;
-    demoZinniaDiscovery=createZinniaPlantDiscovery({onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);const input=arWelcomeLayer?.querySelector('[data-zinnia-plant-input]');if(input){input.value=state.query;input.disabled=['loading','searching','listening'].includes(state.phase);}syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onSpeak:()=>demoProjectVoice?.stop(),onReady:profile=>selectDemoNativePlant({demoNativeChooserFor:orb.id},profile)});
+    demoZinniaDiscovery=createZinniaPlantDiscovery({waitForPresentation:waitForDemoPromptPresentation,onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);const input=arWelcomeLayer?.querySelector('[data-zinnia-plant-input]');if(input){input.value=state.query;input.disabled=['loading','searching','listening'].includes(state.phase);}syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onSpeak:()=>demoProjectVoice?.stop(),onReady:profile=>selectDemoNativePlant({demoNativeChooserFor:orb.id},profile)});
     const board=appRoot?.querySelector('[data-tryit-guided-choice]');
     if(board && !simulatedMode){demoZinniaView=mountZinniaPlantDiscovery(board,demoZinniaDiscovery);demoZinniaView.render(demoZinniaDiscovery.state());}
     syncDemoZinniaButtons(demoZinniaDiscovery.state());demoZinniaDiscovery.begin();
@@ -2738,7 +2747,7 @@ function showDemoZinniaNote(record=null){
     clearDemoZinniaDiscovery();
     showIntroBoard('Create a Note with Zinnia','Tell me what you want written. We will check your words together, then choose a colour.','',null,{stepLabel:'ELEMENTS · Custom Note',historyPhase:'chooser',dynamicCopy:true});
     demoFramePlantChoiceOrbId='zinnia-note';introBoardTextureDirty=true;
-    demoZinniaDiscovery=createZinniaPlantDiscovery({mode:'note',onSpeak:()=>demoProjectVoice?.stop(),onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onReady:draft=>{
+    demoZinniaDiscovery=createZinniaPlantDiscovery({mode:'note',waitForPresentation:waitForDemoPromptPresentation,onSpeak:()=>demoProjectVoice?.stop(),onChange:state=>{introBoardTextureDirty=true;demoZinniaView?.render(state);syncDemoZinniaButtons(state);},onCancel:()=>{demoFramePlantChoiceOrbId='';clearDemoZinniaDiscovery();finishIntroBoard();},onReady:draft=>{
         clearDemoZinniaDiscovery();
         demoFramePlantChoiceOrbId='';appRoot?.querySelectorAll('[data-frame-plant-choice]').forEach(button=>button.remove());demoZinniaView?.destroy();demoZinniaView=null;finishIntroBoard();
         if(record){applyZinniaNote(record,draft);refreshDemoRecord(record);updateSimulatedMarkers();openDemoNoteExperience(record);}
@@ -2766,8 +2775,11 @@ function selectDemoNativePlant(chooser,profile){
     const orb=markers.find(item=>item.id===chooser.demoNativeChooserFor);if(!applyDiscoveredPlant(orb,profile))return;
     clearDemoZinniaDiscovery();
     demoFramePlantChoiceOrbId='';arWelcomeLayer?.querySelector('[data-zinnia-plant-input]')?.remove();appRoot?.querySelector('.living-frame-plant-choices')?.remove();appRoot?.querySelectorAll?.('[data-frame-plant-choice]')?.forEach(button=>button.remove());introBoardTextureDirty=true;
+    // A spatial chooser is modal. Release it before opening the new plant's
+    // Control panel, otherwise toggleDemoPlantProfile silently declines.
+    if(typeof demoKnowledgeWorkspace!=='undefined' && demoKnowledgeWorkspace)closeDemoKnowledge(true);
+    finishIntroBoard();
     knowledgeRenderer?.clear(orb);refreshDemoRecord(orb);updateSimulatedMarkers();toggleDemoPlantProfile(orb);
-    infoPanel?.focusPlant(orb,resolvePlantPim(profile));infoPanel?.setMediaCollapsed(false);
     syncDemoVoiceBar();
     return true;
 }
@@ -2973,7 +2985,7 @@ function showDemoLivingMap(){
     demoMapNarrationCount=-1;closeDemoKnowledge(true);releaseHeldDemoRecord();
     for(const record of markers){if(resetDemoPlantForMap(record)){knowledgeRenderer?.clear(record);infoPanel?.clearPlant?.(record);}if(record.demoType==='zone'){record.demoExpanded=false;record.totemSelectedCard='';record.totemCardsRefreshed=0;}}
     const step=guidedDemoStep('UTILITY 1.1');
-    showIntroBoard(step.title,'Let’s test adding these elements to the landscape.','Continue',startDemoLivingMapActivity,{stepLabel:step.id,historyPhase:'intro',dynamicCopy:true,nextGuide:''});
+    showIntroBoard(step.title,DEMO_IMAP_INTRO_PARAGRAPHS,'Continue',startDemoLivingMapActivity,{stepLabel:step.id,historyPhase:'intro',dynamicCopy:true,nextGuide:''});
     infoPanel?.showLearning({id:'demo-living-map',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
     infoPanel?.setCompact(true);infoPanel?.setMediaCollapsed(true);infoPanel?.minimize();
     infoPanel?.setContextualHint('Aim at the wooden ring and squeeze to move the map. Move your hand to carry it; use the stick to turn it or adjust distance. With tracked hands, pinch the ring. Release to leave it in place.');
@@ -3537,7 +3549,7 @@ function armDemoPlacement(type, {explained=false}={}) {
     showDemoTutorialMedia(mediaKey);
     if(type==='note')infoPanel?.setContextualHint(demoZinniaNoteDraft?'Your confirmed words and colour are ready. Choose where your Note belongs.':'Record an observation for this place.');
     const startPlacement = () => {
-        suppressSessionSelectUntil = performance.now() + 700;
+        suppressSessionSelectUntil = performance.now() + (explained ? 180 : 700);
         finishIntroBoard();
         const questTriggerPlacement=Boolean(session && demoControllerInputSource()?.targetRayMode!=='screen');
         if(type==='plant')showDemoTutorialMedia('curiosity',{id:'demo-plant-context',title:'',hideTitle:true,body:'This prepared profile demonstrates plant information. A real project can use its own plant profiles.'});
@@ -4664,7 +4676,8 @@ function deleteDemoNote(record){
 function focusDemoNoteControls(record){
     if(record.demoNativeChooserFor){const orb=markers.find(item=>item.id===record.demoNativeChooserFor);if(orb)showDemoNativePlantChooser(orb);return true;}
     infoPanel?.restore();infoPanel?.showLearning({title:record.name,body:record.description || record.notes,mesh:'note'});
-    infoPanel?.setObjectContext({title:'Controls · Note',linkedName:record.name,hint:'Grip a Note card to move it. Stick left/right turns it; up/down adjusts distance. The corner button minimizes the Note.',actions:[{id:'dictate',label:'Speak to Zinnia'},{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'},...(record.demoNoteSelectedCard?[{id:'delete-selected',label:'Delete',description:'Delete the held Note card.'}]:[])],onAction:id=>{
+    infoPanel?.setObjectContext({title:'Controls · Note',linkedName:record.name,hint:'Open the Note to review your words. Grip a card to move it; the stick turns it or adjusts distance.',actions:[{id:'open',label:'Open Note'},{id:'dictate',label:'Speak to Zinnia'},{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'},...(record.demoNoteSelectedCard?[{id:'delete-selected',label:'Delete',description:'Delete the held Note card.'}]:[])],onAction:id=>{
+        if(id==='open'){openDemoNoteExperience(record);return;}
         if(id==='dictate'){showDemoZinniaNote(record);return;}
         if(id==='collapse' || id==='reopen'){const view=demoPlacedNoteViews.get(String(record.id)) || demoPlacedNoteDomViews.get(String(record.id));if(view)view.workspace.action(id);else if(demoKnowledgeRoot?.dataset.noteRecord===String(record.id))demoKnowledgeWorkspace?.action(id);else{record.demoNoteCollapsed=id==='collapse';openDemoNoteExperience(record,false);}return;}
         if(id==='delete-selected'){if(record.demoNoteSelectedCard==='main'){deleteDemoNote(record);return;}const selected=record.demoNoteSelectedCard;delete record.demoNoteSelectedCard;openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.('delete:'+selected);return;}
@@ -4772,7 +4785,7 @@ function plantInformationPose(record) {
 }
 
 function placeMarker() {
-    if (!placementReady || marker || markers.length >= DEMO_SEQUENCE.length || markers.some(record => record.tutorialStage === demoStage)) return;
+    if (!placementReady || marker || markers.some(record => record.tutorialStage === demoStage)) return;
     const type = demoStage;
     // A newly placed Note should be visible even if the visitor previously
     // hid Notes from the demo controls.
@@ -4946,7 +4959,9 @@ function renderInterface(simulated) {
     appRoot.querySelector('.tryit-demo')?.addEventListener('click',event=>{if(event.target.closest('button')){demoFeedback?.start();demoFeedback?.sound('menu');}}, {capture:true});
     desktopSpatialPreviewCleanup=mountDesktopSpatialPreview(appRoot,{simulated,quest:isQuestHeadsetBrowser(),flat:true});
     appRoot.querySelector('[data-tryit-safety-help]')?.remove();
-    appRoot.querySelector('[data-demo-ambient]')?.remove();ambientCanvas=null;
+    ambientCanvas=appRoot.querySelector('[data-demo-ambient]');
+    if(!simulated)ambientCanvas?.remove();
+    ambientBeeModel=mountDemoBeeModel(ambientCanvas,{gl:simulated?null:gl});
     rainV2Canvas=null;rainV2LastPaint=0;
     const hasPhoneScreenInput=Array.from(session?.inputSources || []).some(input=>input.targetRayMode==='screen');
     const phoneArPanel=Boolean(!simulated && sessionMode==='immersive-ar' && (hasPhoneScreenInput || (navigator.maxTouchPoints>0 && window.matchMedia('(pointer: coarse)').matches)));
@@ -5655,11 +5670,12 @@ function drawIntroNoteContent(ctx) {
         if(state.activityFocus){
             if(state.title){ctx.fillStyle='#fffaf0';ctx.font=`500 63px ${DEMO_HEADING_FONT}`;ctx.fillText(state.title,700,330,900);}
             if(state.voice?.playing && state.caption){ctx.fillStyle='#f7f4e9';ctx.font=`500 37px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,860).slice(0,3);lines.forEach((line,i)=>ctx.fillText(line,700,430+i*48));}
-            const keyInstructions={'controls-orb-grab':'Side grip: hold the Orb · Release: let go','controls-orb-open':'Trigger: open the Orb','controls-stick':'Move a thumbstick: roll the Orb','controls-stick-click':'Right-stick click, then left-stick click: menus and options','settings-open':'Left thumbstick click: open settings','settings-close':'Left thumbstick click: close settings','laser-dance':'Hold both grips on Zinnia’s leaves','brush':'Right grip: pick up brush · Trigger: paint · Right-stick click: tools','brush-done':'B: undo · Hold A + trigger: erase · Grip: move drawing · Right stick: colour wheel'};
+            const keyInstructions={'controls-orb-grab':'Side grip: hold the Orb · Release: let go','controls-orb-open':'Trigger: open the Orb','controls-stick':'Move a thumbstick: roll the Orb','controls-stick-click':'Right-stick click, then left-stick click: menus and options','settings-open':'Left thumbstick click: open settings','settings-close':'Left thumbstick click: close settings','laser-dance':'Hold both grips on Zinnia’s leaves','brush':'Right grip: pick up brush · Trigger: paint · Grip while painting: thicker line','brush-done':'B: undo · Hold A + trigger: erase · Grip while drawing: thicker line · Right stick: colour wheel'};
             const instruction=keyInstructions[state.phase] || state.layoutCaption || state.caption;if(instruction){ctx.fillStyle='#d6f1dc';ctx.font='600 34px system-ui';const lines=wrappedTextureLines(ctx,instruction,870).slice(0,3);lines.forEach((line,i)=>ctx.fillText(line,700,760+(i-(lines.length-1)/2)*44));}
             ctx.restore();return;
         }
         ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,layoutCaption:state.layoutCaption,width:900,top:260,bottom:850,titleSize:88,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
+        if(state.phase==='visitor-intro')drawDemoVoiceDetectionBar(ctx,{listening:state.audioSignal.listening,voiceLevel:state.audioSignal.rawLevel,voiceError:state.audioSignal.error});
         ctx.restore();return;
     }
 
@@ -5681,7 +5697,11 @@ function drawIntroNoteContent(ctx) {
         ctx.fillStyle='#dfecc8';ctx.font=`600 25px ${DEMO_PRESENTATION_FONT}`;
         ctx.fillText('UTILITY 1.1',700,285,880);
         ctx.fillStyle='#f4f5e7';
-        const headingBottom=drawDemoHeading(ctx,demoMapIntroPaused?'Let’s test adding these elements to the landscape.':guidedDemoStep('UTILITY 1.1').title);
+        const headingBottom=drawDemoHeading(ctx,guidedDemoStep('UTILITY 1.1').title);
+        if(demoMapIntroPaused){
+            drawWelcomeText(ctx,{title:'',caption:introVisibleCopy(),layoutCaption:introBoardBody,width:900,top:headingBottom+60,bottom:900,titleSize:56,bodySize:32,paragraphGap:1.5,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
+            ctx.restore();return;
+        }
         ctx.font=`500 25px ${DEMO_PRESENTATION_FONT}`;
         const elapsed=demoLivingMapElapsed(),reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
         if(demoMapIntroPaused)drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:headingBottom+85,height:300,hideGuidance:true});

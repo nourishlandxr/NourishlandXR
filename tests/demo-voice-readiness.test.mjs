@@ -3,7 +3,7 @@ import {clearDaleysPlantSearchCache} from '../app/services/daleysPlantSearch.js'
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {createZinniaPlantDiscovery,zinniaPlantButtons} from '../app/services/zinniaPlantDiscovery.js';
+import {createZinniaPlantDiscovery,zinniaPlantButtons,zinniaDiscoveryInstruction} from '../app/services/zinniaPlantDiscovery.js';
 import {ZINNIA_HEARS_YOU_LINE} from '../app/services/zinniaConversationInput.js';
 import {createWelcomeComfortOptions} from '../app/services/welcomeComfortOptions.js';
 import {panelSettingsControls} from '../app/services/pimInfoPanel.js';
@@ -37,4 +37,9 @@ test('custom Orb microphone turns search, confirm the chosen plant and deliver t
  try{dialog.begin();await flush();assert.equal(listens,1);callbacks.onText('Please find finger lime');await new Promise(setImmediate);assert.equal(dialog.state().phase,'results');assert.equal(dialog.state().voiceConfirmed,true);assert.equal(zinniaPlantButtons(dialog.state()).some(b=>b.action==='sample'),false);callbacks.onText('first');await flush();assert.equal(dialog.state().phase,'confirm');callbacks.onText('yes');await new Promise(setImmediate);assert.equal(dialog.state().phase,'ready');assert.equal(ready.common_name,'Finger Lime');assert.ok(listens>=3);}finally{dialog.destroy();clearDaleysPlantSearchCache();Object.assign(globalThis,saved);}
 });
 
-test('voice detection bar distinguishes silent listening, detected input, processing and failure',()=>{const silent=demoVoiceDetectionState({listening:true,voiceLevel:0}),heard=demoVoiceDetectionState({listening:true,voiceLevel:.04}),processing=demoVoiceDetectionState({processing:true,voiceLevel:1}),error=demoVoiceDetectionState({voiceError:'microphone'});assert.equal(silent.percent,0);assert.match(silent.label,/waiting for your voice/);assert.equal(heard.percent,50);assert.match(heard.label,/voice detected/);assert.equal(processing.percent,0);assert.match(processing.label,/Understanding/);assert.match(error.label,/unavailable/);});
+test('voice detection bar gives visual input feedback without announcing detection',()=>{const silent=demoVoiceDetectionState({listening:true,voiceLevel:0}),heard=demoVoiceDetectionState({listening:true,voiceLevel:.04}),processing=demoVoiceDetectionState({processing:true,voiceLevel:1}),error=demoVoiceDetectionState({voiceError:'microphone'});assert.equal(silent.percent,0);assert.equal(heard.percent,50);assert.equal(silent.label,heard.label);assert.doesNotMatch(heard.label,/detected|waiting|percent/i);assert.equal(processing.percent,0);assert.match(processing.label,/Processing/);assert.match(error.label,/unavailable/);});
+test('demo discovery keeps Zinnia subtitles separate from short action instructions',async()=>{
+ let present;const spoken=[];const discovery=createZinniaPlantDiscovery({microphoneReady:()=>false,waitForPresentation:()=>new Promise(resolve=>present=resolve),createVoice:()=>({speak:async value=>{spoken.push(value);return true;},listen(){},cancel(){},destroy(){}})});
+ try{discovery.begin();assert.equal(spoken.length,0);assert.match(discovery.state().message,/actually hear you/);assert.match(zinniaDiscoveryInstruction(discovery.state()),/microphone/);present();await flush();assert.deepEqual(spoken,[discovery.state().message]);assert.doesNotMatch(zinniaDiscoveryInstruction({mode:'plant',phase:'results',listening:true}),/detected/i);}
+ finally{discovery.destroy();}
+});

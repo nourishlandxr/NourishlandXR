@@ -3,39 +3,39 @@
   "voice": "marin",
   "model": "gpt-4o-mini-tts",
   "delivery": "v14-friendly-marin-1",
-  "base": "assets/welcome-practice/openai-e9dd17abe325a027/",
+  "base": "assets/welcome-practice/openai-abc58eaafe5d2269/",
   "clips": {
     "micro-fruit-favorite-prefix": {
       "text": "That's my favorite fruit too!",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-favorite-prefix.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-favorite-prefix.mp3"
     },
     "micro-fruit-mango-description": {
       "text": "Mango is a pocket of golden sunshine.",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-mango-description.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-mango-description.mp3"
     },
     "micro-fruit-peach-description": {
       "text": "A fuzzy little jacket hides a juicy surprise.",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-peach-description.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-peach-description.mp3"
     },
     "micro-fruit-fig-description": {
       "text": "A tiny secret garden is hiding inside.",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-fig-description.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-fig-description.mp3"
     },
     "micro-fruit-pomegranate-description": {
       "text": "It is a jewel box that forgot to close.",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-pomegranate-description.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-pomegranate-description.mp3"
     },
     "micro-fruit-apple-description": {
       "text": "It packs a crunchy little drum solo.",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-apple-description.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-apple-description.mp3"
     },
     "micro-fruit-carambola-description": {
       "text": "Slice it open and there is a star inside.",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-carambola-description.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-carambola-description.mp3"
     },
     "micro-fruit-banana-description": {
       "text": "It comes in its own peel-away travel case.",
-      "file": "assets/welcome-practice/openai-e9dd17abe325a027/micro-fruit-banana-description.mp3"
+      "file": "assets/welcome-practice/openai-abc58eaafe5d2269/micro-fruit-banana-description.mp3"
     }
   }
 }
