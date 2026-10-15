@@ -72,3 +72,7 @@ The catalogue points to candidate models already under `app/assets/welcome-pract
 - `species-review-needed`: the picture is ambiguous; confirm the fruit identity before assigning a canonical name.
 
 The ten JPEGs in `references/` remain combined reference sheets. This inventory separates their fruit identities as records; it has not cut out individual image files or created new GLB models. Use `catalog.json` as the starting point for a future local project-loadable catalogue, after validating its asset paths and records.
+
+## Zinnia hand icons
+
+`zinnia-hand-fruit-atlas.png` supplies seven transparent, individually selected illustrated icons for the favourite-fruit conversation: apple, banana, carambola, fig, mango, peach and pomegranate. They are cropped into individual sprites at runtime. This atlas is separate from the 3D fruit used on the practice table. The other catalogue entries remain reference-only until their hand art and response copy are reviewed.
