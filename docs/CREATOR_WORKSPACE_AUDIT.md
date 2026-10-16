@@ -1,5 +1,7 @@
 # Creator workspace and AR navigation — V0.9286
 
+**Current direction:** IMAP (Interactive Map) is the circular 3D disc demonstrated in Utility 1.1. The existing flat desktop Map/register is a separate detailed planning tool. The V2 disc model can generate project content; its spatial Open IMAP control, renderer wiring and optional customization remain separate work. See [the shared-project IMAP direction](imap-shared-project-direction.md).
+
 ## Confirmed findings and repairs
 
 - **Inconsistent visual hierarchy:** `projectDashboardV2.js` mixed text glyphs for navigation, tools and object types. `workspaceIcons.js` now supplies one SVG icon family to project selection, both dashboard implementations, Area records and Location tools. Saved custom Area icons are preserved.

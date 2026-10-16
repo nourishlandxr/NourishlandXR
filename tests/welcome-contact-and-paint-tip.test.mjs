@@ -4,6 +4,8 @@ import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {createMeshPointerContact} from '../app/services/xrMeshPointerContact.js';
 import {createWelcomePracticeTrials} from '../app/services/welcomePracticeTrials.js';
 import {PAINT_V2_COLOURS} from '../app/services/spatialPaintV2.js';
+import {createBrushControllerV2} from '../app/services/brushControllerV2.js';
+import {NOURISHLAND_PAINT_TIP} from '../app/services/nourishlandControllerPrototype.js';
 
 test('visible table edges, rotated Zinnia geometry and the native rim transform determine exact contact',()=>{
     const contact=createMeshPointerContact(),root=new THREE.Group(),mesh=new THREE.Mesh(new THREE.BoxGeometry(.5,.08,.4),new THREE.MeshBasicMaterial());root.add(mesh);root.position.set(1,.8,-2);root.rotation.y=.65;root.updateMatrixWorld(true);
@@ -24,4 +26,14 @@ test('paint tip stays on the right controller through colour changes and left me
         trials.update(.016,{visible:true,inputs:[input(right,.2,true,true),input(left,-.2)]});trials.update(.016,{visible:true,inputs:[input(right,.2,true),input(left,-.2)]});assert.equal(trials.snapshot().strokes,0,'release the menu trigger before painting resumes');trials.update(.016,{visible:true,inputs:[input(right,.2),input(left,-.2)]});
         trials.update(.016,{visible:true,inputs:[input(right,.2,true),input(left,-.2)]});trials.update(.016,{visible:true,inputs:[input(right,.22,true),input(left,-.2)]});assert.equal(trials.snapshot().strokes,1);
     }finally{trials?.destroy();globalThis.document=saved;}
+});
+
+test('brush V2 pigment apex shares the actual drawing contact point on the controller',()=>{
+    const model=new THREE.Group(),brush=createBrushControllerV2(model);
+    try{
+        model.add(brush.group);model.updateMatrixWorld(true);const contact=new THREE.Vector3(NOURISHLAND_PAINT_TIP.x,NOURISHLAND_PAINT_TIP.y,NOURISHLAND_PAINT_TIP.z),tip=model.getObjectByName('Brush V2 contact tip'),vertices=tip.geometry.attributes.position,world=[];
+        for(let i=0;i<vertices.count;i++)world.push(tip.localToWorld(new THREE.Vector3(vertices.getX(i),vertices.getY(i),vertices.getZ(i))));
+        const apex=world.reduce((best,point)=>point.distanceTo(contact)<best.distanceTo(contact)?point:best,world[0]);
+        assert.ok(apex.distanceTo(contact)<1e-6,'visible pigment apex must terminate at the shared paint contact');
+    }finally{brush.destroy();}
 });

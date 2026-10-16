@@ -52,7 +52,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             if(input.source.hand || !input.matrix)continue;
             const profile=(input.source.profiles || []).find(id=>supported.includes(id)),hand=input.source.handedness;
             if(!profile || !['left','right'].includes(hand))continue;
-            const entry=load(profile,hand);if(!entry.ready)continue;const handReveal=toolState.handReveal?.[hand] || 0;entry.handReveal=handReveal;if(handReveal>=1 && !(hand==='right' && tool==='paint') || opacity<.01){entry.sparks.update(0,elapsed);continue;}
+            const entry=load(profile,hand);if(!entry.ready)continue;const handReveal=toolState.handReveal?.[hand] || 0;entry.handReveal=handReveal;if((handReveal>=1 && !(hand==='right' && ['paint','insect'].includes(tool))) || opacity<.01){entry.sparks.update(0,elapsed);continue;}
             const nextTool=hand==='right' && ['paint','insect'].includes(tool)?tool:'standard';
             if(nextTool==='paint' && !entry.brushV2){entry.brushV2=createBrushControllerV2(entry.model);entry.group.add(entry.brushV2.group);onAssets();}
             if(nextTool==='insect' && !entry.prototype){entry.prototype=createNourishlandControllerPrototype({mode:nextTool,hand});entry.group.add(entry.prototype.group);entry.prototype.tip.visible=false;onAssets();}

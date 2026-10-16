@@ -1,6 +1,6 @@
 import { loadCreatorWorkspace, entryProfile, entryAnchor, saveWorkspaceRecord, prepareCreatorFieldPackage, queueFieldResult, syncCreatorFieldResults, loadFieldOperations, saveFieldOperation, updatePreparedPackage } from '../services/creatorWorkspaceData.js';
 import { removeFieldOperation, loadFieldPackage } from '../services/creatorWorkspaceStore.js';
-import { workspaceHeader, escapeWorkspaceHtml as html, fieldPhoto } from '../services/creatorWorkspaceFrame.js';
+import { workspaceHeader, attachCreatorProjectTutorialLink, escapeWorkspaceHtml as html, fieldPhoto } from '../services/creatorWorkspaceFrame.js';
 import { workspaceUrl, recordKey, physicalTagSignature, fieldCheckState } from '../services/creatorWorkspaceMode.js';
 import { PHYSICAL_ANCHOR_IDS, PHYSICAL_ANCHOR_DEFAULTS, physicalMarkerLabel, normalizePhysicalAnchor } from '../services/physicalAnchor.js';
 import { dashboardIcon } from '../services/workspaceIcons.js';
@@ -12,6 +12,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
     const state = { view:'work', siteId:options.siteId || model.sites[0]?.id || '', selected:options.recordKey || '', query:'', busy:false, dirty:false, generation:0, photo:'', scannedKey:'', operations:[], package:null };
     app.innerHTML = `<section class="screen creator-field" aria-label="Android Field">${workspaceHeader(model,'field',{siteId:state.siteId,recordKey:state.selected})}<main class="field-content"><div class="field-context"><label>Site<select data-site>${model.sites.map(site=>`<option value="${html(site.id)}"${site.id===state.siteId?' selected':''}>${html(site.name)}</option>`).join('')}</select></label><span class="field-badge" data-connection></span></div><p class="field-status" role="status" data-status></p><div data-field-content></div></main><nav class="field-bottom-nav" aria-label="Field tasks">${[['work','grid','Work'],['scan','scan','Scan'],['capture','note','Capture'],['project','settings','Project']].map(([view,icon,label])=>`<button type="button" data-view="${view}">${dashboardIcon(icon)}${label}</button>`).join('')}</nav></section>`;
     const root = app.firstElementChild;
+    attachCreatorProjectTutorialLink(root, projectId, 'field');
     const message = (text,error=false) => {if(!root.isConnected)return;const node=root.querySelector('[data-status]');node.textContent=text;node.classList.toggle('is-error',error);};
     const selected = () => model.entries.find(entry=>entry.key===state.selected);
     const allowChange = () => {if(state.busy){message('Wait for the current save to finish.');return false;}if(state.dirty){message('Save or discard your observation before changing tasks.',true);return false;}return true;};
@@ -19,7 +20,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
     const recordButtons = entries => `<div class="field-records">${entries.map(entry=>`<button type="button" data-record="${html(entry.key)}"${entry.key===state.selected?' aria-current="page"':''}><span class="field-record-symbol">${dashboardIcon(entry.marker.type==='plant'?'plant':entry.marker.type==='note'?'note':'totem')}</span><span><strong>${html(entry.marker.name)}</strong><small>${html(entry.place.name)} · ${html(entry.marker.physicalAnchor?.markerLabel || 'No tag')}</small><small>${html(fieldCheckState(entry.marker))}${entry.marker.field_work?.placementNeedsRecheck?' · placement needs review':''}</small></span></button>`).join('') || '<p>No records match this Site.</p>'}</div>`;
     function route() {
         history.replaceState({nourishlandView:'creator-workspace',projectId,workspace:'field',siteId:state.siteId,recordKey:state.selected},'',workspaceUrl(projectId,{mode:'field',siteId:state.siteId,recordKey:state.selected}));
-        root.querySelectorAll('.workspace-mode-picker a').forEach(link=>{const mode=new URL(link.href).searchParams.get('workspace');link.href=workspaceUrl(projectId,{mode,siteId:state.siteId,recordKey:state.selected}).href;});
+        root.querySelectorAll('.workspace-mode-picker a:not([data-guided-project-setup])').forEach(link=>{const mode=new URL(link.href).searchParams.get('workspace');link.href=workspaceUrl(projectId,{mode,siteId:state.siteId,recordKey:state.selected}).href;});
     }
     async function refreshLocalState() {
         [state.operations,state.package] = await Promise.all([loadFieldOperations(projectId),loadFieldPackage(projectId)]);

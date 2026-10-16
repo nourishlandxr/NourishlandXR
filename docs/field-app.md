@@ -1,5 +1,7 @@
 # Nourishland Field application
 
+**IMAP handoff direction:** Field uses IMAP (Interactive Map) as the generated, project-context-aware map entry. Preserve the selected project/Site/Area/record and a clear return route across map handoffs. Public Field/Explorer views must derive from the visitor-filtered shared projection; Creator-only draft/customization access stays behind Creator authorization. See [the shared-project IMAP direction](imap-shared-project-direction.md). This handoff and map entry are planned, not implemented in the current Field launcher.
+
 Field is a separate Android-first mobile web/PWA application within the existing repository. It consumes the same published knowledge as Desktop and Unity; it is not a separate authoritative content database or a native Android APK.
 
 ## Field launcher design

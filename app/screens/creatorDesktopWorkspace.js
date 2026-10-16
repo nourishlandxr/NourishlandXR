@@ -1,5 +1,5 @@
 import { loadCreatorWorkspace, entryProfile, entryAnchor, saveWorkspaceRecord, createWorkspaceRecord, createWorkspaceArea, prepareCreatorFieldPackage, savePlanPoint, loadFieldOperations, syncCreatorFieldResults } from '../services/creatorWorkspaceData.js';
-import { workspaceHeader, escapeWorkspaceHtml as html, openLegacyCreatorTool, fieldPhoto } from '../services/creatorWorkspaceFrame.js';
+import { workspaceHeader, attachCreatorProjectTutorialLink, escapeWorkspaceHtml as html, openLegacyCreatorTool, fieldPhoto } from '../services/creatorWorkspaceFrame.js';
 import { workspaceUrl, fieldCheckState } from '../services/creatorWorkspaceMode.js';
 import { dashboardIcon } from '../services/workspaceIcons.js';
 import { PHYSICAL_ANCHOR_IDS, PHYSICAL_ANCHOR_DEFAULTS, normalizePhysicalAnchor, physicalMarkerLabel } from '../services/physicalAnchor.js';
@@ -13,18 +13,37 @@ export async function renderWorkspace(app, projectId, options = {}) {
     const model = await loadCreatorWorkspace(projectId, { overviewOnly: true });
     const abort = new AbortController();
     const state = { siteId: options.siteId || model.sites[0]?.id || '', areaId:'', query:'', type:'all', page:0,
-        view:['overview','records','map','knowledge','field'].includes(options.view) ? options.view : 'overview', selected:options.recordKey || '', checked:new Set(), dirty:false, generation:0, busy:false, topicId:'', categoryId:'', newTopic:false };
+        view:['overview','records','map','planning-map','imap','knowledge','field'].includes(options.view) ? options.view : 'overview', selected:options.recordKey || '', checked:new Set(), dirty:false, generation:0, busy:false, topicId:'', categoryId:'', newTopic:false };
     app.innerHTML = `<section class="screen creator-studio" aria-label="Desktop Studio">${workspaceHeader(model,'desktop',state)}
       <div class="studio-context"><label>Site<select data-site>${model.sites.map(site=>`<option value="${html(site.id)}"${site.id===state.siteId?' selected':''}>${html(site.name)}</option>`).join('')}</select></label><p data-summary></p><button type="button" data-action="prepare" hidden>${icon('scan')}Prepare for field</button></div>
-      <div class="studio-body"><nav class="studio-sidebar" aria-label="Desktop tasks"><p>WORKSPACE</p>${[['overview','grid','Overview'],['records','grid','Records'],['map','area','Map'],['knowledge','webhub','Knowledge'],['field','scan','Field work']].map(([view,symbol,label])=>`<button type="button" data-view="${view}">${icon(symbol)}${label}</button>`).join('')}<hr><details class="studio-area-tree"><summary>Areas</summary><div data-areas></div></details><button type="button" data-action="new-area">+ Add Area</button><hr><details><summary>Field & project tools</summary><button type="button" data-action="export">Export records</button><button type="button" data-action="print">${icon('print')}Print tags</button><button type="button" data-action="visitor">${icon('explore')}Visitor preview</button><button type="button" data-action="settings">Project settings</button><button type="button" data-action="import">Import project archive</button></details></nav>
+      <div class="studio-body"><nav class="studio-sidebar" aria-label="Desktop tasks"><p>WORKSPACE</p>${[['overview','grid','Overview'],['records','grid','Records'],['map','area','Site plan'],['planning-map','area','Flat map'],['imap','area','Interactive map'],['knowledge','webhub','Knowledge'],['field','scan','Field work']].map(([view,symbol,label])=>`<button type="button" data-view="${view}">${icon(symbol)}${label}</button>`).join('')}<hr><details class="studio-area-tree"><summary>Areas</summary><div data-areas></div></details><button type="button" data-action="new-area">+ Add Area</button><hr><details><summary>Field & project tools</summary><button type="button" data-action="export">Export records</button><button type="button" data-action="print">${icon('print')}Print tags</button><button type="button" data-action="visitor">${icon('explore')}Visitor preview</button><button type="button" data-action="settings">Project settings</button><button type="button" data-action="import">Import project archive</button></details></nav>
       <main class="studio-main"><div class="studio-toolbar"><h1 data-heading>Plant records</h1><button type="button" data-action="add">+ Add record</button></div><div class="studio-filters"><label class="studio-search">Search<input type="search" data-search placeholder="Name, code or tag"></label><label>Type<select data-type><option value="all">All records</option><option value="plant">Plants</option><option value="note">Notes</option><option value="area_checkpoint">Totems</option><option value="archived">Archived</option></select></label></div><p class="studio-status" role="status" data-status>${model.offline?'Prepared records · server unavailable. Database edits require a connection.':''}</p><div data-center></div></main>
       <aside hidden class="studio-inspector" aria-label="Selected record" data-inspector></aside></div><dialog class="studio-dialog" data-dialog></dialog></section>`;
     const root = app.firstElementChild;
+    attachCreatorProjectTutorialLink(root, projectId, 'desktop');
     let activeEntry = null, profile = {}, anchor = null, pimDocument = null;
+    let mountedProjectMap = null, mapMountToken = 0;
     const message = (text, error = false) => { const output=root.querySelector('[data-status]'); output.textContent=text; output.classList.toggle('is-error',error); };
+    function disposeProjectMap() { mapMountToken++; mountedProjectMap?.dispose?.(); mountedProjectMap = null; }
+    async function mountProjectMap(host, view) {
+        const token = ++mapMountToken;
+        try {
+            const module = view === 'imap'
+                ? await import('../services/creatorImapV2View.js')
+                : await import('../services/creatorPlanningMapV2View.js');
+            if (!root.isConnected || !host.isConnected || token !== mapMountToken) return;
+            const mounted = view === 'imap'
+                ? await module.mountCreatorImapV2View(host, projectId, { siteId: state.siteId })
+                : await module.mountCreatorPlanningMapV2(host, projectId, { siteId: state.siteId });
+            if (token !== mapMountToken || !host.isConnected) mounted?.dispose?.();
+            else mountedProjectMap = mounted || null;
+        } catch (error) {
+            if (host.isConnected && token === mapMountToken) host.innerHTML = `<p role="alert">Map could not open: ${html(error.message)} <button type="button" data-action="retry-map">Try again</button></p>`;
+        }
+    }
     function route() {
         history.replaceState({nourishlandView:'creator-workspace',projectId,workspace:'desktop',siteId:state.siteId,recordKey:state.selected,view:state.view},'',workspaceUrl(projectId,{mode:'desktop',siteId:state.siteId,recordKey:state.selected,view:state.view}));
-        root.querySelectorAll('.workspace-mode-picker a').forEach(link=>{ const mode=new URL(link.href).searchParams.get('workspace');link.href=workspaceUrl(projectId,{mode,siteId:state.siteId,recordKey:state.selected,view:state.view}).href; });
+        root.querySelectorAll('.workspace-mode-picker a:not([data-guided-project-setup])').forEach(link=>{ const mode=new URL(link.href).searchParams.get('workspace');link.href=workspaceUrl(projectId,{mode,siteId:state.siteId,recordKey:state.selected,view:state.view}).href; });
     }
     async function ensureRecords() {
         if(model.recordsLoaded) return true;
@@ -59,10 +78,11 @@ export async function renderWorkspace(app, projectId, options = {}) {
         root.querySelector('[data-areas]').innerHTML=`<p>AREAS</p><button type="button" data-area=""${!state.areaId?' aria-current="page"':''}>All Areas</button>${model.areas.filter(area=>area.siteId===state.siteId).map(area=>`<button type="button" data-area="${html(area.id)}"${area.id===state.areaId?' aria-current="page"':''}>${html(area.name)}<small>${model.entries.filter(entry=>entry.siteId===area.siteId&&entry.place.id===area.id&&entry.marker.status!=='archived').length}</small></button>`).join('')}`;
     }
     function renderCenter() {
+        disposeProjectMap();
         root.querySelectorAll('[data-view]').forEach(button=>button.setAttribute('aria-current',button.dataset.view===state.view?'page':'false'));
-        root.querySelector('[data-heading]').textContent=({overview:'Your project',records:'Project records',map:'Map and register',knowledge:'Knowledge studio',field:'Field work'})[state.view];
-        root.querySelector('.studio-filters').hidden=['overview','knowledge'].includes(state.view);
-        root.querySelector('[data-action=add]').hidden=state.view==='overview';
+        root.querySelector('[data-heading]').textContent=({overview:'Your project',records:'Project records',map:'Site plan','planning-map':'Flat planning map',imap:'Interactive Map',knowledge:'Knowledge studio',field:'Field work'})[state.view];
+        root.querySelector('.studio-filters').hidden=['overview','knowledge','planning-map','imap'].includes(state.view);
+        root.querySelector('[data-action=add]').hidden=['overview','planning-map','imap'].includes(state.view);
         root.querySelector('[data-action=prepare]').hidden=!['records','field'].includes(state.view)||(!state.selected&&!state.checked.size);
         root.querySelector('[data-inspector]').hidden=!activeEntry;
         root.querySelector('.studio-body').classList.toggle('has-inspector',Boolean(activeEntry));
@@ -76,6 +96,15 @@ export async function renderWorkspace(app, projectId, options = {}) {
             return;
         }
         if(state.view==='knowledge') { renderKnowledge();return; }
+        if(state.view==='planning-map'||state.view==='imap') {
+            const title=state.view==='imap'?'Interactive Map':'Flat planning map';
+            const description=state.view==='imap'
+                ? 'Explore the same project Areas, Totems, Orbs and Notes in the compact 3D map.'
+                : 'Arrange the project Areas and records. New saved content appears here automatically.';
+            center.innerHTML=`<section class="studio-project-map"><p class="studio-hint">${description}</p><div data-project-map aria-label="${title}"></div></section>`;
+            void mountProjectMap(center.querySelector('[data-project-map]'),state.view);
+            return;
+        }
         let before='';
         if(state.view==='map') {
             const areas=model.areas.filter(area=>area.siteId===state.siteId);
@@ -189,6 +218,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
             if(action==='close-inspector'){if(!allowChange())return;clearSelection();renderCenter();route();return;}
             if(action==='discard'){state.dirty=false;state.newTopic=false;state.view==='knowledge'?renderKnowledge():renderRecordInspector();message('Unsaved changes discarded.');return;}
             if(action==='close-dialog'){root.querySelector('dialog').close();return;}
+            if(action==='retry-map'){renderCenter();return;}
             if(!allowChange())return;
             if(['add','create-record','prepare','export'].includes(action)&&!await ensureRecords())return;
             if(action==='reload-record'){delete model.profiles[activeEntry.key];await selectEntry(activeEntry.key);return;}
@@ -235,5 +265,5 @@ export async function renderWorkspace(app, projectId, options = {}) {
     if((state.view!=='overview'||options.recordKey||options.recordId)&&!await ensureRecords())return {root,signal:abort.signal,destroy(){abort.abort();}};
     const initial=model.entries.find(entry=>entry.key===state.selected || (!options.recordKey&&entry.marker.id===options.recordId));
     if(initial) {if(state.view==='overview')state.view='records';state.siteId=initial.siteId;state.areaId=initial.place.id;root.querySelector('[data-site]').value=state.siteId;renderAreas();await selectEntry(initial.key);}else {renderCenter();renderRecordInspector();}route();
-    return {root,signal:abort.signal,destroy(){state.generation++;abort.abort();}};
+    return {root,signal:abort.signal,destroy(){state.generation++;disposeProjectMap();abort.abort();}};
 }

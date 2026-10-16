@@ -1,0 +1,562 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="data:,">
+<title>IMAP V2 · landscape builder</title>
+<style>
+:root{color-scheme:dark;background:#101a18;color:#ebf2e8;font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+*{box-sizing:border-box}body{margin:0}button,input,select{font:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible,canvas:focus-visible{outline:3px solid #ffe2a2;outline-offset:3px}
+main{max-width:1280px;margin:auto;padding:24px}.eyebrow{text-transform:uppercase;letter-spacing:.17em;color:#9dd5b1;font-size:11px;font-weight:700;margin:0 0 6px}h1{font-size:clamp(2rem,4vw,3.8rem);line-height:1.05;letter-spacing:-.04em;margin:0 0 10px}p{color:#c4d6ca;max-width:75ch}.intro{margin:0 0 24px}
+.layout{display:grid;grid-template-columns:minmax(290px,1fr) 300px;gap:24px;align-items:start}.disc-wrap{position:sticky;top:12px;background:radial-gradient(circle at 50% 38%,#354d3c,#13231d 72%);border:1px solid #42614d;border-radius:22px;padding:clamp(10px,2vw,22px);box-shadow:0 20px 60px #0007}.disc{display:block;width:min(100%,calc(100vh - 225px));height:auto;aspect-ratio:1;margin-inline:auto;touch-action:none;cursor:crosshair}.caption{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#aec8b7;font-size:12px;padding:6px 12px 0}
+.panel{background:#1d2d25;border:1px solid #43604b;border-radius:16px;padding:18px}.panel h2{margin:0 0 6px;font-size:1.25rem}.panel p{font-size:13px;margin:0 0 18px}.tools{display:grid;gap:8px;margin:0 0 20px}.tool{width:100%;text-align:left;border:1px solid #58745d;background:#263b2d;color:#eaf2e9;border-radius:10px;min-height:50px;padding:10px 12px;display:flex;align-items:center;gap:10px}.tool[aria-pressed=true]{background:#3b6849;border-color:#b1dfae;box-shadow:inset 0 0 0 1px #b1dfae}.tool b{font-size:14px}.tool small{display:block;color:#c9dccb;font-size:11px}.symbol{font-size:22px;width:28px;text-align:center;line-height:1}
+label{display:block;margin:14px 0;color:#e2ece0;font-size:13px}label strong{display:flex;justify-content:space-between;font-weight:600;margin-bottom:6px}input[type=range]{width:100%;accent-color:#a9d69e}.side{width:100%;min-height:40px;background:#253a2e;border:1px solid #5f8065;border-radius:8px;color:#fff;padding:6px 10px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}.icon{width:44px;height:44px;border:1px solid #688a6b;background:#273e30;color:#f0f5e8;border-radius:9px;font-size:21px}.icon:hover{background:#385842}.actions .icon:disabled{opacity:.45;cursor:default}.copy{font-size:12px;margin:15px 0 0;color:#b8cbb9}.copy a{color:#b8e6bd}.key{display:inline-block;border:1px solid #66806b;border-radius:5px;padding:1px 5px;color:#e3eadf}.status{min-height:20px;color:#cdecc8;font-size:12px;margin-top:12px}
+@media(max-width:820px){.layout{grid-template-columns:1fr}.disc-wrap{position:static}.disc{width:100%;max-width:540px}.panel{max-width:none}.tools{grid-template-columns:repeat(3,minmax(0,1fr))}.tool{display:block;text-align:center}.tool .symbol{display:block;margin:auto}.tool small{display:none}}@media(max-width:520px){main{padding:14px}.tools{grid-template-columns:1fr}.tool{display:flex;text-align:left}.tool small{display:block}.tool .symbol{margin:0}}
+</style>
+</head>
+<body><main>
+<p class="eyebrow">NourishlandXR · Interactive Map model</p>
+<div style="display:flex;align-items:center;gap:16px"><h1 id="map-title">Build your map</h1><a class="icon" href="preview-imap-v2-3d.html?sample=border-ranges" aria-label="Open Border Ranges in 3D" title="Open Border Ranges in 3D" style="display:inline-grid;place-items:center;text-decoration:none">3D</a></div>
+<p class="intro">Build a simple visual plan for your place. Shape the ground, draw tracks and paths, and place Areas and checkpoints. It is a flexible sketch, not a measured survey.</p>
+<div class="layout">
+  <section class="disc-wrap" aria-label="Map preview"><canvas class="disc" id="disc" width="720" height="720" tabindex="0" aria-label="Map sketch preview. Choose an element then tap or drag to add it. Drag placed items to move them."></canvas><div class="caption"><span id="count">3 terrain edits</span><span>Solid: scenic drive · Dashed: walking tracks</span><span>● Area Totem · ◇ Checkpoint · Illustrative terrain</span></div></section>
+  <aside class="panel" aria-label="Map customization tools"><h2>Map footprint</h2>
+    <button class="tool" id="border-ranges-load" type="button"><span class="symbol" aria-hidden="true">⌖</span><span><b>Load Border Ranges sample</b><small>Build from the NSW National Parks map</small></span></button>
+    <section id="build-sequence" hidden aria-label="Border Ranges build sequence"><h2 id="sequence-title">Build sequence</h2><p id="sequence-caption"></p><div class="actions"><button class="icon" id="sequence-back" type="button" title="Previous build step" aria-label="Previous build step">←</button><output id="sequence-step" style="align-self:center"></output><button class="icon" id="sequence-next" type="button" title="Next build step" aria-label="Next build step">→</button><button class="icon" id="sequence-all" type="button" title="Show complete map" aria-label="Show complete map">▦</button></div></section>
+    <p class="copy" id="source-note" hidden></p>
+    <label><strong>Shape</strong><select class="side" id="shape"><option value="circular">Round</option><option value="square">Square</option></select></label>
+    <label><strong><span>Map size</span><output id="size-value">100%</output></strong><input id="size" type="range" min="0.75" max="1.3" step="0.05" value="1"></label>
+    <h2>Terrain tools</h2><p id="instruction">Drag through the map to lower a waterway.</p>
+    <div class="tools" role="group" aria-label="Choose terrain tool">
+      <button class="tool" data-tool="channel" aria-pressed="true" type="button"><span class="symbol" aria-hidden="true">〰</span><span><b>Waterway</b><small>Drag to lower a channel</small></span></button>
+      <button class="tool" data-tool="hill" aria-pressed="false" type="button"><span class="symbol" aria-hidden="true">▲</span><span><b>Hill</b><small>Tap to raise a mound</small></span></button>
+      <button class="tool" data-tool="bank" aria-pressed="false" type="button"><span class="symbol" aria-hidden="true">⌁</span><span><b>Steep contour</b><small>Drag a line; lift one side</small></span></button>
+    </div>
+    <hr style="border:0;border-top:1px solid #43604b;margin:20px 0">
+    <h2>Add an element</h2><p>Choose a group, select an element, then tap to place it. Drag a path or fence to draw its shape.</p>
+    <label><strong>Element group</strong><select class="side" id="element-group"><option value="Built">Built</option><option value="Plants">Plants</option><option value="Water">Water</option><option value="Food garden">Food garden</option><option value="Nourishland">Nourishland</option></select></label>
+    <div class="tools" id="element-tools" role="group" aria-label="Choose element to place"></div>
+    <section id="selection" hidden aria-label="Selected map element"><h2 id="selection-title">Selected element</h2>
+      <label><strong>Element label</strong><input class="side" id="element-name" type="text" maxlength="80" placeholder="Optional name"></label>
+      <label><strong><span>Element size</span><output id="element-size-value">100%</output></strong><input id="element-size" type="range" min="0.4" max="2.2" step="0.05" value="1"></label>
+      <label><strong><span>Rotation</span><output id="element-rotation-value">0°</output></strong><input id="element-rotation" type="range" min="0" max="359" step="1" value="0"></label>
+      <div class="actions"><button class="icon" id="duplicate" type="button" title="Duplicate selected element" aria-label="Duplicate selected element">⧉</button><button class="icon" id="delete" type="button" title="Delete selected element" aria-label="Delete selected element">⌫</button></div>
+    </section>
+    <label><strong><span>Brush width</span><output id="width-value">1.0</output></strong><input id="width" type="range" min="0.25" max="2" step="0.05" value="1"></label>
+    <label><strong><span>Height or depth</span><output id="strength-value">0.6</output></strong><input id="strength" type="range" min="0.1" max="1" step="0.05" value="0.6"></label>
+    <label id="side-label" hidden><strong>Raise this side of the line</strong><select class="side" id="side"><option value="left">Left of travel</option><option value="right">Right of travel</option></select></label>
+    <div class="actions"><button class="icon" id="undo" type="button" title="Undo last map change" aria-label="Undo last map change">↶</button><button class="icon" id="reset" type="button" title="Restore sample landscape" aria-label="Restore sample landscape">⟲</button><button class="icon" id="clear" type="button" title="Clear terrain and placed elements" aria-label="Clear terrain and placed elements">⌫</button><button class="icon" id="download" type="button" title="Download map sketch" aria-label="Download map sketch">⤓</button><label class="icon" style="display:grid;place-items:center;margin:0;cursor:pointer" title="Import map sketch" aria-label="Import map sketch">↥<input id="upload" type="file" accept="application/json,.json" hidden></label></div>
+    <p class="copy">Shape, size, terrain and placed elements are saved in this browser. Export or import a JSON sketch. <a href="preview-imap-v2.html">See the current round disc reference</a>.</p><div class="status" id="status" role="status" aria-live="polite"></div>
+  </aside>
+</div>
+</main>
+<script type="module">
+// Standalone local-file preview copy of app/services/imapV2Terrain.js.
+// Lightweight, illustrative terrain for the circular Interactive Map.
+// These values are visual sculpt units, not surveyed elevations or metres.
+const IMAP_V2_TERRAIN_RADIUS=6.3;
+const IMAP_V2_TERRAIN_MAX_EDITS=48;
+const IMAP_V2_TERRAIN_HEIGHT_LIMIT=1.2;
+
+const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+const finite=value=>typeof value==='number'&&Number.isFinite(value);
+const round=value=>Math.round(value*1000)/1000;
+const smoothstep=(a,b,value)=>{
+    const t=clamp((value-a)/(b-a),0,1);
+    return t*t*(3-2*t);
+};
+const terrainShape=shape=>shape==='square'?'square':'circular';
+const inside=(x,z,radius,shape)=>shape==='square'?Math.max(Math.abs(x),Math.abs(z))<=radius:Math.hypot(x,z)<=radius;
+
+function normalizeImapV2TerrainEdits(input,{radius=IMAP_V2_TERRAIN_RADIUS,shape='circular'}={}){
+    if(!Array.isArray(input))return [];
+    const edge=Math.max(.2,Math.min(radius-.35,IMAP_V2_TERRAIN_RADIUS-.35));
+    const edits=[];
+    for(const raw of input.slice(0,IMAP_V2_TERRAIN_MAX_EDITS)){
+        if(!['channel','hill','bank'].includes(raw?.kind)||!Array.isArray(raw.points))continue;
+        const points=raw.points.slice(0,32).filter(point=>finite(point?.x)&&finite(point?.z)).map(point=>{
+            if(terrainShape(shape)==='square')return {x:round(clamp(point.x,-edge,edge)),z:round(clamp(point.z,-edge,edge))};
+            const length=Math.hypot(point.x,point.z),scale=length>edge?edge/length:1;
+            return {x:round(point.x*scale),z:round(point.z*scale)};
+        });
+        if(points.length<(raw.kind==='hill'?1:2))continue;
+        edits.push({...(typeof raw.id==='string'?{id:raw.id}:{}),kind:raw.kind,points:raw.kind==='hill'?points.slice(0,1):points,
+            width:round(clamp(finite(raw.width)?raw.width:1,.25,2)),
+            strength:round(clamp(finite(raw.strength)?raw.strength:.55,.1,1)),
+            ...(raw.kind==='bank'?{side:raw.side==='right'?'right':'left'}:{})});
+    }
+    return edits;
+}
+
+function nearestPath(point,points){
+    let nearest={distance:Infinity,signed:0};
+    for(let i=1;i<points.length;i++){
+        const a=points[i-1],b=points[i],dx=b.x-a.x,dz=b.z-a.z,lengthSq=dx*dx+dz*dz;
+        if(lengthSq<.0001)continue;
+        const t=clamp(((point.x-a.x)*dx+(point.z-a.z)*dz)/lengthSq,0,1);
+        const vx=point.x-a.x-t*dx,vz=point.z-a.z-t*dz;
+        const distance=Math.hypot(vx,vz);
+        if(distance<nearest.distance)nearest={distance,signed:(dx*(point.z-a.z)-dz*(point.x-a.x))/Math.sqrt(lengthSq)};
+    }
+    return nearest;
+}
+
+function sampleNormalized(edits,x,z,radius,shape){
+    if(!inside(x,z,radius,shape))return 0;
+    let height=0;
+    for(const edit of edits){
+        if(edit.kind==='hill'){
+            const distance=Math.hypot(x-edit.points[0].x,z-edit.points[0].z);
+            height+=edit.strength*Math.exp(-.5*(distance/(edit.width*.52))**2);
+            continue;
+        }
+        const {distance,signed}=nearestPath({x,z},edit.points);
+        if(edit.kind==='channel'){
+            height-=edit.strength*Math.exp(-.5*(distance/(edit.width*.48))**2);
+        }else{
+            // A steep face plus a short raised shoulder reads as a contour bank.
+            // Its influence ends locally, so a short stroke cannot lift half the disc.
+            const face=smoothstep(-edit.width*.12,edit.width*.12,signed*(edit.side==='right'?-1:1));
+            const shoulder=1-smoothstep(edit.width*.9,edit.width*2.1,distance);
+            height+=edit.strength*face*shoulder;
+        }
+    }
+    return round(clamp(height,-IMAP_V2_TERRAIN_HEIGHT_LIMIT,IMAP_V2_TERRAIN_HEIGHT_LIMIT));
+}
+
+function sampleImapV2TerrainHeight(input,x,z,{radius=IMAP_V2_TERRAIN_RADIUS,shape='circular'}={}){
+    if(!finite(x)||!finite(z))return 0;
+    const selectedShape=terrainShape(shape);
+    // Keep corner edits intact while viewing a round map; they become visible
+    // again if the Creator switches back to a square footprint.
+    return sampleNormalized(normalizeImapV2TerrainEdits(input,{radius,shape:'square'}),x,z,radius,selectedShape);
+}
+
+// Build once when terrain edits change; renderers can reuse this grid as a
+// low-cost disc mesh and should never resample it every XR frame.
+function createImapV2TerrainGrid(input,{radius=IMAP_V2_TERRAIN_RADIUS,segments=64,shape='circular'}={}){
+    const count=clamp(Number.isInteger(segments)?segments:64,16,96);
+    const selectedShape=terrainShape(shape),edits=normalizeImapV2TerrainEdits(input,{radius,shape:'square'});
+    const size=count+1,step=radius*2/count,heights=new Float32Array(size*size);
+    let min=0,max=0;
+    for(let row=0;row<size;row++)for(let col=0;col<size;col++){
+        const value=sampleNormalized(edits,-radius+col*step,-radius+row*step,radius,selectedShape);
+        heights[row*size+col]=value;
+        min=Math.min(min,value);max=Math.max(max,value);
+    }
+    return {radius,shape:selectedShape,segments:count,size,step,heights,min,max,edits};
+}
+
+const R=IMAP_V2_TERRAIN_RADIUS;
+// Standalone local-file preview copy of app/services/imapV2Elements.js.
+// Reusable, illustrative object palette for Creator IMAP composition.
+// Every item is a compact map symbol; it does not create or edit project records.
+const IMAP_V2_ELEMENT_LIMIT=160;
+const IMAP_V2_ELEMENT_CATALOG=Object.freeze([
+    {id:'house',label:'House',group:'Built',icon:'⌂',shape:'object',size:1.35},
+    {id:'shelter',label:'Shelter',group:'Built',icon:'⌃',shape:'object',size:1.05},
+    {id:'shed',label:'Shed',group:'Built',icon:'⌂',shape:'object',size:.8},
+    {id:'fence',label:'Fence',group:'Built',icon:'╫',shape:'line',size:.58},
+    {id:'gate',label:'Gate',group:'Built',icon:'Π',shape:'line',size:.7},
+    {id:'path',label:'Path',group:'Built',icon:'⌁',shape:'line',size:.72},
+    {id:'tree-canopy',label:'Canopy tree',group:'Plants',icon:'♣',shape:'tree',size:1.25},
+    {id:'tree-fruit',label:'Fruit tree',group:'Plants',icon:'✿',shape:'tree',size:1.12},
+    {id:'tree-palm',label:'Palm',group:'Plants',icon:'♠',shape:'tree',size:1.2},
+    {id:'tree-young',label:'Young tree',group:'Plants',icon:'♧',shape:'tree',size:.62},
+    {id:'shrub',label:'Shrub',group:'Plants',icon:'❋',shape:'tree',size:.7},
+    {id:'groundcover',label:'Groundcover',group:'Plants',icon:'⁙',shape:'object',size:.7},
+    {id:'pond',label:'Pond',group:'Water',icon:'◉',shape:'object',size:1.1},
+    {id:'water-tank',label:'Water tank',group:'Water',icon:'◍',shape:'object',size:.78},
+    {id:'garden-bed',label:'Garden bed',group:'Food garden',icon:'▤',shape:'object',size:1},
+    {id:'compost',label:'Compost',group:'Food garden',icon:'♨',shape:'object',size:.72},
+    {id:'orb',label:'Plant Orb',group:'Nourishland',icon:'●',shape:'marker',size:.58,recordKind:'plant'},
+    {id:'totem',label:'Area Totem',group:'Nourishland',icon:'◆',shape:'marker',size:.68,recordKind:'area_checkpoint'},
+    {id:'note',label:'Learning Note',group:'Nourishland',icon:'▤',shape:'marker',size:.58,recordKind:'note'},
+    {id:'intro-checkpoint',label:'Intro checkpoint',group:'Nourishland',icon:'◎',shape:'marker',size:.58,recordKind:'intro_checkpoint'},
+    {id:'sub-checkpoint',label:'Sub checkpoint',group:'Nourishland',icon:'◇',shape:'marker',size:.58,recordKind:'sub_checkpoint'},
+    {id:'area-boundary',label:'Area boundary',group:'Nourishland',icon:'◌',shape:'line',size:.55}
+]);
+const IMAP_V2_ELEMENT_GROUPS=Object.freeze(['Built','Plants','Water','Food garden','Nourishland']);
+
+const catalogById=new Map(IMAP_V2_ELEMENT_CATALOG.map(item=>[item.id,item]));
+const elementClamp=(value,min,max)=>Math.max(min,Math.min(max,value));
+const elementFinite=value=>typeof value==='number'&&Number.isFinite(value);
+const elementRound=value=>Math.round(value*1000)/1000;
+const elementWrapAngle=value=>((value%360)+360)%360;
+
+function normalizeImapV2Elements(input,{shape='circular',radius=6.3}={}){
+    if(!Array.isArray(input))return [];
+    const edge=Math.max(.2,Math.min(radius-.35,6.3-.35));
+    return input.slice(0,IMAP_V2_ELEMENT_LIMIT).flatMap((raw,index)=>{
+        const definition=catalogById.get(raw?.type);
+        if(!definition)return [];
+        const id=typeof raw.id==='string'&&raw.id.length<=160?raw.id:`imap-item-${index+1}`;
+        const name=typeof raw.name==='string'?raw.name.trim().slice(0,80):'';
+        const size=elementRound(elementClamp(elementFinite(raw.size)?raw.size:definition.size,.35,2.2));
+        const rotation=elementRound(elementWrapAngle(elementFinite(raw.rotation)?raw.rotation:0));
+        if(definition.shape==='line'){
+            if(!Array.isArray(raw.points))return [];
+            const points=raw.points.slice(0,32).filter(point=>elementFinite(point?.x)&&elementFinite(point?.z)).map(point=>({
+                x:elementRound(elementClamp(point.x,-edge,edge)),z:elementRound(elementClamp(point.z,-edge,edge))
+            }));
+            if(points.length<2)return [];
+            return [{id,type:definition.id,group:definition.group,shape:definition.shape,points,size,rotation,...(name?{name}:{})}];
+        }
+        if(!elementFinite(raw.x)||!elementFinite(raw.z))return [];
+        let x=elementClamp(raw.x,-edge,edge),z=elementClamp(raw.z,-edge,edge);
+        if(shape!=='square'){
+            const length=Math.hypot(x,z),max=edge;
+            if(length>max){x*=max/length;z*=max/length;}
+        }
+        return [{id,type:definition.id,group:definition.group,shape:definition.shape,x:elementRound(x),z:elementRound(z),size,rotation,...(name?{name}:{}),
+            ...(definition.recordKind?{recordKind:definition.recordKind}:{})}];
+    });
+}
+
+function createImapV2Element(input,{shape='circular',radius=6.3}={}){
+    return normalizeImapV2Elements([input],{shape,radius})[0]||null;
+}
+
+function imapV2ElementDefinition(type){return catalogById.get(type)||null;}
+
+const $=id=>document.getElementById(id),canvas=$('disc'),ctx=canvas.getContext('2d');
+const isBorderRangesPreview=new URLSearchParams(location.search).get('sample')==='border-ranges';
+const storageKey=isBorderRangesPreview?'nlxr.imap-v2.border-ranges-sketch':'nlxr.imap-v2.terrain-sketch';
+const borderRangesPreset={
+  schema:'nourishland.imap-sketch',schemaVersion:1,shape:'circular',sizeScale:1,
+  verified:false,unit:'illustrative-sculpt',
+  mapInfo:{title:'Border Ranges National Park',sourceDate:'25-Oct-2021',source:'https://www.nationalparks.nsw.gov.au/-/media/npws/maps/pdfs/parks/border-ranges-national-park/border-ranges-national-park-map.pdf',reference:'https://www.nationalparks.nsw.gov.au/visit-a-park/parks/border-ranges-national-park',method:'Names and feature classes taken from the NPWS map and park pages; positions and relief are schematic, not georeferenced.',areas:[
+    {id:'brindle-creek',name:'Brindle Creek',boundaryId:'br-area-brindle',totemId:'br-totem-brindle'},
+    {id:'bar-mountain',name:'Bar Mountain',boundaryId:'br-area-bar',totemId:'br-totem-bar'},
+    {id:'sheepstation-creek',name:'Sheepstation Creek',boundaryId:'br-area-sheep',totemId:'br-totem-sheep'},
+    {id:'border-loop',name:'Border Loop',boundaryId:'br-area-loop',totemId:'br-totem-loop'}
+  ]},
+  terrainEdits:[
+    {id:'br-terrain-ridge',kind:'bank',points:[{x:-4.8,z:1.6},{x:-3.4,z:3.3},{x:-1.1,z:4.4},{x:1.6,z:4.1},{x:4.3,z:2.6}],width:1.05,strength:.85,side:'left'},
+    {id:'br-terrain-ridge-fold',kind:'bank',points:[{x:-4.3,z:1.1},{x:-2.8,z:2.6},{x:-.8,z:3.4},{x:1.8,z:3.1},{x:3.9,z:1.8}],width:.56,strength:.44,side:'right'},
+    {id:'br-water-brindle',kind:'channel',points:[{x:-2.7,z:3.4},{x:-2.2,z:2.5},{x:-1.8,z:1.5},{x:-1.1,z:.7}],width:.48,strength:.72},
+    {id:'br-water-sheepstation',kind:'channel',points:[{x:.9,z:.4},{x:.2,z:-.7},{x:-.6,z:-1.8},{x:-1.4,z:-3.4}],width:.52,strength:.66},
+    {id:'br-water-loop',kind:'channel',points:[{x:3.9,z:.5},{x:3.1,z:-.7},{x:3.1,z:-1.7},{x:3.7,z:-2.8}],width:.42,strength:.58}
+  ],
+  elements:[
+    {id:'br-track-scenic',type:'path',name:'Tweed Range Scenic Drive',points:[{x:-5.2,z:-2.5},{x:-3.4,z:-1.7},{x:-2.2,z:-.4},{x:-1.5,z:1.5},{x:.1,z:2.4},{x:2.2,z:2.1},{x:4.5,z:.6},{x:4.6,z:-1.1},{x:3.6,z:-2.2},{x:1.3,z:-3.3}],size:1.45},
+    {id:'br-track-brindle',type:'path',name:'Brindle Creek walking track',points:[{x:-3.8,z:2.5},{x:-3.1,z:2.0},{x:-2.3,z:1.5},{x:-1.5,z:1.1}],size:.8},
+    {id:'br-track-bar',type:'path',name:'Bar Mountain circuit',points:[{x:.1,z:3.2},{x:.8,z:3.0},{x:1.1,z:2.5},{x:.5,z:2.1},{x:-.1,z:2.5},{x:.1,z:3.2}],size:.84},
+    {id:'br-track-pinnacle',type:'path',name:'Pinnacle walk',points:[{x:-.1,z:2.6},{x:.1,z:3.3},{x:.3,z:4.2}],size:.78},
+    {id:'br-track-falcorostrum',type:'path',name:'Falcorostrum loop',points:[{x:1.1,z:2.7},{x:1.8,z:2.9},{x:2.25,z:2.5},{x:1.7,z:2.1},{x:1.1,z:2.7}],size:.76},
+    {id:'br-track-palm',type:'path',name:'Palm Forest walking track',points:[{x:-3.2,z:-2.9},{x:-2.8,z:-3.5},{x:-2.3,z:-4.1}],size:.8},
+    {id:'br-track-rosewood',type:'path',name:'Rosewood loop',points:[{x:-2.9,z:-3.4},{x:-1.4,z:-3.8},{x:-.6,z:-4.8},{x:-2.2,z:-5.2},{x:-3.2,z:-4.3},{x:-2.9,z:-3.4}],size:.8},
+    {id:'br-track-booyong',type:'path',name:'Booyong walking track',points:[{x:-1.1,z:-4.6},{x:.2,z:-4.1},{x:1.6,z:-3.6},{x:2.6,z:-2.9}],size:.8},
+    {id:'br-track-red-cedar',type:'path',name:'Red Cedar loop',points:[{x:-2.7,z:1.8},{x:-1.8,z:2.2},{x:-1.15,z:1.6},{x:-1.7,z:.9},{x:-2.7,z:1.8}],size:.76},
+    {id:'br-track-border-loop',type:'path',name:'Border Loop walk',points:[{x:3.1,z:-2.2},{x:4.1,z:-2.6},{x:4.5,z:-3.6},{x:3.4,z:-4.1},{x:2.8,z:-3.3},{x:3.1,z:-2.2}],size:.84},
+    {id:'br-area-brindle',type:'area-boundary',name:'Brindle Creek Area',points:[{x:-4.7,z:3.6},{x:-1.7,z:4.7},{x:.3,z:3.3},{x:-.5,z:.5},{x:-3.8,z:.7},{x:-4.7,z:3.6}],size:1.25},
+    {id:'br-area-bar',type:'area-boundary',name:'Bar Mountain Area',points:[{x:-.4,z:4.5},{x:3.6,z:3.4},{x:4.7,z:1.2},{x:2.4,z:.1},{x:.2,z:1.3},{x:-.4,z:4.5}],size:1.25},
+    {id:'br-area-sheep',type:'area-boundary',name:'Sheepstation Creek Area',points:[{x:-4.3,z:-2.6},{x:-1.7,z:-2.7},{x:.9,z:-3.1},{x:1.2,z:-5.0},{x:-2.6,z:-5.7},{x:-4.3,z:-2.6}],size:1.25},
+    {id:'br-area-loop',type:'area-boundary',name:'Border Loop Area',points:[{x:2.4,z:-1.8},{x:5.2,z:-2.1},{x:5.5,z:-4.5},{x:2.4,z:-4.7},{x:2.4,z:-1.8}],size:1.25},
+    {id:'br-checkpoint-border',type:'intro-checkpoint',name:'Border Loop lookout',x:4.0,z:-3.1,size:.86},
+    {id:'br-checkpoint-blackbutt',type:'sub-checkpoint',name:'Blackbutt lookout',x:1.8,z:1.65,size:.82},
+    {id:'br-checkpoint-brushbox',type:'sub-checkpoint',name:'Brushbox Falls lookout',x:-2.1,z:-3.5,size:.82},
+    {id:'br-checkpoint-antarctic',type:'sub-checkpoint',name:'Antarctic Beech picnic area',x:-2.9,z:2.9,size:.82},
+    {id:'br-totem-brindle',type:'totem',name:'Brindle Creek',x:-3.5,z:1.05,size:.9},
+    {id:'br-totem-bar',type:'totem',name:'Bar Mountain',x:2.8,z:2.55,size:.9},
+    {id:'br-totem-sheep',type:'totem',name:'Sheepstation Creek',x:-2.3,z:-4.7,size:.9},
+    {id:'br-totem-loop',type:'totem',name:'Border Loop',x:4.75,z:-3.8,size:.9}
+  ],
+  buildSequence:[
+    {id:'terrain',title:'1 · Sculpt the terrain',description:'Lay in a broad ridge and three lower creek channels. The shape is a visual reading of the park map, not measured elevation.',terrainEditIds:['br-terrain-ridge','br-terrain-ridge-fold','br-water-brindle','br-water-sheepstation','br-water-loop'],elementIds:[]},
+    {id:'tracks',title:'2 · Add the tracks',description:'Draw the scenic-drive spine first, then connect the named short walks, loops and lookout routes.',terrainEditIds:['br-terrain-ridge','br-terrain-ridge-fold','br-water-brindle','br-water-sheepstation','br-water-loop'],elementIds:['br-track-scenic','br-track-brindle','br-track-bar','br-track-pinnacle','br-track-falcorostrum','br-track-palm','br-track-rosewood','br-track-booyong','br-track-red-cedar','br-track-border-loop']},
+    {id:'areas',title:'3 · Mark the main areas',description:'Group the map into the named NPWS areas and place one Area Totem in each.',terrainEditIds:['br-terrain-ridge','br-terrain-ridge-fold','br-water-brindle','br-water-sheepstation','br-water-loop'],elementIds:['br-track-scenic','br-track-brindle','br-track-bar','br-track-pinnacle','br-track-falcorostrum','br-track-palm','br-track-rosewood','br-track-booyong','br-track-red-cedar','br-track-border-loop','br-area-brindle','br-area-bar','br-area-sheep','br-area-loop','br-totem-brindle','br-totem-bar','br-totem-sheep','br-totem-loop']},
+    {id:'checkpoints',title:'4 · Place checkpoints',description:'Finish with recognizable lookout and picnic stops so the map has clear destinations.',terrainEditIds:['br-terrain-ridge','br-terrain-ridge-fold','br-water-brindle','br-water-sheepstation','br-water-loop'],elementIds:['br-track-scenic','br-track-brindle','br-track-bar','br-track-pinnacle','br-track-falcorostrum','br-track-palm','br-track-rosewood','br-track-booyong','br-track-red-cedar','br-track-border-loop','br-area-brindle','br-area-bar','br-area-sheep','br-area-loop','br-totem-brindle','br-totem-bar','br-totem-sheep','br-totem-loop','br-checkpoint-border','br-checkpoint-blackbutt','br-checkpoint-brushbox','br-checkpoint-antarctic']}
+  ]
+};
+const sample=[
+  {kind:'channel',points:[{x:-4.6,z:-1.9},{x:-2.5,z:-1.5},{x:-.4,z:-2.2},{x:1.9,z:-1.5},{x:4.4,z:-2.2}],width:.8,strength:.7},
+  {kind:'hill',points:[{x:2.1,z:2.1}],width:1.65,strength:.85},
+  {kind:'bank',points:[{x:-4,z:2.2},{x:-1.6,z:1.3},{x:.3,z:1.8}],width:.75,strength:.8,side:'left'}
+];
+const sampleElements=[
+  {id:'sample-house',type:'house',x:-3.4,z:2.35,size:1.25},
+  {id:'sample-canopy',type:'tree-canopy',x:-1.65,z:3.05,size:1.28},
+  {id:'sample-fruit-tree',type:'tree-fruit',x:-.15,z:3.05,size:1.02},
+  {id:'sample-young-tree',type:'tree-young',x:1.25,z:3.05,size:.66},
+  {id:'sample-palm',type:'tree-palm',x:4.2,z:2.15,size:1.12},
+  {id:'sample-bed',type:'garden-bed',x:-4.25,z:-.85,size:.86},
+  {id:'sample-pond',type:'pond',x:3.6,z:-3.75,size:.82},
+  {id:'sample-path',type:'path',points:[{x:-3.2,z:1.1},{x:-2.2,z:.1},{x:-.7,z:-.2},{x:.1,z:-.95}],size:.8},
+  {id:'sample-fence',type:'fence',points:[{x:-4.65,z:3.95},{x:-2.4,z:4.15}],size:.72},
+  {id:'sample-totem',type:'totem',x:2.1,z:.7,size:.7},
+  {id:'sample-orb',type:'orb',x:3.25,z:.75,size:.62}
+];
+function normalizeSequence(raw,terrain,elements){
+  if(!Array.isArray(raw))return null;
+  const terrainIds=new Set(terrain.map(item=>item.id).filter(Boolean)),elementIds=new Set(elements.map(item=>item.id));
+  const steps=raw.slice(0,12).flatMap((step,index)=>{
+    if(!step||typeof step!=='object')return [];
+    const terrainEditIds=Array.isArray(step.terrainEditIds)?step.terrainEditIds.filter(id=>terrainIds.has(id)).slice(0,48):[];
+    const shownElementIds=Array.isArray(step.elementIds)?step.elementIds.filter(id=>elementIds.has(id)).slice(0,160):[];
+    return [{id:String(step.id||`step-${index+1}`).slice(0,48),title:String(step.title||`Step ${index+1}`).slice(0,100),description:String(step.description||'').slice(0,240),terrainEditIds,elementIds:shownElementIds}];
+  });
+  return steps.length?steps:null;
+}
+let edits=sample,elements=sampleElements,shape='circular',sizeScale=1,tool='terrain:channel',selectedElementId='',draft=null,drag=null,frame=0,history=[],mapInfo=null,buildSequence=null,sequenceStep=0,hasSavedMap=false;
+try{const saved=JSON.parse(localStorage.getItem(storageKey));if(Array.isArray(saved)){edits=normalizeImapV2TerrainEdits(saved,{shape:'square'});hasSavedMap=true;}else if(saved&&typeof saved==='object'){hasSavedMap=true;shape=saved.shape==='square'?'square':'circular';sizeScale=clamp(Number(saved.sizeScale)||1,.75,1.3);edits=normalizeImapV2TerrainEdits(saved.terrainEdits,{shape:'square'});elements=normalizeImapV2Elements(saved.elements??sampleElements,{shape:'square'});mapInfo=saved.mapInfo||null;buildSequence=normalizeSequence(saved.buildSequence,edits,elements);sequenceStep=clamp(Number(saved.sequenceStep)||0,0,buildSequence?.length||0);}}catch{}
+function save(){try{localStorage.setItem(storageKey,JSON.stringify({shape,sizeScale,terrainEdits:edits,elements,mapInfo,buildSequence,sequenceStep}));}catch{}}
+$('shape').value=shape;$('size').value=sizeScale;$('size-value').value=`${Math.round(sizeScale*100)}%`;
+$('element-group').onchange=renderElementTools;
+function renderElementTools(){
+  const group=$('element-group').value,available=IMAP_V2_ELEMENT_CATALOG.filter(item=>item.group===group);
+  $('element-tools').innerHTML=available.map(item=>`<button class="tool" data-element="${item.id}" type="button" aria-pressed="${tool==='element:'+item.id}"><span class="symbol" aria-hidden="true">${item.icon}</span><span><b>${item.label}</b><small>${item.shape==='line'?'Drag to draw':item.shape==='tree'?'Tap to plant':'Tap to place'}</small></span></button>`).join('');
+  for(const button of $('element-tools').querySelectorAll('[data-element]'))button.onclick=()=>{tool='element:'+button.dataset.element;for(const other of $('element-tools').querySelectorAll('[data-element]'))other.setAttribute('aria-pressed',String(other===button));for(const other of document.querySelectorAll('[data-tool]'))other.setAttribute('aria-pressed','false');$('side-label').hidden=true;$('instruction').textContent=`${imapV2ElementDefinition(button.dataset.element).label}: ${imapV2ElementDefinition(button.dataset.element).shape==='line'?'drag to draw':'tap to place'}. Drag placed items to move them.`;};
+}
+renderElementTools();
+function color(height,shade){
+  let c;
+  if(height<-.45)c=[60,113,137];else if(height<-.08)c=[85,135,135];else if(height<.16)c=[94,129,84];else if(height<.48)c=[132,149,89];else c=[175,158,105];
+  return `rgb(${c.map(v=>Math.round(clamp(v*shade,0,255))).join(',')})`;
+}
+function drawContours(grid,scale,left,top){
+  const levels=[-.65,-.3,.3,.65],n=grid.segments,size=grid.size,step=grid.step;
+  for(const level of levels){
+    ctx.beginPath();
+    for(let row=0;row<n;row++)for(let col=0;col<n;col++){
+      const x=-R+col*step,z=-R+row*step;
+      if(shape==='circular'&&Math.hypot(x+step*.5,z+step*.5)>R+step)continue;
+      const a=grid.heights[row*size+col],b=grid.heights[row*size+col+1],c=grid.heights[(row+1)*size+col+1],d=grid.heights[(row+1)*size+col];
+      const crossings=[];
+      const edge=(v1,v2,p1,p2)=>{if((v1<level)===(v2<level))return;const t=(level-v1)/(v2-v1);crossings.push([p1[0]+(p2[0]-p1[0])*t,p1[1]+(p2[1]-p1[1])*t]);};
+      edge(a,b,[x,z],[x+step,z]);edge(b,c,[x+step,z],[x+step,z+step]);edge(c,d,[x+step,z+step],[x,z+step]);edge(d,a,[x,z+step],[x,z]);
+      for(let i=0;i+1<crossings.length;i+=2){ctx.moveTo(left+(crossings[i][0]+R)*scale,top+(R-crossings[i][1])*scale);ctx.lineTo(left+(crossings[i+1][0]+R)*scale,top+(R-crossings[i+1][1])*scale);}
+    }
+    ctx.strokeStyle=level<0?'rgba(226,245,232,.28)':'rgba(29,58,35,.35)';ctx.lineWidth=level===-.3||level===.3?1.5:1;ctx.stroke();
+  }
+}
+function footprintPath(half){ctx.beginPath();if(shape==='square')ctx.roundRect(360-half,360-half,half*2,half*2,16);else ctx.arc(360,360,half,0,Math.PI*2);}
+function rotatedLinePoints(item){
+  const pts=item.points;if(!pts?.length||!item.rotation)return pts||[];
+  const center=pts.reduce((sum,p)=>({x:sum.x+p.x/pts.length,z:sum.z+p.z/pts.length}),{x:0,z:0}),angle=item.rotation*Math.PI/180,c=Math.cos(angle),s=Math.sin(angle);
+  return pts.map(p=>{const x=p.x-center.x,z=p.z-center.z;return {x:center.x+x*c-z*s,z:center.z+x*s+z*c};});
+}
+function drawElements(mapScale){
+  const visible=draft?.element?[...elements,draft.element]:elements;
+  drawElementsFor(visible,mapScale);
+}
+function drawElementsFor(visible,mapScale){
+  ctx.save();ctx.translate(360,360);ctx.scale(mapScale,-mapScale);
+  for(const item of visible){
+    const definition=imapV2ElementDefinition(item.type);if(!definition)continue;
+    if(definition.shape==='line'){
+      const pts=rotatedLinePoints(item);if(pts.length<2)continue;
+      ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].z);for(const p of pts.slice(1))ctx.lineTo(p.x,p.z);
+      if(item.type==='area-boundary'){
+        ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#d5e7b7';ctx.lineWidth=.045*item.size;ctx.setLineDash([.2*item.size,.14*item.size]);ctx.stroke();ctx.setLineDash([]);
+      }else if(item.type==='path'){
+        const mainRoute=item.size>1.2;
+        ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle='#263428';ctx.lineWidth=.2*item.size;ctx.stroke();
+        ctx.strokeStyle=mainRoute?'#f1d8a4':'#f0e5c7';ctx.lineWidth=.11*item.size;if(!mainRoute)ctx.setLineDash([.22,.13]);ctx.stroke();ctx.setLineDash([]);
+      }else{
+        const dx=pts.at(-1).x-pts[0].x,dz=pts.at(-1).z-pts[0].z,length=Math.hypot(dx,dz)||1,nx=-dz/length, nz=dx/length;
+        ctx.lineCap='round';ctx.lineJoin='round';ctx.strokeStyle=item.type==='gate'?'#765332':'#69492f';ctx.lineWidth=.08*item.size;ctx.stroke();
+        for(const offset of [-.13,.13]){ctx.beginPath();ctx.moveTo(pts[0].x+nx*offset*item.size,pts[0].z+nz*offset*item.size);ctx.lineTo(pts.at(-1).x+nx*offset*item.size,pts.at(-1).z+nz*offset*item.size);ctx.strokeStyle='#c39a5c';ctx.lineWidth=.055*item.size;ctx.stroke();}
+        const steps=Math.max(2,Math.ceil(length/.64));for(let i=0;i<=steps;i++){const t=i/steps,x=pts[0].x+dx*t,z=pts[0].z+dz*t;ctx.fillStyle='#704b2b';ctx.fillRect(x-.045*item.size,z-.045*item.size,.09*item.size,.09*item.size);}
+        if(item.type==='gate'){ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].z);ctx.lineTo(pts[0].x+dx*.82,pts[0].z+dz*.82);ctx.strokeStyle='#e0bd79';ctx.lineWidth=.055*item.size;ctx.stroke();}
+      }
+      if(selectedElementId===item.id){ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].z);for(const p of pts.slice(1))ctx.lineTo(p.x,p.z);ctx.strokeStyle='#ffe69a';ctx.lineWidth=.12;ctx.setLineDash([.16,.14]);ctx.stroke();ctx.setLineDash([]);}
+      continue;
+    }
+    ctx.save();ctx.translate(item.x,item.z);ctx.scale(1,-1);ctx.rotate(item.rotation*Math.PI/180);const s=item.size;
+    if(item.type.startsWith('tree-')||item.type==='shrub'){
+      ctx.fillStyle='#12211755';ctx.beginPath();ctx.ellipse(.1,.06,.52*s,.33*s,0,0,Math.PI*2);ctx.fill();
+      if(item.type==='tree-palm'){
+        ctx.strokeStyle='#775337';ctx.lineWidth=.11*s;ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(-.08,-.28*s,.02,-.62*s);ctx.stroke();
+        ctx.strokeStyle='#315e3b';ctx.lineWidth=.095*s;for(let i=0;i<7;i++){const a=(-150+i*30)*Math.PI/180;ctx.beginPath();ctx.moveTo(.02,-.58*s);ctx.quadraticCurveTo(Math.cos(a)*.23*s,-.86*s+Math.sin(a)*.12*s,Math.cos(a)*.54*s,-.57*s+Math.sin(a)*.16*s);ctx.stroke();}
+      }else{
+        ctx.fillStyle='#765238';ctx.fillRect(-.07*s,-.24*s,.14*s,.52*s);
+        const green=item.type==='tree-fruit'?'#427644':item.type==='tree-young'?'#69a25a':item.type==='shrub'?'#477c43':'#3c7643';
+        ctx.fillStyle=green;ctx.beginPath();ctx.arc(0,-.45*s,.39*s,0,Math.PI*2);ctx.arc(-.23*s,-.33*s,.25*s,0,Math.PI*2);ctx.arc(.23*s,-.3*s,.27*s,0,Math.PI*2);ctx.fill();
+        if(item.type==='tree-fruit'){ctx.fillStyle='#e5bd59';for(const [x,y] of [[-.18,-.46],[.16,-.52],[.02,-.24]]){ctx.beginPath();ctx.arc(x*s,y*s,.055*s,0,Math.PI*2);ctx.fill();}}
+      }
+    }else if(item.type==='house'||item.type==='shelter'||item.type==='shed'){
+      const width=(item.type==='house'?.8:item.type==='shed'?.58:.72)*s,height=(item.type==='house'?.56:item.type==='shed'?.43:.42)*s;
+      ctx.fillStyle='#15221855';ctx.beginPath();ctx.ellipse(.08,.05,width*.7,.28*s,0,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=item.type==='house'?'#e1cfaa':'#987044';ctx.fillRect(-width/2,-height,width,height);
+      ctx.fillStyle=item.type==='house'?'#9c593c':'#d0ad6d';ctx.beginPath();ctx.moveTo(-width*.64,-height);ctx.lineTo(0,-height- .42*s);ctx.lineTo(width*.64,-height);ctx.closePath();ctx.fill();
+      if(item.type!=='shelter'){ctx.fillStyle='#63472f';ctx.fillRect(-.095*s,-.29*s,.19*s,.29*s);ctx.fillStyle='#91b3ae';ctx.fillRect(.18*s,-.43*s,.14*s,.14*s);}
+    }else if(item.type==='pond'){
+      ctx.fillStyle='#244f52';ctx.beginPath();ctx.ellipse(0,0,.58*s,.38*s,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#619b9d';ctx.beginPath();ctx.ellipse(-.04*s,-.04*s,.47*s,.28*s,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#c5ddd0';ctx.lineWidth=.025*s;ctx.beginPath();ctx.moveTo(-.28*s,-.04*s);ctx.quadraticCurveTo(0,-.16*s,.3*s,-.07*s);ctx.stroke();
+    }else if(item.type==='water-tank'){
+      ctx.fillStyle='#6c8b89';ctx.beginPath();ctx.ellipse(0,-.3*s,.28*s,.11*s,0,0,Math.PI*2);ctx.fill();ctx.fillRect(-.28*s,-.3*s,.56*s,.52*s);ctx.beginPath();ctx.ellipse(0,.22*s,.28*s,.11*s,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#c3dbd0';ctx.lineWidth=.035*s;ctx.beginPath();ctx.ellipse(0,-.3*s,.28*s,.11*s,0,Math.PI,Math.PI*2);ctx.stroke();
+    }else if(item.type==='garden-bed'){
+      ctx.fillStyle='#654c34';ctx.fillRect(-.52*s,-.34*s,1.04*s,.68*s);ctx.fillStyle='#725333';ctx.fillRect(-.47*s,-.28*s,.94*s,.56*s);ctx.strokeStyle='#9a7149';ctx.lineWidth=.035*s;for(let x=-.32;x<=.32;x+=.32){ctx.beginPath();ctx.moveTo(x*s,-.22*s);ctx.lineTo(x*s,.22*s);ctx.stroke();}ctx.fillStyle='#57824e';for(const [x,y] of [[-.32,-.13],[0,0],[.3,.14],[-.03,.17]]){ctx.beginPath();ctx.arc(x*s,y*s,.065*s,0,Math.PI*2);ctx.fill();}
+    }else if(item.type==='compost'){
+      ctx.fillStyle='#644a31';ctx.fillRect(-.3*s,-.34*s,.6*s,.62*s);ctx.fillStyle='#82944b';ctx.fillRect(-.25*s,-.28*s,.5*s,.45*s);ctx.fillStyle='#88633c';ctx.fillRect(-.34*s,-.38*s,.68*s,.08*s);
+    }else if(item.type==='groundcover'){
+      ctx.fillStyle='#457649';for(const [x,z,r] of [[-.2,.03,.23],[.1,-.11,.26],[.28,.08,.18],[-.32,-.13,.16]]){ctx.beginPath();ctx.arc(x*s,z*s,r*s,0,Math.PI*2);ctx.fill();}
+    }else if(item.type==='orb'){
+      const glow=ctx.createRadialGradient(0,-.03,.03,0,-.03,.31*s);glow.addColorStop(0,'#d7ffb8');glow.addColorStop(.45,'#80d483');glow.addColorStop(1,'#23824c00');ctx.fillStyle=glow;ctx.beginPath();ctx.arc(0,-.03,.31*s,0,Math.PI*2);ctx.fill();ctx.fillStyle='#61b765';ctx.beginPath();ctx.arc(0,-.03,.11*s,0,Math.PI*2);ctx.fill();
+    }else if(item.type==='totem'){
+      ctx.fillStyle='#704d32';ctx.fillRect(-.065*s,-.42*s,.13*s,.52*s);ctx.fillStyle='#dcad59';ctx.beginPath();ctx.arc(0,-.45*s,.17*s,0,Math.PI*2);ctx.fill();ctx.fillStyle='#fff1bd';ctx.beginPath();ctx.arc(0,-.45*s,.065*s,0,Math.PI*2);ctx.fill();
+    }else if(item.type==='note'){
+      ctx.fillStyle='#e9e1c7';ctx.fillRect(-.19*s,-.25*s,.38*s,.32*s);ctx.strokeStyle='#52715b';ctx.lineWidth=.025*s;for(let y=-.16;y<.02;y+=.08){ctx.beginPath();ctx.moveTo(-.12*s,y*s);ctx.lineTo(.12*s,y*s);ctx.stroke();}
+    }else if(item.type==='intro-checkpoint'||item.type==='sub-checkpoint'){
+      ctx.fillStyle=item.type==='intro-checkpoint'?'#e1ac59':'#d78253';ctx.beginPath();if(item.type==='intro-checkpoint')ctx.arc(0,-.03,.18*s,0,Math.PI*2);else{ctx.moveTo(0,-.25*s);ctx.lineTo(.22*s,-.03*s);ctx.lineTo(0,.19*s);ctx.lineTo(-.22*s,-.03*s);ctx.closePath();}ctx.fill();
+    }
+    if(selectedElementId===item.id){ctx.strokeStyle='#ffe69a';ctx.lineWidth=.045*s;ctx.beginPath();ctx.ellipse(0,0,.66*s,.52*s,0,0,Math.PI*2);ctx.stroke();}
+    ctx.restore();
+  }
+  ctx.restore();
+}
+function drawElementLabels(visible,mapScale){
+  for(const item of visible){
+    const isLabelled=['totem','intro-checkpoint','sub-checkpoint'].includes(item.type);
+    if(!isLabelled||!item.name||item.id===selectedElementId)continue;
+    let x,y;
+    if(item.points?.length){x=360+item.points.reduce((sum,p)=>sum+p.x,0)/item.points.length*mapScale;y=360-item.points.reduce((sum,p)=>sum+p.z,0)/item.points.length*mapScale;}
+    else{x=360+item.x*mapScale;y=360-item.z*mapScale;}
+    const words=item.name.split(' '),lines=[''];for(const word of words){const last=lines.length-1;if(lines[last].length&&lines[last].length+word.length>22)lines.push(word);else lines[last]+=(lines[last]?' ':'')+word;}
+    ctx.font=`${item.type==='totem'?'600 18px':'500 15px'} system-ui`;ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#17221b';ctx.fillStyle='#fff2d2';for(const [index,text] of lines.entries()){ctx.strokeText(text,x,y+20+index*17);ctx.fillText(text,x,y+20+index*17);}
+  }
+  if(selectedElementId){const item=visible.find(value=>value.id===selectedElementId),definition=item&&imapV2ElementDefinition(item.type);if(item&&definition){const anchor=item.points?rotatedLinePoints(item)[0]:item;const x=360+anchor.x*mapScale,y=360-anchor.z*mapScale,label=item.name||definition.label;ctx.font='600 18px system-ui';ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#1a281e';ctx.strokeText(label,x,y+32);ctx.fillStyle='#fff2c8';ctx.fillText(label,x,y+32);}}
+}
+function renderSelection(){
+  const item=elements.find(value=>value.id===selectedElementId),definition=item&&imapV2ElementDefinition(item.type),panel=$('selection');
+  panel.hidden=!item;if(!item)return;
+  $('selection-title').textContent=definition.label;
+  $('element-name').value=item.name||'';
+  $('element-name').placeholder=definition.label;
+  $('element-size').value=item.size;$('element-size-value').value=`${Math.round(item.size*100)}%`;
+  $('element-rotation').value=item.rotation;$('element-rotation-value').value=`${Math.round(item.rotation)}°`;
+}
+function renderBuildSequence(){
+  const panel=$('build-sequence');panel.hidden=!buildSequence;
+  if(!buildSequence)return;
+  const complete=sequenceStep>=buildSequence.length,stage=buildSequence[sequenceStep];
+  $('sequence-title').textContent=complete?'Build sequence complete':stage.title;
+  $('sequence-caption').textContent=complete?'Complete source-based mock map. Edit the layout or export it as JSON.':stage.description;
+  $('sequence-step').textContent=complete?'Complete':`${sequenceStep+1} / ${buildSequence.length}`;
+  $('sequence-back').disabled=sequenceStep===0;
+  $('sequence-next').disabled=complete;
+  $('sequence-all').disabled=complete;
+}
+function render(){
+  const stage=buildSequence?.[sequenceStep],terrainVisible=stage?new Set(stage.terrainEditIds):null,elementsVisible=stage?new Set(stage.elementIds):null;
+  const shownEdits=terrainVisible?edits.filter(item=>terrainVisible.has(item.id)):edits;
+  const shownElements=elementsVisible?elements.filter(item=>elementsVisible.has(item.id)):elements;
+  const all=draft?.terrain?[...shownEdits,draft.terrain]:shownEdits,grid=createImapV2TerrainGrid(all,{segments:72,shape}),n=grid.segments,size=grid.size,half=255*sizeScale,scale=half/R,cell=half*2/n,left=360-half,top=360-half;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.save();footprintPath(half);ctx.clip();
+  for(let row=0;row<n;row++)for(let col=0;col<n;col++){
+    const idx=row*size+col,height=grid.heights[idx],dx=grid.heights[idx+1]-height,dz=grid.heights[idx+size]-height;
+    ctx.fillStyle=color(height,clamp(.95-dx*.9+dz*.6,.58,1.25));
+    ctx.fillRect(left+col*cell,top+(n-row-1)*cell,Math.ceil(cell)+1,Math.ceil(cell)+1);
+  }
+  drawContours(grid,scale,left,top);
+  const sheen=ctx.createRadialGradient(360-half*.4,360-half*.55,20,360,360,half*1.3);sheen.addColorStop(0,'#ffffff21');sheen.addColorStop(1,'#00180d2b');ctx.fillStyle=sheen;ctx.fillRect(left,top,half*2,half*2);
+  ctx.restore();
+  ctx.save();footprintPath(half);ctx.clip();
+  if(elementsVisible)drawElementsFor(shownElements,scale);else drawElements(scale);
+  ctx.restore();
+  footprintPath(half);ctx.strokeStyle='#b39a62';ctx.lineWidth=13;ctx.stroke();
+  footprintPath(half-13);ctx.strokeStyle='#ead6a285';ctx.lineWidth=2;ctx.stroke();
+  for(const side of [-1,1]){ctx.save();ctx.translate(360+side*(half+6),360);ctx.rotate(side*Math.PI/2);ctx.fillStyle='#7e704b';ctx.strokeStyle='#d7bd82';ctx.lineWidth=3;ctx.beginPath();ctx.roundRect(-34,-13,68,26,13);ctx.fill();ctx.stroke();ctx.restore();}
+  drawElementLabels(draft?.element?[...shownElements,draft.element]:shownElements,scale);
+  $('count').textContent=`${shape==='square'?'Square':'Round'} · ${Math.round(sizeScale*100)}% · ${shownElements.length} elements · ${shownEdits.length} terrain edits`;
+  renderBuildSequence();
+  $('undo').disabled=history.length===0;
+  renderSelection();
+}
+function schedule(){if(frame)return;frame=requestAnimationFrame(()=>{frame=0;render();});}
+function setSequenceStep(step){if(!buildSequence)return;sequenceStep=clamp(step,0,buildSequence.length);save();schedule();}
+function endSequenceForEditing(){if(!buildSequence||sequenceStep>=buildSequence.length)return;sequenceStep=buildSequence.length;save();}
+function loadBorderRanges(){
+  pushHistory();shape=borderRangesPreset.shape;sizeScale=borderRangesPreset.sizeScale;
+  edits=normalizeImapV2TerrainEdits(structuredClone(borderRangesPreset.terrainEdits),{shape:'square'});
+  elements=normalizeImapV2Elements(structuredClone(borderRangesPreset.elements),{shape:'square'});
+  mapInfo=structuredClone(borderRangesPreset.mapInfo);buildSequence=normalizeSequence(borderRangesPreset.buildSequence,edits,elements);sequenceStep=0;selectedElementId='';
+  $('shape').value=shape;$('size').value=sizeScale;$('size-value').value=`${Math.round(sizeScale*100)}%`;
+  $('element-group').value='Nourishland';renderElementTools();
+  renderSourceNote();
+  save();$('status').textContent='Border Ranges source layout loaded. Step through the terrain, tracks, Areas and checkpoints.';schedule();
+}
+function renderSourceNote(){const note=$('source-note');note.hidden=!mapInfo;note.replaceChildren();$('map-title').textContent=mapInfo?.title||'Build your map';if(!mapInfo)return;const prefix=document.createTextNode('Source: '),link=document.createElement('a');let sourceUrl;try{sourceUrl=new URL(mapInfo.source);if(sourceUrl.protocol!=='https:')throw new Error('invalid');}catch{sourceUrl=new URL('https://www.nationalparks.nsw.gov.au/');}link.href=sourceUrl.href;link.target='_blank';link.rel='noreferrer';link.textContent=`NSW National Parks map, published ${String(mapInfo.sourceDate||'').slice(0,32)}`;note.append(prefix,link,document.createTextNode(`. ${String(mapInfo.method||'').slice(0,240)}`));}
+function point(event){const box=canvas.getBoundingClientRect(),px=(event.clientX-box.left)/box.width*720,py=(event.clientY-box.top)/box.height*720,scale=255*sizeScale/R,x=(px-360)/scale,z=(360-py)/scale;return (shape==='square'?Math.max(Math.abs(x),Math.abs(z)):Math.hypot(x,z))<R-.2?{x,z}:null;}
+function snapshot(){return structuredClone({shape,sizeScale,terrainEdits:edits,elements,mapInfo,buildSequence,sequenceStep});}
+function pushHistory(){history.push(snapshot());if(history.length>40)history.shift();}
+function undo(){const prior=history.pop();if(!prior)return;({shape,sizeScale,mapInfo,buildSequence,sequenceStep}=prior);edits=prior.terrainEdits;elements=prior.elements;selectedElementId='';$('shape').value=shape;$('size').value=sizeScale;$('size-value').value=`${Math.round(sizeScale*100)}%`;renderSourceNote();save();$('status').textContent='Last map change undone.';schedule();}
+function id(){return globalThis.crypto?.randomUUID?.()||`map-${Date.now()}-${Math.random().toString(16).slice(2)}`;}
+function settings(){return {width:Number($('width').value),strength:Number($('strength').value),side:$('side').value};}
+function addElement(type,at){
+  const definition=imapV2ElementDefinition(type);if(!definition||elements.length>=160){$('status').textContent='The sketch has reached its element limit.';return;}
+  pushHistory();
+  const item=createImapV2Element({id:id(),type,x:at.x,z:at.z,size:definition.size,rotation:0},{shape:'square'});
+  if(!item)return;elements.push(item);selectedElementId=item.id;save();$('status').textContent=`${definition.label} added. Drag it to move, or adjust its size and rotation.`;schedule();
+}
+function commitTerrain(stroke){const normalized=normalizeImapV2TerrainEdits([stroke],{shape:'square'});if(!normalized.length)return;pushHistory();edits=normalizeImapV2TerrainEdits([...edits,...normalized],{shape:'square'});draft=null;save();$('status').textContent=`${stroke.kind==='channel'?'Waterway lowered':stroke.kind==='hill'?'Hill raised':'Steep contour formed'}.`;schedule();}
+function commitLineElement(element){const normalized=normalizeImapV2Elements([...elements,element],{shape:'square'});if(normalized.length<=elements.length)return;elements=normalized;selectedElementId=element.id;draft=null;save();const label=imapV2ElementDefinition(element.type)?.label||'Element';$('status').textContent=`${label} added to the sketch.`;schedule();}
+function replace(nextEdits,nextElements,message){edits=normalizeImapV2TerrainEdits(nextEdits,{shape:'square'});elements=normalizeImapV2Elements(nextElements,{shape:'square'});selectedElementId='';draft=null;save();$('status').textContent=message;schedule();}
+function segmentDistance(point,a,b){const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz,t=length?clamp(((point.x-a.x)*dx+(point.z-a.z)*dz)/length,0,1):0;return Math.hypot(point.x-a.x-t*dx,point.z-a.z-t*dz);}
+function hitElement(at){
+  for(const item of [...elements].reverse()){
+    if(item.points){const pts=rotatedLinePoints(item);for(let i=1;i<pts.length;i++)if(segmentDistance(at,pts[i-1],pts[i])<Math.max(.2,item.size*.23))return item;}
+    else if(Math.hypot(at.x-item.x,at.z-item.z)<Math.max(.32,item.size*.48))return item;
+  }
+  return null;
+}
+function startElementDrag(item,at,event){selectedElementId=item.id;pushHistory();drag={id:item.id,pointerId:event.pointerId,last:at};canvas.setPointerCapture(event.pointerId);renderSelection();schedule();}
+canvas.addEventListener('pointerdown',event=>{
+  const at=point(event);if(!at)return;event.preventDefault();
+  endSequenceForEditing();
+  const hit=hitElement(at);if(hit){startElementDrag(hit,at,event);return;}
+  if(tool.startsWith('terrain:')){
+    const kind=tool.slice(8),options=settings();
+    if(kind==='hill'){commitTerrain({kind,points:[at],...options});return;}
+    draft={terrain:{kind,points:[at,at],...options}};canvas.setPointerCapture(event.pointerId);schedule();return;
+  }
+  const type=tool.startsWith('element:')?tool.slice(8):'';const definition=imapV2ElementDefinition(type);if(!definition)return;
+  if(definition.shape==='line'){draft={element:{id:id(),type,points:[at,at],size:definition.size,rotation:0}};canvas.setPointerCapture(event.pointerId);schedule();}
+  else addElement(type,at);
+});
+canvas.addEventListener('pointermove',event=>{
+  const at=point(event);if(!at)return;
+  if(drag?.pointerId===event.pointerId){const dx=at.x-drag.last.x,dz=at.z-drag.last.z,item=elements.find(value=>value.id===drag.id);if(item){if(item.points)item.points=item.points.map(p=>({x:clamp(p.x+dx,-5.95,5.95),z:clamp(p.z+dz,-5.95,5.95)}));else{item.x=clamp(item.x+dx,-5.95,5.95);item.z=clamp(item.z+dz,-5.95,5.95);}drag.last=at;schedule();}return;}
+  if(!draft)return;
+  if(draft.terrain){const points=draft.terrain.points,last=points.at(-1);if(Math.hypot(at.x-last.x,at.z-last.z)>.16){points.push(at);if(points.length>32)points.splice(1,1);}}
+  else if(['path','area-boundary'].includes(draft.element.type)){const points=draft.element.points,last=points.at(-1);if(Math.hypot(at.x-last.x,at.z-last.z)>.16){points.push(at);if(points.length>32)points.splice(1,1);}}
+  else draft.element.points[1]=at;
+  schedule();
+});
+canvas.addEventListener('pointerup',event=>{
+  if(drag?.pointerId===event.pointerId){drag=null;save();return;}
+  if(!draft)return;const work=draft;draft=null;
+  if(work.terrain){const [first]=work.terrain.points,last=work.terrain.points.at(-1);if(Math.hypot(last.x-first.x,last.z-first.z)>.2)commitTerrain(work.terrain);else schedule();}
+  else{const [first]=work.element.points,last=work.element.points.at(-1);if(Math.hypot(last.x-first.x,last.z-first.z)>.2){pushHistory();commitLineElement(work.element);}else schedule();}
+});
+canvas.addEventListener('pointercancel',()=>{draft=null;drag=null;schedule();});
+for(const button of document.querySelectorAll('[data-tool]'))button.addEventListener('click',()=>{tool='terrain:'+button.dataset.tool;for(const other of document.querySelectorAll('[data-tool]'))other.setAttribute('aria-pressed',String(other===button));for(const other of $('element-tools').querySelectorAll('[data-element]'))other.setAttribute('aria-pressed','false');$('side-label').hidden=tool!=='terrain:bank';$('instruction').textContent={channel:'Drag through the map to lower a waterway.',hill:'Tap anywhere on the map to raise a hill.',bank:'Drag a line to make a steep contour; choose its raised side below.'}[button.dataset.tool];});
+$('shape').onchange=event=>{shape=event.target.value==='square'?'square':'circular';save();$('status').textContent=`${shape==='square'?'Square':'Round'} map selected. Terrain and element positions preserved.`;schedule();};
+$('size').oninput=event=>{sizeScale=clamp(Number(event.target.value),.75,1.3);$('size-value').value=`${Math.round(sizeScale*100)}%`;save();schedule();};
+for(const slider of ['element-size','element-rotation'])$(slider).onpointerdown=pushHistory;
+$('element-size').oninput=event=>{const item=elements.find(value=>value.id===selectedElementId);if(item){item.size=Number(event.target.value);$('element-size-value').value=`${Math.round(item.size*100)}%`;save();schedule();}};
+$('element-rotation').oninput=event=>{const item=elements.find(value=>value.id===selectedElementId);if(item){item.rotation=Number(event.target.value);$('element-rotation-value').value=`${Math.round(item.rotation)}°`;save();schedule();}};
+$('element-name').oninput=event=>{const item=elements.find(value=>value.id===selectedElementId);if(item){const value=event.target.value.trim().slice(0,80);if(value)item.name=value;else delete item.name;save();schedule();}};
+$('duplicate').onclick=()=>{const item=elements.find(value=>value.id===selectedElementId);if(!item||elements.length>=160)return;pushHistory();const copy=structuredClone(item);copy.id=id();if(copy.points)copy.points=copy.points.map(p=>({x:clamp(p.x+.35,-5.95,5.95),z:clamp(p.z+.35,-5.95,5.95)}));else{copy.x=clamp(copy.x+.35,-5.95,5.95);copy.z=clamp(copy.z+.35,-5.95,5.95);}elements.push(copy);selectedElementId=copy.id;save();schedule();};
+$('delete').onclick=()=>{if(!selectedElementId)return;pushHistory();elements=elements.filter(item=>item.id!==selectedElementId);selectedElementId='';save();$('status').textContent='Element removed.';schedule();};
+$('shape').addEventListener('change',()=>{elements=normalizeImapV2Elements(elements,{shape:'square'});});
+$('size').addEventListener('change',save);
+for(const id of ['width','strength'])$(id).addEventListener('input',()=>{$(id+'-value').value=Number($(id).value).toFixed(1);});
+$('undo').onclick=undo;
+$('border-ranges-load').onclick=loadBorderRanges;
+$('sequence-back').onclick=()=>setSequenceStep(sequenceStep-1);
+$('sequence-next').onclick=()=>setSequenceStep(sequenceStep+1);
+$('sequence-all').onclick=()=>setSequenceStep(buildSequence?.length||0);
+$('reset').onclick=()=>{pushHistory();mapInfo=null;buildSequence=null;sequenceStep=0;replace(sample,sampleElements,'Sample landscape restored.');renderSourceNote();};
+$('clear').onclick=()=>{pushHistory();mapInfo=null;buildSequence=null;sequenceStep=0;replace([],[],'Terrain and placed elements cleared.');renderSourceNote();};
+$('download').onclick=()=>{const blob=new Blob([JSON.stringify({schema:'nourishland.imap-sketch',schemaVersion:1,shape,sizeScale,terrainEdits:edits,elements,mapInfo,buildSequence,sequenceStep,verified:false,unit:'illustrative-sculpt'},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=mapInfo?'imap-v2-border-ranges-mock.json':'imap-v2-landscape-sketch.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);$('status').textContent='Landscape sketch and build sequence downloaded.';};
+$('upload').onchange=async event=>{const file=event.target.files?.[0];if(!file)return;try{const data=JSON.parse(await file.text());if(data?.schema!=='nourishland.imap-sketch'||data.schemaVersion!==1)throw new Error('Choose an IMAP landscape sketch JSON file.');pushHistory();shape=data.shape==='square'?'square':'circular';sizeScale=clamp(Number(data.sizeScale)||1,.75,1.3);edits=normalizeImapV2TerrainEdits(data.terrainEdits,{shape:'square'});elements=normalizeImapV2Elements(data.elements,{shape:'square'});mapInfo=data.mapInfo&&typeof data.mapInfo==='object'?data.mapInfo:null;buildSequence=normalizeSequence(data.buildSequence,edits,elements);sequenceStep=clamp(Number(data.sequenceStep)||0,0,buildSequence?.length||0);selectedElementId='';$('shape').value=shape;$('size').value=sizeScale;$('size-value').value=`${Math.round(sizeScale*100)}%`;renderSourceNote();save();$('status').textContent=`Loaded ${elements.length} elements, ${edits.length} terrain edits and ${buildSequence?.length||0} build steps.`;schedule();}catch(error){$('status').textContent=error.message;}event.target.value='';};
+if(isBorderRangesPreview&&!hasSavedMap){loadBorderRanges();sequenceStep=buildSequence.length;history=[];save();}
+renderSourceNote();
+render();
+</script>
+</body>
+</html>

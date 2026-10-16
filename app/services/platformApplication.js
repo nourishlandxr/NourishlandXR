@@ -14,6 +14,12 @@ if (!['desktop', 'field'].includes(mode)) throw new Error('Unknown platform inte
 const html = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]);
 const params = new URLSearchParams(location.search);
 const app = document.getElementById('app');
+if (params.get('onboarding') === '1') {
+    const { renderCreatorProjectTutorial } = await import('../screens/creatorProjectTutorial.js');
+    return renderCreatorProjectTutorial(app, {
+        mode, projectId: params.get('project') || '', step: params.get('step') || ''
+    });
+}
 const client = createPublicContentClient({ apiBase: API_BASE });
 const state = { project: null, area: null, record: null, records: [], request: null, view: 'discover', busy: false };
 let checklistDirty = false;
@@ -30,6 +36,17 @@ app.innerHTML = mode === 'field' ? fieldShellMarkup(BUILD_INFO) : `<div class="p
 <nav class="platform-nav" aria-label="Nourishland tools"><button type="button" data-view="discover">${dashboardIcon('explore')}Discover</button><button type="button" data-view="checklists">${dashboardIcon('grid')}Checklists</button>${mode === 'field' ? `<button type="button" data-view="journal">${dashboardIcon('note')}Field journal</button>` : ''}<a href="${url('index.html', { creator: '1' })}">${dashboardIcon('grid')}Create &amp; manage</a><a href="${url('index.html', { experience: 'webxr-demo' })}">${dashboardIcon('ar')}WebXR introduction</a><a href="${url('platform.html', { interface: mode === 'field' ? 'desktop' : 'field', project: params.get('project') })}">${mode === 'field' ? 'Desktop content' : 'Field tools'}</a></nav>
 <main><div class="platform-context">${iconButton('back', 'arrow', 'Back')}<p data-context>Public knowledge</p>${iconButton('refresh', 'refresh', 'Refresh content')}</div><p class="platform-status" role="status" aria-live="polite" data-status></p><div data-content></div></main></div>`;
 const content = app.querySelector('[data-content]');
+if (mode === 'desktop') {
+    const link = document.createElement('a');
+    const setupUrl = new URL('../index.html', import.meta.url);
+    setupUrl.searchParams.set('workspace', mode);
+    setupUrl.searchParams.set('onboarding', '1');
+    if (params.get('project')) setupUrl.searchParams.set('project', params.get('project'));
+    link.href = setupUrl.href;
+    link.textContent = 'Guided Creator setup';
+    link.dataset.guidedCreatorSetup = '';
+    app.querySelector('.platform-nav')?.prepend(link);
+}
 const status = text => { app.querySelector('[data-status]').textContent = text; };
 if(mode==='field') {
     const settings=app.querySelector('[data-field-settings]');
@@ -51,7 +68,7 @@ function context(text) {
 function home() {
     state.request?.abort();state.view='home';status('');context('');
     history.replaceState(null,'',url('platform.html',{interface:mode}));
-    content.innerHTML=fieldLauncherMarkup({studioUrl:url('index.html',{creator:'1'}),contentUrl:url('platform.html',{interface:'desktop'}),xrUrl:url('index.html',{experience:'webxr-demo'})});
+    content.innerHTML=fieldLauncherMarkup({studioUrl:url('index.html',{creator:'1'}),contentUrl:url('platform.html',{interface:'desktop'}),xrUrl:url('index.html',{experience:'webxr-demo'}),setupUrl:url('index.html',{workspace:'field',onboarding:'1',project:params.get('project')})});
 }
 function fieldUtility(view, selected = '') {
     if(mode!=='field')return discover();

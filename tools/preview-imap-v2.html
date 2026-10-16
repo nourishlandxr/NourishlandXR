@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>IMAP V2 · circular Interactive Map direction</title>
+<style>
+:root{color-scheme:dark;font:16px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:#111b19;color:#e9f3ea}
+*{box-sizing:border-box}body{margin:0}.page{max-width:1200px;margin:auto;padding:28px 20px 48px}
+h1{font-size:clamp(2rem,5vw,4rem);line-height:1.08;margin:0 0 12px}h2{font-size:1.3rem;margin:28px 0 8px}
+p{max-width:78ch;color:#c3d7c9}.eyebrow{font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:#96cdab;margin:0 0 8px}
+figure{margin:24px 0;background:#202f2b;border:1px solid #4b6557;border-radius:16px;overflow:hidden}img{display:block;width:100%;height:auto}
+figcaption{padding:10px 16px;color:#c3d7c9;font-size:.88rem}a{color:#a8e6bf;text-underline-offset:3px}a:focus-visible{outline:3px solid #ffe09a;outline-offset:4px}
+.links{display:flex;gap:12px;flex-wrap:wrap}.links a{display:inline-flex;align-items:center;min-height:44px;padding:8px 12px;border:1px solid #54735e;border-radius:8px;background:#263a2e;text-decoration:none}.links a:hover{background:#385440}
+.note{padding:14px 16px;border-left:3px solid #a8e6bf;background:#1d3027;border-radius:0 8px 8px 0}
+</style>
+</head>
+<body><main class="page">
+<p class="eyebrow">NourishlandXR · model review</p>
+<h1>IMAP V2: the Interactive Map</h1>
+<p>IMAP is the grippable 3D map used in the demo. Its terrain, Areas, Totems and Orbs appear together beside the Living Frame. The existing round disc is the visual reference; V2 also allows a square footprint and bounded size adjustment.</p>
+<figure><img src="../artifacts/living-map-placement-0.9377.jpg" width="1280" height="720" alt="Existing circular Interactive Map disc beside the Living Frame in the AR demo"><figcaption>Existing demo disc, shown for reference. This photograph is not a V2 render.</figcaption></figure>
+<h2>What the V2 model adds</h2>
+<p>The data model now generates map pages from shared-project Sites and Areas, preserves actual Totem and Orb identities, reports crowded markers, and keeps optional layout and terrain sketches separate from verified geography. Shape can be round or square, with size bounded from 75% to 130%. The terrain sketch has three direct inputs: lower a waterway, raise a hill, or form a steep contour. The demo renderer has not yet been rewired to this model.</p>
+<div class="links"><a href="preview-imap-v2-terrain.html">Try the terrain-sketch tools</a><a href="preview-demo-living-map.html">Open the current 3D disc preview</a><a href="preview-spatial-living-map.html">Open spatial reveal preview</a><a href="preview-creator-planning-map-v2-interactive.html">Open separate Creator planning-map experiment</a></div>
+<p class="note">The flat Creator planning map was retained as a separate experiment. It is not the IMAP disc.</p>
+</main></body></html>

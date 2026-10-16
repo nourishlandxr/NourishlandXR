@@ -36,6 +36,7 @@ const frontendEntries = [
     'platform.css',
     'field',
     'creator-studio.css',
+    'creator-project-tutorial.css',
     'creator-field-worker.js',
     'style.css',
     'pim.css',

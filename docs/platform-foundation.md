@@ -1,5 +1,7 @@
 # Nourishland foundation: audit and phased implementation
 
+The cross-access generated map is now named IMAP (Interactive Map). Its shared identity/access contract, Web Creator/Explorer navigation, Android Field handoffs and sequencing are captured in [the IMAP direction](imap-shared-project-direction.md). Treat this as the next shared web/Field scope; do not implement competing native Unity UI from this checkout.
+
 Audit date: 14 October 2026. Web checkout: `C:/FILES/Projects/website/github/NourishlandXR`, branch `main`, initial HEAD `1e0ab707`. The initial working tree was clean; unrelated tutorial/controller edits appeared during the audit. Test results therefore describe a changing checkout, not a frozen release candidate.
 
 The new direction supersedes tutorial/demo parity as the Unity migration goal. Preserve the existing WebXR tutorial and native experiments. Do not continue reproducing their full journey across devices.

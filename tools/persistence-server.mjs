@@ -14,6 +14,8 @@ import { createPigeonPeaTemplateProfile } from '../app/services/pigeonPeaTemplat
 import { PIGEON_PEA_EXAMPLE } from '../app/services/pigeonPeaExample.js';
 import { daleysPlantMatchesQuery, normalizeDaleysPlantResult } from '../app/services/daleysPlant.js';
 import { validateSharedProject } from '../app/services/sharedProjectContract.js';
+import { contourRequestUrl, NSW_CONTOUR_LAYER_URL } from '../app/services/imapElevationSource.js';
+import { normalizePersistedProjectSiteMap } from '../app/services/projectGeographicPersistence.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -36,6 +38,13 @@ const DALEYS_BATCH_SIZE = 100;
 const DALEYS_CATALOG_TTL_MS = 15 * 60 * 1000;
 let daleysCatalogCache = { expiresAt: 0, products: [] };
 let daleysCatalogPromise = null;
+const TERRAIN_DATA_TTL_MS = 6 * 60 * 60 * 1000;
+const TERRAIN_CACHE_LIMIT = 16;
+const TERRAIN_MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
+const terrainDataCache = new Map();
+const terrainDataPending = new Map();
+const terrainClientRequests = new Map();
+const terrainCacheDirectory = path.join(workspaceDir, '.terrain-cache');
 const sessionTtlMs = 12 * 60 * 60 * 1000;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const LOGIN_MAX_FAILURES = 5;
@@ -69,14 +78,15 @@ const demoPlaceDir = path.join(workspaceDir, 'Hillyards', 'sites', 'main_food_fo
 const demoMarkersDir = path.join(demoPlaceDir, 'markers');
 fs.mkdirSync(workspaceDir, { recursive: true });
 
-function sendJson(res, statusCode, payload) {
+function sendJson(res, statusCode, payload, extraHeaders = {}) {
     if (res.writableEnded || res.destroyed) return false;
     res.writeHead(statusCode, {
         'Content-Type': 'application/json; charset=utf-8',
         'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
         Pragma: 'no-cache',
         Expires: '0',
-        'X-Content-Type-Options': 'nosniff'
+        'X-Content-Type-Options': 'nosniff',
+        ...extraHeaders
     });
     res.end(JSON.stringify(payload));
     return true;
@@ -140,7 +150,7 @@ function writeJson(filePath, data) {
     fs.renameSync(tempPath, filePath);
 }
 
-const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library', 'zinnia']);
+const passengerStrippedApiRoots = new Set(['projects', 'auth', 'health', 'demo-markers', 'plant-library', 'zinnia', 'terrain']);
 
 function normalizeApiPath(pathname) {
     if (pathname === '/xr-api') return '/api';
@@ -725,6 +735,7 @@ function renameProject(projectId, projectData) {
     const renamed = {
         ...existing,
         ...storedProjectData,
+        ...(storedProjectData.siteMap !== undefined ? { siteMap: normalizePersistedProjectSiteMap(storedProjectData.siteMap, existing.siteMap || {}) } : {}),
         visibility: normalizeVisibility(projectData.visibility, existing.visibility || 'draft'),
         id: nextProjectId,
         name,
@@ -968,6 +979,97 @@ function buildPublicSnapshot(projectId) {
         const response=validateSharedProject({...payload,revision},projectId);
         return response;
 }
+function normalizeTerrainBounds(raw) {
+    const values = String(raw || '').split(',').map(Number);
+    if (values.length !== 4 || values.some(value => !Number.isFinite(value))) throw new Error('Use west,south,east,north coordinates.');
+    const [xmin, ymin, xmax, ymax] = values.map(value => Math.round(value * 10000) / 10000);
+    if (xmin < 140 || xmax > 154.5 || ymin < -38.5 || ymax > -27.5 || xmin >= xmax || ymin >= ymax) {
+        throw new Error('The terrain data area must be inside NSW.');
+    }
+    if (xmax - xmin > 0.12 || ymax - ymin > 0.12) throw new Error('Choose a smaller map area (maximum about 10 km across).');
+    return { xmin, ymin, xmax, ymax, spatialReference: 4326 };
+}
+
+function terrainCacheKey(bounds) {
+    return [bounds.xmin, bounds.ymin, bounds.xmax, bounds.ymax].join(',');
+}
+
+function terrainCacheFile(key) {
+    const digest = crypto.createHash('sha256').update(key).digest('hex');
+    return path.join(terrainCacheDirectory, `${digest}.json`);
+}
+
+function persistTerrainCache(key, entry) {
+    fs.mkdirSync(terrainCacheDirectory, { recursive: true });
+    const destination = terrainCacheFile(key);
+    const temporary = `${destination}.${process.pid}.${crypto.randomUUID()}.tmp`;
+    fs.writeFileSync(temporary, JSON.stringify(entry), { encoding: 'utf8', mode: 0o640, flag: 'wx' });
+    fs.renameSync(temporary, destination);
+    const files = fs.readdirSync(terrainCacheDirectory, { withFileTypes: true })
+        .filter(item => item.isFile() && item.name.endsWith('.json'))
+        .map(item => ({ name: item.name, mtime: fs.statSync(path.join(terrainCacheDirectory, item.name)).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime);
+    for (const stale of files.slice(TERRAIN_CACHE_LIMIT)) fs.rmSync(path.join(terrainCacheDirectory, stale.name), { force: true });
+}
+
+function allowTerrainRefresh(req) {
+    const key = String(req.socket?.remoteAddress || 'unknown');
+    const now = Date.now();
+    const existing = terrainClientRequests.get(key);
+    if (!existing || now - existing.startedAt >= 10 * 60 * 1000) {
+        terrainClientRequests.set(key, { startedAt: now, count: 1 });
+        return true;
+    }
+    if (existing.count >= 30) return false;
+    existing.count++;
+    return true;
+}
+
+async function getTerrainContourData(bounds) {
+    const key = terrainCacheKey(bounds);
+    const now = Date.now();
+    const cached = terrainDataCache.get(key);
+    if (cached && cached.expiresAt > now) {
+        terrainDataCache.delete(key);
+        terrainDataCache.set(key, cached);
+        return { ...cached.payload, cached: true, cachedAt: cached.cachedAt };
+    }
+    try {
+        const stored = JSON.parse(fs.readFileSync(terrainCacheFile(key), 'utf8'));
+        if (stored?.expiresAt > now && stored?.payload?.bounds && Array.isArray(stored.payload.features)) {
+            terrainDataCache.set(key, stored);
+            return { ...stored.payload, cached: true, cachedAt: stored.cachedAt };
+        }
+        fs.rmSync(terrainCacheFile(key), { force: true });
+    } catch (error) {
+        if (error.code !== 'ENOENT') fs.rmSync(terrainCacheFile(key), { force: true });
+    }
+    if (terrainDataPending.has(key)) return { ...(await terrainDataPending.get(key)), cached: false };
+
+    const pending = (async () => {
+        const response = await fetch(contourRequestUrl(bounds), {
+            headers: { Accept: 'application/json' },
+            signal: AbortSignal.timeout(25_000)
+        });
+        if (!response.ok) throw new Error(`NSW contour service returned ${response.status}.`);
+        const text = await response.text();
+        if (Buffer.byteLength(text, 'utf8') > TERRAIN_MAX_RESPONSE_BYTES) throw new Error('The selected contour area returned too much data. Choose a smaller area.');
+        const result = JSON.parse(text);
+        if (result.error) throw new Error(result.error.message || 'NSW contour query failed.');
+        const features = Array.isArray(result.features) ? result.features : [];
+        if (!features.length) throw new Error('No NSW contour features were returned for this area.');
+        const cachedAt = new Date().toISOString();
+        const payload = { features, bounds, source: NSW_CONTOUR_LAYER_URL, exceededTransferLimit: Boolean(result.exceededTransferLimit) };
+        const entry = { expiresAt: Date.now() + TERRAIN_DATA_TTL_MS, cachedAt, payload };
+        terrainDataCache.set(key, entry);
+        persistTerrainCache(key, entry);
+        while (terrainDataCache.size > TERRAIN_CACHE_LIMIT) terrainDataCache.delete(terrainDataCache.keys().next().value);
+        return { ...payload, cached: false, cachedAt };
+    })().finally(() => terrainDataPending.delete(key));
+    terrainDataPending.set(key, pending);
+    return pending;
+}
+
 function handleApi(req, res) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const pathname = normalizeApiPath(url.pathname);
@@ -1000,6 +1102,21 @@ function handleApi(req, res) {
                 logout: 'POST /auth/logout'
             }
         });
+    }
+    if (pathname === '/api/terrain/contours' && req.method === 'GET') {
+        let bounds;
+        try { bounds = normalizeTerrainBounds(url.searchParams.get('bbox')); }
+        catch (error) { return sendJson(res, 400, { error: error.message }); }
+        const key = terrainCacheKey(bounds);
+        const cached = terrainDataCache.get(key);
+        if (!cached && !terrainDataPending.has(key) && !allowTerrainRefresh(req)) {
+            res.setHeader('Retry-After', '600');
+            return sendJson(res, 429, { error: 'Terrain data refresh limit reached. Try again in a few minutes.' });
+        }
+        getTerrainContourData(bounds)
+            .then(payload => sendJson(res, 200, payload))
+            .catch(error => sendJson(res, 502, { error: error.message || 'Terrain data is temporarily unavailable.' }));
+        return true;
     }
     if (pathname === '/api' && req.method === 'GET') {
         return sendJson(res, 200, { ok: true, service: 'nourishland-xr-api', health: '/xr-api/health' });

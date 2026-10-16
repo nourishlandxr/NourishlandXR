@@ -23,6 +23,17 @@ export function workspaceUrl(projectId, { mode = 'desktop', siteId = '', recordK
     return url;
 }
 
+export function creatorProjectTutorialUrl(projectId = '', { mode = 'desktop', step = '' } = {}) {
+    const url = new URL(globalThis.location.href);
+    url.search = '';
+    url.hash = '';
+    url.searchParams.set('workspace', CREATOR_WORKSPACES[mode] ? mode : 'desktop');
+    url.searchParams.set('onboarding', '1');
+    if (projectId) url.searchParams.set('project', projectId);
+    if (step) url.searchParams.set('step', step);
+    return url;
+}
+
 export const recordKey = entry => [entry.siteId, entry.place.id, entry.marker.id].map(encodeURIComponent).join('/');
 export const physicalTagSignature = marker => JSON.stringify(marker?.physicalAnchor || null);
 export function fieldCheckState(marker) {

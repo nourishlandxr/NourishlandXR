@@ -1,5 +1,5 @@
 import { loadCreatorWorkspace } from '../services/creatorWorkspaceData.js';
-import { workspaceHeader, escapeWorkspaceHtml as html } from '../services/creatorWorkspaceFrame.js';
+import { workspaceHeader, attachCreatorProjectTutorialLink, escapeWorkspaceHtml as html } from '../services/creatorWorkspaceFrame.js';
 import { workspaceUrl, fieldCheckState } from '../services/creatorWorkspaceMode.js';
 
 export async function renderWorkspace(app, projectId, options = {}) {
@@ -11,6 +11,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
     state.areaId ||= areas()[0]?.id || '';
     app.innerHTML=`<section class="screen creator-spatial" aria-label="XR Spatial">${workspaceHeader(model,'spatial',{siteId:state.siteId,recordKey:state.selected})}<main class="spatial-entry"><section class="spatial-entry-hero"><p class="studio-eyebrow">XR SPATIAL</p><h1>Place knowledge in real space</h1><p>Select an Area, prepare XR, then enter to place or inspect its elements. Record editing stays in Desktop Studio; scanning and observations stay in Android Field.</p><p role="status" data-status>Checking this device’s WebXR support…</p><div class="spatial-entry-actions"><button type="button" data-paint>Paint V2 markings</button><button type="button" data-paint>Paint V2 markings</button><button type="button" data-prepare>Prepare XR</button><button class="studio-primary" type="button" data-enter disabled>Enter XR</button></div></section><div class="spatial-selectors"><label>Site<select data-site>${model.sites.map(site=>`<option value="${html(site.id)}"${site.id===state.siteId?' selected':''}>${html(site.name)}</option>`).join('')}</select></label><label>Area<select data-area></select></label></div><h2>Area elements</h2><p class="studio-hint">Select an element to begin placement. With no selection, XR opens the Area for inspection.</p><div class="spatial-record-list" data-records></div><details><summary>Device & performance</summary><p>XR needs a secure address and a browser with immersive WebXR support. Preparing assets before entry reduces loading during the session. The in-session Control Panel provides FPS, frame timing and graphics controls.</p><p>Hand tracking and camera access depend on the device and browser.</p></details></main></section>`;
     const root=app.firstElementChild,status=root.querySelector('[data-status]');
+    attachCreatorProjectTutorialLink(root, projectId, 'spatial');
     const message=text=>{if(status.isConnected)status.textContent=text;};
     function render() {
         root.querySelector('[data-area]').innerHTML=areas().map(area=>`<option value="${html(area.id)}"${area.id===state.areaId?' selected':''}>${html(area.name)}</option>`).join('');
@@ -20,7 +21,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
         root.querySelector('[data-paint]').disabled=!state.areaId;
         root.querySelector('[data-prepare]').disabled=state.busy||!state.supported||model.offline;
         history.replaceState({nourishlandView:'creator-workspace',projectId,workspace:'spatial',siteId:state.siteId,recordKey:state.selected},'',workspaceUrl(projectId,{mode:'spatial',siteId:state.siteId,recordKey:state.selected}));
-        root.querySelectorAll('.workspace-mode-picker a').forEach(link=>link.href=workspaceUrl(projectId,{mode:new URL(link.href).searchParams.get('workspace'),siteId:state.siteId,recordKey:state.selected}).href);
+        root.querySelectorAll('.workspace-mode-picker a:not([data-guided-project-setup])').forEach(link=>link.href=workspaceUrl(projectId,{mode:new URL(link.href).searchParams.get('workspace'),siteId:state.siteId,recordKey:state.selected}).href);
     }
     root.addEventListener('change',event=>{
         if(state.busy)return;

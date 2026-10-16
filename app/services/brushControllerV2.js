@@ -21,8 +21,8 @@ export function createBrushControllerV2(model){
     const length=Math.max(.006,tip.distanceTo(back)),pointLength=Math.min(.004,length*.24);
     const pointGeometry=new THREE.CylinderGeometry(0,.0032,length,8,1);pointGeometry.rotateX(-Math.PI/2);geometries.add(pointGeometry);
     const point=new THREE.Mesh(pointGeometry,fibre);point.name='Brush V2 direct tapered point';point.position.z=length/2;head.add(point);
-    const tipGeometry=new THREE.CylinderGeometry(0,.001,length*.22,6,1);tipGeometry.rotateX(-Math.PI/2);geometries.add(tipGeometry);
-    const paintTip=new THREE.Mesh(tipGeometry,pigment);paintTip.name='Brush V2 contact tip';paintTip.position.z=pointLength/2;paintTip.scale.y=.45;head.add(paintTip);
+    const tipGeometry=new THREE.CylinderGeometry(0,.001,pointLength,6,1);tipGeometry.rotateX(-Math.PI/2);geometries.add(tipGeometry);
+    const paintTip=new THREE.Mesh(tipGeometry,pigment);paintTip.name='Brush V2 contact tip';paintTip.position.z=pointLength/2;head.add(paintTip);
     const fascia=[];
     model.updateMatrixWorld(true);
     for(const name of ['a_button','b_button','x_button','y_button']){

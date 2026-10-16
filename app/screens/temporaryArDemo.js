@@ -309,7 +309,7 @@ let demoRenderFailureReported = false;
 const XR_FIRST_CONTENT_TIMEOUT_MS=2500;
 const XR_RECOVERY_CODE='NLXR-XR-01';
 let xrRecoveryTexture=null,xrRecoveryCanvas=null,xrRecoveryStatus='starting',xrRecoveryDetail='';
-let xrFirstContentRendered=false,xrFirstContentWatchdog=null,xrDisabledFrameSteps=new Set(),xrReportedFailurePhases=new Set(),xrFrameRetryAt=new Map();
+let xrFirstContentRendered=false,xrFirstContentWatchdog=null,xrDisabledFrameSteps=new Set(),xrReportedFailurePhases=new Set(),xrFrameRetryAt=new Map(),xrPanelFrameFailures=new Map();
 let xrPanelRenderFailures=0;
 const meshRepository=createMeshRepository();
 const meshSourceResolver=createMeshSourceResolver({repository:meshRepository});
@@ -398,12 +398,13 @@ function runXrFrameStep(phase, operation) {
     if(xrDisabledFrameSteps.has(phase))return false;
     if((xrFrameRetryAt.get(phase) || 0)>performance.now())return false;
     const started=measureXrFrame?performance.now():0;
-    try { operation();xrFrameRetryAt.delete(phase);if(phase==='Control panel render')xrPanelRenderFailures=0;return true; }
+    try { operation();xrFrameRetryAt.delete(phase);xrPanelFrameFailures.delete(phase);if(phase==='Control panel render')xrPanelRenderFailures=0;return true; }
     catch(error){
-        if(phase==='Control panel render'){
+        if(['Control panel render','comfort options render','comfort options update'].includes(phase)){
             if(!xrReportedFailurePhases.has(phase)){xrReportedFailurePhases.add(phase);recordArFailure(error,phase);}
-            xrPanelRenderFailures++;
-            xrFrameRetryAt.set(phase,performance.now()+Math.min(8000,500*2**Math.min(4,xrPanelRenderFailures-1)));
+            const failures=(xrPanelFrameFailures.get(phase) || 0)+1;xrPanelFrameFailures.set(phase,failures);
+            if(phase==='Control panel render')xrPanelRenderFailures=failures;
+            xrFrameRetryAt.set(phase,performance.now()+Math.min(8000,500*2**Math.min(4,failures-1)));
             return false;
         }
         xrDisabledFrameSteps.add(phase);
@@ -421,6 +422,7 @@ function beginXrFirstContentWatchdog(){
     xrDisabledFrameSteps=new Set();
     xrReportedFailurePhases=new Set();
     xrFrameRetryAt=new Map();
+    xrPanelFrameFailures=new Map();
     xrPanelRenderFailures=0;
     const watchedSession=session;
     let elapsed=0,lastCheck=performance.now(),wasVisible=!['hidden','visible-blurred'].includes(session?.visibilityState);
@@ -672,7 +674,7 @@ function clearSessionState() {
     clearTimeout(pointerPressTimer);
     clearTimeout(demoHoldTimer);
     clearTimeout(introNarrationTimer);
-    clearTimeout(xrFirstContentWatchdog);xrFirstContentWatchdog=null;xrFirstContentRendered=false;xrDisabledFrameSteps=new Set();xrReportedFailurePhases=new Set();xrFrameRetryAt=new Map();xrPanelRenderFailures=0;xrRecoveryStatus='starting';xrRecoveryDetail='';
+    clearTimeout(xrFirstContentWatchdog);xrFirstContentWatchdog=null;xrFirstContentRendered=false;xrDisabledFrameSteps=new Set();xrReportedFailurePhases=new Set();xrFrameRetryAt=new Map();xrPanelFrameFailures=new Map();xrPanelRenderFailures=0;xrRecoveryStatus='starting';xrRecoveryDetail='';
     cancelAnimationFrame(arWelcomeShowcaseFrame);arWelcomeShowcaseFrame=0;arWelcomeShowcaseActive=false;
     clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;arWelcomeStartedAt=0;arWelcomeIntroPending=false;arWelcomeSharedBoard=false;limMeshActivatedAt=NaN;arWelcomeOpeningActive=false;arWelcomeOpeningDuration=AR_WELCOME_OPENING_MS;arWelcomeOpeningSeed=0;arWelcomeRenderedFrames=[];
     clearNativeConnectionHold();nativeConnectionState=null;removeNativeConnectionEffect();

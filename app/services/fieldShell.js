@@ -7,7 +7,7 @@ export function fieldShellMarkup({ version, target }) {
 <nav class="field-dock" aria-label="Field dock">${[['home','grid','Home'],['discover','explore','Discover'],['checklists','checklist','Checklists'],['journal','note','Journal']].map(([view,icon,label])=>`<button type="button" data-view="${view}" aria-label="${label}" title="${label}">${dashboardIcon(icon)}<span>${label}</span></button>`).join('')}</nav>
 <dialog class="field-settings" data-field-settings aria-labelledby="field-settings-title"><div class="field-settings-heading"><h2 id="field-settings-title">App settings</h2>${control('close-settings','close','Close settings')}</div><p class="welcome-version-badge">V${html(version)} · ${target==='production'?'Live':'Local preview'}</p><h3>Keep Field on your home screen</h3><p>Use your browser’s Install app or Add to home screen action. Open the installed Field icon for the standalone app view.</p><h3>Your device, your notes</h3><p>Journal drafts and checklist progress stay on this device. Export files before clearing browser storage.</p><div data-field-update></div></dialog></div>`;
 }
-export function fieldLauncherMarkup({ studioUrl, contentUrl, xrUrl }) {
+export function fieldLauncherMarkup({ studioUrl, contentUrl, xrUrl, setupUrl = studioUrl }) {
     const tools=[
         {view:'dashboard',icon:'grid',label:'Dashboard',tone:'mint'},
         {view:'discover',icon:'explore',label:'Discover',tone:'sage'},
@@ -15,6 +15,7 @@ export function fieldLauncherMarkup({ studioUrl, contentUrl, xrUrl }) {
         {view:'checklists',icon:'checklist',label:'Checklists',tone:'honey'},
         {view:'journal',icon:'note',label:'Journal',tone:'clay'},
         {href:xrUrl,icon:'ar',label:'WebXR',tone:'lavender'},
+        {href:setupUrl,icon:'grid',label:'Creator setup',tone:'sage'},
         {href:studioUrl,icon:'grid',label:'Studio',tone:'sky'},
         {href:contentUrl,icon:'webhub',label:'Content',tone:'mint'}
     ];

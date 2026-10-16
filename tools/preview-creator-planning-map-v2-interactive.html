@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Creator planning map V2 · interactive experiment</title>
+<style>
+:root{color-scheme:light;--ink:#1e302a;--muted:#596a62;--line:#a9b9ae;--paper:#f4f6f0;--panel:#fff;--green:#286a50;--blue:#3b7186;--orange:#ad6827;--focus:#126cc2}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}
+button,input,select{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.48}button:focus-visible,input:focus-visible,select:focus-visible,[role=button]:focus-visible{outline:3px solid var(--focus);outline-offset:3px}
+.app{max-width:1640px;margin:auto;padding:24px}.top{display:flex;gap:20px;justify-content:space-between;align-items:start;margin-bottom:18px}.eyebrow{text-transform:uppercase;letter-spacing:.17em;font-size:11px;font-weight:700;color:var(--green);margin:0 0 5px}h1{font-size:32px;letter-spacing:-.04em;line-height:1.05;margin:0}h1 span{font-weight:400;color:var(--muted)}.top p:last-child{max-width:740px;margin:9px 0 0;color:var(--muted)}.version{font-size:12px;color:var(--muted);white-space:nowrap}
+.layout{display:grid;grid-template-columns:minmax(210px,250px) minmax(0,1fr) minmax(235px,280px);gap:14px;align-items:start}
+.panel,.map-panel{background:var(--panel);border:1px solid #d6e0d7;border-radius:10px;box-shadow:0 2px 10px #1832270a}.panel{padding:16px}.panel h2,.map-panel h2{font-size:16px;margin:0 0 8px;letter-spacing:-.01em}.hint{font-size:12px;color:var(--muted);margin:0 0 14px}.metrics{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;margin:12px 0 16px}.metric{border:1px solid #dbe5dc;background:#f7f9f5;border-radius:6px;padding:8px}.metric strong{display:block;font-size:19px;line-height:1.1}.metric span{display:block;color:var(--muted);font-size:11px}.steps{list-style:none;margin:12px 0 16px;padding:0;border-left:1px solid #b9c9bc}.steps li{position:relative;margin:0;padding:6px 0 6px 16px;color:#7b8880;font-size:12px}.steps li:before{content:'';position:absolute;left:-4px;top:13px;width:7px;height:7px;border:1px solid #9aaa9f;border-radius:50%;background:white}.steps li.done{color:var(--ink);font-weight:600}.steps li.done:before{background:var(--green);border-color:var(--green)}.steps li.current{color:var(--green)}.actions{display:flex;gap:6px}.btn{border:1px solid #a6b9aa;border-radius:6px;background:#fff;color:var(--ink);min-height:38px;padding:7px 10px;font-weight:600}.btn.primary{background:var(--green);color:#fff;border-color:var(--green)}.actions .btn{flex:1}.small{font-size:12px}.divider{border:0;border-top:1px solid #e0e8e1;margin:17px 0}.upload{display:block}.upload input{display:block;width:100%;font-size:12px;margin-top:6px}
+.map-panel{overflow:hidden}.map-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 16px;border-bottom:1px solid #dce6dc}.map-bar h2{margin:0}.map-bar span{font-size:12px;color:var(--muted)}.map-wrap{background:#edf2e9;padding:12px}.map{display:block;width:100%;height:auto;aspect-ratio:1000/620;border:1px solid #afc0b1;border-radius:5px;background:#f9faf6;touch-action:none}.map [data-key]{cursor:pointer}.map [data-key]:focus-visible{outline:none}.map [data-key]:focus-visible .node-focus{stroke:var(--focus);stroke-width:4}.map .label{font:600 18px system-ui, sans-serif;fill:#263a30}.map .sub{font:500 11px system-ui,sans-serif;fill:#667a6c}.map .marker-label{font:600 12px system-ui,sans-serif;fill:#243a2f;paint-order:stroke;stroke:#f9faf6;stroke-width:4px;stroke-linejoin:round}.map .map-note{font:500 12px system-ui,sans-serif;fill:#5c6f62}.legend{display:flex;gap:14px;flex-wrap:wrap;padding:11px 16px;border-top:1px solid #dce6dc;font-size:12px;color:#4d6457}.legend b{display:inline-block;width:11px;height:11px;margin-right:5px;vertical-align:-1px}.legend .area{border:2px solid #516f5c}.legend .totem{background:var(--orange);transform:rotate(45deg)}.legend .orb{background:var(--green);border-radius:50%}.legend .note{background:var(--blue)}.map-footer{padding:10px 16px;border-top:1px solid #e4ece5;font-size:12px;color:var(--muted)}
+.control{display:block;margin:14px 0}.control span{display:block;font-size:12px;font-weight:650;margin-bottom:5px}.control select,.control input[type=range]{width:100%}.control select{border:1px solid #aabdaf;background:#fff;border-radius:5px;padding:7px}.check{display:flex;gap:8px;align-items:center;font-size:13px;margin:10px 0}.check input{width:17px;height:17px}.chip{display:inline-flex;background:#e8f0e9;color:#335943;border-radius:4px;padding:3px 6px;font-size:11px;font-weight:700}.inspector{border-top:1px solid #e1e9e1;padding-top:14px;margin-top:16px}.inspector h3{font-size:14px;margin:0 0 6px}.inspector p{font-size:12px;color:var(--muted);margin:3px 0}.inspector strong{color:var(--ink)}.note-box{background:#f1f6f2;border-left:3px solid #5b9473;padding:9px;margin-top:15px;font-size:12px;color:#3b5445}.status{position:absolute;left:-9999px}
+@media(max-width:1120px){.layout{grid-template-columns:minmax(190px,230px) minmax(0,1fr)}.right{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.right>.inspector,.right>.note-box{margin:0;padding-top:0;border:0}}@media(max-width:740px){.app{padding:12px}.top{display:block}.version{display:block;margin-top:8px}.layout{display:block}.panel,.map-panel{margin-bottom:12px}.right{display:block}.map-wrap{padding:4px}.map-bar{display:block}.map-bar span{display:block}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top"><div><p class="eyebrow">NourishlandXR · Creator experiment</p><h1>Planning map <span>V2</span></h1><p>A flat project-planning map that fills itself as Sites, Areas, Totems, Orbs, and Notes are created. Drag a marker to customize its conceptual position. This is separate from the circular Interactive Map disc.</p></div><span class="version" id="version"></span></header>
+  <div class="layout">
+    <aside class="panel left" aria-label="Project progress">
+      <h2>Project progress</h2><p class="hint" id="project-name"></p>
+      <div class="metrics" id="metrics"></div>
+      <ol class="steps" id="steps"></ol>
+      <div class="actions"><button class="btn" id="previous" type="button">Previous</button><button class="btn primary" id="next" type="button">Add next</button></div>
+      <hr class="divider"><button class="btn small" id="sample" type="button">Restart sample project</button>
+      <label class="upload small">Review a shared-project JSON snapshot<input id="import" type="file" accept=".json,application/json"></label>
+      <p class="hint">Imported JSON stays in this browser. Map positions are saved locally by project ID.</p>
+    </aside>
+    <main class="map-panel">
+      <div class="map-bar"><h2 id="map-title">Project map</h2><span id="map-subtitle">Generated from project records</span></div>
+      <div class="map-wrap"><svg class="map" id="map" viewBox="0 0 1000 620" role="img" aria-label="Generated project map showing Sites, Areas, Totems and Orbs"></svg></div>
+      <div class="legend" aria-label="Map legend"><span><b class="area"></b>Area</span><span><b class="totem"></b>Totem</span><span><b class="orb"></b>Orb</span><span><b class="note"></b>Note</span></div>
+      <div class="map-footer" id="map-footer"></div>
+    </main>
+    <aside class="panel right" aria-label="Map presentation">
+      <div><h2>Map presentation</h2><p class="hint">Optional, local prototype controls. Project records remain the source of truth.</p>
+        <label class="control"><span>Terrain style</span><select id="terrain"><option value="none">Clean plan</option><option value="contours">Contour sketch</option><option value="slope">Slope sketch</option></select></label>
+        <label class="control"><span>Contour spacing · <output id="contour-value">3</output></span><input id="contour" type="range" min="2" max="6" value="3"></label>
+        <label class="check"><input id="water" type="checkbox">Show water sketch</label>
+        <label class="upload small">Reference plan image<input id="reference" type="file" accept="image/png,image/jpeg,image/webp"></label>
+      </div>
+      <section class="inspector" id="inspector" aria-label="Selected map item"></section>
+      <div class="note-box">Terrain lines, slope and water here are illustrative. A real project terrain layer needs a sourced plan or elevation data, alignment, and an accuracy label.</div>
+    </aside>
+  </div>
+  <p class="status" id="status" role="status" aria-live="polite"></p>
+</div>
+<script type="module">
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+import {createCreatorPlanningMapV2Projection} from '../app/services/creatorPlanningMapV2Projection.js';
+const $=selector=>document.querySelector(selector);
+const safe=value=>String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const revision='sha256:'+'0'.repeat(64);
+const steps=['Project created','Site added','First Area added','Entrance Totem added','First Orb added','Second Area added','Second Totem added','Second Orb added','Observation Note added'];
+const p='canopy-commons',s='garden-site';
+const site={id:s,name:'Garden Site',description:'Sample project site',projectId:p};
+const area=(id,name)=>({id,name,description:'',projectId:p,siteId:s});
+const record=(id,areaId,title,kind)=>({id:JSON.stringify([p,s,areaId,id]),recordId:id,markerId:id,title,kind,knowledgeId:'',description:'',scientificName:'',profile:{},projectId:p,siteId:s,areaId});
+function sampleSnapshot(step){
+  const snapshot={schemaVersion:1,contract:'nourishland.shared-project',revision,project:{id:p,name:'Canopy Commons',description:'A sample project growing one element at a time'},sites:[],areas:[],records:[]};
+  if(step>=1)snapshot.sites.push(site);
+  if(step>=2)snapshot.areas.push(area('entrance','Entrance Garden'));
+  if(step>=3)snapshot.records.push(record('entrance-totem','entrance','Entrance Totem','area_checkpoint'));
+  if(step>=4)snapshot.records.push(record('pigeon-pea','entrance','Pigeon Pea Orb','plant'));
+  if(step>=5)snapshot.areas.push(area('swale','Swale Garden'));
+  if(step>=6)snapshot.records.push(record('swale-totem','swale','Swale Totem','area_checkpoint'));
+  if(step>=7)snapshot.records.push(record('finger-lime','swale','Finger Lime Orb','plant'));
+  if(step>=8)snapshot.records.push(record('water-note','swale','Water observation','note'));
+  return snapshot;
+}
+let step=4,source=null,model=null,selectedKey='',drag=null,referenceUrl='';
+const prefsFor=id=>{try{return JSON.parse(localStorage.getItem('nlxr.creator-planning-map-v2.prototype.'+id)||'{}');}catch{return {}}};
+let preferences=prefsFor(p);
+const save=()=>{try{localStorage.setItem('nlxr.creator-planning-map-v2.prototype.'+model.project.id,JSON.stringify(preferences));}catch{}};
+const view=()=>source || sampleSnapshot(step);
+const locate=key=>model.areas.find(item=>item.key===key)||model.records.find(item=>item.key===key)||model.sites.find(item=>item.key===key);
+const kindName=kind=>({area_checkpoint:'Totem',plant:'Orb',note:'Note'})[kind] || kind;
+function terrainMarkup(){
+  const style=preferences.terrain || 'none',count=Number(preferences.contour || 3);
+  const image=referenceUrl?'<image href="'+safe(referenceUrl)+'" x="0" y="0" width="1000" height="620" preserveAspectRatio="xMidYMid slice" opacity=".28"/>':'';
+  let lines='';
+  if(style==='contours')for(let i=0;i<count+2;i++){const y=70+i*86;lines+='<path d="M0 '+y+' C170 '+(y-45)+' 300 '+(y+45)+' 500 '+y+' S830 '+(y-35)+' 1000 '+(y+10)+'" fill="none" stroke="#a8b9a7" stroke-width="1.2"/>';}
+  if(style==='slope')for(let i=0;i<8;i++){const x=i*145-30;lines+='<path d="M'+x+' 0 L'+(x+270)+' 620" stroke="#b6c3ae" stroke-width="1.2"/>';}
+  const water=preferences.water?'<path d="M0 455 C200 390 280 550 475 460 S800 340 1000 405" fill="none" stroke="#437f99" stroke-width="4" stroke-dasharray="10 6"/><text x="820" y="375" class="map-note">Water sketch</text>':'';
+  return image+'<rect width="1000" height="620" fill="url(#grid)" opacity=".52"/>'+lines+water;
+}
+function areaMarkup(area){
+  const isSelected=selectedKey===area.key,children=model.records.filter(record=>record.areaKey===area.key),accent=preferences.accents?.[area.key]||'green';
+  const colour={green:'#4d8064',blue:'#44778d',ochre:'#9d7140'}[accent]||'#4d8064';
+  return '<g data-key="'+safe(area.key)+'" role="button" tabindex="0" aria-label="Inspect Area '+safe(area.name)+'" aria-pressed="'+isSelected+'">'+
+    '<rect class="node-focus" x="'+(area.x-125)+'" y="'+(area.y-105)+'" width="250" height="210" rx="5" fill="#ffffff" fill-opacity=".83" stroke="'+colour+'" stroke-width="'+(isSelected?3:2)+'"/>'+
+    '<path d="M'+(area.x-125)+' '+(area.y-70)+' H'+(area.x+125)+'" stroke="'+colour+'" stroke-width="1"/>'+
+    '<text x="'+(area.x-112)+'" y="'+(area.y-80)+'" class="label">'+safe(area.name)+'</text>'+
+    '<text x="'+(area.x-112)+'" y="'+(area.y+92)+'" class="sub">'+children.length+' record'+(children.length===1?'':'s')+' · '+(area.positionSource==='custom'?'custom layout':'generated layout')+'</text></g>';
+}
+function recordMarkup(record){
+  const area=model.areas.find(item=>item.key===record.areaKey),x=area.x+record.dx,y=area.y+record.dy,selected=selectedKey===record.key;
+  const shape=record.kind==='area_checkpoint'?'<path class="node-focus" d="M0 -13 L13 0 L0 13 L-13 0 Z" fill="#b36b2d" stroke="#753b12" stroke-width="'+(selected?3:1.5)+'"/>':record.kind==='plant'?'<circle class="node-focus" r="12" fill="#2f7855" stroke="#194b35" stroke-width="'+(selected?3:1.5)+'"/>':'<rect class="node-focus" x="-11" y="-11" width="22" height="22" fill="#4b8499" stroke="#2e5e6f" stroke-width="'+(selected?3:1.5)+'"/>';
+  return '<g transform="translate('+x+' '+y+')" data-key="'+safe(record.key)+'" role="button" tabindex="0" aria-label="Inspect '+safe(kindName(record.kind))+' '+safe(record.title)+'" aria-pressed="'+selected+'">'+shape+'<text x="18" y="4" class="marker-label">'+safe(record.title)+'</text></g>';
+}
+function renderInspector(){
+  const item=locate(selectedKey),box=$('#inspector');
+  if(!item){box.innerHTML='<h3>Select an item</h3><p>Choose or drag an Area, Totem, Orb, or Note. Dragging stores only a map position override.</p>';return;}
+  const type=item.areaKey?kindName(item.kind):item.siteId?'Area':'Site';
+  const title=item.title||item.name;
+  const custom=item.positionSource==='custom';
+  const colour=!item.areaKey&&item.siteId?'<label class="control"><span>Area line colour</span><select id="accent"><option value="green">Leaf green</option><option value="blue">Water blue</option><option value="ochre">Ochre</option></select></label>':'';
+  box.innerHTML='<h3>'+safe(title)+'</h3><span class="chip">'+safe(type)+'</span><p><strong>Identity:</strong> '+safe(item.id)+'</p><p><strong>Position:</strong> '+(custom?'Customized':'Generated')+'</p>'+colour+'<button class="btn small" id="reset-position" type="button" '+(custom?'':'disabled')+'>Reset position</button>';
+  if(colour)$('#accent').value=preferences.accents?.[item.key]||'green';
+}
+function render(){
+  try{model=createCreatorPlanningMapV2Projection(view(),preferences);}catch(error){$('#status').textContent=error.message;return;}
+  if(selectedKey&&!locate(selectedKey))selectedKey='';
+  $('#project-name').textContent=model.project.name+' · '+(source?'imported snapshot':'local sample progression');
+  $('#version').textContent='V'+BUILD_INFO.version+' · local prototype';
+  $('#map-title').textContent=model.project.name;
+  $('#map-subtitle').textContent=model.sites.length?model.sites.map(site=>site.name).join(' · '):'Add a Site to begin';
+  $('#metrics').innerHTML=[['Sites',model.summary.sites],['Areas',model.summary.areas],['Totems',model.summary.totems],['Orbs',model.summary.orbs]].map(([label,n])=>'<div class="metric"><strong>'+n+'</strong><span>'+label+'</span></div>').join('');
+  $('#steps').innerHTML=steps.map((label,index)=>'<li class="'+(source?'':index===step?'done current':index<step?'done':'')+'">'+safe(label)+'</li>').join('');
+  $('#steps').hidden=Boolean(source);
+  $('#previous').disabled=Boolean(source)||step===0;$('#next').disabled=Boolean(source)||step>=steps.length-1;
+  $('#next').textContent=step<steps.length-1?'Add '+steps[step+1].toLowerCase():'Project sample complete';
+  $('#terrain').value=preferences.terrain||'none';$('#contour').value=preferences.contour||3;$('#contour-value').value=preferences.contour||3;$('#water').checked=Boolean(preferences.water);$('#contour').disabled=(preferences.terrain||'none')!=='contours';
+  $('#map').innerHTML='<defs><pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse"><path d="M40 0 H0 V40" fill="none" stroke="#c8d5c9" stroke-width="1"/></pattern></defs>'+terrainMarkup()+
+    '<path d="M24 24 H76 M24 24 V76 M976 24 H924 M976 24 V76 M24 596 H76 M24 596 V544 M976 596 H924 M976 596 V544" fill="none" stroke="#7d9982" stroke-width="1.5"/>'+
+    (model.areas.length?model.areas.map(areaMarkup).join('')+model.records.map(recordMarkup).join(''):'<text x="500" y="300" text-anchor="middle" class="label">'+(model.sites.length?safe(model.sites[0].name):'Your project map grows here')+'</text><text x="500" y="328" text-anchor="middle" class="map-note">'+(model.sites.length?'Site added · add an Area to start its layout.':'Add a Site, then an Area and its records.')+'</text>')+
+    '<text x="28" y="585" class="map-note">CONCEPTUAL LAYOUT · NO VERIFIED GEOGRAPHY</text>';
+  $('#map-footer').textContent=model.summary.areas+' Areas · '+model.summary.records+' records · '+(source?'snapshot '+model.revision.slice(0,17)+'…':'step '+(step+1)+' of '+steps.length);
+  renderInspector();
+}
+function point(event){const svg=$('#map'),p=svg.createSVGPoint();p.x=event.clientX;p.y=event.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+function setPosition(key,at){
+  const item=locate(key);if(!item)return;
+  const positions=preferences.positions ||= {};
+  if(item.areaKey){const area=model.areas.find(value=>value.key===item.areaKey);positions[key]={dx:Math.round(at.x-area.x),dy:Math.round(at.y-area.y)};}
+  else if(item.siteId)positions[key]={x:Math.round(at.x),y:Math.round(at.y)};
+  save();render();
+}
+$('#map').addEventListener('pointerdown',event=>{const node=event.target.closest('[data-key]');if(!node)return;selectedKey=node.dataset.key;drag={key:selectedKey,id:event.pointerId};$('#map').setPointerCapture(event.pointerId);render();});
+$('#map').addEventListener('pointermove',event=>{if(drag?.id===event.pointerId)setPosition(drag.key,point(event));});
+$('#map').addEventListener('pointerup',event=>{if(drag?.id===event.pointerId)drag=null;});
+$('#map').addEventListener('pointercancel',()=>drag=null);
+$('#map').addEventListener('click',event=>{const node=event.target.closest('[data-key]');if(node){selectedKey=node.dataset.key;render();}});
+$('#map').addEventListener('keydown',event=>{if(!['Enter',' '].includes(event.key))return;const node=event.target.closest('[data-key]');if(!node)return;event.preventDefault();selectedKey=node.dataset.key;render();});
+$('#previous').onclick=()=>{step=Math.max(0,step-1);render();};
+$('#next').onclick=()=>{step=Math.min(steps.length-1,step+1);render();};
+$('#sample').onclick=()=>{source=null;step=0;selectedKey='';$('#import').value='';render();};
+$('#import').onchange=async event=>{const file=event.target.files[0];if(!file)return;try{const parsed=JSON.parse(await file.text());createCreatorPlanningMapV2Projection(parsed,{});source=parsed;preferences=prefsFor(parsed.project.id);selectedKey='';render();$('#status').textContent='Shared-project snapshot loaded locally.';}catch(error){$('#status').textContent='Could not load snapshot: '+error.message;}};
+$('#terrain').onchange=event=>{preferences.terrain=event.target.value;save();render();};
+$('#contour').oninput=event=>{preferences.contour=Number(event.target.value);save();render();};
+$('#water').onchange=event=>{preferences.water=event.target.checked;save();render();};
+$('#reference').onchange=event=>{if(referenceUrl)URL.revokeObjectURL(referenceUrl);referenceUrl=event.target.files[0]?URL.createObjectURL(event.target.files[0]):'';render();};
+$('#inspector').addEventListener('change',event=>{if(event.target.id==='accent'&&selectedKey){(preferences.accents ||= {})[selectedKey]=event.target.value;save();render();}});
+$('#inspector').addEventListener('click',event=>{if(event.target.id==='reset-position'&&selectedKey){delete preferences.positions?.[selectedKey];save();render();}});
+addEventListener('pagehide',()=>{if(referenceUrl)URL.revokeObjectURL(referenceUrl);});
+render();
+</script>
+</body>
+</html>

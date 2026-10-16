@@ -1,0 +1,53 @@
+#app .creator-project-tutorial {
+    --cpt-ink:#243d31; --cpt-muted:#647268; --cpt-line:#d8e1d6; --cpt-paper:#fffef8; --cpt-sage:#edf2e8;
+    max-width:1000px; margin:0 auto; padding:24px; color:var(--cpt-ink); font-family:Manrope,system-ui,sans-serif;
+}
+#app .creator-project-tutorial :is(h1,h2) { font-family:Fraunces,Georgia,serif; font-weight:500; letter-spacing:-.025em; }
+#app .creator-project-tutorial .cpt-header { padding:clamp(22px,5vw,44px); border:1px solid var(--cpt-line); border-radius:24px; background:linear-gradient(110deg,#fcfcf7 52%,#edf2e8); }
+#app .creator-project-tutorial .cpt-header h1 { margin:8px 0 12px; font-size:clamp(2rem,5vw,3.5rem); }
+#app .creator-project-tutorial .cpt-header p { max-width:68ch; line-height:1.65; }
+#app .creator-project-tutorial .cpt-eyebrow { color:#58755d; font-size:.75rem; font-weight:700; letter-spacing:.12em; }
+#app .creator-project-tutorial .cpt-mode { display:inline-block; padding:6px 10px; border:1px solid var(--cpt-line); border-radius:8px; background:#ffffffad; }
+#app .creator-project-tutorial .cpt-progress { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:8px; margin:16px 0; padding:0; list-style:none; }
+#app .creator-project-tutorial .cpt-progress li { padding:10px 8px; border:1px solid var(--cpt-line); border-radius:10px; color:var(--cpt-muted); background:var(--cpt-paper); font-size:.76rem; line-height:1.35; }
+#app .creator-project-tutorial .cpt-progress li.is-current { border-color:#6f916b; background:var(--cpt-sage); color:var(--cpt-ink); font-weight:700; }
+#app .creator-project-tutorial .cpt-progress li.is-done { color:#45624a; }
+#app .creator-project-tutorial .cpt-step-panel,.creator-project-tutorial .cpt-project-picker { margin-top:18px; padding:clamp(20px,4vw,34px); border:1px solid var(--cpt-line); border-radius:20px; background:var(--cpt-paper); box-shadow:0 8px 30px #243d3108; }
+#app .creator-project-tutorial .cpt-step-panel h2,.creator-project-tutorial .cpt-project-picker h2 { margin:8px 0; font-size:clamp(1.55rem,3vw,2.2rem); }
+#app .creator-project-tutorial :is(.cpt-step-copy,.cpt-helper,.cpt-step-note,.cpt-saved,.cpt-warning) { max-width:76ch; line-height:1.6; }
+#app .creator-project-tutorial .cpt-step-copy { font-size:1.05rem; }
+#app .creator-project-tutorial .cpt-helper,.creator-project-tutorial .cpt-project-context,.creator-project-tutorial .cpt-mode { color:var(--cpt-muted); }
+#app .creator-project-tutorial .cpt-step-note { padding:12px 14px; border-left:3px solid #90a987; background:#f3f6ef; }
+#app .creator-project-tutorial .cpt-project-context { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:0; font-size:.8rem; }
+#app .creator-project-tutorial .cpt-project-context span { letter-spacing:.1em; font-weight:700; }
+#app .creator-project-tutorial .cpt-project-context strong { color:var(--cpt-ink); }
+#app .creator-project-tutorial .cpt-form { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:18px 0; }
+#app .creator-project-tutorial .cpt-form .cpt-field:first-child:last-child { grid-column:1/-1; }
+#app .creator-project-tutorial .cpt-field { display:block; min-width:0; color:var(--cpt-ink); font-weight:600; }
+#app .creator-project-tutorial .cpt-field span { display:block; margin-bottom:6px; }
+#app .creator-project-tutorial .cpt-field :is(input,textarea,select) { width:100%; min-height:46px; margin:0; padding:12px; border:1px solid #aebca9; border-radius:8px; background:white; color:inherit; font:inherit; }
+#app .creator-project-tutorial .cpt-field textarea { resize:vertical; }
+#app .creator-project-tutorial .cpt-origin-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:16px 0; }
+#app .creator-project-tutorial .cpt-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:18px; }
+#app .creator-project-tutorial .cpt-button { min-height:46px; padding:10px 16px; border:1px solid #557457; border-radius:9px; background:#e7efe3; color:#243d31; font:600 .95rem Manrope,system-ui,sans-serif; }
+#app .creator-project-tutorial .cpt-button:hover { background:#dbe8d6; }
+#app .creator-project-tutorial .cpt-button-secondary { border-color:var(--cpt-line); background:white; }
+#app .creator-project-tutorial .cpt-button[data-icon] { display:grid; place-items:center; width:46px; min-width:46px; padding:8px; border-radius:50%; }
+#app .creator-project-tutorial .cpt-icon { font-size:1.3rem; line-height:1; }
+#app .creator-project-tutorial :is(.cpt-project-list,.cpt-area-list) { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(250px,100%),1fr)); gap:10px; margin:18px 0; }
+#app .creator-project-tutorial .cpt-project-choice,.creator-project-tutorial .cpt-area-choice { display:flex; flex-direction:column; align-items:flex-start; gap:6px; min-height:72px; padding:14px; text-align:left; border:1px solid var(--cpt-line); border-radius:10px; background:white; color:var(--cpt-ink); }
+#app .creator-project-tutorial .cpt-project-choice small { color:var(--cpt-muted); line-height:1.4; }
+#app .creator-project-tutorial .cpt-saved { padding:12px 14px; border:1px solid #cfddc7; border-radius:9px; background:#f1f6ed; color:#34553b; }
+#app .creator-project-tutorial .cpt-warning { padding:12px 14px; border:1px solid #e4d3a9; border-radius:9px; background:#fff8e7; color:#604c20; }
+#app .creator-project-tutorial .cpt-status { min-height:24px; margin:14px 0 6px; color:#516451; }
+#app .creator-project-tutorial .cpt-status.is-error { color:#8a3329; }
+#app .creator-project-tutorial .cpt-exit { display:inline-block; margin:8px 14px 22px 0; }
+#app .creator-project-tutorial .cpt-exit-project { font-weight:700; }
+#app .creator-project-tutorial .cpt-checkpoints { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(230px,100%),1fr)); gap:8px; padding:0; list-style:none; }
+#app .creator-project-tutorial .cpt-checkpoints li { padding:12px; border:1px solid var(--cpt-line); border-radius:9px; color:var(--cpt-muted); }
+#app .creator-project-tutorial .cpt-checkpoints li[data-complete=true] { border-color:#bbcfb4; color:#34553b; background:#f1f6ed; }
+@media(max-width:720px) {
+    #app .creator-project-tutorial { padding:14px; }
+    #app .creator-project-tutorial .cpt-progress { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    #app .creator-project-tutorial .cpt-form,.creator-project-tutorial .cpt-origin-grid { grid-template-columns:1fr; }
+}
