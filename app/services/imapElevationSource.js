@@ -20,6 +20,18 @@ export function terrainApiUrl(bounds=SHEEPSTATION_BRINDLE_BOUNDS){
     return `${base}/terrain/contours?${params}`;
 }
 
+// Project a WGS84 feature into the IMAP's local disc plane. This uses the same
+// bounds and scale as interpolated contours; coordinates outside the loaded
+// project map are left out rather than clamped to a false edge location.
+export function projectWgs84CoordinateToImap(longitude,latitude,bounds,{radius=6.3}={}){
+    if(!bounds||![longitude,latitude,bounds.xmin,bounds.ymin,bounds.xmax,bounds.ymax].every(Number.isFinite)
+        ||longitude<bounds.xmin||longitude>bounds.xmax||latitude<bounds.ymin||latitude>bounds.ymax)return null;
+    const centerLat=(bounds.ymin+bounds.ymax)/2,centerLon=(bounds.xmin+bounds.xmax)/2;
+    const cos=Math.cos(centerLat*Math.PI/180),halfX=(bounds.xmax-bounds.xmin)*111320*cos/2,halfZ=(bounds.ymax-bounds.ymin)*110540/2;
+    const scale=(radius*.88)/Math.hypot(halfX,halfZ);
+    return {x:(longitude-centerLon)*111320*cos*scale,z:(centerLat-latitude)*110540*scale};
+}
+
 export async function fetchNswContourFeatures({bounds=SHEEPSTATION_BRINDLE_BOUNDS,signal}={}){
     const response=await fetch(terrainApiUrl(bounds),{signal,headers:{Accept:'application/json'}});
     if(!response.ok){const error=await response.json().catch(()=>({}));throw new Error(error.error||`Nourishland terrain API returned ${response.status}.`);}

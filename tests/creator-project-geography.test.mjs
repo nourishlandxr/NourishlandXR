@@ -19,9 +19,9 @@ test('one geographic origin validates coordinates without rejecting zero or acce
 test('origin form inputs reject blanks before numeric coercion and preserve device metadata only when unchanged', () => {
     assert.throws(() => normalizeProjectGeographicOriginInputs('', '0'), /Enter both latitude and longitude/);
     assert.throws(() => normalizeProjectGeographicOriginInputs('  ', '-1'), /Enter both latitude and longitude/);
-    assert.deepEqual(normalizeProjectGeographicOriginInputs('0', '0'), {
+    assert.deepEqual(normalizeProjectGeographicOriginInputs('0', '0', null, '2026-10-16T00:00:00.000Z'), {
         latitude: 0, longitude: 0, source: 'manual', accuracyMetres: null,
-        capturedAt: assert.match.any
+        capturedAt: '2026-10-16T00:00:00.000Z'
     });
     const previous = { latitude: -28.4, longitude: 153.05, source: 'device', accuracyMetres: 18,
         capturedAt: '2026-10-16T00:00:00.000Z' };

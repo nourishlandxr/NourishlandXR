@@ -33,8 +33,11 @@ export function createCreatorPlanningMapV2Model(workspace,siteId,positions={}){
         const order=counts.get(area.key)||0;counts.set(area.key,order+1);
         const row=Math.floor(order/4),column=order%4;
         const saved=positions[key];
+        const anchor=workspace.anchors?.[entry.key];
+        const geographicAnchor=anchor?.type==='gps'&&Number.isFinite(Number(anchor.latitude))&&Number.isFinite(Number(anchor.longitude))
+            ?{type:'gps',latitude:Number(anchor.latitude),longitude:Number(anchor.longitude)}:null;
         return {key,id:marker.id,areaKey:area.key,areaId:area.id,siteId:entry.siteId,name:marker.name || 'Untitled record',kind:marker.semantic_type==='area_checkpoint'?'area_checkpoint':marker.type || 'record',
-            dx:clamp(point(saved?.dx,-68+column*44),-78,78),dy:clamp(point(saved?.dy,5+row*33),-43,60),positionSource:saved?'planning layout':'automatic'};
+            dx:clamp(point(saved?.dx,-68+column*44),-78,78),dy:clamp(point(saved?.dy,5+row*33),-43,60),positionSource:saved?'planning layout':'automatic',geographicAnchor};
     });
     const summary={sites:sites.length,areas:workspace.areas.filter(area=>area.systemKey!=='home' && !['home','unassigned'].includes(String(area.name || '').trim().toLowerCase())).length,
         totems:workspace.entries.filter(entry=>entry.marker.semantic_type==='area_checkpoint'||entry.marker.type==='area_checkpoint').length,

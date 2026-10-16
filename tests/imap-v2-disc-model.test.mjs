@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createImapV2DiscModel,createCreatorImapV2DiscModel,IMAP_V2_DISC_RADIUS,toImapV2LandscapeInput} from '../app/services/imapV2DiscModel.js';
-import {createCreatorPlanningMapV2Model} from '../app/services/creatorPlanningMapV2Model.js';
+import {createImapV2DiscModel,createCreatorImapV2DiscModel,IMAP_V2_DISC_RADIUS,toImapV2LandscapeInput,updateCreatorImapPlacement} from '../app/services/imapV2DiscModel.js';
+import {createCreatorPlanningMapV2Model,planningMapAreaKey,planningMapRecordKey} from '../app/services/creatorPlanningMapV2Model.js';
 
 const projectId='garden';
 const site=(id)=>({id,name:id,description:'',projectId});
@@ -113,5 +113,61 @@ test('flat and disc Creator layouts keep the selected Site and stable record ide
     assert.deepEqual([...flat.areas].map(area=>area.id),disc.areas.map(area=>area.id));
     assert.deepEqual(disc.areas.map(area=>area.siteId),['east']);
     assert.deepEqual([...flatRecords].sort(),[...discRecords].sort());
+});
+
+test('Creator IMAP projects saved flat-map layout positions both ways',()=>{
+    const areaKey=planningMapAreaKey('garden','east','bed');
+    const recordKey=planningMapRecordKey('garden','east','bed','totem-east');
+    const project={id:'garden',name:'Garden',description:'',modified:'m3',creatorPlanningMapV2:{schemaVersion:2,positions:{
+        [areaKey]:{x:735,y:280},[recordKey]:{dx:30,dy:-10}
+    },terrain:'clean',waterSketch:false}};
+    const workspace={project,sites:[{id:'east',name:'East'}],areas:[{id:'bed',siteId:'east',name:'Bed'}],entries:[
+        {key:'east/bed/totem-east',siteId:'east',place:{id:'bed'},marker:{id:'totem-east',name:'Bed Totem',type:'area_checkpoint'}}
+    ]};
+    const flat=createCreatorPlanningMapV2Model(workspace,'east',project.creatorPlanningMapV2.positions);
+    const disc=createCreatorImapV2DiscModel(workspace,{siteId:'east'});
+    assert.equal(disc.areas[0].center.x,Number(((flat.areas[0].x-disc.placementTransform.centerX)*disc.placementTransform.scale).toFixed(3)));
+    assert.equal(disc.areas[0].totem.x,Number((disc.areas[0].center.x+30/86.667).toFixed(3)));
+    const next=updateCreatorImapPlacement(workspace,disc,disc.areas[0].totem.key,{x:disc.areas[0].center.x+.4,z:disc.areas[0].center.z-.2});
+    assert.ok(Math.abs(next[recordKey].dx-34.6668)<1e-6);
+    assert.ok(Math.abs(next[recordKey].dy-17.3334)<1e-6);
+    assert.deepEqual(next[areaKey],project.creatorPlanningMapV2.positions[areaKey]);
+});
+
+test('Creator IMAP shows genuine GPS anchors and leaves out-of-bounds anchors unclamped',()=>{
+    const project={id:'garden',name:'Garden',description:'',modified:'m4',siteMap:{
+        geographicOrigin:{latitude:-28.4,longitude:153.04,source:'manual'},
+        mapData:{status:'sourced',originKey:'-28.4,153.04',source:'NSW',quality:'contour-interpolated',
+            bounds:{xmin:153.03,ymin:-28.41,xmax:153.05,ymax:-28.39,spatialReference:4326},features:[]}
+    }};
+    const entry={key:'east/bed/totem',siteId:'east',place:{id:'bed'},marker:{id:'totem',name:'GPS Totem',type:'area_checkpoint'}};
+    const workspace={project,sites:[{id:'east',name:'East'}],areas:[{id:'bed',siteId:'east',name:'Bed'}],entries:[entry],anchors:{
+        [entry.key]:{type:'gps',latitude:-28.4,longitude:153.041}
+    }};
+    const placed=createCreatorImapV2DiscModel(workspace,{siteId:'east'}).areas[0].totem;
+    assert.equal(placed.source,'GPS anchor');
+    assert.deepEqual(placed.geographicAnchor,{type:'gps',latitude:-28.4,longitude:153.041});
+    workspace.anchors[entry.key]={type:'gps',latitude:-28.4,longitude:153.08};
+    const outside=createCreatorImapV2DiscModel(workspace,{siteId:'east'}).areas[0].totem;
+    assert.equal(outside.source,'generated');
+    assert.deepEqual(outside.geographicAnchor,{type:'gps',latitude:-28.4,longitude:153.08});
+});
+
+test('Creator IMAP draws only saved Area links as schematic Totem paths',()=>{
+    const project={id:'garden',name:'Garden',description:'',modified:'m5'};
+    const workspace={project,sites:[{id:'east',name:'East'}],areas:[
+        {id:'north',siteId:'east',name:'North Bed',totem_links:[{target_area_id:'south',target_totem_id:'totem-south',distance_m:18}]},
+        {id:'south',siteId:'east',name:'South Bed',totem_links:[{target_area_id:'north',target_totem_id:'totem-north',distance_m:18}]}
+    ],entries:[
+        {key:'east/north/totem-north',siteId:'east',place:{id:'north'},marker:{id:'totem-north',name:'North Totem',type:'area_checkpoint'}},
+        {key:'east/south/totem-south',siteId:'east',place:{id:'south'},marker:{id:'totem-south',name:'South Totem',type:'area_checkpoint'}}
+    ]};
+    const model=createCreatorImapV2DiscModel(workspace,{siteId:'east'});
+    assert.equal(model.links.length,1,'reciprocal saved links display once');
+    assert.equal(model.links[0].mode,'schematic-guidance');
+    assert.equal(model.links[0].fromName,'North Bed');
+    const path=toImapV2LandscapeInput(model).elements.find(element=>element.id===model.links[0].id);
+    assert.equal(path.type,'path');
+    assert.deepEqual(path.points,[model.links[0].from,model.links[0].to]);
 });
 

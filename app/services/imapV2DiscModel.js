@@ -1,8 +1,10 @@
 import {validateSharedProject} from './sharedProjectContract.js';
 import {normalizeImapV2TerrainEdits} from './imapV2Terrain.js';
 import {normalizeImapV2Elements} from './imapV2Elements.js';
-import {createContourTerrainGrid} from './imapElevationSource.js';
-import {projectGeographicMapContext} from './creatorProjectGeography.js';
+import {createContourTerrainGrid,projectWgs84CoordinateToImap} from './imapElevationSource.js';
+import {projectGeographicMapContext,projectMapBounds} from './creatorProjectGeography.js';
+import {createCreatorPlanningMapV2Model,planningMapRecordKey} from './creatorPlanningMapV2Model.js';
+import {normalizeAreaLinks} from './areaLinks.js';
 
 export const IMAP_V2_DISC_RADIUS=6.3;
 export const IMAP_V2_AREAS_PER_DISC=5;
@@ -18,11 +20,15 @@ const markerPosition=(center,index,total)=>{
     const angle=-Math.PI*.7+index*Math.PI*1.4/Math.max(1,total-1);
     return {x:center.x+Math.cos(angle)*.62,z:center.z+Math.sin(angle)*.62};
 };
-const recordPosition=(record,center,index,total,overrides)=>{
+const recordPosition=(record,center,index,total,overrides,defaultPosition=()=>markerPosition(center,index,total))=>{
     const saved=overrides.positions?.[record.id];
-    if(!finite(saved?.dx)||!finite(saved?.dz))return markerPosition(center,index,total);
-    const length=Math.hypot(saved.dx,saved.dz),scale=length>.9?.9/length:1;
-    return {x:Number((center.x+saved.dx*scale).toFixed(3)),z:Number((center.z+saved.dz*scale).toFixed(3))};
+    if(finite(saved?.dx)&&(finite(saved?.dz)||finite(saved?.dy))){
+        const dx=finite(saved.dz)?saved.dx:saved.dx/86.667,dz=finite(saved.dz)?saved.dz:-saved.dy/86.667;
+        const length=Math.hypot(dx,dz),scale=length>.9?.9/length:1;
+        return {x:Number((center.x+dx*scale).toFixed(3)),z:Number((center.z+dz*scale).toFixed(3)),source:'layout override'};
+    }
+    if(record.geographicPosition)return {...record.geographicPosition,source:'GPS anchor'};
+    return {...defaultPosition(),source:'generated'};
 };
 
 // Fixed disc slots preserve the shape and scale of the existing grippable
@@ -70,10 +76,11 @@ function buildImapV2DiscModel(snapshot,{siteId='',page=0,overrides={},geographic
         const notes=records.filter(record=>record.kind==='note');
         const other=records.filter(record=>!['area_checkpoint','plant','note'].includes(record.kind));
         const visible=[...orbs.slice(0,ORBS_PER_AREA),...notes.slice(0,NOTES_PER_AREA)];
-        const nodes=visible.map((record,i)=>({key:record.id,recordId:record.recordId,areaKey:areaKey(area),type:record.kind==='plant'?'orb':'note',name:record.title,...recordPosition(record,center,i,visible.length,overrides)}));
+        const nodes=visible.map((record,i)=>({key:record.id,recordId:record.recordId,siteId:area.siteId,areaId:area.id,areaKey:areaKey(area),type:record.kind==='plant'?'orb':'note',name:record.title,...recordPosition(record,center,i,visible.length,overrides),geographicAnchor:record.geographicAnchor||null}));
         return {key:areaKey(area),id:area.id,siteId:area.siteId,name:area.name,
             center:{x:center.x,z:center.z},positionSource:center.source,radius:1.28,
-            totem:totemRecord?{key:totemRecord.id,recordId:totemRecord.recordId,type:'totem',name:totemRecord.title,x:center.x,z:center.z}:null,
+            totem:totemRecord?{key:totemRecord.id,recordId:totemRecord.recordId,siteId:area.siteId,areaId:area.id,type:'totem',name:totemRecord.title,
+                ...recordPosition(totemRecord,center,0,1,overrides,()=>({x:center.x,z:center.z})),geographicAnchor:totemRecord.geographicAnchor||null}:null,
             nodes,counts:{totems:records.filter(record=>record.kind==='area_checkpoint').length,orbs:orbs.length,notes:notes.length,other:other.length},
             hiddenCount:Math.max(0,orbs.length-ORBS_PER_AREA)+Math.max(0,notes.length-NOTES_PER_AREA)+other.length};
     });
@@ -118,19 +125,88 @@ export function createCreatorImapV2DiscModel(workspace,{siteId='',page=0,overrid
     if(!project?.id)throw new Error('Creator project data is required to build its IMAP.');
     const sites=(workspace.sites||[]).map(site=>({id:site.id,name:String(site.name||site.id),description:String(site.description||''),projectId:project.id}));
     const areas=(workspace.areas||[]).filter(area=>area.systemKey!=='home'&&!['home','unassigned'].includes(String(area.name||'').trim().toLowerCase()))
-        .map(area=>({id:area.id,name:String(area.name||area.id),description:String(area.description||''),projectId:project.id,siteId:area.siteId}));
+        .map(area=>({id:area.id,name:String(area.name||area.id),description:String(area.description||''),projectId:project.id,siteId:area.siteId,
+            ...(Array.isArray(area.links)?{links:area.links}:{}),...(Array.isArray(area.totem_links)?{totem_links:area.totem_links}:{})}));
     const areaIds=new Set(areas.map(area=>JSON.stringify([area.siteId,area.id])));
+    const geographicMap=projectGeographicMapContext(project),geographicBounds=geographicMap.mapData?.bounds
+        ||(geographicMap.geographicOrigin?projectMapBounds(geographicMap.geographicOrigin):null);
     const records=(workspace.entries||[]).filter(entry=>areaIds.has(JSON.stringify([entry.siteId,entry.place.id]))).map(entry=>{
         const marker=entry.marker,kind=marker.semantic_type==='area_checkpoint'||marker.type==='area_checkpoint'?'area_checkpoint'
             :marker.type==='plant'?'plant':marker.type==='note'?'note':String(marker.semantic_type||marker.type||'record');
+        const anchor=workspace.anchors?.[entry.key];
+        const geographicAnchor=anchor?.type==='gps'&&Number.isFinite(Number(anchor.latitude))&&Number.isFinite(Number(anchor.longitude))
+            ?{type:'gps',latitude:Number(anchor.latitude),longitude:Number(anchor.longitude)}:null;
+        const geographicPosition=geographicAnchor&&geographicBounds
+            ?projectWgs84CoordinateToImap(geographicAnchor.longitude,geographicAnchor.latitude,geographicBounds,{radius:IMAP_V2_DISC_RADIUS}):null;
         return {id:JSON.stringify([project.id,entry.siteId,entry.place.id,marker.id]),recordId:marker.id,markerId:marker.id,
             title:String(marker.name||marker.commonName||marker.id),kind,knowledgeId:String(marker.plantId||marker.plant_id||''),
             description:String(marker.description||''),scientificName:String(marker.scientificName||''),profile:{},
-            projectId:project.id,siteId:entry.siteId,areaId:entry.place.id};
+            projectId:project.id,siteId:entry.siteId,areaId:entry.place.id,geographicAnchor,
+            ...(geographicPosition?{geographicPosition}:{})};
     });
+    const requestedSite=sites.find(site=>site.id===siteId)?.id||sites[0]?.id||'';
+    const selectedAreas=areas.filter(area=>area.siteId===requestedSite).sort((a,b)=>a.id.localeCompare(b.id));
+    const selectedPage=clamp(Number.isInteger(page)?page:0,0,Math.max(0,Math.ceil(selectedAreas.length/IMAP_V2_AREAS_PER_DISC)-1));
+    const pageAreas=selectedAreas.slice(selectedPage*IMAP_V2_AREAS_PER_DISC,(selectedPage+1)*IMAP_V2_AREAS_PER_DISC);
+    const flat=createCreatorPlanningMapV2Model(workspace,requestedSite,project.creatorPlanningMapV2?.positions||{});
+    const flatById=new Map(flat.areas.map(area=>[area.id,area]));
+    const flatPage=pageAreas.map(area=>flatById.get(area.id)).filter(Boolean);
+    const minX=Math.min(...flatPage.map(area=>area.x),500),maxX=Math.max(...flatPage.map(area=>area.x),500);
+    const minY=Math.min(...flatPage.map(area=>area.y),flat.height/2),maxY=Math.max(...flatPage.map(area=>area.y),flat.height/2);
+    const centerX=(minX+maxX)/2,centerY=(minY+maxY)/2,placementScale=8.4/Math.max(180,maxX-minX,maxY-minY);
+    const placementTransform={centerX,centerY,scale:placementScale,height:flat.height};
+    const sharedPositions={};
+    for(const area of flatPage)sharedPositions[JSON.stringify(['area',project.id,area.siteId,area.id])]={
+        x:(area.x-centerX)*placementScale,z:(centerY-area.y)*placementScale
+    };
+    const flatRecords=new Map(flat.records.map(record=>[JSON.stringify([record.siteId,record.areaId,record.id]),record]));
+    for(const record of records){
+        const source=flatRecords.get(JSON.stringify([record.siteId,record.areaId,record.recordId]));
+        if(source?.positionSource==='planning layout')sharedPositions[record.id]={dx:source.dx/86.667,dz:-source.dy/86.667};
+    }
+    const creatorOverrides={...overrides,positions:{...project.creatorPlanningMapV2?.positions,...sharedPositions,...overrides.positions}};
     const snapshot={schemaVersion:1,contract:'nourishland.creator-map-source',revision:`local:${project.modified||'draft'}`,
         project:{id:project.id,name:String(project.name||project.id),description:String(project.description||'')},sites,areas,records};
-    return buildImapV2DiscModel(snapshot,{siteId,page,overrides,geographicMap:projectGeographicMapContext(project)});
+    const model=buildImapV2DiscModel(snapshot,{siteId:requestedSite,page:selectedPage,overrides:creatorOverrides,geographicMap});
+    model.placementTransform=placementTransform;
+    const currentAreaIds=new Set(model.areas.map(area=>area.id)),seenLinks=new Set();
+    model.links=pageAreas.flatMap(source=>normalizeAreaLinks(source,selectedAreas)
+        .filter(link=>link.enabled&&currentAreaIds.has(link.toAreaId))
+        .flatMap(link=>{
+            const target=selectedAreas.find(area=>area.id===link.toAreaId);
+            const from=model.areas.find(area=>area.id===source.id),to=model.areas.find(area=>area.id===target?.id);
+            if(!target||!from?.totem||!to?.totem||(link.targetTotemId&&link.targetTotemId!==to.totem.recordId))return [];
+            const pair=[source.id,target.id].sort().join('|');
+            if(seenLinks.has(pair))return [];
+            seenLinks.add(pair);
+            return [{id:`totem-link:${source.id}:${target.id}`,fromAreaId:source.id,toAreaId:target.id,
+                fromTotemId:from.totem.recordId,toTotemId:to.totem.recordId,
+                from:{x:from.totem.x,z:from.totem.z},to:{x:to.totem.x,z:to.totem.z},
+                fromName:from.name,toName:to.name,distanceMetres:link.distanceMetres,mode:'schematic-guidance'}];
+        }));
+    return model;
+}
+
+export function updateCreatorImapPlacement(workspace,model,id,point){
+    if(!Number.isFinite(point?.x)||!Number.isFinite(point?.z))throw new Error('Choose a valid map position.');
+    const positions={...(workspace.project.creatorPlanningMapV2?.positions||{})};
+    const area=model.areas.find(item=>item.key===id);
+    if(area){
+        const transform=model.placementTransform;
+        const x=clamp(transform.centerX+point.x/transform.scale,115,885);
+        const y=clamp(transform.centerY-point.z/transform.scale,130,transform.height-115);
+        positions[area.key]={...(positions[area.key]||{}),x,y};
+        return positions;
+    }
+    for(const item of model.areas){
+        const record=item.totem?.key===id?item.totem:item.nodes.find(node=>node.key===id);
+        if(!record)continue;
+        const recordKey=planningMapRecordKey(workspace.project.id,item.siteId,item.id,record.recordId);
+        const dx=(point.x-item.center.x)*86.667,dy=-(point.z-item.center.z)*86.667;
+        positions[recordKey]={...(positions[recordKey]||{}),dx:clamp(dx,-78,78),dy:clamp(dy,-43,60)};
+        return positions;
+    }
+    throw new Error('Select a project Area or marker before moving it.');
 }
 
 // Adapter for createImapV2Landscape3D.setData(); use the same saved mapData
@@ -144,6 +220,8 @@ export function toImapV2LandscapeInput(model){
         if(area.totem)generated.push({id:area.totem.key,type:'totem',name:area.totem.name,x:area.totem.x,z:area.totem.z,size:.9});
         for(const node of area.nodes)generated.push({id:node.key,type:node.type==='orb'?'orb':node.type==='note'?'note':'sub-checkpoint',name:node.name,x:node.x,z:node.z,size:.62});
     }
+    for(const link of model.links||[])generated.push({id:link.id,type:'path',name:`Schematic Totem link · ${link.fromName} to ${link.toName}`,
+        points:[link.from,link.to],size:1.4});
     return {shape:model.disc.shape,sizeScale:model.disc.sizeScale,terrainEdits:model.disc.terrain.edits,
         ...(model.elevationGrid?{elevationGrid:model.elevationGrid}:{}),
         elements:[...generated,...model.elements,...model.terrainFeatures]};

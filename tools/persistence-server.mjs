@@ -16,6 +16,7 @@ import { daleysPlantMatchesQuery, normalizeDaleysPlantResult } from '../app/serv
 import { validateSharedProject } from '../app/services/sharedProjectContract.js';
 import { contourRequestUrl, NSW_CONTOUR_LAYER_URL } from '../app/services/imapElevationSource.js';
 import { normalizePersistedProjectSiteMap } from '../app/services/projectGeographicPersistence.js';
+import { isListableProjectDirectory } from '../app/services/projectListContract.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, '..');
@@ -603,8 +604,11 @@ function listProjects(visitor = false) {
     if (!fs.existsSync(workspaceDir)) return [];
     const priority = ['hillyards', 'frankendael'];
     return fs.readdirSync(workspaceDir, { withFileTypes: true })
-        .filter(entry => entry.isDirectory())
-        .map(entry => readJson(path.join(workspaceDir, entry.name, 'project.json'), { id: entry.name, name: entry.name }))
+        .filter(entry => entry.isDirectory() && isSafeProjectId(entry.name))
+        .map(entry => ({ directoryId: entry.name, project: readJson(path.join(workspaceDir, entry.name, 'project.json'), null) }))
+        .filter(({ directoryId, project }) => isListableProjectDirectory(directoryId, project)
+            && fs.existsSync(path.join(workspaceDir, directoryId, 'project.json')))
+        .map(({ project }) => project)
         .filter(project => !visitor || isPublic(project))
         .sort((left, right) => {
             const leftPriority = priority.indexOf(String(left.id).toLowerCase());
