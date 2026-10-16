@@ -1,0 +1,108 @@
+name: Deploy XR API
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: xr-api-production
+  cancel-in-progress: false
+
+jobs:
+  deploy-api:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Verify API imports and isolated health
+        run: |
+          set -euo pipefail
+          PORT=18343 HOST=127.0.0.1 NOURISHLAND_WORKSPACE_DIR="$RUNNER_TEMP/api-smoke" node dist/xr-api/server.mjs > "$RUNNER_TEMP/api-smoke.log" 2>&1 &
+          process=$!
+          trap 'kill "$process" 2>/dev/null || true' EXIT
+          ready=false
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:18343/api/health | jq -e '.ok == true' >/dev/null; then ready=true; break; fi
+            sleep 1
+          done
+          if test "$ready" != true; then cat "$RUNNER_TEMP/api-smoke.log"; exit 1; fi
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTARMADA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HOSTARMADA_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/nourishland_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/nourishland_deploy ~/.ssh/known_hosts
+      - name: Stage, back up, deploy and verify API code
+        env:
+          REMOTE_HOST: ${{ secrets.HOSTARMADA_HOST }}
+          REMOTE_PORT: ${{ secrets.HOSTARMADA_SSH_PORT }}
+          REMOTE_USER: ${{ secrets.HOSTARMADA_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$REMOTE_HOST"
+          [[ "$REMOTE_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          API_ROOT="/home/$REMOTE_USER/nourishland-xr-api"
+          RELEASE="$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          STAGE="$API_ROOT/.api-stage-$RELEASE"
+          SSH_COMMAND="ssh -i ~/.ssh/nourishland_deploy -p ${REMOTE_PORT:-22} -o BatchMode=yes"
+          $SSH_COMMAND "$REMOTE_USER@$REMOTE_HOST" "test -f '$API_ROOT/server.mjs' && test -w '$API_ROOT' && mkdir -m 700 '$STAGE'"
+          rsync --archive --compress --checksum -e "$SSH_COMMAND" dist/xr-api/ "$REMOTE_USER@$REMOTE_HOST:$STAGE/"
+          $SSH_COMMAND "$REMOTE_USER@$REMOTE_HOST" "sh -s -- '$API_ROOT' '$STAGE' '$RELEASE'" <<'SH'
+          set -eu
+          root="$1"; stage="$2"; release="$3"
+          test "$stage" = "$root/.api-stage-$release"
+          backup="$root/.api-backup-$release"
+          mkdir -m 700 "$backup"
+          cd "$stage"
+          find . -type f | sort > "$backup/new-files.txt"
+          while IFS= read -r relative; do
+            relative="${relative#./}"
+            case "$relative" in *.mjs|app/services/*.js|package.json) ;; *) echo "Unexpected artifact: $relative"; exit 1;; esac
+            if test -f "$root/$relative"; then
+              mkdir -p "$backup/$(dirname "$relative")"
+              cp -p "$root/$relative" "$backup/$relative"
+            fi
+          done < "$backup/new-files.txt"
+          while IFS= read -r relative; do
+            relative="${relative#./}"
+            mkdir -p "$root/$(dirname "$relative")"
+            cp "$stage/$relative" "$root/$relative"
+            chmod 644 "$root/$relative"
+          done < "$backup/new-files.txt"
+          mkdir -p "$root/tmp"
+          touch "$root/tmp/restart.txt"
+          ready=false
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --show-error https://nourishland.org/xr-api/health | grep -q '"ok":true'; then ready=true; break; fi
+            sleep 2
+          done
+          if test "$ready" != true; then
+            while IFS= read -r relative; do
+              relative="${relative#./}"
+              if test -f "$backup/$relative"; then cp -p "$backup/$relative" "$root/$relative"; fi
+            done < "$backup/new-files.txt"
+            touch "$root/tmp/restart.txt"
+            echo 'API health failed; previous code restored.' >&2
+            exit 1
+          fi
+          printf '%s\n' "$release" > "$root/.api-release"
+          SH
+      - name: Verify production authentication remains enabled
+        run: |
+          curl --fail --silent --show-error https://nourishland.org/xr-api/auth/session | jq -e '.authenticated == false and .required == true and .authDisabled == false'
