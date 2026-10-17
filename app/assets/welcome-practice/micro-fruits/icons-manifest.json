@@ -1,0 +1,269 @@
+{
+  "sources": [
+    "references/reference-2.jpg",
+    "references/reference-9.jpg"
+  ],
+  "icons": {
+    "dragon-fruit": {
+      "label": "Dragon fruit",
+      "file": "icons/dragon-fruit.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        0,
+        0
+      ]
+    },
+    "coconut": {
+      "label": "Coconut",
+      "file": "icons/coconut.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        1,
+        0
+      ]
+    },
+    "cherry": {
+      "label": "Cherry",
+      "file": "icons/cherry.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        2,
+        0
+      ]
+    },
+    "blueberry": {
+      "label": "Blueberry",
+      "file": "icons/blueberry.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        3,
+        0
+      ]
+    },
+    "grape": {
+      "label": "Grape",
+      "file": "icons/grape.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        4,
+        0
+      ]
+    },
+    "banana": {
+      "label": "Banana",
+      "file": "icons/banana.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        6,
+        0
+      ]
+    },
+    "avocado": {
+      "label": "Avocado",
+      "file": "icons/avocado.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        7,
+        0
+      ]
+    },
+    "apricot": {
+      "label": "Apricot",
+      "file": "icons/apricot.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        8,
+        0
+      ]
+    },
+    "watermelon": {
+      "label": "Watermelon",
+      "file": "icons/watermelon.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        9,
+        0
+      ]
+    },
+    "mandarin": {
+      "label": "Mandarin",
+      "file": "icons/mandarin.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        10,
+        0
+      ]
+    },
+    "strawberry": {
+      "label": "Strawberry",
+      "file": "icons/strawberry.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        0,
+        1
+      ]
+    },
+    "apple": {
+      "label": "Apple",
+      "file": "icons/apple.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        1,
+        1
+      ]
+    },
+    "raspberry": {
+      "label": "Raspberry",
+      "file": "icons/raspberry.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        2,
+        1
+      ]
+    },
+    "pomegranate": {
+      "label": "Pomegranate",
+      "file": "icons/pomegranate.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        3,
+        1
+      ]
+    },
+    "plum": {
+      "label": "Plum",
+      "file": "icons/plum.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        4,
+        1
+      ]
+    },
+    "pineapple": {
+      "label": "Pineapple",
+      "file": "icons/pineapple.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        5,
+        1
+      ]
+    },
+    "peach": {
+      "label": "Peach",
+      "file": "icons/peach.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        6,
+        1
+      ]
+    },
+    "pear": {
+      "label": "Pear",
+      "file": "icons/pear.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        7,
+        1
+      ]
+    },
+    "orange": {
+      "label": "Orange",
+      "file": "icons/orange.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        9,
+        1
+      ]
+    },
+    "papaya": {
+      "label": "Papaya",
+      "file": "icons/papaya.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        10,
+        1
+      ]
+    },
+    "cantaloupe": {
+      "label": "Cantaloupe",
+      "file": "icons/cantaloupe.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        1,
+        2
+      ]
+    },
+    "mango": {
+      "label": "Mango",
+      "file": "icons/mango.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        2,
+        2
+      ]
+    },
+    "lychee": {
+      "label": "Lychee",
+      "file": "icons/lychee.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        3,
+        2
+      ]
+    },
+    "lime": {
+      "label": "Lime",
+      "file": "icons/lime.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        4,
+        2
+      ]
+    },
+    "lemon": {
+      "label": "Lemon",
+      "file": "icons/lemon.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        5,
+        2
+      ]
+    },
+    "kiwi": {
+      "label": "Kiwifruit",
+      "file": "icons/kiwi.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        6,
+        2
+      ]
+    },
+    "grapefruit": {
+      "label": "Grapefruit",
+      "file": "icons/grapefruit.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        9,
+        2
+      ]
+    },
+    "fig": {
+      "label": "Fig",
+      "file": "icons/fig.png",
+      "source": "references/reference-2.jpg",
+      "sourceCell": [
+        10,
+        2
+      ]
+    },
+    "blackberry": {
+      "label": "Blackberry",
+      "file": "icons/blackberry.png",
+      "source": "references/reference-9.jpg",
+      "sourceCell": [
+        1,
+        2
+      ]
+    }
+  }
+}

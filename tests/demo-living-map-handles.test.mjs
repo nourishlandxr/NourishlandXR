@@ -59,6 +59,24 @@ test('held laser contacts stay on the same handle through aim changes, carrying 
   source.gamepad.buttons[1].pressed=false;input.update(frame);assert.equal(input.contact(source),null);assert.deepEqual(input.heldHandles,[]);
  }finally{input.destroy();}
 });
+test('two hands rotate the map around its centre while keeping the map level',()=>{
+ const session=new EventTarget(),left={handedness:'left',gripSpace:{},targetRaySpace:{},gamepad:{buttons:[{},{pressed:true}]}},right={handedness:'right',gripSpace:{},targetRaySpace:{},gamepad:{buttons:[{},{pressed:true}]}},poses=new Map();
+ session.inputSources=[left,right];const position=origin.clone(),rotation=identity.clone();let time=0;
+ const frame={get predictedDisplayTime(){return ++time;},getPose:key=>{const p=poses.get(key);return p?{transform:{matrix:p.elements}}:null;}};
+ const setPose=(source,x,z)=>{const matrix=new THREE.Matrix4().makeTranslation(x,1.5,z),aim=new THREE.Matrix4().makeRotationX(-Math.PI/4).setPosition(x,1.5,z);poses.set(source.gripSpace,matrix);poses.set(source.targetRaySpace,aim);};
+ setPose(left,-.08,.05675);setPose(right,.08,.05675);
+ const grip=createLivingMapGripInput({enabled:()=>true,origin:()=>position,rotation:()=>rotation,onMove:value=>position.copy(value),onRotate:value=>rotation.copy(value)});grip.bind(session,{});
+ try{
+  grip.update(frame);assert.equal(grip.active,true);assert.equal(grip.heldHandles.length,2);
+  const angle=.6,cos=Math.cos(angle),sin=Math.sin(angle);setPose(left,-.08*cos,.05675+.08*sin);setPose(right,.08*cos,.05675-.08*sin);
+  grip.update(frame);
+  assert.ok(Math.abs(2*Math.atan2(rotation.y,rotation.w)-angle)<.06,'controller separation rotates the map');
+  assert.ok(Math.abs(rotation.x)<1e-6 && Math.abs(rotation.z)<1e-6,'vertical hand differences cannot tilt the map');
+  assert.ok(Math.abs(position.x-origin.x)<1e-6 && Math.abs(position.y-origin.y)<1e-6 && Math.abs(position.z-origin.z)<1e-6,'rotation stays centred');
+  left.gamepad.buttons[1].pressed=false;grip.update(frame);
+  assert.ok(Math.abs(2*Math.atan2(rotation.y,rotation.w)-angle)<.06,'releasing one hand keeps the new map orientation');
+ }finally{grip.destroy();}
+});
 test('production pointer draws the held hook beam instead of hiding it or retargeting another surface',()=>{
  const source=readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
  const fn=source.slice(source.indexOf('function drawDemoInputPointer('),source.indexOf('async function startImmersive()'));

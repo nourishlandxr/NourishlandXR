@@ -3,14 +3,14 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createOrganicOrbGeometry} from './organicOrbGeometry.js';
 
 // A self-contained controller toy. It never creates a plant record or opens PIMO.
-export const CONTROL_ORB_PHASES=Object.freeze(['controls-orb-grab','controls-orb-open','controls-face','controls-face-first','controls-face-second','controls-stick','controls-stick-click']);
+export const CONTROL_ORB_PHASES=Object.freeze(['controls-orb-intro','controls-trigger','controls-grip','controls-orb-grab','controls-orb-open','controls-face','controls-face-first','controls-face-second','controls-stick','controls-stick-click']);
 export const CONTROL_ORB_DEFAULTS=Object.freeze({x:-.30,y:.072,z:.14,shell:'#244d35',core:'#8848b0'});
 export function createWelcomeControlOrb(root,options={}){
     const left=createSingleWelcomeControlOrb(root,{...options,handedness:'left',home:{...CONTROL_ORB_DEFAULTS,x:-.29}});
     const right=createSingleWelcomeControlOrb(root,{...options,handedness:'right',home:{...CONTROL_ORB_DEFAULTS,x:.29,shell:'#34556a',core:'#b87961'}});
     const orbs={left,right};
     return {group:left.group,orbs,reset:options=>{left.reset(options);right.reset(options);},release:()=>{left.release();right.release();},isHolding:source=>left.isHolding(source)||right.isHolding(source),
-        update:(dt,id,inputs,completed,settings)=>{left.update(dt,id,inputs.filter(input=>input.source?.handedness==='left'),completed,settings);const rightClicked=right.rightClicked;right.update(dt,id,inputs.filter(input=>input.source?.handedness==='right'),completed,settings);if(!rightClicked && right.rightClicked)left.clearLeftClick();},
+        update:(dt,id,inputs,completed,settings)=>{left.update(dt,id,inputs,completed,settings);const rightClicked=right.rightClicked;right.update(dt,id,inputs,completed,settings);left.resolveCollision(right);if(!rightClicked && right.rightClicked)left.clearLeftClick();},
         complete:id=>id==='controls-stick-click'?right.rightClicked&&left.leftClicked:left.complete(id)||right.complete(id),
         snapshot:()=>{const a=left.snapshot(),b=right.snapshot();return {...a,visible:a.visible&&b.visible,light:a.light||b.light,colour:Math.max(a.colour,b.colour),pulseColour:Math.max(a.pulseColour,b.pulseColour),rotation:a.rotation+b.rotation,grabbed:a.grabbed||b.grabbed,moved:a.moved||b.moved,released:a.released||b.released,opened:a.opened||b.opened,orbs:{left:a,right:b}};},
         destroy:()=>{left.destroy();right.destroy();}};
@@ -35,20 +35,32 @@ function createSingleWelcomeControlOrb(root,{onFeedback=()=>{},getPotBounds=()=>
     let leftClicked=false;
     function reset({keepSkills=false}={}){release();physical=physicalLearned=true;light=false;rightClicked=leftClicked=false;group.position.set(home.x,home.y,home.z);Object.assign(ball.position,group.position);Object.assign(ball.velocity,{x:0,y:0,z:0});shell.quaternion.identity();for(const {mesh} of cells)mesh.position.set(0,0,0);grabbed=moved=released=opened=false;open=colour=rotation=0;previous.clear();if(!keepSkills)unlocked.clear();phase='';material.color.set(home.shell);core.material.color.set(home.core);pulseColour=0;lastCollision=-Infinity;lastSource=null;}
     return {group,reset,release,clearLeftClick:()=>{leftClicked=false;},get rightClicked(){return rightClicked;},get leftClicked(){return leftClicked;},isHolding:source=>owner===source,
+        resolveCollision(other){
+            if(!group.visible || !other.group.visible)return;
+            const delta=new THREE.Vector3().subVectors(group.position,other.group.position),distance=delta.length(),minimum=radius*2;
+            if(distance>=minimum)return;
+            if(distance<1e-5)delta.set(handedness==='left'?-1:1,0,0);else delta.divideScalar(distance);
+            const overlap=minimum-Math.max(distance,1e-5),moveSelf=owner?0:other.isHolding()?overlap:overlap*.5,moveOther=other.isHolding()?0:owner?overlap:overlap*.5;
+            group.position.addScaledVector(delta,moveSelf);other.group.position.addScaledVector(delta,-moveOther);
+            Object.assign(ball.position,group.position);Object.assign(other.ballPosition(),other.group.position);
+            const relative=(velocity.x-other.physicsVelocity().x)*delta.x+(velocity.y-other.physicsVelocity().y)*delta.y+(velocity.z-other.physicsVelocity().z)*delta.z;
+            if(relative<0){const impulse=-relative*.55;if(!owner){velocity.x+=delta.x*impulse;velocity.y+=delta.y*impulse;velocity.z+=delta.z*impulse;}if(!other.isHolding()){const v=other.physicsVelocity();v.x-=delta.x*impulse;v.y-=delta.y*impulse;v.z-=delta.z*impulse;}}
+        },
+        ballPosition:()=>ball.position,physicsVelocity:()=>ball.velocity,
         update(dt,id,inputs,completed=[],{visible=true,interact=true}={}){
             clock+=dt;const stage=CONTROL_ORB_PHASES.indexOf(id);if(stage>=0)for(let i=0;i<=stage;i++)unlocked.add(CONTROL_ORB_PHASES[i]);
             group.visible=visible && CONTROL_ORB_PHASES.includes(id);if(!group.visible){release();return;}physical=true;
             if(id!==phase){phase=id;previous.clear();}
             if(owner && !inputs.some(input=>input.source===owner && input.matrix && input.down))release();
             const inverse=root.matrixWorld.clone().invert();
-            for(const input of inputs){if(!interact || !input.matrix || input.source?.handedness!==handedness)continue;const before=previous.get(input.source),pose=new THREE.Matrix4().multiplyMatrices(inverse,new THREE.Matrix4().fromArray(input.matrix)),point=new THREE.Vector3().setFromMatrixPosition(pose);
+            for(const input of inputs){if(!interact || !input.matrix || !input.source?.handedness)continue;const before=previous.get(input.source),pose=new THREE.Matrix4().multiplyMatrices(inverse,new THREE.Matrix4().fromArray(input.matrix)),point=new THREE.Vector3().setFromMatrixPosition(pose);
                 if(unlocked.has('controls-orb-grab') && !owner && input.down && before?.down===false && point.distanceTo(group.position)<.14){owner=input.source;offset=pose.clone().invert().multiply(new THREE.Matrix4().compose(group.position,group.quaternion,group.scale));grabbed=true;onFeedback('grab',owner);}
                 if(owner===input.source){const next=pose.clone().multiply(offset),position=new THREE.Vector3(),q=new THREE.Quaternion(),s=new THREE.Vector3();next.decompose(position,q,s);position.x=THREE.MathUtils.clamp(position.x,-.95+radius,.95-radius);position.z=THREE.MathUtils.clamp(position.z,-.45+radius,.45-radius);position.y=Math.max(radius,position.y);if(position.distanceTo(group.position)>.004)moved=true;velocity.copy(position).sub(group.position).divideScalar(Math.max(.001,dt)).clampLength(0,3);group.position.copy(position);group.quaternion.copy(q);}
                 if(unlocked.has('controls-orb-open') && input.trigger && before?.trigger===false){let aimed=false;if(input.ray){const ray=new THREE.Ray(new THREE.Vector3().copy(input.ray.origin),new THREE.Vector3().copy(input.ray.direction).normalize()).applyMatrix4(inverse);aimed=ray.distanceToPoint(group.position)<.10 && ray.direction.dot(group.position.clone().sub(ray.origin))>0;}
                     if(point.distanceTo(group.position)<.17 || aimed){opened=!opened;onFeedback('open',input.source);}}
-                if(unlocked.has('controls-stick') && (id==='controls-stick' || owner===input.source || point.distanceTo(group.position)<.24)){const axes=input.source.gamepad?.axes || [],o=axes.length>=4?2:0,x=axes[o] || 0,y=axes[o+1] || 0;if(Math.hypot(x,y)>.18){lastSource=input.source;if(input.source.handedness==='right'){shell.rotation.y+=x*dt*2.5;shell.rotation.x+=y*dt*2.5;}ball.velocity.x+=x*dt*2;ball.velocity.z+=y*dt*2;rotation+=Math.hypot(x,y)*dt;}}
-                for(const [button,skill] of [[4,'controls-face-first'],[5,'controls-face-second']]){const pressed=input.source.gamepad?.buttons?.[button]?.pressed;if((unlocked.has(skill)||unlocked.has('controls-face')) && pressed && !before?.buttons?.[button]){if(button===4){pulseColour=(pulseColour+1)%4;core.material.color.set([home.core,'#c478d2','#e0ba68','#519c79'][pulseColour]);light=true;}else setColour(colour===1?2:1);onFeedback('control',input.source);}}
-                const clicked=Boolean(input.source.gamepad?.buttons?.[3]?.pressed);if(id==='controls-stick-click' && clicked && before?.buttons?.[3]===false){if(handedness==='right'){light=false;rightClicked=true;}else{leftClicked=true;onFeedback('control',input.source);}}
+                if(input.source.handedness===handedness && unlocked.has('controls-stick') && (id==='controls-stick' || owner===input.source || point.distanceTo(group.position)<.24)){const axes=input.source.gamepad?.axes || [],o=axes.length>=4?2:0,x=axes[o] || 0,y=axes[o+1] || 0;if(Math.hypot(x,y)>.18){lastSource=input.source;if(input.source.handedness==='right'){shell.rotation.y+=x*dt*2.5;shell.rotation.x+=y*dt*2.5;}ball.velocity.x+=x*dt*2;ball.velocity.z+=y*dt*2;rotation+=Math.hypot(x,y)*dt;}}
+                if(input.source.handedness===handedness)for(const [button,skill] of [[4,'controls-face-first'],[5,'controls-face-second']]){const pressed=input.source.gamepad?.buttons?.[button]?.pressed;if((unlocked.has(skill)||unlocked.has('controls-face')) && pressed && !before?.buttons?.[button]){if(button===4){pulseColour=(pulseColour+1)%4;core.material.color.set([home.core,'#c478d2','#e0ba68','#519c79'][pulseColour]);light=true;}else setColour(colour===1?2:1);onFeedback('control',input.source);}}
+                const clicked=Boolean(input.source.handedness===handedness && input.source.gamepad?.buttons?.[3]?.pressed);if(id==='controls-stick-click' && clicked && before?.buttons?.[3]===false){if(handedness==='right'){light=false;rightClicked=true;}else{leftClicked=true;onFeedback('control',input.source);}}
                 previous.set(input.source,{down:Boolean(input.down),trigger:Boolean(input.trigger),buttons:(input.source.gamepad?.buttons || []).map(b=>b.pressed)});
             }
             if(physical && !owner && dt>0){const before={...ball.velocity};stepPracticeBodies([ball],dt,{floor:-.7});const pot=getPotBounds() || {x:.02,z:-.28,radius:.075,top:.118,bottom:0},dx=ball.position.x-pot.x,dz=ball.position.z-pot.z,distance=Math.hypot(dx,dz),limit=radius+pot.radius;let collided=before.x*ball.velocity.x<0 || before.z*ball.velocity.z<0;

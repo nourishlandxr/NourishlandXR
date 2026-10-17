@@ -45,7 +45,7 @@
         "common_name": "",
         "scientific_name": "",
         "revision": 1,
-        "modified": "2026-10-15T20:49:09.568Z"
+        "modified": "2026-10-17T06:19:28.814Z"
       },
       "projectId": "p",
       "siteId": "s",
@@ -81,5 +81,5 @@
       "id": "[\"p\",\"s\",\"a\",\"totem\"]"
     }
   ],
-  "revision": "sha256:d08fec4bcc7e360f153cc2887d075877eb28585a65a91f516415ccb07df9e652"
+  "revision": "sha256:813df86c500ec2b7472cc23595d585014fce4831cbd0ed5c6eaffbbea3a4efce"
 }

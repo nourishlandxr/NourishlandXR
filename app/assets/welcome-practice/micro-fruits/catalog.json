@@ -1,56 +1,949 @@
 {
   "schemaVersion": 1,
   "catalogId": "nlxr-micro-fruits",
-  "status": "inventory-only",
-  "note": "Individual fruit records identified from ten visual reference sheets. Reference pictures are not runtime models. Existing model candidates need appearance, license, scale, and performance review before reuse.",
+  "status": "partial-micro-icon-assets",
+  "note": "29 named fruit records have separate hand-icon PNGs cropped from supplied references. These illustrations are independent of table fruit models. Existing model candidates need appearance, license, scale, and performance review before reuse.",
   "fruits": [
-    { "id": "african-peach", "name": "African peach", "aliases": ["keystone fruit", "nauclea"], "group": "tropical", "references": [5], "assetStatus": "existing-model-candidate", "modelCandidates": ["../african-peach.glb"] },
-    { "id": "apple", "name": "Apple", "aliases": ["green apple", "red apple"], "group": "common", "references": [1, 2, 3, 4, 6, 7], "assetStatus": "existing-model-candidate", "modelCandidates": ["../fruit-collection/apple.glb", "../interactive-fruit/apple-whole.glb"] },
-    { "id": "apricot", "name": "Apricot", "aliases": [], "group": "common", "references": [2], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "avocado", "name": "Avocado", "aliases": [], "group": "common", "references": [2, 4, 5, 6, 7, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "banana", "name": "Banana", "aliases": ["plantain"], "group": "common", "references": [2, 3, 4, 6], "assetStatus": "existing-model-candidate", "modelCandidates": ["../banana.glb", "../interactive-fruit/banana-peel.glb"] },
-    { "id": "bayberry", "name": "Chinese bayberry", "aliases": ["yangmei"], "group": "tropical", "references": [7], "assetStatus": "existing-model-candidate", "modelCandidates": ["../../fruit-window/carambola-bayberry/chinese_bayberry_ripe.glb"] },
-    { "id": "blackberry", "name": "Blackberry", "aliases": ["blackberries"], "group": "berries", "references": [9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "blueberry", "name": "Blueberry", "aliases": ["blueberries"], "group": "berries", "references": [2, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "cantaloupe", "name": "Cantaloupe", "aliases": ["rockmelon", "muskmelon"], "group": "common", "references": [2, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "canistel", "name": "Canistel", "aliases": ["eggfruit"], "group": "tropical", "references": [5], "assetStatus": "species-review-needed", "modelCandidates": [] },
-    { "id": "carambola", "name": "Carambola", "aliases": ["star fruit", "starfruit"], "group": "tropical", "references": [2, 6], "assetStatus": "existing-model-candidate", "modelCandidates": ["../fruit-collection/carambola.glb", "../../fruit-window/carambola-bayberry/carambola_ripe.glb"] },
-    { "id": "cherry", "name": "Cherry", "aliases": ["cherries"], "group": "berries", "references": [2, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "coconut", "name": "Coconut", "aliases": [], "group": "tropical", "references": [2, 4, 6, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "custard-apple", "name": "Custard apple", "aliases": ["sugar apple", "atemoya"], "group": "tropical", "references": [5], "assetStatus": "species-review-needed", "modelCandidates": [] },
-    { "id": "dragon-fruit", "name": "Dragon fruit", "aliases": ["pitaya", "pitahaya"], "group": "tropical", "references": [2, 4, 5, 6, 7, 8], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "durian", "name": "Durian", "aliases": [], "group": "tropical", "references": [10], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "feijoa", "name": "Feijoa", "aliases": ["pineapple guava"], "group": "tropical", "references": [10], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "fig", "name": "Fig", "aliases": [], "group": "common", "references": [1, 2, 4], "assetStatus": "existing-model-candidate", "modelCandidates": ["../fruit-collection/fig.glb"] },
-    { "id": "grape", "name": "Grape", "aliases": ["grapes"], "group": "berries", "references": [1, 2, 3, 4, 7, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "grapefruit", "name": "Grapefruit", "aliases": ["pomelo"], "group": "citrus", "references": [2, 4, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "guava", "name": "Guava", "aliases": [], "group": "tropical", "references": [2, 6, 7], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "horned-melon", "name": "Horned melon", "aliases": ["kiwano", "African horned cucumber"], "group": "tropical", "references": [5], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "kiwi", "name": "Kiwifruit", "aliases": ["kiwi"], "group": "common", "references": [2, 4, 7], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "lemon", "name": "Lemon", "aliases": [], "group": "citrus", "references": [2, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "lime", "name": "Lime", "aliases": [], "group": "citrus", "references": [2, 4, 9], "assetStatus": "existing-model-candidate", "modelCandidates": ["../lime.glb"] },
-    { "id": "lychee", "name": "Lychee", "aliases": ["litchi"], "group": "tropical", "references": [2, 10], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "mamey-sapote", "name": "Mamey sapote", "aliases": ["sapote"], "group": "tropical", "references": [5, 7], "assetStatus": "existing-model-candidate", "modelCandidates": ["../mamey-sapote.glb"] },
-    { "id": "mango", "name": "Mango", "aliases": [], "group": "tropical", "references": [1, 2, 3, 4, 6, 7], "assetStatus": "existing-model-candidate", "modelCandidates": ["../fruit-collection/mango.glb"] },
-    { "id": "mandarin", "name": "Mandarin", "aliases": ["tangerine", "mandarin orange"], "group": "citrus", "references": [1, 2, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "mangosteen", "name": "Mangosteen", "aliases": [], "group": "tropical", "references": [7], "assetStatus": "species-review-needed", "modelCandidates": [] },
-    { "id": "orange", "name": "Orange", "aliases": ["sweet orange"], "group": "citrus", "references": [1, 2, 3, 4, 6, 7, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "papaya", "name": "Papaya", "aliases": ["pawpaw"], "group": "tropical", "references": [2, 4, 6], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "passion-fruit", "name": "Passion fruit", "aliases": ["passionfruit"], "group": "tropical", "references": [2, 6], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "peach", "name": "Peach", "aliases": ["nectarine"], "group": "common", "references": [1, 2, 4, 7], "assetStatus": "existing-model-candidate", "modelCandidates": ["../fruit-collection/peach.glb"] },
-    { "id": "pear", "name": "Pear", "aliases": [], "group": "common", "references": [2, 3, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "persimmon", "name": "Persimmon", "aliases": ["kaki"], "group": "common", "references": [1, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "pineapple", "name": "Pineapple", "aliases": [], "group": "tropical", "references": [1, 2, 3, 4, 6, 7], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "plum", "name": "Plum", "aliases": [], "group": "common", "references": [2, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "pomegranate", "name": "Pomegranate", "aliases": [], "group": "common", "references": [1, 2, 4, 9], "assetStatus": "existing-model-candidate", "modelCandidates": ["../fruit-collection/pomegranate.glb"] },
-    { "id": "rambutan", "name": "Rambutan", "aliases": [], "group": "tropical", "references": [5], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "raspberry", "name": "Raspberry", "aliases": [], "group": "berries", "references": [2, 4], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "rose-apple", "name": "Rose apple", "aliases": ["wax apple", "water apple"], "group": "tropical", "references": [5], "assetStatus": "species-review-needed", "modelCandidates": [] },
-    { "id": "soursop", "name": "Soursop", "aliases": ["guanabana", "graviola"], "group": "tropical", "references": [5, 7, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "star-apple", "name": "Star apple", "aliases": ["caimito"], "group": "tropical", "references": [5, 7], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "strawberry", "name": "Strawberry", "aliases": [], "group": "berries", "references": [1, 2, 4, 6, 7, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "watermelon", "name": "Watermelon", "aliases": [], "group": "common", "references": [2, 3, 4, 9], "assetStatus": "reference-only", "modelCandidates": [] },
-    { "id": "unidentified-tropical-fruit", "name": "Unidentified tropical fruit", "aliases": [], "group": "needs-identification", "references": [5, 7], "assetStatus": "species-review-needed", "modelCandidates": [] }
+    {
+      "id": "african-peach",
+      "name": "African peach",
+      "aliases": [
+        "keystone fruit",
+        "nauclea"
+      ],
+      "group": "tropical",
+      "references": [
+        5
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../african-peach.glb"
+      ]
+    },
+    {
+      "id": "apple",
+      "name": "Apple",
+      "aliases": [
+        "green apple",
+        "red apple"
+      ],
+      "group": "common",
+      "references": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        7
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../fruit-collection/apple.glb",
+        "../interactive-fruit/apple-whole.glb"
+      ],
+      "microIcon": {
+        "file": "icons/apple.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "apricot",
+      "name": "Apricot",
+      "aliases": [],
+      "group": "common",
+      "references": [
+        2
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/apricot.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          8,
+          0
+        ]
+      }
+    },
+    {
+      "id": "avocado",
+      "name": "Avocado",
+      "aliases": [],
+      "group": "common",
+      "references": [
+        2,
+        4,
+        5,
+        6,
+        7,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/avocado.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          7,
+          0
+        ]
+      }
+    },
+    {
+      "id": "banana",
+      "name": "Banana",
+      "aliases": [
+        "plantain"
+      ],
+      "group": "common",
+      "references": [
+        2,
+        3,
+        4,
+        6
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../banana.glb",
+        "../interactive-fruit/banana-peel.glb"
+      ],
+      "microIcon": {
+        "file": "icons/banana.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          6,
+          0
+        ]
+      }
+    },
+    {
+      "id": "bayberry",
+      "name": "Chinese bayberry",
+      "aliases": [
+        "yangmei"
+      ],
+      "group": "tropical",
+      "references": [
+        7
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../../fruit-window/carambola-bayberry/chinese_bayberry_ripe.glb"
+      ]
+    },
+    {
+      "id": "blackberry",
+      "name": "Blackberry",
+      "aliases": [
+        "blackberries"
+      ],
+      "group": "berries",
+      "references": [
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/blackberry.png",
+        "source": "references/reference-9.jpg",
+        "cell": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "blueberry",
+      "name": "Blueberry",
+      "aliases": [
+        "blueberries"
+      ],
+      "group": "berries",
+      "references": [
+        2,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/blueberry.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          3,
+          0
+        ]
+      }
+    },
+    {
+      "id": "cantaloupe",
+      "name": "Cantaloupe",
+      "aliases": [
+        "rockmelon",
+        "muskmelon"
+      ],
+      "group": "common",
+      "references": [
+        2,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/cantaloupe.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          1,
+          2
+        ]
+      }
+    },
+    {
+      "id": "canistel",
+      "name": "Canistel",
+      "aliases": [
+        "eggfruit"
+      ],
+      "group": "tropical",
+      "references": [
+        5
+      ],
+      "assetStatus": "species-review-needed",
+      "modelCandidates": []
+    },
+    {
+      "id": "carambola",
+      "name": "Carambola",
+      "aliases": [
+        "star fruit",
+        "starfruit"
+      ],
+      "group": "tropical",
+      "references": [
+        2,
+        6
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../fruit-collection/carambola.glb",
+        "../../fruit-window/carambola-bayberry/carambola_ripe.glb"
+      ]
+    },
+    {
+      "id": "cherry",
+      "name": "Cherry",
+      "aliases": [
+        "cherries"
+      ],
+      "group": "berries",
+      "references": [
+        2,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/cherry.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          2,
+          0
+        ]
+      }
+    },
+    {
+      "id": "coconut",
+      "name": "Coconut",
+      "aliases": [],
+      "group": "tropical",
+      "references": [
+        2,
+        4,
+        6,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/coconut.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          1,
+          0
+        ]
+      }
+    },
+    {
+      "id": "custard-apple",
+      "name": "Custard apple",
+      "aliases": [
+        "sugar apple",
+        "atemoya"
+      ],
+      "group": "tropical",
+      "references": [
+        5
+      ],
+      "assetStatus": "species-review-needed",
+      "modelCandidates": []
+    },
+    {
+      "id": "dragon-fruit",
+      "name": "Dragon fruit",
+      "aliases": [
+        "pitaya",
+        "pitahaya"
+      ],
+      "group": "tropical",
+      "references": [
+        2,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/dragon-fruit.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "id": "durian",
+      "name": "Durian",
+      "aliases": [],
+      "group": "tropical",
+      "references": [
+        10
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "feijoa",
+      "name": "Feijoa",
+      "aliases": [
+        "pineapple guava"
+      ],
+      "group": "tropical",
+      "references": [
+        10
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "fig",
+      "name": "Fig",
+      "aliases": [],
+      "group": "common",
+      "references": [
+        1,
+        2,
+        4
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../fruit-collection/fig.glb"
+      ],
+      "microIcon": {
+        "file": "icons/fig.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          10,
+          2
+        ]
+      }
+    },
+    {
+      "id": "grape",
+      "name": "Grape",
+      "aliases": [
+        "grapes"
+      ],
+      "group": "berries",
+      "references": [
+        1,
+        2,
+        3,
+        4,
+        7,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/grape.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          4,
+          0
+        ]
+      }
+    },
+    {
+      "id": "grapefruit",
+      "name": "Grapefruit",
+      "aliases": [
+        "pomelo"
+      ],
+      "group": "citrus",
+      "references": [
+        2,
+        4,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/grapefruit.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          9,
+          2
+        ]
+      }
+    },
+    {
+      "id": "guava",
+      "name": "Guava",
+      "aliases": [],
+      "group": "tropical",
+      "references": [
+        2,
+        6,
+        7
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "horned-melon",
+      "name": "Horned melon",
+      "aliases": [
+        "kiwano",
+        "African horned cucumber"
+      ],
+      "group": "tropical",
+      "references": [
+        5
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "kiwi",
+      "name": "Kiwifruit",
+      "aliases": [
+        "kiwi"
+      ],
+      "group": "common",
+      "references": [
+        2,
+        4,
+        7
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/kiwi.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          6,
+          2
+        ]
+      }
+    },
+    {
+      "id": "lemon",
+      "name": "Lemon",
+      "aliases": [],
+      "group": "citrus",
+      "references": [
+        2,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/lemon.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          5,
+          2
+        ]
+      }
+    },
+    {
+      "id": "lime",
+      "name": "Lime",
+      "aliases": [],
+      "group": "citrus",
+      "references": [
+        2,
+        4,
+        9
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../lime.glb"
+      ],
+      "microIcon": {
+        "file": "icons/lime.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          4,
+          2
+        ]
+      }
+    },
+    {
+      "id": "lychee",
+      "name": "Lychee",
+      "aliases": [
+        "litchi"
+      ],
+      "group": "tropical",
+      "references": [
+        2,
+        10
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/lychee.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          3,
+          2
+        ]
+      }
+    },
+    {
+      "id": "mamey-sapote",
+      "name": "Mamey sapote",
+      "aliases": [
+        "sapote"
+      ],
+      "group": "tropical",
+      "references": [
+        5,
+        7
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../mamey-sapote.glb"
+      ]
+    },
+    {
+      "id": "mango",
+      "name": "Mango",
+      "aliases": [],
+      "group": "tropical",
+      "references": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        7
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../fruit-collection/mango.glb"
+      ],
+      "microIcon": {
+        "file": "icons/mango.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          2,
+          2
+        ]
+      }
+    },
+    {
+      "id": "mandarin",
+      "name": "Mandarin",
+      "aliases": [
+        "tangerine",
+        "mandarin orange"
+      ],
+      "group": "citrus",
+      "references": [
+        1,
+        2,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/mandarin.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          10,
+          0
+        ]
+      }
+    },
+    {
+      "id": "mangosteen",
+      "name": "Mangosteen",
+      "aliases": [],
+      "group": "tropical",
+      "references": [
+        7
+      ],
+      "assetStatus": "species-review-needed",
+      "modelCandidates": []
+    },
+    {
+      "id": "orange",
+      "name": "Orange",
+      "aliases": [
+        "sweet orange"
+      ],
+      "group": "citrus",
+      "references": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        7,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/orange.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          9,
+          1
+        ]
+      }
+    },
+    {
+      "id": "papaya",
+      "name": "Papaya",
+      "aliases": [
+        "pawpaw"
+      ],
+      "group": "tropical",
+      "references": [
+        2,
+        4,
+        6
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/papaya.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          10,
+          1
+        ]
+      }
+    },
+    {
+      "id": "passion-fruit",
+      "name": "Passion fruit",
+      "aliases": [
+        "passionfruit"
+      ],
+      "group": "tropical",
+      "references": [
+        2,
+        6
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "peach",
+      "name": "Peach",
+      "aliases": [
+        "nectarine"
+      ],
+      "group": "common",
+      "references": [
+        1,
+        2,
+        4,
+        7
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../fruit-collection/peach.glb"
+      ],
+      "microIcon": {
+        "file": "icons/peach.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          6,
+          1
+        ]
+      }
+    },
+    {
+      "id": "pear",
+      "name": "Pear",
+      "aliases": [],
+      "group": "common",
+      "references": [
+        2,
+        3,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/pear.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          7,
+          1
+        ]
+      }
+    },
+    {
+      "id": "persimmon",
+      "name": "Persimmon",
+      "aliases": [
+        "kaki"
+      ],
+      "group": "common",
+      "references": [
+        1,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "pineapple",
+      "name": "Pineapple",
+      "aliases": [],
+      "group": "tropical",
+      "references": [
+        1,
+        2,
+        3,
+        4,
+        6,
+        7
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/pineapple.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          5,
+          1
+        ]
+      }
+    },
+    {
+      "id": "plum",
+      "name": "Plum",
+      "aliases": [],
+      "group": "common",
+      "references": [
+        2,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/plum.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          4,
+          1
+        ]
+      }
+    },
+    {
+      "id": "pomegranate",
+      "name": "Pomegranate",
+      "aliases": [],
+      "group": "common",
+      "references": [
+        1,
+        2,
+        4,
+        9
+      ],
+      "assetStatus": "existing-model-candidate",
+      "modelCandidates": [
+        "../fruit-collection/pomegranate.glb"
+      ],
+      "microIcon": {
+        "file": "icons/pomegranate.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          3,
+          1
+        ]
+      }
+    },
+    {
+      "id": "rambutan",
+      "name": "Rambutan",
+      "aliases": [],
+      "group": "tropical",
+      "references": [
+        5
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "raspberry",
+      "name": "Raspberry",
+      "aliases": [],
+      "group": "berries",
+      "references": [
+        2,
+        4
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/raspberry.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          2,
+          1
+        ]
+      }
+    },
+    {
+      "id": "rose-apple",
+      "name": "Rose apple",
+      "aliases": [
+        "wax apple",
+        "water apple"
+      ],
+      "group": "tropical",
+      "references": [
+        5
+      ],
+      "assetStatus": "species-review-needed",
+      "modelCandidates": []
+    },
+    {
+      "id": "soursop",
+      "name": "Soursop",
+      "aliases": [
+        "guanabana",
+        "graviola"
+      ],
+      "group": "tropical",
+      "references": [
+        5,
+        7,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "star-apple",
+      "name": "Star apple",
+      "aliases": [
+        "caimito"
+      ],
+      "group": "tropical",
+      "references": [
+        5,
+        7
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": []
+    },
+    {
+      "id": "strawberry",
+      "name": "Strawberry",
+      "aliases": [],
+      "group": "berries",
+      "references": [
+        1,
+        2,
+        4,
+        6,
+        7,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/strawberry.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          0,
+          1
+        ]
+      }
+    },
+    {
+      "id": "watermelon",
+      "name": "Watermelon",
+      "aliases": [],
+      "group": "common",
+      "references": [
+        2,
+        3,
+        4,
+        9
+      ],
+      "assetStatus": "reference-only",
+      "modelCandidates": [],
+      "microIcon": {
+        "file": "icons/watermelon.png",
+        "source": "references/reference-2.jpg",
+        "cell": [
+          9,
+          0
+        ]
+      }
+    },
+    {
+      "id": "unidentified-tropical-fruit",
+      "name": "Unidentified tropical fruit",
+      "aliases": [],
+      "group": "needs-identification",
+      "references": [
+        5,
+        7
+      ],
+      "assetStatus": "species-review-needed",
+      "modelCandidates": []
+    }
   ],
-  "categoriesOutsideFruitScope": ["tomato", "eggplant", "bell pepper", "cucumber", "peas", "broccoli", "onion", "corn", "peanut", "potato", "carrot", "chilli pepper"]
+  "categoriesOutsideFruitScope": [
+    "tomato",
+    "eggplant",
+    "bell pepper",
+    "cucumber",
+    "peas",
+    "broccoli",
+    "onion",
+    "corn",
+    "peanut",
+    "potato",
+    "carrot",
+    "chilli pepper"
+  ]
 }

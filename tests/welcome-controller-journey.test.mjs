@@ -9,6 +9,13 @@ import {welcomeControllerLaserEnd} from '../app/services/welcomeControllerLaser.
 import {createWelcomeControllerGuide} from '../app/services/welcomeControllerGuide.js';
 import {WELCOME_PRACTICE_LESSONS,WELCOME_PRACTICE_RESPONSES} from '../app/services/welcomePracticeContent.js';
 
+test('face-button info balloons use the same compact rectangular style as other controller prompts',()=>{
+    const source=fs.readFileSync(new URL('../app/services/welcomeControllerGuide.js',import.meta.url),'utf8');
+    assert.match(source,/new THREE\.PlaneGeometry\(\.115,\.032\)/);
+    assert.match(source,/ctx\.roundRect\(2,14,entry\.textWidth-4,122,12\)/);
+    assert.doesNotMatch(source,/ctx\.arc\(|roundText/);
+});
+
 async function withAssets(run){
     const saved={document:globalThis.document,Image:globalThis.Image,fetch:globalThis.fetch,createImageBitmap:globalThis.createImageBitmap,self:globalThis.self};
     const requests=[],context=new Proxy({measureText:text=>({width:text.length*18}),createLinearGradient:()=>({addColorStop(){}}),createRadialGradient:()=>({addColorStop(){}})},{get:(target,key)=>target[key] || (()=>{})});
@@ -40,7 +47,7 @@ test('controller practice uses brief on-screen instructions while reveal effects
     assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='controls-orb-grab').spoken,/expandable Orb/);
     assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='settings-open').spoken,/left thumbstick/);
     for(const id of ['controls-intro','controls-trigger','controls-grip','controls-face','controls-stick','controls-stick-click'])assert.notEqual(WELCOME_PRACTICE_LESSONS.find(l=>l.id===id).optional,true,`${id} is taught in the main route`);
-    const order=WELCOME_PRACTICE_LESSONS.map(lesson=>lesson.id);assert.ok(order.indexOf('controls-grip')<order.indexOf('controls-orb-grab'),'the grip is introduced before using it on the Orb');assert.ok(order.indexOf('controls-orb-open')<order.indexOf('controls-face'),'the Orb is introduced before button actions');assert.ok(order.indexOf('controls-face')<order.indexOf('controls-stick-click'),'the Orb stays central through face-button and stick teaching');
+    const order=WELCOME_PRACTICE_LESSONS.map(lesson=>lesson.id);assert.ok(order.indexOf('controls-orb-intro')<order.indexOf('controls-trigger'),'the Orbs are introduced before teaching keys');assert.ok(order.indexOf('controls-trigger')<order.indexOf('controls-orb-grab'),'the trigger is introduced before using it on the Orb');assert.ok(order.indexOf('controls-grip')<order.indexOf('controls-orb-grab'),'the grip is introduced before using it on the Orb');assert.ok(order.indexOf('controls-orb-open')<order.indexOf('controls-face'),'the Orb is introduced before button actions');assert.ok(order.indexOf('controls-face')<order.indexOf('controls-stick-click'),'the Orb stays central through face-button and stick teaching');
     assert.equal(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='controls-face').optional,undefined,'button introduction is part of the main route');
     for(const id of ['controls-stick','controls-stick-click'])assert.ok(WELCOME_PRACTICE_LESSONS.find(l=>l.id===id).caption);
     assert.doesNotMatch(WELCOME_PRACTICE_RESPONSES.find(l=>l.id==='controls-stick-done').spoken,/flying/);
@@ -52,7 +59,7 @@ test('the two Orbs stay visible and each hand changes only its own light, shell 
     try{
         await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
         const inputs=['left','right'].map((handedness,i)=>({source:{handedness,gamepad:{axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false,value:0}))}},matrix:new THREE.Matrix4().makeTranslation(i?.2:-.2,1.1,-.3).elements,down:false,trigger:false}));
-        stage.start(viewer,0);stage.previewLesson('controls-face');stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.snapshot().controlOrb.visible,true);
+        stage.start(viewer,0);stage.previewLesson('controls-orb-intro');stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.snapshot().controlOrb.visible,true,'both Orbs are shown before the key lessons');assert.equal(stage.snapshot().controlOrb.grabbed,false);stage.previewLesson('controls-trigger');stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.snapshot().controlOrb.visible,true,'the Orbs stay on the table while Zinnia introduces the keys');assert.equal(stage.snapshot().controlOrb.grabbed,false);stage.previewLesson('controls-face');stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.equal(stage.snapshot().controlOrb.visible,true);
         inputs[1].source.gamepad.buttons[4].pressed=true;inputs[0].source.gamepad.buttons[4].pressed=true;inputs[0].source.gamepad.buttons[5].pressed=true;stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});const orbs=stage.snapshot().controlOrb.orbs;assert.equal(orbs.left.visible,true);assert.equal(orbs.right.visible,true);assert.equal(orbs.left.colour,1);assert.equal(orbs.right.colour,0);assert.ok(orbs.left.pulseColour>0 && orbs.right.pulseColour>0);
         stage.previewLesson('controls-stick');inputs[1].source.gamepad.axes=[0,0,.8,.4];stage.update(.05,{viewer,floor:0,inputs,controllers:inputs});assert.ok(stage.snapshot().controlOrb.orbs.right.rotation>0);assert.equal(stage.snapshot().controlOrb.orbs.left.rotation,0);
         assert.ok(stage.tableHeight>.72,'the default table is raised to a more usable position');
@@ -141,7 +148,7 @@ test('fresh startup reaches the table and Zinnia before buttons, with no fruit d
 }));
 
 
-test('grip and trigger move and open the Orb before button actions',()=>withAssets(async()=>{
+test('trigger and grip are explained first, then the Orb anchors face-button actions',()=>withAssets(async()=>{
  const spoken=[],voice={status:()=>({playing:false,paused:false,available:true}),speak:value=>{if(value)spoken.push(value);},stop(){},unlock(){}};
  const stage=createWelcomePracticeScene({voice,embedded:true});
  try{await stage.loading;await settle(()=>stage.snapshot().controllerGuide.filter(e=>e.ready).length===2);

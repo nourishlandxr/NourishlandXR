@@ -6297,6 +6297,7 @@ function drawSpatialAmbientLife(view){
         visitor.flightPosition={...position};visitor.flightAt=arWelcomeClock.elapsed;
         visitor.encounterId=bee.flyby>.65?index+':'+bee.encounterIndex:'';
         bee.worldYaw=(visitor.flightYaw ?? bee.heading)+Math.sin(arWelcomeClock.elapsed*.0017+index)*.16;
+        bee.faceViewer=Boolean(viewerMatrix);
         const displacement=Math.hypot(ambientBeeAvoidance[index]?.x || 0,ambientBeeAvoidance[index]?.y || 0,ambientBeeAvoidance[index]?.z || 0);
         const flowerDistance=visitor.nectarTarget?Math.hypot(position.x-visitor.nectarTarget.x,position.y-visitor.nectarTarget.y,position.z-visitor.nectarTarget.z):Infinity;
         bee.nectar=beeWingsAtRest({nectar:visitor.nectar,flyby:bee.flyby,displacement,speed:visitor.flightSpeed ?? Infinity,flowerDistance,pointerContact:beePointerContact(position,latestControllerRay)});

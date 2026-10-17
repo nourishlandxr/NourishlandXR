@@ -65,14 +65,14 @@ function fixture(){
     const event=(type,source)=>{const e=new Event(type,{cancelable:true});e.inputSource=source;e.frame=frame;session.dispatchEvent(e);return e;};
     return {session,sources,controller,orientation,frame,input,event,get position(){return position;},get rotation(){return rotation;},loseTracking(){tracked=false;}};
 }
-test('one timber ring carries with fixed orientation, reserves its input and prevents a second owner',()=>{
+test('the timber ring accepts two owners, rotates level, and continues with one grip after release',()=>{
     const f=fixture(),[a,b]=f.sources;
     try{
         a.gamepad.buttons[1].pressed=true;assert.equal(f.event('squeezestart',a).defaultPrevented,true);f.input.update(f.frame);assert.equal(f.input.active,true);
-        assert.equal(f.event('select',a).defaultPrevented,true);assert.equal(f.event('squeezestart',b).defaultPrevented,false);assert.equal(f.input.owns(b),false);
+        assert.equal(f.event('select',a).defaultPrevented,true);b.gamepad.buttons[1].pressed=true;assert.equal(f.event('squeezestart',b).defaultPrevented,true);f.input.update(f.frame);assert.equal(f.input.owns(b),true,'the second hand joins the hold for bimanual map rotation');
         for(let angle=.1;angle<Math.PI*4;angle+=.1){f.orientation.setFromAxisAngle(new THREE.Vector3(0,1,0),angle);f.input.update(f.frame);assert.ok(f.rotation.angleTo(identity)<1e-6,'wrist turning cannot rotate the carried map');}
         f.controller.add(new THREE.Vector3(.15,.3,.65));f.input.update(f.frame);assert.ok(f.position.distanceTo(new THREE.Vector3(.15,1.3,-.35))<1e-6);
-        a.gamepad.buttons[1].pressed=false;f.event('squeezeend',a);assert.equal(f.input.active,false);const stopped=f.position.clone();f.controller.z+=.2;f.input.update(f.frame);assert.ok(f.position.equals(stopped));
+        a.gamepad.buttons[1].pressed=false;f.event('squeezeend',a);f.input.update(f.frame);assert.equal(f.input.active,true);assert.equal(f.input.owns(b),true,'the second grip keeps the map held');const before=f.position.clone();f.controller.z+=.2;f.input.update(f.frame);assert.ok(!f.position.equals(before),'the remaining grip still moves the map');b.gamepad.buttons[1].pressed=false;f.event('squeezeend',b);f.input.update(f.frame);assert.equal(f.input.active,false);const stopped=f.position.clone();f.controller.z+=.2;f.input.update(f.frame);assert.ok(f.position.equals(stopped));
     }finally{f.input.destroy();}
 });
 test('tracking loss and source removal release the timber ring',()=>{

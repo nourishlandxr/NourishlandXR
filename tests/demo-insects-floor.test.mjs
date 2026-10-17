@@ -30,6 +30,9 @@ test('bee close inspection moves in three dimensions; ambient orientation follow
  assert.equal(beeRenderYaw({worldYaw:0,heading:2.4}),0);
  assert.equal(beeRenderYaw({heading:2.4,headTurn:.1}),2.5);
  assert.equal(beeRenderYaw({}),0);
+ const viewer=new Float32Array(16);viewer[12]=2;viewer[14]=3;
+ assert.ok(Math.abs(beeRenderYaw({worldYaw:0,flyby:1,viewer,faceViewer:true},{x:1,z:1})-Math.atan2(1,2))<1e-9,'a close inspection turns the bee toward the visitor');
+ assert.ok(Math.abs(beeRenderYaw({worldYaw:0,flyby:.5,viewer,faceViewer:true},{x:1,z:1})-Math.atan2(1,2)*.5)<1e-9,'the turn eases in instead of snapping');
  const shader=read('app/services/demoBeeXR.js');assert.match(shader,/uniforms.yaw,beeRenderYaw\(pose,origin\)/);
  assert.ok(INSECT_VISUALS.beeSize<.2);
 });

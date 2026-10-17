@@ -2,6 +2,11 @@
 // Geometry and colour are uploaded once; both eyes and all bees share one rig.
 export function beeRenderYaw(pose={},origin={x:0,z:0}){
     const flight=Number.isFinite(pose.worldYaw)?pose.worldYaw:pose.heading || 0;
+    if(pose.faceViewer && pose.viewer){
+        const dx=pose.viewer[12]-origin.x,dz=pose.viewer[14]-origin.z,target=Math.atan2(dx,dz),difference=Math.atan2(Math.sin(target-flight),Math.cos(target-flight));
+        const t=Math.max(0,Math.min(1,((pose.flyby || 0)-.25)/.5)),face=t*t*(3-2*t);
+        return flight+difference*face+(pose.headTurn || 0);
+    }
     return flight+(pose.headTurn || 0); // User head movement never steers the bee.
 
 }

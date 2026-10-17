@@ -71,8 +71,8 @@ The catalogue points to candidate models already under `app/assets/welcome-pract
 - `reference-only`: the fruit appears in a supplied picture, but there is no identified individual NLXR model here yet.
 - `species-review-needed`: the picture is ambiguous; confirm the fruit identity before assigning a canonical name.
 
-The ten JPEGs in `references/` remain combined reference sheets. This inventory separates their fruit identities as records; it has not cut out individual image files or created new GLB models. Use `catalog.json` as the starting point for a future local project-loadable catalogue, after validating its asset paths and records.
+The ten JPEGs in `references/` remain preserved as source material. The clearly identified fruit cells from `reference-2.jpg` and the blackberry cell from `reference-9.jpg` have been split into 29 individually addressable, transparent PNG icons in `icons/`; `icons-manifest.json` records each source cell, and `catalog.json` links each supported fruit entry to its icon. The split only crops existing illustrations; it does not create new fruit artwork or GLB models. Other sheets remain untouched where their fruit identity, image quality, or cell boundaries are uncertain.
 
 ## Zinnia hand icons
 
-`zinnia-hand-fruit-atlas.png` supplies seven transparent, individually selected illustrated icons for the favourite-fruit conversation: apple, banana, carambola, fig, mango, peach and pomegranate. They are cropped into individual sprites at runtime. This atlas is separate from the 3D fruit used on the practice table. The other catalogue entries remain reference-only until their hand art and response copy are reviewed.
+Zinnia’s favourite-fruit reveal uses the 29 separate `icons/*.png` entries, plus the existing atlas entry for carambola. Those small hand illustrations are separate from the 3D fruit used on the practice table. Existing recorded Zinnia clips remain limited to apple, banana, carambola, fig, mango, peach and pomegranate; the expanded choices use Zinnia’s normal voice path so no unrelated saved fruit narration is reused.

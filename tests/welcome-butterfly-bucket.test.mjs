@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {createWelcomeButterflyBucket} from '../app/services/welcomeButterflyBucket.js';
 import {createWelcomeGameReplay} from '../app/services/welcomeGameReplay.js';
@@ -46,6 +47,14 @@ test('table stays level while a tilted controller positions it',()=>{
  const table=new THREE.Group(),grab=createWelcomePlacementGrab(table),source={handedness:'right'};grab.begin(source,new THREE.Matrix4().elements);
  const matrix=new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(.65,.4,-.5,'YXZ')).setPosition(.2,1.1,-.4).elements;
  grab.update([{source,matrix,down:true}]);assert.ok(Math.abs(table.rotation.x)<1e-6);assert.ok(Math.abs(table.rotation.z)<1e-6);assert.ok(Math.abs(table.rotation.y)>.1);grab.cancel();
+});
+test('tutorial table follows the holding hand vertically and keeps its foot on the floor',()=>{
+ const source=readFileSync(new URL('../app/services/welcomePracticeScene.js',import.meta.url),'utf8');
+ const start=source.indexOf("if(dt>0 && phase()==='table'"),end=source.indexOf("if(table.visible && !tableOutline.visible",start),placement=source.slice(start,end);
+ assert.match(placement,/placementGrab\.update\(inputs\)/);
+ assert.match(placement,/tableHeight=root\.position\.y-practiceFloorY/);
+ assert.doesNotMatch(placement,/root\.position\.y=practiceFloorY\+tableHeight/);
+ assert.match(placement,/tableParts\.alignFootToFloor\(practiceFloorY\)/);
 });
 test('peeled banana keeps a geometrically smaller half and requires a deliberate mouth approach',()=>{
  const holder=new THREE.Group(),whole=new THREE.Group(),mesh=new THREE.Mesh(new THREE.BoxGeometry(.06,.24,.04),new THREE.MeshBasicMaterial());whole.add(mesh);holder.add(whole);holder.updateMatrixWorld(true);

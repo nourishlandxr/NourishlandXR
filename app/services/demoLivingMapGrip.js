@@ -19,7 +19,7 @@ export function livingMapGripContact(point,origin,rotation){
     return livingMapHandleContact(point,origin,rotation);
 }
 export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMove=()=>{},canUse=()=>true,onGrab=()=>{},responseMs=0}){
-    const held=new Map(),suppressed=new Map();let session=null,space=null,abort=null,lastUpdate=null;
+    const held=new Map(),suppressed=new Map();let session=null,space=null,abort=null,lastUpdate=null,pair=null;
     function sample(source,frame){
         try{
             if(source.hand){const state=handTrackingState(frame,source,space),index=state?.joints.get('index-finger-tip'),thumb=state?.joints.get('thumb-tip'),wrist=state?.joints.get('wrist');if(!state?.tracked || !index || !thumb || !wrist)return null;return {position:{x:(index.x+thumb.x)/2,y:(index.y+thumb.y)/2,z:(index.z+thumb.z)/2},up:{x:wrist.matrix[4],y:wrist.matrix[5],z:wrist.matrix[6]},pressed:state.pinch,tracked:true};}
@@ -29,7 +29,7 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
     }
     function begin(source,frame){
         if(!enabled() || !canUse(source) || held.has(source))return held.has(source);
-        if(held.size)return false; // One owner carries the map; a second hand cannot steal it.
+        if(held.size>=2)return false;
         const value=sample(source,frame);if(!value)return false;let contact=value.position,remote=false,anchor=null;
         if(!livingMapGripContact(contact,origin(),rotation()) && !source.hand){
             const pose=frame?.getPose(source.targetRaySpace,space);if(!pose)return false;
@@ -47,10 +47,10 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
         // Translation carries the contact. Wrist rotation must not swing a
         // distant ray-length offset around the controller like a lever.
         const local=anchor || livingMapHandleAnchor(livingMapGripContact(contact,origin(),rotation()));
-        held.set(source,{offset,anchor:local,side:0,position:vector(value.position),origin:vector(origin()),rotation:quaternion(rotation()),orientation:value.orientation?.clone(),turn:0,depth:0});onGrab(source);return true;
+        held.set(source,{offset,anchor:local,side:0,position:vector(value.position),origin:vector(origin()),rotation:quaternion(rotation()),orientation:value.orientation?.clone(),turn:0,depth:0});pair=null;onGrab(source);return true;
     }
     function release(source){if(!held.has(source))return false;held.delete(source);suppressed.set(source,performance.now()+400);return true;}
-    function reset(){held.clear();lastUpdate=null;}
+    function reset(){held.clear();pair=null;lastUpdate=null;}
     return {
         get active(){return held.size>0;},owns:source=>held.has(source),
         get heldHandles(){return [...held.values()].map(grip=>grip.side);},
@@ -74,10 +74,25 @@ export function createLivingMapGripInput({enabled,origin,rotation,onRotate,onMov
                 if(!value.pressed){release(source);continue;}
                 const grip=held.get(source);if(!grip)continue;
                 const position=vector(value.position).add(grip.offset);
-                samples.push({...value,position,source,handedness:source.handedness});
+                samples.push({...value,rawPosition:vector(value.position),position,source,handedness:source.handedness});
             }
             for(const source of held.keys())if(!samples.some(s=>s.source===source))release(source);
             const now=frame.predictedDisplayTime ?? performance.now(),dt=lastUpdate===null?16:Math.max(1,now-lastUpdate);lastUpdate=now;
+            if(samples.length>=2){
+                const [first,second]=samples,midpoint=first.position.clone().add(second.position).multiplyScalar(.5),spanStart=pair?.spanStart || second.position.clone().sub(first.position),spanNow=second.position.clone().sub(first.position),startLength=Math.hypot(spanStart.x,spanStart.z),nowLength=Math.hypot(spanNow.x,spanNow.z);
+                if(!pair || pair.sources[0]!==first.source || pair.sources[1]!==second.source){pair={sources:[first.source,second.source],spanStart:spanStart.clone(),midpointStart:midpoint.clone(),origin:vector(origin()),rotation:quaternion(rotation())};}
+                const angle=startLength>.025 && nowLength>.025?Math.atan2(spanStart.z*spanNow.x-spanStart.x*spanNow.z,spanStart.x*spanNow.x+spanStart.z*spanNow.z):0;
+                const moved=pair.origin.clone().add(midpoint.sub(pair.midpointStart));
+                const turned=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),angle).multiply(pair.rotation);
+                const blend=responseMs>0?1-Math.exp(-dt/responseMs):1;
+                onMove(vector(origin()).lerp(moved,blend));onRotate(quaternion(rotation()).slerp(limitLivingMapTilt(turned),blend));
+                for(const sample of samples){const grip=held.get(sample.source);if(grip)grip.currentPosition=sample.rawPosition;}
+                return;
+            }
+            if(pair){
+                pair=null;const remaining=samples[0],grip=remaining&&held.get(remaining.source);
+                if(grip){grip.origin=vector(origin());grip.rotation=quaternion(rotation());grip.position=remaining.rawPosition.clone();grip.turn=grip.depth=0;}
+            }
             const carrying=samples[0],grip=carrying && held.get(carrying.source);
             if(grip){
                 const axes=carrying.source.gamepad?.axes || [],start=axes.length>=4?2:0,seconds=Math.min(50,dt)/1000;
