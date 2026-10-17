@@ -70,7 +70,7 @@ export function createWelcomeOptionalGame(id,root,{onAssets=()=>{},onFeedback=()
         stepPracticeBodies(bodies,dt);sync();
     }
     function hints(){
-        if(flight)return asset==='loading'?['Loading the dragonfly…']:asset==='error'?['Dragonfly model could not load. Reload to retry.']:[flight.cue,'Wrist → Change controllers → Insect flight. Trigger to fly; stick to steer / climb.','With hands, hold and guide the dragonfly through rings.'];
+        if(flight)return asset==='loading'?['Loading the dragonfly…']:asset==='error'?['Dragonfly model could not load. Reload to retry.']:[flight.cue,'Wrist → Change controllers → Insect flight. Lift to rise; lower to descend; turn wrist to steer. Trigger: forward · Grip: back · Stick: fine tune.','With hands, hold and guide the dragonfly through rings.'];
         const instruction={packet:'Hold the packet; trigger or pinch its seal to open.',seed:'Pick up the tiny seed and release it onto the soil.',water:'Hold the watering can by its handle and tilt over the pot.',grow:'Watch the strawberry plant grow and ripen.',harvest:'Pick the ripe strawberries and put them in the basket.'};
         return [instruction[phase()],phase()==='grow'?`Growth ${Math.round(garden.snapshot().growth*100)}%`:`Collected ${props.snapshot().harvestCount} of 3 strawberries.`];
     }

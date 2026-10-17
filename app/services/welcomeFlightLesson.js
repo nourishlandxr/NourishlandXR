@@ -22,10 +22,12 @@ export function createWelcomeFlightLesson(root,dragon,landing,{onFeedback=()=>{}
     const target=Math.atan2(-aim.x,-aim.z)+stickHeading;
     heading+=Math.atan2(Math.sin(target-heading),Math.cos(target-heading))*(1-Math.exp(-dt*7));
    }else heading-=steer*dt*1.65;
-   const handClimb=aim?Math.sign(aim.y)*Math.max(0,Math.abs(aim.y)-.12)/.88:0;
-   desired.set(-Math.sin(heading)*speed*.65,vertical*.55+handClimb*Math.abs(speed)*.42,-Math.cos(heading)*speed*.65);
+   // Controller pitch is a direct lift / drop axis. Keep it independent of
+   // throttle so users can descend and land after releasing forward flight.
+   const handClimb=aim?Math.sign(aim.y)*Math.max(0,Math.abs(aim.y)-.08)/.92:0;
+   desired.set(-Math.sin(heading)*speed*.8,vertical*.75+handClimb*1.05,-Math.cos(heading)*speed*.8);
    if(desired.lengthSq()>.001)airborne=true;
-   if(airborne){velocity.lerp(desired,1-Math.exp(-dt*8));delta.copy(velocity).multiplyScalar(dt);position.add(delta);position.x=THREE.MathUtils.clamp(position.x,-3.5,3.5);position.y=THREE.MathUtils.clamp(position.y,.035,2.2);position.z=THREE.MathUtils.clamp(position.z,-3.5,2.5);dragon.group.rotation.y=heading;dragon.group.rotation.z=THREE.MathUtils.damp(dragon.group.rotation.z,aim?THREE.MathUtils.clamp(-(pilot.up?.x||0)*.28,-.28,.28):0,8,dt);}
+   if(airborne){velocity.lerp(desired,1-Math.exp(-dt*10));delta.copy(velocity).multiplyScalar(dt);position.add(delta);position.x=THREE.MathUtils.clamp(position.x,-3.5,3.5);position.y=THREE.MathUtils.clamp(position.y,.035,2.2);position.z=THREE.MathUtils.clamp(position.z,-3.5,2.5);dragon.group.rotation.y=heading;dragon.group.rotation.z=THREE.MathUtils.damp(dragon.group.rotation.z,aim?THREE.MathUtils.clamp(-(pilot.up?.x||0)*.28,-.28,.28):0,8,dt);}
   }else if(!landed && airborne){velocity.multiplyScalar(Math.exp(-dt*5));position.addScaledVector(velocity,dt);}
   else {position.copy(start);velocity.set(0,0,0);}
   if(lesson && airborne && count<entries.length){const entry=entries[count],a=before.clone().sub(entry.point).dot(entry.normal),b=position.clone().sub(entry.point).dot(entry.normal);if(a*b<=0 && Math.abs(a-b)>.0001){const cross=before.clone().lerp(position,a/(a-b));if(cross.distanceTo(entry.point)<.145){count++;onFeedback('ring',pilot?.source);}}}
