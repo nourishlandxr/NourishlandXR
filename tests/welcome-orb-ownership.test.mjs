@@ -27,3 +27,17 @@ test('either hand can grab either practice Orb while collisions keep the pair ap
   assert.ok(Math.hypot(left.position[0]-right.position[0],left.position[1]-right.position[1],left.position[2]-right.position[2])>=.143,'the Orbs do not pass through each other');
  }finally{practice.destroy();}
 });
+
+test('Orb interactions unlock during key practice so users can learn while holding one',()=>{
+ const root=new THREE.Group(),practice=createWelcomeControlOrb(root),hand={handedness:'right',gamepad:{axes:[0,0,0,0],buttons:[]}};
+ const input={source:hand,matrix:new THREE.Matrix4().makeTranslation(-.29,.2,.14).toArray(),down:false,trigger:false};
+ root.updateMatrixWorld(true);
+ try{
+  practice.update(.016,'controls-orb-intro',[input],[],{visible:true});
+  practice.update(.016,'controls-trigger',[input],[],{visible:true});
+  input.down=true;practice.update(.016,'controls-trigger',[input],[],{visible:true});
+  assert.equal(practice.isHolding(hand),true,'grabbing is already available during trigger practice');
+  input.trigger=true;practice.update(.016,'controls-trigger',[input],[],{visible:true});
+  assert.equal(practice.snapshot().orbs.left.opened,true,'trigger practice can open the held Orb');
+ }finally{practice.destroy();}
+});
