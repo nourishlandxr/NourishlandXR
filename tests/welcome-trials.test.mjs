@@ -99,3 +99,25 @@ test('Peek frame keeps its 60 by 40 cm dimensions and follows a grip in all mode
   assert.ok(frame.position.x>.19);assert.ok(frame.position.y>.49);trial.destroy();
  }
 }));
+
+test('finishing hand-tracked Tic-Tac-Toe reveals the Living Frame and two hands can scale it to twice size',()=>withCanvas(()=>{
+ const root=new THREE.Group(),trial=createWelcomePracticeTrials(root);trial.open('tic-tac-toe');
+ const frame=root.getObjectByName('Grabbable 60 by 40 cm Peek frame');assert.ok(frame);assert.equal(frame.visible,false);
+ for(let turn=0;turn<9 && !trial.snapshot().game.finished;turn++){
+  const index=trial.snapshot().game.cells.findIndex(cell=>!cell);if(index<0)break;
+  assert.equal(trial.command('cell:'+index),true);
+  for(let wait=0;wait<13;wait++)trial.update(.06,{visible:true,inputs:[]});
+ }
+ assert.equal(trial.snapshot().game.finished,true);assert.equal(frame.visible,true);assert.equal(trial.snapshot().peekFrameRevealed,true);
+ const left={hand:{},handedness:'left'},right={hand:{},handedness:'right'},y=frame.position.y,z=frame.position.z;
+ const hand=(source,x,down)=>{const input=inputAt(root,source,x,y,z,down,down);input.pinchPoint={x,y,z};return input;};
+ trial.update(.05,{visible:true,inputs:[hand(left,-.05,false),hand(right,.05,false)]});
+ trial.update(.05,{visible:true,inputs:[hand(left,-.05,true),hand(right,.05,true)]});
+ assert.equal(trial.snapshot().peekFrameTouched,true);
+ trial.update(.05,{visible:true,inputs:[hand(left,-.10,true),hand(right,.10,true)]});
+ assert.ok(Math.abs(trial.snapshot().peekFrameScale-2)<1e-6);
+ trial.update(.05,{visible:true,inputs:[hand(left,-.10,false),hand(right,.10,true)]});
+ trial.update(.05,{visible:true,inputs:[hand(right,.12,true)]});
+ assert.equal(trial.snapshot().peekFrameScale,2,'single-hand continuation should not snap the resized frame');
+ trial.destroy();
+}));

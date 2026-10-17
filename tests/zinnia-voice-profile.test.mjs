@@ -6,13 +6,17 @@ import {DEMO_NARRATION_BANK as demo} from '../app/services/demoNarrationBank.js'
 import {ZINNIA_VOICE_DELIVERY,ZINNIA_VOICE_PROFILE} from '../tools/zinniaVoiceServer.mjs';
 import {spokenFrameLead} from '../app/services/demoVoiceTextFlow.js';
 
-test('tutorial, demo and live speech use the same refined OpenAI delivery',()=>{
+test('tutorial, demo and live speech use the same current Marin V14 profile',()=>{
  for(const bank of [tutorial,demo]){
+  assert.equal(bank.provider,'OpenAI');
+  assert.equal(bank.model,ZINNIA_VOICE_PROFILE.model);
   assert.equal(bank.delivery,ZINNIA_VOICE_DELIVERY);
   assert.equal(bank.instructions,ZINNIA_VOICE_PROFILE.instructions);
-  assert.equal(bank.voice,'marin');
+  assert.equal(bank.voice,ZINNIA_VOICE_PROFILE.voice);
   for(const id of bank.clips)assert.ok(fs.statSync(new URL('../app/'+bank.base+id+'.mp3',import.meta.url)).size>1000,id);
  }
+ assert.equal(ZINNIA_VOICE_PROFILE.voice,'marin');
+ assert.equal(ZINNIA_VOICE_DELIVERY,'v14-friendly-marin-1');
  assert.match(ZINNIA_VOICE_PROFILE.instructions,/smooth word joins and soft, clear word endings/);
  assert.match(ZINNIA_VOICE_PROFILE.instructions,/ordinary comfortable pace/);
 });

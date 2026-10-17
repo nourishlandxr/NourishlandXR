@@ -5,6 +5,7 @@ import {DEMO_NARRATION_BANK as bank} from '../app/services/demoNarrationBank.js'
 import {DEMO_GUIDED_STEPS} from '../app/features/ar-demo/demoJourneyContent.js';
 import {normalizeNarrationText,projectNarrationSegments} from '../app/services/projectNarration.js';
 import {demoNarrationContent} from '../tools/demo-narration-content.mjs';
+import {ZINNIA_VOICE_DELIVERY,ZINNIA_VOICE_PROFILE} from '../tools/zinniaVoiceServer.mjs';
 
 test('opening demo screen contains only its heading and first narrated paragraph',()=>{
     const opening=DEMO_GUIDED_STEPS.find(step=>step.id==='INTRO 1.1');
@@ -36,9 +37,11 @@ test('every authored main-demo paragraph has a complete saved friendly Marin rec
     }
 });
 
-test('extra demo guidance uses live speech instead of old Ava recordings',()=>{
+test('extra demo guidance uses live speech from the shared current Zinnia profile',()=>{
     const extra='This unique demo guidance has no saved recording yet.';
     assert.deepEqual(projectNarrationSegments(extra,{demo:true}),[{id:'project-guidance',spoken:extra,spokenOverride:true}]);
+    assert.equal(bank.voice,ZINNIA_VOICE_PROFILE.voice);
+    assert.equal(bank.delivery,ZINNIA_VOICE_DELIVERY);
     const source=fs.readFileSync(new URL('../app/screens/temporaryArDemo.js',import.meta.url),'utf8');
     assert.match(source,/demoProjectVoice=createProjectNarration\(\{demo:true/);
 });

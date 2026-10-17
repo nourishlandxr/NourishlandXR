@@ -1,21 +1,30 @@
-# Zinnia recording
+# Zinnia narration recording
 
-The supported replacement is OpenAI's Audio Speech API, using `gpt-4o-mini-tts` and `coral`, matching the live speech route. This changes the previous Ava voice: regenerate the whole tutorial together so stages do not mix voices.
+The active tutorial, demo, and live-speech profile is defined once in `tools/zinniaVoiceServer.mjs`:
 
-1. Use your configured Node server without copying its key: `node tools/record-zinnia-narration.mjs --server=https://nourishland.org/xr-api`. The server must have speech enabled. Requests are paced below its per-minute limit.
+- Voice: OpenAI Marin
+- Model: `gpt-4o-mini-tts`
+- Delivery: `v14-friendly-marin-1`
 
-Alternatively, configure `OPENAI_API_KEY` in the local process environment with API billing enabled. Never commit it.
-2. Run `node tools/record-zinnia-narration.mjs --plan` to see the scope without making paid requests.
-3. Run `node tools/record-zinnia-narration.mjs`. Generation uses paid API requests once; saved tutorial playback requires no API call.
-4. The recorder resumes saved clips and activates the new bank only after every clip is complete. Failures leave the existing bank active.
-5. Increment `app/services/buildInfo.js`, build, and review the welcome narration, fruit pickup, cutting, pause and replay before deployment.
+The tutorial and demo recorders import this profile. The hosted `/zinnia/speech` route uses it too and returns the delivery identifier in `X-Zinnia-Delivery`. Do not pass a separate voice or delivery value to create a new narration bank.
 
-Old audio is retained. Dynamic personalised speech uses the same Coral voice only after the Coral tutorial bank is active. If live speech fails, captions remain; device speech is never substituted.
+## Record a bank
+
+Use the authenticated speech server so no API key enters the workspace:
+
+```powershell
+node tools/record-zinnia-narration.mjs --plan
+node tools/record-zinnia-narration.mjs --server=https://nourishland.org/xr-api
+node tools/record-demo-narration.mjs --plan
+node tools/record-demo-narration.mjs --server=https://nourishland.org/xr-api
+```
+
+Recording makes paid speech requests. The scripts pace requests, resume valid saved files, and activate a bank only after all clips are complete. The hosted response must carry the expected delivery identifier. Local direct API recording is also supported with `OPENAI_API_KEY` configured in the process environment; never commit or paste the key.
+
+Saved clips play locally after they are bundled. Uncatalogued tutorial replies and demo guidance use the same live Marin V14 profile, but each new synthesis can vary slightly in intonation and timing. For a line that must sound identical every time, add an approved recording to the active bank and make its catalogue text exactly match the spoken text. Do not use device speech synthesis as an alternate Zinnia voice.
+
+After changing narration content or banks, increment `app/services/buildInfo.js` by `0.0001`, run the voice tests and frontend build, and review the welcome version before deployment. Test the saved/live transition and playback on Quest as a separate device check.
+
+Legacy audio banks remain archived and are not selected by the active pointers: `app/services/welcomeNarrationBank.js` and `app/services/demoNarrationBank.js`.
 
 Official API documentation: https://developers.openai.com/api/docs/guides/text-to-speech
-
-## Approved OpenAI V13 delivery
-
-Tutorial and demo recorders import one profile from `tools/zinniaVoiceServer.mjs`. The hosted route returns `X-Zinnia-Delivery: v13-approved-1`; recorders reject a successful response with the wrong profile marker. The bank hash includes the delivery instructions, so existing basic recordings are not reused. Each active bank records its instructions and delivery version. Live replies use the same delivery.
-
-V13 is the approved 23-year-old flower character delivery. OpenAI Coral keeps normal playback rate; the prompt asks for a light upper-middle register, connected conversational phrasing, gentle warmth and naturally released word endings. Background music and short echo remain separate from the saved voice recordings.

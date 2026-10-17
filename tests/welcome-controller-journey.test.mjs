@@ -34,10 +34,10 @@ test('brush V2 retains the official grip model and animated controls at full vir
  }finally{guide.destroy();}
 }));
 
-test('the insect controller remains visible after virtual hands are fully revealed',()=>withAssets(async()=>{
+test('RC Bug V2 keeps the original Meta controller visible after virtual hands are fully revealed',()=>withAssets(async()=>{
  const scene=new THREE.Scene(),guide=createWelcomeControllerGuide(scene),source={handedness:'right',profiles:['meta-quest-touch-plus'],gamepad:{axes:[0,0,0,0],buttons:Array.from({length:6},()=>({value:0,pressed:false}))}};
  try{await guide.preload([source]);const pose=new THREE.Matrix4().makeRotationY(.4);pose.setPosition(.2,1.1,-.4);const input={source,matrix:pose.elements,trigger:false,down:false};guide.update(.05,[input],'fly',null,false,1,'insect',{handReveal:{right:1}});
-  const group=scene.children.find(node=>node.userData.welcomeAlwaysConvert),prototype=scene.getObjectByName('Nourishland insect controller prototype');assert.ok(group?.visible);assert.equal(group.children.some(node=>node.name==='controller_mesh' && node.visible),false);assert.ok(prototype?.visible);assert.equal(group.matrix.equals(pose),true);
+  const group=scene.children.find(node=>node.userData.welcomeAlwaysConvert),hardware=scene.getObjectByName('controller_mesh'),attachment=scene.getObjectByName('RC Bug controller V2 flight controls');assert.ok(group?.visible);assert.ok(hardware?.visible);assert.ok(attachment?.visible);assert.ok(scene.getObjectByName('Flight pod base'));assert.ok(scene.getObjectByName('RC Bug V2 bezel · a_button'));assert.equal(scene.getObjectByName('Nourishland insect controller prototype'),undefined);assert.equal(group.matrix.equals(pose),true);
  }finally{guide.destroy();}
 }));
 

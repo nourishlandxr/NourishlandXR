@@ -8,6 +8,7 @@ import {createWelcomePlacementGrab} from '../app/services/welcomePlacementGrab.j
 import {unlockWelcomeInputChoice,welcomeInputChoiceUnlocked} from '../app/services/welcomeExperienceUnlock.js';
 import {prepareBananaHalf,tryBananaBite} from '../app/services/welcomeBananaBite.js';
 import {panelSettingsControls} from '../app/services/pimInfoPanel.js';
+import {stepPracticeBodies} from '../app/services/welcomePracticePhysics.js';
 
 test('butterfly pinch releases to brief flight without inventing missing hand perches',async()=>{
  const root=new THREE.Group();root.position.set(1,.8,-2);root.rotation.y=.7;root.updateMatrixWorld(true);
@@ -27,6 +28,14 @@ test('three upside-down cups hide butterflies until the correct one is lifted',a
  const move=(point,down)=>{input.matrix=new THREE.Matrix4().setPosition(point).elements;input.trigger=down;bucket.update(.05,[input]);};
  const lift=cup=>{const point=cup.position.clone().add(new THREE.Vector3(0,.073,0));move(point,false);move(point,true);move(point.add(new THREE.Vector3(0,.2,0)),true);move(point,false);};
  try{assert.equal(bucket.cups.length,3);assert.ok(bucket.cups.every(cup=>Math.abs(cup.rotation.x-Math.PI)<1e-6));for(let i=0;i<30;i++)bucket.update(.05,[]);assert.equal(bucket.snapshot().burst,false,'time alone cannot reveal the surprise');lift(bucket.cups[1]);assert.equal(bucket.snapshot().burst,false,'empty cup must not release butterflies');lift(bucket.bucket);assert.equal(bucket.snapshot().burst,true);assert.equal(bucket.snapshot().insects.length,3);}finally{bucket.destroy();}
+});
+test('butterfly cups are physical, reusable table props that settle after release',async()=>{
+ const root=new THREE.Group(),game=createWelcomeButterflyBucket(root,{load:async()=>[]}),source={handedness:'right',hand:{}},input={source,trigger:false};await game.loading;
+ const body=game.physicsBodies()[0],cup=game.cups[0],bottom=cup.position.clone().add(new THREE.Vector3(0,-.073,0).applyQuaternion(cup.quaternion));
+ const move=(point,down)=>{input.matrix=new THREE.Matrix4().setPosition(point).elements;input.trigger=down;game.update(.05,[input]);};
+ try{assert.equal(game.physicsBodies().length,3);assert.equal(body.visible,true);move(bottom,false);move(bottom,true);assert.equal(body.held,true);move(bottom.clone().add(new THREE.Vector3(0,.12,0)),true);move(bottom.clone().add(new THREE.Vector3(0,.12,0)),false);assert.equal(body.held,false,'release gives physics ownership back to the scene');
+  body.position.y=.4;for(let i=0;i<90;i++)stepPracticeBodies([body],1/60,{floor:-.6});game.syncPhysics();assert.ok(Math.abs(cup.position.y-body.position.y)<1e-8);assert.ok(Math.abs(body.position.y-body.halfSize.y)<.015,'released cup settles on the table surface');
+ }finally{game.destroy();}
 });
 test('only a completed tic-tac-toe outcome unlocks the free input choice',()=>{
  const saved=globalThis.sessionStorage,values=new Map();globalThis.sessionStorage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
