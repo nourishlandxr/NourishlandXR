@@ -42,10 +42,10 @@ test('the insect controller remains visible after virtual hands are fully reveal
 }));
 
 test('controller practice uses brief on-screen instructions while reveal effects stay silent',()=>{
-    const quiet=['frame','table-reveal','zinnia-reveal','virtual-hands-reveal','basket-reveal','practice-ready','controls-stick','controls-stick-click','butterflies'];
+    const quiet=['frame','table-reveal','zinnia-reveal','zinnia','settings-open','virtual-hands-reveal','basket-reveal','practice-ready','controls-stick','controls-stick-click','butterflies'];
     for(const lesson of WELCOME_PRACTICE_LESSONS)if(quiet.includes(lesson.id))assert.equal(lesson.silent,true,lesson.id);else{assert.ok(lesson.spoken?.trim(),lesson.id);assert.notEqual(lesson.silent,true,lesson.id);}
     assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='controls-orb-grab').spoken,/expandable Orb/);
-    assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='settings-open').spoken,/left thumbstick/);
+    assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='settings-open').caption,/left thumbstick/);
     for(const id of ['controls-intro','controls-trigger','controls-grip','controls-face','controls-stick','controls-stick-click'])assert.notEqual(WELCOME_PRACTICE_LESSONS.find(l=>l.id===id).optional,true,`${id} is taught in the main route`);
     const order=WELCOME_PRACTICE_LESSONS.map(lesson=>lesson.id);assert.ok(order.indexOf('controls-orb-intro')<order.indexOf('controls-trigger'),'the Orbs are introduced before teaching keys');assert.ok(order.indexOf('controls-trigger')<order.indexOf('controls-orb-grab'),'the trigger is introduced before using it on the Orb');assert.ok(order.indexOf('controls-grip')<order.indexOf('controls-orb-grab'),'the grip is introduced before using it on the Orb');assert.ok(order.indexOf('controls-orb-open')<order.indexOf('controls-face'),'the Orb is introduced before button actions');assert.ok(order.indexOf('controls-face')<order.indexOf('controls-stick-click'),'the Orb stays central through face-button and stick teaching');
     assert.equal(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='controls-face').optional,undefined,'button introduction is part of the main route');
@@ -66,21 +66,23 @@ test('the two Orbs stay visible and each hand changes only its own light, shell 
     }finally{stage.destroy();}
 }));
 
-test('fruit stays in Games while the brush leads to a bee or firefly RC choice',()=>withAssets(async requests=>{
+test('fruit and RC flight stay in Games with bee and firefly choices',()=>withAssets(async requests=>{
     const lessons=WELCOME_PRACTICE_LESSONS.map(item=>item.id);
-    assert.ok(lessons.indexOf('brush')<lessons.indexOf('rc-choice') && lessons.indexOf('rc-choice')<lessons.indexOf('fly') && lessons.indexOf('fly')<lessons.indexOf('hands'));
+    assert.ok(lessons.indexOf('brush')<lessons.indexOf('hands'));
+    assert.equal(WELCOME_PRACTICE_LESSONS.find(item=>item.id==='rc-choice').optional,true);
+    assert.equal(WELCOME_PRACTICE_LESSONS.find(item=>item.id==='fly').optional,true);
     for(const id of ['basket','basket-reveal','practice-ready','grab','fruit'])assert.equal(WELCOME_PRACTICE_LESSONS.find(item=>item.id===id).optional,true);
     const voice={status:()=>({playing:false,paused:false,available:true}),speak(){},stop(){},unlock(){}};
     const stage=createWelcomePracticeScene({voice,embedded:true});
     try{
         await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;
         const inputs=['left','right'].map(handedness=>({source:{handedness,gamepad:{buttons:Array.from({length:6},()=>({pressed:false})),axes:[0,0,0,0]}},matrix:new THREE.Matrix4().makeTranslation(0,1.1,-.3).elements,down:false,trigger:false}));
-        stage.start(viewer,0);stage.previewLesson('rc-choice');stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});
+        stage.start(viewer,0);assert.equal(stage.openGame('rc-flight'),true);stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});
         inputs[1].source.gamepad.buttons[4].pressed=true;stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});
         assert.equal(stage.snapshot().flightCompanion,'firefly');
         for(let i=0;i<45;i++)stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});
         assert.equal(stage.phase,'fly');assert.ok(!requests.some(url=>/banana\.glb|fruit-collection/.test(url)));
-        stage.previewLesson('rc-choice');inputs[1].source.gamepad.buttons[4].pressed=false;stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});
+        assert.equal(stage.openGame('rc-flight'),true);inputs[1].source.gamepad.buttons[4].pressed=false;stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});
         inputs[0].source.gamepad.buttons[4].pressed=true;stage.update(.05,{viewer,floor:0,controllers:inputs,inputs});
         assert.equal(stage.snapshot().flightCompanion,'bee');assert.ok(requests.some(url=>/bee\.glb/.test(url)));
     }finally{stage.destroy();}

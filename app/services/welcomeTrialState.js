@@ -2,6 +2,7 @@
 export const WELCOME_PRACTICE_GROUPS=Object.freeze([
     {id:'orb-dance',label:'Orb and dance with Zinnia',input:'controllers'},
     {id:'fruit-brush',label:'Fruit discovery',input:'gloves'},
+    {id:'rc-flight',label:'Bee and firefly flight',input:'controllers'},
     {id:'hand-play',label:'Butterfly bucket and tic-tac-toe',input:'hands'}
 ]);
 export const WELCOME_TRIALS=Object.freeze([

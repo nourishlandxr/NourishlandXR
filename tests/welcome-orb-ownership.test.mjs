@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
 import {createWelcomeControlOrb} from '../app/services/welcomeControlOrb.js';
 import {WELCOME_PRACTICE_LESSONS} from '../app/services/welcomePracticeContent.js';
+import {WELCOME_PRACTICE_GROUPS} from '../app/services/welcomeTrialState.js';
 
 test('the Orbs are introduced first, keys follow, then Orb activities',()=>{
  const ids=WELCOME_PRACTICE_LESSONS.map(lesson=>lesson.id);
@@ -11,6 +12,19 @@ test('the Orbs are introduced first, keys follow, then Orb activities',()=>{
  assert.ok(ids.indexOf('controls-trigger')<ids.indexOf('controls-orb-grab'));
  assert.ok(ids.indexOf('controls-grip')<ids.indexOf('controls-orb-grab'));
  assert.ok(ids.indexOf('controls-orb-open')<ids.indexOf('controls-face'));
+});
+
+test('RC flight is an optional Games activity, not part of the guided tutorial',()=>{
+ const rc=WELCOME_PRACTICE_LESSONS.filter(lesson=>['rc-choice','fly'].includes(lesson.id));
+ assert.equal(rc.length,2);assert.ok(rc.every(lesson=>lesson.optional));
+ assert.ok(WELCOME_PRACTICE_GROUPS.some(group=>group.id==='rc-flight' && /bee and firefly/i.test(group.label)));
+});
+
+test('practice Orbs stay visible through joystick click and menu teaching',()=>{
+ const root=new THREE.Group(),practice=createWelcomeControlOrb(root),left={handedness:'left',gamepad:{axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false}))}},right={handedness:'right',gamepad:{axes:[0,0,0,0],buttons:Array.from({length:6},()=>({pressed:false}))}};
+ const inputs=[left,right].map(source=>({source,matrix:new THREE.Matrix4().makeTranslation(source.handedness==='left'?-.29:.29,.2,.14).toArray(),down:false,trigger:false}));root.updateMatrixWorld(true);
+ try{for(const phase of ['controls-stick-click','settings-open','settings-close']){practice.update(.016,phase,inputs,[],{visible:true});assert.equal(practice.snapshot().visible,true,`both Orbs remain visible in ${phase}`);}}
+ finally{practice.destroy();}
 });
 
 test('either hand can grab either practice Orb while collisions keep the pair apart',()=>{

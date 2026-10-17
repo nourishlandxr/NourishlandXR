@@ -5,11 +5,12 @@ import {WELCOME_PRACTICE_LESSONS} from '../app/services/welcomePracticeContent.j
 import {WELCOME_NARRATION_BANK} from '../app/services/welcomeNarrationBank.js';
 
 test('opening slides have exact saved Zinnia audio, including the welcome',()=>{
- for(const id of ['title','arrival','table','face','zinnia','living-frame','controls-intro']){
+ for(const id of ['title','arrival','table','face','living-frame','controls-intro']){
   const lesson=WELCOME_PRACTICE_LESSONS.find(l=>l.id===id);
   assert.equal(WELCOME_NARRATION_BANK.catalog[id].text,lesson.spoken,id);
   for(const paragraph of lesson.paragraphs || [])assert.ok(lesson.spoken.includes(paragraph),id+' paragraph matches speech');
  }
+ const removed=WELCOME_PRACTICE_LESSONS.find(l=>l.id==='zinnia');assert.equal(removed.silent,true);assert.equal(removed.spoken,'');assert.doesNotMatch(removed.caption,/Here I am/i);
 });
 test('opening paragraph reveal follows playback and holds its position while paused',()=>{
  const lesson=WELCOME_PRACTICE_LESSONS.find(l=>l.id==='title');

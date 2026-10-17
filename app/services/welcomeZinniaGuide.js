@@ -57,7 +57,7 @@ export function createWelcomeZinniaGuide(root,{voice,onAssets=()=>{},onError=()=
     function updateCradle(){
         const left=parts.Leaf_arm_L?.userData.guidePivot,right=parts.Leaf_arm_R?.userData.guidePivot;if(!left || !right)return;
         left.getWorldPosition(cradlePoint);right.getWorldPosition(shoulderPoint);cradlePoint.add(shoulderPoint).multiplyScalar(.5);root.worldToLocal(cradlePoint);
-        presentationSocket.position.copy(cradlePoint).add(shoulderPoint.set(0,.09,.095));presentationSocket.updateWorldMatrix(true,false);
+        presentationSocket.position.copy(cradlePoint).add(shoulderPoint.set(0,.065,.045));presentationSocket.updateWorldMatrix(true,false);
     }
     function update(dt,{lesson,target:taskTarget,viewer,success=false,focused=false,cue=null,reaction=null,leafTargets=null}={}){
         // The tutorial owns visibility and its white silhouette reveal.

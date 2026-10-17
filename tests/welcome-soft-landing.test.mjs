@@ -12,13 +12,21 @@ import {welcomePracticeVisualGuide} from '../app/services/welcomeComfortOptions.
 import {createWelcomeObjectReveal} from '../app/services/welcomeObjectReveal.js';
 import {createWelcomePracticeVoice} from '../app/services/welcomePracticeVoice.js';
 
-test('arrival leads through the two Orbs, brush and RC before tracked hands; fruit remains optional',()=>{
+test('arrival leads through the two Orbs and brush before tracked hands; RC and fruit remain optional',()=>{
     const before=(a,b)=>assert.ok(lessons.findIndex(l=>l.id===a)<lessons.findIndex(l=>l.id===b),`${a} precedes ${b}`);
-    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','controls-intro');before('controls-intro','controls-orb-intro');before('controls-orb-intro','controls-trigger');before('controls-trigger','controls-grip');before('controls-grip','controls-orb-grab');before('controls-orb-open','controls-face');before('controls-face','controls-stick');before('controls-stick','controls-stick-click');before('controls-stick-click','settings-open');before('settings-close','laser-intro');before('laser-zinnia','comfort');before('settings-close','interaction-methods');before('hand-game','interaction-methods');before('virtual-hands-reveal','gloves');before('gloves','brush');before('brush','rc-choice');before('rc-choice','fly');before('fly','hands');assert.equal(lessons.find(l=>l.id==='fruit').optional,true);
+    before('arrival','table');before('table-reveal','face');before('zinnia','living-frame');before('visitor-intro','controls-intro');before('controls-intro','controls-orb-intro');before('controls-orb-intro','controls-trigger');before('controls-trigger','controls-grip');before('controls-grip','controls-orb-grab');before('controls-orb-open','controls-face');before('controls-face','controls-stick');before('controls-stick','controls-stick-click');before('controls-stick-click','settings-open');before('settings-close','laser-intro');before('laser-zinnia','comfort');before('settings-close','interaction-methods');before('hand-game','interaction-methods');before('virtual-hands-reveal','gloves');before('gloves','brush');before('brush','hands');assert.equal(lessons.find(l=>l.id==='rc-choice').optional,true);assert.equal(lessons.find(l=>l.id==='fly').optional,true);assert.equal(lessons.find(l=>l.id==='fruit').optional,true);
     assert.equal(lessons.find(l=>l.id==='living-frame').spoken.match(/Living Frame/g)?.length,1,'Living Frame is introduced in one narration line');
     assert.equal(lessons.some(l=>l.id==='point'),false);
     assert.equal(welcomePracticeVisualGuide({phase:'grab'}).image,'');
     for(const clip of [...lessons,...responses].filter(c=>c.spoken && !c.liveVoice))assert.ok(fs.statSync(new URL('../app/'+(WELCOME_NARRATION_BANK?.base || 'assets/welcome-practice/voice/')+clip.id+'.mp3',import.meta.url)).size>1000,clip.id);
+});
+
+test('Zinnia copy, subtitles and voice text agree on the reviewed opening and brush controls',()=>{
+ const zinnia=lessons.find(l=>l.id==='zinnia'),menu=lessons.find(l=>l.id==='settings-open'),brush=lessons.find(l=>l.id==='brush');
+ assert.equal(zinnia.silent,true);assert.equal(zinnia.spoken,'');assert.doesNotMatch(zinnia.caption,/Here I am/i);
+ assert.equal(menu.silent,true);assert.equal(menu.spoken,'');assert.doesNotMatch(menu.caption,/highlighted button/i);
+ assert.match(brush.caption,/Grip while painting/);assert.match(brush.spoken,/Squeeze the grip as you draw/);
+ assert.equal(WELCOME_NARRATION_BANK.voice,'marin');assert.equal(WELCOME_NARRATION_BANK.delivery,'v14-friendly-marin-1');
 });
 
 test('white silhouette precedes the solid object and follows adjusted geometry',()=>{
@@ -96,6 +104,11 @@ test('actual tutorial scene waits for the rim, hides early props, reveals Zinnia
         assert.ok(Object.values(can.position).every(Number.isFinite));
         let disposed=false;const character=stage.takeZinniaCharacter();character.getObjectByName('Pot').geometry.addEventListener('dispose',()=>disposed=true);stage.destroy();stage=null;assert.equal(disposed,false);
     }finally{stage?.destroy();globalThis.document=oldDocument;globalThis.fetch=oldFetch;globalThis.Image=oldImage;console.warn=oldWarn;}
+});
+
+test('RC flight opens from Games as a separate optional experience',async()=>{
+    const oldDocument=globalThis.document,oldFetch=globalThis.fetch,oldWarn=console.warn,oldImage=globalThis.Image;globalThis.Image=class {set src(value){this.onerror?.();}};globalThis.document=canvasDocument();globalThis.fetch=async()=>{throw Error('Test intentionally uses geometry placeholders');};console.warn=()=>{};
+    let stage;try{const voice={status:()=>({playing:false,paused:false,available:true,muted:false}),speak(){},stop(){},unlock(){}};stage=createWelcomePracticeScene({voice,embedded:true});await stage.loading;const viewer=new THREE.Matrix4().makeTranslation(0,1.6,0).elements;stage.start(viewer,0);stage.update(.05,{viewer,floor:0,frameReady:true});assert.equal(stage.openGame('rc-flight'),true);assert.equal(stage.phase,'rc-choice');assert.equal(stage.snapshot().inputMode,'controllers');}finally{stage?.destroy();globalThis.document=oldDocument;globalThis.fetch=oldFetch;console.warn=oldWarn;globalThis.Image=oldImage;}
 });
 
 test('fixed narration uses its bundled recording at natural speed and resumes at the same offset',async()=>{

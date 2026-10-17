@@ -3,7 +3,7 @@ import * as THREE from '../assets/fruit-window/vendor/three.module.js';
 import {createOrganicOrbGeometry} from './organicOrbGeometry.js';
 
 // A self-contained controller toy. It never creates a plant record or opens PIMO.
-export const CONTROL_ORB_PHASES=Object.freeze(['controls-orb-intro','controls-trigger','controls-grip','controls-orb-grab','controls-orb-open','controls-face','controls-face-first','controls-face-second','controls-stick','controls-stick-click']);
+export const CONTROL_ORB_PHASES=Object.freeze(['controls-orb-intro','controls-trigger','controls-grip','controls-orb-grab','controls-orb-open','controls-face','controls-face-first','controls-face-second','controls-stick','controls-stick-click','settings-open','settings-close']);
 export const CONTROL_ORB_DEFAULTS=Object.freeze({x:-.30,y:.072,z:.14,shell:'#244d35',core:'#8848b0'});
 export function createWelcomeControlOrb(root,options={}){
     const left=createSingleWelcomeControlOrb(root,{...options,handedness:'left',home:{...CONTROL_ORB_DEFAULTS,x:-.29}});

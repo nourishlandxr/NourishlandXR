@@ -22,7 +22,7 @@ export async function createWelcomeMicroFruitIcon(id,{fetchImage=fetch,decode=cr
     const full=await decode(blob);
     const texture=new THREE.Texture(full);texture.colorSpace=THREE.SRGBColorSpace;texture.needsUpdate=true;
     const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.08,depthWrite:false,side:THREE.DoubleSide});
-    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.085,.085),material);
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.12,.12),material);
     if(useAtlas){const uv=mesh.geometry.attributes.uv,minU=cell[0]/4,maxU=(cell[0]+1)/4,minV=1-(cell[1]+1)/2,maxV=1-cell[1]/2;
         uv.setXY(0,minU,maxV);uv.setXY(1,maxU,maxV);uv.setXY(2,minU,minV);uv.setXY(3,maxU,minV);uv.needsUpdate=true;}
     mesh.name='Zinnia hand micro-fruit icon: '+id;mesh.renderOrder=24;
