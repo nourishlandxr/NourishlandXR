@@ -59,7 +59,7 @@ export function createWelcomeControllerGuide(scene,{onAssets=()=>{}}={}){
             if(nextTool!==entry.tool)entry.tool=nextTool;
             entry.mix=THREE.MathUtils.clamp(entry.mix+(nextTool==='insect'?1:-1)*dt*5,0,1);
             const blend=entry.mix*entry.mix*(3-2*entry.mix);
-            entry.skin.update(dt,nextTool==='paint'?'paint':'standard');entry.model.visible=true;
+            entry.skin.update(dt,nextTool==='paint'?'paint':nextTool==='insect'?'insect':'standard');entry.model.visible=true;
             entry.brushV2?.update(nextTool==='paint',toolState.paintColour,input.source.gamepad?.buttons?.[1]?.value || (input.down?1:0));
             if(entry.rcBugV2){
                 const axes=input.source.gamepad?.axes || [],axisOffset=axes.length>=4?2:0;
