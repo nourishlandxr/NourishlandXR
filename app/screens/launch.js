@@ -35,6 +35,7 @@ export function renderLaunchScreen(app) {
  <section class="v2-intro-sequence" aria-label="Ways to explore"><div class="v2-intro-steps"><article><small>01 · FIND YOUR PLACE</small><h2>Follow your curiosity</h2><p>Visit a garden or food forest. Meet the plants that grow there.</p></article><article><small>02 · LOOK CLOSER</small><h2>Knowledge, connected</h2><p>Follow a plant’s uses, growing needs and relationships. See where each idea comes from.</p></article><article><small>03 · LEARN IN PLACE</small><h2>Step into the landscape</h2><p>Read on screen or try a spatial experience on a compatible device.</p></article></div></section>
  </div>`;
  if(app.querySelector){
+  const demoButton=app.querySelector('.v2-actions .v2-primary');demoButton?.insertAdjacentHTML('afterend','<button class="v2-secondary" onclick="window.openBiomeWheelXR()">Try biome wheel →</button>');
   const field = globalThis.navigator?.userAgentData?.mobile || /Android|iPhone|iPad|Mobile/i.test(globalThis.navigator?.userAgent || '');
   const platformEntry = new URL(field ? '../field/index.html' : '../platform.html', import.meta.url);
   app.querySelector('.v2-actions')?.insertAdjacentHTML('afterbegin',`<a class="v2-secondary" href="${html(platformEntry.href)}">${field ? 'Open Field Multitool' : 'Browse content'}</a>`);
