@@ -1003,7 +1003,7 @@ function skipDemoMapWaits(){
     updateSpatialLivingMap(now);return true;
 }
 function skipCurrentDemoStep(practice=null) {
-    if(practice?.active)return true;
+    if(practice?.active){practice.stage.button('skip-step');return true;}
     if(demoHeldIndex>=0 || demoWebModeOpen || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)return false;
     demoFastSkipActive=true;
     try{
@@ -1459,7 +1459,7 @@ function activateImmersiveDemoControl() {
         if(arWelcomeShowcaseActive){
             // DOM-overlay buttons handle their own clicks. Controller-only AR
             // must hit the drawn Continue control instead of accepting any tap.
-            if(sessionMode==='immersive-vr' || domOverlayEnabled || !introWorldAnchor || !welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,360))return false;
+            if(sessionMode==='immersive-vr' && !welcomePractice?.active || domOverlayEnabled || !introWorldAnchor || !welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,360))return false;
         }
         continueButton.click();
         return true;
@@ -5196,7 +5196,7 @@ function setupRenderer() {
     // Hero Dice no longer competes with the plant/Control panel journey.
     if((developerLab?.id==='toys' || !developerLab) && (isQuestHeadsetBrowser() || sessionMode==='immersive-vr'))welcomePractice=createWelcomePracticeXR(gl,{voice:welcomePracticeVoice,getFXVolume:()=>demoFeedback?.volumes().fx ?? 1,getTrialPanelPose:()=>infoPanel?.spatialPose,getFramePose:()=>{if(!introWorldAnchor)return null;const center=introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition);return livingFramePose(billboardMatrix(center,AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,introWorldAnchor));},
         onToolMenu:kind=>welcomeComfort?.act(kind==='input'?'input-open':kind==='general'?'toggle':kind.startsWith('colour-')?kind:'controller-toggle'),onFeedback:(kind,source,intensity)=>playWelcomePracticeFeedback(demoFeedback,kind,source,intensity),
-        onChange:state=>{syncDemoVoiceBar();syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=true;next.textContent=state.phase==='hands'?'Try a pinch':'Continue';next.onclick=()=>welcomePractice?.stage.button('next');}},
+        onChange:state=>{syncDemoVoiceBar();syncWelcomeComfortOptions(state);introBoardTitle=state.title;introBoardBody=state.caption;introBoardVisibleBody=state.caption;introBoardVisible=true;arWelcomeSharedBoard=true;introBoardTextureDirty=true;const next=appRoot?.querySelector('[data-tryit-intro-continue]');if(next){next.hidden=state.phase==='frame' || state.exiting;next.disabled=false;next.textContent='Skip step';next.setAttribute('aria-label','Skip this tutorial step');next.onclick=()=>welcomePractice?.stage.button('skip-step');}},
         isFrameReady:()=>Boolean(livingFrameModel?.ready && introNoteTexture),getFrameError:()=>livingFrameModel?.error,
         onPanelOwns:source=>infoPanel?.getHeldInputSource()===source || Boolean(infoPanel?.isHandInteracting(source)),
         onSelect:(ray,source)=>{if(welcomePractice?.stage.exiting)return true;const target=nearestWelcomePointerHit(ray,welcomePracticeFrameHit(ray),welcomePractice?.stage.hit(ray));if(target?.kind==='voice-bar')return Boolean(zinniaVoiceBar?.select(ray));if(target?.kind!=='panel' || source?.hand && !directPanelPress(source,ray,target))return false;if(source?.hand && infoPanel?.isHandInteracting(source))return true;return Boolean(infoPanel?.activate(ray,source));},onHit:welcomePracticeFrameHit,
@@ -5961,7 +5961,7 @@ function drawIntroSpatial(view) {
         demoPresentationPaintedAt=performance.now();
     }
     const continueButton = appRoot?.querySelector('[data-tryit-intro-continue]');
-    const controlLabel = session && !domOverlayEnabled && continueButton && sessionMode !== 'immersive-vr' && !continueButton.hidden
+    const controlLabel = session && !domOverlayEnabled && continueButton && !continueButton.hidden
         ? (continueButton.textContent || 'Continue').trim()
         : '';
     if (controlLabel) {
@@ -6648,7 +6648,7 @@ function drawDemoInputPointer(view,pointerSource) {
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,AR_PHONE_COMFORT.boardPosition),AR_PHONE_COMFORT.boardScale[0]*2500/1400,AR_PHONE_COMFORT.boardScale[1]*2100/1080,2500,2100,true)
         : null;
     const continueButton=appRoot?.querySelector('[data-tryit-intro-continue]');
-    const controlSurface=session && !domOverlayEnabled && continueButton && sessionMode!=='immersive-vr' && !continueButton.hidden && introWorldAnchor
+    const controlSurface=session && !domOverlayEnabled && continueButton && !continueButton.hidden && introWorldAnchor
         ? welcomeSurfaceHit(introLocalPosition(introWorldAnchor,INTRO_CONTROL_POSITION),INTRO_CONTROL_SCALE[0],INTRO_CONTROL_SCALE[1],900,360)
         : null;
     const placementPoint=placementReady ? placementPosition() : null;
