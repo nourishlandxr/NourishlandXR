@@ -1,0 +1,7 @@
+/* Route spacing only. The hero and header own their respective layouts. */
+body[data-page="education"] #pathways { padding-block: 65px; }
+body[data-page="education"] .pathway-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+body[data-page="platform"] #explore { padding-top: 65px; }
+@media(max-width:760px) {
+  body[data-page="education"] .pathway-grid { grid-template-columns: 1fr; }
+}

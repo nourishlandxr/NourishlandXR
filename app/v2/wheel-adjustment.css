@@ -1,0 +1,27 @@
+.wheel-adjustment { position: absolute; z-index: 6; top: 100px; right: 24px; width: min(310px,calc(100% - 32px)); color: #24392f; border: 1px solid #a3b395; background: #f9faf2f5; font: 11px/1.5 var(--sans,system-ui,sans-serif); box-shadow: 0 8px 30px #24392f12; }
+.wheel-adjustment summary { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 0 16px; cursor: pointer; font-weight: 650; list-style: none; }
+.wheel-adjustment summary::-webkit-details-marker { display: none; }
+.wheel-adjustment summary span { color: #647c51; font-size: 10px; }
+.wheel-adjustment-body { padding: 0 16px 12px; max-height: calc(100dvh - 200px); overflow-y: auto; }
+.wheel-adjustment-body > p { margin: 0 0 12px; font-size: 11px; color: #596b50; }
+.wheel-angle-row { display: grid; grid-template-columns: 1fr 64px 10px; gap: 3px 6px; margin-bottom: 10px; align-items: center; }
+.wheel-angle-row label { grid-column: 1 / -1; font-size: 11px; }
+.wheel-angle-row input[type="range"] { width: 100%; min-width: 0; min-height: 32px; accent-color: #526d40; }
+.wheel-angle-row input[type="number"] { min-width: 0; width: 64px; min-height: 32px; padding: 4px; border: 1px solid #b5c2a8; background: #fff; color: inherit; font: inherit; }
+.wheel-guide { display: flex; align-items: center; gap: 7px; min-height: 32px; }
+.wheel-guide input { accent-color: #526d40; }
+.wheel-adjustment-actions { display: flex; align-items: center; gap: 7px; margin: 6px 0 12px; }
+.wheel-adjustment-actions button { min-height: 44px; padding: 0 12px; background: #e8eedf; border: 1px solid #a4b594; color: inherit; font: inherit; cursor: pointer; }
+.wheel-adjustment-actions button[aria-pressed="true"] { background: #304a38; color: #fff; }
+.wheel-adjustment-actions .wheel-adjustment-icon { width: 44px; padding: 0; font-size: 20px; }
+.wheel-adjustment :disabled { opacity: .55; cursor: default; }
+.wheel-copy-label { display: block; margin-top: 8px; color: #586c4d; font-size: 10px; }
+.wheel-copy-label :is(input,textarea) { width: 100%; margin-top: 5px; padding: 6px; border: 1px solid #bac6af; background: #fff; color: #24392f; font: 10px/1.4 ui-monospace,monospace; }
+.wheel-copy-label textarea { resize: vertical; min-height: 80px; }
+.wheel-adjustment-body .wheel-adjustment-status { margin: 8px 0 0; min-height: 28px; font-size: 10px; }
+.wheel-adjustment :focus-visible { outline: 3px solid #94783d; outline-offset: 2px; }
+.wheel-center-guide { position: absolute; z-index: 5; top: 50%; left: 50%; width: 22px; height: 22px; transform: translate(-50%,-50%); border: 1px solid #304a38; border-radius: 50%; pointer-events: none; }
+.wheel-center-guide::before,.wheel-center-guide::after { position: absolute; content: ''; background: #304a38; }
+.wheel-center-guide::before { height: 1px; width: 32px; top: 50%; left: -6px; }
+.wheel-center-guide::after { width: 1px; height: 32px; left: 50%; top: -6px; }
+@media(max-width:760px) { .wheel-adjustment { top: 90px; right: 16px; } }

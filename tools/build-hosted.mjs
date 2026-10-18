@@ -53,6 +53,7 @@ const frontendEntries = [
     'services',
     'templates',
     'vendor'
+    ,'v2'
 ];
 
 function recreateDirectory(directory) {

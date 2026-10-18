@@ -1,0 +1,22 @@
+{
+  "version": 8,
+  "model": "biome-only surface on original relief volume",
+  "base_geometry_used_for": [
+    "volume",
+    "silhouette",
+    "topography"
+  ],
+  "original_skin_visible": false,
+  "original_mesh_exported": false,
+  "biome_families": 5,
+  "landscape_variants": 25,
+  "continuous_surface": true,
+  "inner_radius": 0.605,
+  "outer_radius": 1.825,
+  "vertical_drops_skinned": false,
+  "surface_vertices": 91548,
+  "surface_triangles": 181768,
+  "glb": "C:\\Users\\andre\\Documents\\Codex\\2026-10-15\\help-me-gain-access-to-edit\\outputs\\nourishland-preview\\assets\\hero-wheel-biome-surface.glb",
+  "blend": "C:\\Users\\andre\\Documents\\Codex\\2026-10-15\\help-me-gain-access-to-edit\\outputs\\wheel-model\\nourishland-wheel-v8-biome-surface.blend",
+  "elapsed_seconds": 13.62
+}

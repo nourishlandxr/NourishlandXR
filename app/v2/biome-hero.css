@@ -1,0 +1,52 @@
+/* The landing is the living world. Content lives on the linked routes. */
+body[data-page="home"] { background: #edf0e5; }
+body[data-page="home"] main { height: 100dvh; min-height: 0; }
+body[data-page="home"] .footer { display: none; }
+.biome-hero-route { position: relative; width: 100%; height: 100dvh; min-height: 0; }
+.nl-biome-mount {
+  --nl-biome-ink: #24392f;
+  --nl-biome-muted: #536558;
+  --nl-biome-line: #aeb9a4;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  overflow: clip;
+  color: var(--nl-biome-ink);
+  background: radial-gradient(ellipse at 50% 43%, #f9f9f1 0%, #e6ebda 65%, #d8e1cc 100%);
+  font-family: var(--sans, Manrope, system-ui, sans-serif);
+}
+.nl-biome-scene { position: relative; height: 100%; width: 100%; }
+.nl-biome-stage { position: absolute; inset: 0; overflow: hidden; touch-action: pan-y pinch-zoom; cursor: grab; user-select: none; }
+.nl-biome-stage:active { cursor: grabbing; }
+.nl-biome-stage:focus-visible { outline: 3px solid #8a713d; outline-offset: -7px; }
+.nl-biome-stage canvas { display: block; width: 100%; height: 100%; pointer-events: none; opacity: 0; transition: opacity 850ms ease; }
+.nl-biome-stage[data-ready="true"] canvas { opacity: 1; }
+.nl-biome-stage[data-ready="error"] { cursor: default; }
+.nl-biome-stage[data-ready="error"] canvas { display: none; }
+.nl-biome-poster { position: absolute; left: 50%; top: 50%; width: min(105vw, 105vh); height: min(105vw, 105vh); transform: translate(-53.125%,-43.958333%); object-fit: contain; mix-blend-mode: multiply; pointer-events: none; }
+.nl-biome-poster[hidden] { display: none; }
+.nl-biome-status { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); width: min(380px,80%); color: var(--nl-biome-muted); font-size: 11px; text-align: center; }
+.nl-biome-stage[data-ready="true"] .nl-biome-status { display: none; }
+.nl-biome-title { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.nl-biome-navigation { position: absolute; z-index: 4; left: clamp(24px,3.1vw,48px); right: clamp(24px,3.1vw,48px); bottom: max(24px,env(safe-area-inset-bottom)); display: flex; align-items: center; justify-content: space-between; gap: 14px; pointer-events: none; }
+.nl-biome-gesture-cue { margin: 0; color: #4e6248; font-size: 10px; line-height: 1.6; letter-spacing: .025em; }
+.nl-biome-gesture-cue span { display: block; }
+.nl-biome-scene[data-navigation-open="true"] { pointer-events: none; }
+.nl-biome-mount :is(button,a,input,summary):focus-visible { outline: 3px solid #8a713d; outline-offset: 4px; }
+.biome-hero-placeholder { display: grid; place-items: center; height: 100dvh; min-height: 0; background: #edf0e5; }
+.biome-hero-placeholder > div { display: none; }
+.biome-hero-placeholder img { width: min(100vw,100vh); height: min(100vw,100vh); transform: translate(-3.125%,6.041667%); object-fit: contain; mix-blend-mode: multiply; }
+@media(max-width:760px) {
+  .nl-biome-navigation { left: 20px; right: 20px; bottom: max(20px,env(safe-area-inset-bottom)); gap: 10px; }
+  .nl-biome-gesture-cue { font-size: 9px; }
+  .nl-biome-gesture-cue span { display: block; }
+  .nl-biome-poster { width: 110vw; height: 110vw; }
+}
+@media(prefers-reduced-motion:reduce) { .nl-biome-mount *, .nl-biome-mount *::after { animation: none !important; transition: none !important; } }
+.nl-biome-scene[data-motion="reduce"] *, .nl-biome-scene[data-motion="reduce"] *::after { animation: none !important; transition: none !important; }
+
+/* Only the central pathways yield to the wheel at the close framing. */
+body[data-page="home"][data-hero-close] .header-pathways { opacity: 0; visibility: hidden; pointer-events: none; }
+.header-pathways { transition: opacity 220ms ease, visibility 220ms; }
