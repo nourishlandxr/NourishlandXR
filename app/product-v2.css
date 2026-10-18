@@ -7,8 +7,9 @@ body { background:var(--v2-paper); }
 #app .v2-masthead > span { margin-left:auto; color:var(--v2-muted); font-size:12px; }
 #app .v2-masthead-meta { display:flex; align-items:center; gap:12px; white-space:nowrap; color:var(--v2-muted); font-size:12px; }
 #app .v2-masthead-meta button { border:0; background:none; padding:4px 0; color:var(--v2-ink); text-decoration:underline; text-underline-offset:3px; }
-#app .v2-wordmark { font-size:23px; font-weight:700; letter-spacing:-1px; padding:0; border:0; background:none; box-shadow:none; color:var(--v2-ink); }
-#app .v2-wordmark span { font-size:11px; vertical-align:super; letter-spacing:1px; margin-left:5px; }
+#app .v2-wordmark { position:relative; isolation:isolate; display:inline-flex; align-items:center; gap:5px; min-height:48px; padding:7px 15px; border:1px solid #d6d0bf; border-radius:16px 19px 15px 18px; background:radial-gradient(ellipse at 18% 12%,#ffffff8a,transparent 56%),linear-gradient(145deg,#f9f6ed 0%,#ede9dc 58%,#e5e0d1 100%); box-shadow:inset 0 1px 0 #ffffffc9,inset 0 -1px 0 #c9c2af66,0 3px 9px #38423012; color:#254735; font-size:23px; font-weight:700; letter-spacing:-1px; text-shadow:0 1px 0 #ffffffa6; transition:background .18s ease,box-shadow .18s ease,transform .18s ease; }
+#app .v2-wordmark:hover { background:radial-gradient(ellipse at 18% 12%,#ffffffa0,transparent 56%),linear-gradient(145deg,#fbf8f0 0%,#efecdf 58%,#e7e2d5 100%); box-shadow:inset 0 1px 0 #ffffffd9,inset 0 -1px 0 #c9c2af66,0 5px 12px #38423018; transform:translateY(-1px); }
+#app .v2-wordmark span { align-self:center; margin:0; padding:3px 5px; border:1px solid #c8d0bd; border-radius:6px; background:linear-gradient(145deg,#e8eee2,#dce5d7); color:#53694f; font-size:9px; font-weight:700; line-height:1; letter-spacing:.08em; vertical-align:baseline; text-shadow:none; }
 #app .v2-header-tools { position:relative; display:flex; align-items:center; gap:8px; margin-left:auto; }
 #app .v2-header-tools > button { background:transparent; border:1px solid var(--v2-line); padding:10px 14px; border-radius:99px; font-size:12px; }
 #app .v2-header-tools > .v2-language-trigger { display:flex; align-items:center; gap:6px; padding:9px 11px; }
