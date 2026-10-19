@@ -1,7 +1,7 @@
 import './site-navigation.js';
 import { BUILD_INFO } from '../services/buildInfo.js';
-const aliases={main:'home',pathways:'education',learn:'education',explore:'platform',grow:'food-forests',connect:'nature-learning',create:'creator','creator-start':'creator','creator-steps':'creator',projects:'pilot','project-hillyards':'pilot','pilot-program':'pilot','pilot-application':'collaborate',support:'collaborate',tools:'demos','library-guide':'education','webxr-guide':'demos','field-guide':'demos','studio-guide':'demos','imap-guide':'demos','native-xr-guide':'demos',solarpunk:'food-forests',contact:'collaborate'};
-const titles={home:'Learning rooted in place',education:'Education','food-forests':'Food Forests & Solarpunk','nature-learning':'Immersive Nature Learning',platform:'Creator + Explorer',creator:'Creator',explorer:'Explorer',pilot:'The pilot',demos:'Demos & access',about:'About',collaborate:'Collaborate','food-forest-guide':'Food-forest learning guide'};
+const aliases={main:'home',pathways:'education',learn:'education',explore:'platform',grow:'food-forests',connect:'nature-learning',create:'creator','creator-start':'creator','creator-steps':'creator',projects:'pilot','project-hillyards':'pilot','pilot-program':'pilot','pilot-application':'collaborate',support:'collaborate',tools:'demos','library-guide':'education','webxr-guide':'demos','field-guide':'demos','studio-guide':'demos','imap-guide':'demos','native-xr-guide':'demos',solarpunk:'about',contact:'collaborate'};
+const titles={home:'Learning rooted in place',education:'Education','food-forests':'Food Forests','nature-learning':'Immersive Learning',platform:'Creator + Explorer',creator:'Creator',explorer:'Explorer',pilot:'The pilot',demos:'Demos & access',about:'About',collaborate:'Collaborate','food-forest-guide':'Food-forest learning guide'};
 function showRoute({focus=false}={}){
  const key=location.hash.slice(1)||'home';
  const route=aliases[key]||key;
