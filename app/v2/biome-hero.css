@@ -76,5 +76,9 @@ body[data-page="home"][data-hero-close] .header-pathways { opacity: 0; visibilit
 .nl-cinematic-enter:focus-visible { outline:3px solid #8a713d;outline-offset:4px }
 .nl-cinematic-return{position:absolute;z-index:5;left:18px;bottom:max(18px,env(safe-area-inset-bottom));width:44px;height:44px;border:1px solid #ffffff88;border-radius:6px;background:#173b2ee6;color:#fff;font-size:24px;cursor:pointer}.nl-cinematic-return[hidden]{display:none}.nl-cinematic-return:focus-visible{outline:3px solid #c8df9a;outline-offset:3px}
 .nl-cinematic-loading{position:absolute;z-index:5;left:50%;bottom:84px;transform:translateX(-50%);max-width:80%;padding:10px 16px;border-radius:6px;background:#173b2ee6;color:white;font-size:13px;text-align:center}.nl-cinematic-loading[hidden]{display:none}
+body[data-page="home"]:has(.nl-cinematic-mount) #site-header :is(.wordmark,.header-pathways a,.menu-toggle){color:#fff!important;text-shadow:0 1px 5px #071b13,0 0 18px #071b1380}
+body[data-page="home"]:has(.nl-cinematic-mount) #site-header .wordmark{font-size:clamp(30px,2.6vw,42px)}
+body[data-page="home"]:has(.nl-cinematic-mount) #site-header .header-pathways a{font-size:clamp(12px,1vw,16px);font-weight:650;letter-spacing:.09em}
+body[data-page="home"]:has(.nl-cinematic-mount) #site-header .menu-toggle{background:#10291f52;border-color:#ffffff88}
 @media(max-width:620px){.nl-cinematic-actions{left:18px;right:18px;justify-content:flex-end}.nl-cinematic-caption{display:none}.nl-cinematic-enter{min-height:46px}}
 @media(prefers-reduced-motion:reduce){.nl-cinematic-video{display:none}.nl-cinematic-poster{opacity:1!important;transition:none}.nl-cinematic-enter:hover{transform:none}.nl-cinematic-iframe{transition:none}}
