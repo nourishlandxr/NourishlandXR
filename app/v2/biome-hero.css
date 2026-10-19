@@ -56,13 +56,25 @@ body[data-page="home"][data-hero-close] .header-pathways { opacity: 0; visibilit
 .nl-cinematic-mount { position:relative;isolation:isolate;width:100%;height:100dvh;min-height:0;overflow:hidden;background:#e5f2fb;color:#24392f;font-family:var(--sans,Manrope,system-ui,sans-serif) }
 .nl-cinematic-scene { position:relative;width:100%;height:100% }
 .nl-cinematic-video,.nl-cinematic-poster { position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center center }
-.nl-cinematic-video { z-index:1;background:#e5f2fb }
+.nl-cinematic-video { z-index:1;background:#e5f2fb;opacity:0;transition:opacity 1250ms ease }
+.nl-cinematic-video[data-cinematic-video="0"] { opacity:1 }
+.nl-cinematic-scene[data-active-video="1"] .nl-cinematic-video[data-cinematic-video="0"] { opacity:0 }
+.nl-cinematic-scene[data-active-video="1"] .nl-cinematic-video[data-cinematic-video="1"] { opacity:1 }
+.nl-cinematic-scene[data-active-video="0"] .nl-cinematic-video[data-cinematic-video="0"] { opacity:1 }
+.nl-cinematic-scene[data-active-video="0"] .nl-cinematic-video[data-cinematic-video="1"] { opacity:0 }
 .nl-cinematic-poster { z-index:2;transition:opacity 500ms ease }
 .nl-cinematic-scene[data-media="video"] .nl-cinematic-poster { opacity:0;pointer-events:none }
+.nl-cinematic-iframe { position:absolute;z-index:3;inset:0;width:100%;height:100%;border:0;background:#e5f2fb;opacity:0;pointer-events:none;transition:opacity 500ms ease }
+.nl-cinematic-scene[data-media="interactive"] .nl-cinematic-iframe { opacity:1;pointer-events:auto }
+.nl-cinematic-scene[data-media="interactive"] :is(.nl-cinematic-video,.nl-cinematic-poster) { opacity:0;pointer-events:none }
+.nl-cinematic-scene[data-media="interactive"] .nl-cinematic-actions { display:none }
 .nl-cinematic-actions { position:absolute;z-index:4;right:clamp(18px,3.1vw,48px);bottom:max(24px,env(safe-area-inset-bottom));display:flex;align-items:center;gap:14px }
 .nl-cinematic-caption { color:#40584c;font-size:10px;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 1px 3px rgba(229,242,251,.86) }
-.nl-cinematic-enter { display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid rgba(35,59,48,.45);border-radius:5px;background:rgba(245,249,242,.82);backdrop-filter:blur(8px);color:#203d30;font-size:12px;font-weight:700;letter-spacing:.04em;text-decoration:none;box-shadow:0 8px 24px rgba(25,49,39,.12) }
+.nl-cinematic-enter { display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid rgba(35,59,48,.45);border-radius:5px;background:rgba(245,249,242,.82);backdrop-filter:blur(8px);color:#203d30;font:700 12px/1 var(--sans,Manrope,system-ui,sans-serif);letter-spacing:.04em;text-decoration:none;box-shadow:0 8px 24px rgba(25,49,39,.12);cursor:pointer }
+.nl-cinematic-enter:disabled { cursor:progress;opacity:.82 }
 .nl-cinematic-enter:hover { background:#f8faf4;transform:translateY(-1px) }
 .nl-cinematic-enter:focus-visible { outline:3px solid #8a713d;outline-offset:4px }
+.nl-cinematic-return{position:absolute;z-index:5;left:18px;bottom:max(18px,env(safe-area-inset-bottom));width:44px;height:44px;border:1px solid #ffffff88;border-radius:6px;background:#173b2ee6;color:#fff;font-size:24px;cursor:pointer}.nl-cinematic-return[hidden]{display:none}.nl-cinematic-return:focus-visible{outline:3px solid #c8df9a;outline-offset:3px}
+.nl-cinematic-loading{position:absolute;z-index:5;left:50%;bottom:84px;transform:translateX(-50%);max-width:80%;padding:10px 16px;border-radius:6px;background:#173b2ee6;color:white;font-size:13px;text-align:center}.nl-cinematic-loading[hidden]{display:none}
 @media(max-width:620px){.nl-cinematic-actions{left:18px;right:18px;justify-content:flex-end}.nl-cinematic-caption{display:none}.nl-cinematic-enter{min-height:46px}}
-@media(prefers-reduced-motion:reduce){.nl-cinematic-video{display:none}.nl-cinematic-poster{opacity:1!important;transition:none}.nl-cinematic-enter:hover{transform:none}}
+@media(prefers-reduced-motion:reduce){.nl-cinematic-video{display:none}.nl-cinematic-poster{opacity:1!important;transition:none}.nl-cinematic-enter:hover{transform:none}.nl-cinematic-iframe{transition:none}}

@@ -10,10 +10,10 @@ test('website v2 has the approved entry navigation and progressive cinematic her
     read('index.html'),
     read('site-navigation.js'),
     read('homepage-hero.js'),
-    stat(new URL('assets/hero-wheel-v16-cinematic.webm', root)),
-    stat(new URL('assets/hero-wheel-v16-cinematic.mp4', root)),
-    stat(new URL('assets/hero-wheel-v16-poster.webp', root)),
-    stat(new URL('full-3d/Nourishland-Hero-Living-v16.html', root))
+    stat(new URL('assets/hero-v17-central-day.webm', root)),
+    stat(new URL('assets/hero-v17-central-day.mp4', root)),
+    stat(new URL('assets/hero-v17-central-day-poster-mp4.webp', root)),
+    stat(new URL('full-3d/Nourishland-Hero-Living-v17.html', root))
   ]);
 
   assert.match(html, /href="#pathways">Education<\/a>/);
@@ -26,11 +26,17 @@ test('website v2 has the approved entry navigation and progressive cinematic her
   assert.match(navigation, /data-navigation-open/);
   assert.match(hero, /preload="metadata"/);
   assert.match(hero, /prefers-reduced-motion: reduce/);
-  assert.match(hero, /Explore full 3D/);
+  assert.match(hero, /Explore Nourishland/);
+  assert.match(hero, /nl-cinematic-iframe/);
+  assert.match(hero, /muted loop playsinline/);
+  assert.doesNotMatch(hero, /crossfadeLoop/);
+  assert.match(hero, /child\.heroInspection/);
+  assert.match(hero, /child\.heroPuzzle\.setDistance\(2\.24\)/);
+  assert.match(hero, /data-return-video/);
   assert.doesNotMatch(hero, /mountBiomeHero/);
-  assert.ok(video.size > 1_000_000 && video.size < 8_000_000, 'the cinematic loop stays within the test hero budget');
-  assert.ok(mp4.size > 500_000 && mp4.size < 8_000_000, 'the MP4 compatibility fallback stays within the test hero budget');
-  assert.ok(poster.size > 50_000 && poster.size < 750_000, 'the immediate poster stays lightweight');
+  assert.ok(video.size > 1_000_000 && video.size < 35_000_000, 'the optional VP9 fallback stays within the V17 review budget');
+  assert.ok(mp4.size > 500_000 && mp4.size < 16_000_000, 'the 24-second MP4 compatibility fallback stays within the V17 test budget');
+  assert.ok(poster.size > 50_000 && poster.size < 2_500_000, 'the exact-frame poster stays within the V17 test budget');
   assert.ok(full3d.size > 60_000_000, 'the complete wheel remains available behind explicit intent');
 });
 
