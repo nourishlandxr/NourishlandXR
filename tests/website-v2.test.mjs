@@ -20,3 +20,12 @@ test('website v2 keeps local module and media references resolvable',async()=>{
  const files=new Set([...html.matchAll(/(?:href|src)="((?!https?:|mailto:|#)[^"]+)"/g)].map(x=>x[1].split('?')[0]));
  for(const file of files)await stat(new URL(file,root));
 });
+test('only the V17 viewer can be embedded by its own website',async()=>{
+ const policy=await read('full-3d/.htaccess');
+ assert.match(policy,/<Files "Nourishland-Hero-Living-v17\.html">/);
+ assert.match(policy,/X-Frame-Options "SAMEORIGIN"/);
+ assert.match(policy,/frame-ancestors 'self'/);
+ assert.doesNotMatch(policy,/frame-ancestors \*/);
+ const parent=await readFile(new URL('../deploy/xr.htaccess',import.meta.url),'utf8');
+ assert.match(parent,/X-Frame-Options "DENY"/);
+});

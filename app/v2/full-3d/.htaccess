@@ -1,0 +1,8 @@
+# The website embeds its own biome viewer. Keep all other XR pages protected
+# by the parent DENY policy and reject embedding by other origins.
+<IfModule mod_headers.c>
+  <Files "Nourishland-Hero-Living-v17.html">
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Content-Security-Policy "object-src 'none'; base-uri 'self'; frame-ancestors 'self'"
+  </Files>
+</IfModule>
