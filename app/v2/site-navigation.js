@@ -1,104 +1,35 @@
-const navigation = document.querySelector('#main-nav');
-const menuButton = document.querySelector('.menu-toggle');
-const pageRegions = [...document.querySelectorAll('main, footer')];
-const originalInertState = new Map(pageRegions.map(region => [region, region.inert]));
-let menuOpen = false;
-
-function currentRoute() {
-  return decodeURIComponent(location.hash.slice(1) || 'home');
+const navigation=document.querySelector('#main-nav');
+const button=document.querySelector('.menu-toggle');
+const regions=[...document.querySelectorAll('main, footer')];
+let open=false;
+function setOpen(next,{restore=false}={}){
+ open=next;navigation.hidden=!next;button.setAttribute('aria-expanded',String(next));
+ button.setAttribute('aria-label',next?'Close menu':'Open menu');button.title=next?'Close menu':'Open menu';
+ button.querySelector('path').setAttribute('d',next?'M6 6l12 12M6 18L18 6':'M4 7h16M4 12h16M4 17h16');
+ document.body.toggleAttribute('data-navigation-open',next);
+ regions.forEach(region=>region.inert=next);
+ window.dispatchEvent(new CustomEvent('nourishland:navigation-state',{detail:{open:next}}));
+ if(next)navigation.querySelector('a').focus();else if(restore)button.focus();
 }
-
-function syncPathwayMenu() {
-  const route = currentRoute();
-  const educationRoutes = new Set(['pathways', 'learn', 'grow', 'food-forests', 'connect', 'creator-steps']);
-  const pathway = educationRoutes.has(route) ? 'education' : 'platform';
-  document.body.dataset.menuPathway = pathway;
-  document.querySelectorAll('.header-pathways a[href^="#"]').forEach(link => {
-    const active = link.hash.slice(1) === (pathway === 'education' ? 'pathways' : 'explore');
-    if (active) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  });
-  document.querySelectorAll('#main-nav a[href^="#"]').forEach(link => {
-    if (link.hash.slice(1) === route) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  });
-}
-
-function announceNavigationState(open) {
-  document.body.toggleAttribute('data-navigation-open', open);
-  window.dispatchEvent(new CustomEvent('nourishland:navigation-state', { detail: { open } }));
-}
-
-function closeMenu({ restoreFocus = false } = {}) {
-  if (!menuOpen) return;
-  menuOpen = false;
-  navigation.classList.remove('is-open');
-  menuButton.setAttribute('aria-expanded', 'false');
-  menuButton.setAttribute('aria-label', 'Open menu');
-  menuButton.title = 'Open menu';
-  document.body.removeAttribute('data-menu-open');
-  announceNavigationState(false);
-  pageRegions.forEach(region => { region.inert = originalInertState.get(region); });
-  if (restoreFocus) menuButton.focus();
-}
-
-function openMenu() {
-  if (menuOpen) return;
-  menuOpen = true;
-  navigation.classList.add('is-open');
-  menuButton.setAttribute('aria-expanded', 'true');
-  menuButton.setAttribute('aria-label', 'Close menu');
-  menuButton.title = 'Close menu';
-  document.body.setAttribute('data-menu-open', 'true');
-  announceNavigationState(true);
-  pageRegions.forEach(region => { region.inert = true; });
-  requestAnimationFrame(() => focusableInMenu()[0]?.focus());
-}
-
-function focusableInMenu() {
-  return [...navigation.querySelectorAll('a[href]')]
-    .filter(element => !element.closest('[hidden]') && element.getClientRects().length > 0);
-}
-
-menuButton.addEventListener('click', () => menuOpen ? closeMenu({ restoreFocus: true }) : openMenu());
-document.querySelector('.header-pathways')?.addEventListener('keydown', event => {
-  if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
-  const links = [...event.currentTarget.querySelectorAll('a[href]')];
-  const current = Math.max(0, links.indexOf(document.activeElement));
-  const step = event.key === 'ArrowRight' ? 1 : -1;
-  links[(current + step + links.length) % links.length]?.focus();
-  event.preventDefault();
+button.addEventListener('click',()=>setOpen(!open,{restore:true}));
+navigation.addEventListener('click',event=>{if(event.target.closest('a'))setOpen(false,{restore:true});});
+document.addEventListener('keydown',event=>{
+ if(!open)return;
+ if(event.key==='Escape'){event.preventDefault();setOpen(false,{restore:true});}
+ if(event.key==='Tab'){
+  const links=[button,...navigation.querySelectorAll('a')];
+  const index=links.indexOf(document.activeElement);
+  if(event.shiftKey&&(index===0||index===-1)){event.preventDefault();links.at(-1).focus();}
+  else if(!event.shiftKey&&(index===links.length-1||index===-1)){event.preventDefault();button.focus();}
+ }
 });
-navigation.addEventListener('click', event => {
-  const link = event.target.closest('a[href]');
-  if (!link) return;
-  if (link.hash.slice(1) === currentRoute()) closeMenu({ restoreFocus: true });
+document.addEventListener('pointerdown',event=>{if(open&&!navigation.contains(event.target)&&!button.contains(event.target))setOpen(false);});
+window.addEventListener('hashchange',()=>{if(open)setOpen(false);});
+window.addEventListener('nourishland:route',event=>{
+ const page=event.detail.page;
+ const group=['education','food-forests','food-forest-guide','nature-learning'].includes(page)?'education':['platform','creator','explorer','demos'].includes(page)?'platform':page;
+ document.querySelectorAll('.header-pathways a, #main-nav a').forEach(link=>{
+  const current=link.closest('.header-pathways')?link.hash===`#${group}`:link.hash===`#${page}`;
+  if(current)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
+ });
 });
-navigation.addEventListener('keydown', event => {
-  if (!menuOpen || event.key !== 'Tab') return;
-  const focusables = focusableInMenu();
-  if (!focusables.length) return;
-  const first = focusables[0];
-  const last = focusables.at(-1);
-  if (event.shiftKey && (document.activeElement === first || !navigation.contains(document.activeElement))) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && (document.activeElement === last || !navigation.contains(document.activeElement))) {
-    event.preventDefault();
-    first.focus();
-  }
-});
-document.addEventListener('keydown', event => {
-  if (event.key === 'Escape' && menuOpen) {
-    closeMenu({ restoreFocus: true });
-    event.preventDefault();
-  }
-});
-document.addEventListener('pointerdown', event => {
-  if (menuOpen && !navigation.contains(event.target) && !menuButton.contains(event.target)) closeMenu();
-});
-window.addEventListener('hashchange', () => {
-  syncPathwayMenu();
-  closeMenu({ restoreFocus: true });
-});
-syncPathwayMenu();
