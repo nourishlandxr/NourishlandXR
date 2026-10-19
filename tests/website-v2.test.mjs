@@ -5,7 +5,7 @@ import { readFile, stat } from 'node:fs/promises';
 const root = new URL('../app/v2/', import.meta.url);
 const read = file => readFile(new URL(file, root), 'utf8');
 
-test('website v2 has the approved entry navigation and progressive cinematic hero assets', async () => {
+test('website v2 starts with the live central world and retains explicit fallback media', async () => {
   const [html, navigation, hero, video, mp4, poster, full3d] = await Promise.all([
     read('index.html'),
     read('site-navigation.js'),
@@ -24,15 +24,15 @@ test('website v2 has the approved entry navigation and progressive cinematic her
   assert.match(html, /About Nourishland/);
   assert.match(navigation, /nourishland:navigation-state/);
   assert.match(navigation, /data-navigation-open/);
-  assert.match(hero, /preload="metadata"/);
-  assert.match(hero, /prefers-reduced-motion: reduce/);
   assert.match(hero, /Explore Nourishland/);
   assert.match(hero, /nl-cinematic-iframe/);
-  assert.match(hero, /muted loop playsinline/);
-  assert.doesNotMatch(hero, /crossfadeLoop/);
-  assert.match(hero, /child\.heroInspection/);
-  assert.match(hero, /child\.heroPuzzle\.setDistance\(2\.24\)/);
-  assert.match(hero, /data-return-video/);
+  assert.match(hero, /\?embed=1&central=1/);
+  assert.match(hero, /loadLiveWorld\(\);/);
+  assert.match(hero, /child\.heroInspection\.setCentral\(\)/);
+  assert.match(hero, /heroInspection\.setUnlocked\(true\)/);
+  assert.match(hero, /data-return-central/);
+  assert.match(hero, /function playVideoFallback\(\)/);
+  assert.doesNotMatch(hero, /<video/);
   assert.doesNotMatch(hero, /mountBiomeHero/);
   assert.ok(video.size > 1_000_000 && video.size < 35_000_000, 'the optional VP9 fallback stays within the V17 review budget');
   assert.ok(mp4.size > 500_000 && mp4.size < 16_000_000, 'the 24-second MP4 compatibility fallback stays within the V17 test budget');

@@ -1,5 +1,6 @@
 import {welcomeInputChoiceUnlocked,welcomeInputMethod,setWelcomeInputMethod} from '../services/welcomeExperienceUnlock.js';
 import {drawWelcomeText} from '../services/welcomeSpeechPresentation.js';
+import controllerGuideArtUrl from '../assets/demo-tutorial-art/controller-guide-pencil-outline.png?url';
 import {prepareZinniaMicrophone} from '../services/prepareZinniaMicrophone.js';
 import {directPanelPress} from '../services/xrDirectInteraction.js';
 import {DEMO_CHAPTERS} from '../services/demoChapters.js';
@@ -41,6 +42,7 @@ import {demoPlantOrbColor} from '../services/demoPlantChoices.js';
 import {ZINNIA_PLANT_COPY,applyZinniaNote,createZinniaPlantDiscovery,applyDiscoveredPlant,zinniaPlantButtons,drawZinniaPlantDiscovery,mountZinniaPlantDiscovery} from '../services/zinniaPlantDiscovery.js';
 import {drawDemoVoiceDetectionBar} from '../services/demoVoiceDetectionBar.js';
 let demoFramePlantChoiceOrbId='';
+const controllerGuideArt=new Image();controllerGuideArt.src=controllerGuideArtUrl;
 let demoZinniaDiscovery=null,demoZinniaView=null;
 let demoZinniaNoteDraft=null;
 import {orbPinchPoint,openPalmUnderOrb} from '../services/demoOrbHands.js';
@@ -5665,6 +5667,27 @@ function introVisibleCopy(){
     }
     return introBoardVisibleBody;
 }
+function drawControllerPressGuide(ctx,state){
+    if(!controllerGuideArt.complete || !controllerGuideArt.naturalWidth)return;
+    const x=460,y=515,width=480,height=320,active=new Set(state.controlHighlights || []),marked=new Set(state.controlMarks || []),pulse=.5+.5*Math.sin(performance.now()/150);
+    ctx.save();ctx.globalAlpha=.96;ctx.drawImage(controllerGuideArt,x,y,width,height);
+    const markers={
+        'left:y':[.29,.17],'left:stick':[.37,.17],'left:x':[.34,.26],'left:trigger':[.27,.51],'left:grip':[.18,.47],
+        'right:b':[.64,.23],'right:stick':[.74,.17],'right:a':[.68,.29],'right:trigger':[.73,.51],'right:grip':[.84,.47]
+    };
+    for(const [id,[px,py]] of Object.entries(markers)){
+        if(!active.has(id) && !marked.has(id))continue;
+        const cx=x+width*px,cy=y+height*py,r=13+4*pulse;
+        if(!active.has(id)){
+            ctx.beginPath();ctx.arc(cx,cy,16,0,Math.PI*2);ctx.fillStyle='rgba(79,139,101,.88)';ctx.fill();ctx.strokeStyle='#f2f5df';ctx.lineWidth=3;ctx.stroke();
+            ctx.beginPath();ctx.moveTo(cx-6,cy);ctx.lineTo(cx-1,cy+5);ctx.lineTo(cx+8,cy-6);ctx.strokeStyle='#fff';ctx.lineWidth=3.5;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke();continue;
+        }
+        ctx.beginPath();ctx.arc(cx,cy,r+8,0,Math.PI*2);ctx.fillStyle=`rgba(245,174,54,${.12+.12*pulse})`;ctx.fill();
+        ctx.beginPath();ctx.arc(cx,cy,r,0,Math.PI*2);ctx.fillStyle='rgba(255,196,72,.78)';ctx.fill();ctx.strokeStyle='#fff5d5';ctx.lineWidth=4;ctx.stroke();
+        ctx.beginPath();ctx.arc(cx,cy,r+5,0,Math.PI*2);ctx.strokeStyle=`rgba(236,160,35,${.55+.4*pulse})`;ctx.lineWidth=3;ctx.stroke();
+    }
+    ctx.restore();
+}
 function drawIntroNoteContent(ctx) {
     if(welcomePractice?.active){
         const state=welcomePractice.stage.snapshot();ctx.save();ctx.globalAlpha=['frame','title','arrival'].includes(state.phase)?1:state.textOpacity;ctx.textAlign='center';ctx.textBaseline='middle';
@@ -5672,8 +5695,9 @@ function drawIntroNoteContent(ctx) {
         if(state.activityFocus){
             if(state.title){ctx.fillStyle='#fffaf0';ctx.font=`500 63px ${DEMO_HEADING_FONT}`;ctx.fillText(state.title,700,330,900);}
             if(state.voice?.playing && state.caption){ctx.fillStyle='#f7f4e9';ctx.font=`500 37px ${DEMO_PRESENTATION_FONT}`;const lines=wrappedTextureLines(ctx,state.caption,860).slice(0,3);lines.forEach((line,i)=>ctx.fillText(line,700,430+i*48));}
+            if(state.phase.startsWith('controls-'))drawControllerPressGuide(ctx,state);
             const keyInstructions={'controls-orb-grab':'Side grip: hold the Orb · Release: let go','controls-orb-open':'Trigger: open the Orb','controls-stick':'Move a thumbstick: roll the Orb','controls-stick-click':'Right-stick click, then left-stick click: menus and options','settings-open':'Left thumbstick click: open settings','settings-close':'Left thumbstick click: close settings','laser-dance':'Hold both grips on Zinnia’s leaves','brush':'Right grip: pick up brush · Trigger: paint · Grip while painting: thicker line','brush-done':'B: undo · Hold A + trigger: erase · Grip while drawing: thicker line · Right stick: colour wheel'};
-            const instruction=keyInstructions[state.phase] || state.layoutCaption || state.caption;if(instruction){ctx.fillStyle='#d6f1dc';ctx.font='600 34px system-ui';const lines=wrappedTextureLines(ctx,instruction,870).slice(0,3);lines.forEach((line,i)=>ctx.fillText(line,700,760+(i-(lines.length-1)/2)*44));}
+            const instruction=keyInstructions[state.phase] || state.layoutCaption || state.caption;if(instruction){ctx.fillStyle='#d6f1dc';ctx.font='600 34px system-ui';const lines=wrappedTextureLines(ctx,instruction,870).slice(0,3),instructionY=state.phase.startsWith('controls-')?925:760;lines.forEach((line,i)=>ctx.fillText(line,700,instructionY+(i-(lines.length-1)/2)*44));}
             ctx.restore();return;
         }
         ctx.fillStyle='#fffaf0';drawWelcomeText(ctx,{title:state.title,layoutTitle:state.layoutTitle,caption:state.caption,layoutCaption:state.layoutCaption,width:900,top:260,bottom:850,titleSize:88,bodySize:40,headingFont:DEMO_HEADING_FONT,bodyFont:DEMO_PRESENTATION_FONT});
