@@ -1,8 +1,8 @@
 const host = document.querySelector('[data-biome-hero]');
 
 if (host) {
-  const posterUrl = new URL('./assets/hero-v17-central-day-poster-mp4.webp', import.meta.url).href;
-  const liveUrl = new URL('./full-3d/Nourishland-Hero-Living-v17.html?embed=1&central=1', import.meta.url).href;
+  const posterUrl = new URL('./assets/hero-v17-natural-depth-poster.webp', import.meta.url).href;
+  const liveUrl = new URL('./full-3d/Nourishland-Hero-Living-v17.html?embed=1&central=1&revision=natural-depth-01', import.meta.url).href;
   const fallbackUrl = new URL('./assets/hero-v17-central-day.mp4', import.meta.url).href;
   const lifetime = new AbortController();
   let viewer = null;
@@ -114,6 +114,9 @@ if (host) {
   enter.addEventListener('click', enterInteractive, { signal: lifetime.signal });
   back.addEventListener('click', returnToCentral, { signal: lifetime.signal });
   fallbackButton.addEventListener('click', playVideoFallback, { signal: lifetime.signal });
+  window.addEventListener('nourishland:route',event=>{
+    if(viewer)viewer.style.display=event.detail.page==='home'?'':'none';
+  },{signal:lifetime.signal});
   loadLiveWorld();
 
   window.nourishlandBiomeHero = {

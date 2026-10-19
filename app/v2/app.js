@@ -19,5 +19,3 @@ function showRoute({focus=false}={}){
 }
 window.addEventListener('hashchange',()=>showRoute({focus:true}));showRoute();
 document.querySelectorAll('[data-site-version]').forEach(node=>node.textContent=`Preview ${BUILD_INFO.version}`);
-const seed=document.querySelector('[data-nl-hero]');
-if(seed){const lazyDie=new IntersectionObserver(async entries=>{if(entries.some(entry=>entry.isIntersecting)){lazyDie.disconnect();try{const {mountLandingWheel}=await import('./nlxr/services/landingWheel.js');await mountLandingWheel(seed);}catch(error){seed.dataset.ready='error';console.warn('Discovery die artwork fallback.',error);}}},{rootMargin:'100px'});lazyDie.observe(seed);}

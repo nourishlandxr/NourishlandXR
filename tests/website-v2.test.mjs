@@ -6,9 +6,11 @@ const read=file=>readFile(new URL(file,root),'utf8');
 test('website offers education and platform journeys with an honest collaboration path',async()=>{
  const html=await read('index.html');
  for(const route of ['education','platform','creator','explorer','pilot','collaborate','demos'])assert.match(html,new RegExp(`data-route="${route}"`));
- assert.match(html,/data-nl-hero/);
+ assert.match(html,/data-biome-hero/);
+ assert.doesNotMatch(html,/data-nl-hero/);
+ assert.match(html,/homepage-hero\.js\?v=natural-depth-01/);
  assert.match(html,/mailto:info@nourishland.org/);
- assert.doesNotMatch(html,/<script[^>]+(?:homepage-hero|pilot-application)/);
+ assert.doesNotMatch(html,/<script[^>]+pilot-application/);
  assert.doesNotMatch(html,/Review test application|founding cohort/);
  const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
  assert.equal(ids.length,new Set(ids).size,'HTML ids must be unique');

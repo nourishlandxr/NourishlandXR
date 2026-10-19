@@ -1,0 +1,11 @@
+/* Review landing: one living world, simple navigation, linked content routes. */
+body[data-page="home"] {overflow:hidden;background:#b9def3}
+body[data-page="home"] main,body[data-page="home"] #home {height:100dvh;min-height:0}
+body[data-page="home"] #site-header {position:absolute;top:0;left:0;right:0;z-index:70;margin:auto;padding-block:18px;background:linear-gradient(#0b211d9c,transparent);max-width:none;padding-inline:clamp(18px,4vw,60px);color:white}
+body[data-page="home"] #site-header :is(.brand,.header-pathways a,.header-contact){color:#fff;text-shadow:0 1px 5px #071b13}
+body[data-page="home"] .header-contact{display:none}
+body[data-page="home"] .menu-toggle {background:#173b2ed9;color:white;border-color:#ffffff88}
+.nl-cinematic-actions{left:18px;right:auto;bottom:88px}
+.nl-cinematic-return{left:18px;bottom:88px}
+.nl-cinematic-loading{bottom:145px}
+@media(max-width:760px){body[data-page="home"] #site-header{padding-block:12px}.nl-cinematic-actions{bottom:105px}.nl-cinematic-return{bottom:105px}}
