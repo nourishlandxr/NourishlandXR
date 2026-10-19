@@ -42,7 +42,7 @@ test('RC Bug V2 keeps the original Meta controller visible after virtual hands a
 }));
 
 test('controller practice uses brief on-screen instructions while reveal effects stay silent',()=>{
-    const quiet=['frame','table-reveal','zinnia-reveal','zinnia','settings-open','virtual-hands-reveal','basket-reveal','practice-ready','controls-stick','controls-stick-click','butterflies'];
+    const quiet=['frame','table-reveal','zinnia-reveal','zinnia','settings-open','virtual-hands-reveal','basket-reveal','practice-ready','controls-trigger','controls-grip','controls-face','controls-stick','controls-stick-click','controls-face-first','controls-face-second','butterflies'];
     for(const lesson of WELCOME_PRACTICE_LESSONS)if(quiet.includes(lesson.id))assert.equal(lesson.silent,true,lesson.id);else{assert.ok(lesson.spoken?.trim(),lesson.id);assert.notEqual(lesson.silent,true,lesson.id);}
     assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='controls-orb-grab').spoken,/expandable Orb/);
     assert.match(WELCOME_PRACTICE_LESSONS.find(l=>l.id==='settings-open').caption,/left thumbstick/);

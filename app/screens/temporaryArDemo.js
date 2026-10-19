@@ -1,6 +1,5 @@
 import {welcomeInputChoiceUnlocked,welcomeInputMethod,setWelcomeInputMethod} from '../services/welcomeExperienceUnlock.js';
 import {drawWelcomeText} from '../services/welcomeSpeechPresentation.js';
-import controllerGuideArtUrl from '../assets/demo-tutorial-art/controller-guide-pencil-outline.png?url';
 import {prepareZinniaMicrophone} from '../services/prepareZinniaMicrophone.js';
 import {directPanelPress} from '../services/xrDirectInteraction.js';
 import {DEMO_CHAPTERS} from '../services/demoChapters.js';
@@ -42,7 +41,7 @@ import {demoPlantOrbColor} from '../services/demoPlantChoices.js';
 import {ZINNIA_PLANT_COPY,applyZinniaNote,createZinniaPlantDiscovery,applyDiscoveredPlant,zinniaPlantButtons,drawZinniaPlantDiscovery,mountZinniaPlantDiscovery} from '../services/zinniaPlantDiscovery.js';
 import {drawDemoVoiceDetectionBar} from '../services/demoVoiceDetectionBar.js';
 let demoFramePlantChoiceOrbId='';
-const controllerGuideArt=new Image();controllerGuideArt.src=controllerGuideArtUrl;
+const controllerGuideArt=typeof Image==='function'?new Image():null;if(controllerGuideArt)controllerGuideArt.src=new URL('../assets/demo-tutorial-art/controller-guide-pencil-outline.png',import.meta.url).href;
 let demoZinniaDiscovery=null,demoZinniaView=null;
 let demoZinniaNoteDraft=null;
 import {orbPinchPoint,openPalmUnderOrb} from '../services/demoOrbHands.js';
@@ -5668,7 +5667,7 @@ function introVisibleCopy(){
     return introBoardVisibleBody;
 }
 function drawControllerPressGuide(ctx,state){
-    if(!controllerGuideArt.complete || !controllerGuideArt.naturalWidth)return;
+    if(!controllerGuideArt?.complete || !controllerGuideArt.naturalWidth)return;
     const x=460,y=515,width=480,height=320,active=new Set(state.controlHighlights || []),marked=new Set(state.controlMarks || []),pulse=.5+.5*Math.sin(performance.now()/150);
     ctx.save();ctx.globalAlpha=.96;ctx.drawImage(controllerGuideArt,x,y,width,height);
     const markers={
