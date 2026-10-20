@@ -1,0 +1,65 @@
+/* A small public introduction; detailed material stays inside the learning guide. */
+.simple-intro{padding-block:70px 44px}
+.simple-intro h1{font-size:clamp(46px,5.4vw,78px);max-width:20ch;margin-bottom:25px}
+.simple-intro .lead{font-size:clamp(19px,1.7vw,23px);max-width:56ch}
+.simple-intro .eyebrow,.simple-page .eyebrow{font-size:11px;letter-spacing:.12em}
+.simple-choices,.simple-steps,.simple-pilot{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+.simple-choice{position:relative;padding:34px;border:1px solid #cdd6c3;border-radius:20px;background:#e8eddf;transition:transform .2s}
+.simple-choice:hover{transform:translateY(-3px)}
+.simple-choice img{width:88px;height:88px;object-fit:cover;border-radius:12px;float:right;margin:0 0 25px 22px;box-shadow:0 6px 18px #153c341a}
+.simple-choice .eyebrow{display:block;margin:0 0 44px;max-width:24ch}
+.simple-choice h2{font-size:clamp(30px,3vw,44px);clear:both;margin-bottom:17px}
+.simple-choice p{font-size:17px;line-height:1.6;margin-bottom:20px}
+.simple-choice .text-link{font-size:15px}
+.choice-air{background:#dfebe7}
+.simple-next{display:flex;justify-content:space-between;align-items:center;gap:24px;padding-block:36px 64px}
+.simple-next p{font-size:18px}
+.simple-page .button{font-size:15px;min-height:52px;gap:22px}
+.simple-explanation,.simple-product{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center;padding-bottom:64px}
+.simple-explanation h2,.simple-steps h2,.simple-pilot h2{font-size:clamp(30px,3.4vw,46px);margin-bottom:18px}
+.simple-explanation p,.simple-steps p:not(.eyebrow),.simple-product p:not(.eyebrow),.simple-pilot p:not(.eyebrow){font-size:18px;line-height:1.65;max-width:47ch}
+.simple-explanation p+h2{margin-top:30px}
+.simple-explanation .button,.simple-product .button,.simple-contact .button{margin-top:28px}
+.simple-botanical{width:230px;aspect-ratio:1;object-fit:cover;border-radius:20px;justify-self:center;box-shadow:0 12px 35px #173a2d1c}
+.simple-drawing{overflow:hidden;border-radius:20px;background:#e7ece0}
+.simple-drawing img{width:100%;max-height:390px;object-fit:cover}
+.simple-drawing figcaption{font-size:13px;line-height:1.5;padding:16px 22px;color:#456154}
+.simple-steps{padding-bottom:40px}
+.simple-steps article{position:relative;border-top:1px solid #afbeaa;padding:28px 64px 28px 0}
+.step-number{position:absolute;right:16px;top:22px;font:400 58px/1 var(--serif);color:#8b9f87}
+.simple-steps .eyebrow{margin-bottom:22px}
+.simple-product{grid-template-columns:1.2fr 1fr}
+.simple-pilot{padding-bottom:45px;gap:70px}
+.simple-contact{padding:32px;border-radius:20px;background:#e3eadc}
+.simple-contact .email-address{font-size:15px;overflow-wrap:anywhere}
+.simple-details{padding:22px 0;margin-bottom:55px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.simple-details summary{font-size:17px;font-weight:600;cursor:pointer;padding:10px 0}
+.simple-details p{font-size:16px;max-width:66ch;margin-top:18px}
+.simple-details .text-link{margin:14px 24px 0 0}
+.simple-demo{padding-bottom:45px}
+.simple-demo p{font-size:15px;color:var(--soft);margin-top:20px}
+.simple-footer{padding-block:32px}
+.simple-footer>.wrap{display:flex;align-items:center;gap:24px;flex-wrap:wrap}
+.simple-footer nav{display:flex;flex-direction:row;gap:22px;margin-left:auto;font-size:14px}
+.simple-footer p{font-size:12px;color:var(--soft);max-width:none}
+.simple-footer .acknowledgement{flex-basis:100%;font-size:11px}
+.header-pathways .nav-demo{border-bottom:1px solid #9aaa93}
+@media(max-width:760px){
+  .simple-intro{padding-block:42px 28px}
+  .simple-intro h1{font-size:46px}
+  .simple-choices,.simple-steps,.simple-pilot,.simple-explanation,.simple-product{grid-template-columns:1fr;gap:25px}
+  .simple-choice{padding:26px}
+  .simple-choice .eyebrow{margin-bottom:30px}
+  .simple-choice h2{font-size:34px}
+  .simple-choice p{font-size:16px}
+  .simple-choice img{width:72px;height:72px;margin-bottom:20px}
+  .simple-next{align-items:flex-start;flex-direction:column;padding-block:28px 42px;gap:16px}
+  .simple-explanation,.simple-product{padding-bottom:42px}
+  .simple-explanation p,.simple-steps p:not(.eyebrow),.simple-product p:not(.eyebrow),.simple-pilot p:not(.eyebrow){font-size:17px}
+  .simple-drawing img{max-height:330px}
+  .simple-pilot{padding-bottom:30px}
+  .simple-contact{padding:26px}
+  .simple-footer nav{margin-left:0;gap:16px;flex-wrap:wrap;font-size:13px}
+  .header-pathways{gap:8px}
+  .header-pathways a{font-size:11px}
+}

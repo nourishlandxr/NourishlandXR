@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import {readFile,stat} from 'node:fs/promises';
 const root=new URL('../app/v2/',import.meta.url);
 const read=file=>readFile(new URL(file,root),'utf8');
-test('website keeps the live central world and offers the new editorial journeys',async()=>{
+test('website offers a short introduction while preserving the live central world',async()=>{
  const [html,hero]=await Promise.all([read('index.html'),read('homepage-hero.js')]);
- for(const route of ['education','platform','creator','explorer','pilot','collaborate','demos'])assert.match(html,new RegExp(`data-route="${route}"`));
+ for(const route of ['education','food-forests','nature-learning','platform','collaborate','demos'])assert.match(html,new RegExp(`data-route="${route}"`));
  assert.match(html,/data-biome-hero/);
  assert.doesNotMatch(html,/data-nl-hero/);
  assert.match(html,/hero-preview\.css/);
@@ -14,17 +14,23 @@ test('website keeps the live central world and offers the new editorial journeys
  assert.match(hero,/Nourishland-Hero-Living-v17\.html\?embed=1&central=1/);
  assert.match(hero,/heroInspection\.setUnlocked\(true\)/);
  assert.match(hero,/function playVideoFallback\(\)/);
- assert.match(html,/Observe\. Explore\. <em>Reflect\.<\/em>/);
  assert.match(html,/06-plant-orb-effects\.png/);
  assert.match(html,/08-connect-pimo-to-limo\.png/);
- assert.match(html,/05-totem-unfolds-garden-knowledge\.png/);
- for(const slot of ['zinnia','student-observation','creator-desktop','android-field','hillyards','demo-film'])assert.match(html,new RegExp(`data-media-slot="${slot}"`));
+ assert.doesNotMatch(html,/Reserved capture|Replace with a genuine|Show an educator shaping|data-media-slot/);
+ assert.match(html,/Create a guide\./);
+ assert.match(html,/Explore the place\./);
  assert.doesNotMatch(html,/>Food Forests &amp; Solarpunk<\/a>/);
  assert.match(html,/mailto:info@nourishland.org/);
  assert.doesNotMatch(html,/<script[^>]+pilot-application/);
  assert.doesNotMatch(html,/Review test application|founding cohort/);
  const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(x=>x[1]);
  assert.equal(ids.length,new Set(ids).size,'HTML ids must be unique');
+});
+
+test('legacy website bookmarks resolve to the combined pages',async()=>{
+ const app=await read('app.js');
+ for(const alias of ['creator','explorer'])assert.match(app,new RegExp(`${alias}:'platform'`));
+ for(const alias of ['pilot','about'])assert.match(app,new RegExp(`${alias}:'collaborate'`));
 });
 test('website v2 keeps local module and media references resolvable',async()=>{
  const html=await read('index.html');

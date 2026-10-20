@@ -27,7 +27,7 @@ document.addEventListener('pointerdown',event=>{if(open&&!navigation.contains(ev
 window.addEventListener('hashchange',()=>{if(open)setOpen(false);});
 window.addEventListener('nourishland:route',event=>{
  const page=event.detail.page;
- const group=['education','food-forests','food-forest-guide','nature-learning'].includes(page)?'education':['platform','creator','explorer','demos'].includes(page)?'platform':page;
+ const group=['education','food-forests','food-forest-guide','nature-learning'].includes(page)?'education':page;
  document.querySelectorAll('.header-pathways a, #main-nav a').forEach(link=>{
   const current=link.closest('.header-pathways')?link.hash===`#${group}`:link.hash===`#${page}`;
   if(current)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
