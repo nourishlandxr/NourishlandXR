@@ -132,9 +132,9 @@ function makeKeyboard(root, activeInput, scrollTop, viewportHeight, onChange, on
     keyboard.style.cssText = [
         'position:absolute',
         'z-index:99999',
-        'left:54px',
-        `top:${Math.round(scrollTop + viewportHeight * .51)}px`,
-        'width:1172px',
+        'left:20px',
+        `top:${Math.round(scrollTop + viewportHeight * .45)}px`,
+        `width:${Math.max(280,root.getBoundingClientRect().width-40)}px`,
         'box-sizing:border-box',
         'padding:18px',
         'border:3px solid rgba(232,249,190,.92)',
@@ -152,7 +152,7 @@ function makeKeyboard(root, activeInput, scrollTop, viewportHeight, onChange, on
         button.type = 'button';
         button.dataset.spatialKey = value;
         button.textContent = label;
-        button.style.cssText = `min-height:54px;padding:8px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:#385746;color:#fff;font:800 22px system-ui,sans-serif;grid-column:span ${columns}`;
+        button.style.cssText = `min-height:46px;padding:8px;border:1px solid rgba(255,255,255,.3);border-radius:10px;background:#385746;color:#fff;font:700 20px system-ui,sans-serif;grid-column:span ${columns}`;
         keyboard.append(button);
     };
     keys.forEach(key => addKey(key, /^[A-Z]$/.test(key) ? key.toLowerCase() : key));
@@ -198,7 +198,7 @@ export function createSpatialDashboardMirror(options = {}) {
     if (!gl || !root) throw new Error('A WebGL context and dashboard root are required.');
     const width = Number(options.width) || DEFAULT_VIEWPORT_WIDTH;
     const height = Number(options.height) || DEFAULT_VIEWPORT_HEIGHT;
-    const background=options.background || '#f5f7ef';
+    const background=options.background === null ? null : options.background || '#f5f7ef';
     const ink=options.ink || '#243328';
     const canvas = document.createElement('canvas');
     canvas.width = width;
@@ -213,7 +213,8 @@ export function createSpatialDashboardMirror(options = {}) {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     const paintStatus = (title, detail) => {
-        context.fillStyle = background;
+        context.clearRect(0,0,width,height);
+        context.fillStyle = background || 'rgba(14,38,29,.28)';
         context.fillRect(0, 0, width, height);
         context.fillStyle = ink;
         context.font = '800 42px system-ui, sans-serif';
@@ -242,6 +243,7 @@ export function createSpatialDashboardMirror(options = {}) {
     let scrollTop = 0;
     let activeInput = null;
     let keyboard = null;
+    let choices = null,hoveredTarget = null;
     let destroyed = false;
     let refreshTimer = 0;
     let refreshGeneration = 0;
@@ -253,7 +255,7 @@ export function createSpatialDashboardMirror(options = {}) {
 
     const maxScroll = () => Math.max(0, Math.max(root.scrollHeight, root.getBoundingClientRect().height) - height);
     const positionKeyboard = () => {
-        const nextTop = `${Math.round(scrollTop + height * .51)}px`;
+        const nextTop = `${Math.round(scrollTop + height * .45)}px`;
         if (keyboard && keyboard.style.top !== nextTop) keyboard.style.top = nextTop;
     };
 
@@ -273,6 +275,7 @@ export function createSpatialDashboardMirror(options = {}) {
         scrollTop = clamp(scrollTop, 0, maxScroll());
         positionKeyboard();
         const html2canvas = await loadHtml2canvas();
+        context.clearRect(0,0,width,height);
         await html2canvas(root, {
             canvas,
             backgroundColor: background,
@@ -303,7 +306,7 @@ export function createSpatialDashboardMirror(options = {}) {
                 cloneRoot.style.setProperty('width', `${width}px`, 'important');
                 cloneRoot.style.setProperty('max-width', 'none', 'important');
                 cloneRoot.style.setProperty('margin', '0', 'important');
-                cloneRoot.style.setProperty('background', background, 'important');
+                cloneRoot.style.setProperty('background', background || 'transparent', 'important');
             }
         });
         if (destroyed || generation !== refreshGeneration) return;
@@ -348,9 +351,13 @@ export function createSpatialDashboardMirror(options = {}) {
         const rootRect = root.getBoundingClientRect();
         const contentX = pixelX;
         const contentY = pixelY + scrollTop;
-        const candidates = [...root.querySelectorAll(INTERACTIVE_SELECTOR)].filter(element => {
+        const scope=choices || root;
+        const candidates = [...scope.querySelectorAll(INTERACTIVE_SELECTOR)].filter(element => {
+            if(element.matches(':disabled'))return false;
             const rect = element.getBoundingClientRect();
             if (!rect.width || !rect.height) return false;
+            const scrollHost=element.closest('[data-spatial-scroll]');
+            if(scrollHost){const clip=scrollHost.getBoundingClientRect();if(pixelX+rootRect.left<clip.left || pixelX+rootRect.left>clip.right || pixelY+rootRect.top<clip.top || pixelY+rootRect.top>clip.bottom)return false;}
             const left = rect.left - rootRect.left;
             const top = rect.top - rootRect.top;
             return contentX >= left && contentX <= left + rect.width && contentY >= top && contentY <= top + rect.height;
@@ -366,14 +373,37 @@ export function createSpatialDashboardMirror(options = {}) {
     };
 
     const showKeyboard = input => {
+        choices?.remove();choices=null;
         activeInput = input;
         const rootRect = root.getBoundingClientRect();
         const inputRect = input.getBoundingClientRect();
         const inputTop = inputRect.top - rootRect.top;
         scrollTop = clamp(inputTop - height * .18, 0, maxScroll());
+        const scrollHost=input.closest('[data-spatial-scroll]');
+        if(scrollHost)scrollHost.scrollTop+=inputRect.top-rootRect.top-height*.2;
         keyboard = makeKeyboard(root, input, scrollTop, height, refresh, closeKeyboard);
         options.onStatus?.('Spatial keyboard open. Aim at the keys and press the trigger.');
         refresh();
+    };
+
+    const showChoices = select => {
+        closeKeyboard();choices?.remove();
+        choices=document.createElement('section');choices.dataset.spatialMirrorChoices='';choices.setAttribute('role','listbox');choices.setAttribute('aria-label',select.labels?.[0]?.textContent?.trim() || 'Choose an option');
+        choices.style.cssText=`position:absolute;z-index:99999;left:20px;top:${Math.round(scrollTop+height*.18)}px;width:${width-40}px;padding:20px;border:2px solid #d6e8bd;border-radius:16px;background:rgba(17,42,29,.97);color:#f0f2dd;font:20px system-ui;display:grid;gap:9px`;
+        const enabled=[...select.options].filter(option=>!option.disabled);let optionPage=Math.max(0,Math.floor(enabled.indexOf(select.selectedOptions[0])/6));
+        const close=()=>{choices?.remove();choices=null;refresh();};
+        const draw=()=>{
+            choices.replaceChildren();
+            for(const option of enabled.slice(optionPage*6,optionPage*6+6)){
+                const button=document.createElement('button');button.type='button';button.textContent=option.textContent;button.setAttribute('role','option');button.setAttribute('aria-selected',String(option.selected));
+                button.style.cssText=`min-height:48px;text-align:left;border:1px solid #a5bc8d;border-radius:9px;padding:10px 16px;background:${option.selected?'#c9dcad':'#304f35'};color:${option.selected?'#1a3824':'#f0f2dd'};font:600 19px system-ui`;
+                button.onclick=()=>{select.value=option.value;dispatchValueEvents(select);close();};choices.append(button);
+            }
+            const nav=document.createElement('nav');nav.style.cssText='display:flex;gap:14px;justify-content:space-between;margin-top:10px';
+            for(const [label,text,disabled,callback] of [['Previous options','‹',optionPage===0,()=>{optionPage--;draw();refresh();}],['Cancel choice','×',false,close],['Next options','›',(optionPage+1)*6>=enabled.length,()=>{optionPage++;draw();refresh();}]]){
+                const button=document.createElement('button');button.type='button';button.textContent=text;button.disabled=disabled;button.setAttribute('aria-label',label);button.title=label;button.style.cssText='width:54px;height:48px;border:1px solid #aac291;background:#35543a;color:#f0f2dd;border-radius:9px;font:26px system-ui';button.onclick=callback;nav.append(button);
+            }choices.append(nav);
+        };draw();root.append(choices);refresh();
     };
 
     const activateAt = (pixelX, pixelY) => {
@@ -392,6 +422,11 @@ export function createSpatialDashboardMirror(options = {}) {
                 refresh();
                 return true;
             }
+            if(type==='range'){
+                const rect=target.getBoundingClientRect(),rootRect=root.getBoundingClientRect(),fraction=clamp((pixelX-(rect.left-rootRect.left))/rect.width,0,1);
+                const min=Number(target.min)||0,max=Number(target.max)||100,step=Number(target.step)||1;
+                target.value=String(clamp(min+Math.round((max-min)*fraction/step)*step,min,max));dispatchValueEvents(target);refresh();return true;
+            }
             if (type === 'file') {
                 options.onStatus?.('File upload remains available in Web Mode. Other dashboard editing stays spatial.');
                 return true;
@@ -401,13 +436,7 @@ export function createSpatialDashboardMirror(options = {}) {
             return true;
         }
         if (target instanceof HTMLSelectElement) {
-            const enabledOptions = [...target.options].filter(option => !option.disabled);
-            const selected = enabledOptions.indexOf(target.selectedOptions[0]);
-            const next = enabledOptions[(selected + 1 + enabledOptions.length) % enabledOptions.length];
-            if (next) target.value = next.value;
-            dispatchValueEvents(target);
-            options.onStatus?.(`${target.labels?.[0]?.textContent?.trim() || 'Option'}: ${next?.textContent?.trim() || target.value}`);
-            refresh();
+            showChoices(target);
             return true;
         }
         if (target.matches('summary')) {
@@ -422,6 +451,8 @@ export function createSpatialDashboardMirror(options = {}) {
     };
 
     const scrollBy = delta => {
+        const scrollHost=root.querySelector('[data-spatial-scroll]');
+        if(scrollHost && !keyboard && !choices){const before=scrollHost.scrollTop;scrollHost.scrollTop+=Number(delta||0);if(Math.abs(scrollHost.scrollTop-before)<1)return false;refresh();return true;}
         const next = clamp(scrollTop + Number(delta || 0), 0, maxScroll());
         if (Math.abs(next - scrollTop) < 1) return false;
         scrollTop = next;
@@ -437,6 +468,7 @@ export function createSpatialDashboardMirror(options = {}) {
         settleRefresh?.(); settleRefresh=null;
         observer.disconnect();
         keyboard?.remove();
+        choices?.remove();hoveredTarget?.removeAttribute('data-xr-aimed');
         delete root.dataset.spatialDashboardMirrorSource;
         if (originalStyle == null) root.removeAttribute('style');
         else root.setAttribute('style', originalStyle);
@@ -446,9 +478,11 @@ export function createSpatialDashboardMirror(options = {}) {
     refresh();
     return {
         texture,
+        get canvas(){return canvas;},
         width,
         height,
         activateAt,
+        hoverAt(pixelX,pixelY){const target=Number.isFinite(pixelX)&&Number.isFinite(pixelY)?targetAt(pixelX,pixelY):null;if(target===hoveredTarget)return;hoveredTarget?.removeAttribute('data-xr-aimed');hoveredTarget=target;target?.setAttribute('data-xr-aimed','');if(target)target.dispatchEvent(new Event('pointerover',{bubbles:true}));refresh();},
         focusInput:showKeyboard,
         scrollBy,
         refresh,

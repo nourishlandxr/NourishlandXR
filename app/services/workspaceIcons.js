@@ -1,4 +1,11 @@
 const DASHBOARD_ICON_PATHS = Object.freeze({
+    back: '<path d="M20 12H4m6-6-6 6 6 6"/>',
+    next: '<path d="m9 5 7 7-7 7"/>',
+    previous: '<path d="m15 5-7 7 7 7"/>',
+    plus: '<path d="M12 4v16M4 12h16"/>',
+    save: '<path d="M4 3h13l4 4v14H3V3zM7 3v7h10V3M7 21v-7h10v7"/>',
+    monitor: '<rect x="3" y="3" width="18" height="13" rx="2"/><path d="M8 21h8M12 16v5"/>',
+    phone: '<rect x="6" y="2" width="12" height="20" rx="2"/><path d="M10 5h4M11 19h2"/>',
     tools: '<path d="m4 20 9-9M14 4a5 5 0 0 0 6 6l-4 4-6-6zM3 4l5 5M3 3l3 1-2 2z"/>',
     ruler: '<path d="M3 8h18v8H3zM7 8v4M11 8v3M15 8v4M19 8v3"/>',
     plant: '<path d="M12 21V10M12 15C5 15 3 11 3 6c6 0 9 3 9 9Zm0-4c0-5 3-8 9-8 0 5-3 8-9 8Z"/>',
@@ -15,6 +22,7 @@ const DASHBOARD_ICON_PATHS = Object.freeze({
     arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>',
     upload: '<path d="M12 16V3m-5 5 5-5 5 5M3 16v5h18v-5"/>',
     close: '<path d="m6 6 12 12M6 18 18 6"/>',
+    logout: '<path d="M10 4H4v16h6M10 12h11m-4-4 4 4-4 4"/>',
     pin: '<path d="M19 10c0 5-7 12-7 12S5 15 5 10a7 7 0 1 1 14 0Z"/><circle cx="12" cy="10" r="2"/>',
 
     area: '<path d="M4 5.5 10 3l4 2 6-2v15.5L14 21l-4-2-6 2V5.5Z"/><path d="M10 3v16M14 5v16"/>',

@@ -25,21 +25,21 @@ export async function ensureCreatorAuthentication() {
     if (!status.ok) throw new Error(`Authentication check failed (${status.status})`);
     const session = await status.json();
     creatorAuthDisabled = session.authDisabled === true;
-    if (session.authenticated) return true;
+    if (session.authenticated) {
+        if(session.identity?.status==='pending')throw Error('Your Creator account is awaiting approval. Open Account to check its status.');
+        return true;
+    }
+    const {requestCreatorSignIn}=await import('./creatorSignIn.js');
+    const authenticated=await requestCreatorSignIn();
+    creatorAuthDisabled=false;
+    return authenticated;
+}
 
-    const username = window.prompt('Creator account name (leave blank for the existing administrator login)');
-    if (username === null) return false;
-    const password = window.prompt('Creator password');
-    if (password === null) return false;
-    const response = await apiFetch(`${API_BASE}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim(), password })
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `Creator login failed (${response.status})`);
-    creatorAuthDisabled = false;
-    return true;
+export async function accountRequest(route,{method='GET',body}={}){
+    const response=await apiFetch(`${API_BASE}${route}`,{method,...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})});
+    const value=await response.json().catch(()=>({}));
+    if(!response.ok){const error=Error(value.error || `Account service unavailable (${response.status}).`);error.status=response.status;throw error;}
+    return value;
 }
 
 export async function logoutCreatorAuthentication() {

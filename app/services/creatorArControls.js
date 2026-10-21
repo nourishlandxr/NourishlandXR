@@ -13,6 +13,9 @@ export function creatorArControlsMarkup() {
  <button type="button" data-quest-ar-action="special" data-ar-add-special aria-label="Open Totem tools">${icon('totem')}<span>Totem tools</span></button></section>
  <section class="creator-ar-action-palette" data-ar-more-menu hidden aria-label="More AR tools">
  <button type="button" data-ar-view-mode aria-pressed="false">View plants</button>
+ <button type="button" data-ar-map-area>Map Orb area</button>
+ <button type="button" data-ar-map-line>Map Orb line</button>
+ <button type="button" data-ar-quick-start>Creator quick start</button>
  <button type="button" data-quest-ar-action="knowledge" data-ar-knowledge-open>${icon('book')}<span>Plant knowledge</span></button>
  <button type="button" data-quest-ar-action="web" data-ar-web-return>Project workspace</button></section>
  <section class="creator-ar-knowledge-context" data-ar-knowledge-context hidden aria-label="Selected plant knowledge"><span data-ar-knowledge-label></span><div>

@@ -3,6 +3,29 @@ import {drawWelcomeText} from '../services/welcomeSpeechPresentation.js';
 import {prepareZinniaMicrophone} from '../services/prepareZinniaMicrophone.js';
 import {directPanelPress} from '../services/xrDirectInteraction.js';
 import {DEMO_CHAPTERS} from '../services/demoChapters.js';
+import {createRuntimeWristMenu} from '../services/runtimeWristMenu.js';
+import {createCreatorQuickStart,CREATOR_PRACTICE_COMPLETE} from '../services/creatorQuickStart.js';
+let demoWrist=null,directCreatorPractice=false;
+const demoCreatorQuickStart=createCreatorQuickStart(state=>{
+    if(!directCreatorPractice || !state.active)return;
+    if(state.complete){placementReady=false;appRoot?.querySelector('[data-tryit-place]')?.setAttribute('hidden','');setGuide('Complete. You placed an Orb, a Note and a Totem. These practice objects are not saved to a project.');}
+    else {demoStage=state.step.type==='area_checkpoint'?'totem':state.step.type;placementReady=true;marker=null;
+        const place=appRoot?.querySelector('[data-tryit-place]');place?.removeAttribute('hidden');place?.classList.add('is-ready','is-revealing');
+        if(place){place.dataset.placementKind=demoStage;place.setAttribute('aria-label',state.step.title);const label=place.querySelector('.creator-ar-placement-guide-label');if(label)label.textContent=state.step.title;}
+        if(place&&simulatedMode){const aim={plant:[32,42],note:[72,44],totem:[54,68]}[demoStage];place.dataset.preferredAimX=String(aim[0]);place.dataset.preferredAimY=String(aim[1]);}
+        setGuide(state.step.title+' · Aim, then press trigger or the aiming circle.');refreshSimulatedPlacementAim();}
+    demoWrist?.sync();
+    if(state.active){infoPanel?.restore();infoPanel?.setTaskProgress(null);infoPanel?.setHeaderProgress(null);infoPanel?.setStageContext(null);infoPanel?.setContextualHint('Practice objects are not saved to a project.');infoPanel?.showLearning({title:state.complete?'Placement practice complete':state.step.title,body:state.complete?CREATOR_PRACTICE_COMPLETE:state.step.instruction});}
+});
+function demoWristActions(){if(directCreatorPractice)return [{id:'restart-creator',label:'Restart placement practice',icon:'repeat'},{id:'exit',label:'Exit practice',icon:'close'}];return [{id:'creator',label:'Creator quick start',icon:'lesson'},
+    {id:'settings',label:'Settings',icon:'settings'},{id:'chapters',label:'Demo chapters',icon:'lesson'},
+    {id:'restart-creator',label:'Restart placement practice',icon:'repeat'}];}
+function createDemoWrist(simulated){
+    demoWrist?.destroy();demoWrist=createRuntimeWristMenu({root:appRoot,headset:!simulated,phoneAR:!simulated&&domOverlayEnabled,
+        actions:demoWristActions,onAction:id=>{if(id==='creator'||id==='restart-creator')activateDemoChapter('creator');else if(id==='settings'){infoPanel?.restore();infoPanel?.setSettingsOpen(true);}else handleDemoPanelAction(id);},
+        blocked:source=>Boolean(welcomePractice?.active || livingPeekActive || demoKnowledgeWorkspace || demoGrabInputSource===source && demoHeldIndex>=0)});
+    if(!simulated&&gl){demoWrist.attach(gl);demoWrist.bindSession(session,referenceSpace);}
+}
 let demoStartChapter=null,demoChaptersOpen=false;
 import {WELCOME_PRACTICE_LESSONS} from '../services/welcomePracticeContent.js';
 import {requireDeveloperLabSession,developerToolsEnabled} from '../services/developerLabAccess.js';
@@ -736,6 +759,7 @@ function clearSessionState() {
     destroySpatialSphereRenderer(gl, sphereRenderer);
     destroySpatialRainRenderer(gl,rainRenderer);rainRenderer=null;
     totemCardsRenderer?.destroy(); totemCardsRenderer = null;knowledgeRenderer?.destroy();knowledgeRenderer=null;heroDiceToy?.destroy();heroDiceToy=null;
+    demoWrist?.destroy();demoWrist=null;directCreatorPractice=false;demoCreatorQuickStart.close();
     demoLimo?.close({notify:false});demoLimo=null;demoLimoReturn=null;pimHold?.destroy(); pimHold = null; infoPanel?.destroy(); infoPanel = null;
     destroySpatialTetherRenderer(gl, tetherRenderer);
     handOutlineRenderer?.destroy();handOutlineRenderer=null;
@@ -830,6 +854,7 @@ function demoControlIsVisible(selector) {
 }
 
 function demoPanelActions() {
+    if(directCreatorPractice&&!demoChaptersOpen)return [{id:'chapter:creator',label:'Restart placement practice'},{id:'exit',label:'Exit practice'}];
     if(demoChaptersOpen)return [...DEMO_CHAPTERS.map(chapter=>({id:'chapter:'+chapter.id,label:chapter.title})),{id:'chapters-close',label:'Back to controls'}];
     if(developerLab && demoExitLifecycle.state===DEMO_EXIT_STATES.IDLE)return [{id:'lab-reset',label:'Reset station'},{id:'lab-voice',label:'Replay Zinnia voice'},{id:'lab-unload',label:'Unload / Developer Lab'}];
     if(demoViewOpen)return [
@@ -871,6 +896,7 @@ function demoPanelActions() {
 }
 
 function syncDemoPanelActions() {
+    demoWrist?.sync();
     syncDemoVoiceBar();
     const mapPlay=appRoot?.querySelector('[data-demo-map-play]');
     if(mapPlay){const label=demoLivingMapPlayback.playing(performance.now())?'Pause living map':'Play living map';if(mapPlay.textContent!==label)mapPlay.textContent=label;}
@@ -1344,7 +1370,7 @@ function demoTotemCards(record) {
     const plantSigns=['left','right'].map(side=>({side,pair:plants.filter(item=>directionFor(item)===side)})).filter(group=>group.pair.length).map(({side,pair})=>({id:!second && pair.length===1?`plant-${pair[0].id}`:`plants-${side}`,eyebrow:'',title:pointedTitle(pair.length>2?'Plants':pair.map(shortPlantName).join(' · '),side),summary:'',body:pair.map(item=>item.name).join(' · '),plaque:true,boardSide:side,references:pair.map(item=>item.id)}));
     const note=notes[0];
     const partner=markers.find(item=>item.demoType==='zone' && (item.id===record.demoLinkPartner || item!==record && item.demoZoneName===record.demoNeighbourZoneName));
-    const pendingNeighbour=!partner && record.tutorialStage==='totem';
+    const pendingNeighbour=!directCreatorPractice && !partner && record.tutorialStage==='totem';
     const destination=partner?.demoZoneName || (pendingNeighbour?'Second Area':'');
     const navigation=resolveTotemNavigation(record,partner,demoTotemRotationY(record));
     const neighbour=destination ? {id:'neighbour',eyebrow:'',title:pendingNeighbour?pointedTitle(destination,'left'):navigation.reliable?pointedTitle(destination,navigation.side):`Explore ${destination}`,summary:'',body:'Follow this sign to the neighbouring Totem.',boardSide:pendingNeighbour?'left':navigation.side,plaque:true,navigation:{...navigation,destinationId:partner?.id,pending:pendingNeighbour}} : null;
@@ -2328,6 +2354,7 @@ function paintWelcomeLayer(now) {
 }
 
 function paintDemoAmbientLife(now){
+    if(directCreatorPractice){ambientBeeModel?.hide?.();return;}
     if(welcomePractice?.active){ambientBeeModel?.hide?.();return;}
     paintDemoButterfly(now);
     if(now-ambientLastPaint<33)return;
@@ -2862,10 +2889,10 @@ function updateDemoFloor(){
     updateSimulatedMarkers();
 }
 
-function createDemoTotemExample() {
+function createDemoTotemExample(practicePosition=null,practiceAnchor=null) {
     const groundBaseY = pairedDemoTotemGroundY();
     groundYEstimate = groundBaseY-getSpatialVisualSettings().floorOffset;
-    const position = pairedDemoTotemPosition(1,groundBaseY);
+    const position = directCreatorPractice && practicePosition?practicePosition:pairedDemoTotemPosition(1,groundBaseY);
     const pairRightLength=Math.hypot(Number(viewerMatrix?.[0]) || 1,Number(viewerMatrix?.[2]) || 0) || 1;
     const totem = {
         ...createMinimalMarkerDraft('area_checkpoint', {
@@ -2903,6 +2930,7 @@ function createDemoTotemExample() {
     };
     totem.texture = createMarkerTexture(totem);
     markers.push(totem);
+    if(directCreatorPractice){totem.simulatedAnchor=practiceAnchor;updateSimulatedMarkers();demoCreatorQuickStart.placed('area_checkpoint');return;}
     markers.filter(record=>['plant','note'].includes(record.demoType) && !record.demoAmbientNeighbour).forEach(record=>{record.demoAreaId=totem.id;});
     advanceWelcomeRootMilestone(WELCOME_ROOT_MILESTONES.firstAreaShown);
     updateSimulatedMarkers();
@@ -4857,6 +4885,7 @@ function placeMarker() {
     pointer?.classList.add('is-revealing', 'is-ready');
     updateSimulatedMarkers();
     marker = null;
+    if(directCreatorPractice){pointer?.setAttribute('hidden','');demoCreatorQuickStart.placed(type);return;}
     if (type === 'plant') guidePlantConversion(placedRecord);
     else if (type === 'plant2') guidePlantConversion(placedRecord);
     else guideNoteConversion(placedRecord);
@@ -4978,6 +5007,7 @@ function renderInterface(simulated) {
         import('../services/demoButterflyModel.js').then(({mountDemoButterflyModel})=>{if(insect.canvas.isConnected)insect.model=mountDemoButterflyModel(insect.canvas,{gl:simulated?null:gl,red:insect.red,colour:insect.colour,wingOpacity:insect.wingOpacity});}).catch(error=>console.warn('Butterfly unavailable:',error));
     }
     infoPanel.element?.classList.toggle('is-demo-panel',simulated);
+    createDemoWrist(simulated);
     if(simulated)infoPanel.setCompact(true);
     infoPanel.setLearningModules(null);
     infoPanel.setRayFilter(ray=>{if(demoNoteOwnsPointer(ray))return false;const rim=demoLivingFrameRimHit(ray),panel=infoPanel?.hit(ray);return !rim || Boolean(panel && panel.distance<rim.distance);});
@@ -5909,7 +5939,7 @@ function drawWelcomePracticeFrame(view){
 }
 
 function drawIntroSpatial(view) {
-    if ((!introSceneActive && !arWelcomeShowcaseActive) || !viewerMatrix || !program || !buffer) return;
+    if ((!introSceneActive && !arWelcomeShowcaseActive && !directCreatorPractice) || !viewerMatrix || !program || !buffer) return;
     if(!introWorldAnchor){
         introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
         limDiagnostic('root-placement',{anchor: introWorldAnchor ? Array.from(introWorldAnchor.slice(12,15)) : null,mode:sessionMode});
@@ -6018,6 +6048,7 @@ function drawIntroSpatial(view) {
 }
 
 function drawDemoZinnia(view,frameMatrix){
+    if(directCreatorPractice)return;
     if(welcomePractice?.active)return;
     const inputs=[...latestTrackedHandStates.filter(entry=>entry.state?.tracked).map(entry=>({source:entry.source,tip:entry.state.rawJoints.get('index-finger-tip')})),...demoPointerRays.filter(entry=>!entry.source?.hand).map(entry=>({source:entry.source,ray:entry.ray,trigger:Boolean(entry.source?.gamepad?.buttons?.[0]?.pressed)}))];
     zinniaFramePerch?.matchRim(livingFrameModel?.scene);
@@ -6279,6 +6310,7 @@ function blendInsectWithFlower(position,visit,visitor){
 }
 
 function drawSpatialAmbientLife(view){
+    if(directCreatorPractice)return;
     if(welcomePractice?.active)return;
     // Never display a different bee while the animated model is loading.
     if(!getSpatialVisualSettings().insects || !ambientBeeModel?.ready || !viewerMatrix || !Number.isFinite(ambientBeesStartedAt))return;
@@ -6430,7 +6462,7 @@ function drawNativeConnectionSpatial(view){
 }
 
 function drawSpatialRain(view,time){
-    if(!viewerMatrix || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
+    if(directCreatorPractice || !viewerMatrix || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches)return;
     drawSpatialRainField(gl,rainRenderer,view,time,{quality:currentRainQuality(),progress:demoRainProgress(arWelcomeClock.elapsed),origin:viewerMatrix,groundY:Number.isFinite(groundYEstimate)?groundYEstimate:viewerMatrix[13]-1.6});
 }
 
@@ -6690,7 +6722,7 @@ function drawDemoInputPointer(view,pointerSource) {
     // Butterflies can be caught along the ray, but never clamp the laser tip.
     const practiceFrameHit=welcomePracticeFrameHit(latestControllerRay),practiceStageHit=welcomePractice?.stage.hit(latestControllerRay);
     const practiceTarget=practiceStageHit && !practiceStageHit.worldPoint && Number.isFinite(practiceStageHit.distance)?{...practiceStageHit,worldPoint:{x:origin.x+direction.x*practiceStageHit.distance,y:origin.y+direction.y*practiceStageHit.distance,z:origin.z+direction.z*practiceStageHit.distance}}:practiceStageHit;
-    const surface = mapDragging?mapSurface:[welcomePractice?zinniaVoiceBar?.hit(latestControllerRay):null,practiceFrameHit,practiceTarget,demoFramePlantChoiceHit(),demoLivingFrameRimHit(),demoZinniaPointerHit(latestControllerRay),limSurface,controlSurface,greenSurface,placementSurface,handleSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+    const surface = mapDragging?mapSurface:[welcomePractice?zinniaVoiceBar?.hit(latestControllerRay):null,practiceFrameHit,practiceTarget,demoFramePlantChoiceHit(),demoLivingFrameRimHit(),demoZinniaPointerHit(latestControllerRay),limSurface,controlSurface,greenSurface,placementSurface,handleSurface,mapSurface,pimSurface,hoveredRecordHit,demoNoteHit(latestControllerRay),heroDiceToy?.hit(latestControllerRay),demoWrist?.panel.hit(latestControllerRay),infoPanel?.hit(latestControllerRay),totemCardsRenderer?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
     // Dashboard-style surfaces expose `position`; Totem/PIM surfaces expose
     // `point`. Treat both as the same exact visual contact so the laser does
     // not fall through to its five-metre fallback after a valid cell hit.
@@ -6979,6 +7011,8 @@ async function startImmersive() {
             runXrFrameStep('controller depth',()=>pollDemoControllerDepth(_time));
             runXrFrameStep('floor dice input',()=>heroDiceToy?.update(frame,_time));
             runXrFrameStep('knowledge object input',()=>knowledgeRenderer?.updateInput(frame));
+            demoWrist?.panel.suspend(Boolean(welcomePractice?.active || livingPeekActive));
+            runXrFrameStep('shared wrist update',()=>demoWrist?.update(viewerMatrix,_time,latestControllerRay,frame));
             runXrFrameStep('Control panel update',()=>infoPanel?.update(viewerMatrix, _time, latestControllerRay, frame,source=>livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || (demoHeldIndex>=0 && demoGrabInputSource===source) || demoKnowledgeIsModal()));
             runXrFrameStep('LIM hover',syncImmersiveLimHover);
             runXrFrameStep('hand surface touch',()=>nearHandInteraction?.update(latestTrackedHandStates,_time,source=>livingPeekActive || livingPeekConsumedSources.has(source) || demoLivingMapGrip?.owns(source) || butterflyHeldBy(source) || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || demoHeldIndex>=0 || Boolean(placementReady || demoKnowledgeWorkspace || demoWebModeOpen || arWelcomeIntroPending || demoExitLifecycle.state!==DEMO_EXIT_STATES.IDLE)));
@@ -7022,6 +7056,7 @@ async function startImmersive() {
                 if(runXrFrameStep('marker render',()=>drawMarker(view)))renderedContent=true;
                 runXrFrameStep('PIM render',()=>drawDemoKnowledge(view));
                 runXrFrameStep('Control panel render',()=>infoPanel?.draw(view));
+                runXrFrameStep('shared wrist render',()=>demoWrist?.draw(view));
                 runXrFrameStep('floor dice render',()=>heroDiceToy?.draw(view));
                 runXrFrameStep('butterfly render',()=>drawSpatialButterfly(view));
                 runXrFrameStep('ambient render',()=>drawSpatialAmbientLife(view));runXrFrameStep('Zinnia voice bar',()=>zinniaVoiceBar?.draw(view));
@@ -7060,24 +7095,29 @@ export function openTemporaryArDemoWindow(app) {
 }
 
 export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null, refinementPreview = null, livingFramePreviewClock:framePreviewClock = null, developerStation=null,chapter=null,microphonePrepared=false } = {}) {
+    directCreatorPractice=false;demoCreatorQuickStart.close();demoWrist?.destroy();demoWrist=null;
     // Development fixtures may inspect XR, but public desktop entry is a book.
     if((!chapter || chapter==='tutorial') && !developerStation && !livingMapPreviewRecords && !refinementPreview && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
-    if(!microphonePrepared && !developerStation && !livingMapPreviewRecords && !refinementPreview && isQuestHeadsetBrowser()){
+    if(chapter!=='creator' && !microphonePrepared && !developerStation && !livingMapPreviewRecords && !refinementPreview && isQuestHeadsetBrowser()){
         // Request permission alongside entry; no extra page or XR-blocking await.
         void prepareZinniaMicrophone();
     }
     resetZinniaVisitor();appRoot = app;
     limDiagnostic('device-context',limDeviceContext(navigator.maxTouchPoints ? 'touch-capable' : 'mouse'));
     clearSessionState();
+    directCreatorPractice=chapter==='creator';
     developerLab=developerStation;demoStartChapter=chapter;demoChaptersOpen=false;if(chapter)setWelcomeTutorialEnabled(chapter==='tutorial');
     demoPeekPortal=createPeekPortalExperience();
     if(!livingMapPreviewRecords && !refinementPreview){resetSpatialVisualSettings();setSpatialVisualSettings({orbModel:'v3'});}
     demoCellOpacity=getSpatialVisualSettings().cellOpacity;demoHandMode=developerLab?.input==='controllers'?'pointer':'outline';if(!developerLab)demoHandMode=getSpatialVisualSettings().handMode;
     demoLivingFramePreviewClock=refinementPreview && typeof framePreviewClock==='function'?framePreviewClock:null;
     demoLivingMapPreviewClock=livingMapPreviewRecords && typeof livingMapPreviewClock==='function' ? livingMapPreviewClock : null;
-    demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview});
-    demoProjectVoice=createProjectNarration({demo:true,isVisible:()=>session?session.visibilityState!=='hidden':!document.hidden,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();demoFeedbackLastTick=-Infinity;demoFeedback.start();
-    {welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();for(const lesson of WELCOME_PRACTICE_LESSONS.filter(value=>!value.silent && !value.optional).slice(0,3))void welcomePracticeVoice.prepare({...lesson,spokenOverride:true,recorded:false});}
+    demoFeedback=createDemoFeedback({resetSettings:!livingMapPreviewRecords && !refinementPreview,silent:directCreatorPractice});
+    if(!directCreatorPractice){
+        demoProjectVoice=createProjectNarration({demo:true,isVisible:()=>session?session.visibilityState!=='hidden':!document.hidden,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(welcomePracticeVoice?.status().playing))});demoProjectVoice.unlock();void demoProjectVoice.preload();
+        welcomePracticeVoice=createWelcomePracticeVoice({enabled:true,onChange:state=>demoFeedback?.setNarrating(state.playing || Boolean(demoProjectVoice?.status().playing))});welcomePracticeVoice.unlock();for(const lesson of WELCOME_PRACTICE_LESSONS.filter(value=>!value.silent && !value.optional).slice(0,3))void welcomePracticeVoice.prepare({...lesson,spokenOverride:true,recorded:false});
+    }
+    demoFeedbackLastTick=-Infinity;demoFeedback.start();
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = livingMapPreviewRecords || refinementPreview || developerLab && !developerLab.xr ? false : await startImmersive();
@@ -7141,10 +7181,24 @@ function activateDeveloperStation(){
 
 function activateDemoChapter(id){
  if(!DEMO_CHAPTERS.some(chapter=>chapter.id===id))return;
+ directCreatorPractice=id==='creator';demoCreatorQuickStart.close();
  introWorldAnchor ||= introWorldAnchorFromViewer(viewerMatrix);
  demoPeekPortal?.close();closeLivingPeek();clearDemoNarration();clearTimeout(arWelcomeUnlockTimer);arWelcomeUnlockTimer=null;
  arWelcomeIntroPending=false;arWelcomeOpeningActive=false;arWelcomeSettleStage=false;placementReady=false;
  infoPanel?.restore();infoPanel?.suspend(false);infoPanel?.setIntroduction(false);syncDemoPanelActions();
+ if(id==='creator'){
+    demoProjectVoice?.destroy();demoProjectVoice=null;welcomePracticeVoice?.destroy();welcomePracticeVoice=null;
+    demoFeedback?.destroy();demoFeedback=createDemoFeedback({silent:true});
+    clearTimeout(introNarrationTimer);introNarrationTimer=null;
+    welcomePractice?.park();welcomeComfort=null;infoPanel?.setComfortContext(null);
+    clearTimeout(aimRevealTimer);finishIntroBoard();disposeSpatialLivingMap();limMeshVisible=false;
+    for(const record of markers){knowledgeRenderer?.clear(record);if(record.texture)gl?.deleteTexture(record.texture);}markers=[];marker=null;
+    for(const insect of butterflyCompanions)if(insect.canvas)insect.canvas.style.visibility='hidden';
+    zinniaFramePerch?.hide();introBoardVisible=false;introSceneActive=false;arWelcomeShowcaseActive=false;
+    appRoot?.querySelector('[data-tryit-skip]')?.setAttribute('hidden','');
+    demoCreatorQuickStart.start();updateSimulatedMarkers();syncDemoPanelActions();return;
+ }
+ appRoot?.querySelector('[data-tryit-skip]')?.removeAttribute('hidden');
  if(id==='tutorial'){if(welcomePractice){welcomePracticeCompleted=false;welcomePractice.start(viewerMatrix,calibratedDemoGroundY());syncWelcomeComfortOptions();}else {setWelcomeTutorialEnabled(true);returnToWelcome();}return;}
  if(id==='introduction'){showDemoCalmWelcome();return;}
  if(id==='space'){runArWelcomeTutorial(0);return;}

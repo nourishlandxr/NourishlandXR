@@ -1,5 +1,6 @@
 import {DEMO_GUIDED_STEPS} from '../features/ar-demo/demoJourneyContent.js';
 export const DEMO_CHAPTERS=Object.freeze([
+ {id:'creator',title:'Creator quick start',description:'Place an Orb, a Note and a Totem. Three steps, no narrated introduction.'},
  {id:'tutorial',title:'Hands tutorial',description:'Meet Zinnia; practise controllers, virtual hands and hand tracking.'},
  {id:'introduction',title:'Welcome and imagine',description:'Meet NourishlandXR and look through the Living Frame.'},
  {id:'space',title:'Your spatial tools',description:'Explore the Frame, Control Panel and tools you can use in Creator mode.'},

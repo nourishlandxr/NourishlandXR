@@ -571,7 +571,7 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.doesNotMatch(source, /showDemoAction\('zone'\)/);
     assert.match(source, /function cycleDemoNoteTemplate\(record\)/);
     assert.match(source, /record\.demoExpanded = false/);
-    assert.match(source, /function createDemoTotemExample\(\)/);
+    assert.match(source, /function createDemoTotemExample\(/);
     assert.match(guidedDemoStep('ELEMENTS 1.18').main, /signs help visitors/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.doesNotMatch(source, /const DEMO_TOTEM_STYLES|function cycleDemoTotemStyle\(record\)/);

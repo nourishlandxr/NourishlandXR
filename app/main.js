@@ -6,6 +6,8 @@ import { renderCreatorWorkspace } from './services/creatorWorkspaceRouting.js';
 import { renderVisitorExperience, clearVisitorCache, cancelVisitorExperience } from './screens/visitorExperience.js';
 import { SiteManager } from './managers/siteManager.js';
 import { renderLaunchScreen } from './screens/launch.js';
+import {renderAccessPortal} from './screens/accessPortal.js';
+import {portalUrl} from './services/portalRoutes.js';
 import { renderBiomeWheelXR } from './screens/biomeWheelXR.js';
 import { renderStudio } from './screens/studio.js';
 import { renderSites, renderProjectFormScreen, setProjectTemplate } from './screens/sites.js';
@@ -297,7 +299,7 @@ async function bootstrap() {
     }
 }
 
-window.renderLaunchScreen = () => { if (isArModeActive()) { exitArMode(() => window.renderLaunchScreen()); return; } if (isVisitorArActive()) return exitAr().then(() => window.renderLaunchScreen()); forgetCurrentView(); replaceViewHistory('welcome'); setExperienceRole('launch'); renderLaunchScreen(app); };
+window.renderLaunchScreen = () => { if (isArModeActive()) { exitArMode(() => window.renderLaunchScreen()); return; } if (isVisitorArActive()) return exitAr().then(() => window.renderLaunchScreen()); forgetCurrentView(); replaceViewHistory('welcome'); setExperienceRole('launch'); history.replaceState(null,'',portalUrl('home')); return renderAccessPortal(app); };
 window.renderHillyardsDemo = () => renderDemoHome(app);
 window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${escapeMainHtml(error.message)}</p></div>`; }); };
 window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
@@ -308,15 +310,7 @@ window.applyAnalogFilters = applyAnalogFilters;
 window.renderDemoProjects = async () => {
     if (isArModeActive()) { exitArMode(() => window.renderDemoProjects()); return; }
     if (isVisitorArActive()) return exitAr().then(() => window.renderDemoProjects());
-    try {
-        if (!await ensureCreatorAuthentication()) return;
-        setExperienceRole('creator');
-        rememberCurrentView('projects');
-        history.replaceState({ nourishlandView: 'projects' }, '', window.location.href);
-        await renderDemoProjects(app);
-    } catch (error) {
-        window.alert(error.message);
-    }
+    location.href=portalUrl('creator');
 };
 window.renderProjectHome = async projectId => {
     if (window.__nourishlandSpatialWindow?.renderProjectHome) {

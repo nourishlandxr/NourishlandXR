@@ -1,6 +1,9 @@
 ﻿import { SiteManager } from '../managers/siteManager.js';
 import { renderSiteForm } from '../components/siteForm.js';
 import { renderSiteDashboard } from './siteDashboard.js';
+import { ensureCreatorInterfaceStyles } from '../services/creatorInterface.js';
+import { dashboardIcon } from '../services/workspaceIcons.js';
+import { creatorStartHeader } from '../services/creatorWorkspaceFrame.js';
 
 let selectedTemplate = 'empty';
 
@@ -48,6 +51,7 @@ export function renderSitesScreen(app, siteManager = new SiteManager()) {
 }
 
 export function renderProjectFormScreen(app, project = null) {
+    ensureCreatorInterfaceStyles();
     const formHtml = renderSiteForm(
         'window.renderDemoProjects()',
         project ? `window.renameProjectFromForm(${JSON.stringify(project)})` : 'window.createProjectFromForm()',
@@ -56,9 +60,9 @@ export function renderProjectFormScreen(app, project = null) {
     );
 
     app.innerHTML = `
-    <div class="screen">
+    <div class="screen creator-settings creator-project-form">${creatorStartHeader()}
         <div class="page-header">
-            <button class="ghost" onclick="window.renderDemoProjects()">Back</button>
+            <button class="ghost" onclick="window.renderDemoProjects()" aria-label="Back to projects" title="Back to projects">${dashboardIcon('back')}</button>
             <h1>${project ? 'Rename Location' : 'New Location'}</h1>
             <p class="subtitle">${project ? 'Update the location name.' : 'Create a new location in this workspace.'}</p>
         </div>

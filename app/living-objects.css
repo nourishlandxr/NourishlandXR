@@ -2397,6 +2397,9 @@ body .nlxr-info-panel:is(.is-demo-panel,.is-creator-panel):is(.is-media-collapse
 /* Desktop tells the same story through simple, opaque 2D surfaces. */
 .is-simple-desktop-ar *{animation:none!important;transition:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
 .is-simple-desktop-ar :is(.nlxr-info-panel,.nlxr-settings-companion,.tryit-guided-choice,.tryit-sim-plant-profile,.creator-ar-plant-profile){background:#172d29!important;box-shadow:none!important}
+.creator-ar-overlay.is-simple-desktop-ar .nlxr-settings-companion h2{color:#edf1e3}
+.creator-ar-overlay.is-simple-desktop-ar .nlxr-settings-close{width:44px;min-width:44px;height:44px;min-height:44px;padding:0;border-radius:12px;font-size:0}
+.creator-ar-overlay.is-simple-desktop-ar .nlxr-settings-close::before{content:'\00d7';font:400 30px/1 system-ui}
 .is-simple-desktop-ar .plant-knowledge-map[data-knowledge-mode] :is(.plant-knowledge-cell,.plant-knowledge-core)::after{background:#213934!important;opacity:1!important}
 .is-simple-desktop-ar .tryit-demo::before,.is-simple-desktop-ar .tryit-demo::after,.is-simple-desktop-ar .tryit-stage::before,.is-simple-desktop-ar .tryit-stage::after{display:none!important}
 .is-simple-desktop-ar :is(.tryit-ambient-life,.tryit-ambient-model,.tryit-butterfly-model,.tryit-rain-v2){display:none!important}
@@ -2598,4 +2601,10 @@ body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],butt
 .nlxr-info-panel.is-comfort-options > section > p { color:#cfddca; margin:0 0 16px; }
 .nlxr-info-panel.is-comfort-options button { color:#eef4e6; background:linear-gradient(145deg,#425949,#263b31); border:1px solid #b8cab2a8; font-size:14px; padding:8px; }
 .nlxr-info-panel.is-comfort-options button:disabled { opacity:.4; }
+.nlxr-info-panel.is-runtime-wrist { position:fixed!important;left:auto!important;right:16px!important;top:16px!important;bottom:auto!important;width:68px!important;height:auto!important;min-height:0;grid-template-rows:1fr;grid-template-areas:"content";z-index:13010; }
+.nlxr-info-panel.is-runtime-wrist.is-runtime-wrist-open { width:min(240px,calc(100vw - 32px))!important; }
+.nlxr-info-panel.is-runtime-wrist > .nlxr-control-header,.nlxr-info-panel.is-runtime-wrist > section > p { display:none; }
+.nlxr-info-panel.is-runtime-wrist > section { padding:6px!important;overflow:visible; }
+.nlxr-info-panel.is-runtime-wrist > section > nav { margin:0; }
+.nlxr-info-panel.is-runtime-wrist:not(.is-runtime-wrist-open) > section > nav { grid-template-columns:1fr!important; }
 .nlxr-info-panel.is-comfort-options button[aria-pressed="true"] { border-color:#bce3a3; background:#537055; }

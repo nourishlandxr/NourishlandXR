@@ -1,6 +1,8 @@
 import http from 'http';
 import { createProjectAccess, projectRole } from './projectAccess.mjs';
 import { handleProjectChecklists } from './projectChecklists.mjs';
+import {handleProjectTours} from './projectTours.mjs';
+import {validateSiteFeature} from '../app/services/siteFeature.js';
 import {handleZinniaVoice} from './zinniaVoiceServer.mjs';
 import {handleZinniaPreview} from './zinniaPreviewProxy.mjs';
 import fs from 'fs';
@@ -37,6 +39,10 @@ const loginFailures = new Map();
 const DALEYS_PRODUCTS_URL = 'https://www.daleysfruit.com.au/app/products.php';
 const DALEYS_BATCH_SIZE = 100;
 const DALEYS_CATALOG_TTL_MS = 15 * 60 * 1000;
+const bundledDaleysCatalog = path.join(__dirname, 'data1', 'daleys_plant_catalog.json');
+const DALEYS_LOCAL_CATALOG_FILE = fs.existsSync(bundledDaleysCatalog)
+    ? bundledDaleysCatalog
+    : path.join(rootDir, 'data1', 'daleys_plant_catalog.json');
 let daleysCatalogCache = { expiresAt: 0, products: [] };
 let daleysCatalogPromise = null;
 const TERRAIN_DATA_TTL_MS = 6 * 60 * 60 * 1000;
@@ -97,18 +103,35 @@ async function loadDaleysCatalog() {
     if (daleysCatalogCache.expiresAt > Date.now()) return daleysCatalogCache.products;
     if (daleysCatalogPromise) return daleysCatalogPromise;
     daleysCatalogPromise = (async () => {
-        const products = [];
-        for (let start = 0; start < 100000; start += DALEYS_BATCH_SIZE) {
-            const endpoint = `${DALEYS_PRODUCTS_URL}?Start=${start}&Qty=${DALEYS_BATCH_SIZE}`;
-            const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
-            if (!response.ok) throw new Error(`Daleys catalog request failed (${response.status})`);
-            const payload = await response.json();
-            const batch = Array.isArray(payload?.data) ? payload.data : [];
-            products.push(...batch);
-            if (batch.length < DALEYS_BATCH_SIZE) break;
+        try {
+            const products = [];
+            for (let start = 0; start < 100000; start += DALEYS_BATCH_SIZE) {
+                const endpoint = `${DALEYS_PRODUCTS_URL}?Start=${start}&Qty=${DALEYS_BATCH_SIZE}`;
+                const response = await fetch(endpoint, { headers: { Accept: 'application/json' } });
+                if (!response.ok) throw new Error(`Daleys catalog request failed (${response.status})`);
+                const payload = await response.json();
+                const batch = Array.isArray(payload?.data) ? payload.data : [];
+                products.push(...batch);
+                if (batch.length < DALEYS_BATCH_SIZE) break;
+            }
+            daleysCatalogCache = { expiresAt: Date.now() + DALEYS_CATALOG_TTL_MS, products };
+            return products;
+        } catch (error) {
+            const localCatalog = readJson(DALEYS_LOCAL_CATALOG_FILE);
+            if (!Array.isArray(localCatalog?.products) || !localCatalog.products.length) throw error;
+            const products = localCatalog.products.map(product => ({
+                sku: product.sku,
+                name: product.commonName,
+                botanicalName: product.scientificName,
+                category: product.sourceCategory,
+                url: product.productUrl,
+                image: product.imageUrl ? [product.imageUrl] : [],
+                description: product.description
+            }));
+            daleysCatalogCache = { expiresAt: Date.now() + DALEYS_CATALOG_TTL_MS, products };
+            console.warn(`[Daleys] Using local catalog (${products.length} listings); live API unavailable: ${error.message}`);
+            return products;
         }
-        daleysCatalogCache = { expiresAt: Date.now() + DALEYS_CATALOG_TTL_MS, products };
-        return products;
     })().finally(() => { daleysCatalogPromise = null; });
     return daleysCatalogPromise;
 }
@@ -945,7 +968,7 @@ function createSpatialPlant(projectId, siteId, placeId, data) {
     }
 }
 
-function publicIdentity(identity) { return identity ? { id: identity.id, platformAdmin: identity.platformAdmin, projects: identity.projects } : null; }
+function publicIdentity(identity) { return identity ? { id: identity.id, name:identity.name||identity.id, status:identity.status||'approved', creatorEnabled:identity.creatorEnabled===true, platformAdmin: identity.platformAdmin, projects: identity.projects } : null; }
 function buildPublicSnapshot(projectId) {
         if(!isPublicHierarchy(projectId))return null;
         const brief=(record,id)=>({id,name:String(record.name||id),description:String(record.description||'')});
@@ -1093,7 +1116,7 @@ function handleApi(req, res) {
     if(handleZinniaVoice(req,res,pathname,{sendJson,readRequestJson,isAllowedOrigin}))return true;
 
     if (pathname === '/api/auth/session' && req.method === 'GET') {
-        return sendJson(res, 200, { authenticated: hasCreatorSession(req), required: production || Boolean(accessRegistryFile), authDisabled: creatorAuthDisabled, identity: publicIdentity(projectAccess.identity(req)) });
+        return sendJson(res, 200, { authenticated: hasCreatorSession(req), required: production || Boolean(accessRegistryFile), authDisabled: creatorAuthDisabled, registrationAvailable:projectAccess.registrationAvailable, identity: publicIdentity(projectAccess.identity(req)) });
     }
     if (pathname === '/api/health' && req.method === 'GET') {
         return sendJson(res, 200, {
@@ -1132,6 +1155,23 @@ function handleApi(req, res) {
             .then(results => sendJson(res, 200, { source: 'daleys', results }))
             .catch(error => sendJson(res, 502, { error: error.message || 'Daleys plant search is temporarily unavailable.' }));
         return true;
+    }
+    if(pathname==='/api/auth/register' && req.method==='POST'){
+        if(!isAllowedOrigin(req))return sendJson(res,403,{error:'Request origin is not allowed'});
+        if(!projectAccess.registrationAvailable)return sendJson(res,503,{error:'Account registration is not configured. Contact the administrator.'});
+        const rate=loginRateLimit(req);if(rate.blocked)return sendJson(res,429,{error:'Too many account attempts. Try again later.'});
+        recordLoginFailure(req);
+        readRequestJson(req,async(error,data)=>{if(error)return sendJson(res,400,{error:error.message});try{const identity=await projectAccess.register(data);setSessionCookie(res,projectAccess.token(identity,Date.now()+sessionTtlMs),Math.floor(sessionTtlMs/1000));sendJson(res,201,{authenticated:true,identity:publicIdentity(identity)});}catch(error){sendJson(res,400,{error:error.message});}});return true;
+    }
+    if(pathname==='/api/admin/accounts' || pathname.startsWith('/api/admin/accounts/')){
+        const identity=projectAccess.identity(req);if(!identity?.platformAdmin)return sendJson(res,identity?403:401,{error:'Platform administrator required'});
+        if(pathname==='/api/admin/accounts' && req.method==='GET')return sendJson(res,200,{accounts:projectAccess.accounts(),registrationAvailable:projectAccess.registrationAvailable});
+        const match=pathname.match(/^\/api\/admin\/accounts\/([A-Za-z0-9_-]+)$/);
+        if(match && req.method==='PUT'){
+            if(!isAllowedOrigin(req))return sendJson(res,403,{error:'Request origin is not allowed'});
+            if(match[1]===identity.id)return sendJson(res,400,{error:'Use another administrator to change your own access.'});
+            readRequestJson(req,(error,data)=>{if(error)return sendJson(res,400,{error:error.message});try{if(data.action==='access' && Object.keys(data.projects||{}).some(id=>!isSafeProjectId(id)||!fs.existsSync(path.join(getSitePath(id),'project.json'))))throw Error('Choose an existing project.');sendJson(res,200,projectAccess.reviewAccount(match[1],data));}catch(error){sendJson(res,400,{error:error.message});}});return true;
+        }return sendJson(res,405,{error:'Account action is unavailable'});
     }
     const loginRequest = req.method === 'POST' && ['/api/auth/login', '/api/auth/session'].includes(pathname);
     if (loginRequest) {
@@ -1173,18 +1213,20 @@ function handleApi(req, res) {
     }
 
     const identity = projectAccess.identity(req);
-    const scopedProject = pathname.match(/^\/api\/projects\/([^/]+)/);
+    if(identity?.status==='pending' && (writeRequest || !visitor))return sendJson(res,403,{error:'Your Creator account is awaiting administrator approval.'});
+    const scopedProject = pathname.match(/^\/api\/(?:projects|workspace-record)\/([^/]+)/);
     const projectId = scopedProject ? decodeURIComponent(scopedProject[1]) : '';
-    const checklistRoute = /^\/api\/projects\/[^/]+\/checklists(?:\/|$)/.test(pathname);
+    const checklistRoute = /^\/api\/projects\/[^/]+\/(?:checklists|tours)(?:\/|$)/.test(pathname);
     if (writeRequest || !visitor || /^\/api\/projects\/[^/]+\/export$/.test(pathname)) {
         if (projectId && projectId !== 'import') {
             const role = projectRole(identity, projectId);
             if (!role || (writeRequest && !checklistRoute && role !== 'admin')) return sendJson(res, 403, { error: 'Project permission required; legacy content writes require an administrator' });
-        } else if (!identity?.platformAdmin && !(pathname === '/api/projects' && req.method === 'GET')) {
+        } else if (!identity?.platformAdmin && !(pathname === '/api/projects' && (req.method === 'GET' || req.method==='POST' && identity?.creatorEnabled))) {
             return sendJson(res, 403, { error: 'Platform administrator required' });
         }
     }
     if (handleProjectChecklists(req, res, pathname, { visitor, access: projectAccess, sendJson, readRequestJson, readJson, writeJson, getProjectPath: getSitePath, publicSnapshot: buildPublicSnapshot })) return true;
+    if (handleProjectTours(req,res,pathname,{visitor,access:projectAccess,sendJson,readRequestJson,readJson,writeJson,getProjectPath:getSitePath,publicSnapshot:buildPublicSnapshot})) return true;
 
     if (pathname === '/api/plant-library' && req.method === 'GET') {
         const result = loadPlantRegistryData();
@@ -1418,11 +1460,12 @@ function handleApi(req, res) {
     }
 
     if (pathname === '/api/projects' && req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => { body += chunk; });
-        req.on('end', () => {
+        readRequestJson(req,(failure,data)=>{
+            if(failure)return sendJson(res,400,{error:failure.message});
             try {
-                sendJson(res, 201, createProject(JSON.parse(body || '{}')));
+                const project=createProject(identity.platformAdmin?data:{...data,visibility:'draft'});
+                if(!identity.platformAdmin)projectAccess.grantProject(identity.id,project.id);
+                sendJson(res,201,project);
             } catch (error) {
                 sendJson(res, 400, { error: error.message });
             }
@@ -1672,8 +1715,9 @@ function handleApi(req, res) {
                 if (String(data.expectedMarkerModified ?? '') !== String(originalMarker.modified || '')) return sendJson(res, 409, { error: 'This record changed elsewhere. Reload before saving.' });
                 originalProfile = originalMarker.type === 'plant' ? readJson(path.join(sourceDir, 'plant_profile.json'), {}) : null;
                 if (originalProfile && Object.hasOwn(data, 'expectedProfileRevision') && Number(data.expectedProfileRevision) !== Number(originalProfile.revision || 0)) return sendJson(res, 409, { error: 'This plant profile changed elsewhere. Reload before saving.' });
-                const allowed = ['name', 'description', 'notes', 'physicalAnchor', 'field_work', 'visibility', 'status', 'reference_photo'];
+                const allowed = ['name', 'description', 'notes', 'physicalAnchor', 'field_work', 'visibility', 'status', 'reference_photo', 'site_feature'];
                 const markerChanges = Object.fromEntries(Object.entries(data.markerChanges || {}).filter(([key]) => allowed.includes(key)));
+                if(Object.hasOwn(markerChanges,'site_feature'))markerChanges.site_feature=validateSiteFeature(markerChanges.site_feature);
                 const profileChanges = originalProfile ? data.profileChanges || {} : {};
                 const physicalAnchor = Object.hasOwn(markerChanges, 'physicalAnchor') ? normalizePhysicalAnchor(markerChanges.physicalAnchor) : originalMarker.physicalAnchor || null;
                 if (physicalAnchor && !['plant', 'area_checkpoint'].includes(originalMarker.type) && originalMarker.semantic_type !== 'area_checkpoint') throw new Error('Only Plants and Totems can have printed tags');
@@ -1985,12 +2029,13 @@ const server = http.createServer((req, res) => {
     const safePath = requestPathname === '/app' || requestPathname === '/app/' ? '/app/index.html' : requestPathname;
     if (!safePath.startsWith('/app/') && !safePath.startsWith('/tools/preview-')) { sendJson(res, 404, { error: 'File not found' }); return; }
     const publicRoot = path.resolve(rootDir);
-    const filePath = path.resolve(publicRoot, safePath.replace(/^\//, ''));
+    let filePath = path.resolve(publicRoot, safePath.replace(/^\//, ''));
     if (filePath !== publicRoot && !filePath.startsWith(`${publicRoot}${path.sep}`)) {
         sendJson(res, 404, { error: 'File not found' });
         return;
     }
 
+    if(fs.existsSync(filePath) && fs.statSync(filePath).isDirectory())filePath=path.join(filePath,'index.html');
     if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
         sendJson(res, 404, { error: `File not found: ${requestPathname}` });
         return;

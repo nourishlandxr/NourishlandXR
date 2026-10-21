@@ -152,7 +152,7 @@ export async function renderVisitorExperience(app, view='places', projectId='', 
         rememberPlace(project);
         const places = siteGroups.flatMap(g=>g.placeGroups.map(p=>({...p.place,siteId:g.site.id,count:p.plants.length})));
         if (view === 'place') {
-            app.innerHTML=`<div class="screen v2-screen v2-place-entry">${header(project,'place')}${visitorPlaceWelcomeMarkup(guide)}</div>`;
+            app.innerHTML=`<div class="screen v2-screen v2-place-entry">${header(project,'place')}${visitorPlaceWelcomeMarkup(guide)}<section class="v2-actions"><a class="v2-secondary" href="?tour=1&amp;project=${encodeURIComponent(projectId)}">Guided tours →</a></section></div>`;
             const openMarker = markerId => {
                 const target = resolvePublishedMarker(guide, markerId);
                 if (!target) return `${physicalMarkerLabel(markerId)} is unassigned or linked more than once in this published project.`;

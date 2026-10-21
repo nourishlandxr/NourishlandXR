@@ -20,6 +20,8 @@ test('a rendered demo board releases narration and Continue after reading and au
 test('chapter 4 establishes its spatial anchor before positioning a plant',()=>{
  const body=source.slice(source.indexOf('function activateDemoChapter('));
  const plant={demoType:'plant'},context={DEMO_CHAPTERS:[{id:'plants'}],introWorldAnchor:null,viewerMatrix:[1],introWorldAnchorFromViewer:()=>[2],demoPeekPortal:null,closeLivingPeek(){},clearDemoNarration(){},clearTimeout(){},arWelcomeUnlockTimer:null,infoPanel:null,syncDemoPanelActions(){},markers:[],knowledgeRenderer:null,gl:null,developerLabRecords:()=>[plant],createMarkerTexture:()=>null,updateSimulatedMarkers(){},introLocalPosition(anchor){assert.deepEqual(anchor,[2]);return {x:0,y:0,z:-1.6};},toggleDemoPlantProfile(){},showDemoInfo(){}};
+ context.demoCreatorQuickStart={close(){}};
+ context.appRoot=null;
  vm.createContext(context);vm.runInContext(body,context);context.activateDemoChapter('plants');assert.equal(plant.position.z,-1.6);
  assert.match(source,/if\(viewerMatrix\)\{const chapter=demoStartChapter/);
  const chapters=fs.readFileSync(new URL('../app/screens/demoChapters.js',import.meta.url),'utf8');assert.match(chapters,/import \{startTemporaryArDemo\}/);assert.doesNotMatch(chapters,/await import/);

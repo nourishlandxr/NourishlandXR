@@ -519,7 +519,8 @@ body[data-menu-open="true"] #site-header.masthead .site-navigation,
 body[data-menu-open="true"][data-page="home"] #site-header.masthead .site-navigation { display:flex !important; }
 #site-header .nav-menu-links { display:none; flex-direction:column; align-items:stretch; min-width:220px; }
 body[data-menu-pathway="education"] #site-header .nav-menu-links[data-menu-pathway="education"],
-body[data-menu-pathway="platform"] #site-header .nav-menu-links[data-menu-pathway="platform"] { display:flex; }
+body[data-menu-pathway="platform"] #site-header .nav-menu-links[data-menu-pathway="platform"],
+body[data-menu-pathway="demos"] #site-header .nav-menu-links[data-menu-pathway="demos"] { display:flex; }
 #site-header .nav-menu-links a,
 #site-header .nav-menu-about {
   display:flex;

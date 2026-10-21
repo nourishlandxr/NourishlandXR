@@ -18,7 +18,7 @@ export function welcomeWristPose(matrix,context,forearmDirection=null,viewerMatr
     if(viewerMatrix){const toViewer=new THREE.Vector3(viewerMatrix[12],viewerMatrix[13],viewerMatrix[14]).sub(new THREE.Vector3().setFromMatrixPosition(wrist));if(normal.dot(toViewer)<-.12)normal.negate();}
     const right=new THREE.Vector3().crossVectors(up,normal).normalize();up.crossVectors(normal,right).normalize();
     const offset=context.centerOffset || {x:0,y:0};
-    const center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(up,(context.controllerMounted?.030:forearmDirection?-.11:-.17)+offset.y).addScaledVector(normal,context.controllerMounted?.055:.028).addScaledVector(right,context.controllerMounted?offset.x+.11:offset.x);
+    const center=new THREE.Vector3().setFromMatrixPosition(wrist).addScaledVector(up,(context.controllerMounted?.030:forearmDirection?-.11:-.17)+offset.y).addScaledVector(normal,context.controllerMounted?.055:.028).addScaledVector(right,context.controllerMounted?offset.x+(context.anchorHand==='right'?-.11:.11):offset.x);
     return {center,right,up,normal,anchorHeading:right,width:context.width || .12,height:(context.width || .12)*context.height/1000};
 }
 
@@ -35,6 +35,12 @@ export function drawWristIcon(ctx,id,x,y,size){
     const circle=(x,y,r,fill=false)=>{ctx.moveTo(x+r,y);ctx.arc(x,y,r,0,Math.PI*2);if(fill)ctx.fill();};
     if(id==='pulse'){ctx.moveTo(-.8,0);ctx.lineTo(-.35,0);ctx.lineTo(-.15,-.55);ctx.lineTo(.12,.55);ctx.lineTo(.35,0);ctx.lineTo(.8,0);}
     else if(id==='mic'){ctx.roundRect(-.2,-.8,.4,.9,.2);ctx.moveTo(-.45,-.2);ctx.arc(0,-.2,.45,Math.PI,0,true);line(0,.25,0,.65);line(-.3,.65,.3,.65);}
+    else if(id==='add'){line(-.7,0,.7,0);line(0,-.7,0,.7);}
+    else if(id==='plant'){line(0,.8,0,-.2);ctx.moveTo(0,.1);ctx.bezierCurveTo(-.8,.1,-.8,-.8,0,-.4);ctx.moveTo(0,.3);ctx.bezierCurveTo(.8,.3,.8,-.6,0,-.2);}
+    else if(id==='note'){ctx.rect(-.55,-.75,1.1,1.5);line(-.3,-.3,.3,-.3);line(-.3,.1,.3,.1);}
+    else if(id==='totem'){ctx.rect(-.2,-.8,.4,1.6);line(-.7,-.3,.7,-.3);line(-.7,.3,.7,.3);}
+    else if(id==='area'){ctx.moveTo(-.7,.6);ctx.lineTo(-.45,-.65);ctx.lineTo(.65,-.4);ctx.lineTo(.45,.7);ctx.closePath();}
+    else if(id==='line'){line(-.7,.6,0,-.5);line(0,-.5,.7,.2);circle(-.7,.6,.12);circle(0,-.5,.12);circle(.7,.2,.12);}
     else if(id==='stop'){ctx.roundRect(-.55,-.55,1.1,1.1,.1);}
     else if(id==='check'){line(-.7,0,-.2,.5);line(-.2,.5,.7,-.65);}
     else if(id==='triangle'){ctx.moveTo(0,-.8);ctx.lineTo(.7,.55);ctx.lineTo(-.7,.55);ctx.closePath();}
@@ -45,6 +51,7 @@ export function drawWristIcon(ctx,id,x,y,size){
     else if(id==='controller'){ctx.ellipse(0,0,.48,.8,.2,0,Math.PI*2);circle(-.12,-.4,.12);circle(.22,-.2,.055);line(-.25,.15,.25,.15);}
     else if(id==='audio' || id==='mute'){ctx.moveTo(-.8,-.22);ctx.lineTo(-.4,-.22);ctx.lineTo(0,-.6);ctx.lineTo(0,.6);ctx.lineTo(-.4,.22);ctx.lineTo(-.8,.22);ctx.closePath();if(id==='mute'){line(.3,-.35,.8,.35);line(.3,.35,.8,-.35);}else{ctx.moveTo(.35,-.4);ctx.quadraticCurveTo(.8,0,.35,.4);}}
     else if(id==='settings'){for(let i=0;i<12;i++){const a=i*Math.PI/6,r=i%2?.6:.85;i?ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r):ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r);}ctx.closePath();circle(0,0,.28);}
+    else if(id==='tools'){line(-.8,-.5,.8,-.5);line(-.8,0,.8,0);line(-.8,.5,.8,.5);circle(-.3,-.5,.13);circle(.35,0,.13);circle(-.1,.5,.13);}
     else if(id==='lesson'){ctx.roundRect(-.65,-.8,1.3,1.6,.12);line(-.35,-.35,.35,-.35);line(-.35,0,.35,0);line(-.35,.35,.15,.35);}
     else if(id==='close'){line(-.6,-.6,.6,.6);line(-.6,.6,.6,-.6);}
     else if(id==='play'){ctx.moveTo(-.4,-.7);ctx.lineTo(.7,0);ctx.lineTo(-.4,.7);ctx.closePath();}
@@ -91,5 +98,6 @@ export function drawWelcomeWristMenu(ctx,card){
     }
     ctx.globalAlpha=1;ctx.fillStyle='#c2ddd0';ctx.font='500 25px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
     const hint=card.hoverHint;
+    if(hint && menu.compactHint && menu.opened){ctx.fillStyle='#e6f2e9';ctx.font='500 40px system-ui';ctx.fillText(hint,500,height-50,960);}
     if(hint && expanded){ctx.fillStyle='#d4e8dc';ctx.font='500 20px system-ui';ctx.fillText(hint,px(.123),py(.035),px(.194)-px(.050));}
 }

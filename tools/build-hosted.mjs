@@ -34,12 +34,22 @@ const frontendEntries = [
     'platform.html',
     'platform.js',
     'platform.css',
+    'access-portal.css',
+    'account',
+    'creator',
+    'demos',
+    'admin',
     'field',
     'creator-studio.css',
+    'creator-hub.css',
+    'creator-game-menu.css',
+    'creator-workbench.css',
+    'creator-xr-panel.css',
     'creator-project-tutorial.css',
     'creator-field-worker.js',
     'style.css',
     'pim.css',
+    'pimo-editor.css',
     'product-v2.css',
     'living-objects.css',
     'creator-workspace.css',
@@ -129,12 +139,20 @@ if (!frontendOnly) {
     fs.copyFileSync(path.join(root, 'tools', 'zipArchive.mjs'), path.join(apiDist, 'zipArchive.mjs'));
     for(const file of ['zinniaVoiceServer.mjs','zinniaInterpretation.mjs','zinniaPreviewProxy.mjs','projectAccess.mjs'])fs.copyFileSync(path.join(root,'tools',file),path.join(apiDist,file));
     fs.writeFileSync(path.join(apiDist,'projectChecklists.mjs'), fs.readFileSync(path.join(root,'tools','projectChecklists.mjs'),'utf8').replaceAll('../app/services/', './app/services/'));
+    fs.writeFileSync(path.join(apiDist,'projectTours.mjs'),fs.readFileSync(path.join(root,'tools','projectTours.mjs'),'utf8').replaceAll('../app/services/','./app/services/'));
     const apiServices = ['spatialDataModel.js', 'daleysPlant.js', 'pigeonPeaTemplate.js', 'pigeonPeaExample.js', 'pigeonPeaPim.js', 'plantTrialContent.js', 'pimCellIllustrations.js', 'pimModel.js', 'pimCompass.js'];
     apiServices.push('sharedProjectContract.js', 'checklistContract.js', 'projectListContract.js',
+        'tourModel.js','siteFeature.js',
         'imapElevationSource.js', 'projectGeographicPersistence.js', 'creatorProjectGeography.js');
     const apiServiceDist = path.join(apiDist, 'app', 'services');
     fs.mkdirSync(apiServiceDist, { recursive: true });
     apiServices.forEach(fileName => fs.copyFileSync(path.join(root, 'app', 'services', fileName), path.join(apiServiceDist, fileName)));
+    const daleysCatalogSource = path.join(root, 'data1', 'daleys_plant_catalog.json');
+    if (fs.existsSync(daleysCatalogSource)) {
+        const daleysCatalogDist = path.join(apiDist, 'data1');
+        fs.mkdirSync(daleysCatalogDist, { recursive: true });
+        fs.copyFileSync(daleysCatalogSource, path.join(daleysCatalogDist, 'daleys_plant_catalog.json'));
+    }
     fs.writeFileSync(path.join(apiDist, 'package.json'), JSON.stringify({
         name: 'nourishland-xr-api',
         private: true,

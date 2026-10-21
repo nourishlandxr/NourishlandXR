@@ -1,4 +1,7 @@
 import { dashboardIcon } from '../services/workspaceIcons.js';
+import { ensureCreatorInterfaceStyles } from '../services/creatorInterface.js';
+import { workspaceHeader, creatorStartHeader, attachCreatorProjectTutorialLink } from '../services/creatorWorkspaceFrame.js';
+import { CREATOR_WORKSPACES } from '../services/creatorWorkspaceMode.js';
 import { createPlaceMarker, createSitePlace, loadPlaceMarkers, loadPlantProfile, loadProjectSites, loadProjects, loadSitePlaces, updatePlaceMarker } from '../services/persistence.js';
 import { setNxrLanguage } from '../services/i18n.js';
 import { renderProjectEntry } from '../components/projectEntry.js';
@@ -1219,18 +1222,19 @@ export function openCreatorVisitorPreview(encodedProjectId) {
 }
 
 export async function renderPlatformHome(app) {
+    ensureCreatorInterfaceStyles();
     applyProjectTheme('forest-light');
     const projects = (await loadProjects()).filter(project => !['plant-library', 'Banyula'].includes(project.id));
     const cards = projects.map(project => {
         const name = PROJECT_NAMES[project.id] || project.name;
         return `<button class="menu-card project-selection-row" onclick="window.renderProjectDashboard('${encoded(project.id)}', '${encoded(name)}')"><span class="workspace-place-icon" aria-hidden="true">${dashboardIcon('area')}</span><span class="workspace-place-copy"><strong>${escapeHtml(name)}</strong><small>Plants, Areas and connected knowledge</small></span><span class="workspace-place-arrow" aria-hidden="true">${dashboardIcon('arrow')}</span></button>`;
     }).join('');
-    app.innerHTML = `<div class="screen app-surface app-surface-selection platform-home creator-project-menu creator-workspace">
+    app.innerHTML = `<div class="screen app-surface app-surface-selection platform-home creator-project-menu creator-workspace">${creatorStartHeader()}
         <div class="page-header">
-            <button class="ghost" onclick="window.renderLaunchScreen()">Back</button>
+            <button class="ghost creator-icon-control" aria-label="Back to welcome" title="Back to welcome" onclick="window.renderLaunchScreen()">${dashboardIcon('back')}</button>
             <p class="welcome-label">PROJECT SELECTION</p>
-            <h1>Your places</h1>
-            <p class="subtitle">Build knowledge, organise a place, and prepare it for visitors.</p>
+            <h1>Your projects</h1>
+            <p class="subtitle">Open a project or create a new one.</p>
         </div>
         <section class="project-section">
             <h2 class="project-section-title">Locations</h2>
@@ -2172,6 +2176,7 @@ export async function renderStoriesAndFocus(app, encodedProjectId) {
 
 export async function renderProjectSettings(app, encodedProjectId) {
     const project = await projectById(decodeURIComponent(encodedProjectId));
+    ensureCreatorInterfaceStyles();
     const theme = PROJECT_THEMES.has(project.theme) ? project.theme : 'forest-light';
     const expertMode = project.expertMode === true;
     const tutorialEnabled = isProjectTutorialEnabled(project.id);
@@ -2188,7 +2193,9 @@ export async function renderProjectSettings(app, encodedProjectId) {
         completed: 'Completed',
         skipped: 'Skipped'
     }[arTutorial.state] || 'Not started';
-    app.innerHTML = `<div class="screen project-settings-screen">
+    const creatorParams = new URLSearchParams(location.search);
+    const creatorMode = CREATOR_WORKSPACES[creatorParams.get('workspace')] ? creatorParams.get('workspace') : 'desktop';
+    app.innerHTML = `<div class="screen project-settings-screen creator-settings">${workspaceHeader({project}, creatorMode, {view:'settings',siteId:creatorParams.get('site') || '',recordKey:creatorParams.get('record') || ''})}
         <div class="page-header">
             <button class="ghost" onclick="window.renderProjectDashboard('${encoded(project.id)}')">Back</button>
             <h1>Project Settings</h1>
@@ -2346,6 +2353,7 @@ export async function renderProjectSettings(app, encodedProjectId) {
             <p id="deleteProjectSettingsStatus" class="meta"></p>
         </section>
     </div>`;
+    attachCreatorProjectTutorialLink(app.firstElementChild, project.id, creatorMode);
 }
 
 function updateProjectThemeControls(theme, message) {

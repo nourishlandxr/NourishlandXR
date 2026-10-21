@@ -1,28 +1,45 @@
 import { CREATOR_WORKSPACES, creatorProjectTutorialUrl, workspaceUrl } from './creatorWorkspaceMode.js';
+import { dashboardIcon } from './workspaceIcons.js';
+import { creatorLogoMarkup } from './creatorIdentity.js';
+import { creatorHubTools, creatorGroupForView } from './creatorHub.js';
+import {portalUrl} from './portalRoutes.js';
 export const escapeWorkspaceHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export const plainHomeUrl = () => { const url = new URL(location.href); url.search = ''; url.hash = ''; return url.href; };
+export function creatorStartHeader() {
+    return `<header class="workspace-shell-header creator-start-header v2-masthead"><a class="workspace-brand" href="${escapeWorkspaceHtml(portalUrl('creator'))}" aria-label="Your projects">${creatorLogoMarkup()}<span>nourishland<small>Creator</small></span></a></header>`;
+}
+export function workspaceToolNavigation(projectId, mode, { siteId = '', recordKey = '', view = 'hub' } = {}) {
+    const active = creatorGroupForView(view);
+    return `<nav class="creator-tool-nav" aria-label="Project tools">${creatorHubTools().map(tool => `<a data-creator-tool="${tool.id}" href="${escapeWorkspaceHtml(workspaceUrl(projectId, { mode, siteId, recordKey, view:tool.id }).href)}"${tool.id === active ? ' aria-current="page"' : ''}>${dashboardIcon(tool.icon)}<span>${escapeWorkspaceHtml(tool.title)}</span></a>`).join('')}</nav>`;
+}
+export function updateWorkspaceNavigation(root, projectId, mode, context) {
+    const active = creatorGroupForView(context.view);
+    const hub = root.querySelector('[data-creator-hub-link]');
+    if (hub) hub.href = workspaceUrl(projectId, { ...context, mode, view:'hub' }).href;
+    root.querySelectorAll('[data-creator-tool]').forEach(link => {
+        link.href = workspaceUrl(projectId, { ...context, mode, view:link.dataset.creatorTool }).href;
+        if (link.dataset.creatorTool === active) link.setAttribute('aria-current', 'page');
+        else link.removeAttribute('aria-current');
+    });
+    root.querySelectorAll('.workspace-mode-picker a:not([data-guided-project-setup])').forEach(link => {
+        link.href = workspaceUrl(projectId, { ...context, mode:new URL(link.href).searchParams.get('workspace') }).href;
+    });
+}
 export function workspaceHeader(model, mode, { siteId = '', recordKey = '', view = 'records' } = {}) {
     const html = escapeWorkspaceHtml;
-    const guideKey = `nlxr.creator-guide.v1.${model.project.id}`;
-    let showGuide = false;
-    try {
-        showGuide = sessionStorage.getItem(guideKey) !== 'shown';
-        if (showGuide) sessionStorage.setItem(guideKey, 'shown');
-    } catch { showGuide = true; }
-    const workspaceSummary = {
-        desktop: 'Set up a Site or Area, add plant and Note records, save your work as a draft, then use Visitor preview to review it.',
-        field: 'Use the project prepared by Desktop Studio. Scan a printed tag or capture an observation; results save on this device until you sync.',
-        spatial: 'Choose a Site and Area, prepare XR, then place or inspect its elements. Edit knowledge in Desktop Studio and capture field observations in Android Field.'
-    }[mode] || CREATOR_WORKSPACES[mode].description;
-    const guideModes = Object.entries(CREATOR_WORKSPACES).map(([key, value]) => `<a href="${html(workspaceUrl(model.project.id,{ mode:key,siteId,recordKey,view:'overview' }).href)}"${key===mode?' aria-current="page"':''}><strong>${html(value.label)}</strong><small>${html(value.description)}</small></a>`).join('');
-    return `<header class="workspace-shell-header v2-masthead"><a class="workspace-brand" href="${html(plainHomeUrl())}">Nourishland<small>${html(model.project.name)}</small></a><nav class="workspace-mode-picker" aria-label="Creator workspace">${Object.entries(CREATOR_WORKSPACES).map(([key, value]) => `<a href="${html(workspaceUrl(model.project.id,{ mode:key,siteId,recordKey,view }).href)}"${key===mode?' aria-current="page"':''}>${html(value.label)}</a>`).join('')}</nav></header><details class="creator-first-run" data-creator-guide${showGuide?' open':''}><summary>Creator guide · how these workspaces fit together</summary><div class="creator-guide-body"><p class="creator-guide-current">${html(workspaceSummary)}</p><ol><li><strong>Project</strong><span>Choose a project from the home screen. This menu keeps the current project when you switch workspaces.</span></li><li><strong>Site and Area</strong><span>Choose where the knowledge belongs before adding or inspecting its content.</span></li><li><strong>Add and save</strong><span>Studio edits records; Field saves observations on this device; Spatial places or inspects content in XR.</span></li><li><strong>Review sharing</strong><span>Studio offers Visitor preview. Check the project’s draft or public status there before sharing.</span></li></ol><nav class="creator-guide-workspaces" aria-label="Choose a Creator workspace">${guideModes}</nav></div></details>`;
+    return `<header class="workspace-shell-header v2-masthead"><a class="workspace-brand" href="${html(plainHomeUrl())}" aria-label="Nourishland home">${creatorLogoMarkup()}<span>nourishland<small>${html(model.project.name)}</small></span></a><div class="workspace-access"><a class="workspace-hub-link workspace-control" data-creator-hub-link href="${html(workspaceUrl(model.project.id,{mode,siteId,recordKey,view:'hub'}).href)}" aria-label="Creator hub" title="Creator hub">${dashboardIcon('grid')}<span class="workspace-control-hint">Creator hub</span></a><nav class="workspace-mode-picker" aria-label="Access mode">${Object.entries(CREATOR_WORKSPACES).map(([key, value]) => `<a class="workspace-control" href="${html(workspaceUrl(model.project.id,{ mode:key,siteId,recordKey,view }).href)}" aria-label="${html(value.label)}" title="${html(value.label)}"${key===mode?' aria-current="page"':''}>${dashboardIcon({desktop:'monitor',field:'phone',spatial:'ar'}[key])}<span class="workspace-control-hint">${html(value.label)}</span></a>`).join('')}</nav></div></header>${view === 'hub' ? '' : workspaceToolNavigation(model.project.id, mode, { siteId, recordKey, view })}`;
+}
+export function guardWorkspaceNavigation(root, canLeave, signal) {
+    root.addEventListener('click', event => { if (event.target.closest('a') && !canLeave()) event.preventDefault(); }, { signal });
 }
 export function attachCreatorProjectTutorialLink(root, projectId, mode) {
     const nav = root?.querySelector('.workspace-mode-picker');
     if (!nav || nav.querySelector('[data-guided-project-setup]')) return;
     const link = document.createElement('a');
     link.href = creatorProjectTutorialUrl(projectId, { mode }).href;
-    link.textContent = 'Guided setup';
+    link.innerHTML = `${dashboardIcon('help')}<span class="workspace-control-hint">Guided setup</span>`;
+    link.className = 'workspace-control';
+    link.setAttribute('aria-label', 'Guided project setup');
     link.dataset.guidedProjectSetup = '';
     link.title = 'Resume beginner project setup';
     nav.append(link);

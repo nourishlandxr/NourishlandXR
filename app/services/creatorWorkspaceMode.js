@@ -11,7 +11,7 @@ export function suggestedCreatorWorkspace() {
     return 'desktop';
 }
 
-export function workspaceUrl(projectId, { mode = 'desktop', siteId = '', recordKey = '', view = 'overview' } = {}) {
+export function workspaceUrl(projectId, { mode = 'desktop', siteId = '', recordKey = '', view = 'hub' } = {}) {
     const url = new URL(globalThis.location.href);
     url.search = '';
     url.hash = '';
@@ -19,7 +19,7 @@ export function workspaceUrl(projectId, { mode = 'desktop', siteId = '', recordK
     url.searchParams.set('project', projectId);
     if (siteId) url.searchParams.set('site', siteId);
     if (recordKey) url.searchParams.set('record', recordKey);
-    if (mode === 'desktop' && view !== 'overview') url.searchParams.set('view', view);
+    if (view !== 'hub') url.searchParams.set('view', view);
     return url;
 }
 

@@ -1,6 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createDemoFeedback,DEMO_FEEDBACK} from '../app/services/demoFeedback.js';
+test('quiet placement practice never allocates music or an audio context',()=>{
+    const oldAudio=globalThis.Audio,oldContext=globalThis.AudioContext;
+    globalThis.Audio=class{constructor(){throw Error('Music must not start');}};globalThis.AudioContext=class{constructor(){throw Error('Audio must not start');}};
+    try{const feedback=createDemoFeedback({silent:true});feedback.start();feedback.sound('placement');assert.equal(feedback.status().playing,false);assert.equal(feedback.status().touchReady,false);feedback.destroy();}finally{globalThis.Audio=oldAudio;globalThis.AudioContext=oldContext;}
+});
 test('demo music streams, touch tones release resources, haptics throttle and stop on exit',t=>{
     const originalAudio=globalThis.Audio,originalContext=globalThis.AudioContext;
     let audio,context,plays=0,paused=0,closed=0,tones=0,now=0;t.mock.method(performance,'now',()=>now);

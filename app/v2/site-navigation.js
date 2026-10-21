@@ -27,9 +27,10 @@ document.addEventListener('pointerdown',event=>{if(open&&!navigation.contains(ev
 window.addEventListener('hashchange',()=>{if(open)setOpen(false);});
 window.addEventListener('nourishland:route',event=>{
  const page=event.detail.page;
- const group=['education','food-forests','food-forest-guide','nature-learning'].includes(page)?'education':page;
+ const group=page==='education'?(['why','what','how'].includes(event.detail.section)?event.detail.section:'why'):page;
  document.querySelectorAll('.header-pathways a, #main-nav a').forEach(link=>{
-  const current=link.closest('.header-pathways')?link.hash===`#${group}`:link.hash===`#${page}`;
+  const target=link.closest('.header-pathways')||page==='education'?group:page;
+  const current=link.hash===`#${target}`;
   if(current)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');
  });
 });

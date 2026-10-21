@@ -1,6 +1,6 @@
 // Demo-only streamed music and lightweight, original touch tones.
 export const DEMO_FEEDBACK = Object.freeze({ musicVolume: .20, touchVolume: .035, selectionStrength: .12, holdStrength: .42, beeApproachStrength:.24, beeApproachDuration:50 });
-export function createDemoFeedback({resetSettings=false}={}) {
+export function createDemoFeedback({resetSettings=false,silent=false}={}) {
     let music=null, context=null,fxGain=null, lastSound=-Infinity,lastSoundKind=null, lastTick=-Infinity, destroyed=false;
     const paintSources=new Map();let paintTone=null,paintTimer=null;
     const encounters=new WeakMap(),encounterPulseUntil=new WeakMap();
@@ -42,7 +42,7 @@ export function createDemoFeedback({resetSettings=false}={}) {
         if(paintSources.size && !paintTimer)paintTimer=setInterval(()=>{for(const [input,state] of paintSources)if(performance.now()-state.at>220){paintSources.delete(input);pulse(input,0,1);}if(!paintSources.size){clearInterval(paintTimer);paintTimer=null;if(paintTone){const tone=paintTone;paintTone=null;tone.gain.gain.setTargetAtTime(0,context.currentTime,.025);tone.oscillator.stop(context.currentTime+.12);tone.oscillator.onended=()=>{tone.oscillator.disconnect();tone.gain.disconnect();};}}},80);
     }
     function start() {
-        if(destroyed)return;
+        if(destroyed || silent)return;
         // HTMLAudio streams the album; never decode its full duration into RAM.
         if(!music){music=new Audio(new URL('../assets/demo-wet-land.mp3',import.meta.url).href);music.preload='metadata';music.loop=true;music.volume=levels.music*(narrating?.8:1);}
         music.play()?.catch(()=>{});

@@ -14,6 +14,120 @@ import {getSpatialVisualSettings} from '../services/spatialVisualSettings.js';
 import {createXRPerformanceSettings} from '../services/xrPerformanceSettings.js';
 import {SPATIAL_OBJECT_VISUALS,spatialTransitionProgress} from '../services/spatialObjectVisuals.js';
 import { createPimInfoPanel } from '../services/pimInfoPanel.js';
+import {createCreatorWristMenus} from '../services/runtimeWristMenu.js';
+import {creatorAccessCapabilities} from '../services/creatorHub.js';
+import {createOrbMappingDraft,mappingGroundPoint,mappedOrbPoints} from '../services/orbMapping.js';
+import {createCreatorQuickStart} from '../services/creatorQuickStart.js';
+import {createMappingController} from '../services/mappingController.js';
+
+let creatorWrist=null,mappingSaving=false,mappingController=null,creatorGeneralPage='home',creatorPreferredInput='auto';
+function creatorGeneralWristActions(){
+    if(creatorGeneralPage==='input')return [{id:'general-home',label:'Back to general settings',icon:'back'},
+        {id:'input-controllers',label:'Standard controllers',icon:'controller',selected:creatorPreferredInput==='controller'},
+        {id:'input-hands',label:'Tracked hands',icon:'tracked-hand',selected:creatorPreferredInput==='hand'},
+        {id:'input-auto',label:'Automatic input',icon:'check',selected:creatorPreferredInput==='auto'}];
+    return [{id:'settings',label:'General settings',icon:'settings'},{id:'input-selection',label:'Controller / hand selection',icon:'controller'},
+        {id:'workspace',label:'Creator hub',icon:'area'},{id:'recenter-ui',label:'Recenter panels',icon:'repeat'},
+        {id:'quick-start',label:'Creator quick start',icon:'lesson'},{id:'exit',label:'Exit XR',icon:'close'}];
+}
+const orbMapping=createOrbMappingDraft();
+const creatorQuickStart=createCreatorQuickStart(state=>{
+    if(!state.active)return;
+    setPlacementStatus(state.complete?'Complete. Your Orb, Note and Totem are saved in this place.':state.step.title+' · '+state.step.instruction);
+    infoPanel?.restore();infoPanel?.showLearning({title:state.complete?'Creator quick start complete':state.step.title,body:state.complete?'Your Orb, Note and Totem are saved in this place.':state.step.instruction});
+    creatorWrist?.sync();
+});
+function creatorWristActions(){
+    const draft=orbMapping.snapshot();
+    const pathActions=questSpatialWorklist?.contextActions?.();if(pathActions?.length)return pathActions;
+    if(draft.target)return [
+        {id:'map-point',label:'Mark point',icon:'add'},
+        {id:'map-undo',label:'Undo point',icon:'undo',disabled:!draft.points.length},
+        {id:'map-save',label:'Save '+draft.type,icon:'check',disabled:mappingSaving || draft.points.length<(draft.type==='area'?3:2)},
+        {id:'map-cancel',label:'Cancel mapping',icon:'close',disabled:mappingSaving}];
+    if(readyPlacementType)return [{id:'place',label:'Place '+readyPlacementLabel(readyPlacementType),icon:'check'},{id:'cancel-place',label:'Cancel placement',icon:'close'}];
+    if(creatorKnowledgeRoot && !creatorKnowledgeWorkspace?.controller)return [...creatorKnowledgeRoot.querySelectorAll('button')].filter(button=>!button.closest('[hidden]')).slice(0,6).map((button,index)=>({id:'object-action:'+index,label:button.getAttribute('aria-label')||button.textContent.trim()||'Object option',icon:button.type==='submit'?'check':button.matches('[data-note-close],[data-note-cancel]')?'close':'note',disabled:button.matches(':disabled')}));
+    if(creatorKnowledgeRoot){const editing=Boolean(creatorKnowledgeWorkspace?.controller?.getState().editorMode);return editing
+        ?[{id:'knowledge-save',label:'Save plant knowledge',icon:'check'},{id:'knowledge-cancel',label:'Cancel knowledge edit',icon:'undo'}]
+        :[{id:'knowledge-observation',label:'Add local observation',icon:'note'},{id:'knowledge-close',label:'Return to scene',icon:'back'}];}
+    const selected=selectedKnowledgeRecord() || contextToolbarRecord;
+    if(selected)return [{id:'knowledge',label:'Open selected knowledge',icon:'plant',disabled:selected.marker.type!=='plant'},
+        {id:'selection-options',label:'Selected object options',icon:'tools'},
+        {id:'map-area',label:'Map selected Orb area',icon:'area',disabled:!hasSavedSpatialPosition(selected)},
+        {id:'map-line',label:'Map selected Orb line',icon:'line',disabled:!hasSavedSpatialPosition(selected)}];
+    return [{id:'plant',label:'Place Orb',icon:'plant'},{id:'note',label:'Place Note',icon:'note'},
+        {id:'totem',label:'Totem tools',icon:'totem'},{id:'map-area',label:'Map Orb area',icon:'area'},
+        {id:'map-line',label:'Map Orb line',icon:'line'},{id:'task-help',label:'Current task help',icon:'lesson'}];
+}
+function addOrbMappingPoint(){
+    const point=creatorMappingAim();
+    if(!point){setPlacementStatus('Aim down at the ground within 20 metres.');return;}
+    try{if(orbMapping.add(point)){pulseCreatorHaptics();setPlacementStatus(orbMapping.snapshot().points.length+' points · Mark more, Undo, or Save.');creatorWrist?.sync();syncMappingControls();}}catch(error){setPlacementStatus(error.message);}
+}
+function creatorMappingAim(){
+    const ray=latestControllerRay || (latestViewerMatrix?{origin:{x:latestViewerMatrix[12],y:latestViewerMatrix[13],z:latestViewerMatrix[14]},direction:pointerWorldRay() || {x:-latestViewerMatrix[8],y:-latestViewerMatrix[9],z:-latestViewerMatrix[10]}}:null);
+    return mappingGroundPoint(ray,currentGroundY());
+}
+async function handleCreatorWristAction(action){
+    if(action.startsWith('object-action:')){const button=[...(creatorKnowledgeRoot?.querySelectorAll('button')||[])].filter(button=>!button.closest('[hidden]'))[Number(action.split(':')[1])];if(button&&!button.matches(':disabled'))button.click();return;}
+    if(action.startsWith('path-')){questSpatialWorklist?.activateContext?.(action);return;}
+    if(action==='input-selection'){creatorGeneralPage='input';creatorWrist?.sync();return;}
+    if(action==='general-home'){creatorGeneralPage='home';creatorWrist?.sync();return;}
+    if(action.startsWith('input-')){creatorPreferredInput={controllers:'controller',hands:'hand',auto:'auto'}[action.slice(6)] || 'auto';setCreatorInputMode(availableCreatorInputMode());setPlacementStatus(creatorPreferredInput==='hand'?'Tracked hands selected. Put controllers down and raise your hands.':creatorPreferredInput==='controller'?'Standard controllers selected. Pick up a controller to continue.':'Input switches automatically with available tracking.');creatorWrist?.sync();return;}
+    if(action==='recenter-ui'){infoPanel?.recenter();document.getElementById('app')?.querySelector('[data-xr-action=recenter]')?.click();return;}
+    if(action==='selection-options'){const record=selectedKnowledgeRecord() || contextToolbarRecord;if(record)openMarkerContextToolbar(record,true);infoPanel?.setExplorerOpen(true);return;}
+    if(action==='task-help'){const state=creatorQuickStart.snapshot();infoPanel?.restore();infoPanel?.showLearning({title:state.active&&!state.complete?state.step.title:'Create in this Area',body:state.active&&!state.complete?state.step.instruction:'Choose Orb, Note or Totem on your right wrist. Select an existing element to reveal its settings.'});return;}
+    if(action.startsWith('knowledge-')){const selector={'knowledge-save':'.pim-web-editor form [type=submit],form [type=submit]','knowledge-cancel':'[data-pim-cancel-editor]','knowledge-observation':'[data-knowledge-observation]','knowledge-close':'[data-knowledge-close]'}[action];creatorKnowledgeRoot?.querySelector(selector)?.click();return;}
+    if(['workspace','exit','quick-start'].includes(action)&&questSpatialWorklist&&!questSpatialWorklist.canLeave())return;
+    if(action==='quick-start'){creatorQuickStart.start();return;}
+    if(action==='settings'){infoPanel?.restore();infoPanel?.setSettingsOpen(true);return;}
+    if(action.startsWith('map-')){
+        if(mappingSaving)return;
+        try{
+            if(action==='map-area'||action==='map-line'){
+                if(readyPlacementType || dragState || creatorKnowledgeRoot)throw Error('Finish placement or editing before mapping.');
+                const target=selectedKnowledgeRecord() || contextToolbarRecord;
+                if(!target || !hasSavedSpatialPosition(target))throw Error('Select a placed Orb first, then choose Map area or Map line.');
+                clearControllerMarkerPress();handPimHold.cancel();
+                orbMapping.begin(target,action.slice(4));setPlacementStatus('Mapping '+target.marker.name+' · Aim down and press trigger to mark each point.');
+                infoPanel?.showLearning({title:'Mapping '+target.marker.name,body:'Aim at the ground and press trigger to mark points. Open the wrist menu to Undo, Save or Cancel.'});
+                showMappingControls();
+            }else if(action==='map-point')addOrbMappingPoint();
+            else if(action==='map-undo')orbMapping.undo();
+            else if(action==='map-cancel'){orbMapping.cancel();overlayRoot?.querySelector('[data-mapping-controls]')?.remove();setPlacementStatus('Mapping cancelled.');}
+            else if(action==='map-save'){
+                const {target}=orbMapping.snapshot(),spatial_mapping=orbMapping.serialize(),operation=captureArOperationContext();
+                if(target.areaId!==activeAreaId || target.siteId!==activeSiteId)throw Error('Return to the Orb’s area before saving its mapping.');
+                mappingSaving=true;creatorWrist?.sync();
+                const request=updatePlaceMarker(operation.projectId,target.siteId,target.areaId,target.marker.id,{spatial_mapping});
+                pendingMovePromises.add(request);let saved;try{saved=await request;}finally{pendingMovePromises.delete(request);}
+                if(!isArOperationCurrent(operation))return;
+                target.marker={...target.marker,...saved};orbMapping.cancel();overlayRoot?.querySelector('[data-mapping-controls]')?.remove();setPlacementStatus('Mapping saved to '+target.marker.name+'.');
+            }
+        }catch(error){setPlacementStatus(error.message);}finally{mappingSaving=false;creatorWrist?.sync();syncMappingControls();}
+        return;
+    }
+    handleCreatorPanelAction(action);
+}
+function showMappingControls(){
+    overlayRoot?.querySelector('[data-mapping-controls]')?.remove();
+    const bar=document.createElement('nav');bar.dataset.mappingControls='';bar.setAttribute('aria-label','Mapping controller');
+    bar.style.cssText='position:fixed;top:80px;left:12px;right:12px;z-index:13020;display:flex;gap:8px;flex-wrap:wrap;background:#173d32;color:white;padding:12px;border-radius:12px';
+    for(const [id,label] of [['map-point','Mark point'],['map-undo','Undo'],['map-save','Save mapping'],['map-cancel','Cancel']]){
+        const button=document.createElement('button');button.type='button';button.dataset.mappingAction=id;button.textContent=id==='map-undo'?'↶':id==='map-cancel'?'×':label;button.setAttribute('aria-label',label);button.title=label;button.style.minWidth=button.style.minHeight='44px';button.onclick=()=>void handleCreatorWristAction(id);bar.append(button);
+    }overlayRoot?.append(bar);syncMappingControls();
+}
+function syncMappingControls(){const draft=orbMapping.snapshot();for(const button of overlayRoot?.querySelectorAll('[data-mapping-action]')||[]){button.disabled=mappingSaving || button.dataset.mappingAction==='map-undo'&&!draft.points.length || button.dataset.mappingAction==='map-save'&&draft.points.length<(draft.type==='area'?3:2);}}
+function drawCreatorMappings(view){
+    const draft=orbMapping.snapshot();
+    const draw=(points,type,color)=>{for(let i=1;i<points.length;i++)drawSpatialTether(gl,controllerPointerRenderer,view,points[i-1],points[i],{curve:0,lift:0,width:.012,color});
+        if(type==='area' && points.length>2)drawSpatialTether(gl,controllerPointerRenderer,view,points.at(-1),points[0],{curve:0,lift:0,width:.012,color});};
+    for(const record of activeAreaMarkers())if(hasRenderableSpatialPosition(record)){
+        const points=mappedOrbPoints(record);draw(points,record.marker.spatial_mapping?.type,[.47,.88,.71,.8]);
+        if(points.length)drawSpatialTether(gl,controllerPointerRenderer,view,record.position,points[0],{width:.003,color:[.47,.88,.71,.45]});
+    }
+    if(draft.target){draw(draft.points,draft.type,[1,.8,.35,1]);const point=creatorMappingAim();if(point)drawSpatialPointerContact(gl,controllerPointerRenderer,view,point,.028,[1,.8,.35,1]);mappingController?.draw(view);}
+}
 import { bindSpatialPimHold, createPimHold } from '../services/pimActivationHold.js';
 import { createPlantKnowledgeResolver, totemKnowledgeCards, totemCardsMarkup, liveOrbCrownMarkup } from '../services/spatialKnowledgePresentation.js';
 import { createSpatialTotemCards, drawSpatialTotemButtons,drawSpatialTotemPlaques,totemLayoutForRecord } from '../services/spatialTotemCards.js';
@@ -68,6 +182,7 @@ import { creatorArControlsMarkup, bindCreatorArControls } from '../services/crea
 import { pimToArKnowledge } from '../services/pimModel.js';
 import { renderProjectDashboard, renderProjectAreaDashboard, renderProjectHome, renderAreaCheckpointForm, openProjectEntry } from './projectDashboard.js';
 import { mountCreatorXrWorklist } from '../services/creatorXrWorklist.js';
+import { CREATOR_XR_SURFACE } from '../services/creatorXrWorkspace.js';
 import { renderFieldGuide } from './fieldGuide.js';
 import { DEFAULT_TOTEM_COLOR, normalizeTotemStyle, renderedTotemStyle, totemHeightPreset } from '../services/totemAppearance.js';
 import { applyTotemLinkCalibration, createTotemLinkCalibration, reverseTotemLinkCalibration } from '../services/totemLinkCalibration.js';
@@ -87,6 +202,7 @@ function pulseCreatorHaptics(source=null){
 }
 let sessionMode = 'immersive-ar';
 let questHeadsetSession = false;
+function creatorUsesSpatialInterface(){return questHeadsetSession && creatorAccessCapabilities().kind!=='phone';}
 let creatorInputMode = 'touch';
 let controllerActionIndex = 0;
 let controllerMenuActive = true;
@@ -575,6 +691,7 @@ function closeAreaLens() {
 }
 
 async function openAreaLens() {
+    if(orbMapping.snapshot().target){setPlacementStatus('Save or cancel the current mapping before changing areas.');return;}
     const panel = overlayRoot?.querySelector('[data-ar-area-lens-panel]');
     if (!panel) return;
     if (areaLensOpen) {
@@ -1139,6 +1256,7 @@ function creatorTotemInformationMarkup(record) {
 }
 
 function setPlacementStatus(message) {
+    if(orbMapping.snapshot().target)infoPanel?.setContextualHint(message);
     const status = overlayRoot?.querySelector('[data-ar-placement-status]');
     if (status) status.textContent = message;
 }
@@ -1745,7 +1863,7 @@ function bindCreatorPanelActions() {
 }
 
 function activateQuestHeadsetFromInput(source) {
-    if (!isTrackedHeadsetInputSource(source)) return false;
+    if (creatorAccessCapabilities().kind==='phone' || !isTrackedHeadsetInputSource(source)) return false;
     questHeadsetSession = true;
     document.body.classList.add('creator-ar-quest-headset');
     document.body.dataset.arDevice = 'quest';
@@ -1773,6 +1891,8 @@ function fallbackCreatorInputMode() {
 }
 
 function availableCreatorInputMode() {
+    if(creatorPreferredInput==='hand' && handInputSources().length)return 'hand';
+    if(creatorPreferredInput==='controller' && controllerInputSource())return 'controller';
     if (controllerInputSource()) return 'controller';
     if (handInputSources().length) return 'hand';
     return fallbackCreatorInputMode();
@@ -1823,8 +1943,9 @@ function closeSpatialWebWindow() {
 
 async function openQuestSpatialWebPanel() {
     if (questSpatialWebVisible) {
+        if(questSpatialWorklist && !questSpatialWorklist.canLeave())return;
         closeQuestSpatialWebPanel();
-        setPlacementStatus('Project Dashboard closed. AR remains active.');
+        setPlacementStatus('Creator panel closed. XR remains active.');
         updateControllerHud();
         return;
     }
@@ -1832,19 +1953,32 @@ async function openQuestSpatialWebPanel() {
     questSpatialWebVisible = true;
     // Summon the dashboard in front of the user's current view, then keep
     // that transform unchanged so the surface remains world locked.
-    questSpatialDashboardPanel = spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix);
+    const creatorPose=()=>spatialDashboardPanelFromViewer(latestViewerMatrix || questBeltViewerMatrix,{width:CREATOR_XR_SURFACE.metresWide,height:CREATOR_XR_SURFACE.metresHigh,distance:CREATOR_XR_SURFACE.distance,drop:.04});
+    questSpatialDashboardPanel = creatorPose();
     controllerMenuActive = true;
-    setPlacementStatus('Opening Area elements…');
+    setPlacementStatus('Opening XR Creator…');
     updateControllerHud();
     try {
         const dashboardRoot = document.getElementById('app');
         if (!dashboardRoot || !gl || !questSpatialDashboardPanel) throw new Error('The dashboard surface is not ready.');
         questSpatialWorklist?.destroy();
         questSpatialWorklist = mountCreatorXrWorklist(dashboardRoot, {
+            projectId:activeProjectId,siteId:activeSiteId,
             projectName: activeProjectName || activeProjectId,
             areaName: activeAreaName,
             getRecords: activeAreaMarkers,
             onClose: closeQuestSpatialWebPanel,
+            onRecenter:()=>{questSpatialDashboardPanel=creatorPose();},
+            onAction:action=>{
+                if(orbMapping.snapshot().target || readyPlacementType || creatorKnowledgeWorkspace){setPlacementStatus('Finish or cancel the current edit before opening another tool.');return;}
+                closeQuestSpatialWebPanel();
+                return handleCreatorWristAction(action);
+            },
+            onOpenTool: view => {
+                const projectId = activeProjectId, siteId = activeSiteId;
+                if (orbMapping.snapshot().target || readyPlacementType || creatorKnowledgeWorkspace) { setPlacementStatus('Finish or cancel the current edit before opening another tool.'); return; }
+                exitArMode(() => import('../services/creatorWorkspaceRouting.js').then(module => module.renderCreatorWorkspace(document.getElementById('app'), projectId, { mode:'spatial', siteId, view })));
+            },
             onInspect: record => { closeQuestSpatialWebPanel(); openMarkerContextToolbar(record, true); },
             onPlace: async record => { closeQuestSpatialWebPanel(); await prepareExistingMarkerPlacement(record.marker.id); },
             onKnowledge: record => { closeQuestSpatialWebPanel(); openCreatorKnowledge(record); }
@@ -1854,14 +1988,15 @@ async function openQuestSpatialWebPanel() {
         questSpatialDashboardMirror = createSpatialDashboardMirror({
             gl,
             root: dashboardRoot,
-            width: 720,
-            height: 620,
-            title: 'AREA ELEMENTS',
+            width: CREATOR_XR_SURFACE.width,
+            height: CREATOR_XR_SURFACE.height,
+            background:null,ink:'#f1f1e3',
+            title: 'XR CREATOR',
             onStatus: setPlacementStatus,
             onError: error => setPlacementStatus(`Spatial Dashboard refresh failed: ${error.message}`)
         });
         document.body.classList.add('creator-ar-spatial-web-ready');
-        setPlacementStatus('Area elements ready. Aim and trigger to inspect, place or read. Press HUB again to close.');
+        setPlacementStatus('XR Creator ready. Aim and trigger to choose a tool. Thumbstick scrolls. Glass adjusts transparency.');
     } catch (error) {
         closeQuestSpatialWebPanel();
         setPlacementStatus(`Project Dashboard could not open: ${error.message}`);
@@ -1882,7 +2017,7 @@ function openSpatialWebWindow() {
             ? `web-marker:${selectedRecord.marker.id}`
             : '';
     // WEB is the full creator workspace, not an AR exit or an icon-only menu.
-    if (!questHeadsetSession) {
+    if (!questHeadsetSession || creatorAccessCapabilities().kind==='phone') {
         if (selectedReturnContext) arReturnContext = selectedReturnContext;
         exitArMode();
         return;
@@ -2137,6 +2272,7 @@ function controllerSpatialDashboardAtAim() {
         ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror)
         : null;
     questSpatialDashboardHit = target;
+    questSpatialDashboardMirror?.hoverAt?.(target?.pixelX,target?.pixelY);
     if (target) {
         clearMarkerHover();
         controllerMenuActive = true;
@@ -2174,12 +2310,18 @@ function controllerLaserSubjects() {
 }
 
 function controllerSpatialSurfaceAtAim() {
+    const wristHit=creatorWrist?.panel.hit(latestControllerRay);
+    if(orbMapping.snapshot().target){
+        const panel=[wristHit,infoPanel?.hit(latestControllerRay)].filter(Boolean).sort((a,b)=>a.distance-b.distance)[0];
+        const point=creatorMappingAim();return panel || (point?{point,distance:Math.hypot(point.x-latestControllerRay.origin.x,point.y-latestControllerRay.origin.y,point.z-latestControllerRay.origin.z)}:null);
+    }
     const dashboardHit = questSpatialWebVisible && questSpatialDashboardPanel
         ? spatialDashboardRayHit(latestControllerRay, questSpatialDashboardPanel, questSpatialDashboardMirror || {})
         : null;
     const pimCandidate = spatialPimTargetAtAim({ updateHover: false });
     const candidates = [
         heroDiceToy?.hit(latestControllerRay),
+        wristHit,
         infoPanel?.hit(latestControllerRay),
         totemCardsRenderer?.hit(latestControllerRay),
         dashboardHit && { ...dashboardHit, kind: 'dashboard' },
@@ -2356,6 +2498,8 @@ function activateKnowledgeSelection() {
 }
 
 function activateControllerSelection() {
+    if(creatorWrist?.panel.hit(latestControllerRay))return true;
+    if(orbMapping.snapshot().target){addOrbMappingPoint();return true;}
     if(creatorNoteRenderer?.activate(latestControllerRay))return true;
     if (!creatorKnowledgeRoot && !readyPlacementType && activateCreatorTotemCard(totemCardsRenderer?.hit(latestControllerRay))) return true;
     if(creatorKnowledgeRoot) return activateKnowledgeSelection();
@@ -2411,6 +2555,7 @@ function activateControllerSelection() {
 }
 
 function pollControllerInput(time = performance.now()) {
+    if(orbMapping.snapshot().target)return;
     if (exitPromise || arExitRequested) return;
     const source = controllerInputSource();
     if (!source?.gamepad || creatorInputMode !== 'controller') return;
@@ -2486,7 +2631,7 @@ function updateControllerRay(frame, time = performance.now()) {
             }
         }
     }
-    if (recentlyUsedControllerRay) {
+    if (recentlyUsedControllerRay && creatorPreferredInput!=='hand') {
         latestControllerRay = recentlyUsedControllerRay;
         setCreatorInputMode('controller');
         return;
@@ -2503,7 +2648,7 @@ function updateControllerRay(frame, time = performance.now()) {
         || trackedHands.find(entry => entry.source.handedness === 'right')
         || trackedHands[0]
         || null;
-    if (activeHand) {
+    if (activeHand && (creatorPreferredInput!=='controller' || !availableControllerRay)) {
         if (creatorInputMode !== 'hand') {
             clearControllerMarkerPress();
             if (dragState?.pointerId === 'xr-controller') cancelMarkerDrag({ pointerId: 'xr-controller' });
@@ -2538,13 +2683,15 @@ function pollHandPinch() {
     if (!latestHandState?.pointer) {handPimHold.cancel(); return;}
     const pinching = Boolean(latestHandState.pinch);
     const source=latestTrackedHandStates.find(entry=>entry.state===latestHandState)?.source;
-    if(infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPimHold.cancel();handPinchActive=pinching;return;}
+    if(creatorWrist?.panel.isHandInteracting(source) || infoPanel?.isHandInteracting(source) || nearHandInteraction?.isNear(source)){handPimHold.cancel();handPinchActive=pinching;return;}
     if (handPimHold.active) {
         if (!pinching){handPimHold.activateNow(spatialPimTargetAtAim({updateHover:false}));handPimHold.cancel();}
         else handPimHold.tick(spatialPimTargetAtAim({updateHover:false}),performance.now());
         handPinchActive=pinching;return;
     }
     if (pinching && !handPinchActive) {
+        if(creatorWrist?.panel.activateHand(latestControllerRay,source,latestHandState)){handPinchActive=pinching;return;}
+        if(orbMapping.snapshot().target){addOrbMappingPoint();handPinchActive=pinching;return;}
         if(creatorKnowledgeRoot) {activateKnowledgeSelection();handPinchActive=pinching;return;}
         if(infoPanel?.activateHand(latestControllerRay,source,latestHandState)) {handPinchActive=pinching;return;}
         if(activateCreatorTotemCard(totemCardsRenderer?.hit(latestControllerRay))){handPinchActive=pinching;return;}
@@ -4027,7 +4174,7 @@ function drawQuestSpatialWebPanel(view) {
     gl.depthFunc(gl.LEQUAL);
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.depthMask(true);
+    gl.depthMask(false);
     gl.useProgram(homeSignProgram);
     gl.uniform1f(gl.getUniformLocation(homeSignProgram, 'pimTexture'), 0);
     gl.bindBuffer(gl.ARRAY_BUFFER, homeSignBuffer);
@@ -4151,7 +4298,8 @@ function setupSpatialMarkerRenderer() {
     sphereRenderer = createSpatialSphereRenderer(gl);
     rainRenderer=createSpatialRainRenderer(gl);
     totemCardsRenderer = createSpatialTotemCards(gl,{ray:()=>latestControllerRay});
-    infoPanel?.attach(gl);
+    if(creatorUsesSpatialInterface())infoPanel?.attach(gl);
+    creatorWrist?.attach(gl);
     prismRenderer = createSpatialPrismRenderer(gl);
     totemSculptureRenderer = createSpatialTotemSculpture(gl);
     triangleRenderer = createSpatialTriangleRenderer(gl);
@@ -5430,6 +5578,7 @@ async function ensurePlacementArea(operation = captureArOperationContext()) {
 }
 
 async function armPlacement(type, specialMarker = null) {
+    if(orbMapping.snapshot().target){setPlacementStatus('Save or cancel the current mapping before placing another object.');return;}
     const generation = ++placementArmGeneration;
     closeMarkerContextToolbar();
     closePlacePicker();
@@ -5755,6 +5904,7 @@ async function quickPlace(type) {
         } else {
         setPlacementStatus(`${marker.name} placed. Hold it to move it, or use EDIT mode to edit it.`);
         }
+        creatorQuickStart.placed(type);
     } catch (error) {
         if (activePlacementOperation !== placementToken || !isArOperationCurrent(loadingOperation, { matchLocation: false })) return;
         readyPlacementType = type;
@@ -5851,6 +6001,9 @@ function createOverlay() {
         void armPlacement(type);
     };
     bindCreatorArControls(overlayRoot, {
+        '[data-ar-map-area]':()=>void handleCreatorWristAction('map-area'),
+        '[data-ar-map-line]':()=>void handleCreatorWristAction('map-line'),
+        '[data-ar-quick-start]':()=>creatorQuickStart.start(),
         '[data-ar-add-plant]':()=>armDirectPlacement('plant'),
         '[data-ar-add-note]':()=>armDirectPlacement('note'),
         '[data-ar-add-special]':()=>void openSpecialMarkerPicker(),
@@ -5902,12 +6055,15 @@ function createOverlay() {
 }
 
 function createCreatorInfoPanel(){
+    const spatialInterface=creatorUsesSpatialInterface();
+    creatorWrist?.destroy();
+    creatorWrist=createCreatorWristMenus({root:overlayRoot,headset:spatialInterface,phoneAR:Boolean(session&&!spatialInterface),generalActions:creatorGeneralWristActions,contextActions:creatorWristActions,onAction:action=>void handleCreatorWristAction(action),blocked:source=>Boolean(dragState || heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source)});
     creatorLimo?.close();creatorLimo=null;creatorLimoReturn=null;
     infoPanel?.destroy();creatorPanelActionSignature='';
     creatorCellOpacity=getSpatialVisualSettings().cellOpacity;creatorHandMode=getSpatialVisualSettings().handMode;
-    infoPanel=createPimInfoPanel({root:overlayRoot,headset:questHeadsetSession,phoneAR:Boolean(session && !questHeadsetSession),simpleDesktop:!session,rainEnabled:true,onGraphicsQuality:()=>renderSessionMarkers(),
+    infoPanel=createPimInfoPanel({root:overlayRoot,headset:spatialInterface,phoneAR:Boolean(session && !spatialInterface),simpleDesktop:!spatialInterface,rainEnabled:true,onGraphicsQuality:()=>renderSessionMarkers(),
         cellOpacity:creatorCellOpacity,handMode:creatorHandMode,onHandMode:value=>{creatorHandMode=value;},
-        panelHints:['Aim, then press once to open plant information.','Hold an Orb for 0.8 seconds to move it. Use the right joystick to adjust distance.','Press a cell once to read or expand its information.'],
+        panelHints:spatialInterface?['Aim, then press once to open plant information.','Hold an Orb for 0.8 seconds to move it. Use the right joystick to adjust distance.','Press a cell once to read or expand its information.']:['Tap an Orb to open plant information.','Use the touch controls to place or edit an object.','Tap a cell to read its information.'],
         onPerformanceAction:action=>creatorPerformance.action(action),onGrab:pulseCreatorHaptics,
         onFloorOffset:()=>renderSessionMarkers(),onTotemModel:()=>renderSessionMarkers(),
         onInfoOpacity:value=>overlayRoot?.style.setProperty('--creator-info-opacity',String(value)),
@@ -5918,6 +6074,8 @@ function createCreatorInfoPanel(){
 }
 
 function cleanup() {
+    mappingController?.destroy();mappingController=null;
+    creatorWrist?.destroy();creatorWrist=null;orbMapping.cancel();creatorQuickStart.close();
     creatorLimo?.close();creatorLimo=null;creatorLimoReturn=null;
     sessionMarkers.forEach(preserveKnowledgeContext);
     disposeKnowledgeDesktopViews(overlayRoot);
@@ -6271,7 +6429,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         // again once that display exists so Android can honour a later rotate.
         allowArScreenRotation();
         sessionMode = arSession.mode || 'immersive-ar';
-        questHeadsetSession = questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space';
+        questHeadsetSession = creatorAccessCapabilities().kind!=='phone' && (questBrowser || sessionMode === 'immersive-vr' || session.interactionMode === 'world-space');
         const launchedSession = session;
         createCreatorInfoPanel();
         document.body.classList.add('creator-ar-session-active');
@@ -6351,9 +6509,11 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
             if (questHeadsetSession) document.body.classList.remove('creator-ar-quest-pending');
             pollControllerInput(_time);
             updateControllerRay(frame, _time);
+            if(orbMapping.snapshot().target){mappingController ||= createMappingController(gl);mappingController.update(frame,refSpace);}
+            creatorWrist?.update(latestViewerMatrix,_time,latestControllerRay,frame);
             if(!latestHandState || latestHandState.pinch)tickControllerMarkerPress(_time);
-            heroDiceToy?.update(frame,_time);knowledgeRenderer?.updateInput(frame);infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot)); pimHold?.tick(_time);
-            nearHandInteraction?.update(latestTrackedHandStates,_time,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot || readyPlacementType || exitPromise || arExitRequested));
+            heroDiceToy?.update(frame,_time);knowledgeRenderer?.updateInput(frame);if(creatorUsesSpatialInterface())infoPanel?.update(latestViewerMatrix, _time, latestControllerRay, frame,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || Boolean(dragState || creatorKnowledgeRoot)); pimHold?.tick(_time);
+            nearHandInteraction?.update(latestTrackedHandStates,_time,source=>heroDiceToy?.heldSource===source || knowledgeRenderer?.grabbedSource===source || Boolean(orbMapping.snapshot().target || dragState || creatorKnowledgeRoot || readyPlacementType || exitPromise || arExitRequested));
             const hasSpatialRay = isSpatialRayInputMode() && latestControllerRay;
             const dashboardTarget = hasSpatialRay ? controllerSpatialDashboardAtAim() : null;
             const pimTarget = !dashboardTarget && hasSpatialRay ? spatialPimTargetAtAim() : null;
@@ -6385,6 +6545,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 drawQuestSpatialWebPanel(view);
                 creatorNoteRenderer?.draw(view,latestViewerMatrix);
                 drawCalibratedTotemPath(view);
+                drawCreatorMappings(view);
                 drawSpatialMarkers(view);
                 if (questBeltUsesSpatialRenderer() && totemCardsRenderer) {
                     totemCardsRenderer.begin();
@@ -6401,7 +6562,8 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
                 if(!globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches)drawSpatialRainField(gl,rainRenderer,view,_time,{origin:pose.transform.matrix,groundY:currentGroundY()});
                 drawSpatialPlantProfiles(view);
                 drawCreatorSignDestinations(view);
-                infoPanel?.draw(view);heroDiceToy?.draw(view);
+                if(creatorUsesSpatialInterface())infoPanel?.draw(view);heroDiceToy?.draw(view);
+                creatorWrist?.draw(view);
                 drawHandTrackingLines(view);
                 // Keep the controller laser and its contact marker in the
                 // foreground. A world-locked PIM panel is transparent, but
@@ -6433,13 +6595,15 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         });
         heroDiceToy?.bindSession(launchedSession,refSpace);nearHandInteraction?.bindSession(launchedSession);
         knowledgeRenderer?.bindSession(launchedSession,refSpace,{mode:sessionMode,onActivate:target=>activateSpatialPimTarget({record:target.record,target:target.node,inputSource:target.inputSource,intentionalHold:true}),canGrab:target=>{if(heroDiceToy?.heldSource===target.source)return false;const panel=target.contactPoint?infoPanel?.hitPoint(target.contactPoint):infoPanel?.hit(target.inputRay || latestControllerRay);return !creatorKnowledgeRoot && !readyPlacementType && (!panel || panel.distance>=target.distance);}});
-        infoPanel?.bindSession(launchedSession, refSpace);
+        if(creatorUsesSpatialInterface())infoPanel?.bindSession(launchedSession, refSpace);
+        creatorWrist?.bindSession(launchedSession,refSpace);
         pimHold = bindSpatialPimHold({session:launchedSession,
-            enabled:()=>!knowledgeRenderer?.movingAtAim() && !exitPromise && !arExitRequested && !latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay) && !totemCardsRenderer?.hit(latestControllerRay) && !controllerSpatialDashboardAtAim(),
+            enabled:()=>!orbMapping.snapshot().target && !knowledgeRenderer?.movingAtAim() && !exitPromise && !arExitRequested && !latestHandState && !creatorKnowledgeRoot && !readyPlacementType && !dragState && !infoPanel?.hit(latestControllerRay) && !totemCardsRenderer?.hit(latestControllerRay) && !controllerSpatialDashboardAtAim(),
             getTarget:()=>{const target=spatialPimTargetAtAim({updateHover:false});return target?.record?.knowledgeExplorer?.mode==='explore'?null:target;}, activate:activateSpatialPimTarget,
             progress:({record,target},amount)=>{record.pimPressPath=target.path;record.pimPressProgress=amount;}
         });
         launchedSession.addEventListener('squeezestart',event=>{
+            if(orbMapping.snapshot().target)return;
             if(event.inputSource.hand || !isPrimaryControllerSource(event.inputSource) || exitPromise || arExitRequested || creatorKnowledgeRoot || readyPlacementType || dragState)return;
             if(infoPanel?.hit(latestControllerRay) || totemCardsRenderer?.hit(latestControllerRay) || controllerSpatialDashboardAtAim())return;
             clearControllerMarkerPress();activateControllerTarget(true);
@@ -6450,6 +6614,7 @@ async function launchArMode(projectId, areaId, checkpointId, initialPlacementTyp
         launchedSession.addEventListener('selectstart', event => {
             if(event.inputSource.hand) return;
             if (exitPromise || arExitRequested) return;
+            if(orbMapping.snapshot().target || creatorWrist?.panel.hit(latestControllerRay))return;
             consumedMarkerSource=null;
             if(creatorKnowledgeRoot) return;
             if(totemCardsRenderer?.hit(latestControllerRay)) return;

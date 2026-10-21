@@ -484,7 +484,7 @@ test('Creator AR Taskbar V2 keeps the main bar permanent and adds compact contex
     assert.match(arSource, /Tap the centre circle to place it/);
     assert.match(arSource, /data-ar-web-return/);
     assert.match(arSource, /&#x23CE;<\/b><span>WEB/);
-    assert.match(arSource, /function openSpatialWebWindow\(\)[\s\S]*if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
+    assert.match(arSource, /function openSpatialWebWindow\(\)[\s\S]*if \(!questHeadsetSession \|\| creatorAccessCapabilities\(\)\.kind==='phone'\)[\s\S]*exitArMode\(\)/);
     assert.match(arSource, /world-locked WebGL texture/);
     assert.match(arSource, /createSpatialDashboardMirror/);
     assert.match(arSource, /arReturnContext = selectedReturnContext/);
@@ -830,8 +830,9 @@ test('Creator Area worklist provides the DOM source for the Quest spatial mirror
     assert.match(arSource, /mountCreatorXrWorklist\(dashboardRoot,\s*\{/);
     assert.match(arSource, /createSpatialDashboardMirror\(\{\s*gl,\s*root: dashboardRoot/);
     assert.match(arSource, /questSpatialWorklist\?\.destroy\(\)/);
-    const worklistSource = read('app/services/creatorXrWorklist.js');
-    assert.match(worklistSource, /export function mountCreatorXrWorklist\(root,/);
+    assert.match(read('app/services/creatorXrWorklist.js'), /mountCreatorXrWorkspace as mountCreatorXrWorklist/);
+    const worklistSource = read('app/services/creatorXrWorkspace.js');
+    assert.match(worklistSource, /export function mountCreatorXrWorkspace\(root,/);
     assert.match(worklistSource, /data-inspect=/);
     assert.match(worklistSource, /data-place=/);
     assert.match(worklistSource, /data-knowledge=/);
@@ -881,7 +882,7 @@ test('Creator AR keeps mobile controls intact and adds Q3-only spatial dashboard
     assert.match(arSource, /if \(surfaceHit\?\.point \|\| surfaceHit\?\.position\) return surfaceHit\.point \|\| surfaceHit\.position/);
     assert.match(arSource, /color: surfaceHit[\s\S]*XR_LASER_POINTER_CONFIG\.color,\.82/);
     assert.match(arSource, /drawSpatialPointerContact\(gl,controllerPointerRenderer,view,point/);
-    assert.match(arSource, /if \(!questHeadsetSession\)[\s\S]*exitArMode\(\)/);
+    assert.match(arSource, /if \(!questHeadsetSession \|\| creatorAccessCapabilities\(\)\.kind==='phone'\)[\s\S]*exitArMode\(\)/);
     assert.doesNotMatch(taskbar, /data-ar-hold-mode/);
     assert.doesNotMatch(taskbar, /data-ar-open-bag/);
     assert.doesNotMatch(taskbar, /data-ar-reset|data-ar-recenter/);
@@ -996,7 +997,11 @@ test('Creator AR opens a passthrough or native immersive WebXR session and clean
     const webxrSource = read('app/services/webxrSession.js');
     assert.match(arSource, /requestImmersiveArSession\(overlayRoot, \{ requireDomOverlay: false, preferDomOverlay: questBrowser \}\)/);
     assert.match(arSource, /document\.body\.dataset\.arDomOverlay = arSession\.domOverlay \? 'true' : 'false'/);
-    assert.match(arSource, /questHeadsetSession = questBrowser \|\| sessionMode === 'immersive-vr' \|\| session\.interactionMode === 'world-space'/);
+    assert.match(arSource, /questHeadsetSession = creatorAccessCapabilities\(\)\.kind!=='phone' && \(questBrowser \|\| sessionMode === 'immersive-vr' \|\| session\.interactionMode === 'world-space'\)/);
+    assert.match(arSource, /function activateQuestHeadsetFromInput\(source\) \{\s*if \(creatorAccessCapabilities\(\)\.kind==='phone' \|\| !isTrackedHeadsetInputSource\(source\)\) return false/);
+    assert.match(arSource, /function creatorUsesSpatialInterface\(\)\{return questHeadsetSession && creatorAccessCapabilities\(\)\.kind!=='phone';\}/);
+    assert.match(arSource, /headset:spatialInterface,phoneAR:Boolean\(session && !spatialInterface\),simpleDesktop:!spatialInterface/);
+    for(const method of ['attach','draw','update','bindSession'])assert.match(arSource,new RegExp('if\\(creatorUsesSpatialInterface\\(\\)\\)infoPanel\\?\\.'+method+'\\('),'Phone touch panel must not enter the XR '+method+' lifecycle');
     assert.match(arSource, /classList\.toggle\('creator-ar-quest-headset', questHeadsetSession\)/);
     assert.match(arSource, /classList\.remove\('creator-ar-quest-headset'\)/);
     assert.match(arSource, /isQuestHeadsetBrowser/);
@@ -1708,7 +1713,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /DEMO_NOTE_TEMPLATE_KEYS/);
     assert.match(source, /pollinators/);
     assert.doesNotMatch(source, /Give the Area a Totem/);
-    assert.match(source, /function createDemoTotemExample\(\)/);
+    assert.match(source, /function createDemoTotemExample\(/);
     assert.match(source, /pairedDemoTotemPosition\(1,groundBaseY\)/);
     assert.match(source, /guidedDemoStep\('ELEMENTS 1\.18'\)\.title/);
     assert.match(source, /guidedDemoStep\('ELEMENTS 1\.22'\)/);

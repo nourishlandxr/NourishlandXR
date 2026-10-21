@@ -1,3 +1,6 @@
+import { ensureCreatorInterfaceStyles } from '../services/creatorInterface.js';
+import { creatorLogoMarkup } from '../services/creatorIdentity.js';
+import { dashboardIcon } from '../services/workspaceIcons.js';
 import { CREATOR_PROJECT_TUTORIAL } from '../services/creatorProjectTutorialContent.js';
 import { ensureCreatorAuthentication } from '../services/apiClient.js';
 import {
@@ -72,6 +75,7 @@ function includeStylesheet() {
 export async function renderCreatorProjectTutorial(app, { mode = 'desktop', projectId = '', step = '' } = {}) {
     mode = CREATOR_WORKSPACES[mode] ? mode : 'desktop';
     includeStylesheet();
+    ensureCreatorInterfaceStyles();
     document.body.dataset.experienceRole = 'creator';
     document.body.dataset.creatorOnboarding = 'true';
 
@@ -350,6 +354,12 @@ export async function renderCreatorProjectTutorial(app, { mode = 'desktop', proj
 
     function render() {
         root.replaceChildren();
+        const brand = add('div', 'cpt-brandbar');
+        const exitUrl = state.projectId && state.projectId !== 'pending'
+            ? workspaceUrl(state.projectId, {mode:state.mode,siteId:state.siteId}).href
+            : new URL('../index.html?creator=1', import.meta.url).href;
+        brand.innerHTML = `<span>${creatorLogoMarkup()}nourishland <small>Creator</small></span><a href="${html(exitUrl)}" aria-label="Leave project setup" title="Leave project setup">${dashboardIcon('close')}</a>`;
+        root.append(brand);
         const header = add('header', 'cpt-header');
         header.append(add('p', 'cpt-eyebrow', 'NOURISHLAND CREATOR · BEGINNER SETUP'));
         header.append(add('h1', '', CREATOR_PROJECT_TUTORIAL.title));
@@ -360,6 +370,8 @@ export async function renderCreatorProjectTutorial(app, { mode = 'desktop', proj
         progress.setAttribute('aria-label', 'Setup progress');
         for (let index = 0; index < STEPS.length; index++) {
             const item = add('li', index === state.stepIndex ? 'is-current' : index < state.stepIndex ? 'is-done' : '', (index + 1) + '. ' + STEPS[index].heading);
+            if (index === state.stepIndex) item.setAttribute('aria-current', 'step');
+            if (index < state.stepIndex) item.append(add('span', 'cpt-complete-mark', ' ✓'));
             progress.append(item);
         }
         root.append(header, progress);
@@ -556,7 +568,7 @@ export async function renderCreatorProjectTutorial(app, { mode = 'desktop', proj
         setStatus('Reopened the same project. Its first Area and record identities are intact.');
     }
 
-    async function openWorkspace(targetMode, view = 'overview', checkpoint = '') {
+    async function openWorkspace(targetMode, view = 'hub', checkpoint = '') {
         if (checkpoint) {
             const checkpoints = [...new Set([...(state.project.creatorOnboarding?.checkpoints || []), checkpoint])];
             await saveProgress({ checkpoints });
