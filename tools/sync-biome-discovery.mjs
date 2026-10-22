@@ -14,10 +14,10 @@ for(const [id,name]of sources)payload.modules[id]=fs.readFileSync(path.join(root
 let puzzle=payload.modules['nl-puzzle'];
 const originalCall='installNourishlandLayer({THREE,scene,camera,stage,pieces,payload,terrainSampler,renderer,requestRender,createLivingSphereGeometry,createTotemSculptureGeometry,foodPondDistance,foodChannelDistance,ricePatchWeight});';
 if(!puzzle.includes(originalCall)||!puzzle.includes('finishInnerLandscape({'))throw Error('Expected current master geometry and NL-layer startup.');
-puzzle="import {installBiomeDiscovery} from 'nl-discovery';\n"+puzzle.replace(originalCall,'installBiomeDiscovery({scene,camera,stage,plan:payload.plan,height:(x,z,f)=>terrainSampler(x,z,f),requestRender,createLivingSphereGeometry,createTotemSculptureGeometry});');
+puzzle=puzzle.replace(originalCall,"stage.dataset.nlLayer='disabled';");
 puzzle=puzzle.replace("stage.dataset.layoutLocked='true';","stage.dataset.worldRevision='"+provenance.revision+"';stage.dataset.layoutLocked='true';");
 payload.modules['nl-puzzle']=puzzle;
 const encoded=JSON.stringify(payload).replaceAll('<','\\u003c');
 html=html.slice(0,match.index)+match[0].replace(match[1],()=>encoded)+html.slice(match.index+match[0].length);
 const next=file+'.discovery-next';fs.writeFileSync(next,html);try{fs.renameSync(next,file);}finally{if(fs.existsSync(next))fs.unlinkSync(next);}
-console.log('Current master '+provenance.revision+' + quiet animated reveal. Model data preserved.');
+console.log('Current master '+provenance.revision+'; NL layer disabled. Model data preserved.');

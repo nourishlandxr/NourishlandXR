@@ -1,5 +1,7 @@
 # Hidden knowledge showcase
 
+**Paused pending design review.** The NL layer is disabled in the current intro and optional full 3D world. The intro uses the clean high-quality video described in `intro-hero-video.md`. The notes below describe retained experimental work, not the active homepage.
+
 The homepage uses the current `knowledge-mesh-03` master from the separate website preview. Its V17 filename is retained, but the landscape includes the newer closed rock interior, food-landform repairs and inner biomes. `app/v2/full-3d/world-source.json` records the imported source hash and model-data hashes.
 
 The NL layer is a demonstrative animation, not an information browser. A quiet welcome Totem begins a terrain-following path reveal. Two secondary Totems appear, then a cluster of three actual Living-shell orbs. One orb opens briefly with a small arrangement of connected leaf cells. The reveal fades away before another biome begins. Hovering or tapping a welcome Totem chooses its reveal without moving the camera.

@@ -22,7 +22,8 @@ test('the standalone world contains the maintained discovery modules',()=>{
   const payload=JSON.parse(html.match(/<script id="hero-puzzle-data" type="application\/json">([\s\S]*?)<\/script>/)[1]);
   assert.equal(payload.modules['nl-discovery-model'],fs.readFileSync(new URL('../app/v2/biome-discovery-model.js',import.meta.url),'utf8'));
   assert.equal(payload.modules['nl-discovery'],fs.readFileSync(new URL('../app/v2/biome-discovery.js',import.meta.url),'utf8').replace("'./nlxr/vendor/three.module.min.js'","'nl-three'").replace("'./biome-discovery-model.js'","'nl-discovery-model'").replace("'./biome-route-surface.js'","'nl-route-surface'"));
-  assert.match(payload.modules['nl-puzzle'],/installBiomeDiscovery\(\{scene,camera/);
+  assert.doesNotMatch(payload.modules['nl-puzzle'],/import \{installBiomeDiscovery\}|installBiomeDiscovery\(\{scene,camera|installNourishlandLayer\(\{THREE,scene,camera/);
+  assert.match(payload.modules['nl-puzzle'],/stage.dataset.nlLayer='disabled'/);
   assert.match(payload.modules['nl-puzzle'],/finishInnerLandscape\(\{/);
   const source=JSON.parse(fs.readFileSync(new URL('../app/v2/full-3d/world-source.json',import.meta.url),'utf8'));
   assert.equal(source.revision,'knowledge-mesh-03');

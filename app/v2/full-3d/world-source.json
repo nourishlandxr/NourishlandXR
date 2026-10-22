@@ -12,5 +12,6 @@
     "cliffRepair": "1ca3295540a6ef024f45b16a729cbcdd594bf3f41bc1bf08fc4f7d14f97aa76d",
     "foodContours": "8e7979628e2baef82a81656f31f9a7877902432f7675a43fb45d5d66e9c08bb6"
   },
-  "showcaseRevision": "quiet-reveal-01"
+  "showcaseRevision": "disabled-pending-design",
+  "showcaseEnabled": false
 }

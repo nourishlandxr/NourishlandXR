@@ -1,11 +1,25 @@
-/* Review landing: one living world, simple navigation, linked content routes. */
-body[data-page="home"] {overflow:hidden;background:#b9def3}
-body[data-page="home"] main,body[data-page="home"] #home {height:100dvh;min-height:0}
-body[data-page="home"] #site-header {position:absolute;top:0;left:0;right:0;z-index:70;margin:auto;padding-block:18px;background:linear-gradient(#0b211d9c,transparent);max-width:none;padding-inline:clamp(18px,4vw,60px);color:white}
-body[data-page="home"] #site-header :is(.brand,.header-pathways a,.header-contact){color:#fff;text-shadow:0 1px 5px #071b13}
+/* High-resolution landscape video. No WebGL world or NL overlay on entry. */
+body[data-page="home"]{overflow:hidden;background:#263f32;overscroll-behavior-y:none}
+body[data-page="home"] main,body[data-page="home"] #home{height:100dvh;min-height:0}
+body[data-page="home"] .footer{display:none}
+body[data-page="home"] #site-header{position:absolute;inset:0 0 auto;z-index:70;margin:auto;max-width:none;padding:18px clamp(18px,4vw,60px);background:linear-gradient(#0b211d9c,transparent);color:white}
+body[data-page="home"] #site-header :is(.brand,.header-pathways a,.header-contact){color:white;text-shadow:0 1px 5px #071b13}
 body[data-page="home"] .header-contact{display:none}
-body[data-page="home"] .menu-toggle {background:#173b2ed9;color:white;border-color:#ffffff88}
-.nl-cinematic-actions{left:18px;right:auto;bottom:88px}
-.nl-cinematic-return{left:18px;bottom:88px}
-.nl-cinematic-loading{bottom:145px}
-@media(max-width:760px){body[data-page="home"] #site-header{padding-block:12px}.nl-cinematic-actions{bottom:105px}.nl-cinematic-return{bottom:105px}}
+body[data-page="home"] .menu-toggle{background:#173b2ed9;color:white;border-color:#ffffff88}
+[data-biome-hero]{position:relative;height:100dvh;width:100%;overflow:hidden}
+.nl-video-scene{position:absolute;inset:0;overflow:hidden;isolation:isolate;touch-action:none;background:#263f32;perspective:1600px;cursor:grab;outline-offset:-5px}
+.nl-video-scene.is-dragging{cursor:grabbing}
+.nl-video-scene:focus:not(:focus-visible){outline:none}
+.nl-video-scene:focus-visible{outline:3px solid #d8c799}
+.nl-video-plane{position:absolute;inset:0;transform:scale(1.035);transform-origin:center 58%;pointer-events:none;backface-visibility:hidden}
+.nl-video-poster,.nl-hero-video{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;object-position:center}
+.nl-hero-video{opacity:0}
+.nl-video-plane.is-playing .nl-hero-video{opacity:1}
+.nl-video-plane.is-playing .nl-video-poster{opacity:0}
+.nl-hero-controls{position:absolute;z-index:5;left:18px;bottom:max(20px,env(safe-area-inset-bottom));display:flex;gap:8px}
+.nl-hero-controls button{display:grid;place-items:center;width:44px;height:44px;border:1px solid #ffffff85;border-radius:50%;background:#173b2ebd;color:#fff;cursor:pointer}
+.nl-hero-controls button svg{width:20px;height:20px}
+.nl-hero-controls button:hover{background:#173b2ef2}
+.nl-hero-controls button:focus-visible{outline:3px solid #e3c78e;outline-offset:4px}
+@media(max-width:760px){body[data-page="home"] #site-header{padding-block:12px}.nl-hero-controls{left:14px;bottom:max(18px,env(safe-area-inset-bottom))}}
+@media(prefers-reduced-motion:reduce){.nl-video-plane{transform:none!important}.nl-video-scene{cursor:default}}

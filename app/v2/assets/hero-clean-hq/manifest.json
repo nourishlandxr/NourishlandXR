@@ -1,0 +1,42 @@
+{
+  "revision": "clean-hq-video-01",
+  "source": "hero-living-v17/hero-cycle-02/media",
+  "captureRevision": "inner-rock-02",
+  "captureSourceSha256": "0a1e5d34d05e459ba620586a3276f6ea93765a7da9f7e18d7935fd3d36b50f5c",
+  "nlLayer": false,
+  "note": "hero-cycle-03 includes baked-in NL graphics; excluded.",
+  "durationSeconds": 24,
+  "fps": 30,
+  "desktop": {
+    "width": 2560,
+    "height": 1440,
+    "bitrateKbps": 14389
+  },
+  "phone": {
+    "width": 1080,
+    "height": 1920,
+    "bitrateKbps": 6685
+  },
+  "files": [
+    {
+      "file": "desktop.mp4",
+      "bytes": 43170483,
+      "sha256": "1e71eddff76360abfe8a5483874b849b5709a94aea37b328ac1f941c60aa9b23"
+    },
+    {
+      "file": "phone.mp4",
+      "bytes": 20057406,
+      "sha256": "764a782111ec4aa7cbce1ddac63c36a21735db928515ba0fa4423500fdec606d"
+    },
+    {
+      "file": "desktop-mp4-poster.webp",
+      "bytes": 1445228,
+      "sha256": "8e9d0bd51173cc6e8dec6abf6a4ee9316c6ba79160c0e1ef0fbb60c9535f428d"
+    },
+    {
+      "file": "phone-mp4-poster.webp",
+      "bytes": 706364,
+      "sha256": "ce5ace2a0d3fb3799e5dc8edfa6713697ea4280b2d8949402dd04bdbbea03918"
+    }
+  ]
+}

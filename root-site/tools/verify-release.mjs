@@ -1,4 +1,5 @@
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
+import {allowedFrontendFile} from './frontend-boundary.mjs';
 const version=process.argv[2]||'0.9774';if(!/^0\.[0-9]{4}$/.test(version))throw Error('Invalid release version');
 const root=path.resolve('root-site/releases',version),manifest=JSON.parse(fs.readFileSync(path.join(root,'manifest.json'),'utf8'));
 const routes=new Set(Object.values(JSON.parse(fs.readFileSync('root-site/routes.json','utf8'))).map(route=>(route.path==='/'?'':route.path.slice(1))+'index.html'));
@@ -7,7 +8,7 @@ if(manifest.version!==version||manifest.managedBy!=='root-site-release'||manifes
 for(const item of manifest.files){
  const name=item.file;
  if(!/^[a-zA-Z0-9_./-]+$/.test(name)||name.startsWith('/')||name.split('/').some(part=>part==='..'||part.startsWith('.'))||seen.has(name))throw Error('Unsafe or duplicate path: '+name);seen.add(name);
- if(!routes.has(name)&&name!=='xr/services/buildInfo.js'&&!(name.startsWith('site/')&&/\.(js|mjs|css|json|webp)$/.test(name)))throw Error('Unexpected frontend file: '+name);
+ if(!allowedFrontendFile(name,routes))throw Error('Unexpected frontend file: '+name);
  if(!/^[a-f0-9]{64}$/.test(item.sha256)||item.previousSha256&&!/^[a-f0-9]{64}$/.test(item.previousSha256))throw Error('Invalid hash');
  const file=path.join(root,'payload',name);if(fs.lstatSync(file).isSymbolicLink())throw Error('Symlink in release');const bytes=fs.readFileSync(file);if(bytes.length!==item.bytes||digest(bytes)!==item.sha256)throw Error('Artifact hash mismatch: '+name);
 }

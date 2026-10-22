@@ -3,17 +3,16 @@ import assert from 'node:assert/strict';
 import {readFile,stat} from 'node:fs/promises';
 const root=new URL('../app/v2/',import.meta.url);
 const read=file=>readFile(new URL(file,root),'utf8');
-test('website offers a short introduction while preserving the live central world',async()=>{
+test('website offers a short introduction with a clean high-quality video hero',async()=>{
  const [html,hero]=await Promise.all([read('index.html'),read('homepage-hero.js')]);
  for(const route of ['education','food-forests','nature-learning','platform','collaborate','demos'])assert.match(html,new RegExp(`data-route="${route}"`));
  assert.match(html,/data-biome-hero/);
  assert.doesNotMatch(html,/data-nl-hero/);
  assert.match(html,/hero-preview\.css/);
- assert.match(hero,/revision=knowledge-mesh-03-quiet-reveal-01/);
- assert.match(html,/homepage-hero\.js\?v=knowledge-mesh-03-quiet-reveal-01/);
- assert.match(hero,/Nourishland-Hero-Living-v17\.html\?embed=1&central=1/);
- assert.match(hero,/heroInspection\.setUnlocked\(true\)/);
- assert.match(hero,/function playVideoFallback\(\)/);
+ assert.match(hero,/assets\/hero-clean-hq\//);
+ assert.match(html,/homepage-hero\.js\?v=clean-hq-video-02/);
+ assert.match(hero,/loop:true,playsInline:true/);
+ assert.doesNotMatch(hero,/createElement\('iframe'\)|Nourishland-Hero-Living|heroNourishland|installBiomeDiscovery/);
  assert.match(html,/06-plant-orb-effects\.png/);
  assert.match(html,/08-connect-pimo-to-limo\.png/);
  assert.doesNotMatch(html,/Reserved capture|Replace with a genuine|Show an educator shaping|data-media-slot/);

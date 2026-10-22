@@ -1,0 +1,42 @@
+{
+  "version": "0.9775",
+  "results": [
+    {
+      "name": "desktop",
+      "dimensions": {
+        "width": 2560,
+        "height": 1440,
+        "duration": 24,
+        "loop": true,
+        "muted": true,
+        "inline": true,
+        "src": "http://127.0.0.1:54895/xr/v2/assets/hero-clean-hq/desktop.mp4?v=inner-rock-02"
+      },
+      "loopVerified": true,
+      "menuAndRoutePause": true,
+      "controls": true
+    },
+    {
+      "name": "phone",
+      "dimensions": {
+        "width": 1080,
+        "height": 1920,
+        "duration": 24,
+        "loop": true,
+        "muted": true,
+        "inline": true,
+        "src": "http://127.0.0.1:54895/xr/v2/assets/hero-clean-hq/phone.mp4?v=inner-rock-02"
+      },
+      "loopVerified": true,
+      "menuAndRoutePause": true,
+      "controls": true
+    }
+  ],
+  "reducedMotion": true,
+  "posterOnVideoFailure": true,
+  "noNLlayer": true,
+  "noFullWorldRequest": true,
+  "welcomeVersion": true,
+  "physicalPhone": false,
+  "errors": []
+}

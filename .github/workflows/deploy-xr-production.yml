@@ -24,19 +24,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy-production:
+  release-boundary:
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    environment:
-      name: production
-      url: ${{ vars.XR_URL }}
-    timeout-minutes: 15
-
+    outputs:
+      legacy: ${{ steps.boundary.outputs.legacy }}
     steps:
-      - name: Check out main
-        uses: actions/checkout@v4
-
       - name: Protect the official root website release
+        id: boundary
         shell: bash
         run: |
           set -euo pipefail
@@ -45,13 +40,26 @@ jobs:
             --output "$MARKER" --write-out '%{http_code}' \
             'https://nourishland.org/site/root-release.json')
           if [[ "$STATUS" == "200" ]] && grep -q '"managedBy": "root-site-release"' "$MARKER"; then
-            echo '::error::The official root website shares reviewed assets with /xr. This legacy sync would overwrite or delete that release. Integrate the root release sources and dedicated publisher before removing the root-release marker.'
+            echo 'legacy=false' >> "$GITHUB_OUTPUT"
+            echo '::notice::Root publisher manages this site. Legacy sync safely skipped; use the reviewed additive overlay.'
+          elif [[ "$STATUS" == "404" ]]; then
+            echo 'legacy=true' >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Cannot establish root release boundary (HTTP $STATUS). Refusing frontend overwrite."
             exit 1
           fi
-          if [[ "$STATUS" != "404" ]]; then
-            echo "::error::Cannot establish the root release boundary (HTTP $STATUS). Refusing to overwrite the frontend."
-            exit 1
-          fi
+
+  deploy-production:
+    needs: release-boundary
+    if: github.ref == 'refs/heads/main' && needs.release-boundary.outputs.legacy == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ vars.XR_URL }}
+    timeout-minutes: 15
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
