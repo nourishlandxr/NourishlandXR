@@ -13,7 +13,7 @@ export const totemBranches = {
   ]}
 };
 
-import {craftPortrait} from './totem-portraits.js';
+import {craftPortrait,warmPortraits} from './totem-portraits.js';
 export function initTotemJourney(stage) {
   if(!stage)return;
   const artwork='/site/art/platform-totem-menu-640.webp';
@@ -29,7 +29,7 @@ export function initTotemJourney(stage) {
     <p class="sr-only" role="status" data-journey-status></p><nav class="journey-bottom" aria-label="Platform previews"><button type="button" data-open-showcase>Inside Creator ↗</button><a href="/demos/">Device demos ↗</a></nav>`;
   const parent=stage.querySelector('.journey-parent'),child=stage.querySelector('.journey-child'),detail=stage.querySelector('.journey-detail');
   const actors=[parent,child],reduced=matchMedia('(prefers-reduced-motion:reduce)');
-  const animations=new Map();let branch=null,selected=null,revision=0,frame=0,until=0,positions=[],balloonAnimation=null,lastFrame=0;
+  const animations=new Map();let branch=null,selected=null,revision=0,branchRevision=0,frame=0,until=0,positions=[],balloonAnimation=null,lastFrame=0,measured={width:0,height:0};
   function positionBalloon(){
     const tether=stage.querySelector('.journey-balloon-tether');
     if(!selected||detail.hidden){tether.querySelector('path').setAttribute('d','');return;}
@@ -69,6 +69,7 @@ export function initTotemJourney(stage) {
   function track(){until=performance.now()+1150;if(!frame)frame=requestAnimationFrame(groundLinks);}
   function metrics(){
     const r=stage.getBoundingClientRect(),mobile=r.width<700;
+    measured={width:r.width,height:r.height};
     // Reserve space above for breadcrumbs and below for captions / demo link.
     const size=Math.max(80,Math.min(420,r.width*(mobile?.88:.38),(r.height-100)/1.5));
     stage.style.setProperty('--totem-size',size+'px');
@@ -110,20 +111,23 @@ export function initTotemJourney(stage) {
     if(restore)child.querySelector(`[data-journey-item="${old}"]`)?.focus({preventScroll:true});
   }
   function home(restore=false){
+    branchRevision++;
     const old=branch;branch=null;selected=null;detail.hidden=true;updateNavigation();
     stage.querySelector('[data-parent-caption]').textContent='Choose Creator or Explorer';
     layout({focus:restore?parent.querySelector(`[data-journey-branch="${old}"]`):null});
     stage.querySelector('[data-journey-status]').textContent='Platform overview';
   }
-  function openBranch(key){
+  async function openBranch(key){
     const data=totemBranches[key];if(!data)return;
+    const request=++branchRevision;
     branch=key;selected=null;detail.hidden=true;
     child.querySelector('.journey-plaque').textContent=data.label;
     child.querySelector('[data-branch-heading]').textContent=data.label;
     child.querySelector('nav').setAttribute('aria-label',data.label+' choices');
     child.querySelector('nav').innerHTML=data.items.map((item,i)=>sign(item.label,`data-journey-item="${item.id}" aria-expanded="false" aria-controls="journey-detail-title"`,i)).join('');
     delete child.querySelector('.journey-sculpture').dataset.crafted;
-    craftPortrait(child,key==='creator'?'botanical':'organic').then(track);
+    await craftPortrait(child,key==='creator'?'botanical':'organic');
+    if(request!==branchRevision||branch!==key)return;
     child.querySelector('[data-child-caption]').textContent=data.copy;
     stage.querySelector('[data-parent-caption]').textContent='Platform';
     updateNavigation();layout({focus:child.querySelector('[data-branch-heading]')});
@@ -152,10 +156,15 @@ export function initTotemJourney(stage) {
   // Aim at the small ancestor to return, while its visible labels remain intact.
   parent.addEventListener('click',event=>{if(branch&&!event.target.closest('button'))home(true);});
   stage.addEventListener('keydown',event=>{if(event.key==='Escape'){event.preventDefault();if(selected)closeDetail(true);else home(true);}});
-  new ResizeObserver(()=>layout({animate:false})).observe(stage);
+  new ResizeObserver(()=>{
+    const r=stage.getBoundingClientRect();if(!r.width||!r.height)return;
+    if(Math.abs(r.width-measured.width)<.5&&Math.abs(r.height-measured.height)<.5)return;
+    layout({animate:stage.dataset.motion==='moving'});
+  }).observe(stage);
   reduced.addEventListener('change',()=>layout({animate:false}));
   document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);frame=0;stage.dataset.connectorAlive='false';}else track();});
-  window.addEventListener('nourishland:route',event=>{if(event.detail.page!=='platform'){home();for(const animation of animations.values())animation.finish();}else craftPortrait(parent,'basic').then(track);});
+  window.addEventListener('nourishland:route',event=>{if(event.detail.page!=='platform'){home();for(const animation of animations.values())animation.finish();}else {warmPortraits();craftPortrait(parent,'basic').then(track);}});
+  if(document.body.dataset.page==='platform'){warmPortraits();craftPortrait(parent,'basic').then(track);}
   updateNavigation();layout({animate:false});
   return {home,openBranch,openItem,get moving(){return stage.dataset.motion==='moving';}};
 }

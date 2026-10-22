@@ -13,7 +13,7 @@ function render({focus=false}={}){let key=reverse[location.pathname]||'home',sec
  window.dispatchEvent(new CustomEvent('nourishland:route',{detail:{page:key,section:section||key}}));
  prepareEntrance(key);
  document.querySelectorAll('.header-pathways a,#main-nav a').forEach(a=>{if(new URL(a.href).pathname===routes[key])a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
- if(key==='home'&&!heroStarted){heroStarted=true;current?.querySelectorAll('[data-hero-src],[data-hero-srcset]').forEach(n=>{if(n.dataset.heroSrc)n.setAttribute('src',n.dataset.heroSrc);if(n.dataset.heroSrcset)n.setAttribute('srcset',n.dataset.heroSrcset);});import('/xr/v2/homepage-hero.js?v=clean-hq-video-02');}
+ if(key==='home'&&!heroStarted){heroStarted=true;current?.querySelectorAll('[data-hero-src],[data-hero-srcset]').forEach(n=>{if(n.dataset.heroSrc)n.setAttribute('src',n.dataset.heroSrc);if(n.dataset.heroSrcset)n.setAttribute('srcset',n.dataset.heroSrcset);});import('/xr/v2/homepage-hero.js?v=autoplay-09783');}
  requestAnimationFrame(()=>{const target=section&&document.getElementById(section);if(target&&!target.closest('[hidden]'))target.scrollIntoView({block:'start'});else scrollTo({top:0,behavior:'instant'});if(focus){const h=current?.querySelector('h1');h?.setAttribute('tabindex','-1');h?.focus({preventScroll:true});}});
 }
 function show(options={}){const from=document.body.dataset.page;const to=reverse[location.pathname]||'home';transitionPage(()=>render(options),from,to,()=>enterPage(document.body.dataset.page));}

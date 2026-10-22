@@ -10,7 +10,9 @@ test('website offers a short introduction with a clean high-quality video hero',
  assert.doesNotMatch(html,/data-nl-hero/);
  assert.match(html,/hero-preview\.css/);
  assert.match(hero,/assets\/hero-clean-hq\//);
- assert.match(html,/homepage-hero\.js\?v=clean-hq-video-02/);
+ assert.match(html,/homepage-hero\.js\?v=autoplay-09783/);
+ assert.match(hero,/autoplay:true/);
+ assert.doesNotMatch(hero,/data-hero-play|data-hero-replay|nl-hero-controls|poster\.decode\(/);
  assert.match(hero,/loop:true,playsInline:true/);
  assert.doesNotMatch(hero,/createElement\('iframe'\)|Nourishland-Hero-Living|heroNourishland|installBiomeDiscovery/);
  assert.match(html,/06-plant-orb-effects\.png/);

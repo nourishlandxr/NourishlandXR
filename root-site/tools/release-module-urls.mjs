@@ -17,3 +17,7 @@ export function versionModuleImports(source,version){
  walk(ast);for(const edit of edits.sort((a,b)=>b.start-a.start))source=source.slice(0,edit.start)+edit.text+source.slice(edit.end);
  return source;
 }
+
+export function versionCssImports(source,version){
+ return source.replace(/(@import\s+(?:url\(\s*)?["'])([^"'?]+\.css)(?:\?[^"']*)?(["'])/g,`$1$2?v=${version}$3`);
+}

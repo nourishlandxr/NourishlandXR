@@ -1,0 +1,61 @@
+{
+  "version": "0.9783",
+  "public": false,
+  "results": [
+    {
+      "name": "desktop",
+      "heroAutoplay": true,
+      "noHeroControls": true,
+      "education": true,
+      "totemJourney": true,
+      "outward": {
+        "frames": 347,
+        "intermediate": 125,
+        "firstMovementMs": 47,
+        "largestFrameGapMs": 53
+      },
+      "returnToOverview": {
+        "frames": 406,
+        "intermediate": 161,
+        "firstMovementMs": 20,
+        "largestFrameGapMs": 7
+      },
+      "rapidSwitch": true,
+      "phonePreview": true,
+      "wheel": true,
+      "places": true,
+      "die": true,
+      "version": true
+    },
+    {
+      "name": "phone",
+      "heroAutoplay": true,
+      "noHeroControls": true,
+      "education": true,
+      "totemJourney": true,
+      "outward": {
+        "frames": 403,
+        "intermediate": 160,
+        "firstMovementMs": 21,
+        "largestFrameGapMs": 10
+      },
+      "returnToOverview": {
+        "frames": 407,
+        "intermediate": 161,
+        "firstMovementMs": 17,
+        "largestFrameGapMs": 4
+      },
+      "rapidSwitch": true,
+      "phonePreview": true,
+      "wheel": true,
+      "places": true,
+      "die": true,
+      "version": true
+    }
+  ],
+  "reducedMotion": true,
+  "autoplayWithoutPoster": true,
+  "errors": [],
+  "physicalDevice": false,
+  "heroCrevice": "Known issue: retained video predates food-area repair"
+}

@@ -16,10 +16,5 @@ body[data-page="home"] .menu-toggle{background:#173b2ed9;color:white;border-colo
 .nl-hero-video{opacity:0}
 .nl-video-plane.is-playing .nl-hero-video{opacity:1}
 .nl-video-plane.is-playing .nl-video-poster{opacity:0}
-.nl-hero-controls{position:absolute;z-index:5;left:18px;bottom:max(20px,env(safe-area-inset-bottom));display:flex;gap:8px}
-.nl-hero-controls button{display:grid;place-items:center;width:44px;height:44px;border:1px solid #ffffff85;border-radius:50%;background:#173b2ebd;color:#fff;cursor:pointer}
-.nl-hero-controls button svg{width:20px;height:20px}
-.nl-hero-controls button:hover{background:#173b2ef2}
-.nl-hero-controls button:focus-visible{outline:3px solid #e3c78e;outline-offset:4px}
-@media(max-width:760px){body[data-page="home"] #site-header{padding-block:12px}.nl-hero-controls{left:14px;bottom:max(18px,env(safe-area-inset-bottom))}}
+@media(max-width:760px){body[data-page="home"] #site-header{padding-block:12px}}
 @media(prefers-reduced-motion:reduce){.nl-video-plane{transform:none!important}.nl-video-scene{cursor:default}}
