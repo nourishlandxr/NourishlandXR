@@ -153,7 +153,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     const activeGrabs=new Map(),inputEdges=new Map(),point=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),worldInverse=new THREE.Matrix4(),pendingEvents=new Set();
     let guidedTrial=null,inputChoiceUnlocked=welcomeInputChoiceUnlocked(),practiceGroup=null,butterflyViewer=null,rcToyActive=false;let trialVisibility=null,trialVoiceWasPaused=false,controllerTool='standard',trialPreviousTool='standard',paintReady=false,lastPaintFeedback=-Infinity,paintingSource=null;
     const trials=createWelcomePracticeTrials(root,{wristControls:true,onAssets:notifyAssets,onFeedback,getControllerTool:()=>controllerTool,getPanelPose:getTrialPanelPose,
-        getButterflyContext:()=>({viewer:butterflyViewer,interactionOwner:getButterflyInteractionOwner(),onSparkle:position=>getAudioOwner()?.sparkle?.(position,{volume:getFXVolume()}),ready:!pendingLessonSpeech && !voice?.status().playing && !voice?.status().loading,zinniaPerch:zinniaCharacter.userData.zinnia.guide.butterflyPerch?.()}),
+        getButterflyContext:()=>({viewer:butterflyViewer,interactionOwner:getButterflyInteractionOwner(),physicsOwner:getPhysicsOwner(),floor:-tableHeight,onSparkle:position=>getAudioOwner()?.sparkle?.(position,{volume:getFXVolume()}),ready:!pendingLessonSpeech && !voice?.status().playing && !voice?.status().loading,zinniaPerch:zinniaCharacter.userData.zinnia.guide.butterflyPerch?.()}),
         onButterflyZinnia:stage=>zinniaCharacter.userData.zinnia.guide.setButterflyStage?.(stage),
         onButterflyCue:spoken=>voice?.speak({id:'butterfly-gentle-shake',spoken,spokenOverride:true,recorded:false}),onOpen:()=>{
         gameReplay?.cancel();replayOffered=false;trialPreviousTool=controllerTool;controllerTool='standard';paintReady=false;releaseAll(false);if(!trialVisibility){trialVisibility=new Map(root.children.filter(child=>child!==trials.layer && child!==trials.panel).map(child=>[child,child.visible]));trialVoiceWasPaused=Boolean(voice?.status().paused);if(!guidedTrial)voice?.pause();}
@@ -214,7 +214,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
             if(successAt===null){successAt=elapsed;successCuePlayed=true;void voice?.speak(spokenLesson(cue(phase()+'-done')));}
             else if(elapsed-successAt>1)setLesson(index+1);
         }
-        controllerGuide.update(dt,[],phase(),viewer);paint();
+        controllerGuide.update(dt,guidedTrial==='butterflies'?currentInputs.filter(input=>!input.source.hand):[],phase(),viewer);paint();
     }
     function openPracticeGroup(mode){
         if(guidedTrial || !['controllers','gloves','hands'].includes(mode))return false;rcToyActive=false;if(phase()!=='explore')setLesson(WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='explore'));
@@ -338,6 +338,7 @@ export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=
     }
 
     function update(dt,{viewer,floor,hands=[],controllers=[],inputs=[],frameReady=true,frameError=null,handsReady=true,presentationReady=true,renderRevision=null}={}){
+        currentInputs=inputs;
         butterflyViewer=viewer;
         if(trials.active==='butterflies')getAudioOwner()?.update(dt,elapsed,{viewer,muted:Boolean(voice?.status().muted) || getFXVolume()<=0,paused:tutorialPaused,visible:active && !exiting});
         const focusId={brush:'magic-brush','paint-pot':'pot-spray',grab:lastPickedFruit || 'peach',fruit:lastPickedFruit || 'peach',packet:'seed-packet',seed:'seed',water:'watering-can'}[phase()];

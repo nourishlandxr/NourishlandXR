@@ -229,7 +229,7 @@ export function drawZinniaPlantDiscovery(ctx,state){
     ctx.font='400 25px sans-serif';ctx.fillStyle='#cfddd4';canvasLines(ctx,state.message,700,408,880,34,4);
     for(const button of zinniaPlantButtons(state,{voiceControls:true})){ctx.fillStyle=button.action.startsWith('color:')?ZINNIA_NOTE_COLORS[button.action.slice(6)]:button.action==='voice'?'#47775d':'#23493a';ctx.beginPath();ctx.roundRect(button.x,button.y,button.width,button.height,14);ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#83ba9b';ctx.stroke();ctx.fillStyle=button.action.startsWith('color:')?'#17362b':'#f5faf7';ctx.font='500 24px sans-serif';if(button.icon){ctx.globalAlpha=button.disabled?.45:1;drawWristIcon(ctx,button.icon,button.x+button.width/2,button.y+button.height/2,38);ctx.globalAlpha=1;}else ctx.fillText(button.label,button.x+button.width/2,button.y+button.height/2,button.width-20);}
     drawDemoVoiceDetectionBar(ctx,state);
-    ctx.font='600 22px sans-serif';ctx.fillStyle='#dcecc4';canvasLines(ctx,zinniaDiscoveryInstruction(state),700,1092,920,29,2);ctx.restore();
+    ctx.font='600 22px sans-serif';ctx.fillStyle='#dcecc4';canvasLines(ctx,zinniaDiscoveryInstruction(state),700,916,920,29,2);ctx.restore();
 }
 export function mountZinniaPlantDiscovery(root,discovery){
     const panel=document.createElement('section');panel.className='living-frame-plant-choices zinnia-plant-discovery';panel.style.cssText='position:relative;display:grid;gap:12px;max-width:600px;margin:18px auto;padding:18px;background:#16362be8;border:1px solid #89b59d;border-radius:18px;color:#eef8f2;pointer-events:auto';

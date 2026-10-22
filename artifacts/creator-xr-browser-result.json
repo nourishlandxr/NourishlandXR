@@ -1,0 +1,22 @@
+{
+  "version": "0.9759",
+  "alpha": {
+    "partial": 700516,
+    "clear": 460,
+    "solid": 9424
+  },
+  "worldLock": true,
+  "recenter": true,
+  "rayFocus": true,
+  "opacity": true,
+  "sixInSessionMenus": true,
+  "spatialCallbacks": true,
+  "explicitScreenConfirmation": true,
+  "paths": "XR keyboard, dropdown, draft save/reopen and inline preview passed",
+  "dirtyNavigation": true,
+  "stereo": "Two eye WebGL preview with transparent texture; no GL errors",
+  "welcomeVersion": true,
+  "access": "Android remains touch-only even with navigator.xr; direct XR entry rejected; touch Control Panel has screen settings and no XR inputs; desktop 3D has no wrists",
+  "physicalHeadset": false,
+  "errors": []
+}

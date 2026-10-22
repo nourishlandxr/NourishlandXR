@@ -1,0 +1,35 @@
+{
+  "masterRevision": "knowledge-mesh-03",
+  "showcaseRevision": "quiet-reveal-01",
+  "welcomeAreas": 5,
+  "routes": [
+    {
+      "id": "R",
+      "complete": true
+    },
+    {
+      "id": "C",
+      "complete": true
+    },
+    {
+      "id": "W",
+      "complete": true
+    },
+    {
+      "id": "F",
+      "complete": true
+    },
+    {
+      "id": "M",
+      "complete": true
+    }
+  ],
+  "accessStyleUI": false,
+  "revealChangesCamera": false,
+  "reducedMotionRespected": true,
+  "automaticOrbOpening": true,
+  "returnsToQuiet": true,
+  "phoneControls": true,
+  "physicalXR": false,
+  "errors": []
+}

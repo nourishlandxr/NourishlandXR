@@ -59,10 +59,10 @@ test('desktop preparation keeps its own entry label and AR entry exposes retry f
 
 test('homepage AR introduction checks the remembered preference before starting WebXR', () => {
     const source = fs.readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
-    const entry = source.slice(source.indexOf('export function openTemporaryArDemoWindow'), source.indexOf('export async function startTemporaryArDemo'));
+    const entry = source.slice(source.indexOf('export async function openTemporaryArDemoWindow'), source.indexOf('export async function startTemporaryArDemo'));
     assert.match(entry, /shouldSkipArIntroductionPreparation\(\)/);
     assert.doesNotMatch(entry, /shouldSkipArIntroductionPreparation\(\) && arAssetsReady/);
     assert.match(entry, /renderArIntroductionPreparation/);
-    assert.ok(entry.indexOf('isDesktopLearningBookTarget()') < entry.indexOf('shouldSkipArIntroductionPreparation()'));
+    assert.ok(entry.indexOf('demoHardwareAccess()') < entry.indexOf('shouldSkipArIntroductionPreparation()'));
     assert.ok(entry.indexOf('shouldSkipArIntroductionPreparation()') < entry.indexOf('startTemporaryArDemo(app)'));
 });

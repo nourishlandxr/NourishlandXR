@@ -40,37 +40,11 @@ test('book branches use the authored LIM and PIM parent-child identities', () =>
     assert.ok(bookChildren(LIM_INTRO_CELLS, 'lim-intro-analysis').some(node => node.id === 'lim-intro-analysis-climate'));
 });
 
-test('desktop entry offers the existing book and removes simulated AR access', () => {
-    const demo = readFileSync(new URL('../app/screens/temporaryArDemo.js', import.meta.url), 'utf8');
-    const launch = readFileSync(new URL('../app/screens/launch.js', import.meta.url), 'utf8');
-    const css = readFileSync(new URL('../app/living-objects.css', import.meta.url), 'utf8');
-    assert.match(launch, /Try our demo →/);
-    assert.match(demo, /data-desktop-learning-book/);
-    assert.doesNotMatch(demo, /data-desktop-plain-ar/);
-    assert.match(demo, /The AR demo is not designed for desktop use/);
-    assert.doesNotMatch(demo.slice(demo.indexOf('export async function startTemporaryArDemo')), /return renderDesktopLearningBook/);
-    assert.match(css, /\.nxr-desktop-ar-options/);
-});
-
-test('desktop entry explains device compatibility and opens the original book prototype', () => {
-    const previousMatchMedia = globalThis.matchMedia;
-    const handlers = new Map();
-    const app = {
-        innerHTML: '',
-        querySelector: selector => ({ addEventListener: (_event, handler) => handlers.set(selector, handler) }),
-        addEventListener: () => {},
-        contains: () => true
-    };
-    globalThis.matchMedia = () => ({ matches: true });
-    try {
-        openTemporaryArDemoWindow(app);
-        assert.match(app.innerHTML, /compatible phone or headset/);
-        assert.doesNotMatch(app.innerHTML, /Open AR introduction/);
-        handlers.get('[data-desktop-learning-book]')();
-        assert.match(app.innerHTML, /Project, Areas and Totem map/);
-    } finally {
-        globalThis.matchMedia = previousMatchMedia;
-    }
+test('public demo entry requires XR hardware instead of opening the desktop book', async () => {
+    const app={innerHTML:''};
+    await openTemporaryArDemoWindow(app);
+    assert.match(app.innerHTML,/Compatible XR hardware required/);
+    assert.doesNotMatch(app.innerHTML,/data-desktop-learning-book/);
 });
 
 test('desktop tutorial opens canonical PIMO cells and LIMO information in a side panel', () => {

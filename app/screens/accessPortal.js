@@ -4,6 +4,7 @@ import {dashboardIcon as icon} from '../services/workspaceIcons.js';
 import {portalUrl,ensurePortalStyles} from '../services/portalRoutes.js';
 import {accountRequest,logoutCreatorAuthentication} from '../services/apiClient.js';
 import {signInMarkup,bindSignIn} from '../services/creatorSignIn.js';
+import {demoHardwareAccess} from '../services/demoHardwareAccess.js';
 import {creatorAccessCapabilities} from '../services/creatorHub.js';
 import {workspaceUrl,suggestedCreatorWorkspace,creatorProjectTutorialUrl} from '../services/creatorWorkspaceMode.js';
 const html=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -40,8 +41,16 @@ export async function renderAccessPortal(app,section='home'){
         if(creatorAccessCapabilities().kind==='phone'){main.querySelector('[data-demo-tutorial]').checked=false;main.querySelector('[data-demo-tutorial]').disabled=true;main.querySelector('.access-choice').append(' · headset only');}
         const demoButtons=[...root.querySelectorAll('[data-start-demo]')];demoButtons.forEach(button=>button.disabled=true);
         const readyStatus=document.createElement('p');readyStatus.className='access-hint';readyStatus.setAttribute('role','status');readyStatus.textContent='Preparing demo controls…';main.querySelector('.access-intro').append(readyStatus);
-        const demoReady=import('./temporaryArDemo.js');
-        demoReady.then(()=>{demoButtons.forEach(button=>button.disabled=false);readyStatus.remove();}).catch(failure=>{if(root.isConnected)readyStatus.textContent=`Demos could not load: ${failure.message}`;});
+        const demoReady=demoHardwareAccess().then(async supported=>{
+            if(!root.isConnected || !supported){
+                if(root.isConnected){readyStatus.textContent='Immersive demos require a supported AR phone or XR headset with WebXR. PIMO and Discovery Path editors work on screen.';demoButtons.forEach(button=>{button.setAttribute('aria-describedby','demo-hardware-status');});readyStatus.id='demo-hardware-status';}
+                return null;
+            }
+            const demo=await import('./temporaryArDemo.js');
+            if(root.isConnected){demoButtons.forEach(button=>button.disabled=false);readyStatus.remove();}
+            return demo;
+        });
+        demoReady.catch(failure=>{if(root.isConnected)readyStatus.textContent=`Demos could not load: ${failure.message}`;});
         demoButtons.forEach(button=>button.onclick=async()=>{
             button.disabled=true;
             try{
@@ -50,6 +59,7 @@ export async function renderAccessPortal(app,section='home'){
                 // Load the existing demo under a user action; preserve its permissions and XR startup path.
                 window.renderLaunchScreen=()=>{history.replaceState(null,'',portalUrl('demos'));return renderAccessPortal(app,'demos');};
                 const demo=await demoReady;
+                if(!demo)return;
                 if(kind==='placement')await demo.startTemporaryArDemo(app,{chapter:'creator'});else demo.openTemporaryArDemoWindow(app);
             }catch(failure){button.disabled=false;error(failure.message);}
         });return;

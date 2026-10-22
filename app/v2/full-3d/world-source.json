@@ -1,0 +1,16 @@
+{
+  "revision": "knowledge-mesh-03",
+  "sourceSha256": "d9f0b747e6b41c384ec4a5aea803b29811fcf63e14129614defa8e9361632a1f",
+  "sourceBytes": 74440748,
+  "source": "JOEY - WEBSITE / outputs/video-hero-site/app/v2/full-3d",
+  "importedAt": "2026-10-22T00:13:44.603Z",
+  "modelDigests": {
+    "model": "2824962d1daca7235d68bf637a4b1563caef2d32f5bb2d7feacf17be12c3c1dd",
+    "contentModel": "e7409c53ca650681896dc9eff2d9e718535983041007544c70bf53378d105b27",
+    "edgeModel": "b4da229f88cf26d988f8a1751c97d9f1fa11dca808881fa1363cf22267c723cf",
+    "windbreakModel": "82badc0c9ae17be960e8351b337c95fd1b155c30bbf5710af38936e28cced462",
+    "cliffRepair": "1ca3295540a6ef024f45b16a729cbcdd594bf3f41bc1bf08fc4f7d14f97aa76d",
+    "foodContours": "8e7979628e2baef82a81656f31f9a7877902432f7675a43fb45d5d66e9c08bb6"
+  },
+  "showcaseRevision": "quiet-reveal-01"
+}

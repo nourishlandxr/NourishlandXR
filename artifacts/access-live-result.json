@@ -1,0 +1,18 @@
+{
+  "origin": "https://nourishland.org",
+  "version": "0.9759",
+  "commit": "10e330ec46b0",
+  "checks": [
+    "Live build V0.9759 / 10e330ec46b0",
+    "Website hero retained; Learn, Demos, Creator and Account navigation",
+    "Four public demo entries and visible V0.9759 Live badge",
+    "Public PIMO editor opens",
+    "Discovery Path practice creates and saves a browser-local draft",
+    "Creator requires sign-in",
+    "Account and registration availability match deployed server configuration",
+    "390px phone layout: website, demos, account and Creator"
+  ],
+  "registrationAvailable": false,
+  "physicalDevice": false,
+  "errors": []
+}

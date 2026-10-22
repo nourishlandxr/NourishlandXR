@@ -139,7 +139,9 @@ export function createWelcomePracticeTrials(root,{onAssets=()=>{},onOpen=()=>{},
             const pose=panelPose || getPanelPose();if(pose?.center && pose.right && pose.up && pose.normal){const center=v().copy(pose.center).addScaledVector(pose.right,-((pose.width || .60)/2+.28));const m=new THREE.Matrix4().makeBasis(v().copy(pose.right),v().copy(pose.up),v().copy(pose.normal));m.setPosition(center);m.premultiply(root.matrixWorld.clone().invert());m.decompose(panel.position,panel.quaternion,panel.scale);panel.scale.setScalar(.46/.24);}
         }
         if(!state.active)return;dt=paused?0:Math.min(.06,Math.max(0,dt));time+=dt;const inverse=root.matrixWorld.clone().invert();
-        const eligible=inputs.filter(input=>Boolean(input.source.hand)===(state.mode==='hands') && input.matrix);
+        // This is a hand-tracking lesson, but picking controllers back up must
+        // still allow cup/butterfly grabs without changing the lesson mode.
+        const eligible=inputs.filter(input=>input.matrix && (state.active==='butterflies' || Boolean(input.source.hand)===(state.mode==='hands')));
         const right=eligible.find(input=>input.source.handedness==='right');if(right)paintSource=right.source;
         if(!paintSource)paintSource=eligible.find(input=>!input.uiBlocked && input.source.handedness!=='left')?.source || null;
         const tipInput=eligible.find(input=>input.source===paintSource);

@@ -1,0 +1,26 @@
+[
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreate.cs",
+    "hash": "fd19ed01fee75db61891ca5ab18377c14454f98f7bae5ad70eb2f2bc9c8948c0"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyPlatform.cs",
+    "hash": "f705f2cf1cca3ccd3a098ca6f0000082719f83c51fa723e1d4366df16b9ba082"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreatorSetup.cs",
+    "hash": "ff03bcca992f0e2563537b7665081963a6a96be313de3c24c1cfe047c9200761"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyMainMenuChecks.cs",
+    "hash": "fd77caf21c5bff4832b69ba1b520b0ac9a6907ea35da37adeddc9345df2903ed"
+  },
+  {
+    "file": "Assets/NLXR/Editor/ProjectSetup.cs",
+    "hash": "2c205873d796e6fb3ca83317e213abc16fd9a5cb6cc21d14009ac75f052b015c"
+  },
+  {
+    "file": "ProjectSettings/ProjectSettings.asset",
+    "hash": "a816476e1bd9e96dd2fe8df525a682a196064864e307c32bebf1ece42f110daf"
+  }
+]

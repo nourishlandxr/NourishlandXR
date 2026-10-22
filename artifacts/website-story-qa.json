@@ -1,0 +1,21 @@
+[
+  {
+    "viewport": "desktop",
+    "routes": 7,
+    "menu": "passed",
+    "overflow": "none",
+    "version": "0.9744",
+    "heroLoader": "natural-depth-01 preserved; model rendering excluded"
+  },
+  {
+    "viewport": "mobile",
+    "routes": 7,
+    "menu": "passed",
+    "overflow": "none",
+    "version": "0.9744",
+    "heroLoader": "natural-depth-01 preserved; model rendering excluded"
+  },
+  {
+    "welcomeVersion": "V0.9744 · Live"
+  }
+]

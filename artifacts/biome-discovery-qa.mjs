@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true,args:['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const errors=[];
+try{
+ const page=await browser.newPage({viewport:{width:1100,height:760},reducedMotion:'reduce'});page.on('pageerror',e=>errors.push(e.message));
+ await page.goto('http://127.0.0.1:8010/app/v2/full-3d/Nourishland-Hero-Living-v17.html?embed=1&central=1',{waitUntil:'domcontentloaded',timeout:120000});
+ await page.waitForFunction(()=>window.heroDiscovery&&window.heroPuzzle?.ready(),null,{timeout:150000});
+ assert.equal(await page.locator('[data-kind=welcome]').count(),5);
+ assert.equal(await page.locator('[data-kind=stop]:not([hidden]),[data-kind=orb]:not([hidden])').count(),0);
+ assert(await page.locator('.nd-card').isHidden());
+ const routes=await page.evaluate(()=>heroDiscovery.routes);console.log(JSON.stringify(routes.map(r=>({id:r.id,complete:r.complete,lengths:r.segments.map(s=>s.length)}))));
+ assert.equal(routes.length,5);assert(routes.every(r=>r.complete),'A biome has a disconnected route');
+ const cameraBefore=await page.evaluate(()=>heroPuzzle.camera.position.toArray());
+ await page.evaluate(()=>heroDiscovery.preview('F'));assert.equal(await page.locator('[data-biome-stage]').getAttribute('data-discovery-state'),'preview');
+ assert.deepEqual(await page.evaluate(()=>heroPuzzle.camera.position.toArray()),cameraBefore);
+ assert.equal(await page.locator('[data-kind=stop]:not([hidden]),[data-kind=orb]:not([hidden])').count(),0);
+ await page.getByRole('button',{name:'Explore this biome'}).click();
+ assert.equal(await page.evaluate(()=>heroDiscovery.state.active),'F');
+ await page.evaluate(()=>heroDiscovery.preview('R'));assert.equal(await page.evaluate(()=>heroDiscovery.state.visible),'F');
+ await page.getByRole('button',{name:'View current stop'}).click();
+ await page.waitForTimeout(500);
+ if(process.env.QA_CAPTURE==='1')await page.screenshot({path:'artifacts/biome-discovery-food-walk.png',timeout:60000});
+ const orb=page.locator('[data-kind=orb][data-walk=F]:not([hidden])').first();await orb.waitFor();await orb.click();
+ assert.match(await page.locator('.nd-card h2').innerText(),/Plant layers|Sunlight|Growing conditions/);
+ await page.getByRole('button',{name:'Next stop'}).click();assert.equal(await page.evaluate(()=>heroDiscovery.state.stop),1);assert.equal(await page.evaluate(()=>heroDiscovery.state.orb),null);
+ await page.getByRole('button',{name:'Close biome walk'}).click();assert.equal(await page.evaluate(()=>heroDiscovery.state.active),null);
+ await page.evaluate(()=>heroInspection.setCentral());if(process.env.QA_CAPTURE==='1')await page.screenshot({path:'artifacts/biome-discovery-quiet.png',timeout:60000});
+ await page.getByRole('button',{name:'Choose a biome walk'}).click();await page.locator('[data-choose=C]').click();
+ assert.equal(await page.evaluate(()=>heroDiscovery.state.active),'C');assert.match(await page.locator('.nd-card').innerText(),/Temperate forest/i);
+ if(process.env.QA_CAPTURE==='1')await page.screenshot({path:'artifacts/biome-discovery-temperate.png',timeout:60000});
+ // The same scene adapts without loading a second large world in this browser.
+ await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+ await page.getByRole('button',{name:'Close biome walk'}).click();await page.getByRole('button',{name:'Choose a biome walk'}).click();await page.locator('[data-choose=W]').click();
+ assert.match(await page.locator('.nd-card').innerText(),/Wetland/i);if(process.env.QA_CAPTURE==='1')await page.screenshot({path:'artifacts/biome-discovery-phone.png',timeout:60000});
+ assert.deepEqual(errors,[]);
+ const result={routes:routes.map(r=>({id:r.id,complete:r.complete,segments:r.segments.map(s=>s.length)})),welcomeAreas:5,quietDefault:true,previewDoesNotMoveCamera:true,singlePinnedRoute:true,oneClusterAtATime:true,orbOpensTopic:true,phoneLayout:true,physicalXR:false,errors};
+ fs.writeFileSync('artifacts/biome-discovery-result.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
+}finally{await browser.close();}

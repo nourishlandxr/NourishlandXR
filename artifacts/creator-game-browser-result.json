@@ -1,0 +1,14 @@
+{
+  "version": "0.9755",
+  "desktop": "six tools and PIMO return context passed",
+  "phone": "touch editor; no spatial PIMO even with navigator.xr/direct XR URL; six tool groups",
+  "paths": "mobile draft saved/reopened; unsaved navigation blocked",
+  "responsive": "all phone hub/editor routes fit",
+  "headset": "browser hub and XR menu callback fixture passed",
+  "welcomeVersion": true,
+  "logoLoading": "real auth wait; decoded original logo; animated orbit",
+  "menu": "six keyboard-operable buttons; icon focus labels",
+  "reducedMotion": "animation disabled",
+  "physicalXR": false,
+  "errors": []
+}

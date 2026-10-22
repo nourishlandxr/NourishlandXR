@@ -113,7 +113,7 @@ for(const hand of [false,true])test(`tutorial cup uses actual SDK ${hand?'pinch'
     const tick=()=>{runtime.update(f.frame,f.space,time+=20,time);bucket.update(.02,[{source:f.source,matrix:new THREE.Matrix4().setPosition(position).elements,pinchPoint:hand?position:null,trigger:down,down,uiBlocked:blocked}]);};
     try{
         tick();tick();down=true;tick();assert.equal(owner.held(f.source)?.id,'butterfly-cup');assert.equal(bucket.snapshot().backend,'iwsdk');assert.ok(bucket.isHolding(f.source));
-        const before=bucket.bucket.position.clone();position.y+=.2;setPosition();tick();assert.ok(Math.abs(bucket.bucket.position.y-before.y-.2)<1e-5);assert.equal(bursts,1);assert.ok(bucket.snapshot().sparkles.active>0);
+        const before=bucket.bucket.position.clone();position.y+=.2;setPosition();tick();assert.ok(Math.abs(bucket.bucket.position.y-before.y-.2)<.0015,'cup follows hand travel within the 1 mm table-contact clearance');assert.equal(bursts,1);assert.ok(bucket.snapshot().sparkles.active>0);
         tick();assert.equal(bursts,1,'holding the cup never retriggers its chime');
         blocked=true;tick();assert.equal(bucket.isHolding(f.source),false);assert.equal(owner.held(f.source),null);blocked=false;tick();assert.equal(bucket.isHolding(f.source),false,'held input cannot recapture after a menu');
         down=false;tick();bucket.releaseAll();assert.equal(bucket.snapshot().sparkles.active,0);assert.deepEqual(owner.snapshot().held,[]);

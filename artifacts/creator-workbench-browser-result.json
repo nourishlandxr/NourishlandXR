@@ -1,0 +1,14 @@
+{
+  "version": "0.9757",
+  "desktop": "records save, dirty cross-tool navigation guard, selected record context, knowledge, site plan, paths, settings, projects and creation checked",
+  "phone": "touch editor; no spatial PIMO even with navigator.xr/direct XR URL; six tool groups",
+  "paths": "mobile draft saved/reopened; unsaved navigation blocked",
+  "responsive": "13 routes fit at 390px; record inspector fits at 320, 390 and 768px",
+  "headset": "browser hub and XR menu callback fixture passed",
+  "welcomeVersion": true,
+  "logoLoading": "real auth wait; decoded original logo; animated orbit",
+  "menu": "six keyboard-operable buttons; icon focus labels",
+  "reducedMotion": "animation disabled",
+  "physicalXR": false,
+  "errors": []
+}

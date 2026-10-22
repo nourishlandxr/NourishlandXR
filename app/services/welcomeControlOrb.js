@@ -4,10 +4,10 @@ import {createOrganicOrbGeometry} from './organicOrbGeometry.js';
 
 // A self-contained controller toy. It never creates a plant record or opens PIMO.
 export const CONTROL_ORB_PHASES=Object.freeze(['controls-orb-intro','controls-trigger','controls-grip','controls-orb-grab','controls-orb-open','controls-face','controls-face-first','controls-face-second','controls-stick','controls-stick-click','settings-open','settings-close','controls-orb-finale']);
-export const CONTROL_ORB_DEFAULTS=Object.freeze({x:-.30,y:.072,z:.14,shell:'#244d35',core:'#8848b0'});
+export const CONTROL_ORB_DEFAULTS=Object.freeze({x:-.30,y:.072,z:.14,shell:'#eee3cb',core:'#8848b0'});
 export function createWelcomeControlOrb(root,options={}){
     const left=createSingleWelcomeControlOrb(root,{...options,handedness:'left',home:{...CONTROL_ORB_DEFAULTS,x:-.29}});
-    const right=createSingleWelcomeControlOrb(root,{...options,handedness:'right',home:{...CONTROL_ORB_DEFAULTS,x:.29,shell:'#34556a',core:'#b87961'}});
+    const right=createSingleWelcomeControlOrb(root,{...options,handedness:'right',home:{...CONTROL_ORB_DEFAULTS,x:.29,core:'#b87961'}});
     const orbs={left,right};
     return {group:left.group,orbs,reset:options=>{left.reset(options);right.reset(options);},release:()=>{left.release();right.release();},isHolding:source=>left.isHolding(source)||right.isHolding(source),collectionTargets:()=>[left.collectionTarget(),right.collectionTarget()],
         update:(dt,id,inputs,completed,settings)=>{left.update(dt,id,inputs,completed,settings);const rightClicked=right.rightClicked;right.update(dt,id,inputs,completed,settings);left.resolveCollision(right);if(!rightClicked && right.rightClicked)left.clearLeftClick();},
@@ -20,7 +20,7 @@ function createSingleWelcomeControlOrb(root,{onFeedback=()=>{},getPotBounds=()=>
     // Share the organic V3 shell and compact radial travel with demo Plant Orbs.
     // The controller toy keeps its existing purple core and practice mechanics.
     const data=createOrganicOrbGeometry('medium'),cells=[],radius=.072;
-    const material=new THREE.MeshStandardMaterial({color:home.shell,roughness:.72,metalness:0,side:THREE.DoubleSide}),shell=new THREE.Group();group.add(shell);
+    const material=new THREE.MeshStandardMaterial({color:home.shell,roughness:.82,metalness:0,side:THREE.DoubleSide}),shell=new THREE.Group();group.add(shell);
     for(const {id} of data.cells){
         const vertices=[],normals=[],indices=[],remap=new Map();let axis=null;
         for(const source of data.indices){if(data.vertices[source*10+9]!==id)continue;if(!remap.has(source)){remap.set(source,vertices.length/3);vertices.push(...data.vertices.slice(source*10,source*10+3));normals.push(...data.vertices.slice(source*10+3,source*10+6));axis ||= new THREE.Vector3(...data.vertices.slice(source*10+6,source*10+9));}indices.push(remap.get(source));}

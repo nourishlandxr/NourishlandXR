@@ -1,0 +1,23 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import crypto from 'node:crypto';
+import {fileURLToPath} from 'node:url';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..'),file=path.join(root,'app/v2/full-3d/Nourishland-Hero-Living-v17.html');
+const provenance=JSON.parse(fs.readFileSync(path.join(root,'app/v2/full-3d/world-source.json'),'utf8'));
+const original=fs.readFileSync(path.join(root,'artifacts/biome-master-source.html'));
+if(crypto.createHash('sha256').update(original).digest('hex')!==provenance.sourceSha256)throw Error('Master source hash does not match the imported revision.');
+let html=original.toString();const match=html.match(/<script id="hero-puzzle-data" type="application\/json">([\s\S]*?)<\/script>/);
+if(!match)throw Error('Missing standalone world payload');
+const payload=JSON.parse(match[1]);
+const sources=[['nl-discovery-model','biome-discovery-model.js'],['nl-route-surface','biome-route-surface.js'],['nl-discovery','biome-discovery.js']];
+for(const [id,name]of sources)payload.modules[id]=fs.readFileSync(path.join(root,'app/v2',name),'utf8').replaceAll("'./nlxr/vendor/three.module.min.js'","'nl-three'").replaceAll("'./biome-discovery-model.js'","'nl-discovery-model'").replaceAll("'./biome-route-surface.js'","'nl-route-surface'");
+let puzzle=payload.modules['nl-puzzle'];
+const originalCall='installNourishlandLayer({THREE,scene,camera,stage,pieces,payload,terrainSampler,renderer,requestRender,createLivingSphereGeometry,createTotemSculptureGeometry,foodPondDistance,foodChannelDistance,ricePatchWeight});';
+if(!puzzle.includes(originalCall)||!puzzle.includes('finishInnerLandscape({'))throw Error('Expected current master geometry and NL-layer startup.');
+puzzle="import {installBiomeDiscovery} from 'nl-discovery';\n"+puzzle.replace(originalCall,'installBiomeDiscovery({scene,camera,stage,plan:payload.plan,height:(x,z,f)=>terrainSampler(x,z,f),requestRender,createLivingSphereGeometry,createTotemSculptureGeometry});');
+puzzle=puzzle.replace("stage.dataset.layoutLocked='true';","stage.dataset.worldRevision='"+provenance.revision+"';stage.dataset.layoutLocked='true';");
+payload.modules['nl-puzzle']=puzzle;
+const encoded=JSON.stringify(payload).replaceAll('<','\\u003c');
+html=html.slice(0,match.index)+match[0].replace(match[1],()=>encoded)+html.slice(match.index+match[0].length);
+const next=file+'.discovery-next';fs.writeFileSync(next,html);try{fs.renameSync(next,file);}finally{if(fs.existsSync(next))fs.unlinkSync(next);}
+console.log('Current master '+provenance.revision+' + quiet animated reveal. Model data preserved.');

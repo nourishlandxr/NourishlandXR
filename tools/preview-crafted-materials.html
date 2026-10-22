@@ -1,0 +1,23 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Nourishland · crafted materials</title>
+<style>body{margin:0;background:#eee8dc;color:#423d31;font:16px/1.5 system-ui}main{max-width:1280px;margin:auto;padding:28px}h1,h2{font-family:Georgia,serif;font-weight:400}h1{margin-bottom:6px}p{max-width:850px}canvas{width:100%;display:block;background:radial-gradient(ellipse at 40% 25%,#faf7ef,#d6cdbb);border-radius:12px}iframe{width:100%;height:1050px;border:0;border-radius:12px}button{background:#fffaf0;border:1px solid #aa9d82;border-radius:8px;min-height:44px;padding:8px 18px;color:inherit;cursor:pointer}#error{color:#983d2c}</style>
+<main><h1>Warm timber & eggshell porcelain</h1><p id="version"></p><p>Production table, practice Orbs and Zinnia. Ivory shells have a matte ceramic finish; their coloured interiors and light interactions remain available.</p><button id="open">Open / close Orbs</button><canvas id="table" width="1440" height="900" aria-label="Timber practice table with Zinnia and two porcelain Orbs"></canvas><p id="error" role="status"></p><h2>Totem · production renderer</h2><p>Turned timber, pale wooden signs and a fluted sage ceramic crown. Select Bionic Pole or Botanical column below to inspect the crown.</p><iframe src="preview-totem.html" title="Interactive production Totem material preview"></iframe></main>
+<script type="module">
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createWelcomePracticeTable} from '../app/services/welcomePracticeTable.js';
+import {createWelcomeControlOrb} from '../app/services/welcomeControlOrb.js';
+import {createZinniaCharacter,animateZinniaCharacter} from '../app/services/zinniaCharacter.js';
+import {BUILD_INFO} from '../app/services/buildInfo.js';
+document.querySelector('#version').textContent='V'+BUILD_INFO.version+' · local material review';
+try{
+ const canvas=document.querySelector('#table'),renderer=new THREE.WebGLRenderer({canvas,antialias:true});renderer.setSize(1440,900,false);renderer.setClearColor('#e9e2d3');renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.15;
+ const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);root.position.y=.8;
+ const camera=new THREE.PerspectiveCamera(39,1440/900,.01,20);camera.position.set(1.7,1.9,2.6);camera.lookAt(0,.83,0);
+ scene.add(new THREE.HemisphereLight('#fff4df','#78846e',2));const sun=new THREE.DirectionalLight('#fff4df',2.6);sun.position.set(-2,4,3);scene.add(sun);
+ const table=createWelcomePracticeTable(root),orbs=createWelcomeControlOrb(root);let opened=false;
+ const zinnia=createZinniaCharacter({onError:e=>document.querySelector('#error').textContent=e.message});zinnia.position.set(0,0,-.2);root.add(zinnia);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(20,20),new THREE.MeshStandardMaterial({color:'#ddd4c0',roughness:1}));floor.rotation.x=-Math.PI/2;scene.add(floor);
+ document.querySelector('#open').onclick=()=>{opened=!opened;};
+ camera.updateMatrixWorld();const shellAxes=new Map();let last=0;renderer.setAnimationLoop(time=>{const dt=Math.min(.04,(time-last)/1000);last=time;orbs.update(dt,'controls-face',[],[],{visible:true,interact:false});for(const orb of Object.values(orbs.orbs)){const shell=orb.group.children[0];shell.children.forEach(mesh=>{if(!shellAxes.has(mesh)){const p=mesh.geometry.attributes.position,axis=new THREE.Vector3(),point=new THREE.Vector3();for(let i=0;i<p.count;i++)axis.add(point.fromBufferAttribute(p,i));shellAxes.set(mesh,axis.normalize());}mesh.position.copy(shellAxes.get(mesh)).multiplyScalar(opened?.025:0);});}animateZinniaCharacter(zinnia,time/1000,false,{viewer:camera.matrixWorld.elements});renderer.render(scene,camera);});
+ window.materialReview={renderer,scene,table,orbs,zinnia};
+}catch(error){document.querySelector('#error').textContent=error.stack;}
+</script></html>

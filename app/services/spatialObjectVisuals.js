@@ -6,7 +6,7 @@ export const SPATIAL_OBJECT_VISUALS = Object.freeze({
         organic: Object.freeze({twist:0,waist:0,flutes:0}),
         controlHeights: Object.freeze([1.35,1.16]),
         carved: Object.freeze({twist:.52,waist:.18,flutes:.16}),
-        botanical: Object.freeze({twist:.18,waist:.07,flutes:.12}),
+        botanical: Object.freeze({twist:.04,waist:.06,flutes:.025}),
         sculptureTint: Object.freeze([.66,.48,.30]),
         controlBronze: Object.freeze([.56,.42,.24]),
         controlActive: Object.freeze([.82,.71,.48]),
@@ -22,8 +22,8 @@ export const SPATIAL_OBJECT_VISUALS = Object.freeze({
         fadeTransitionMs: 460
     }),
     orb: Object.freeze({
-        shellRoughness: .38,
-        shellMetalness: .06,
+        shellRoughness: .82,
+        shellMetalness: 0,
         idleRimAlpha: .78,
         targetRimAlpha: .96,
         selectedRimAlpha: 1,

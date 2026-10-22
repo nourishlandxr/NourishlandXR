@@ -9,8 +9,8 @@ test('website offers a short introduction while preserving the live central worl
  assert.match(html,/data-biome-hero/);
  assert.doesNotMatch(html,/data-nl-hero/);
  assert.match(html,/hero-preview\.css/);
- assert.match(hero,/revision=natural-depth-01/);
- assert.match(html,/homepage-hero\.js\?v=natural-depth-01/);
+ assert.match(hero,/revision=knowledge-mesh-03-quiet-reveal-01/);
+ assert.match(html,/homepage-hero\.js\?v=knowledge-mesh-03-quiet-reveal-01/);
  assert.match(hero,/Nourishland-Hero-Living-v17\.html\?embed=1&central=1/);
  assert.match(hero,/heroInspection\.setUnlocked\(true\)/);
  assert.match(hero,/function playVideoFallback\(\)/);

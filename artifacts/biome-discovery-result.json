@@ -1,0 +1,53 @@
+{
+  "routes": [
+    {
+      "id": "R",
+      "complete": true,
+      "segments": [
+        30,
+        31
+      ]
+    },
+    {
+      "id": "C",
+      "complete": true,
+      "segments": [
+        16,
+        25
+      ]
+    },
+    {
+      "id": "W",
+      "complete": true,
+      "segments": [
+        13,
+        44
+      ]
+    },
+    {
+      "id": "F",
+      "complete": true,
+      "segments": [
+        16,
+        31
+      ]
+    },
+    {
+      "id": "M",
+      "complete": true,
+      "segments": [
+        24,
+        28
+      ]
+    }
+  ],
+  "welcomeAreas": 5,
+  "quietDefault": true,
+  "previewDoesNotMoveCamera": true,
+  "singlePinnedRoute": true,
+  "oneClusterAtATime": true,
+  "orbOpensTopic": true,
+  "phoneLayout": true,
+  "physicalXR": false,
+  "errors": []
+}

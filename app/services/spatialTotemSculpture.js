@@ -1,13 +1,21 @@
 import {GRAPHICS_PRESETS,currentGraphicsQuality} from './spatialVisualSettings.js';
 import { SPATIAL_OBJECT_VISUALS } from './spatialObjectVisuals.js';
 import {SECONDARY_TOTEM_IDS,createSecondaryTotemGeometry} from './secondaryTotemGeometry.js';
+import {createCraftedTimberCanvas} from './craftedSurfaceTextures.js';
 const VERTEX_ATTRIBUTES=Object.freeze([['position',0,3],['normal',12,3],['uv',24,2]]);
+function ceramicCrownPoint(t,a){
+    let radius,y;
+    if(t<.65){const h=t/.65;radius=.72+h*.34+.035*Math.cos(a*16);y=1.01+h*.34;}
+    else if(t<.83){const h=(t-.65)/.18;radius=1.06-h*.13+.018*Math.sin(h*Math.PI);y=1.35+.025*Math.sin(h*Math.PI);}
+    else {const h=(t-.83)/.17;radius=Math.max(.001,.93*(1-h));y=1.35-h*.22;}
+    return [Math.cos(a)*radius,y,Math.sin(a)*radius];
+}
 
 // One reusable mesh and one small, mipmapped material per WebGL context.
 // Shape is part of the mesh, so it remains sculptural without extra effects.
 export function totemSculpturePoint(t, angle, style='carved') {
     if(style==='basic' || style==='organic'){
-        const radius=.43+.075*Math.exp(-t*28)+.018*Math.cos(t*Math.PI*2);
+        const radius=.62+.19*Math.exp(-t*24)+.025*Math.cos(t*Math.PI*2);
         return [Math.cos(angle)*radius,t*2-1,Math.min(Math.sin(angle)*radius,radius*.91)];
     }
     const form=SPATIAL_OBJECT_VISUALS.totem[style] || SPATIAL_OBJECT_VISUALS.totem.carved;
@@ -52,7 +60,7 @@ export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='
             indices.push(...(t ? [center,edge+1,edge] : [center,edge,edge+1]));
         }
     }
-    if(style==='basic' || style==='organic'){
+    if(style==='basic' || style==='organic' || style==='botanical' || style==='carved'){
         // Crown is part of the cached mesh: no additional draw calls or textures.
         const rows=style==='organic'?16:Math.max(16,Math.floor(vertical*.75)),start=vertices.length/8;
         for(let row=0;row<=rows;row++)for(let column=0;column<=radial;column++){
@@ -63,10 +71,12 @@ export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='
                 p=[Math.cos(a)*(1.85+tube),1.29+Math.sin(a)*(.29+tube*.155),-Math.sin(b)*.38];
                 n=[Math.cos(a)*Math.cos(b),Math.sin(a)*Math.cos(b)/.155,-Math.sin(b)/1.22];
             }else{
-                const latitude=row/rows*Math.PI-Math.PI/2,c=Math.cos(latitude),s=Math.sin(latitude);
-                const ribs=1+.014*Math.cos(a*8)*c*c;
-                p=[Math.cos(a)*c*2.05*ribs,1.17+s*.145,Math.sin(a)*c*2.6*ribs];
-                n=[Math.cos(a)*c/2.05,s/.145,Math.sin(a)*c/2.6];
+                // Turned, fluted ceramic crown with a closed, softly rolled lip.
+                // The inner return closes the profile without additional meshes.
+                const t=row/rows;p=ceramicCrownPoint(t,a);
+                const lo=ceramicCrownPoint(Math.max(0,t-.0001),a),hi=ceramicCrownPoint(Math.min(1,t+.0001),a),next=ceramicCrownPoint(t,a+.0001);
+                const u=hi.map((v,i)=>v-lo[i]),v=next.map((value,i)=>value-p[i]);
+                n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
             }
             const length=Math.hypot(...n);vertices.push(...p,...n.map(value=>value/length),column/radial,1.1+row/rows*.8);
             if(row<rows && column<radial){const i=start+row*(radial+1)+column;indices.push(i,i+radial+1,i+1,i+1,i+radial+1,i+radial+2);}
@@ -78,7 +88,7 @@ export function createTotemSculptureGeometry(radial = 48, vertical = 32, style='
 export function createTotemMaterialCanvas(scale=1) {
     const canvas=document.createElement('canvas');canvas.width=512*scale;canvas.height=1024*scale;
     const ctx=canvas.getContext('2d');ctx.scale(scale,scale);
-    ctx.fillStyle='#a68b6a';ctx.fillRect(0,0,512,1024);
+    ctx.drawImage(createCraftedTimberCanvas({width:512*scale,height:1024*scale}),0,0,512,1024);
     // Deterministic, seamless growth lines; no noisy pixel stippling.
     for(let i=-6;i<134;i++) {
         const phase=i*2.399, x=i*4;
@@ -87,7 +97,7 @@ export function createTotemMaterialCanvas(scale=1) {
             const px=x+Math.sin(y*.005+phase)*3.2+Math.sin(y*.018+phase*.3)*.8;
             if(y===0)ctx.moveTo(px,y);else ctx.lineTo(px,y);
         }
-        ctx.strokeStyle=i%7===0?'rgba(50,28,14,.18)':'rgba(59,34,20,.08)';
+        ctx.strokeStyle=i%7===0?'rgba(50,28,14,.055)':'rgba(59,34,20,.025)';
         ctx.lineWidth=i%7===0?1.8:.75;ctx.stroke();
     }
     if(scale>1){
@@ -141,20 +151,20 @@ export function createSpatialTotemSculpture(gl) {
             vec3 normal=normalize(n),light=normalize(vec3(-.55,.7,.65)),viewer=normalize(eye);
             if(tex.y>1.0){
                 float diffuse=max(dot(normal,light),0.),facing=max(dot(normal,viewer),0.);
-                float sheen=pow(max(dot(normal,normalize(light+viewer)),0.),42.);
+                float sheen=pow(max(dot(normal,normalize(light+viewer)),0.),12.);
                 float ribs=pow(.5+.5*cos(tex.x*50.2655),16.);
-                vec3 frost=mix(notificationColour,vec3(.87,.94,.85),.38);
-                vec3 glass=frost*(.58+.23*diffuse)+vec3(.94,.98,.91)*sheen*.16;
-                glass+=frost*(.06+notificationStrength*(form>2.5?.65:.16))+vec3(.12,.17,.14)*pow(1.-facing,3.);
+                vec3 frost=mix(notificationColour,vec3(.67,.72,.51),.82);
+                vec3 glass=frost*(.64+.30*diffuse)+vec3(.94,.90,.78)*sheen*.045;
+                glass+=frost*notificationStrength*(form>2.5?.65:.12);
                 glass=mix(glass,glass*.94,ribs*.45);
                 gl_FragColor=vec4(glass,alpha);return;
             }
             vec3 wood=texture2D(timber,tex).rgb;
             if(form>2.5 && form<3.5)wood=vec3(.57,.58,.53)*(.80+.20*wood.r);
-            float collar=smoothstep(.90,.925,tex.y);
+            float collar=smoothstep(.975,.985,tex.y);
             if(form>2.5)collar=0.;
             float foot=1.-smoothstep(.025,.07,tex.y);
-            vec3 base=wood*mix(vec3(.69,.51,.35),tint,.36);
+            vec3 base=wood*mix(vec3(1.08,1.02,.95),tint*1.3,.15);
             base=mix(base,vec3(.13,.16,.13),foot*.62);
             base=mix(base,vec3(.92,.96,.9),collar*.88);
             // Flush incisions are part of the timber material, never floating meshes.
@@ -171,14 +181,14 @@ export function createSpatialTotemSculpture(gl) {
             base=mix(base,base*vec3(.74,.82,.76),form>.5 && form<1.5?.5:0.);
             float diffuse=max(dot(normal,light),0.);
             float spec=pow(max(dot(normal,normalize(light+viewer)),0.),48.);
-            vec3 shaded=base*(.64+.40*diffuse);
-            shaded+=vec3(.92,.81,.58)*spec*(.055+collar*.13);
+            vec3 shaded=base*(.69+.34*diffuse);
+            shaded+=vec3(.92,.81,.58)*spec*(.035+collar*.055);
             shaded+=vec3(.60,.68,.48)*pow(1.-max(dot(normal,viewer),0.),3.)*.045;
             shaded=mix(shaded,shaded+vec3(.09,.065,.025),aim);
             float glassGrain=.5+.5*sin(tex.x*90.+sin(tex.y*110.)*.65);
-            float seam=(1.-smoothstep(.001,.004,abs(tex.y-.89)))+(1.-smoothstep(.001,.004,abs(tex.y-.065)));
+            float seam=(1.-smoothstep(.001,.004,abs(tex.y-.035)))+(1.-smoothstep(.001,.004,abs(tex.y-.065)));
             shaded=mix(shaded,vec3(.46,.39,.26)*(.7+.25*diffuse),min(1.,seam)*.8);
-            vec3 glass=mix(notificationColour,vec3(.83,.90,.79),.38)*(.61+.035*glassGrain)+vec3(.74,.93,.88)*spec*.12;
+            vec3 glass=vec3(.62,.44,.22)*(.75+.24*diffuse)+vec3(.83,.74,.51)*spec*.10;
             if(form>1.5)glass=vec3(.55,.47,.31)*(.70+.24*diffuse)+vec3(.83,.74,.51)*spec*.10;
             shaded=mix(shaded,glass+notificationColour*notificationStrength*.16,collar);
             gl_FragColor=vec4(shaded,max(alpha,(1.-smoothstep(.031,.034,d))*controlOpacity*.90));

@@ -428,7 +428,7 @@ test('Marker and Plant spheres are shared across Creator, demo and Explorer AR',
     const styles = read('app/style.css');
     assert.match(sphereSource, /gl\.drawElements\(gl\.TRIANGLES/);
     assert.doesNotMatch(sphereSource, /radius \* 0\.38/);
-    assert.match(sphereSource, /alpha: plant \? \.98 : \.94/);
+    assert.match(sphereSource, /ceramicShell:true,alpha:1/,'porcelain shells remain opaque in shared rendering');
     assert.match(sphereSource, /gl\.enable\(gl\.DEPTH_TEST\)/);
     assert.match(creatorSource, /shape !== 0 && shape !== 4/);
     assert.doesNotMatch(creatorSource, /hoverVibration|livingRadius|profileHovered/);
@@ -1101,7 +1101,7 @@ test('Creator AR fences stale session, restore and placement work', () => {
 
 test('immersive demo builds its welcome before requesting the first XR frame', () => {
     const source = read('app/screens/temporaryArDemo.js');
-    const immersive = source.slice(source.indexOf('async function startImmersive()'), source.indexOf('export function openTemporaryArDemoWindow'));
+    const immersive = source.slice(source.indexOf('async function startImmersive()'), source.indexOf('export async function openTemporaryArDemoWindow'));
     assert.ok(immersive.indexOf('renderInterface(false);') > -1);
     assert.ok(immersive.indexOf('renderInterface(false);') < immersive.indexOf('session.requestAnimationFrame(draw);'));
     assert.match(source, /if \(simulated\) introNarrationTimer = setTimeout\(showArWelcomeShowcase, 120\);\s*else showArWelcomeShowcase\(\);/);

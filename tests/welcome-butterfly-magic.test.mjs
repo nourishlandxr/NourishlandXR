@@ -57,6 +57,16 @@ test('curled, far-away, moving or incomplete tracked hands cannot invite perches
     }finally{f.bucket.destroy();}
 });
 
+test('hands comfortably above the table can finish the surprise without being raised to the face',async()=>{
+ const f=await fixture();f.viewer[13]=1.15;
+ try{
+  liftHiddenCup(f.bucket);for(let i=0;i<240;i++)f.bucket.update(.05,[f.input]);await Promise.resolve();
+  assert.ok(f.bucket.snapshot().landed>=3);assert.equal(f.bucket.snapshot().cueDone,true);
+  for(const x of [.02,-.02,.02,-.02]){f.move(x);f.bucket.update(.05,[f.input]);}
+  for(let i=0;i<44;i++)f.bucket.update(.05,[]);assert.equal(f.bucket.snapshot().complete,true);
+ }finally{f.bucket.destroy();}
+});
+
 test('Zinnia butterfly lands before the prompt, remains during speech, and flies after her shake',async()=>{
     let finish;const cue=new Promise(resolve=>finish=resolve),f=await fixture({cue,context:{zinniaPerch:{point:new THREE.Vector3(-.3,.4,0),q:new THREE.Quaternion()}}});
     try{

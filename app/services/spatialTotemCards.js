@@ -4,6 +4,7 @@ import { totemSculpturePoint } from './spatialTotemSculpture.js';
 import { currentTotemModel, currentInfoOpacity } from './spatialVisualSettings.js';
 import { totemHeightPreset, renderedTotemStyle } from './totemAppearance.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from './spatialObjectVisuals.js';
+import {createCraftedTimberCanvas} from './craftedSurfaceTextures.js';
 
 const TOTEM_BUTTON_WIDTH = .104;
 const TOTEM_BUTTON_RADIUS = .052;
@@ -123,7 +124,7 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const titleBottom=buttons[0].faceCenter.y-position.y+.075;
     const titleHeight=Math.max(.025,Math.min(.18,1.88*bodyHalfHeight-titleBottom-.015));
     const headerBoard = cards[0] ? {
-        ...place(0,bodyHalfHeight*2+(['basic','organic'].includes(style)?bodyHalfHeight*.36+.12:.16),demoZone ? .92 : .90,.23,{...cards[0],title:String(cards[0].title || '').toUpperCase(),freeText:true,boardStyle:'header-lettering',stats:undefined}),
+        ...place(0,bodyHalfHeight*2+(['basic','organic','botanical','carved'].includes(style)?bodyHalfHeight*.36+.12:.16),demoZone ? .92 : .90,.23,{...cards[0],title:String(cards[0].title || '').toUpperCase(),freeText:true,boardStyle:'header-lettering',stats:undefined}),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
@@ -137,7 +138,8 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
         ].filter(Boolean).map(surface=>({...surface,opacity:signOpacity*(surface.opacity ?? 1),interactive:signInteractive})) : [])
     ];
     const selected=cards.find(card=>card.id===selectedId);
-    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(bodyHalfHeight*2+.30,2.04*demoScale)+(['basic','organic'].includes(state.style || currentTotemModel())?bodyHalfHeight*.68+.2:0),.90,.42,{...selected,freeText:false,glassOpacity:.96,body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
+    const detailY=Math.max(bodyHalfHeight*2+.30,2.04*demoScale)+(['basic','organic','botanical','carved'].includes(style)?bodyHalfHeight*.68+.2:0);
+    if(selected && signsVisible && !faded) surfaces.push({...place(0,Math.max(detailY,(headerBoard?.center.y ?? position.y)-position.y+.23/2+.42/2+.035),.90,.42,{...selected,freeText:false,glassOpacity:.96,body:selected.id===cards[0]?.id ? selected.welcomeBody || selected.body : selected.body,boardStyle:'header-detail'},true),opacity:signOpacity,interactive:signInteractive});
     return surfaces;
 }
 
@@ -270,6 +272,7 @@ function wrapped(ctx,text,x,y,width,lineHeight,maxLines) {
 
 function cardCanvas(card, detail) {
     const boardStyle=card.boardStyle || (detail ? 'header-detail' : 'card');
+    const timberSign=boardStyle==='attached-sign' && ['basic','carved','botanical','organic'].includes(card.signStyle);
     const resolution=boardStyle==='header-lettering'?[2048,512]:card.control ? TOTEM_TEXT_RESOLUTION.control
         : detail ? TOTEM_TEXT_RESOLUTION.detail
             : boardStyle==='header' || boardStyle==='header-detail' || boardStyle==='header-compact' ? TOTEM_TEXT_RESOLUTION.header : TOTEM_TEXT_RESOLUTION.plaque;
@@ -288,6 +291,10 @@ function cardCanvas(card, detail) {
         else if(boardStyle==='attached-sign' && card.boardSide){const left=card.boardSide==='left',tip=left?7:width-7,edge=left?70:width-70;ctx.moveTo(tip,height/2);ctx.lineTo(edge,7);ctx.lineTo(left?width-7:7,7);ctx.lineTo(left?width-7:7,height-7);ctx.lineTo(edge,height-7);ctx.closePath();}
         else ctx.roundRect(7,7,width-14,height-14,boardStyle==='header-compact'?height/2:24);
         ctx.fillStyle=card.selected?`rgba(6,36,62,${Math.max(.5,card.glassOpacity)})`:boardStyle==='header-compact'?`rgba(37,48,43,${card.glassOpacity})`:`rgba(${({sun:'60,44,21',moon:'28,30,53',leaf:'25,49,33',botanical:'25,49,33',rock:'38,45,47',carved:'52,39,27',organic:'24,44,45',basic:'24,44,45'})[card.signStyle] || '8,30,28'},${card.glassOpacity*.80})`;ctx.fill();
+        if(timberSign){
+            ctx.save();ctx.clip();ctx.drawImage(createCraftedTimberCanvas({width:1024,height:256,pale:true,horizontal:true}),0,0,width,height);
+            const light=ctx.createLinearGradient(0,0,0,height);light.addColorStop(0,'rgba(255,250,228,.32)');light.addColorStop(.14,'rgba(255,250,228,0)');light.addColorStop(.85,'rgba(62,34,12,0)');light.addColorStop(1,'rgba(62,34,12,.22)');ctx.fillStyle=light;ctx.fillRect(0,0,width,height);ctx.restore();
+        }
         ctx.strokeStyle='rgba(213,232,207,.84)';ctx.lineWidth=card.signStyle==='basic' || card.signStyle==='organic'?2:3;ctx.stroke();ctx.restore();
     }
     if(boardStyle==='header-lettering'){
@@ -303,11 +310,12 @@ function cardCanvas(card, detail) {
     }
     if(boardStyle==='attached-sign'){
         ctx.shadowColor='rgba(3,15,12,.85)';ctx.shadowBlur=0;ctx.shadowOffsetY=1;
+        if(timberSign){ctx.shadowColor='rgba(255,246,218,.7)';ctx.shadowOffsetY=1;}
         if(card.directional){
             const left=card.boardSide==='left',title=String(card.title || '').replace(/^[←→]\s*|\s*[←→]$/g,'');
-            ctx.fillStyle='#f0cb7c';ctx.font=`750 108px ${face}`;ctx.textAlign=left?'left':'right';ctx.fillText(left?'←':'→',left?36:988,128,130);
+            ctx.fillStyle=timberSign?'#493721':'#f0cb7c';ctx.font=`750 108px ${face}`;ctx.textAlign=left?'left':'right';ctx.fillText(left?'←':'→',left?36:988,128,130);
             ctx.textAlign='center';ctx.font=`850 88px ${face}`;ctx.fillText(title,512,128,700);
-        }else {ctx.fillStyle='#fffdf2';ctx.font=`750 ${String(card.title||'').length>26?76:92}px ${face}`;ctx.fillText(card.title,512,128,900);}
+        }else {ctx.fillStyle=timberSign?'#493721':'#fffdf2';ctx.font=`750 ${String(card.title||'').length>26?76:92}px ${face}`;ctx.fillText(card.title,512,128,900);}
         return canvas;
     }
     if(boardStyle==='header-compact'){

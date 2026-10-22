@@ -1,9 +1,9 @@
 const host = document.querySelector('[data-biome-hero]');
 
 if (host) {
-  const posterUrl = new URL('./assets/hero-v17-natural-depth-poster.webp', import.meta.url).href;
-  const liveUrl = new URL('./full-3d/Nourishland-Hero-Living-v17.html?embed=1&central=1&revision=natural-depth-01', import.meta.url).href;
-  const fallbackUrl = new URL('./assets/hero-v17-central-day.mp4', import.meta.url).href;
+  const posterUrl = new URL('./assets/hero-current-master-poster.webp', import.meta.url).href;
+  const liveUrl = new URL('./full-3d/Nourishland-Hero-Living-v17.html?embed=1&central=1&revision=knowledge-mesh-03-quiet-reveal-01', import.meta.url).href;
+  const fallbackUrl = new URL('./assets/hero-current-master-fallback.mp4', import.meta.url).href;
   const lifetime = new AbortController();
   let viewer = null;
   let fallback = null;

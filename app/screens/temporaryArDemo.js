@@ -205,7 +205,7 @@ import {createQuestTutorialCapture} from '../services/questTutorialCapture.js';
 import { isQuestHeadsetBrowser, requestImmersiveArSession } from '../services/webxrSession.js';
 import { mountDesktopSpatialPreview } from '../services/desktopSpatialPreview.js';
 import { isDesktopLearningBookTarget } from '../services/desktopLearningBookTarget.js';
-import { renderDesktopLearningBook } from './desktopLearningBook.js';
+import { demoHardwareAccess,showDemoHardwareRequired } from '../services/demoHardwareAccess.js';
 import {FRUIT_WINDOW_LIBRARY} from '../services/fruitWindowInteraction.js';
 import { BIOMAP_CATEGORIES, DEMO_CONTENT, DEMO_JOURNEY_STAGES, DEMO_NOTE_TEMPLATE_KEYS, DEMO_ORB_MATERIALS, DEMO_PANEL_HINTS, DEMO_TUTORIAL_ART, INTRO_KNOWLEDGE_KEYWORDS, NOTE_TEMPLATES, PIGEON_PEA_CONTROL_IMAGE, WELCOME_BOARD_PARAGRAPHS, WELCOME_BOARD_PARAGRAPHS_PT } from '../features/ar-demo/demoContent.js';
 import { AR_PHONE_COMFORT, AR_WELCOME_SETTLED_MS, DEMO_ARCHETYPE_INTERVAL_MS, DEMO_ARCHETYPE_REVEAL_MS, DEMO_ARCHETYPE_START_MS, DEMO_BOARD_TYPING_SAFETY_MS, DEMO_LIM_SURFACE_CANVAS, DEMO_LIM_TEXTURE_INTERVAL_MS, DEMO_NOTE_IMMERSIVE_SCALE, DEMO_PIM_IMMERSIVE_SCALE, DEMO_PLANT_ORB_HOLD_DELAY_MS, DEMO_PRESENTATION_FONT, DEMO_HEADING_FONT, DEMO_HEADING_SIZE, DEMO_QUEST_ORB_SCALE, DEMO_SEQUENCE, DEMO_TEXT_TEXTURE_INTERVAL_MS, DEMO_TOTEM_HALF_HEIGHT_METRES, DEMO_WELCOME_CONTINUE_MS, DEMO_WELCOME_DESCRIPTION_HOLD_MS, DEMO_WELCOME_OPENING_MS, DEMO_WELCOME_TITLE_HOLD_MS, INTRO_CONTROL_POSITION, INTRO_CONTROL_SCALE, demoRainProgress, welcomeAutoAdvanceReady } from '../features/ar-demo/demoConfig.js';
@@ -7078,12 +7078,8 @@ async function startImmersive() {
     }
 }
 
-export function openTemporaryArDemoWindow(app) {
-    if(isDesktopLearningBookTarget()){
-        app.innerHTML=`<section class="screen ar-safety-screen nxr-desktop-ar-choice"><header class="page-header"><p class="welcome-label">NourishlandXR · desktop</p><h1>A spatial experience belongs in a real space.</h1><p class="subtitle">The AR demo is not designed for desktop use. It needs a compatible phone or headset for spatial tracking and interaction with the environment.</p></header><section class="panel nxr-desktop-ar-option"><h2>Explore the illustrated introduction</h2><p>On desktop, our existing book-style prototype explains how places, plant information and learning connect. There is no simulated AR mode.</p><button type="button" class="primary" data-desktop-learning-book>Open illustrated introduction</button></section><button type="button" data-desktop-ar-back>← Back to welcome</button></section>`;
-        app.querySelector('[data-desktop-learning-book]')?.addEventListener('click',()=>renderDesktopLearningBook(app,{moringaDocument:MORINGA_PIM,onExit:()=>window.renderLaunchScreen?.()}),{once:true});
-        app.querySelector('[data-desktop-ar-back]')?.addEventListener('click',()=>window.renderLaunchScreen?.(),{once:true});return;
-    }
+export async function openTemporaryArDemoWindow(app) {
+    if(!await demoHardwareAccess()){showDemoHardwareRequired(app);return;}
     void prepareLivingFrameModel().catch(error=>console.warn('Living Frame preparation:',error));
     prepareArAssets({experience:'demo'}).catch(error=>console.warn('AR preparation:',error));
     if (shouldSkipArIntroductionPreparation()) return startTemporaryArDemo(app);
@@ -7096,8 +7092,8 @@ export function openTemporaryArDemoWindow(app) {
 
 export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null, livingMapPreviewClock = null, refinementPreview = null, livingFramePreviewClock:framePreviewClock = null, developerStation=null,chapter=null,microphonePrepared=false } = {}) {
     directCreatorPractice=false;demoCreatorQuickStart.close();demoWrist?.destroy();demoWrist=null;
-    // Development fixtures may inspect XR, but public desktop entry is a book.
-    if((!chapter || chapter==='tutorial') && !developerStation && !livingMapPreviewRecords && !refinementPreview && isDesktopLearningBookTarget())return openTemporaryArDemoWindow(app);
+    const developmentPreview=Boolean(developerStation || livingMapPreviewRecords || refinementPreview);
+    if(!developmentPreview && !await demoHardwareAccess()){showDemoHardwareRequired(app);return;}
     if(chapter!=='creator' && !microphonePrepared && !developerStation && !livingMapPreviewRecords && !refinementPreview && isQuestHeadsetBrowser()){
         // Request permission alongside entry; no extra page or XR-blocking await.
         void prepareZinniaMicrophone();
@@ -7121,6 +7117,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
     const rain=RAIN_QUALITIES[currentRainQuality()];demoRainIntensity=rain.intensity;demoRainStyle=rain.style;
     demoExitLifecycle.reset();
     const immersive = livingMapPreviewRecords || refinementPreview || developerLab && !developerLab.xr ? false : await startImmersive();
+    if(!immersive && !developmentPreview){clearSessionState();showDemoHardwareRequired(app,{failedSession:true});return;}
     if(!immersive && developerLab?.xr){clearSessionState();developerLab=null;await window.openDeveloperLab();const status=app.querySelector('[data-status]');if(status)status.textContent='XR could not start. Use a compatible headset, or load the desktop preview.';return;}
     if (!immersive) {
         renderInterface(true);

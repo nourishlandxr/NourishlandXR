@@ -1,0 +1,14 @@
+{
+  "version": "0.9758",
+  "routes": "Start, Demos, Creator, Account and Admin; website links updated and hero retained",
+  "authentication": "form failure, direct-link dialog, register, pending, approval, login, logout",
+  "authorization": "pending blocked; owner review; creator isolated project; admin denied to creator",
+  "paths": "same editor; browser practice save/reopen/preview and real project API draft",
+  "pimo": "public desktop and phone; phone has no XR editor",
+  "placement": "Orb, Note, Totem; no music or narration requests",
+  "mainDemo": "tutorial on/off preference checked; desktop retains illustrated introduction",
+  "phone": "390px start, demos, account, registration, creator, PIMO and path entry fit",
+  "physicalXR": false,
+  "deployed": false,
+  "errors": []
+}

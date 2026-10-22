@@ -37,6 +37,49 @@ test('butterfly cups are physical, reusable table props that settle after releas
   body.position.y=.4;for(let i=0;i<90;i++)stepPracticeBodies([body],1/60,{floor:-.6});game.syncPhysics();assert.ok(Math.abs(cup.position.y-body.position.y)<1e-8);assert.ok(Math.abs(body.position.y-body.halfSize.y)<.015,'released cup settles on the table surface');
  }finally{game.destroy();}
 });
+
+test('bucket activity itself runs gravity and blocks held cups at the tabletop',async()=>{
+ const root=new THREE.Group(),feedback=[],game=createWelcomeButterflyBucket(root,{load:async()=>[],onFeedback:(kind,source)=>feedback.push([kind,source])});await game.loading;
+ const source={handedness:'right',hand:{}},cup=game.bucket,input={source,trigger:false,matrix:new THREE.Matrix4().setPosition(cup.position).elements};
+ const move=(y,pressed)=>{input.matrix=new THREE.Matrix4().setPosition(cup.position.x,y,cup.position.z).elements;input.trigger=pressed;game.update(1/60,[input]);};
+ try{
+  move(.08,false);move(.08,true);move(-.3,true);root.updateMatrixWorld(true);
+  assert.ok(new THREE.Box3().setFromObject(cup).min.y>=-.001,'body and folded handle cannot pass through the table');
+  assert.ok(feedback.some(([kind])=>kind==='impact'));
+  move(.4,true);move(.4,false);const start=cup.position.y;for(let i=0;i<150;i++)game.update(1/60,[]);
+  assert.ok(cup.position.y<start-.15);assert.ok(Math.abs(cup.position.y-.08)<.015,'no external physics loop is needed');
+  assert.ok(feedback.some(([kind,owner])=>kind==='release' && owner===source));
+ }finally{game.destroy();}
+});
+
+test('lifting before model loading finishes still reveals the arriving butterfly groups',async()=>{
+ let finish;const root=new THREE.Group(),game=createWelcomeButterflyBucket(root,{load:()=>new Promise(resolve=>finish=resolve)});await Promise.resolve();
+ const source={handedness:'left',hand:{}},point=game.bucket.position.clone(),input={source,trigger:false,matrix:new THREE.Matrix4().setPosition(point).elements};
+ try{
+  game.update(.05,[input]);input.trigger=true;game.update(.05,[input]);input.matrix=new THREE.Matrix4().setPosition(point.clone().add(new THREE.Vector3(0,.2,0))).elements;game.update(.05,[input]);assert.equal(game.snapshot().burst,true);
+  const group=new THREE.Group();group.add(new THREE.Mesh(new THREE.SphereGeometry(1,6,4),new THREE.MeshBasicMaterial()));finish([group]);await game.loading;game.update(.05,[]);
+  assert.equal(group.visible,true);assert.equal(group.userData.welcomeAlwaysConvert,true,'native converter must include hidden group descendants before reveal');assert.equal(game.snapshot().insects[0].state,'flying');
+ }finally{game.destroy();}
+});
+
+test('controllers can discover, grab and release a butterfly to complete without tracked joints',async()=>{
+ const root=new THREE.Group(),feedback=[],game=createWelcomeButterflyBucket(root,{load:async()=>Array.from({length:3},()=>new THREE.Mesh(new THREE.SphereGeometry(1,6,4),new THREE.MeshBasicMaterial())),onFeedback:(kind,source)=>feedback.push([kind,source])});await game.loading;
+ const source={handedness:'right'},input={source,down:false,trigger:false};
+ const move=(point,down)=>{input.matrix=new THREE.Matrix4().setPosition(point).elements;input.down=down;game.update(.05,[input]);};
+ try{
+  const p=game.bucket.position.clone();move(p,false);move(p,true);move(p.clone().add(new THREE.Vector3(0,.2,0)),true);move(p,false);assert.equal(game.snapshot().burst,true);assert.equal(game.snapshot().complete,false,'lifting a cup alone does not finish the activity');
+  let insect=new THREE.Vector3(...game.snapshot().insects[0].position);move(insect,false);insect=new THREE.Vector3(...game.snapshot().insects[0].position);move(insect,true);assert.equal(game.isHolding(source),true);move(insect,false);assert.equal(game.snapshot().released,1);
+  for(let i=0;i<50;i++)game.update(.05,[]);assert.equal(game.snapshot().complete,true);assert.equal(game.snapshot().shaken,0);assert.ok(feedback.some(([kind,owner])=>kind==='release' && owner===source));
+  game.reset();assert.equal(game.snapshot().complete,false);
+ }finally{game.destroy();}
+});
+test('an idle tracked hand cannot mask a controller grip on the same side at the SDK boundary',async()=>{
+ let selected;const interactionOwner={step:inputs=>{selected=inputs.find(input=>input.source.handedness==='right')?.source;},held:()=>null,reset(){}};
+ const game=createWelcomeButterflyBucket(new THREE.Group(),{load:async()=>[],getContext:()=>({interactionOwner})});await game.loading;
+ const controller={handedness:'right'},tracked={handedness:'right',hand:{}},matrix=new THREE.Matrix4().elements;
+ try{game.update(.05,[{source:tracked,matrix,trigger:false},{source:controller,matrix,down:true}]);assert.equal(selected,controller);game.update(.05,[{source:controller,matrix,down:false},{source:tracked,matrix,trigger:true}]);assert.equal(selected,tracked);}finally{game.destroy();}
+});
+
 test('only a completed tic-tac-toe outcome unlocks the free input choice',()=>{
  const saved=globalThis.sessionStorage,values=new Map();globalThis.sessionStorage={getItem:k=>values.get(k),setItem:(k,v)=>values.set(k,v)};
  try{assert.equal(unlockWelcomeInputChoice({finished:false,winner:null}),false);assert.equal(welcomeInputChoiceUnlocked(),false);assert.equal(unlockWelcomeInputChoice({finished:true,draw:true}),true);assert.equal(welcomeInputChoiceUnlocked(),true);}finally{globalThis.sessionStorage=saved;}

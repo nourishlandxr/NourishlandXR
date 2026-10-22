@@ -1,0 +1,50 @@
+[
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreate.cs",
+    "sha256": "6f5001ac416ed69be0c573eddfadd33a62e31b1cd3f76af13e70417ff64d0ae3"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyPlatform.cs",
+    "sha256": "1ee8585e1e57ce92784b79206365865e66e55ee0a36ecef20c4d13c00053424c"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreatorSetup.cs",
+    "sha256": "2d4a40835bec032e4f2ea032c84bf5bf2541393377859c27c310bac9ca35329e"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyMainMenuChecks.cs",
+    "sha256": "31ed4c371a06d04f1ff34d4851045cc4d1e37872f12e8d85a08ed379e4d6651d"
+  },
+  {
+    "file": "Assets/NLXR/Editor/ProjectSetup.cs",
+    "sha256": "1055a27c576b61c064e3e1666186148b60d50911ba5c20209a6a0e4cb68903ae"
+  },
+  {
+    "file": "ProjectSettings/ProjectSettings.asset",
+    "sha256": "2bbe7b17f93460a0bc6974d0352e78d3a955e0c564578564e7118ed01f7534e3"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreatorHub.cs",
+    "sha256": "6b66ab07605a001a1ba3402404489508347e05e64eb8df5b21045595a4b28cb4"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreatorHubChecks.cs",
+    "sha256": "c7e27aa6245038bb40613333229285c778902a540df036549d6f9c726191e10c"
+  },
+  {
+    "file": "Documentation/creator-hub.md",
+    "sha256": "4019be780f5693152edd3d95de8e2de42d143e7537339e71585941603529ff87"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreatorHub.cs.meta",
+    "sha256": "8909841096aa5ab1e6ce900850a1d57f24a2a3afb5b1902ddc34a91da7fb0dc7"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativeJourneyCreatorHubChecks.cs.meta",
+    "sha256": "a9f3fcd0220d35d19109301b29f7d3dc8a5289e2f71ca304b176c64422229da3"
+  },
+  {
+    "file": "Assets/NLXR/Scripts/NativePanel.cs",
+    "sha256": "f40307f8d0a2aa9cc399117f1c59f1b719625a01d6054388e4fbc01e1063b769"
+  }
+]

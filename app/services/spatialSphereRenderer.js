@@ -160,6 +160,7 @@ export function createSpatialSphereRenderer(gl) {
         uniform float metalness;
         uniform float botanicalDetail;
         uniform float livingShell;
+        uniform float ceramicShell;
         uniform float coreGlow;
         varying float cellTone;
         void main() {
@@ -179,6 +180,11 @@ export function createSpatialSphereRenderer(gl) {
             float pearl = 0.5 + 0.5 * sin(normal.y * 4.2 + normal.x * 2.6);
             vec3 base=color;
             if(livingShell>.5){float tone=mod(floor(cellTone+.5),3.0);base=tone<.5?mix(color,vec3(.92,.89,.81),.65):tone<1.5?mix(color,vec3(.74,.78,.70),.32):mix(color,vec3(.63,.75,.74),.35);}
+            if(ceramicShell>.5){
+                base=vec3(.94,.89,.79)*(1.+.012*sin(localPosition.x*13.+localPosition.z*9.)*sin(localPosition.y*11.));
+                float clay=.5+.5*sin(localPosition.x*157.+sin(localPosition.z*133.))*sin(localPosition.y*149.);
+                base*=.991+clay*.018;
+            }
             vec3 shaded = base * (0.62 + diffuse * 0.36);
             shaded = mix(shaded, mix(color, vec3(0.88, 0.94, 0.9), 0.42), pearl * 0.09);
             shaded += mix(vec3(.26),color*.55+vec3(.14),metalness) * highlight * (livingShell>.5?.22:1.0);
@@ -186,6 +192,10 @@ export function createSpatialSphereRenderer(gl) {
             // Keep edge light in the shell colour; a pale Fresnel rim reads as
             // an unwanted white outline on the small Quest Plant Orbs.
             shaded += base * rim * (livingShell>.5 ? 0.035 : 0.10);
+            if(ceramicShell>.5){
+                float softHighlight=pow(max(dot(normal,normalize(lightDirection+viewer)),0.),10.);
+                shaded=base*(.67+.32*diffuse)+vec3(.98,.94,.85)*softHighlight*.045;
+            }
             if(botanicalDetail > .5){
                 float softRim=pow(1.0-facing,3.0);
                 shaded += vec3(.13,.18,.12)*softRim;
@@ -256,7 +266,7 @@ export function createSpatialSphereRenderer(gl) {
     return {
         program,
         livingStates:new WeakMap(),
-        cellAxisLocation:gl.getAttribLocation(program,'cellAxis'),cellIdLocation:gl.getAttribLocation(program,'cellId'),cellOpeningLocation:gl.getUniformLocation(program,'cellOpening'),livingShellLocation:gl.getUniformLocation(program,'livingShell'),coreGlowLocation:gl.getUniformLocation(program,'coreGlow'),
+        cellAxisLocation:gl.getAttribLocation(program,'cellAxis'),cellIdLocation:gl.getAttribLocation(program,'cellId'),cellOpeningLocation:gl.getUniformLocation(program,'cellOpening'),livingShellLocation:gl.getUniformLocation(program,'livingShell'),ceramicShellLocation:gl.getUniformLocation(program,'ceramicShell'),coreGlowLocation:gl.getUniformLocation(program,'coreGlow'),
         modelBuffers,prepareOptionalModel,
         vertexBuffer,
         indexBuffer,
@@ -293,6 +303,7 @@ export function drawSpatialSphere(gl, renderer, projectionMatrix, viewMatrix, po
     gl.vertexAttribPointer(renderer.normalLocation, 3, gl.FLOAT, false, stride*4, 12);
     for(const [location,size,offset] of [[renderer.cellAxisLocation,3,24],[renderer.cellIdLocation,1,36]]){if(stride===10){gl.enableVertexAttribArray(location);gl.vertexAttribPointer(location,size,gl.FLOAT,false,40,offset);}else {gl.disableVertexAttribArray(location);if(size===3)gl.vertexAttrib3f(location,0,0,0);else gl.vertexAttrib1f(location,0);}}
     gl.uniform1f(renderer.cellOpeningLocation,material.opening || 0);gl.uniform1f(renderer.livingShellLocation,['living','v3'].includes(material.orbModel)&&!material.crown?1:0);gl.uniform1f(renderer.coreGlowLocation,material.coreGlow || 0);
+    gl.uniform1f(renderer.ceramicShellLocation,material.ceramicShell?1:0);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, material.crown ? buffers.crownIndexBuffer : buffers.indexBuffer);
     gl.uniformMatrix4fv(renderer.projectionLocation, false, projectionMatrix);
     gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
@@ -334,7 +345,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         if(state.at!==now){const dt=Math.min(.1,Math.max(0,now-state.at));state.opening+=(target-state.opening)*(1-Math.exp(-dt/ .32));state.at=now;}if(model==='v3' && Math.abs(target-state.opening)<.001)state.opening=target;renderer.livingStates.set(key,state);
         const soft=authoredColor.map((c,i)=>c*.72+[.88,.87,.80][i]*.28);
         drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius*.94,{orbModel:'basic',color:authoredColor,alpha:.98,roughness:.8,emissive:.18,rotationY:options.rotationY || 0,coreGlow:.12+state.opening*(.15+.08*(.5+.5*Math.sin(now*2.8))),opacity:options.opacity});
-        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:model,color:soft,alpha:.98,roughness:.72,emissive:moving?.18:targeted?.12:.04,rotationY:options.rotationY || 0,opening:state.opening*(model==='v3'?.72:1),opacity:options.opacity});
+        drawSpatialSphere(gl,renderer,view.projectionMatrix,view.transform.inverse.matrix,position,radius,{orbModel:model,color:soft,ceramicShell:true,alpha:1,roughness:.82,emissive:moving?.18:targeted?.12:.04,rotationY:options.rotationY || 0,opening:state.opening*(model==='v3'?.72:1),opacity:options.opacity});
         gl.enable(gl.CULL_FACE);return;
     }
 
@@ -345,7 +356,7 @@ export function drawSpatialOrb(gl, renderer, view, position, radius, options = {
         view.transform.inverse.matrix,
         position,
         radius,
-        { color: shellColor, alpha: plant ? .98 : .94, emissive: moving ? .65 : selected ? .53 : targeted ? .43 : plant ? .27 : .24,
+        { color: shellColor, ceramicShell:true,alpha:1, emissive: moving ? .65 : selected ? .53 : targeted ? .43 : plant ? .27 : .24,
             rotationY:options.rotationY || 0,coreGlow:selected?.12+.07*Math.sin((options.time || 0)*2.8):.025,orbModel:model,detail:Math.min(appearance.detail,currentGraphicsPreset().detail),roughness:appearance.roughness,metalness:appearance.metalness,opacity: options.opacity }
     );
 

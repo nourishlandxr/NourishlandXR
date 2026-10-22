@@ -1,0 +1,11 @@
+{
+  "passed": true,
+  "version": "0.2.27",
+  "versionCode": 28,
+  "menuChecks": 263,
+  "changedSinceApplied": [],
+  "packageHashMatches": true,
+  "physicalDeviceAcceptance": false,
+  "installed": false,
+  "committed": false
+}

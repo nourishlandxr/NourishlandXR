@@ -2,7 +2,7 @@ import { currentTotemModel } from './spatialVisualSettings.js';
 export const DEFAULT_TOTEM_COLOR = '#715a46';
 
 export const TOTEM_STYLES = Object.freeze([
-    Object.freeze({ id: 'basic', label: 'Bionic Pole', description: 'Slender timber pole with a softly luminous ribbed glass crown' }),
+    Object.freeze({ id: 'basic', label: 'Bionic Pole', description: 'Turned timber post with a fluted sage ceramic crown' }),
     Object.freeze({ id: 'carved', label: 'Carved timber', description: 'Flowing timber with engraved controls' }),
     Object.freeze({ id: 'botanical', label: 'Botanical column', description: 'Quiet flutes and bronze leaf inlay' }),
     Object.freeze({ id: 'organic', label: 'Halo Stem', description: 'Slender timber pole with an open oval glass halo' }),

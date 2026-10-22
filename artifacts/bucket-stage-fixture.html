@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><title>Bucket stage regression</title><style>body{margin:0;background:#263e34}canvas{display:block;width:960px;height:720px}</style><canvas width="960" height="720"></canvas><script type="module">
+import * as THREE from '../app/assets/fruit-window/vendor/three.module.js';
+import {createWelcomePracticeScene} from '../app/services/welcomePracticeScene.js';
+import {createFruitWindowXR} from '../app/services/fruitWindowXR.js';
+const viewer=new THREE.Matrix4().makeTranslation(0,1.62,0).elements,spoken=[],feedback=[];
+const voice={status:()=>({playing:false,loading:false,paused:false,available:true}),speak:async line=>spoken.push(line?.id),stop(){},pause(){},resume(){},unlock(){},prepare:async()=>{},speechLevel:()=>0};
+const stage=createWelcomePracticeScene({voice,onFeedback:(...args)=>feedback.push(args),createVisitorVoice:()=>({listen(){},cancel(){},destroy(){}}),loadFruit:async()=>{throw Error('Not needed for bucket fixture');}});
+stage.start(viewer,0);stage.previewLesson('butterflies');
+const tick=async(inputs=[],n=1)=>{for(let i=0;i<n;i++){stage.update(.05,{viewer,floor:0,inputs,frameReady:true,handsReady:true,presentationReady:true});await Promise.resolve();}};
+await tick();while(stage.trials.snapshot().game?.asset==='loading' || stage.snapshot().zinniaAsset==='loading')await new Promise(done=>setTimeout(done,20));
+await tick();const bucket=stage.scene.getObjectByName('Hand tracking butterfly bucket'),root=bucket.parent;
+const canvas=document.querySelector('canvas'),gl=canvas.getContext('webgl2',{antialias:true,preserveDrawingBuffer:true}),native=createFruitWindowXR(gl,stage.scene,{welcomeMagic:true,alphaCompositing:true,visibleParentsOnly:true});
+while(!native.prepareNext() || !native.ready)await new Promise(done=>setTimeout(done,10));
+const camera=new THREE.PerspectiveCamera(45,960/720,.01,20);camera.position.set(.45,1.55,.5);camera.lookAt(0,1.02,-.75);camera.updateMatrixWorld();
+function draw(){native.update();gl.viewport(0,0,960,720);gl.clearColor(.13,.22,.17,1);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);native.draw({projectionMatrix:camera.projectionMatrix.elements,transform:{matrix:camera.matrixWorld.elements,inverse:{matrix:camera.matrixWorldInverse.elements}}},{position:{x:0,y:0,z:0},quaternion:{x:0,y:0,z:0,w:1}},1);}
+function hand(point,trigger=false){root.updateMatrixWorld(true);const world=root.localToWorld(point.clone());return {source,matrix:new THREE.Matrix4().setPosition(world).elements,pinchPoint:world,trigger,down:trigger};}
+const source={handedness:'left',hand:new URLSearchParams(location.search).has('controller')?null:{},profiles:['meta-quest-touch-plus']};
+window.bucketFixture={stage,bucket,native,spoken,feedback,tick,draw,async reveal(){const p=bucket.position.clone();await tick([hand(p)]);await tick([hand(p,true)]);await tick([hand(p.clone().add(new THREE.Vector3(0,.23,0)),true)]);await tick();draw();return {burst:stage.trials.snapshot().game.burst,covered:native.coversScene(),insects:stage.trials.snapshot().game.insects};},async finishController(){
+ const point=()=>new THREE.Vector3(...stage.trials.snapshot().game.insects[0].position);await tick([hand(point())]);await tick([hand(point(),true)]);const grabbed=stage.isHolding(source),mode=stage.trials.mode;await tick([hand(point())]);const released=stage.trials.snapshot().game.released;await tick([],85);return {grabbed,mode,released,phase:stage.phase};
+},async finish(){
+ const input=hand(new THREE.Vector3(0,.35,.1));input.joints=new Map();
+ function move(x=0){const p=new THREE.Vector3(x,.35,.1),world=root.localToWorld(p.clone());input.matrix=new THREE.Matrix4().setPosition(world).elements;input.pinchPoint=world;
+  const joint=(name,dx,dy)=>{const point=root.localToWorld(p.clone().add(new THREE.Vector3(dx,dy,0)));input.joints.set(name,{x:point.x,y:point.y,z:point.z,matrix:new THREE.Matrix4().setPosition(point).elements});};
+  joint('wrist',0,0);joint('thumb-tip',.065,.07);joint('thumb-phalanx-distal',.052,.055);for(const [i,finger]of ['index','middle','ring','pinky'].entries()){const dx=.03-i*.02;joint(finger+'-finger-tip',dx,.14);joint(finger+'-finger-phalanx-proximal',dx,.05);joint(finger+'-finger-phalanx-intermediate',dx,.10);joint(finger+'-finger-metacarpal',dx,.025);}}
+ move();await tick([input],360);const beforeShake=stage.trials.snapshot().game;for(const x of [.02,-.02,.02,-.02]){move(x);await tick([input]);}await tick([],85);return {beforeShake,phase:stage.phase,spoken};
+}};draw();window.bucketFixture.ready=true;
+</script>
