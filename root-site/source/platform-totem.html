@@ -1,0 +1,72 @@
+<section id="platform" class="route-block simple-page" data-route="platform" hidden>
+ <header class="wrap platform-intro"><h1 tabindex="-1">Tools for living places.</h1><p>Select a sign to discover Creator, Explorer or Field tools.</p></header>
+ <div class="wrap platform-totem-layout" data-platform-totem data-totem-state="overview">
+  <figure class="totem-navigation-figure">
+   <div class="platform-totem-object">
+    <picture><source type="image/webp" srcset="/site/art/platform-totem-menu-640.webp 640w, /site/art/platform-totem-menu.webp 1024w" sizes="(max-width:760px) 350px, 440px"><img src="/site/art/platform-totem-menu.webp" alt="Carved wooden Nourishland Totem with a fluted ceramic crown and three directional signs" width="1024" height="1536" decoding="async" fetchpriority="high"></picture>
+    <span class="totem-title-plaque" aria-hidden="true">Platform</span>
+    <nav class="totem-signs" aria-label="Platform tools">
+     <button type="button" class="totem-sign totem-sign-creator" data-totem-sign="creator" aria-label="Learn about Creator" aria-expanded="false" aria-controls="platform-highlights"><span>Creator</span></button>
+     <button type="button" class="totem-sign totem-sign-explorer" data-totem-sign="explorer" aria-label="Learn about Explorer" aria-expanded="false" aria-controls="platform-highlights"><span>Explorer</span></button>
+     <button type="button" class="totem-sign totem-sign-field" data-totem-sign="field" aria-label="Learn about Field tools" aria-expanded="false" aria-controls="platform-highlights"><span>Field tools</span></button>
+    </nav>
+   </div>
+   <figcaption data-totem-caption>Select a sign to learn about a tool.</figcaption>
+  </figure>
+  <section id="platform-highlights" class="platform-highlights" data-totem-highlights hidden aria-labelledby="platform-highlight-title" aria-hidden="true" inert>
+   <p class="eyebrow" data-highlight-tool></p>
+   <h2 id="platform-highlight-title" tabindex="-1" data-highlight-title></h2>
+   <figure class="platform-highlight-visual"><img data-highlight-image width="768" height="512" decoding="async" alt=""><figcaption>Concept illustration</figcaption></figure>
+   <p class="platform-highlight-copy" data-highlight-copy></p>
+   <ul class="platform-highlight-points" data-highlight-points></ul>
+
+   <a class="platform-tool-entry" data-highlight-entry>Open the tool <span aria-hidden="true">↗</span></a>
+   <p class="platform-highlight-access" data-highlight-access></p>
+  <section class="creator-system" data-creator-system hidden aria-labelledby="creator-system-title">
+   <header class="creator-system-intro"><p class="eyebrow">Inside Creator</p><h2 id="creator-system-title">Knowledge becomes part of a place.</h2><p>Give a plant a guide. Connect the areas around it. Watch the project grow.</p></header>
+   <nav class="creator-feature-nav" aria-label="Discover Creator features">
+    <button type="button" data-creator-feature="pimo" aria-controls="creator-pimo" aria-expanded="true"><span class="feature-symbol" aria-hidden="true">⬡</span><strong>PIMO</strong><small>Knowledge that grows</small></button>
+    <span class="creator-connection" aria-hidden="true"></span>
+    <button type="button" data-creator-feature="totem" aria-controls="creator-totem" aria-expanded="false"><span class="feature-symbol" aria-hidden="true">↟</span><strong>Totems</strong><small>Guides between areas</small></button>
+    <span class="creator-connection" aria-hidden="true"></span>
+    <button type="button" data-creator-feature="imap" aria-controls="creator-imap" aria-expanded="false"><span class="feature-symbol" aria-hidden="true">◎</span><strong>IMAP</strong><small>A project taking shape</small></button>
+   </nav>
+   <section class="creator-feature" id="creator-pimo" data-creator-panel="pimo" aria-labelledby="creator-pimo-title">
+    <header><h3 id="creator-pimo-title" tabindex="-1">One orb. Connected plant knowledge.</h3><p>A PIMO is a plant’s interactive guide. Add images, observations and growing knowledge, then share it with others.</p></header>
+    <div class="creator-pimo-flower" data-creator-pimo data-open="true">
+     <div class="creator-pimo-cells" id="creator-pimo-cells" data-creator-cells aria-label="The original six PIMO knowledge families"></div>
+     <button type="button" class="creator-pimo-orb" data-creator-orb title="Click to open or close; drag to turn" aria-label="Close the PIMO; drag to rotate the orb" aria-expanded="true" aria-controls="creator-pimo-cells">
+      <img src="/site/creator/actual-orb-v3-open.webp" data-creator-orb-image width="1600" height="1050" alt="Current Nourishland Organic V3 orb, open"><canvas width="300" height="300" aria-hidden="true"></canvas>
+     </button>
+    </div>
+    <div class="creator-cell-detail" data-creator-cell-detail aria-live="polite"><strong data-creator-cell-title>Information can keep growing.</strong><p data-creator-cell-copy>Start with what you know about a plant. Add new connections as you observe, learn and share.</p></div>
+    <details class="creator-real-capture"><summary>See the PIMO in Nourishland</summary><figure><img src="/site/creator/actual-pimo-panel-fruit.webp" alt="Actual Nourishland Pigeon Pea PIMO: six honeycomb knowledge families, an open control panel and the Fruit Window" width="1600" height="1050" loading="lazy"><figcaption>Actual NL preview · Pigeon Pea PIMO, control panel and Fruit Window.</figcaption></figure></details>
+   </section>
+   <section class="creator-feature" id="creator-totem" data-creator-panel="totem" hidden aria-labelledby="creator-totem-title" inert>
+    <header><h3 id="creator-totem-title" tabindex="-1">A guide to what’s around you.</h3><p>Totems give each area a point of reference. Their signs connect plant guides, field notes and the next place to explore.</p></header>
+    <div class="creator-totem-example"><img src="/site/creator/actual-totem-signs.webp" alt="Actual Nourishland Food Forest Totem with Plant Orbs, Field Notes and Next Totem signs" width="900" height="736" loading="lazy">
+     <button type="button" class="creator-totem-hotspot" data-creator-sign="pimo" aria-label="See how Plant Orbs connect to PIMOs" style="--left:53%;--top:55.5%;--width:22%;--height:8%"></button>
+     <button type="button" class="creator-totem-hotspot" data-creator-sign="notes" aria-label="Learn about Field Notes on a Totem" style="--left:25%;--top:64%;--width:23%;--height:8%"></button>
+     <button type="button" class="creator-totem-hotspot" data-creator-sign="imap" aria-label="See how the next Totem connects on the IMAP" style="--left:54%;--top:71.5%;--width:20%;--height:8%"></button>
+    </div>
+    <p class="creator-interaction-hint">Actual NL Totem · select a sign</p><p class="creator-totem-note" data-creator-totem-note aria-live="polite">A Totem connects the information in an area with the paths beyond it.</p>
+   </section>
+   <section class="creator-feature" id="creator-imap" data-creator-panel="imap" hidden aria-labelledby="creator-imap-title" inert>
+    <header><h3 id="creator-imap-title" tabindex="-1">See the whole place take shape.</h3><p>The Interactive Map brings terrain, areas and connections together. It can be updated as the project grows.</p></header>
+    <div class="creator-map-viewport"><canvas data-creator-map tabindex="0" aria-label="Border Ranges 3D map. Drag to turn, arrow keys to orbit, plus and minus to zoom."></canvas><p class="creator-map-status" data-creator-map-status role="status">The Border Ranges map loads when you open this feature.</p>
+     <nav class="creator-map-controls" aria-label="Map view controls"><button type="button" data-map-control="reset" aria-label="Reset map view" title="Reset view">↺</button><button type="button" data-map-control="top" aria-label="View map from above" title="View from above">⊤</button><button type="button" data-map-control="in" aria-label="Zoom in" title="Zoom in">+</button><button type="button" data-map-control="out" aria-label="Zoom out" title="Zoom out">−</button></nav>
+    </div>
+    <div class="creator-map-growth"><label for="creator-map-growth">Watch a project grow</label><input id="creator-map-growth" data-map-growth type="range" min="0" max="3" value="0" step="1" aria-describedby="creator-map-stage"><output id="creator-map-stage" data-map-stage>1 · The terrain</output></div>
+    <p class="creator-interaction-hint">Drag to turn · select a marker · use + / − to zoom</p>
+    <p class="creator-map-selection" data-map-selection aria-live="polite">Totems stay connected as the map gains paths and places.</p>
+    <p class="creator-map-provenance" data-map-provenance>Border Ranges · NSW contour-derived terrain (200–970 m AHD). Paths and Totem positions are illustrative.</p>
+    <details class="creator-map-source"><summary>About the terrain</summary><p>Public NSW elevation contours cached on 16 October 2026, interpolated into a lightweight display surface. Relief is exaggerated; the outer circular rim is extrapolated. This is not a surveyed site map or a bare-earth DEM.</p><a href="https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Elevation_and_Depth_Theme/FeatureServer/2" target="_blank" rel="noreferrer">NSW elevation source ↗</a></details>
+   </section>
+   <div class="creator-system-footer"><p>Plant knowledge, wayfinding and the project map belong together.</p><a href="/creator/">Explore Creator <span aria-hidden="true">↗</span></a></div>
+  </section><button type="button" class="platform-detail-close" data-totem-close aria-label="Close tool introduction">×</button></section>
+
+
+  <noscript><nav class="platform-noscript" aria-label="Platform tools"><p>Creator prepares plant guides. Explorer opens those guides. Field tools brings place knowledge and a personal journal to your phone.</p><a href="/creator/">Creator</a> · <a href="/explorer/">Explorer</a> · <a href="/field/">Field tools</a></nav></noscript>
+ </div>
+ <div class="wrap platform-totem-secondary"><p>Development pilot · features vary by device.</p><a href="/demos/">Browse demos <span aria-hidden="true">↗</span></a></div>
+</section>

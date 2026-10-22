@@ -1,0 +1,27 @@
+{
+  "cachedAt": "2026-10-16T00:24:08.331Z",
+  "bounds": {
+    "xmin": 153.01,
+    "ymin": -28.422,
+    "xmax": 153.08,
+    "ymax": -28.37,
+    "spatialReference": 4326
+  },
+  "source": "https://portal.spatial.nsw.gov.au/server/rest/services/NSW_Elevation_and_Depth_Theme/FeatureServer/2/query",
+  "sourceSha256": "259bea1f5ce98564494709b7ae8ef1f9bf7da1aed1baa9d1b2281afdb557bce7",
+  "features": 520,
+  "elevation": {
+    "min": 200,
+    "max": 970,
+    "interpolatedMin": 212,
+    "interpolatedMax": 962,
+    "datum": "AHD",
+    "contourCount": 520,
+    "sampleCount": 2271
+  },
+  "gridSamples": 4225,
+  "gridSize": 65,
+  "exceededTransferLimit": false,
+  "featurePositions": "Demonstration only; not georeferenced",
+  "outputBytes": 76351
+}

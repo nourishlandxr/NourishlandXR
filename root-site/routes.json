@@ -1,0 +1,50 @@
+{
+  "home": {
+    "path": "/",
+    "title": "A connected living world"
+  },
+  "education": {
+    "path": "/education/",
+    "title": "Learn about plants"
+  },
+  "food-forests": {
+    "path": "/food-forests/",
+    "title": "Food forests"
+  },
+  "food-forest-story": {
+    "path": "/food-forests/story/",
+    "title": "The story of a food forest"
+  },
+  "food-forest-guide": {
+    "path": "/food-forests/guide/",
+    "title": "Food-forest learning guide"
+  },
+  "nature-learning": {
+    "path": "/immersive-learning/",
+    "title": "Immersive learning"
+  },
+  "platform": {
+    "path": "/platform/",
+    "title": "The Nourishland platform"
+  },
+  "hillyards": {
+    "path": "/hillyards/",
+    "title": "Hillyards prototype"
+  },
+  "collaborate": {
+    "path": "/collaborate/",
+    "title": "Build with Nourishland"
+  },
+  "about": {
+    "path": "/about/",
+    "title": "About Nourishland"
+  },
+  "contact": {
+    "path": "/contact/",
+    "title": "Contact Nourishland"
+  },
+  "places": {
+    "path": "/places/",
+    "title": "Living places"
+  }
+}

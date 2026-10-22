@@ -1,1 +1,6 @@
 * text=auto eol=lf
+
+# Reviewed root overlays are hash-addressed byte-for-byte.
+root-site/releases/**/payload/** -text
+root-site/tools/*.sh text eol=lf
+.github/workflows/publish-root-site.yml text eol=lf

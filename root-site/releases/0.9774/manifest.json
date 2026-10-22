@@ -1,0 +1,276 @@
+{
+  "schema": "nourishland.root-overlay.v1",
+  "version": "0.9774",
+  "managedBy": "root-site-release",
+  "files": [
+    {
+      "file": "about/index.html",
+      "bytes": 54886,
+      "sha256": "6e12f996f8eb8f9ccd71522811834e631ad7f5a4317354a1f8ad0d564d262434",
+      "previousSha256": "f041aebccecee9935e74d93055e0415d551c788527e752a0f53fc47f195bb87b",
+      "mode": "0644"
+    },
+    {
+      "file": "collaborate/index.html",
+      "bytes": 54892,
+      "sha256": "ef79ea82983987fec327f2712e9db90d908a43f37051eec9bd4e19b638a13121",
+      "previousSha256": "4d0bf10c098d994847df57129c0605dbf601ff0e4ab52e8b7371fbb66739ef2c",
+      "mode": "0644"
+    },
+    {
+      "file": "contact/index.html",
+      "bytes": 54816,
+      "sha256": "7371e7de2f1d05f17baf999ee60d5f598ebf2886459046d535be421cbd7bd8ed",
+      "previousSha256": "7ca6624df2ba6d17f34e79cdc0e0eeb4d7985faa8927e0e6986511ef12a5d391",
+      "mode": "0644"
+    },
+    {
+      "file": "education/index.html",
+      "bytes": 55043,
+      "sha256": "9ccc32964f624eea23fce2a7057c67ed15766d7f4f1b302fc391ac77fd5d9ec7",
+      "previousSha256": "53d27968398a46ebf496f0d1add48ed7f8aec4b89044a8cd20aff68d75b1c610",
+      "mode": "0644"
+    },
+    {
+      "file": "food-forests/guide/index.html",
+      "bytes": 54912,
+      "sha256": "5b18f85aa486f2e96cf504613b85e193c0b9d88481e02b01c452231a27cbbb9f",
+      "previousSha256": "47df6e40f1aeff4b20b5e9648090b4a8d368ed9129512d5583803f5db055e61c",
+      "mode": "0644"
+    },
+    {
+      "file": "food-forests/index.html",
+      "bytes": 54899,
+      "sha256": "3e7b6c93a9c2badd07ccb5e6c94fec4fff1401d8f88e1d8dc6c0a57a8a290737",
+      "previousSha256": "7aab8fd3c7caa68a01e4668eab8943c49fa81fceadc0a3c76b9f86f7f43dce97",
+      "mode": "0644"
+    },
+    {
+      "file": "food-forests/story/index.html",
+      "bytes": 54926,
+      "sha256": "25bf66df6dd2c8a3b0426e4a541da449289f67dd0fd8790cd0cf67f44f9bfb5a",
+      "previousSha256": "2566fc1aaaa6d0880d535a88ec5bcb85d4cf76d5db5d668ee5b80d57c1145dac",
+      "mode": "0644"
+    },
+    {
+      "file": "hillyards/index.html",
+      "bytes": 54870,
+      "sha256": "2374b7a7d8c30a11211afb0192028783dc2e676b505b3fd18f18ee511979eb76",
+      "previousSha256": "7ae0ba224c7c5b7f0de1cb0263c0784d69bf9f9f79c2bd0e974380dd92fe4bdd",
+      "mode": "0644"
+    },
+    {
+      "file": "immersive-learning/index.html",
+      "bytes": 54938,
+      "sha256": "c824b50e4d4bc8b7e5f18be90d668ba22fd8f23311b3fb9042e05ec4a9e592b6",
+      "previousSha256": "2bb87dac3cb294b3ccc73fdc5127a39a9ec4c791d3559d43327715b21265a4a2",
+      "mode": "0644"
+    },
+    {
+      "file": "index.html",
+      "bytes": 54861,
+      "sha256": "b0432bd7ed14f9a6de03957fabd651c0565cd3f887a89949f32508e9b989a4ea",
+      "previousSha256": "fd2e3ee741b3c3d137d6b099dff2cc4b9f1034b1f8015b50b9005cf069aaf288",
+      "mode": "0644"
+    },
+    {
+      "file": "places/index.html",
+      "bytes": 54877,
+      "sha256": "fe9c747f446445d1cd558ea71b7db76362aea51a55b35e5bdf5193327e27346e",
+      "previousSha256": "1fb8e90b860af36eebe0bdd035d49a1e30e0f31fffd359744dbc2a23495b11c5",
+      "mode": "0644"
+    },
+    {
+      "file": "platform/index.html",
+      "bytes": 54887,
+      "sha256": "171e168329dd99786e7d832d3c4bc3e50088d0def024d305f4dc054be1d52366",
+      "previousSha256": "1289061b201159636dac9968b23dbb031302579dd02dffde711dc7d170944e40",
+      "mode": "0644"
+    },
+    {
+      "file": "site/art/platform-totem-menu-640.webp",
+      "bytes": 54450,
+      "sha256": "cd235de45dcddb143a39f3a291bab3f2c75531131b23791bc798c85337bf85da",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/art/platform-totem-menu.webp",
+      "bytes": 101236,
+      "sha256": "a9e6ff1896aaa2d89c87fe8a149ceebce1c34e19f38f7b316f5da00855829b84",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/actual-orb-v3-closed.webp",
+      "bytes": 11612,
+      "sha256": "c16b24cd4c05d849089c498f65ac6ccb71d6f10b0a388e71b8bc40ba414ce209",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/actual-orb-v3-open.webp",
+      "bytes": 14626,
+      "sha256": "70223c49fa245aea2a4f4520c8b13940234cbca1bbdecb7e403f86a117ddfb25",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/actual-pimo-panel-fruit.webp",
+      "bytes": 59242,
+      "sha256": "cd6dd98c9541b9b73c71d67196446d9cdb3dfe7acf153b2b94b6fec56c354c41",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/actual-totem-signs.webp",
+      "bytes": 11446,
+      "sha256": "2342f10c182c7d93076b12afa509e413e94baea2e6b46f92e30f929bf99d163a",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/border-ranges.json",
+      "bytes": 76351,
+      "sha256": "03eb80f03787178a811714ffe8b0917da0e723df7258a51b86d5f2856579f4a4",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/imapElevationSource.js",
+      "bytes": 7082,
+      "sha256": "4cf1e9e9b46f402f742fd725d8b90606e1e04e239b5a5b386a41f17bbdff424f",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/imapV2Elements.js",
+      "bytes": 5024,
+      "sha256": "c8950f1e1d7638ff1ca8f01cb1d56cf9d410f3f17ae02a52968a46dded91a162",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/imapV2Landscape3D.js",
+      "bytes": 15934,
+      "sha256": "2bf43487ddfba464c6f6926ee7ed68f0c18ffce63de195a1db57b51803203c1f",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/imapV2Terrain.js",
+      "bytes": 4911,
+      "sha256": "e5c08587e320f537ac5ec75b115f4fe664963bc8db620d8520b29636ff0c78f7",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/pimoGraph.js",
+      "bytes": 9882,
+      "sha256": "71c51a405516093b7b28a05d0374f813c4842618189cfc0758c79981c41b940e",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/pimoGraphDesigns.js",
+      "bytes": 6350,
+      "sha256": "31f0b67e135e07457b15a42b551c33955cdef3108b7c523f55ca261c61289484",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/pimoGraphGeometry.js",
+      "bytes": 2617,
+      "sha256": "9159d732b5b5c49fa8cab5e87da29ff1285d97c2b119500617993c8af8f57590",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/pimoGraphTemplates.js",
+      "bytes": 4064,
+      "sha256": "30c0588832751dc2f08b6a5fffefe6ef14c9733145f475deb43826616a0c9c91",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator-features.js",
+      "bytes": 8957,
+      "sha256": "c39e83a049ad646f41df3a4cc47858c33220e436e2131af55cc8dc7d8837c2c3",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/education-orb.css",
+      "bytes": 14244,
+      "sha256": "bf666a99387aa62b698f5805d1d29c6e842455023e1c6d46df51b6b30bedee1a",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/education-orb.js",
+      "bytes": 10383,
+      "sha256": "244926614b060b64102956881819ad43cfbf7d62c344cec491a59ac7565a2709",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/orb/ceramic-orb.js",
+      "bytes": 4544,
+      "sha256": "4414350fd1c35b7f4569ba76dd4114ba009d019a2d265b11cc73b7b4041adfac",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/orb/organicOrbGeometry.mjs",
+      "bytes": 4363,
+      "sha256": "cb59de84c17859e4944e6429a6f85ff71c62f93b134b273fcfc6b13131e25834",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/orb/three-core.mjs",
+      "bytes": 381124,
+      "sha256": "61ba0df005b05991361d040d8ff670e1aadfd0ce7aeebd1fdb0725957a8957de",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/orb/three.mjs",
+      "bytes": 338902,
+      "sha256": "0fccd1f7bf625b332e2b8738dd70d3853a52c81e9c4fe7f85f7d9ea495e045e0",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/platform-totem.css",
+      "bytes": 19279,
+      "sha256": "7736c2bb3adca80c62614c8d85223767d045821f99e3770602cd2e5495641d16",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/platform-totem.js",
+      "bytes": 5156,
+      "sha256": "2793c16c61ca2b0c1102c6294a772d143d3f45e56957fd32bd88ee97f91e150d",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/root-release.json",
+      "bytes": 188,
+      "sha256": "f8cd201518da46c2a788fce1d4be353cdb7d0308b5d9422b7b985332864bee9f",
+      "previousSha256": "70573e2339325bf2c01ed946312ecc38fcf66ce6e264f0dc917e441ce738985c",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/buildInfo.js",
+      "bytes": 138,
+      "sha256": "869db3041445bb180314e0ae217a6ff185dc6a83d8171547785a7b732d9cab99",
+      "previousSha256": "ab179747032e680c2de338abfd636f6fe4c113dc343cca8f1f4e6ed93541e0cb",
+      "mode": "0644"
+    }
+  ],
+  "backendChanged": false,
+  "routingChanged": false,
+  "wordPressChanged": false
+}

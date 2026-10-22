@@ -1,0 +1,73 @@
+name: Publish reviewed root website
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Reviewed root overlay version
+        required: true
+        default: '0.9774'
+permissions:
+  contents: read
+concurrency:
+  group: nourishland-root-production
+  cancel-in-progress: false
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://nourishland.org/
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Verify components and release boundary
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          node root-site/tests/menu-interaction-checks.mjs
+          node root-site/tests/creator-feature-checks.mjs
+          node root-site/tools/verify-release.mjs "$RELEASE_VERSION"
+      - name: Configure existing HostArmada deployment identity
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.HOSTARMADA_SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.HOSTARMADA_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/nourishland_deploy
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/nourishland_deploy ~/.ssh/known_hosts
+      - name: Stage and install explicit frontend overlay with private backup
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+          REMOTE_HOST: ${{ secrets.HOSTARMADA_HOST }}
+          REMOTE_PORT: ${{ secrets.HOSTARMADA_SSH_PORT }}
+          REMOTE_USER: ${{ secrets.HOSTARMADA_USER }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_VERSION" =~ ^0\.[0-9]{4}$ ]]
+          [[ "$REMOTE_USER" =~ ^[a-zA-Z0-9_-]+$ ]]
+          REMOTE_PORT="${REMOTE_PORT:-22}"
+          [[ "$REMOTE_PORT" =~ ^[0-9]+$ ]]
+          test -n "$REMOTE_HOST"
+          ROOT="/home/$REMOTE_USER/public_html"
+          RELEASE="$RELEASE_VERSION-$GITHUB_SHA-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT"
+          STAGE="/home/$REMOTE_USER/.nourishland-root-stage-$RELEASE"
+          BACKUP="/home/$REMOTE_USER/.nourishland-root-backup-$RELEASE"
+          ssh_cmd=(ssh -i ~/.ssh/nourishland_deploy -p "$REMOTE_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes)
+          "${ssh_cmd[@]}" "$REMOTE_USER@$REMOTE_HOST" "test -d '$ROOT' && mkdir -m 700 '$STAGE'"
+          rsync --archive --compress --checksum --chmod=Du=rwx,Dgo=,Fu=rw,Fgo= \
+            -e "ssh -i $HOME/.ssh/nourishland_deploy -p $REMOTE_PORT -o BatchMode=yes -o StrictHostKeyChecking=yes" \
+            "root-site/releases/$RELEASE_VERSION/" "$REMOTE_USER@$REMOTE_HOST:$STAGE/"
+          "${ssh_cmd[@]}" "$REMOTE_USER@$REMOTE_HOST" "sh -s -- '$ROOT' '$STAGE' '$BACKUP' '$RELEASE_VERSION'" < root-site/tools/install-overlay.sh
+      - name: Verify all public file hashes
+        env:
+          RELEASE_VERSION: ${{ inputs.version }}
+        run: node root-site/tools/verify-release.mjs "$RELEASE_VERSION" --public
