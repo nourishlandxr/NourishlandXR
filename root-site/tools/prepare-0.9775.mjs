@@ -38,10 +38,18 @@ function walk(directory){for(const entry of fs.readdirSync(directory,{withFileTy
     if(allowedFrontendFile(target,routes))candidates.set(target,fs.readFileSync('dist/'+target));}
 }}
 walk('app/v2/assets/hero-clean-hq');walk('app/vendor/iwsdk-input');
-candidates.set('xr/index.html',fs.readFileSync('dist/xr/index.html'));
+// /xr/index.html is now the root site's redirect to /app/. Preserve that
+// migrated entry rather than replacing it with the legacy build shell.
 candidates.set('xr/services/buildInfo.js',fs.readFileSync('dist/xr/services/buildInfo.js'));
 const marker=await fetch('https://nourishland.org/site/root-release.json?baseline='+Date.now(),{signal:AbortSignal.timeout(30000)});
 if(!marker.ok||(await marker.json()).version!==previousVersion)throw Error('Root baseline changed; reconcile before packaging');
+// /xr routes missing files through its HTML app redirect with HTTP 200.
+// Recognise only that exact sentinel body; the installer still requires an
+// absent physical target before accepting a new file.
+const missing=await fetch('https://nourishland.org/xr/__release_probe_9775_missing__.json?baseline='+Date.now(),{signal:AbortSignal.timeout(30000)});
+const missingBytes=Buffer.from(await missing.arrayBuffer());
+if(!missing.headers.get('content-type')?.includes('text/html')||!missingBytes.toString().includes('https://nourishland.org/app/'))throw Error('Unexpected XR missing-file response');
+const missingHash=sha(missingBytes);
 const files=[],queue=[...candidates];let cursor=0;
 await Promise.all(Array.from({length:4},async()=>{while(cursor<queue.length){
   const [file,bytes]=queue[cursor++];
@@ -49,6 +57,7 @@ await Promise.all(Array.from({length:4},async()=>{while(cursor<queue.length){
   if(!response.ok&&response.status!==404)throw Error('Unexpected baseline HTTP '+response.status+': '+file);
   let previousSha256=null;
   if(response.ok){const hash=crypto.createHash('sha256');for await(const chunk of response.body)hash.update(chunk);previousSha256=hash.digest('hex');}
+  if(file.startsWith('xr/')&&previousSha256===missingHash)previousSha256=null;
   const sha256=sha(bytes);
   // Root pages and the release badge stay explicit even if their content matches.
   if(previousSha256===sha256&&!routes.has(file)&&file!=='xr/services/buildInfo.js')continue;

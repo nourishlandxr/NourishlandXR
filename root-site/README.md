@@ -2,6 +2,14 @@
 
 This directory owns the official nourishland.org marketing frontend. The root-release marker protects it from the legacy XR rsync workflow. That guard remains enabled.
 
+## Release 0.9775
+
+The reviewed 50-file overlay retains the 0.9774 Education and Platform pages and adds the clean high-quality intro video, the paused NL layer, and pending static XR tutorial/material/microphone fixes since 10e330ec. The desktop video is 2560 × 1440 (43.2 MB); the portrait video is 1080 × 1920 (20.1 MB). The intro does not load the full 3D world.
+
+The publisher also accepts explicitly listed static XR screens, services, v2 and vendor assets. It still rejects API/data files, dotfiles, routing configuration and the migrated `/xr/index.html` redirect to `/app/`. Missing XR assets return an HTML app redirect with HTTP 200; the preparation tool recognises that exact sentinel, while installation independently requires each new physical target to be absent. Every replaced file must match its recorded live baseline before any public write.
+
+The legacy workflow now reports a protected skip when the root marker is present. Use `Publish reviewed root website` with version `0.9775` for this release. The unchanged API does not need redeployment. Local verification: 1,205 tests, frontend build, root component checks, desktop/phone video browser checks and the visible V0.9775 welcome badge. Physical phone and headset acceptance remain separate.
+
 ## Release 0.9774
 
 - Education introduces curiosity, participation and care through the approved philosophical paragraph.

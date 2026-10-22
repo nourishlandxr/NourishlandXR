@@ -1,0 +1,503 @@
+import {createExperienceFocusLighting} from './experienceFocusLighting.js';
+import {WELCOME_PRACTICE_GROUPS} from './welcomeTrialState.js';
+import {createWelcomeGameReplay} from './welcomeGameReplay.js';
+import {tryBananaBite} from './welcomeBananaBite.js';
+import {createWelcomeToolStation} from './welcomeToolStation.js';
+import {createWelcomePlacementGrab} from './welcomePlacementGrab.js';
+import {welcomeInputChoiceUnlocked,unlockWelcomeInputChoice,setWelcomeInputMethod} from './welcomeExperienceUnlock.js';
+import {loadXRAssetBatch} from './xrAssetQueue.js';
+import {fruitPointDistance,fruitOverlaps} from './welcomeFruitCollision.js';
+import {PAINT_V2_COLOURS} from './spatialPaintV2.js';
+import {fruitInsidePalm} from './xrDirectInteraction.js';
+import * as THREE from '../assets/fruit-window/vendor/three.module.js';
+import {NOURISHLAND_PAINT_TIP} from './nourishlandControllerPrototype.js';
+import {GLTFLoader} from '../assets/fruit-window/vendor/GLTFLoader.js';
+import {WELCOME_PRACTICE_LESSONS,WELCOME_PRACTICE_RESPONSES} from './welcomePracticeContent.js';
+import {PRACTICE_TABLE_RADIUS,onPracticeTable,createPracticeBody,resetPracticeBody,stepPracticeBodies,practiceSupport} from './welcomePracticePhysics.js';
+import {createWelcomeControllerGuide} from './welcomeControllerGuide.js';
+import {createWelcomePlantPractice} from './welcomePlantPractice.js';
+import {createWelcomePracticeProps} from './welcomePracticeProps.js';
+import {WELCOME_FRUIT_ASSETS,WELCOME_INITIAL_FRUITS} from './welcomePracticeFruitAssets.js';
+import {createWelcomeMicroFruitIcon} from './welcomeMicroFruitIcons.js';
+
+import {createWelcomePracticeTable} from './welcomePracticeTable.js';
+import {createWelcomeFlightLesson} from './welcomeFlightLesson.js';
+import {createWelcomeVisitorIntroduction} from './welcomeVisitorIntroduction.js';
+import {getZinniaVisitor,resetZinniaVisitor} from './zinniaVisitorSession.js';
+import {welcomeSpeechCaption,welcomePracticeTablePose,welcomeLessonCaption} from './welcomeSpeechPresentation.js';
+import {welcomeHandMagicProgress} from './welcomeControllerMagic.js';
+import {createWelcomeControlOrb,CONTROL_ORB_PHASES} from './welcomeControlOrb.js';
+import {createWelcomeOrbCoinTrail,ORB_COIN_PHASE} from './welcomeOrbCoinTrail.js';
+import {createWelcomeControlWarmup} from './welcomeControlWarmup.js';
+import {createTutorialMagicBrush} from './tutorialMagicBrush.js';
+import {prepareTutorialFruit} from './tutorialFruitInteraction.js';
+import {setBananaPeel,resetInteractiveFruit,tryAppleBite} from './welcomeInteractiveFruit.js';
+import {createZinniaCharacter,animateZinniaCharacter,disposeZinniaCharacter,giggleZinniaCharacter} from './zinniaCharacter.js';
+import {createWelcomeObjectReveal} from './welcomeObjectReveal.js';
+import {getSpatialVisualSettings} from './spatialVisualSettings.js';
+import {createWelcomePracticeTrials} from './welcomePracticeTrials.js';
+import {createMeshPointerContact} from './xrMeshPointerContact.js';
+import {zinniaContacts} from './zinniaTouchReactions.js';
+
+const one=new THREE.Vector3(1,1,1),up=new THREE.Vector3(0,1,0);
+const serial=v=>({x:v.x,y:v.y,z:v.z});
+const meshPointerContact=createMeshPointerContact();
+function disposeTree(root){const geometries=new Set(),materials=new Set(),textures=new Set();root.traverse(n=>{if(n.geometry)geometries.add(n.geometry);for(const m of [n.material].flat().filter(Boolean)){materials.add(m);for(const value of Object.values(m))if(value?.isTexture)textures.add(value);}});geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>{t.image?.close?.();t.dispose();});}
+function glass(colour,opacity=1){return new THREE.MeshStandardMaterial({color:colour,roughness:.72,metalness:0,transparent:opacity<1,opacity,depthWrite:true,side:THREE.DoubleSide});}
+function tableSurface(colour,opacity){return new THREE.MeshBasicMaterial({color:colour,transparent:opacity<1,opacity,depthWrite:opacity>=1,side:THREE.DoubleSide});}
+function textPlate(width,height,worldWidth,worldHeight){
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const texture=new THREE.CanvasTexture(canvas),material=new THREE.MeshBasicMaterial({map:texture,transparent:true,depthWrite:false,side:THREE.DoubleSide});
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(worldWidth,worldHeight),material);mesh.renderOrder=20;
+    return {mesh,canvas,texture,paint:fn=>{const ctx=canvas.getContext('2d');ctx.clearRect(0,0,width,height);fn(ctx);texture.needsUpdate=true;}};
+}
+function createDragonfly(){
+    const group=new THREE.Group(),bodyMaterial=glass('#8aaca1'),eyeMaterial=glass('#59796f'),wingMaterial=glass('#e5efdb',.78),round=new THREE.SphereGeometry(1,10,8);
+    const abdomen=new THREE.Mesh(new THREE.CylinderGeometry(.006,.003,.095,10),bodyMaterial);abdomen.rotation.x=Math.PI/2;abdomen.position.z=.024;group.add(abdomen);
+    for(const [x,y,z,sx,sy,sz,mat] of [[0,0,-.023,.014,.012,.02,bodyMaterial],[-.009,.006,-.042,.007,.007,.006,eyeMaterial],[.009,.006,-.042,.007,.007,.006,eyeMaterial]]){const mesh=new THREE.Mesh(round,mat);mesh.position.set(x,y,z);mesh.scale.set(sx,sy,sz);group.add(mesh);}
+    const wings=[];
+    for(const side of [-1,1])for(const front of [-1,1]){const pivot=new THREE.Group();pivot.position.set(side*.008,.004,front*.014);const wing=new THREE.Mesh(round,wingMaterial);wing.scale.set(.047,.0013,.013);wing.position.x=side*.044;wing.rotation.y=front*side*.28;pivot.add(wing);group.add(pivot);wings.push({pivot,side,front});}
+    return {group,wings};
+}
+function createPracticeFirefly(){
+    const group=new THREE.Group(),wings=[],round=new THREE.SphereGeometry(1,12,8);
+    const body=new THREE.Mesh(round,new THREE.MeshStandardMaterial({color:'#403c28',roughness:.8}));body.scale.set(.016,.013,.038);group.add(body);
+    const light=new THREE.Mesh(round,new THREE.MeshBasicMaterial({color:'#fff3a0'}));light.name='Firefly lantern';light.position.z=.025;light.scale.set(.013,.012,.02);group.add(light);
+    const wingMaterial=new THREE.MeshBasicMaterial({color:'#dde8c8',transparent:true,opacity:.64,side:THREE.DoubleSide,depthWrite:false});
+    for(const side of [-1,1]){const pivot=new THREE.Group();pivot.position.set(side*.009,.009,-.007);const wing=new THREE.Mesh(round,wingMaterial);wing.scale.set(.031,.0015,.014);wing.position.x=side*.025;pivot.add(wing);group.add(pivot);wings.push({pivot,side,front:1});}
+    return {group,wings};
+}
+function createPracticeBee(){
+    const group=new THREE.Group(),wings=[],round=new THREE.SphereGeometry(1,12,8);
+    const body=new THREE.Mesh(round,new THREE.MeshStandardMaterial({color:'#e9b841',roughness:.72}));body.scale.set(.018,.016,.035);group.add(body);
+    for(const z of [-.012,.008]){const stripe=new THREE.Mesh(round,new THREE.MeshStandardMaterial({color:'#3d3324',roughness:.8}));stripe.position.z=z;stripe.scale.set(.019,.017,.005);group.add(stripe);}
+    const wingMaterial=new THREE.MeshBasicMaterial({color:'#e8f0e4',transparent:true,opacity:.67,side:THREE.DoubleSide,depthWrite:false});
+    for(const side of [-1,1]){const pivot=new THREE.Group();pivot.position.set(side*.009,.012,-.009);const wing=new THREE.Mesh(round,wingMaterial);wing.scale.set(.032,.0015,.014);wing.position.x=side*.025;pivot.add(wing);group.add(pivot);wings.push({pivot,side,front:1});}
+    return {group,wings};
+}
+
+// The scene/state are shared by native WebXR and the desktop visual preview.
+// The anchor stays in the world; moving one's head never moves the table.
+export function createWelcomePracticeScene({voice,onComplete=()=>{},onChange=()=>{},onFeedback=()=>{},onToolMenu=()=>{},onAssets=()=>{},embedded=false,onSelect=()=>false,loadZinnia,loadFruit,createVisitorVoice,getTrialPanelPose=()=>null,getFramePose=()=>null,getFruitInteractionOwner=()=>null,getPhysicsOwner=()=>null,getAudioOwner=()=>null,getButterflyInteractionOwner=()=>null,getFXVolume=()=>1}={}){
+    let textAge=0,textPresented=false;let sceneRevision=0,preparedPhase='';
+    const notifyAssets=()=>{sceneRevision++;onAssets();};
+    const scene=new THREE.Scene(),root=new THREE.Group();scene.add(root);root.visible=false;
+    const focusLighting=createExperienceFocusLighting(scene);
+    const controllerGuide=createWelcomeControllerGuide(scene,{onAssets:notifyAssets}),toolMenuPressed=new WeakMap(),skipChordState=new WeakMap();
+    void controllerGuide.preload(['left','right'].map(handedness=>({handedness,profiles:['meta-quest-touch-plus']})));
+    const tableParts=createWelcomePracticeTable(root),table=tableParts.group,stand=tableParts.stand,foot=tableParts.foot;
+    // The handle is fixed in table-local space; the ray is transformed into
+    // that same space, so its bounds need only be measured once.
+    tableParts.grip.updateWorldMatrix(true,true);
+    const tableGripBounds=new THREE.Box3().setFromObject(tableParts.grip).expandByScalar(.018);
+    // Reserve a quiet physical home for the separately authored Zinnia character.
+    const zinniaPot=new THREE.Group();zinniaPot.name='Zinnia pot · character mount';zinniaPot.position.set(.02,0,-.28);root.add(zinniaPot);
+    const zinniaMount=new THREE.Group();zinniaMount.name='Authored Zinnia attachment';zinniaPot.add(zinniaMount);
+    let zinniaReveal=null;
+    const zinniaCharacter=createZinniaCharacter({load:loadZinnia,onReady:()=>{if(disposed)return;zinniaReveal?.removeGlow();zinniaReveal=createWelcomeObjectReveal(zinniaPot,{duration:2.4});zinniaReveal?.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);notifyAssets();lastSignature='';if(active)paint();},onError:()=>{if(!disposed){lastSignature='';if(active)paint();}}});zinniaMount.add(zinniaCharacter);
+    const homes=[[0,.22],[-.22,.24],[.26,.25],[-.50,.27],[-.26,-.02],[.16,.05],[.47,.28]];
+    const bodies=WELCOME_INITIAL_FRUITS.map((id,i)=>createPracticeBody(id,{x:homes[i][0],z:homes[i][1],radius:WELCOME_FRUIT_ASSETS[id].extent*.4}));
+    const controlWarmup=createWelcomeControlWarmup({onPress:source=>{lastActionSource=source;onFeedback('step',source);}});
+    let potShape=null;const controlOrb=createWelcomeControlOrb(root,{onFeedback,getPotBounds:()=>{
+        if(potShape)return potShape;const nodes=[];for(const name of ['Pot','Rolled pot lip'])zinniaCharacter.getObjectByName(name)?.traverse(node=>{if(node.isMesh)nodes.push(node);});if(!nodes.length)return null;
+        root.updateMatrixWorld(true);const inverse=root.matrixWorld.clone().invert(),bounds=new THREE.Box3();for(const node of nodes){node.geometry.computeBoundingBox();bounds.union(node.geometry.boundingBox.clone().applyMatrix4(inverse.clone().multiply(node.matrixWorld)));}
+        const center=bounds.getCenter(new THREE.Vector3()),size=bounds.getSize(new THREE.Vector3());return potShape={x:center.x,z:center.z,radius:Math.max(size.x,size.z)/2,top:bounds.max.y,bottom:bounds.min.y};
+    }});
+    const orbCoinTrail=createWelcomeOrbCoinTrail(root,{onCollect:(source,count,total)=>onFeedback('coin',source,count/total)});
+    const practiceFruits=bodies.slice();for(const body of practiceFruits)body.fruit=true;const contactBlocked=new Set();
+    const toolStation=createWelcomeToolStation(root,{onFeedback,onAssets:notifyAssets});
+    const magicBrush=createTutorialMagicBrush(root,{onAssets:notifyAssets,controllerOnly:true});magicBrush.group.visible=false;
+    const objects=new Map();
+    for(const body of toolStation.bodies)bodies.push(body);
+    for(const [id,object] of toolStation.objects)objects.set(id,object);
+    for(const body of practiceFruits){const group=new THREE.Group();group.visible=false;root.add(group);objects.set(body.id,group);
+        const placeholder=new THREE.Mesh(new THREE.SphereGeometry(1,24,16),glass(WELCOME_FRUIT_ASSETS[body.id].colour));
+        const half=body.halfSize;placeholder.scale.set(half.x,half.y,half.z);group.add(placeholder);
+    }
+    const props=createWelcomePracticeProps(root,practiceFruits.slice(),{fruitBoard:true,onCollect:body=>onFeedback('collect',body.interactionSource || lastActionSource)});bodies.push(props.body);objects.set(props.body.id,props.remote);
+    const tableReveal=createWelcomeObjectReveal(table,{duration:4.4,glowStrength:0,opaqueFade:true}),basketReveal=createWelcomeObjectReveal(props.basket);zinniaPot.visible=false;
+    table.userData.welcomeAlwaysConvert=true;props.basket.userData.welcomeAlwaysConvert=true;props.plate.userData.welcomeAlwaysConvert=true;tableReveal.update(-1);zinniaReveal?.update(-1);basketReveal.update(-1);
+    const garden=createWelcomePlantPractice(root,{onAssets:notifyAssets,deferAssets:true});props.addHarvest(garden.harvestBodies);bodies.push(...garden.bodies);for(const [id,object] of garden.objects)objects.set(id,object);
+    const dragon=createDragonfly();dragon.group.scale.setScalar(.8);root.add(dragon.group);
+    const flight=createWelcomeFlightLesson(root,dragon,tableParts.landing,{onFeedback});
+    let companionMixer=null,flightCompanion=null;
+    function chooseFlightCompanion(kind){
+        flightCompanion=kind;companionMixer=null;
+        if(kind==='firefly'){const firefly=createPracticeFirefly();disposeTree(dragon.group);dragon.group.clear();dragon.group.add(firefly.group);dragon.wings=firefly.wings;notifyAssets();return;}
+        // Keep a small visible companion while the authored bee GLB streams in.
+        const fallback=createPracticeBee();disposeTree(dragon.group);dragon.group.clear();dragon.group.add(fallback.group);dragon.wings=fallback.wings;notifyAssets();
+        void new GLTFLoader().loadAsync(new URL('../assets/bee.glb',import.meta.url).href).then(async gltf=>{
+            if(disposed || flightCompanion!=='bee'){disposeTree(gltf.scene);return;}
+            // The authored bee uses glTF spec-gloss material data. This Three
+            // loader ignores that extension, so restore its embedded colour map.
+            const diffuse=gltf.parser?.json?.materials?.[0]?.extensions?.KHR_materials_pbrSpecularGlossiness?.diffuseTexture?.index;
+            if(Number.isInteger(diffuse))try{const map=await gltf.parser.getDependency('texture',diffuse);if(disposed || flightCompanion!=='bee'){disposeTree(gltf.scene);map?.dispose();return;}gltf.scene.traverse(node=>{if(node.isMesh){node.material?.dispose();node.material=new THREE.MeshStandardMaterial({map,roughness:.85,metalness:0,side:THREE.DoubleSide,alphaTest:.08});}});}catch(error){console.warn('Practice bee texture:',error.message);}
+            const bounds=new THREE.Box3().setFromObject(gltf.scene),size=bounds.getSize(new THREE.Vector3()),center=bounds.getCenter(new THREE.Vector3()),scale=.11/Math.max(size.x,size.y,size.z,.001);
+            gltf.scene.position.sub(center).multiplyScalar(scale);gltf.scene.scale.setScalar(scale);
+            disposeTree(dragon.group);dragon.group.clear();dragon.group.add(gltf.scene);dragon.wings=[];
+            companionMixer=gltf.animations.length?new THREE.AnimationMixer(gltf.scene):null;if(companionMixer)companionMixer.clipAction(gltf.animations.find(clip=>clip.name==='hover') || gltf.animations[0]).play();notifyAssets();
+        }).catch(error=>console.warn('Practice bee:',error.message));
+    }
+    const plate=textPlate(1400,350,.98,.245);plate.mesh.position.set(0,.48,-.41);root.add(plate.mesh);
+    const buttons=new Map();const tableOutline=new THREE.Group();tableOutline.name='Practice table placement outline';root.add(tableOutline);for(const [x,z,w,d] of [[0,-.45,1.9,.005],[0,.45,1.9,.005],[-.95,0,.005,.9],[.95,0,.005,.9]]){const edge=new THREE.Mesh(new THREE.BoxGeometry(w,.004,d),new THREE.MeshBasicMaterial({color:'#9bddc8'}));edge.position.set(x,.004,z);const halo=new THREE.Mesh(edge.geometry,new THREE.MeshBasicMaterial({color:'#b4ffe3',transparent:true,opacity:.22,depthWrite:false}));halo.scale.set(w>d?1:4,2,w>d?4:1);edge.add(halo);tableOutline.add(edge);}tableOutline.visible=false;let placementStarted=null,placementOwner=null,placementOffset=null;const placementGrab=createWelcomePlacementGrab(root);
+    for(const [id,x] of [['replay',-.36],['mute',-.12],['skip',.12],['next',.36]]){const p=textPlate(360,100,.222,.062);p.mesh.position.set(x,.288,-.41);root.add(p.mesh);buttons.set(id,{...p,x,y:.288,width:.222,height:.062,enabled:true});}
+    let placementViewer=null,active=false,disposed=false,anchored=false,index=0,elapsed=0,stepStarted=0,tableHeight=1.02,practiceFloorY=0,lastSignature='',lastImpact=-Infinity;
+    let exiting=false,exitStarted=0,fadeStarted=null,exitOpacity=1,exitSkipped=false,lastPickedFruit=null,tableHeightOffset=getSpatialVisualSettings().practiceTableHeight;
+    let pointed=false,orangeGrabbed=false,orangeReleased=false,fruitGrabbed=false,fruitReleased=false,dragonDistance=0,dragonReleased=false,handsPresent=false,handStable=0,successAt=null;
+    let remoteSource=null,remoteArmed=false,narrationFinishedAt=null,fruitMessage='',fruitCue=null,fruitMessageUntil=0;const fruitVariants=new Map(),fruitParts=new Map();
+      const visitorIntroduction=createWelcomeVisitorIntroduction({confirmNames:false,createVoice:createVisitorVoice,onListen:()=>{pendingLessonSpeech=false;voice?.stop();},onChange:()=>{lastSignature='';if(active)paint();},onPrepare:spoken=>void voice?.prepare?.({id:'visitor-intro-response',spoken,spokenOverride:true,recorded:false}),onSay:(spoken,{audioIds}={})=>{pendingLessonSpeech=false;const pieces=audioIds?.length?audioIds.map(id=>({id,spoken:id==='micro-fruit-favorite-prefix'?"That's my favorite fruit too!":spoken.slice("That's my favorite fruit too!".length).trim(),recorded:true})): [{id:'visitor-intro-response',spoken,spokenOverride:true,recorded:false}];const speaking=speakReplyPieces(pieces);if(microFruitDisplay)Promise.resolve(speaking).then(hideFavouriteFruit,hideFavouriteFruit);prepareUpcoming();},onCelebrate:showFavouriteFruit});
+    let laserStarted=null,laserConfirmed=false,handMagicStarted=null,virtualHandsIntroduced=false;const laserFeedback=new Set(),magicFeedback=new Map();
+    let currentInputs=[],twoHandPull=null,danceAge=0,colourWheel=null;const leafHolds=new Map(),pressedControlMarks=new Set();let tableHeightOwner=null,tableHeightStart=null,microFruitReady=null;let settingsUnlocked=false,settingsPressed=false,frameLoadError=null,tutorialPaused=false,presentationRevision=0,pendingLessonSpeech=false,framePresentedAt=null;
+    const reveals={table:null,zinnia:null,basket:null};
+    let dragonOwner=null,dragonOffset=null,dragonVelocity=new THREE.Vector3(),dragonManual=false,dragonPhase=Math.random()*Math.PI*2,dragonHeading=0,successCuePlayed=false,lastActionSource=null,wasPouring=false,microFruitDisplay=null,microFruitIndependent=false,microFruitAge=0,microFruitTargetScale=null;
+    const activeGrabs=new Map(),inputEdges=new Map(),point=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3(),worldInverse=new THREE.Matrix4(),pendingEvents=new Set();
+    let guidedTrial=null,inputChoiceUnlocked=welcomeInputChoiceUnlocked(),practiceGroup=null,butterflyViewer=null,rcToyActive=false;let trialVisibility=null,trialVoiceWasPaused=false,controllerTool='standard',trialPreviousTool='standard',paintReady=false,lastPaintFeedback=-Infinity,paintingSource=null;
+    const trials=createWelcomePracticeTrials(root,{wristControls:true,onAssets:notifyAssets,onFeedback,getControllerTool:()=>controllerTool,getPanelPose:getTrialPanelPose,
+        getButterflyContext:()=>({viewer:butterflyViewer,interactionOwner:getButterflyInteractionOwner(),physicsOwner:getPhysicsOwner(),floor:-tableHeight,onSparkle:position=>getAudioOwner()?.sparkle?.(position,{volume:getFXVolume()}),ready:!pendingLessonSpeech && !voice?.status().playing && !voice?.status().loading,zinniaPerch:zinniaCharacter.userData.zinnia.guide.butterflyPerch?.()}),
+        onButterflyZinnia:stage=>zinniaCharacter.userData.zinnia.guide.setButterflyStage?.(stage),
+        onButterflyCue:spoken=>voice?.speak({id:'butterfly-gentle-shake',spoken,spokenOverride:true,recorded:false}),onOpen:()=>{
+        gameReplay?.cancel();replayOffered=false;trialPreviousTool=controllerTool;controllerTool='standard';paintReady=false;releaseAll(false);if(!trialVisibility){trialVisibility=new Map(root.children.filter(child=>child!==trials.layer && child!==trials.panel).map(child=>[child,child.visible]));trialVoiceWasPaused=Boolean(voice?.status().paused);if(!guidedTrial)voice?.pause();}
+        for(const child of trialVisibility.keys())if(child!==table && !(guidedTrial && child===zinniaPot))child.visible=false;tableReveal.update(4.4);notifyAssets();lastSignature='';
+    },onClose:()=>{gameReplay?.cancel();controllerTool=trialPreviousTool;paintReady=false;for(const [child,visible] of trialVisibility || [])child.visible=visible;trialVisibility=null;inputEdges.clear();notifyAssets();if(!trialVoiceWasPaused && !tutorialPaused)voice?.resume();lastSignature='';paint();}});
+    const fruitHighlight=new THREE.Mesh(new THREE.TorusGeometry(.07,.0035,6,40),new THREE.MeshBasicMaterial({color:'#ffe0a0',transparent:true,opacity:.8,depthWrite:false}));fruitHighlight.name='Fruit selection highlight';fruitHighlight.visible=false;fruitHighlight.rotation.x=Math.PI/2;root.add(fruitHighlight);
+    let inputOverride=null,replayOffered=false;const gameReplay=createWelcomeGameReplay({...(createVisitorVoice?{createVoice:createVisitorVoice}:{}),onSay:clip=>voice?.speak(clip),onYes:()=>{trials.command('reset');replayOffered=false;},onNo:()=>trials.close(),onChange:()=>{lastSignature='';}});
+    const handsEnabled=()=>controllerTool!=='standard'?false:trials.active?trials.mode==='hands':inputOverride?inputOverride==='hands':['hands','paint-pot','packet','seed','water','grow','harvest','explore'].includes(phase());
+    const lesson=()=>WELCOME_PRACTICE_LESSONS[index];
+    const phase=()=>lesson().id;
+    const handReveal=()=>{
+        const progress=inputOverride==='controllers' || inputOverride==='hands'?{left:0,right:0}:handMagicStarted!==null?{left:welcomeHandMagicProgress(elapsed-handMagicStarted,'left'),right:welcomeHandMagicProgress(elapsed-handMagicStarted,'right')}:inputOverride==='gloves' || virtualHandsIntroduced?{left:1,right:1}:{left:0,right:0};
+
+        return progress;
+    };
+    const gloveOpacity=()=>Math.max(...Object.values(handReveal()));
+    const laserProgress=()=>practiceGroup==='controllers'?1:laserStarted===null?0:['laser-intro','laser-dance','laser-zinnia'].includes(phase())?THREE.MathUtils.smoothstep(elapsed-laserStarted,0,1.1):Math.max(0,1-(elapsed-stepStarted)/.28);
+    const settingsAvailable=()=>settingsUnlocked;
+    const cue=id=>WELCOME_PRACTICE_RESPONSES.find(value=>value.id===id);
+    const spokenGuidance=new Set();
+    const followupGuidance=()=>null;
+    const spokenLesson=(value=lesson())=>value?.silent || !value?.spoken?null:{...value,spokenOverride:true,recorded:false};
+    const comfortVisible=()=>index>0 || Boolean(frameLoadError) || zinniaCharacter.userData.zinnia.status==='error' || settingsAvailable();
+    const frameOpacity=()=>framePresentedAt===null?0:THREE.MathUtils.smoothstep(elapsed-framePresentedAt,0,1.2);
+    const textOpacity=()=>phase()==='frame'?frameOpacity():!textPresented?0:THREE.MathUtils.smoothstep(textAge,0,.5)*frameOpacity();
+    const instructionCaption=()=>lesson().silent && (phase().startsWith('controls-') || phase().startsWith('settings-') || phase().startsWith('laser-'))?lesson().caption:phase()==='visitor-intro'?visitorIntroduction.state().caption:successCuePlayed && successAt!==null && cue(phase()==='hands'?'hands-ready':lesson().id+'-done')?.spoken?cue(phase()==='hands'?'hands-ready':lesson().id+'-done').spoken:['face','zinnia-reveal','zinnia'].includes(phase()) && zinniaCharacter.userData.zinnia.status==='error'?'Zinnia’s model could not load. Check your connection and restart the tutorial.':phase()==='frame' && frameLoadError?'The 3D Living Frame could not load. Use Adjust, then Frame SD or HD, to retry.':phase()===ORB_COIN_PHASE?lesson().caption+' '+orbCoinTrail.snapshot().count+' of '+orbCoinTrail.snapshot().total+' collected.':phase()==='harvest'?lesson().caption+' '+props.snapshot().harvestCount+' of 3.':phase()==='fly'?(controllerTool==='insect'?flight.cue+' Lift to rise · lower to descend · turn wrist to steer. Trigger: forward · Grip: back · Stick: fine tune.':lesson().caption):phase()==='hands' && handsPresent?'Your movements become visible hands. Gently touch thumb and index finger together.':lesson().caption;
+    const audioSignal=()=>{const state=visitorIntroduction.state();return {listening:state.active && state.listening,speaking:false,level:state.active && state.listening?Math.min(1,(state.level || 0)*20):0,rawLevel:state.level || 0,error:state.error || null};};
+    const currentCaption=()=>{if(trials.active && !pendingLessonSpeech && !voice?.status().playing)return gameReplay.state().active?'Would you like another round? Say yes to play again, or no to keep exploring.':trials.snapshot().gameHint || lesson().caption;if(phase()==='frame')return '';if(fruitMessage && elapsed<fruitMessageUntil)return fruitMessage;if(lesson().silent)return phase().startsWith('controls-')?instructionCaption():'';if(phase()==='visitor-intro')return visitorIntroduction.state().caption;if(!textPresented && !['title','arrival','table'].includes(phase()))return '';return welcomeLessonCaption({...lesson(),caption:instructionCaption()},textAge,voice?.status());};
+    function prepareUpcoming(){voice?.unlock?.();if(!lesson().silent)void voice?.prepare?.(spokenLesson());const next=WELCOME_PRACTICE_LESSONS.slice(index+1).find(value=>!value.silent && !value.optional);if(next)void voice?.prepare?.(spokenLesson(next));}
+    function beginTableReveal(){if(reveals.table!==null || placementStarted!==null)return;placementStarted=elapsed;tableOutline.visible=true;const pose=welcomePracticeTablePose(placementViewer,getFramePose(),root.position.y);root.position.set(pose.x,pose.y,pose.z);root.quaternion.setFromAxisAngle(up,pose.yaw);root.updateMatrixWorld(true);tableParts.alignFootToFloor(practiceFloorY);notifyAssets();}
+    const exitCopy=()=>exitSkipped?'You chose to end the tutorial. You can always come back here later. Let’s continue with the NourishlandXR main demo.':'You’re ready. Let’s continue with the NourishlandXR main demo.';
+    function leafTargetsForSnapshot(source,hold){return hold.point?.toArray();}
+    function controlHighlights(){
+        const active=[];
+        for(const input of currentInputs){
+            const source=input.source,hand=source?.handedness,buttons=source?.gamepad?.buttons || [],axes=source?.gamepad?.axes || [];
+            if(source?.hand || !['left','right'].includes(hand))continue;
+            if(input.trigger)active.push(`${hand}:trigger`);
+            if(input.down)active.push(`${hand}:grip`);
+            if(buttons[3]?.pressed || Math.hypot(axes[2]||0,axes[3]||0)>.18)active.push(`${hand}:stick`);
+            if(buttons[4]?.pressed)active.push(`${hand}:${hand==='left'?'x':'a'}`);
+            if(buttons[5]?.pressed)active.push(`${hand}:${hand==='left'?'y':'b'}`);
+        }
+        for(const id of active)pressedControlMarks.add(id);
+        return active;
+    }
+    function snapshot(){return {gameReplay:gameReplay.state(),inputChoiceUnlocked,practiceGroup,guidedTrial,controllerTool,sceneRevision,frameOpacity:frameOpacity(),waitingForPresentation:pendingLessonSpeech,controlOrb:controlOrb.snapshot(),layoutTitle:lesson().title,layoutCaption:trials.active && !pendingLessonSpeech && !voice?.status().playing?gameReplay.state().active?'Would you like another round? Say yes to play again, or no to keep exploring.':trials.snapshot().gameHint || lesson().caption:(lesson().paragraphs || [lesson().caption]).join('\n\n'),activityFocus:Boolean(trials.active) || phase().startsWith('controls-') || phase().startsWith('settings-') || phase().startsWith('laser-'),controlHighlights:controlHighlights(),controlMarks:[...pressedControlMarks],audioSignal:audioSignal(),handReveal:handReveal(),laserProgress:laserProgress(),settingsAvailable:settingsAvailable(),laserConfirmed,danceAge,leafContacts:[...leafHolds].map(([source,hold])=>({hand:source.handedness,point:leafTargetsForSnapshot(source,hold)})),insectControllerAvailable:['brush','fly'].includes(phase()) || practiceGroup==='gloves' || trials.active==='dragonfly',active,exiting,exitOpacity,visitor:getZinniaVisitor(),lastPickedFruit,fruitMessage,fruitInteractions:Object.fromEntries([...fruitVariants].map(([id,v])=>[id,{peeled:v.peel || 0,bitten:Boolean(v.bitten),bites:v.bites || 0}])),openedFruits:[...fruitVariants].filter(([,v])=>v.opened).map(([id])=>id),phase:phase(),index,caption:exiting?exitCopy():practiceGroup?({controllers:'Roll your Orb, or hold both leaf grips to dance with Zinnia.',gloves:'Explore the fruit, or pick up the brush to paint.',hands:currentCaption() || 'Pinch to grab. Open your fingers to release.'}[practiceGroup]):phase()==='controls-stick'?(controlWarmup.snapshot().completed.includes('right')?'Move the left thumbstick around its edge.':'Move the right thumbstick around its edge.'):phase()==='controls-stick-click'?(controlWarmup.snapshot().completed.includes('right')?'Click the left thumbstick.':'Click the right thumbstick, then the left.'):currentCaption(),title:exiting?'':phase()==='frame'?'':!textPresented || !lesson().automatic && textAge>5?'':lesson().title,handsPresent,held:[...activeGrabs.values()].map(g=>g.body.id),inputMode:trials.active?trials.mode:inputOverride || (handsEnabled()?'hands':gloveOpacity()>0?'gloves':'controllers'),comfortVisible:comfortVisible(),textOpacity:textOpacity(),voice:{...voice?.status(),paused:trials.active?tutorialPaused:tutorialPaused || Boolean(voice?.status().paused)},brush:magicBrush.snapshot(),assets:fruitAssets,zinniaAsset:zinniaCharacter.userData.zinnia.status,flight:flight.snapshot(),flightCompanion,nextFruit:props.nextFruit,garden:garden.snapshot(),basket:props.snapshot(),completed:successAt!==null,controllerGuide:controllerGuide.snapshot(),trials:trials.snapshot()};}
+    function updateGuidedTrial(dt,{viewer,presentationReady,renderRevision}){
+        dt=tutorialPaused || voice?.status().paused?0:Math.min(.06,Math.max(0,dt));elapsed+=dt;
+        for(const child of trialVisibility?.keys() || [])if(child!==table && child!==zinniaPot)child.visible=false;
+        zinniaPot.visible=true;animateZinniaCharacter(zinniaCharacter,elapsed,Boolean(voice?.status().playing),{viewer,lesson:phase(),speechLevel:voice?.speechLevel?.() || 0});
+        zinniaReveal?.update(reveals.zinnia===null?4:elapsed-reveals.zinnia);
+        if(pendingLessonSpeech && dt>0 && presentationReady && (renderRevision===null || renderRevision===sceneRevision) && trials.snapshot().game?.asset==='ready'){textPresented=true;pendingLessonSpeech=false;void voice?.speak(spokenLesson());}
+        if(textPresented)textAge+=dt;
+        const game=trials.snapshot().game,done=guidedTrial==='butterflies'?game?.complete:game?.finished;
+        if(guidedTrial==='hand-game' && done)inputChoiceUnlocked=unlockWelcomeInputChoice(game) || inputChoiceUnlocked;
+        if(done && !pendingLessonSpeech && !tutorialPaused && !voice?.status().playing && !voice?.status().loading && !voice?.status().paused){
+            if(successAt===null){successAt=elapsed;successCuePlayed=true;void voice?.speak(spokenLesson(cue(phase()+'-done')));}
+            else if(elapsed-successAt>1)setLesson(index+1);
+        }
+        controllerGuide.update(dt,guidedTrial==='butterflies'?currentInputs.filter(input=>!input.source.hand):[],phase(),viewer);paint();
+    }
+    function openPracticeGroup(mode){
+        if(guidedTrial || !['controllers','gloves','hands'].includes(mode))return false;rcToyActive=false;if(phase()!=='explore')setLesson(WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='explore'));
+        if(guidedTrial){trials.close();guidedTrial=null;}else trials.close();
+        releaseAll(false);voice?.stop();pendingLessonSpeech=false;textPresented=true;textAge=0;practiceGroup=mode;inputOverride=mode;controllerTool='standard';
+        if(mode==='controllers'){controlOrb.reset({keepSkills:true});laserStarted=elapsed-2;}
+        if(mode==='gloves'){toolStation.reset();virtualHandsIntroduced=true;handMagicStarted=elapsed-5;reveals.basket=elapsed-4;props.stockBasket();void loadPracticeAssets();}
+        if(mode==='hands')trials.open('butterflies',{mode:'hands'});
+        lastSignature='';notifyAssets();paint();return true;
+    }
+    function openRcToy(){if(guidedTrial)return false;active=true;exiting=false;exitOpacity=1;tutorialPaused=false;root.visible=true;practiceGroup=null;inputOverride='controllers';trials.close();rcToyActive=true;setLesson(WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='rc-choice'),{optional:true});return true;}
+    function nextAllowed(){return !(voice?.status().playing || !trials.active && voice?.status().paused || tutorialPaused) && phase()==='explore';}
+    function skipCurrentStep(source){if(exiting || trials.active && !guidedTrial || index>=WELCOME_PRACTICE_LESSONS.length-1)return false;onFeedback('control',source);if(lesson().advanceToDemo)finish();else setLesson(index+1);return true;}
+    function paint(){
+        const v=voice?.status() || {playing:false,muted:true};
+        const label=phase()==='hands'?'Try a pinch':'Continue';
+        const caption=currentCaption();
+        const trial=trials.snapshot(),drawing=trial.paint || {},pressedControls=controlHighlights();const signature=[index,caption,v.playing,v.paused,tutorialPaused,v.muted,nextAllowed(),handsPresent,exiting,lastPickedFruit,orbCoinTrail.snapshot().count,Math.round(textOpacity()*20),textAge<5,trial.active,trial.mode,trial.gameHint,trial.game?.asset,trial.game?.rings,trial.game?.collected,drawing.strokes,drawing.colour,drawing.width,drawing.brush,drawing.motion,pressedControls.join(','),pressedControls.length?Math.floor(elapsed*8):0].join('|');if(signature===lastSignature)return;lastSignature=signature;
+        plate.paint(ctx=>{ctx.fillStyle='rgba(242,240,228,.92)';ctx.beginPath();ctx.roundRect(2,2,1396,346,65);ctx.fill();ctx.strokeStyle='rgba(147,168,146,.7)';ctx.lineWidth=3;ctx.stroke();ctx.fillStyle='#637763';ctx.font='500 27px system-ui';ctx.textAlign='center';ctx.fillText('NOURISHLAND XR  ·  WELCOME 0.1',700,63);ctx.fillStyle='#304334';ctx.font='500 59px system-ui';ctx.fillText(snapshot().title,700,147,1310);ctx.font='34px system-ui';ctx.fillStyle='#485c49';
+            const words=caption.split(' '),lines=[''];for(const word of words){const i=lines.length-1;if(ctx.measureText(lines[i]+word).width>1280)lines.push(word+' ');else lines[i]+=word+' ';}lines.slice(0,2).forEach((line,i)=>ctx.fillText(line.trim(),700,223+i*47));});
+        for(const [id,p] of buttons){p.enabled=id==='next'?nextAllowed():Boolean(voice);p.mesh.visible=p.enabled && !embedded;
+            p.paint(ctx=>{ctx.fillStyle=id==='next'?'#677f65':'rgba(236,239,225,.92)';ctx.beginPath();ctx.roundRect(2,2,356,96,43);ctx.fill();ctx.fillStyle=id==='next'?'#fff9e9':'#405740';ctx.font='500 28px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(id==='skip'?'Skip hands tutorial':id==='replay'?'Hear again':id==='mute'?(v.muted?'Voice off':'Voice on'):label,180,50,338);});
+        }
+        plate.mesh.material.opacity=textOpacity();plate.mesh.visible=!embedded && phase()!=='frame';onChange(snapshot());
+    }
+    function setLesson(value,{optional=false}={}){if(guidedTrial){trials.close();guidedTrial=null;}practiceGroup=null;textAge=0;pressedControlMarks.clear();while(WELCOME_PRACTICE_LESSONS[value]?.optional && !optional)value++;textPresented=WELCOME_PRACTICE_LESSONS[value]?.id==='title' || Boolean(WELCOME_PRACTICE_LESSONS[value]?.silent && WELCOME_PRACTICE_LESSONS[value]?.id.startsWith('controls-'));controlOrb.release();visitorIntroduction.cancel();controlWarmup.reset();settingsPressed=false;presentationRevision++;releaseAll(false);index=value;spokenGuidance.clear();if(phase()==='hands')controllerTool='standard';if(index>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='settings-open'))settingsUnlocked=true;paintReady=false;stepStarted=elapsed;narrationFinishedAt=null;
+        fruitMessage='';fruitCue=null;if(phase()==='table-reveal' && reveals.table===null)beginTableReveal();if(phase()==='zinnia-reveal' && reveals.zinnia===null)reveals.zinnia=elapsed;pointed=false;orangeGrabbed=false;orangeReleased=false;fruitGrabbed=false;fruitReleased=false;dragonDistance=0;dragonReleased=false;handStable=0;lastActionSource=null;wasPouring=false;if(phase()==='packet'){garden.reset();garden.bodies.forEach(resetPracticeBody);}successCuePlayed=false;successAt=null;lastSignature='';if(phase()==='rc-choice'){flightCompanion=null;controllerTool='standard';}if(phase()==='fly'){flight.reset();controllerTool='insect';if(!flightCompanion)chooseFlightCompanion('bee');}if(phase()==='laser-intro')laserStarted=elapsed+.55;if(phase()==='laser-zinnia')laserConfirmed=false;leafHolds.clear();danceAge=0;if(phase()==='virtual-hands-reveal'){virtualHandsIntroduced=true;handMagicStarted=elapsed;magicFeedback.clear();}if(['basket','basket-reveal','practice-ready','grab','fruit'].includes(phase()))void loadPracticeAssets();if(['packet','seed','water','grow','harvest'].includes(phase()))void garden.loadAssets();if(phase()==='visitor-intro')visitorIntroduction.begin();if(['butterflies','hand-game'].includes(phase())){guidedTrial=phase();trials.open(phase()==='hand-game'?'tic-tac-toe':'butterflies',{mode:'hands'});}voice?.stop();pendingLessonSpeech=!lesson().silent;prepareUpcoming();notifyAssets();paint();if(phase()==='brush')toolStation.reset();}
+    function start(viewer,floor){if(disposed)return;guidedTrial=null;practiceGroup=null;rcToyActive=false;inputChoiceUnlocked=welcomeInputChoiceUnlocked();placementGrab.cancel();anchored=false;controlOrb.reset();contactBlocked.clear();preparedPhase='';resetZinniaVisitor();laserStarted=null;laserConfirmed=false;handMagicStarted=null;virtualHandsIntroduced=false;settingsUnlocked=false;controllerTool='standard';inputOverride=null;magicFeedback.clear();laserFeedback.clear();trials.close();active=true;exiting=false;tutorialPaused=false;exitOpacity=1;fadeStarted=null;lastPickedFruit=null;twoHandPull=null;for(const [id,variants] of fruitVariants){const body=bodies.find(b=>b.id===id);body.halfSize={...variants.wholeHalfSize};body.radius=Math.max(...Object.values(variants.wholeHalfSize));resetInteractiveFruit(variants);}for(const part of fruitParts.values())part.visible=false;magicBrush.reset();props.reset();garden.reset({station:true});placementStarted=null;placementOwner=null;tableOutline.visible=false;reveals.table=reveals.zinnia=reveals.basket=null;tableReveal.update(-1);zinniaReveal?.update(-1);basketReveal.update(-1);for(const mesh of objects.values())mesh.visible=false;dragon.group.visible=false;elapsed=0;stepStarted=0;framePresentedAt=null;if(viewer)anchor(viewer,floor);setLesson(0);}
+    function anchor(viewer,floor=viewer[13]-1.65){if(anchored || !viewer)return;practiceFloorY=floor;placementViewer=Array.from(viewer);const forward=new THREE.Vector3(-viewer[8],0,-viewer[10]).normalize();if(forward.lengthSq()<.1)forward.set(0,0,-1);tableHeight=Math.max(.62,Math.min(.95,viewer[13]-.55-floor))*.82+tableHeightOffset;root.position.set(viewer[12]+forward.x*.75,floor+tableHeight,viewer[14]+forward.z*.75);root.quaternion.setFromAxisAngle(up,Math.atan2(-forward.x,-forward.z));tableParts.setHeight(tableHeight);root.updateMatrixWorld(true);tableParts.alignFootToFloor(practiceFloorY);anchored=true;}
+    function setTableHeightOffset(value){const next=Math.max(-.2,Math.min(.25,value)),delta=next-tableHeightOffset;tableHeightOffset=next;if(!anchored)return;if(!tableHeightOwner)releaseAll(false);root.position.y+=delta;tableHeight+=delta;tableParts.setHeight(tableHeight);root.updateMatrixWorld(true);tableParts.alignFootToFloor(practiceFloorY);}
+    function localPose(matrix){return new THREE.Matrix4().multiplyMatrices(worldInverse,new THREE.Matrix4().fromArray(matrix));}
+    function localRay(ray){if(!ray?.origin || !ray.direction)return null;root.updateMatrixWorld(true);worldInverse.copy(root.matrixWorld).invert();return new THREE.Ray(new THREE.Vector3(ray.origin.x,ray.origin.y,ray.origin.z),new THREE.Vector3(ray.direction.x,ray.direction.y,ray.direction.z).normalize()).applyMatrix4(worldInverse);}
+    function hit(ray){if(!active || !anchored)return null;const r=localRay(ray);if(!r)return null;let best=null;
+        const trialHit=trials.hit(ray);if(trialHit)best=trialHit;
+        const pick=(distance,value)=>{if(distance>0 && (!best || distance<best.distance))best={...value,distance};};
+        if(!trials.active && index>0)for(const body of bodies){if(!body.visible)continue;const p=r.intersectSphere(new THREE.Sphere(new THREE.Vector3(body.position.x,body.position.y,body.position.z),body.radius+.014),new THREE.Vector3());if(p)pick(p.distanceTo(r.origin),{kind:'body',body,point:p});}
+        if(!trials.active && ['fly','explore'].includes(phase())){const p=r.intersectSphere(new THREE.Sphere(dragon.group.position,.095),new THREE.Vector3());if(p)pick(p.distanceTo(r.origin),{kind:'dragon',point:p});}
+        const p=r.intersectPlane(new THREE.Plane(new THREE.Vector3(0,0,1),.41),new THREE.Vector3());
+        if(p && !embedded)for(const [id,b] of buttons)if(b.enabled && Math.abs(p.x-b.x)<b.width/2 && Math.abs(p.y-b.y)<b.height/2)pick(p.distanceTo(r.origin),{kind:'button',id,point:p.clone()});
+        if(table.visible && !tableOutline.visible){const p=r.intersectBox(tableGripBounds,new THREE.Vector3());if(p)pick(p.distanceTo(r.origin),{kind:'table-grip',point:p});}
+        if(tableOutline.visible){const p=r.intersectPlane(new THREE.Plane(up,0),new THREE.Vector3());if(p && Math.abs(p.x)<.95 && Math.abs(p.z)<.45)pick(p.distanceTo(r.origin),{kind:'table-outline',point:p});}
+        for(const target of [['laser-dance','laser-zinnia'].includes(phase())?[zinniaCharacter,'zinnia']:null].filter(Boolean)){const contact=meshPointerContact(ray,target[0],{kind:target[1],frameToken:elapsed});if(contact)pick(contact.distance,{...contact,point:root.worldToLocal(contact.worldPoint.clone())});}
+        if(best){best.worldPoint ||= best.point.clone().applyMatrix4(root.matrixWorld);return best;}return null;
+    }
+    function finish(skipped=false){visitorIntroduction.cancel();if(!active || exiting)return;trials.close();hideFavouriteFruit();exiting=true;tutorialPaused=false;exitSkipped=skipped;exitStarted=elapsed;fadeStarted=null;releaseAll(false);zinniaCharacter.userData.zinnia.guide.wave('farewell');voice?.stop();void voice?.speak({...cue(skipped?'practice-exit':'practice-complete'),recorded:false,spokenOverride:true});lastSignature='';paint();}
+    function abort(){visitorIntroduction.cancel();trials.close();active=false;exiting=false;exitOpacity=0;voice?.stop();releaseAll(false);root.visible=false;onChange(snapshot());onComplete({aborted:true});}
+    function button(id,source){if(exiting)return;voice?.unlock();if(id==='skip-step'){skipCurrentStep(source);return;}onFeedback('control',source);if(trials.active && id==='pause'){releaseAll(false);tutorialPaused=!tutorialPaused;paint();return;}if(trials.active && id==='replay')return;if(id==='skip'){finish(true);return;}else if(id==='pause'){releaseAll(false);tutorialPaused=!(tutorialPaused || voice?.status().paused);tutorialPaused?voice?.pause():voice?.resume();}else if(id==='replay'){presentationRevision++;void voice?.speak(spokenLesson(followupGuidance() || lesson()));}else if(id==='mute')voice?.toggleMute();else if(id==='next' && nextAllowed()){finish();}paint();}
+    function select(ray,source){if(!active || exiting)return false;voice?.unlock();const trialTarget=trials.hit(ray);if(trialTarget?.kind==='trial-control'){trials.command(trialTarget.id);trials.consumeSelect(source);return true;}const pointedTarget=hit(ray);if(phase()==='laser-zinnia' && !source?.hand && laserProgress()>=.99 && !['button','trial-control'].includes(pointedTarget?.kind) && meshPointerContact(ray,zinniaCharacter,{frameToken:elapsed})){if(!laserConfirmed){laserConfirmed=true;pendingLessonSpeech=false;lastActionSource=source;voice?.stop();giggleZinniaCharacter(zinniaCharacter);onFeedback('step',source);}return true;}if(onSelect(ray,source))return true;if(activeGrabs.get(source)?.body.id==='magic-brush')return true;if(source?.hand && !handsEnabled())return false;const target=hit(ray);if(!target)return false;if(target.kind==='button'){button(target.id,source);return true;}
+        return false;
+    }
+    let fruitInteractionOwner=null;
+    const fruitGrabAllowed=body=>['basket','basket-reveal','practice-ready','grab','fruit','gloves','hands','explore'].includes(phase()) && practiceFruits.includes(body);
+    const sdkGrabAllowed=body=>fruitGrabAllowed(body) ||
+        body.id==='strawberry-pot' && ['paint-pot','packet','seed','water','grow','harvest','explore'].includes(phase()) ||
+        body.id==='magic-brush' && ['brush','fruit','explore'].includes(phase()) ||
+        body.id==='pot-spray' && ['paint-pot','explore'].includes(phase()) ||
+        body.id==='seed-packet' && ['packet','explore'].includes(phase()) ||
+        body.id==='seed' && ['seed','explore'].includes(phase()) ||
+        body.id==='watering-can' && ['water','grow','explore'].includes(phase()) ||
+        body.id.startsWith('strawberry-') && ['harvest','explore'].includes(phase());
+    function grab(source,pose,closing,sdkHold=null){if(source?.hand && !handsEnabled())return;if(contactBlocked.has(source))return;if(tutorialPaused || voice?.status().paused || lesson().automatic && !['basket','basket-reveal','practice-ready'].includes(phase()) || activeGrabs.has(source))return;pose.decompose(point,rotation,scale);
+        const occupied=new Set([...activeGrabs.values()].map(g=>g.body));
+        const allowed=b=>b.id==='strawberry-pot' && ['paint-pot','packet','seed','water','grow','harvest','explore'].includes(phase()) || b.id==='paint-controller' && !source.hand && source.handedness==='right' && ['brush','explore'].includes(phase()) || b.id==='rc-controller' && !source.hand && source.handedness==='right' && ['fly','explore'].includes(phase()) || b.id==='magic-brush' && ['brush','fruit'].includes(phase()) || phase()==='explore' || phase()==='fruit' && practiceFruits.includes(b) || phase()==='hands' && practiceFruits.includes(b) || phase()==='paint-pot' && b.id==='pot-spray' || phase()==='packet' && b.id==='seed-packet' || phase()==='seed' && b.id==='seed' || phase()==='harvest' && b.id.startsWith('strawberry-') || ['water','grow'].includes(phase()) && b.id==='watering-can' || ['basket','basket-reveal','practice-ready','grab','gloves'].includes(phase()) && practiceFruits.includes(b) || phase()==='fly' && b.id==='remote' && !source.hand;
+        const sdkBody=sdkHold?bodies.find(body=>body.id===sdkHold.id && body.visible && sdkGrabAllowed(body) && (!['paint-controller','rc-controller'].includes(body.id) || source.handedness==='right') && !occupied.has(body)):null;
+        const candidate=sdkBody?{body:sdkBody}:bodies.filter(b=>b.visible && !occupied.has(b) && allowed(b) && (!fruitInteractionOwner || !sdkGrabAllowed(b) || !source.hand && practiceFruits.includes(b))).map(b=>({body:b,d:point.distanceTo(new THREE.Vector3(b.gripPoint?.x || 0,b.gripPoint?.y || 0,b.gripPoint?.z || 0).applyQuaternion(new THREE.Quaternion(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w)).add(new THREE.Vector3(b.position.x,b.position.y,b.position.z)))})).filter(c=>practiceFruits.includes(c.body)?fruitPointDistance(c.body,point)<(source.hand?.045:.055):c.d<c.body.radius+(source.hand?.07:.095)).sort((a,b)=>a.d-b.d)[0];
+        if(candidate){const b=candidate.body;if(WELCOME_FRUIT_ASSETS[b.id])lastPickedFruit=b.id;if(b.id==='remote' && phase()==='fly'){remoteSource=source;remoteArmed=false;}props.remove(b);b.anchored=false;b.interactionSource=source;const harvested=garden.picked(b);if(['paint-controller','rc-controller'].includes(b.id)){const heldQ=new THREE.Quaternion().setFromRotationMatrix(pose);Object.assign(b.rotation,{x:heldQ.x,y:heldQ.y,z:heldQ.z,w:heldQ.w});}const bodyMatrix=new THREE.Matrix4().compose(new THREE.Vector3(b.position.x,b.position.y,b.position.z),new THREE.Quaternion(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w),one);if(b.gripPoint){const grip=new THREE.Vector3(b.gripPoint.x,b.gripPoint.y,b.gripPoint.z).applyQuaternion(new THREE.Quaternion(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w));bodyMatrix.setPosition(point.clone().sub(grip));}activeGrabs.set(source,{body:b,offset:['remote','magic-brush'].includes(b.id) && !source.hand?new THREE.Matrix4():pose.clone().invert().multiply(bodyMatrix),samples:[],started:elapsed,start:new THREE.Vector3(b.position.x,b.position.y,b.position.z),moved:0});b.held=true;Object.assign(b.velocity,{x:0,y:0,z:0});Object.assign(b.angular,{x:0,y:0,z:0});if(['paint-controller','rc-controller'].includes(b.id))controllerTool=toolStation.activate(b,source) || 'standard';if(WELCOME_FRUIT_ASSETS[b.id]){b.named=true;fruitMessage=WELCOME_FRUIT_ASSETS[b.id].remark;fruitMessageUntil=elapsed+6;fruitCue={id:'fruit-grab-'+b.id,spoken:fruitMessage,spokenOverride:true,recorded:false};}if(phase()==='grab' && practiceFruits.includes(b))orangeGrabbed=true;if(['fruit','hands'].includes(phase()))fruitGrabbed=true;onFeedback(harvested?'harvest':'grab',source);return;}
+        if(phase()==='explore' && !dragonOwner && point.distanceTo(dragon.group.position)<.13 && source.hand){dragonOwner=source;dragonOffset=dragon.group.position.clone().sub(point);}
+    }
+    function release(source,throwing=true){const g=activeGrabs.get(source);if(throwing && source===remoteSource && phase()==='fly' && g?.body.id==='remote')return;if(g){if(g.sdk)fruitInteractionOwner?.cancel(g.body.id);const b=g.body,last=g.samples.at(-1),first=g.samples.find(s=>last.time-s.time<=.12);if(throwing && last && first && last.time-first.time>.008){const v=last.p.clone().sub(first.p).divideScalar(last.time-first.time).clampLength(0,3.2);Object.assign(b.velocity,serial(v));const q=last.q.clone().multiply(first.q.clone().invert());if(q.w<0)q.set(-q.x,-q.y,-q.z,-q.w);const angle=2*Math.acos(Math.max(-1,Math.min(1,q.w))),a=new THREE.Vector3(q.x,q.y,q.z).normalize().multiplyScalar(Math.min(8,angle/(last.time-first.time)));Object.assign(b.angular,serial(a));}
+            b.held=false;activeGrabs.delete(source);if(['paint-controller','rc-controller'].includes(b.id))controllerTool='standard';let rewarded=false;if(throwing){lastActionSource=source;if(g.moved>.06){if(phase()==='grab' && practiceFruits.includes(b) && orangeGrabbed && elapsed-g.started>1.2)orangeReleased=true;else if(phase()==='hands' && source.hand && fruitGrabbed)fruitReleased=true;}if(b.id==='magic-brush'){const opened=magicBrush.end();if(opened)openFruit(opened,source);magicBrush.dock();rewarded=true;}else if(b.id==='strawberry-pot'){rewarded=false;}else if(['grab','fruit','gloves','hands','explore'].includes(phase()) && WELCOME_FRUIT_ASSETS[b.id.split(':')[0]])rewarded=props.placeOnPlate(b);else if(['harvest','explore'].includes(phase()))rewarded=props.place(b);if(['seed','explore'].includes(phase()) && garden.plant(b)){rewarded=true;Object.assign(b.velocity,{x:0,y:0,z:0});onFeedback('plant',source);}}if(throwing && !rewarded)onFeedback('release',source);}
+        if(dragonOwner===source){dragonOwner=null;dragonManual=false;if(throwing && dragonDistance>.08)dragonReleased=true;}
+    }
+    function releaseAll(throwing=false){gameReplay?.cancel();placementGrab.cancel();leafHolds.clear();fruitInteractionOwner?.reset();getAudioOwner()?.suspend();tableHeightOwner=null;tableHeightStart=null;if(paintingSource){onFeedback('paint-stop',paintingSource);paintingSource=null;}controlOrb.release();trials.releaseAll();remoteSource=null;remoteArmed=false;for(const source of [...activeGrabs.keys()])release(source,throwing);dragonOwner=null;dragonManual=false;dragonVelocity.set(0,0,0);}
+    const fruitAssets=Object.fromEntries(WELCOME_INITIAL_FRUITS.map(id=>[id,'loading']));
+    const loader=new GLTFLoader();const loadFruitAsset=loadFruit || (async value=>{const assetURL=new URL(value,import.meta.url),response=await fetch(assetURL,{signal:AbortSignal.timeout(20000)});if(!response.ok)throw Error('Fruit download failed');return loader.parseAsync(await response.arrayBuffer(),new URL('.',assetURL).href);});
+    let fruitLoading=null;function loadPracticeAssets(){if(fruitLoading)return fruitLoading;fruitLoading=loadXRAssetBatch(practiceFruits.filter(body=>WELCOME_FRUIT_ASSETS[body.id] && fruitAssets[body.id]!=='ready'),async body=>{
+        try{const gltf=await loadFruitAsset(WELCOME_FRUIT_ASSETS[body.id].url);if(disposed){disposeTree(gltf.scene);return;}
+            const info=WELCOME_FRUIT_ASSETS[body.id],prepared=prepareTutorialFruit(gltf.scene,info.extent,info),holder=objects.get(body.id);disposeTree(holder);holder.clear();holder.userData.welcomeAlwaysConvert=true;holder.add(prepared.group);const variants={whole:prepared.group,wholeHalfSize:{...prepared.halfSize},half:null,opened:false,peel:0,bitten:false};fruitVariants.set(body.id,variants);
+            body.halfSize=prepared.halfSize;body.radius=Math.max(...Object.values(body.halfSize));fruitAssets[body.id]='ready';if(!body.held && !body.plated && !body.basketed)resetPracticeBody(body);if(body.basketed)props.stockBasket();notifyAssets();
+            if(info.halfUrl){try{const cut=await loadFruitAsset(info.halfUrl);if(disposed){disposeTree(cut.scene);return;}const half=prepareTutorialFruit(cut.scene,info.extent,info);variants.half=half.group;variants.halfSize=half.halfSize;variants.axis=half.axis;half.group.visible=false;holder.add(half.group);}catch(error){console.warn('Fruit opening unavailable:',body.id,error.message);}}
+            if(info.biteUrls){holder.userData.welcomeAlwaysConvert=true;variants.biteStates=[];variants.biteHalfSizes=[];for(const url of info.biteUrls){const bitten=await loadFruitAsset(url);if(disposed){disposeTree(bitten.scene);return;}const preparedBite=prepareTutorialFruit(bitten.scene,info.extent,info),group=preparedBite.group;variants.biteHalfSizes.push(preparedBite.halfSize);group.visible=false;variants.biteStates.push(group);holder.add(group);}variants.bite=variants.biteStates[0];}
+            fruitAssets[body.id]='ready';notifyAssets();
+        }catch(error){if(fruitAssets[body.id]!=='ready')fruitAssets[body.id]='fallback';console.warn('Practice fruit:',body.id,error.message);}
+    },{cancelled:()=>disposed}).then(()=>{if(!disposed)notifyAssets();});return fruitLoading;}
+    const fruitModelsReady=()=>WELCOME_INITIAL_FRUITS.every(id=>fruitAssets[id]==='ready' || fruitAssets[id]==='fallback');
+    const loading=zinniaCharacter.userData.zinnia.ready;
+      async function speakReplyPieces(pieces){for(let index=0;index<pieces.length;index++){const complete=await voice?.speak(pieces[index]);if(complete===false)return false;const deadline=performance.now()+35000;while(active && !disposed && (voice?.status().playing || voice?.status().paused || voice?.status().loading)){if(performance.now()>deadline)return false;await new Promise(resolve=>setTimeout(resolve,50));}if(!active || disposed)return false;if(index+1<pieces.length)await new Promise(resolve=>setTimeout(resolve,180));}return true;}
+      function hideFavouriteFruit(){microFruitReady?.(false);microFruitReady=null;microFruitDisplay?.removeFromParent();if(microFruitIndependent && microFruitDisplay)disposeTree(microFruitDisplay);microFruitDisplay=null;microFruitIndependent=false;microFruitTargetScale=null;microFruitAge=0;zinniaCharacter.userData.zinnia.guide.releaseFruit();notifyAssets();}
+    async function showFavouriteFruit(id){let display;try{display=await createWelcomeMicroFruitIcon(id);}catch(error){console.warn('Zinnia micro-fruit:',id,error.message);return false;}if(!display)return false;await zinniaCharacter.userData.zinnia.guide.loading;if(disposed || !active || phase()!=='visitor-intro'){disposeTree(display);return false;}const socket=zinniaCharacter.userData.zinnia.guide.fruitSocket();if(!socket){disposeTree(display);return false;}hideFavouriteFruit();display.name='Zinnia favourite micro-fruit: '+id;socket.add(display);microFruitIndependent=true;microFruitTargetScale=new THREE.Vector3(1,1,1);display.scale.setScalar(.001);microFruitDisplay=display;microFruitAge=0;zinniaCharacter.userData.zinnia.guide.presentFruit();notifyAssets();return new Promise(resolve=>{microFruitReady=resolve;});}
+    function openFruit(body,source){
+        const variants=fruitVariants.get(body.id);if(!variants?.half || variants.opened || !['grab','fruit','explore'].includes(phase()))return false;
+        variants.opened=true;variants.whole.visible=false;for(const state of variants.biteStates || [])state.visible=false;variants.half.visible=true;
+        body.halfSize={...variants.halfSize};body.radius=Math.max(...Object.values(body.halfSize));body.support=practiceSupport(body);
+        let part=fruitParts.get(body.id);if(!part){part=createPracticeBody(body.id+':half',{radius:body.radius,halfSize:variants.halfSize,bounce:.05});part.home={...body.home};fruitParts.set(body.id,part);bodies.push(part);practiceFruits.push(part);props.addFruit(part);const group=new THREE.Group(),half=variants.half.clone(true);half.visible=true;half.scale[variants.axis]*=-1;group.add(half);root.add(group);objects.set(part.id,group);}
+        part.fruit=true;part.visible=true;part.held=false;part.anchored=false;part.plated=false;part.basketed=false;Object.assign(part.position,body.position);Object.assign(part.rotation,body.rotation);const separation=new THREE.Vector3();separation[variants.axis]=(body.halfSize[variants.axis]+part.halfSize[variants.axis]+.009);separation.applyQuaternion(new THREE.Quaternion(body.rotation.x,body.rotation.y,body.rotation.z,body.rotation.w));part.position.x+=separation.x;part.position.y+=separation.y;part.position.z+=separation.z;part.position.y=Math.max(practiceSupport(part),part.position.y);Object.assign(part.velocity,{x:0,y:0,z:0});
+        // A two-hand pull should leave one half in each hand. The second grip
+        // already owns the opening gesture, so transfer it to the new half.
+        const second=currentInputs.find(input=>input.source===source && input.matrix && input.down);
+        if(second && !activeGrabs.has(source)){
+            const pose=localPose(second.matrix),bodyMatrix=new THREE.Matrix4().compose(new THREE.Vector3(part.position.x,part.position.y,part.position.z),new THREE.Quaternion(part.rotation.x,part.rotation.y,part.rotation.z,part.rotation.w),one);
+            activeGrabs.set(source,{body:part,offset:pose.clone().invert().multiply(bodyMatrix),samples:[],started:elapsed,start:new THREE.Vector3(part.position.x,part.position.y,part.position.z),moved:0});
+            part.held=true;part.interactionSource=source;
+        }
+        fruitMessage='Place your opened fruit on the plate.';fruitCue=null;zinniaCharacter.userData.zinnia.guide.celebrate();onFeedback('open',source);notifyAssets();return true;
+    }
+    const leafHints=['L','R'].map(side=>{const ring=new THREE.Mesh(new THREE.TorusGeometry(.035,.002,6,28),new THREE.MeshBasicMaterial({color:'#ffdf93',transparent:true,opacity:.65,depthWrite:false}));ring.name='Leaf grip target '+side;ring.visible=false;scene.add(ring);return ring;});let trialZinniaTime=0;
+    function updateLeafInteraction(dt,inputs){
+        for(const [i,ring] of leafHints.entries()){ring.visible=(phase()==='laser-dance' || practiceGroup==='controllers') && ![...leafHolds.values()].some(h=>h.side===(i?'R':'L'));const leaf=zinniaCharacter.userData.zinnia.guide.leaf(i?'R':'L');if(ring.visible && leaf){ring.position.copy(new THREE.Box3().setFromObject(leaf).getCenter(new THREE.Vector3()));if(placementViewer)ring.quaternion.setFromRotationMatrix(new THREE.Matrix4().fromArray(placementViewer));}}const leafTargets={};if(index>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='laser-dance') && dt>0){for(const source of leafHolds.keys())if(!inputs.some(i=>i.source===source && i.matrix && i.down))leafHolds.delete(source);for(const input of inputs){if(!input.matrix)continue;const side=input.source.handedness==='left'?'L':'R',leaf=zinniaCharacter.userData.zinnia.guide.leaf(side);if(!input.down){leafHolds.delete(input.source);continue;}const direct=leaf && (input.source.hand || gloveOpacity()>0 || trials.active && trials.mode==='gloves')?new THREE.Box3().setFromObject(leaf).expandByScalar(.035).containsPoint(new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(input.matrix))):false;const contact=!leafHolds.has(input.source) && leaf?(direct?{worldPoint:new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(input.matrix))}:input.ray?meshPointerContact(input.ray,leaf,{frameToken:elapsed}) || (()=>{const ray=new THREE.Ray(new THREE.Vector3().copy(input.ray.origin),new THREE.Vector3().copy(input.ray.direction).normalize()),worldPoint=ray.intersectBox(new THREE.Box3().setFromObject(leaf).expandByScalar(.015),new THREE.Vector3());return worldPoint?{worldPoint}:null;})():null):null;if(contact)leafHolds.set(input.source,{side,direct,distance:input.ray?new THREE.Vector3().copy(input.ray.origin).distanceTo(contact.worldPoint):0,point:contact.worldPoint.clone(),anchor:contact.worldPoint.clone()});const hold=leafHolds.get(input.source);if(hold){if(hold.direct)hold.point.setFromMatrixPosition(new THREE.Matrix4().fromArray(input.matrix));else if(input.ray)hold.point.copy(input.ray.origin).addScaledVector(new THREE.Vector3().copy(input.ray.direction).normalize(),hold.distance);hold.point.sub(hold.anchor).clampLength(0,.28).add(hold.anchor);leafTargets[hold.side]=hold.point;}}if(leafTargets.L && leafTargets.R)danceAge+=dt;}
+        return leafTargets;
+    }
+    function practiceZinniaTarget(){
+        if(phase()==='living-frame'){const pose=getFramePose();if(pose?.center)return new THREE.Vector3().copy(pose.center);if(pose?.matrix)return new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(pose.matrix));}
+        if(microFruitDisplay)return zinniaCharacter.userData.zinnia.guide.fruitSocket()?.getWorldPosition(new THREE.Vector3());
+        if(CONTROL_ORB_PHASES.includes(phase()) && controlOrb.group.visible)return controlOrb.group.getWorldPosition(new THREE.Vector3());
+        const held=[...activeGrabs.values()].find(g=>practiceFruits.includes(g.body));if(held)return objects.get(held.body.id)?.getWorldPosition(new THREE.Vector3());
+        const id={brush:'magic-brush',grab:lastPickedFruit || WELCOME_INITIAL_FRUITS[0],packet:'seed-packet',water:'watering-can',seed:'seed'}[phase()];
+        const object=phase()==='fruit' || phase()==='basket-reveal'?props.basket:phase()==='grow' || phase()==='harvest'?root.getObjectByName('WelcomeStrawberryPot'):phase()==='table-reveal'?table:id?objects.get(id):phase()==='fly' || phase()==='explore'?dragon.group:null;
+        if(object?.visible)return object.getWorldPosition(new THREE.Vector3());
+        if(!voice?.status().playing || phase().startsWith('controls-')){const hand=controlWarmup.snapshot().completed.includes('right')?'left':'right',input=currentInputs.find(i=>i.matrix && i.source.handedness===hand) || currentInputs.find(i=>i.matrix);if(input)return new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(input.matrix));}
+        return null;
+    }
+
+    function update(dt,{viewer,floor,hands=[],controllers=[],inputs=[],frameReady=true,frameError=null,handsReady=true,presentationReady=true,renderRevision=null}={}){
+        currentInputs=inputs;
+        butterflyViewer=viewer;
+        if(trials.active==='butterflies')getAudioOwner()?.update(dt,elapsed,{viewer,muted:Boolean(voice?.status().muted) || getFXVolume()<=0,paused:tutorialPaused,visible:active && !exiting});
+        const focusId={brush:'magic-brush','paint-pot':'pot-spray',grab:lastPickedFruit || 'peach',fruit:lastPickedFruit || 'peach',packet:'seed-packet',seed:'seed',water:'watering-can'}[phase()];
+        const introduced=trials.active?trials.layer:phase().startsWith('controls-')?root.getObjectByName('Controller practice Orb V3'):['basket','basket-reveal'].includes(phase())?props.basket:phase()==='table-reveal'?table:['grow','harvest'].includes(phase())?root.getObjectByName('WelcomeStrawberryPot'):focusId?objects.get(focusId):null;
+        focusLighting.update(dt,{guide:zinniaCharacter,element:introduced?.visible?introduced:null,enabled:active && !exiting,revision:sceneRevision,radius:trials.active ? .26 : .13,reducedMotion:globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches});
+        fruitInteractionOwner=getFruitInteractionOwner();
+        if(active && !disposed && !exiting){
+            for(const input of controllers){
+                const source=input.source,buttons=source.gamepad?.buttons || [],right=source.handedness==='left'?controllers.find(other=>other.source.handedness==='right'):null,rightButtons=right?.source.gamepad?.buttons || [],skipChord=source.handedness==='left' && Boolean(buttons[4]?.pressed && buttons[5]?.pressed && rightButtons[4]?.pressed && rightButtons[5]?.pressed);let chord=skipChordState.get(source);
+                if(!skipChord){skipChordState.delete(source);}else {if(!chord){chord={held:0,fired:false};skipChordState.set(source,chord);}chord.held+=Math.min(.06,Math.max(0,dt));if(!chord.fired && chord.held>=.65){chord.fired=true;skipCurrentStep(source);}}
+                const pressed=Boolean(input.source.gamepad?.buttons?.[3]?.pressed),previousPress=toolMenuPressed.get(input.source);
+                toolMenuPressed.set(input.source,pressed);
+                if(!pressed || previousPress!==false || (input.source.handedness!=='left' && controllerTool!=='paint') || !settingsAvailable())continue;
+                onToolMenu(input.source.handedness==='left'?'general':'brush');if(phase().startsWith('settings-'))settingsPressed=true;
+                lastActionSource=input.source;onFeedback('control',input.source);
+            }
+            anchor(viewer,floor);if(anchored){root.visible=true;root.updateMatrixWorld(true);trials.update(dt,{inputs,visible:comfortVisible(),paused:tutorialPaused});if(trials.active){if(guidedTrial){updateGuidedTrial(dt,{viewer,presentationReady,renderRevision});return;}if(trials.active==='tic-tac-toe' && trials.snapshot().game?.finished){inputChoiceUnlocked=unlockWelcomeInputChoice(trials.snapshot().game) || inputChoiceUnlocked;}if(trials.active==='tic-tac-toe' && trials.snapshot().game?.finished && !replayOffered){replayOffered=true;if(!trials.snapshot().peekFrameRevealed)gameReplay.begin();}gameReplay.update(tutorialPaused?0:Math.min(.06,dt),!voice?.status().playing && !voice?.status().loading && !tutorialPaused);for(const child of trialVisibility?.keys() || [])if(child!==table)child.visible=false;if(index>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='laser-dance') && trialVisibility?.get(zinniaPot)){zinniaPot.visible=true;trialZinniaTime+=tutorialPaused?0:Math.min(.06,dt);const leafTargets=updateLeafInteraction(tutorialPaused?0:dt,inputs.filter(i=>!i.uiBlocked));animateZinniaCharacter(zinniaCharacter,elapsed+trialZinniaTime,false,{leafTargets,viewer,lesson:'trial',paused:tutorialPaused});}controllerGuide.update(tutorialPaused?0:Math.min(.06,dt),trials.mode==='gloves'?[]:controllers,'trial',viewer,false,1,controllerTool,{settingsUnlocked,framePose:getFramePose(),flying:trials.snapshot().game?.airborne===true,speed:.6});paint();return;}}}
+        if(!active || disposed)return;dt=!exiting && (tutorialPaused || voice?.status().paused)?0:Math.min(.06,Math.max(0,dt));elapsed+=dt;frameLoadError=phase()==='frame'?frameError:null;anchor(viewer,floor);if(!anchored)return;if(Number.isFinite(floor) && Math.abs(floor-practiceFloorY)>.005){practiceFloorY=floor;root.position.y=practiceFloorY+tableHeight;root.updateMatrixWorld(true);tableParts.alignFootToFloor(practiceFloorY);}
+        if(exiting){animateZinniaCharacter(zinniaCharacter,elapsed,Boolean(voice?.status().playing),{viewer,contacts:[],speechLevel:voice?.speechLevel?.() || 0,cue:{id:'tutorial-farewell',intent:'farewell'}});if(fadeStarted===null && elapsed-exitStarted>2.5 && (!voice?.status().playing || elapsed-exitStarted>24)){voice?.stop();fadeStarted=elapsed;}if(fadeStarted!==null){const t=Math.min(1,(elapsed-fadeStarted)/1.8);exitOpacity=1-t*t*(3-2*t);if(t>=1){active=false;root.visible=false;onChange(snapshot());onComplete({skipped:exitSkipped});return;}}paint();return;}
+        currentInputs=inputs;root.visible=true;root.updateMatrixWorld(true);worldInverse.copy(root.matrixWorld).invert();
+        const handsAllowed=handsEnabled();hands=handsAllowed?hands:[];inputs=inputs.filter(input=>!input.uiBlocked && (!input.source.hand || handsAllowed));handsPresent=hands.some(e=>e.state?.tracked);handStable=handsPresent?Math.min(3,handStable+dt):Math.max(0,handStable-dt*3);
+        if(framePresentedAt===null && frameReady && presentationReady && (renderRevision===null || renderRevision===sceneRevision))framePresentedAt=elapsed;
+        const age=elapsed-stepStarted,playback=voice?.status() || {};if(textPresented && !playback.loading)textAge+=dt;
+        if(['basket','basket-reveal'].includes(phase()) && reveals.basket===null && fruitModelsReady() && presentationReady && (renderRevision===null || renderRevision===sceneRevision)){props.stockBasket();reveals.basket=elapsed;notifyAssets();}
+        if(dt>0 && phase()==='table' && reveals.table===null){beginTableReveal();
+            const buttonDown=i=>i.down || i.trigger || i.source.gamepad?.buttons?.some(b=>b.pressed);
+            const held=Boolean(placementGrab.owner),released=placementGrab.update(inputs);placementOwner=placementGrab.owner;
+            if(held || released){root.position.y=Math.max(practiceFloorY+.32,root.position.y);tableHeight=root.position.y-practiceFloorY;tableParts.setHeight(tableHeight);root.updateMatrixWorld(true);tableParts.alignFootToFloor(practiceFloorY);}
+            if(released){reveals.table=elapsed;tableOutline.visible=false;notifyAssets();}
+            else if(!held){const input=inputs.find(i=>i.matrix && i.ray && buttonDown(i) && hit(i.ray)?.kind==='table-outline');if(input){placementGrab.begin(input.source,input.matrix);placementOwner=input.source;}else if(elapsed-placementStarted>6 && !pendingLessonSpeech && !voice?.status().playing){reveals.table=elapsed;tableOutline.visible=false;notifyAssets();}}
+
+        }
+        if(table.visible && !tableOutline.visible && !trials.active && dt>0){
+            const owner=inputs.find(input=>input.source===tableHeightOwner);
+            if(tableHeightOwner && (!owner?.matrix || !owner.down)){tableHeightOwner=null;tableHeightStart=null;}
+            else if(owner){setTableHeightOffset(tableHeightStart.offset+owner.matrix[13]-tableHeightStart.y);root.updateMatrixWorld(true);tableParts.alignFootToFloor(practiceFloorY);worldInverse.copy(root.matrixWorld).invert();inputs=inputs.filter(input=>input.source!==tableHeightOwner);}
+            else {const input=inputs.find(input=>{const edge=inputEdges.get(input.source);return input.matrix && input.down && edge?.down===false && !(controllerTool==='paint' && input.source.handedness==='right') && !activeGrabs.has(input.source) && !controlOrb.isHolding(input.source) && !leafHolds.has(input.source) && input.ray && hit(input.ray)?.kind==='table-grip';});if(input){tableHeightOwner=input.source;tableHeightStart={y:input.matrix[13],offset:tableHeightOffset};inputs=inputs.filter(value=>value.source!==input.source);}}
+        }
+
+        if(phase()==='face' && reveals.zinnia===null && zinniaCharacter.userData.zinnia.status==='ready'){reveals.zinnia=elapsed;notifyAssets();}
+        if(dt>0){for(const input of controllers){if(laserProgress()>0 && !laserFeedback.has(input.source)){laserFeedback.add(input.source);onFeedback('magic',input.source);}const progress=handReveal()[input.source.handedness] || 0,previous=magicFeedback.get(input.source) || 0;if(progress>0 && progress<1 && progress-previous>.055){onFeedback('magic-charge',input.source,progress);magicFeedback.set(input.source,progress);}else if(progress>=1 && previous<1 && handMagicStarted!==null){onFeedback('magic',input.source);magicFeedback.set(input.source,1);}}}
+        if(phase()==='visitor-intro')visitorIntroduction.update(dt,{ready:!pendingLessonSpeech && !voice?.status().playing && !voice?.status().loading});
+        tableReveal.update(reveals.table===null?-1:elapsed-reveals.table);
+        zinniaReveal?.update(reveals.zinnia===null?-1:elapsed-reveals.zinnia);
+        const leafTargets=updateLeafInteraction(dt,inputs);
+        const frameTarget=phase()==='living-frame'?practiceZinniaTarget():null;
+        let facing=0;if(frameTarget){const local=root.worldToLocal(frameTarget.clone()),origin=root.worldToLocal(zinniaCharacter.getWorldPosition(new THREE.Vector3()));facing=Math.atan2(local.x-origin.x,local.z-origin.z);}
+        zinniaCharacter.rotation.y=THREE.MathUtils.damp(zinniaCharacter.rotation.y,facing,3,dt);
+        animateZinniaCharacter(zinniaCharacter,elapsed,Boolean(voice?.status().playing),{leafTargets,contacts:phase()==='laser-zinnia'?zinniaContacts(zinniaCharacter,inputs,{includeHover:true}).map(contact=>({...contact,pressed:contact.pressed || undefined})):[],lesson:phase(),viewer,inputs:inputs.filter(input=>(input.source.hand || laserProgress()>0 && gloveOpacity()===0) && !activeGrabs.has(input.source)),speechLevel:voice?.speechLevel?.() || 0,targetWorld:practiceZinniaTarget(),paused:tutorialPaused || Boolean(voice?.status().paused),cue:{id:phase()+':'+(lastPickedFruit || '')+':'+Boolean(fruitVariants.get(lastPickedFruit)?.opened)+':'+presentationRevision+':'+(successAt!==null),intent:successAt!==null?'celebrate':phase()==='zinnia'?'greet':'explain'},success:successAt!==null});
+        if(phase()==='laser-zinnia' && !laserConfirmed && zinniaCharacter.userData.zinnia.touch.snapshot().reaction==='tickle'){laserConfirmed=true;pendingLessonSpeech=false;voice?.stop();onFeedback('step',inputs.find(input=>input.ray)?.source);}
+        const orangeAppear=1;
+        for(const fruit of practiceFruits)objects.get(fruit.id)?.scale.setScalar(Math.max(.001,orangeAppear));
+        if(microFruitDisplay && microFruitTargetScale){microFruitAge+=dt;microFruitDisplay.scale.copy(microFruitTargetScale).multiplyScalar(Math.max(.001,THREE.MathUtils.smoothstep(microFruitAge,0,.24)));if(viewer)microFruitDisplay.lookAt(new THREE.Vector3().setFromMatrixPosition(new THREE.Matrix4().fromArray(viewer)));if(microFruitReady && microFruitAge>=.3){const ready=microFruitReady;microFruitReady=null;ready(true);}}
+        for(const source of [...inputEdges.keys()])if(!inputs.some(i=>i.source===source)){release(source,false);inputEdges.delete(source);}
+        if(fruitInteractionOwner){
+            const fruitInputs=inputs.filter(input=>!contactBlocked.has(input.source) && (!activeGrabs.has(input.source) || activeGrabs.get(input.source).sdk) && !controlOrb.isHolding(input.source) && !(controllerTool!=='standard' && input.source.handedness==='right' && !['paint-controller','rc-controller'].includes(activeGrabs.get(input.source)?.body.id)));
+            fruitInteractionOwner.step(fruitInputs,bodies.filter(body=>body.visible && sdkGrabAllowed(body)),{rootMatrix:root.matrixWorld.elements,dt,time:elapsed,enabled:dt>0 && (!lesson().automatic || ['basket','basket-reveal','practice-ready'].includes(phase()))});
+            for(const [source,hold] of activeGrabs)if(hold.sdk && fruitInteractionOwner.held(source)?.id!==hold.body.id){
+                const input=inputs.find(value=>value.source===source);release(source,Boolean(input?.matrix && !input.down));
+            }
+        }
+        const consumed=new Set();
+        for(const input of inputs){const {source,matrix,ray,down,trigger}=input,previous=inputEdges.get(source);
+            if(dt===0)continue;if(!matrix){release(source,false);inputEdges.delete(source);continue;}const pose=localPose(matrix);
+            const stickActive=Boolean(trigger && source.gamepad?.axes?.some((value,i)=>i>=(source.gamepad.axes.length>=4?2:0) && Math.abs(value)>.18));
+            if(previous && (down && !previous.down && ['grab','fruit','packet','seed','water','harvest'].includes(phase()) || phase()==='fly' && (trigger && !previous.trigger || stickActive && !previous.stickActive))){lastActionSource=source;onFeedback('control',source);}
+            if(source===remoteSource && !down)remoteArmed=true;if(down && !leafHolds.has(source) && !activeGrabs.has(source) && !(controllerTool!=='standard' && source.handedness==='right')){const sdkHold=fruitInteractionOwner?.held(source);grab(source,pose,previous?.down===false,sdkHold);const hold=activeGrabs.get(source);if(sdkHold && hold?.body.id===sdkHold.id)hold.sdk=true;}else if(!down){contactBlocked.delete(source);release(source,true);}
+            if(trigger && previous?.trigger===false && (source.hand || phase()==='laser-zinnia') && !activeGrabs.has(source) && dragonOwner!==source){if(select(ray,source))consumed.add(source);}
+            const g=activeGrabs.get(source);if(phase()==='packet' && !garden.opened){const holder=[...activeGrabs].find(([,hold])=>hold.body.id==='seed-packet');let opening=g?.body.id==='seed-packet' && trigger && previous?.down && !previous.trigger;if(source.hand && down && holder && holder[0]!==source){pose.decompose(point,rotation,scale);opening ||= point.distanceTo(garden.sealPoint())<.065;}if(opening && garden.openPacket()){lastActionSource=source;onFeedback('open',source);}}if(g){const sdkHold=g.sdk?fruitInteractionOwner?.held(source):null,m=sdkHold?new THREE.Matrix4().fromArray(sdkHold.matrix):pose.clone().multiply(g.offset),p=new THREE.Vector3(),q=new THREE.Quaternion();m.decompose(p,q,scale);const oldRotation={...g.body.rotation};Object.assign(g.body.rotation,{x:q.x,y:q.y,z:q.z,w:q.w});g.body.support=practiceSupport(g.body);if(!g.body.gripPoint && onPracticeTable(p.x,p.z))p.y=Math.max(g.body.support,p.y);if(g.body.fruit && practiceFruits.some(other=>other!==g.body && other.visible && fruitOverlaps(g.body,p,other))){Object.assign(g.body.rotation,oldRotation);q.set(oldRotation.x,oldRotation.y,oldRotation.z,oldRotation.w);}
+            const desired=p.clone();props.constrainBasket(g.body,p);if(!g.body.gripPoint && onPracticeTable(p.x,p.z,-.03))p.y=Math.max(g.body.support,p.y);const blocked=g.body.fruit && g.body.basketContact && desired.distanceTo(p)>.002;g.moved=Math.max(g.moved,p.distanceTo(g.start));Object.assign(g.body.position,serial(p));Object.assign(g.body.rotation,{x:q.x,y:q.y,z:q.z,w:q.w});g.samples.push({time:elapsed,p:p.clone(),q:q.clone()});g.samples=g.samples.filter(s=>elapsed-s.time<.18);if(blocked){release(source,false);contactBlocked.add(source);Object.assign(g.body.velocity,{x:0,y:0,z:0});onFeedback('basket-contact',source);}}
+            if(g?.body.id==='pot-spray' && (source.hand?down:trigger))garden.spray(dt);
+            if(source.hand && phase()==='explore' && dragonOwner===source){pose.decompose(point,rotation,scale);const desired=point.clone().add(dragonOffset),before=dragon.group.position.clone();dragon.group.position.lerp(desired,1-Math.exp(-dt*16));dragonDistance+=before.distanceTo(dragon.group.position);dragonManual=true;}
+            // Near finger contact makes audio controls available without rays.
+            if(input.tip && !embedded){const tip=new THREE.Vector3(input.tip.x,input.tip.y,input.tip.z).applyMatrix4(worldInverse),poke=Math.abs(tip.z+.41)<.027;const b=[...buttons].find(([,v])=>v.enabled && Math.abs(tip.x-v.x)<v.width/2 && Math.abs(tip.y-v.y)<v.height/2);const id=poke && b?b[0]:null;if(id && previous?.poke!==id && !down && !g)button(id);input.poke=id;}
+            if(phase()==='rc-choice' && !flightCompanion && previous){const x=Boolean(source.handedness==='left' && source.gamepad?.buttons?.[4]?.pressed && !previous.face4),a=Boolean(source.handedness==='right' && source.gamepad?.buttons?.[4]?.pressed && !previous.face4);if(x || a){chooseFlightCompanion(x?'bee':'firefly');onFeedback('control',source);}}inputEdges.set(source,{down:Boolean(down),trigger:Boolean(trigger),stickActive,poke:input.poke,face4:Boolean(source.gamepad?.buttons?.[4]?.pressed)});
+        }
+        if(['grab','fruit','explore'].includes(phase()) && dt>0){
+            const held=[...activeGrabs.entries()].find(([,g])=>g.body.fruit && !fruitVariants.get(g.body.id)?.opened);
+            if(held){const [owner,grabbed]=held,other=inputs.find(i=>i.source!==owner && i.down && i.matrix),own=inputs.find(i=>i.source===owner && i.matrix);
+                if(other && own){const a=new THREE.Vector3().setFromMatrixPosition(localPose(own.matrix)),c=new THREE.Vector3().setFromMatrixPosition(localPose(other.matrix)),distance=a.distanceTo(c);
+                    const variant=fruitVariants.get(grabbed.body.id),banana=grabbed.body.id==='banana';
+                    const relative=c.clone().sub(a).applyQuaternion(new THREE.Quaternion().copy(grabbed.body.rotation).invert());
+                    if(twoHandPull?.source!==other.source || twoHandPull?.body!==grabbed.body)twoHandPull=null;
+                    if(!twoHandPull && !activeGrabs.has(other.source) && c.distanceTo(new THREE.Vector3().copy(grabbed.body.position))<grabbed.body.radius+.12)twoHandPull={source:other.source,body:grabbed.body,start:distance,startY:relative.y,peel:variant?.peel || 0};
+                    if(twoHandPull?.body===grabbed.body){
+                        if(banana && variant){
+                            const progress=twoHandPull.peel+Math.max(0,twoHandPull.startY-relative.y)/.18;
+                            if(setBananaPeel(variant,progress)){
+                                // Grow collision support with the peel, retaining the fruit origin.
+                                const bounds={...variant.wholeHalfSize},v=new THREE.Vector3();variant.whole.traverse(node=>{if(!node.isMesh)return;for(let i=0;i<node.geometry.attributes.position.count;i++){node.getVertexPosition(i,v);for(const axis of ['x','y','z'])bounds[axis]=Math.max(bounds[axis],Math.abs(v[axis])*.19);}});grabbed.body.halfSize=bounds;grabbed.body.radius=Math.max(...Object.values(bounds));grabbed.body.support=practiceSupport(grabbed.body);
+                                if(variant.peel>=.98 && !variant.opened){variant.opened=true;onFeedback('open',other.source);notifyAssets();}
+                            }
+                        }else if(distance-twoHandPull.start>.10){openFruit(grabbed.body,other.source);twoHandPull=null;}
+                    }
+                }else twoHandPull=null;
+            }else twoHandPull=null;
+        }
+        if(viewer && dt>0 && ['grab','fruit','explore'].includes(phase())){
+            const mouth=new THREE.Vector3(0,-.10,-.08).applyMatrix4(new THREE.Matrix4().fromArray(viewer)).applyMatrix4(worldInverse);
+            for(const [source,grabbed] of activeGrabs){if(grabbed.body.id==='apple' && tryAppleBite(fruitVariants.get('apple'),grabbed.body,mouth,source,onFeedback))notifyAssets();if(grabbed.body.id==='banana' && tryBananaBite(fruitVariants.get('banana'),grabbed.body,mouth,source,onFeedback))notifyAssets();}
+        }
+        magicBrush.hideGuide();toolStation.update(dt,inputs,{phase:phase()});toolStation.sync();
+        const painter=controllerTool==='paint'?inputs.find(i=>i.source.handedness==='right' && !i.source.hand && i.matrix):null;
+        const paintPose=painter?localPose(painter.matrix):null;magicBrush.controllerPose(paintPose,elapsed);
+        if(painter && dt>0){const axes=painter.source.gamepad?.axes || [],o=axes.length>=4?2:0,x=axes[o] || 0,y=axes[o+1] || 0;if(Math.hypot(x,y)>.5){const colour=(Math.round((Math.atan2(y,x)+Math.PI/2)/(Math.PI/4))+8)%8;if(colourWheel===null)onToolMenu('colour-open');colourWheel=colour;}else if(colourWheel!==null){magicBrush.paint.setColour(colourWheel);onToolMenu('colour-close');colourWheel=null;}
+
+            if(!painter.trigger)paintReady=true;
+            const tip=new THREE.Vector3().copy(NOURISHLAND_PAINT_TIP).applyMatrix4(paintPose),pressed=paintReady && Boolean(painter.trigger);
+            if(phase()==='paint-pot'){garden.spray(pressed?dt:0,paintPose,PAINT_V2_COLOURS[magicBrush.paint.snapshot().colour]);}
+            else {if(!magicBrush.controls(painter,paintPose,localRay(painter.ray)))magicBrush.update(tip,pressed,null);}
+            if(pressed){onFeedback('paint',painter.source);paintingSource=painter.source;}else if(paintingSource){onFeedback('paint-stop',paintingSource);paintingSource=null;}
+        }else {magicBrush.hideControls();if(paintingSource){onFeedback('paint-stop',paintingSource);paintingSource=null;}const opened=magicBrush.end();if(opened)openFruit(opened,lastActionSource);}
+
+        if(fruitCue && !voice?.status().playing && !voice?.status().paused && !pendingLessonSpeech){void voice?.speak(fruitCue);fruitCue=null;}
+        garden.update(dt,lesson().id,{tableVisible:table.visible});if(garden.pouring && !wasPouring)onFeedback('water',lastActionSource);wasPouring=garden.pouring;
+        const basketReady=fruitModelsReady() && reveals.basket!==null && elapsed-reveals.basket>=3.1;
+        for(const b of practiceFruits)b.visible=(!practiceGroup || practiceGroup==='gloves') && basketReady && (!b.id.includes(':half') || Boolean(fruitVariants.get(b.id.split(':')[0])?.opened)) && (['basket','basket-reveal','practice-ready','grab','fruit','explore'].includes(phase()));
+        const flightInput=controllerTool==='insect'?inputs.find(i=>!i.source.hand && i.source.handedness==='right'):null;
+        const flightPose=flightInput?.matrix?new THREE.Matrix4().multiplyMatrices(worldInverse,new THREE.Matrix4().fromArray(flightInput.matrix)):null;
+        const pilot=flightInput?{...flightInput,reverse:Boolean(flightInput.down),aim:flightPose?new THREE.Vector3(0,0,-1).transformDirection(flightPose):null,up:flightPose?new THREE.Vector3(0,1,0).transformDirection(flightPose):null}:null;props.update(phase(),pilot,dt);basketReveal.update(reveals.basket===null?-1:elapsed-reveals.basket);props.basket.visible &&= ['basket','basket-reveal','practice-ready','grab','fruit','packet','seed','water','grow','harvest','explore'].includes(phase());if(practiceGroup && practiceGroup!=='gloves'){props.basket.visible=false;props.plate.visible=false;}magicBrush.paint.root.visible=!practiceGroup || practiceGroup==='gloves';
+        const physicsBodies=[...bodies,...trials.physicsBodies()];
+        const physicsOwned=getPhysicsOwner()?.step(physicsBodies,dt,{floor:-tableHeight,tableVisible:table.visible,basket:props.basket,plate:props.plate}) || new Set();
+        stepPracticeBodies(physicsBodies.filter(body=>!physicsOwned.has(body.id)),dt,{floor:-tableHeight,constrainMovement:props.constrainBasket,onImpact:(body,speed)=>{if(elapsed-lastImpact>.18){lastImpact=elapsed;onFeedback('impact',body.interactionSource || lastActionSource,Math.min(1,speed/3));}}});
+        trials.syncPhysics();
+        let visibilityChanged=false;for(const b of bodies){const mesh=objects.get(b.id);if(mesh.visible!==b.visible)visibilityChanged=true;mesh.visible=b.visible;mesh.position.set(b.position.x,b.position.y,b.position.z);mesh.quaternion.set(b.rotation.x,b.rotation.y,b.rotation.z,b.rotation.w);}
+        if(visibilityChanged)notifyAssets();
+        flight.update(dt,phase(),pilot);if(phase()==='fly')companionMixer?.update(dt);if(phase()!=='fly')dragon.group.visible=false;tableParts.landing.visible=phase()==='fly';
+        const audioOwner=getAudioOwner();if(audioOwner){
+            const worldPoint=p=>new THREE.Vector3().copy(p).applyMatrix4(root.matrixWorld);
+            audioOwner.update(dt,elapsed,{viewer,zinnia:zinniaMount.getWorldPosition(new THREE.Vector3()),water:worldPoint(bodies.find(body=>body.id==='watering-can').position),
+                insect:dragon.group.getWorldPosition(new THREE.Vector3()),watering:garden.pouring,flying:phase()==='fly' && dragon.group.visible,
+                paused:tutorialPaused || Boolean(voice?.status().paused),muted:Boolean(voice?.status().muted),visible:active && !exiting});
+        }
+        fruitHighlight.visible=false;
+        if(lesson().silent)textAge+=dt;
+        if(lesson().automatic){
+            const speaking=tutorialPaused || voice?.status().playing || voice?.status().paused;
+            if(speaking || pendingLessonSpeech)narrationFinishedAt=null;else if(narrationFinishedAt===null)narrationFinishedAt=elapsed;
+            const readTime=lesson().silent?0:voice?.status().muted || !voice?.status().available || voice?.status().hasPlayed===false?Math.max(5,(lesson().spoken || '').split(/\s+/).length/2.6):0;
+            const ready=(phase()!=='table' || reveals.table!==null && elapsed-reveals.table>=4.8) && (phase()!=='frame' || framePresentedAt!==null && frameOpacity()===1) && (phase()!=='table-reveal' || reveals.table!==null && elapsed-reveals.table>=4.4);
+            const assetsReady= (phase()!=='face' || zinniaCharacter.userData.zinnia.status==='ready') && (phase()!=='virtual-hands-intro' || handsReady && controllers.length===2 && controllerGuide.snapshot().filter(entry=>entry.ready && entry.visible).length>=2);
+            if(ready && assetsReady && !pendingLessonSpeech && !fruitCue && !(['basket','basket-reveal','practice-ready'].includes(phase()) && activeGrabs.size) && !speaking && textAge>Math.max(lesson().silent?lesson().hold || 2:5,lesson().hold || 0,readTime) && elapsed-narrationFinishedAt>(lesson().silent?0:lesson().afterPause || .8)){let next=index+1;while(['table-reveal','zinnia-reveal','conversation-bridge'].includes(WELCOME_PRACTICE_LESSONS[next]?.id))next++;if(lesson().advanceToDemo)finish();else setLesson(next);}
+        }
+        if(!tutorialPaused && pendingLessonSpeech && presentationReady && (renderRevision===null || renderRevision===sceneRevision) && elapsed-stepStarted>.15){
+            const objectReady=phase()==='table'?placementStarted!==null:phase()==='face'?reveals.zinnia!==null && elapsed-reveals.zinnia>=2.8:phase()==='basket'?basketReady && practiceFruits.some(body=>body.visible):phase()==='fly'?dragon.group.visible:phase()==='paint-pot' || phase()==='packet'?garden.snapshot().potVisible!==false && age>2.7:phase()==='virtual-hands-intro'?handsReady:phase()==='laser-intro'?laserProgress()===1:CONTROL_ORB_PHASES.includes(phase())?controlOrb.group.visible:true;
+            if(objectReady){textPresented=true;pendingLessonSpeech=false;stepStarted=elapsed;narrationFinishedAt=null;void voice?.speak(spokenLesson());lastSignature='';}
+        }
+        controlOrb.update(dt,practiceGroup==='controllers'?'controls-stick':phase(),inputs,controlWarmup.snapshot().completed,{visible:!trials.active && (practiceGroup==='controllers' || CONTROL_ORB_PHASES.includes(phase())),interact:dt>0 && controllerTool==='standard' && !lesson().automatic});
+        orbCoinTrail.update(dt,phase()===ORB_COIN_PHASE,controlOrb.collectionTargets());
+        const success=!pendingLessonSpeech && (phase()==='visitor-intro'?visitorIntroduction.state().phase==='complete':phase()==='laser-dance'?danceAge>=8:phase()==='laser-zinnia'?laserConfirmed:phase()===ORB_COIN_PHASE?orbCoinTrail.complete:phase()==='controls-orb-grab' || phase()==='controls-orb-open'?controlOrb.complete(phase()):phase().startsWith('settings-')?settingsPressed:phase().startsWith('controls-')?dt>0 && controlWarmup.update(phase(),inputs):phase()==='brush'?magicBrush.snapshot().painted && magicBrush.snapshot().docked:phase()==='grab'?orangeReleased && props.snapshot().plated.length>0:phase()==='gloves'?dt>0 && controlWarmup.update('controls-grip',inputs) && controllers.length===2 && controllers.every(input=>!input.down):phase()==='fruit'?new Set(props.snapshot().plated.map(id=>id.split(':')[0])).size>=2:phase()==='fly'?flight.complete:phase()==='rc-choice'?Boolean(flightCompanion):phase()==='hands'?['controllers','gloves'].includes(inputOverride)?inputs.some(input=>!input.source.hand && input.trigger):handStable>1.2 && inputs.some(input=>input.source.hand && input.trigger):phase()==='paint-pot'?garden.painted:phase()==='packet'?garden.opened:phase()==='seed'?garden.planted:phase()==='water'?garden.watered:phase()==='grow'?garden.grown:phase()==='harvest'?props.harvestComplete:false);
+        const guidance=lesson().silent?null:followupGuidance(),guidancePending=Boolean(guidance && !spokenGuidance.has(guidance.id));
+        if(guidancePending && !pendingLessonSpeech && presentationReady && !voice?.status().playing && !voice?.status().paused && !tutorialPaused){spokenGuidance.add(guidance.id);void voice?.speak(spokenLesson(guidance));lastSignature='';}
+        if(preparedPhase!==phase()){preparedPhase=phase();notifyAssets();}
+        if(success && !guidancePending){if(successAt===null){successAt=elapsed;zinniaCharacter.userData.zinnia.guide.celebrate();if(phase().startsWith('controls-')){for(const input of controllers)onFeedback('lesson',input.source);}else onFeedback('lesson',lastActionSource);}
+            if(lesson().silent && !successCuePlayed){successCuePlayed=true;successAt=elapsed;}
+            if(!lesson().silent && !successCuePlayed && elapsed-successAt>(phase()==='laser-zinnia'?1.8:.45) && !voice?.status().playing && !voice?.status().paused && !tutorialPaused){successCuePlayed=true;successAt=elapsed;const id=phase()==='hands'?'hands-ready':lesson().id+'-done',response=phase()==='hands'?null:cue(id),live=Boolean(response?.liveVoice),name=getZinniaVisitor().name,named=false;if(response)void voice?.speak({...response,spoken:named?`You’ve got it, ${name}. ${response.spoken}`:response.spoken,spokenOverride:true,recorded:false});}
+            if(successCuePlayed && elapsed-successAt>(lesson().silent?1.1:.55) && !voice?.status().playing && !voice?.status().paused && !tutorialPaused){if(rcToyActive && phase()==='fly'){rcToyActive=false;inputOverride=null;setLesson(WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='explore'));}else setLesson(index+1,{optional:rcToyActive});}
+        }
+        controllerGuide.update(dt,controllers,lesson().id,viewer,successAt!==null,1,controllerTool,{settingsUnlocked,paintColour:PAINT_V2_COLOURS[magicBrush.paint.snapshot().colour],completedHands:controlWarmup.snapshot().completed,rightStickClicked:controlWarmup.snapshot().completed.includes('right'),handReveal:handReveal(),framePose:getFramePose(),flying:phase()==='fly' && flight.snapshot().airborne,speed:flight.snapshot().speed});paint();
+    }
+    return {scene,root,previewHandMagic(age){virtualHandsIntroduced=true;handMagicStarted=elapsed-Math.max(0,Math.min(4,age));},loadPracticeAssets,openGame(id){if(id==='rc-flight')return openRcToy();const group=WELCOME_PRACTICE_GROUPS.find(g=>g.id===id);return group?openPracticeGroup(group.input):trials.open(id);},resumeGame(id){active=true;exiting=false;exitOpacity=1;tutorialPaused=false;root.visible=true;if(id==='rc-flight')return openRcToy();setLesson(WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='explore'));const group=WELCOME_PRACTICE_GROUPS.find(g=>g.id===id);if(group)return openPracticeGroup(group.input);inputOverride=['butterflies','tic-tac-toe'].includes(id)?'hands':null;pendingLessonSpeech=false;textPresented=true;return trials.open(id);},preloadControllers:sources=>controllerGuide.preload(sources),bodies,objects,dragon,trials,loading,start,setControllerTool(tool){if(guidedTrial && tool!=='standard')return false;if(!['standard','paint','insect'].includes(tool) || tool==='insect' && !snapshot().insectControllerAvailable)return false;controllerTool=tool;paintReady=false;magicBrush.end();if(tool!=='standard' && trials.active)trials.command('mode:controllers');lastSignature='';paint();return true;},setInputMode(mode){if(guidedTrial)return false;if(inputChoiceUnlocked && ['controllers','gloves','hands'].includes(mode))setWelcomeInputMethod(mode);releaseAll(false);if(['controllers','gloves','hands'].includes(mode)){controllerTool='standard';paintReady=false;}if(trials.active){trials.command('mode:'+mode);lastSignature='';paint();return true;}inputOverride=['controllers','gloves','hands'].includes(mode)?mode:null;if(mode==='gloves'){handMagicStarted=elapsed;virtualHandsIntroduced=true;magicFeedback.clear();}lastSignature='';paint();return true;},update,hit,select,button,snapshot,get sceneRevision(){return sceneRevision;},get settingsAvailable(){return settingsAvailable();},releaseLeaf(source){leafHolds.delete(source);},heldLeafPoint(hand){for(const [source,hold] of leafHolds)if(source.handedness===hand)return hold.point;return null;},releaseAll,paint:magicBrush.paint,isBrushHeld:source=>controllerTool==='paint' && source?.handedness==='right',isHolding:source=>leafHolds.has(source) || tableHeightOwner===source || controlOrb.isHolding(source) || trials.isHolding(source) || activeGrabs.has(source) || dragonOwner===source,abort,setTableHeightOffset,zinniaMount,takeZinniaCharacter(){zinniaReveal?.removeGlow();zinniaCharacter.removeFromParent();return zinniaCharacter;},get replayConversation(){return gameReplay;},get conversation(){return phase()==='visitor-intro' && visitorIntroduction.state().active?visitorIntroduction:null;},get exitOpacity(){return exitOpacity;},get exiting(){return exiting;},get active(){return active;},get phase(){return lesson().id;},get tableHeight(){return tableHeight;},get controllerLasersVisible(){return inputOverride!=='gloves' && !(handMagicStarted!==null && !inputOverride) && !['virtual-hands-intro','virtual-hands-reveal'].includes(phase()) && laserProgress()>0 && controllerTool==='standard' && gloveOpacity()===0 && !handsEnabled();},get controllerLaserProgress(){return laserProgress();},get controllerHandReveal(){return trials.active?{left:1,right:1}:handReveal();},get controllerHandsVisible(){return active && (trials.active?trials.mode==='gloves':gloveOpacity()>0);},get controllerHandOpacity(){return 1;},get handsEnabled(){return handsEnabled();},get trackedHandOpacity(){return !handsEnabled()?0:trials.active?1:phase()==='hands'?THREE.MathUtils.smoothstep(handStable,.4,2.4):1;},get hands(){return handsPresent;},previewLesson(id){controllerTool='standard';trials.close();const next=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id===id);if(next>=0){if(id!=='frame')framePresentedAt=elapsed-1.2;virtualHandsIntroduced=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='virtual-hands-reveal');handMagicStarted=null;inputOverride=null;laserStarted=null;reveals.table=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='table-reveal')?elapsed-4:null;reveals.zinnia=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='zinnia-reveal')?elapsed-4:null;reveals.basket=next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='basket-reveal')?elapsed-4:null;setLesson(next,{optional:true});if(next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='basket'))props.stockBasket();if(next>WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='laser-intro'))laserStarted=elapsed-2;if(next>=WELCOME_PRACTICE_LESSONS.findIndex(l=>l.id==='gloves')){virtualHandsIntroduced=true;handMagicStarted=elapsed-5;}garden.previewPhase(id);}},rebase(matrix){releaseAll(false);root.applyMatrix4(new THREE.Matrix4().fromArray(matrix));root.updateMatrixWorld(true);practiceFloorY+=Number(matrix?.[13])||0;tableParts.alignFootToFloor(practiceFloorY);},resetObjects(){if(Object.values(fruitAssets).includes('fallback')){fruitLoading=null;for(const id of Object.keys(fruitAssets))if(fruitAssets[id]==='fallback')fruitAssets[id]='loading';void loadPracticeAssets();}releaseAll(false);controlOrb.reset({keepSkills:true});magicBrush.reset();fruitMessage='';fruitCue=null;lastPickedFruit=null;twoHandPull=null;for(const [id,variants] of fruitVariants){resetInteractiveFruit(variants);const body=bodies.find(b=>b.id===id);body.halfSize={...variants.wholeHalfSize};body.radius=Math.max(...Object.values(body.halfSize));body.support=practiceSupport(body);}for(const part of fruitParts.values())part.visible=false;if(trials.active){trials.command('reset');return;}props.reset();bodies.forEach(resetPracticeBody);if(['grab','fruit','explore'].includes(phase()))props.stockBasket();if(phase()==='seed')garden.reset();},destroy({stopVoice=true}={}){focusLighting.destroy();disposed=true;active=false;visitorIntroduction.destroy();gameReplay.destroy();if(stopVoice)voice?.stop();releaseAll(false);trials.destroy();controlOrb.destroy();magicBrush.destroy();toolStation.destroy();controllerGuide.destroy();garden.destroy();if(zinniaCharacter.parent)disposeZinniaCharacter(zinniaCharacter);disposeTree(scene);}};
+}
