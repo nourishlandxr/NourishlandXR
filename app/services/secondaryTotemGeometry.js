@@ -4,19 +4,22 @@ export function createSecondaryTotemGeometry(style, segments=24) {
     const vertices=[],indices=[];
     function triangle(a,b,c,light=false) {
         const u=b.map((v,i)=>v-a[i]),v=c.map((n,i)=>n-a[i]);
-        const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot(...n)||1;
+        const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]],length=Math.hypot(...n);
+        if(length<1e-10)return;
         const start=vertices.length/8;
-        for(const p of [a,b,c])vertices.push(...p,...n.map(x=>x/length),.25+p[0]*.07,light?1.2:(p[1]+1)*.42);
+        for(const p of [a,b,c])vertices.push(...p,...n.map(x=>x/length),.25+p[0]*.07,typeof light==='number'?light+.2:light?1.2:(p[1]+1)*.42);
         indices.push(start,start+1,start+2);
     }
     function quad(a,b,c,d,light=false){triangle(a,b,c,light);triangle(a,c,d,light);}
     function polygon(points,z,depth,light=false) {
         const center=points.reduce((sum,p)=>[sum[0]+p[0]/points.length,sum[1]+p[1]/points.length],[0,0]);
+        const lip=Math.min(.045,depth*.26),rings=[[z,.96],[z+lip,1],[z+depth-lip,1],[z+depth,.96]];
+        const p=(r,i)=>[center[0]+(points[i][0]-center[0])*rings[r][1],center[1]+(points[i][1]-center[1])*rings[r][1],rings[r][0]];
         for(let i=0;i<points.length;i++) {
-            const a=points[i],b=points[(i+1)%points.length];
-            triangle([...center,z+depth],[...a,z+depth],[...b,z+depth],light);
-            triangle([...center,z],[...b,z],[...a,z],light);
-            quad([...a,z],[...b,z],[...b,z+depth],[...a,z+depth],light);
+            const j=(i+1)%points.length;
+            triangle([...center,z+depth],p(3,i),p(3,j),light);
+            triangle([...center,z],p(0,j),p(0,i),light);
+            for(let r=0;r<3;r++)quad(p(r,i),p(r,j),p(r+1,j),p(r+1,i),light);
         }
     }
     const box=(x,y,w,h,z,d,light=false)=>polygon([[x-w,y-h],[x+w,y-h],[x+w,y+h],[x-w,y+h]],z,d,light);
@@ -46,20 +49,64 @@ export function createSecondaryTotemGeometry(style, segments=24) {
             quad([...c,-.34],[...d,-.34],[...d,.34],[...c,.34]);
         }
     } else if(style==='rock') {
-        box(0,-.92,2.35,.08,-2,4);
-        for(let k=0;k<4;k++) {
-            const cy=-.68+k*.45,rx=2.6-k*.40,ry=k===3?.29:.26,rz=2.15-k*.30;
-            const point=(j,i)=>{const lat=-Math.PI/2+j*Math.PI/10,a=i*Math.PI*2/segments,r=1+.06*Math.sin(a*3+k)+.035*Math.cos(lat*5+a*2);return [Math.cos(lat)*Math.cos(a)*rx*r+.13*Math.sin(k*2),cy+Math.sin(lat)*ry,Math.cos(lat)*Math.sin(a)*rz*r];};
-            for(let j=0;j<10;j++)for(let i=0;i<segments;i++)quad(point(j,i),point(j+1,i),point(j+1,i+1),point(j,i+1));
+        // One standing stone carries the signs. A separate weathered footing
+        // replaces the repeated pebble stack, with an asymmetrical broken top.
+        const rockSegments=Math.max(18,Math.min(36,segments)),rows=16;
+        const profile=[[0,1.95],[.12,1.84],[.29,1.49],[.47,1.44],[.68,1.18],[.88,1.03],[1,.77]];
+        const radius=t=>{let i=1;while(i<profile.length-1&&profile[i][0]<t)i++;const [a,ra]=profile[i-1],[b,rb]=profile[i],u=(t-a)/(b-a);return ra+(rb-ra)*u;};
+        const monolith=(t,a)=>{
+            const r=radius(t)*(1+.07*Math.sin(a*3+.5)+.045*Math.cos(a*7+t*4));
+            const x=Math.cos(a)*r+.16*Math.sin(t*2.8)-.12;
+            const z=Math.min(Math.sin(a)*r*.76,r*.67)+.06*Math.sin(t*5);
+            const y=-.90+1.80*t+Math.sin(a*3+.4)*.015*Math.sin(t*Math.PI)+(t>.94?(t-.94)/.06*(.11*Math.cos(a)+.055*Math.sin(a*3)):0);
+            return [x,y,z];
+        };
+        for(let j=0;j<rows;j++)for(let i=0;i<rockSegments;i++){
+            const a=i*Math.PI*2/rockSegments,b=(i+1)*Math.PI*2/rockSegments;
+            quad(monolith(j/rows,a),monolith((j+1)/rows,a),monolith((j+1)/rows,b),monolith(j/rows,b));
         }
-        // A narrow mineral light seam, rather than illuminating the whole stone.
-        circle(0,-.01,1.30,.025,1.60,.03,true);
-        box(0,-.63,.88,.075,2.09,.04);
+        for(let i=0;i<rockSegments;i++){
+            const a=i*Math.PI*2/rockSegments,b=(i+1)*Math.PI*2/rockSegments;
+            triangle([0,.90,0],monolith(1,b),monolith(1,a));
+            const footing=(j,k)=>{const lat=-Math.PI/2+j*Math.PI/8,angle=k*Math.PI*2/rockSegments,r=1+.08*Math.sin(angle*5);return [Math.cos(lat)*Math.cos(angle)*2.55*r,-.90+Math.sin(lat)*.10,Math.cos(lat)*Math.sin(angle)*1.98*r];};
+            for(let j=0;j<8;j++)quad(footing(j,i),footing(j+1,i),footing(j+1,i+1),footing(j,i+1));
+        }
+        const front=(x,t)=>{
+            let z=-Infinity;
+            for(let i=0;i<rockSegments;i++){
+                const a=monolith(t,i*Math.PI*2/rockSegments),b=monolith(t,(i+1)*Math.PI*2/rockSegments),dx=b[0]-a[0];
+                if(Math.abs(dx)<1e-8)continue;const u=(x-a[0])/dx;
+                if(u>=0&&u<=1)z=Math.max(z,a[2]+u*(b[2]-a[2]));
+            }
+            return Number.isFinite(z)?z:0;
+        };
+        // Quartz and blue-green mineral seams are narrow raised inlays, with
+        // branching fractures. They remain quiet enough to read as real stone.
+        for(const branch of [0,1,2]){
+            const start=branch===2?.48:.055,end=branch===2?.83:.965,count=32;
+            const p=u=>{const t=start+(end-start)*u,x=branch===0?-.28+.27*Math.sin(t*8.3)+t*.30:branch===1?.56-.34*t+.11*Math.sin(t*13):-.28+(t-.48)*2.1,y=-.90+1.80*t;return [x,y,front(x,t)+.020];};
+            for(let i=0;i<count;i++){
+                const a=p(i/count),b=p((i+1)/count),w=branch===0?.033:branch===1?.014:.018;
+                quad([a[0]-w,a[1],a[2]],[a[0]+w,a[1],a[2]],[b[0]+w,b[1],b[2]],[b[0]-w,b[1],b[2]],branch===1?true:6);
+            }
+        }
+        // Small lichen islands at the foot, rather than a uniform green wash.
+        for(let k=0;k<9;k++){
+            const x=-1.0+k*.22,t=.04+.018*Math.sin(k*2.4),y=-.90+1.80*t,z=front(x,t)+.024;
+            const points=Array.from({length:7},(_,i)=>{const a=i*Math.PI*2/7,r=.10+.028*Math.sin(i*3+k);return [x+Math.cos(a)*r,y+Math.sin(a)*r*.17];});
+            polygon(points,z,.012,5);
+        }
     }
     if(style==='rock') {
         let low=Infinity,high=-Infinity;
         for(let i=1;i<vertices.length;i+=8){low=Math.min(low,vertices[i]);high=Math.max(high,vertices[i]);}
-        for(let i=1;i<vertices.length;i+=8)vertices[i]=(vertices[i]-low)/(high-low)*2-1;
+        const scaleY=2/(high-low);
+        for(let i=0;i<vertices.length;i+=8){
+            vertices[i+1]=(vertices[i+1]-low)*scaleY-1;
+            vertices[i+4]/=scaleY;
+            const length=Math.hypot(vertices[i+3],vertices[i+4],vertices[i+5]);
+            for(let k=3;k<6;k++)vertices[i+k]/=length;
+        }
     }
     return {vertices:new Float32Array(vertices),indices:new Uint16Array(indices)};
 }

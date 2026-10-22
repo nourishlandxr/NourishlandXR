@@ -13,7 +13,7 @@ for(const item of manifest.files){
  const file=path.join(root,'payload',name);if(fs.lstatSync(file).isSymbolicLink())throw Error('Symlink in release');const bytes=fs.readFileSync(file);if(bytes.length!==item.bytes||digest(bytes)!==item.sha256)throw Error('Artifact hash mismatch: '+name);
 }
 for(const name of ['index.html','education/index.html','platform/index.html','site/root-release.json','xr/services/buildInfo.js'])if(!seen.has(name))throw Error('Missing release file: '+name);
-const rank=name=>name==='site/root-release.json'?4:name==='xr/services/buildInfo.js'?3:name==='index.html'?2:name.endsWith('index.html')?1:0;
+const rank=name=>name==='site/root-release.json'?4:name==='xr/services/buildInfo.js'?3:name==='index.html'?2:name.endsWith('index.html')||name.endsWith('world-manifest.json')?1:0;
 manifest.files.sort((a,b)=>rank(a.file)-rank(b.file)||a.file.localeCompare(b.file));
 fs.writeFileSync(path.join(root,'files.tsv'),manifest.files.map(item=>[item.file,item.sha256,item.previousSha256||'-'].join('\t')).join('\n')+'\n');
 if(process.argv.includes('--public')){

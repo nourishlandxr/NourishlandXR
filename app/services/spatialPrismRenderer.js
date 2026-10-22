@@ -1,3 +1,4 @@
+import {createCraftedSignGeometry} from './craftedTotemGeometry.js';
 function compileShader(gl, type, source) {
     const shader = gl.createShader(type);
     gl.shaderSource(shader, source);
@@ -109,6 +110,8 @@ export function createSpatialPrismRenderer(gl) {
         uniform float alpha;
         uniform float woodGrain;
         uniform float grainDirection;
+        uniform float craftedSign;
+        uniform float signMaterial;
         uniform vec3 notificationColour;
         uniform float notificationStrength;
         void main() {
@@ -138,6 +141,14 @@ export function createSpatialPrismRenderer(gl) {
             }
             float glassGrain=.5+.5*sin(localPosition.x*115.+sin(localPosition.y*90.)*.6);
             shaded=mix(shaded,notificationColour*(.72+.16*glassGrain+notificationStrength*1.5)+vec3(.8,.94,.9)*sheen*.55,collar);
+            if(craftedSign>.5){
+                float grain=sin(localPosition.y*92.+sin(localPosition.x*5.)*.35)*.018;
+                if(signMaterial>1.5)grain=sin(localPosition.x*231.+localPosition.y*113.)*sin(localPosition.y*193.)*.006;
+                if(signMaterial>3.5)grain+=sin(localPosition.y*54.+sin(localPosition.x*15.)*1.6)*.035;
+                float glint=pow(max(dot(normal,normalize(lightDirection+viewer)),0.),28.);
+                shaded=color*(.64+.37*diffuse+grain)+vec3(.95,.80,.55)*glint*.055;
+                if(signMaterial>2.5&&signMaterial<3.5)shaded+=vec3(.8,.94,.92)*(glint*.12+rim*.09);
+            }
             gl_FragColor = vec4(shaded, alpha);
         }
     `);
@@ -158,6 +169,7 @@ export function createSpatialPrismRenderer(gl) {
     gl.bufferData(gl.ARRAY_BUFFER, geometry, gl.STATIC_DRAW);
     return {
         program,
+        signMeshes:{},
         vertexBuffer,
         vertexCount: geometry.length / 6,
         positionLocation: gl.getAttribLocation(program, 'position'),
@@ -168,6 +180,8 @@ export function createSpatialPrismRenderer(gl) {
         topTaperLocation: gl.getUniformLocation(program, 'topTaper'),
         colorLocation: gl.getUniformLocation(program, 'color'),
         topColorLocation: gl.getUniformLocation(program, 'topColor'),
+        craftedSignLocation:gl.getUniformLocation(program,'craftedSign'),
+        signMaterialLocation:gl.getUniformLocation(program,'signMaterial'),
         woodLocation:gl.getUniformLocation(program,'woodGrain'),grainLocation:gl.getUniformLocation(program,'grainDirection'),
         alphaLocation: gl.getUniformLocation(program, 'alpha'),
         notificationColourLocation:gl.getUniformLocation(program,'notificationColour'),
@@ -189,7 +203,13 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.depthMask(alpha >= .95);
     gl.useProgram(renderer.program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, renderer.vertexBuffer);
+    let vertexBuffer=renderer.vertexBuffer,vertexCount=renderer.vertexCount;
+    if(options.signBoard){
+        const key=options.signStyle?options.signStyle+':'+options.signBoard:options.signBoard;
+        if(!renderer.signMeshes[key]){const geometry=createCraftedSignGeometry(options.signBoard,options.signStyle),buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,geometry,gl.STATIC_DRAW);renderer.signMeshes[key]={buffer,count:geometry.length/6};}
+        vertexBuffer=renderer.signMeshes[key].buffer;vertexCount=renderer.signMeshes[key].count;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
     gl.enableVertexAttribArray(renderer.positionLocation);
     gl.vertexAttribPointer(renderer.positionLocation, 3, gl.FLOAT, false, 24, 0);
     gl.enableVertexAttribArray(renderer.normalLocation);
@@ -200,12 +220,14 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
     gl.uniform1f(renderer.topTaperLocation, Number.isFinite(options.topTaper) ? options.topTaper : 1);
     gl.uniform3fv(renderer.colorLocation, options.color || [.34, .78, .7]);
     gl.uniform3fv(renderer.topColorLocation, options.topColor || [.58, .93, .84]);
+    gl.uniform1f(renderer.craftedSignLocation,options.signBoard?1:0);
+    gl.uniform1f(renderer.signMaterialLocation,options.signMaterial||0);
     gl.uniform1f(renderer.woodLocation,options.woodGrain || 0);
     gl.uniform1f(renderer.grainLocation,options.grainDirection || 0);
     gl.uniform1f(renderer.alphaLocation, alpha);
     gl.uniform3fv(renderer.notificationColourLocation,options.notification?.colour || [1,1,1]);
     gl.uniform1f(renderer.notificationStrengthLocation,options.notification?.strength || 0);
-    gl.drawArrays(gl.TRIANGLES, 0, renderer.vertexCount);
+    gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
     gl.depthMask(true);
     gl.disable(gl.CULL_FACE);
 }
@@ -213,5 +235,6 @@ export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
 export function destroySpatialPrismRenderer(gl, renderer) {
     if (!gl || !renderer) return;
     gl.deleteBuffer(renderer.vertexBuffer);
+    for(const mesh of Object.values(renderer.signMeshes||{}))gl.deleteBuffer(mesh.buffer);
     gl.deleteProgram(renderer.program);
 }

@@ -1,3 +1,4 @@
+import {totemSignMount} from './totemSignMounts.js';
 import { drawSpatialSphere } from './spatialSphereRenderer.js';
 import { drawSpatialPrism } from './spatialPrismRenderer.js';
 import { totemSculpturePoint } from './spatialTotemSculpture.js';
@@ -5,6 +6,7 @@ import { currentTotemModel, currentInfoOpacity } from './spatialVisualSettings.j
 import { totemHeightPreset, renderedTotemStyle } from './totemAppearance.js';
 import { SPATIAL_OBJECT_VISUALS, spatialTransitionProgress } from './spatialObjectVisuals.js';
 import {createCraftedTimberCanvas} from './craftedSurfaceTextures.js';
+import {craftedTotemSignStyle,paintCraftedTotemSign} from './craftedTotemSigns.js';
 
 const TOTEM_BUTTON_WIDTH = .104;
 const TOTEM_BUTTON_RADIUS = .052;
@@ -90,11 +92,11 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const front={x:-right.z,y:0,z:right.x};
     const bodyHalfDepth = Number(state?.bodyHalfDepth) || .035;
     const bodyHalfWidth = Number(state?.bodyHalfWidth) || .07;
+    const bodyHalfHeight = Number(state?.bodyHalfHeight) || (state?.demoZone ? 1 : .69);
     const demoZone=Boolean(state?.demoZone);
     const demoScale=(Number(state?.bodyHalfHeight) || (demoZone ? 1 : .69))/.82;
-    const boardWidth = Number(state?.boardWidth) || (demoZone ? .66 : .68);
+    const boardWidth = Number(state?.boardWidth) || (demoZone ? .46 : .48)*Math.max(.8,Math.min(1.6,bodyHalfHeight/.6));
     const boardHeight = Number(state?.boardHeight) || (demoZone ? .17 : .18);
-    const boardAttach=bodyHalfWidth+boardWidth/2-.035;
     const place = (x,y,width,height,card,detail=false,offset=bodyHalfDepth+.018) => ({
         center:{x:position.x+right.x*x+front.x*offset,y:position.y+y,z:position.z+right.z*x+front.z*offset},
         right, width,height,card,detail
@@ -104,27 +106,31 @@ export function totemCardSurfaces(position, right, cards, selectedId = '', state
     const faded=typeof state==='object' ? Boolean(state.faded) : false;
     const signs={id:'__signs',title:'SIGNS',symbol:'↔',control:true,pressed:signsVisible && !faded};
     const fade={id:'__fade',title:faded?'WAKE':'FADE',symbol:'◐',control:true,pressed:faded};
-    const bodyHalfHeight = Number(state?.bodyHalfHeight) || (demoZone ? 1 : .69);
     const buttons = totemControlButtonLayout(position, right, { bodyHalfDepth, bodyHalfHeight,style:state.style || currentTotemModel() });
     const style=state.style || currentTotemModel();
     const signBoard = (card, index, count) => {
         const side=card.boardSide==='left'?-1:card.boardSide==='right'?1:0;
-        return {
-            ...place(side*boardAttach, bodyHalfHeight*(.68+(count-1-index)*.30), boardWidth*(style==='moon'?.88:style==='sun'?1.08:1), boardHeight*(style==='basic'?.84:style==='sun'?1.1:1), {
+        const y=bodyHalfHeight*(.68+(count-1-index)*.30),width=boardWidth*(style==='moon'?.88:style==='sun'?1.08:1),height=boardHeight*(style==='basic'?.84:style==='sun'?1.1:1);
+        const mount=totemSignMount({style,y,width,height,halfWidth:bodyHalfWidth,halfDepth:bodyHalfDepth,halfHeight:bodyHalfHeight,side,boardHalfDepth:craftedTotemSignStyle(style).halfDepth});
+        return {mount,origin:position,
+            ...place(mount.x,y,width,height,{
                 ...card,
                 glassOpacity:Math.max(.92,currentInfoOpacity()),
                 boardStyle:'attached-sign',signStyle:style,
                 boardSide:card.boardSide || '',
                 directional:Boolean(card.navigation?.reliable),selected:card.id===selectedId
-            }),
+            },false,mount.front),
             opacity:card.id===selectedId && !globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches? .9+.1*Math.sin(performance.now()/260):1,
             boardSide:card.boardSide || ''
         };
     };
     const titleBottom=buttons[0].faceCenter.y-position.y+.075;
     const titleHeight=Math.max(.025,Math.min(.18,1.88*bodyHalfHeight-titleBottom-.015));
-    const headerBoard = cards[0] ? {
-        ...place(0,bodyHalfHeight*2+(['basic','organic','botanical','carved'].includes(style)?bodyHalfHeight*.36+.12:.16),demoZone ? .92 : .90,.23,{...cards[0],title:String(cards[0].title || '').toUpperCase(),freeText:true,boardStyle:'header-lettering',stats:undefined}),
+    const crafted=['basic','carved','botanical'].includes(style);
+    const headerY=crafted?bodyHalfHeight*1.91:bodyHalfHeight*2+(style==='organic'?bodyHalfHeight*.36+.12:.16);
+    const headerMount=crafted?totemSignMount({style,y:headerY,width:.40,height:.12,halfWidth:bodyHalfWidth,halfDepth:bodyHalfDepth,halfHeight:bodyHalfHeight,boardHalfDepth:.014}):null;
+    const headerBoard = cards[0] ? {mount:headerMount,origin:position,
+        ...place(headerMount?.x||0,headerY,crafted?.40:demoZone?.92:.90,crafted?.12:.23,{...cards[0],title:crafted?String(cards[0].title || ''):String(cards[0].title || '').toUpperCase(),freeText:!crafted,timberHeader:crafted,signStyle:style,boardStyle:'header-lettering',stats:undefined},false,headerMount?.front??bodyHalfDepth+.018),
         boardStyle:'header'
     } : null;
     const signCards=cards.slice(1,5);
@@ -180,30 +186,38 @@ export function resolveTotemNavigation(record, partner, facingRotation=record?.r
 
 export function drawSpatialTotemPlaques(gl, prismRenderer, sphereRenderer, view, surfaces, opacity = 1) {
     for(const surface of surfaces) {
-        // Glass backgrounds and outlines live in the text texture. An opaque
-        // timber backing would defeat the shared opacity preference.
-        if(surface.card?.control || surface.card?.freeText || Number.isFinite(surface.card?.glassOpacity))continue;
+        // Physical signs use a solid board and a post-mounted bracket.
+        // Information panels retain their own opacity and text surfaces.
+        const craftedBoard=surface.card?.timberHeader || surface.card?.boardStyle==='attached-sign';
+        if(surface.card?.control || surface.card?.freeText || Number.isFinite(surface.card?.glassOpacity)&&!craftedBoard)continue;
         const style=surface.card?.boardStyle || surface.boardStyle;
-        const header=style==='header' || style==='header-detail' || style==='header-compact';
+        const header=surface.card?.timberHeader || style==='header' || style==='header-detail' || style==='header-compact';
         const right=surface.right,front={x:-right.z,y:0,z:right.x};
-        const rotationY=Math.atan2(-right.z,right.x),halfDepth=header ? .014 : .009;
+        const signProfile=craftedTotemSignStyle(surface.card?.signStyle);
+        const rotationY=Math.atan2(-right.z,right.x),halfDepth=surface.mount?.boardHalfDepth??(header ? .014 : .009);
+        if(surface.mount&&surface.origin){
+            const bracket=surface.mount.bracket,origin=surface.origin;
+            drawSpatialPrism(gl,prismRenderer,view,{x:origin.x+right.x*bracket.x+front.x*bracket.z,y:origin.y+bracket.y-bracket.halfHeight,z:origin.z+right.z*bracket.x+front.z*bracket.z},{halfWidth:bracket.halfWidth,halfHeight:bracket.halfHeight,halfDepth:bracket.halfDepth,signBoard:'bracket',color:signProfile.mountRGB,alpha:opacity*(surface.opacity??1),rotationY});
+        }
         const centerDepth={x:surface.center.x-front.x*(halfDepth+.003),z:surface.center.z-front.z*(halfDepth+.003)};
         const visual=SPATIAL_OBJECT_VISUALS.totem;
-        const colour=header ? visual.boardHeader : visual.boardWood;
+        const colour=craftedBoard?signProfile.colourRGB:header ? visual.boardHeader : visual.boardWood;
         const highlight=header ? visual.boardHeaderEdge : visual.boardWoodEdge;
         drawSpatialPrism(gl,prismRenderer,view,{x:centerDepth.x,y:surface.center.y-surface.height/2,z:centerDepth.z},{
             halfWidth:surface.width/2,halfHeight:surface.height/2,halfDepth,
-            color:colour,topColor:highlight,woodGrain:visual.woodGrain,grainDirection:1,topTaper:header ? .96 : .975,alpha:opacity*(surface.opacity ?? 1),rotationY
+            signBoard:craftedBoard?(surface.card?.timberHeader?'header':surface.card?.boardSide||'header'):undefined,
+            signStyle:craftedBoard?surface.card?.signStyle:undefined,signMaterial:({timber:1,ceramic:2,glass:3,stone:4})[signProfile.material],
+            color:colour,topColor:highlight,woodGrain:signProfile.material==='timber'?visual.woodGrain:0,grainDirection:1,topTaper:craftedBoard?1:header ? .96 : .975,alpha:opacity*(surface.opacity ?? 1),rotationY
         });
         const fixingOffsets=header ? [-surface.height*.27,surface.height*.27] : [0];
         for(const yOffset of fixingOffsets) {
             const fixingCenter={
-                x:surface.center.x+front.x*.006,
+                x:surface.center.x+right.x*(surface.mount?surface.mount.bracket.x-surface.mount.x:0)+front.x*.006,
                 y:surface.center.y+yOffset,
-                z:surface.center.z+front.z*.006
+                z:surface.center.z+right.z*(surface.mount?surface.mount.bracket.x-surface.mount.x:0)+front.z*.006
             };
             drawSpatialSphere(gl,sphereRenderer,view.projectionMatrix,view.transform.inverse.matrix,fixingCenter,.009,{
-                color:[.44,.40,.30],alpha:opacity*(surface.opacity ?? 1),emissive:.018,roughness:.4,metalness:.55,scale:{x:1,y:1,z:.32},rotationY
+                color:signProfile.mountRGB,alpha:opacity*(surface.opacity ?? 1),emissive:.018,roughness:.4,metalness:.55,scale:{x:1,y:1,z:.32},rotationY
             });
         }
     }
@@ -272,7 +286,7 @@ function wrapped(ctx,text,x,y,width,lineHeight,maxLines) {
 
 function cardCanvas(card, detail) {
     const boardStyle=card.boardStyle || (detail ? 'header-detail' : 'card');
-    const timberSign=boardStyle==='attached-sign' && ['basic','carved','botanical','organic'].includes(card.signStyle);
+    const timberSign=boardStyle==='attached-sign';
     const resolution=boardStyle==='header-lettering'?[2048,512]:card.control ? TOTEM_TEXT_RESOLUTION.control
         : detail ? TOTEM_TEXT_RESOLUTION.detail
             : boardStyle==='header' || boardStyle==='header-detail' || boardStyle==='header-compact' ? TOTEM_TEXT_RESOLUTION.header : TOTEM_TEXT_RESOLUTION.plaque;
@@ -283,11 +297,12 @@ function cardCanvas(card, detail) {
     ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.shadowColor='rgba(5,10,8,.72)';ctx.shadowBlur=3;ctx.shadowOffsetY=2;
     const face='Manrope, "Segoe UI", system-ui, sans-serif';
+    if(boardStyle==='attached-sign'||card.timberHeader){paintCraftedTotemSign(ctx,card);return canvas;}
     if(Number.isFinite(card.glassOpacity) && !card.freeText){
         const width=canvas.width/2,height=canvas.height/2;
         ctx.save();ctx.shadowBlur=0;ctx.shadowOffsetY=0;
         ctx.beginPath();
-        if(boardStyle==='attached-sign' && ['sun','moon','leaf','botanical','rock'].includes(card.signStyle)){const r=card.signStyle==='rock'?6:card.signStyle==='sun'?height*.46:card.signStyle==='moon'?height*.36:height*.24;ctx.roundRect(7,7,width-14,height-14,r);}
+        if(boardStyle==='attached-sign' && !timberSign && ['sun','moon','leaf','rock'].includes(card.signStyle)){const r=card.signStyle==='rock'?6:card.signStyle==='sun'?height*.46:card.signStyle==='moon'?height*.36:height*.24;ctx.roundRect(7,7,width-14,height-14,r);}
         else if(boardStyle==='attached-sign' && card.boardSide){const left=card.boardSide==='left',tip=left?7:width-7,edge=left?70:width-70;ctx.moveTo(tip,height/2);ctx.lineTo(edge,7);ctx.lineTo(left?width-7:7,7);ctx.lineTo(left?width-7:7,height-7);ctx.lineTo(edge,height-7);ctx.closePath();}
         else ctx.roundRect(7,7,width-14,height-14,boardStyle==='header-compact'?height/2:24);
         ctx.fillStyle=card.selected?`rgba(6,36,62,${Math.max(.5,card.glassOpacity)})`:boardStyle==='header-compact'?`rgba(37,48,43,${card.glassOpacity})`:`rgba(${({sun:'60,44,21',moon:'28,30,53',leaf:'25,49,33',botanical:'25,49,33',rock:'38,45,47',carved:'52,39,27',organic:'24,44,45',basic:'24,44,45'})[card.signStyle] || '8,30,28'},${card.glassOpacity*.80})`;ctx.fill();
@@ -295,7 +310,10 @@ function cardCanvas(card, detail) {
             ctx.save();ctx.clip();ctx.drawImage(createCraftedTimberCanvas({width:1024,height:256,pale:true,horizontal:true}),0,0,width,height);
             const light=ctx.createLinearGradient(0,0,0,height);light.addColorStop(0,'rgba(255,250,228,.32)');light.addColorStop(.14,'rgba(255,250,228,0)');light.addColorStop(.85,'rgba(62,34,12,0)');light.addColorStop(1,'rgba(62,34,12,.22)');ctx.fillStyle=light;ctx.fillRect(0,0,width,height);ctx.restore();
         }
-        ctx.strokeStyle='rgba(213,232,207,.84)';ctx.lineWidth=card.signStyle==='basic' || card.signStyle==='organic'?2:3;ctx.stroke();ctx.restore();
+        ctx.strokeStyle=timberSign?'rgba(139,91,44,.72)':'rgba(213,232,207,.84)';ctx.lineWidth=card.signStyle==='basic' || card.signStyle==='organic'?2:3;ctx.stroke();ctx.restore();
+    }
+    if(boardStyle==='header-lettering' && card.timberHeader){
+        ctx.shadowBlur=0;ctx.shadowOffsetY=0;ctx.fillStyle='#49321d';let size=86;ctx.font=`550 ${size}px ${face}`;while(size>38&&ctx.measureText(card.title).width>860){size-=2;ctx.font=`550 ${size}px ${face}`;}ctx.fillText(card.title,512,128);return canvas;
     }
     if(boardStyle==='header-lettering'){
         const gradient=ctx.createLinearGradient(0,60,0,200);gradient.addColorStop(0,'#ffffff');gradient.addColorStop(.45,'#e2f5ec');gradient.addColorStop(.6,'#a3c8bd');gradient.addColorStop(1,'#e5fff4');

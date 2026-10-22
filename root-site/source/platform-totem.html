@@ -44,12 +44,10 @@
    </section>
    <section class="creator-feature" id="creator-totem" data-creator-panel="totem" hidden aria-labelledby="creator-totem-title" inert>
     <header><h3 id="creator-totem-title" tabindex="-1">A guide to what’s around you.</h3><p>Totems give each area a point of reference. Their signs connect plant guides, field notes and the next place to explore.</p></header>
-    <div class="creator-totem-example"><img src="/site/creator/actual-totem-signs.webp" alt="Actual Nourishland Food Forest Totem with Plant Orbs, Field Notes and Next Totem signs" width="900" height="736" loading="lazy">
-     <button type="button" class="creator-totem-hotspot" data-creator-sign="pimo" aria-label="See how Plant Orbs connect to PIMOs" style="--left:53%;--top:55.5%;--width:22%;--height:8%"></button>
-     <button type="button" class="creator-totem-hotspot" data-creator-sign="notes" aria-label="Learn about Field Notes on a Totem" style="--left:25%;--top:64%;--width:23%;--height:8%"></button>
-     <button type="button" class="creator-totem-hotspot" data-creator-sign="imap" aria-label="See how the next Totem connects on the IMAP" style="--left:54%;--top:71.5%;--width:20%;--height:8%"></button>
-    </div>
-    <p class="creator-interaction-hint">Actual NL Totem · select a sign</p><p class="creator-totem-note" data-creator-totem-note aria-live="polite">A Totem connects the information in an area with the paths beyond it.</p>
+    <div class="creator-totem-example creator-totem-live" data-creator-totem-stage><img src="/site/creator/totem-basic-09780.webp" alt="Nourishland carved timber Totem with its attached signs" width="450" height="600" loading="lazy"><canvas data-creator-totem tabindex="0" aria-label="Nourishland Totem. Drag to turn, use left and right arrow keys to rotate."></canvas><p data-creator-totem-status role="status">The 3D Totem loads when you open this feature.</p></div>
+    <label class="creator-totem-choice">A Totem for each place <select data-creator-totem-style aria-label="Totem style"><option value="basic">Bionic Pole</option></select></label>
+    <nav class="creator-totem-links" aria-label="Totem destinations"><button type="button" data-creator-sign="pimo">Plant Orbs ↗</button><button type="button" data-creator-sign="notes">Field Notes</button><button type="button" data-creator-sign="imap">Next Totem ↗</button></nav>
+    <p class="creator-interaction-hint">Drag to turn · select a sign</p><p class="creator-totem-note" data-creator-totem-note aria-live="polite">A Totem connects the information in an area with the paths beyond it.</p>
    </section>
    <section class="creator-feature" id="creator-imap" data-creator-panel="imap" hidden aria-labelledby="creator-imap-title" inert>
     <header><h3 id="creator-imap-title" tabindex="-1">See the whole place take shape.</h3><p>The Interactive Map brings terrain, areas and connections together. It can be updated as the project grows.</p></header>

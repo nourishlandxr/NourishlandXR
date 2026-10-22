@@ -1,7 +1,7 @@
 <!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Sculpted Totem study</title>
-<style>body{margin:0;background:#202c27;color:#f1eadb;font:16px/1.5 system-ui}main{max-width:900px;margin:auto;padding:20px}h1{font:500 28px/1.2 Georgia,serif;margin:0 0 10px}p{color:#c0cabd;margin:8px 0 16px}canvas{width:100%;max-height:70vh;object-fit:contain;display:block;border-radius:22px;background:radial-gradient(ellipse at 45% 40%,#6e7a63,#273c34 85%)}nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}button,a{color:inherit}button{padding:9px 15px;border:1px solid #9a9f86;border-radius:24px;background:#ffffff0d;font:inherit;cursor:pointer}button[aria-pressed="true"],button:hover,button:focus-visible{background:#c8bf8c30;outline:2px solid #ceb780}#destination-status{display:block;min-height:24px;color:#d8cfb0}#errors{color:#ffccad}</style>
-<main><h1>Totems · four crafted forms</h1><p>Bionic Pole, Carved Timber, Botanical Column and Halo Stem. Soft glass light, fine grain and flush bronze controls. The signs and their destinations use the production interaction layout.</p>
-<nav aria-label="Totem style"><button data-model="carved" aria-pressed="true">Carved timber</button><button data-model="botanical" aria-pressed="false">Botanical column</button><button data-model="basic" aria-pressed="false">Bionic Pole</button><button data-model="organic" aria-pressed="false">Halo Stem</button></nav><nav aria-label="Totem height"><button data-height=".46">Low · 0.92 m</button><button data-height=".60">Standard · 1.2 m</button><button data-height=".75">Tall · 1.5 m</button><button data-height="1">Life size · 2 m</button><button data-sign="home">Open welcome</button></nav><nav aria-label="Totem appearance"><button id="reset">Face front</button><button id="left">Turn left</button><button id="right">Turn right</button><button id="signs">Hide signs</button><button id="fade">Fade Totem</button><button id="background">Bright / dark background</button></nav>
+<style>body{margin:0;background:#202c27;color:#f1eadb;font:16px/1.5 system-ui}main{max-width:900px;margin:auto;padding:20px}h1{font:500 28px/1.2 Georgia,serif;margin:0 0 10px}p{color:#c0cabd;margin:8px 0 16px}canvas{width:100%;max-height:70vh;object-fit:contain;display:block;border-radius:22px;background:radial-gradient(ellipse at 45% 40%,#6e7a63,#273c34 85%)}nav{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}#model-description{font-size:13px;line-height:1.5;min-height:40px}[data-totem-models] button[data-model=sun],[data-totem-models] button[data-model=leaf],[data-totem-models] button[data-model=rock],[data-totem-models] button[data-model=moon]{border-bottom-width:3px}button,a{color:inherit}button{padding:9px 15px;border:1px solid #9a9f86;border-radius:24px;background:#ffffff0d;font:inherit;cursor:pointer}button[aria-pressed="true"],button:hover,button:focus-visible{background:#c8bf8c30;outline:2px solid #ceb780}#destination-status{display:block;min-height:24px;color:#d8cfb0}#errors{color:#ffccad}</style>
+<main><h1>Totems · the complete family</h1><p>Eight Nourishland forms: Bionic Pole, Carved Timber, Botanical Column, Halo Stem, Sun, Leaf, Rock and Moon. Select a model, turn it and try its signs.</p>
+<nav aria-label="Totem style" data-totem-models></nav><p id="model-description" aria-live="polite"></p><nav aria-label="Totem height"><button data-height=".46">Low · 0.92 m</button><button data-height=".60">Standard · 1.2 m</button><button data-height=".675">Sub-area · 1.35 m</button><button data-height=".75">Tall · 1.5 m</button><button data-height="1">Life size · 2 m</button><button data-sign="home">Open welcome</button></nav><nav aria-label="Totem appearance"><button id="reset">Face front</button><button id="side-view" aria-label="View Totem from the side">Side view</button><button id="left">Turn left</button><button id="right">Turn right</button><button id="signs">Hide signs</button><button id="fade">Fade Totem</button><button id="background">Bright / dark background</button></nav>
 <canvas id="totem" width="1000" height="1100" aria-label="Sculpted timber Totem with signs, Plant Orb, Field Note and other Totem"></canvas>
 <nav aria-label="Select a sign"><button data-sign="plant">Plant Orb</button><button data-sign="notes">Field Note</button><button data-sign="neighbour">Other Totem</button></nav><span id="destination-status" role="status">No destination selected</span><p id="errors" role="status"></p><p><a href="preview-spatial-objects.html">Return to Orb and Totem overview</a></p></main>
 <script type="module">
@@ -12,6 +12,7 @@ import {createSpatialTotemCards,totemCardSurfaces,drawSpatialTotemPlaques,drawSp
 import {createSpatialTetherRenderer} from '../app/services/spatialTetherRenderer.js';
 import {selectTotemSign,selectedTotemDestinationIds,drawSignDestinationHighlight,totemNotificationLight} from '../app/services/totemSignSelection.js';
 import {SPATIAL_OBJECT_VISUALS} from '../app/services/spatialObjectVisuals.js';
+import {TOTEM_MODEL_CHOICES} from '../app/services/totemAppearance.js';
 const identity=()=>new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]);
 function view(canvas,y,z){const f=1/Math.tan(.67/2),a=canvas.width/canvas.height,n=.05,far=30,m=identity(),inverse=identity();m[13]=y;m[14]=z;inverse[13]=-y;inverse[14]=-z;return {projectionMatrix:new Float32Array([f/a,0,0,0,0,f,0,0,0,0,(far+n)/(n-far),-1,0,0,2*far*n/(n-far),0]),transform:{matrix:m,inverse:{matrix:inverse}}};}
 try{
@@ -33,10 +34,24 @@ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function progress(start,duration){if(reduced)return 1;const t=Math.max(0,Math.min(1,(performance.now()-start)/duration));return t*t*(3-2*t);}
 function toggleSigns(){signs=!signs;signStart=performance.now();document.querySelector('#signs').textContent=signs?'Hide signs':'Show signs';}
 function toggleFade(){faded=!faded;fadeStart=performance.now();document.querySelector('#fade').textContent=faded?'Wake Totem':'Fade Totem';}
-document.querySelectorAll('[data-model]').forEach(button=>button.onclick=()=>{model=button.dataset.model;document.querySelectorAll('[data-model]').forEach(choice=>choice.setAttribute('aria-pressed',String(choice===button)));});
+const modelNav=document.querySelector('[data-totem-models]');
+const modelDescription=document.querySelector('#model-description');
+function chooseModel(id){
+ const choice=TOTEM_MODEL_CHOICES.find(item=>item.id===id);if(!choice)return;
+ model=id;totemCanvas.dataset.currentModel=id;
+ totemCanvas.setAttribute('aria-label',choice.label+' with directional signs. Drag to turn; use the sign controls below.');
+ modelDescription.textContent=choice.description;
+ record.appearance={notificationColor:choice.color || '#a3ad82'};
+ document.querySelectorAll('[data-model]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.model===id)));
+}
+for(const choice of TOTEM_MODEL_CHOICES){
+ const button=document.createElement('button');button.type='button';button.dataset.model=choice.id;button.textContent=choice.label;button.setAttribute('aria-pressed',String(choice.id===model));button.addEventListener('click',()=>chooseModel(choice.id));modelNav.append(button);
+}
+chooseModel(model);
 document.querySelectorAll('[data-height]').forEach(button=>button.onclick=()=>{halfHeight=Number(button.dataset.height);});
 document.querySelector('#signs').onclick=toggleSigns;document.querySelector('#fade').onclick=toggleFade;
 document.querySelector('#reset').onclick=()=>{yaw=.12;record.rotationY=yaw;};
+document.querySelector('#side-view').onclick=()=>{yaw=Math.PI/2;record.rotationY=yaw;};
 document.querySelector('#left').onclick=()=>{yaw-=Math.PI/12;record.rotationY=yaw;};
 document.querySelector('#right').onclick=()=>{yaw+=Math.PI/12;record.rotationY=yaw;};
 function chooseSign(id){selectTotemSign(record,id,[record]);const card=cards.find(item=>item.id===record.totemSelectedCard);document.querySelector('#destination-status').textContent=card?(card.id==='home'?'Welcome and local notes open':'Highlighted: '+card.title):'No destination selected';}

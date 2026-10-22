@@ -1,6 +1,23 @@
 // Baked once, shared by the table and the native XR Totem renderer.
 // All variation is deterministic; there is no texture generation in the frame loop.
 const timberCanvases=new Map();
+const stoneCanvases=new Map();
+export function createCraftedStoneCanvas({width=512,height=1024}={}){
+    const key=width+':'+height;if(stoneCanvases.has(key))return stoneCanvases.get(key);
+    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    const ctx=canvas.getContext('2d'),image=ctx.createImageData(width,height);
+    for(let y=0;y<height;y++)for(let x=0;x<width;x++){
+        const u=x/width,v=y/height;
+        const grain=Math.sin(x*127.1+y*311.7)*43758.5453,noise=grain-Math.floor(grain);
+        const strata=Math.sin(v*83+u*11+Math.sin(u*22+v*9)*2.2);
+        const broad=Math.sin(u*21+Math.sin(v*13))*Math.cos(v*27-u*5);
+        const mineral=Math.pow(Math.max(0,Math.sin(u*251+v*91)),18)*.10;
+        const tone=broad*.06+strata*.025+(noise-.5)*.10+mineral;
+        const warm=Math.max(0,Math.sin(u*17-v*11))*.018,i=(y*width+x)*4;
+        image.data[i]=123+(tone+warm)*255;image.data[i+1]=126+tone*246;image.data[i+2]=116+(tone-warm)*235;image.data[i+3]=255;
+    }
+    ctx.putImageData(image,0,0);stoneCanvases.set(key,canvas);return canvas;
+}
 export function createCraftedTimberCanvas({width=512,height=1024,pale=false,horizontal=false}={}){
     const key=[width,height,pale,horizontal].join(':');
     if(timberCanvases.has(key))return timberCanvases.get(key);

@@ -1217,8 +1217,7 @@
 .tryit-sim-plant-profile .plant-knowledge-cell.is-connected{outline:3px solid #dfff9b;outline-offset:3px;filter:drop-shadow(0 0 13px rgba(223,255,155,.72))}
 .nlxr-info-panel.is-media-collapsed .nlxr-media-wing{display:none}
 
-/* Elemental Totem: shape and broad light define the material. The surface is
-   intentionally clean, with no simulated timber grain or realistic texture. */
+/* The compact desktop fallback retains the same material family as the mesh. */
 .tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system .tryit-sim-totem-pillar {
     left:39%;
     top:24%;
@@ -2608,3 +2607,21 @@ body[data-desktop-ar="unavailable"] :is(.global-ar-action,[data-v2-open-ar],butt
 .nlxr-info-panel.is-runtime-wrist > section > nav { margin:0; }
 .nlxr-info-panel.is-runtime-wrist:not(.is-runtime-wrist-open) > section > nav { grid-template-columns:1fr!important; }
 .nlxr-info-panel.is-comfort-options button[aria-pressed="true"] { border-color:#bce3a3; background:#537055; }
+
+/* Crafted Totems: match directional plaques to the material of each post. */
+.nlxr-totem-system{--totem-sign-face:#d7b17e;--totem-sign-ink:#493721;--totem-sign-shape:polygon(0 50%,12% 6%,96% 6%,100% 18%,100% 82%,96% 94%,12% 94%)}
+.nlxr-totem-system.is-totem-carved{--totem-sign-face:#96603b;--totem-sign-ink:#f1d6a8;--totem-sign-shape:polygon(0 48%,13% 10%,31% 4%,86% 8%,100% 21%,99% 82%,86% 95%,30% 92%,13% 84%)}
+.nlxr-totem-system.is-totem-botanical{--totem-sign-face:#789268;--totem-sign-ink:#faf0d9;--totem-sign-shape:polygon(0 50%,14% 21%,36% 5%,66% 2%,91% 15%,100% 33%,100% 67%,91% 85%,66% 98%,36% 95%,14% 79%)}
+.nlxr-totem-system.is-totem-organic{--totem-sign-face:#afc4bc;--totem-sign-ink:#244b40;--totem-sign-shape:polygon(0 50%,12% 21%,20% 10%,85% 10%,96% 18%,100% 35%,100% 65%,96% 82%,85% 90%,20% 90%,12% 79%)}
+.nlxr-totem-system.is-totem-sun{--totem-sign-face:#d2a161;--totem-sign-ink:#5b381c;--totem-sign-shape:polygon(0 50%,13% 22%,15% 9%,34% 3%,86% 3%,100% 22%,100% 78%,86% 97%,34% 97%,15% 91%,13% 78%)}
+.nlxr-totem-system.is-totem-leaf{--totem-sign-face:#59774f;--totem-sign-ink:#f3eed6;--totem-sign-shape:polygon(0 50%,16% 28%,33% 12%,58% 3%,80% 10%,94% 28%,100% 42%,100% 59%,92% 76%,74% 92%,51% 96%,28% 81%,12% 65%)}
+.nlxr-totem-system.is-totem-rock{--totem-sign-face:#a9afa5;--totem-sign-ink:#293c35;--totem-sign-shape:polygon(0 49%,11% 14%,23% 6%,84% 0,100% 18%,98% 82%,82% 98%,23% 93%,11% 79%)}
+.nlxr-totem-system.is-totem-moon{--totem-sign-face:#d6dcde;--totem-sign-ink:#45566a;--totem-sign-shape:polygon(0 52%,14% 79%,29% 90%,61% 92%,88% 86%,99% 71%,100% 39%,91% 18%,69% 6%,40% 3%,18% 18%)}
+.nlxr-totem-system .nlxr-totem-cards>button{background:linear-gradient(115deg,#ffffff30,transparent 44%,#19251c24),var(--totem-sign-face);color:var(--totem-sign-ink);border-color:color-mix(in srgb,var(--totem-sign-face),#18241e 30%);backdrop-filter:none;box-shadow:inset 0 1px #ffffff55,0 4px 8px #17281d25}
+.nlxr-totem-system .nlxr-totem-cards>button :is(small,strong,span){color:inherit}
+.nlxr-totem-system .nlxr-totem-cards>button[data-sign-side=left]{clip-path:var(--totem-sign-shape);padding-left:18px}
+.nlxr-totem-system .nlxr-totem-cards>button[data-sign-side=right]{border-radius:7px 18px 18px 7px}
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-rock .tryit-sim-totem-pillar{width:28%;left:36%;clip-path:polygon(18% 100%,13% 91%,20% 66%,25% 42%,32% 17%,48% 10%,60% 0,67% 23%,73% 64%,88% 100%);border-radius:0;background:repeating-linear-gradient(82deg,transparent 0 15px,#d7d8c51c 16px,transparent 17px 28px),linear-gradient(105deg,#4f5851,#8d9387 32%,#626e63 56%,#38473e);filter:drop-shadow(0 4px 3px #122a2340)}
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-sun .tryit-sim-totem-pillar::before{content:'';display:block;position:absolute;top:-50px;left:50%;width:70px;height:70px;transform:translateX(-50%);border:8px solid #9c6836;border-radius:50%;background:repeating-conic-gradient(#ddbe7b 0deg 12deg,#ad8445 12deg 15deg);box-shadow:0 0 0 3px #ba9256}
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-leaf .tryit-sim-totem-pillar::before{content:'';display:block;position:absolute;top:-52px;left:50%;width:58px;height:77px;transform:translateX(-50%);border-radius:4% 80% 4% 80%;background:linear-gradient(50deg,#73945e 48%,#beab70 49% 51%,#557449 52%);box-shadow:inset 1px 1px #dce3bb77}
+.tryit-sim-marker.tryit-sim-marker-zone.nlxr-totem-system.is-totem-moon .tryit-sim-totem-pillar::before{content:'';display:block;position:absolute;top:-53px;left:50%;width:65px;height:65px;transform:translateX(-50%);border-radius:50%;background:#d6dcde;clip-path:polygon(50% 0,82% 5%,60% 25%,56% 50%,65% 75%,84% 94%,50% 100%,18% 85%,3% 51%,18% 16%);box-shadow:inset 3px 0 #a39e8c}

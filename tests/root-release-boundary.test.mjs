@@ -5,7 +5,7 @@ import {allowedFrontendFile} from '../root-site/tools/frontend-boundary.mjs';
 const routes = new Set(['index.html', 'education/index.html', 'platform/index.html']);
 test('root publisher accepts reviewed pages, hero media and static XR fixes', () => {
   for (const file of ['index.html', 'education/index.html', 'site/root-release.json',
-    'xr/services/buildInfo.js', 'xr/screens/temporaryArDemo.js',
+    'xr/services/buildInfo.js', 'xr/screens/temporaryArDemo.js', 'xr/living-objects.css',
     'xr/v2/assets/hero-clean-hq/desktop.mp4', 'xr/vendor/iwsdk-input/bridge.js']) {
     assert.equal(allowedFrontendFile(file, routes), true, file);
   }

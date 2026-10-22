@@ -1,4 +1,4 @@
-import {createCreatorFeatures} from './creator-features.js?v=creator-intro-04';
+import {createCreatorFeatures} from './creator-features.js?v=0.9780';
 const stage=document.querySelector('[data-platform-totem]');
 if(stage){
  const nav=stage.querySelector('.totem-signs'),panel=stage.querySelector('[data-totem-highlights]'),caption=stage.querySelector('[data-totem-caption]');

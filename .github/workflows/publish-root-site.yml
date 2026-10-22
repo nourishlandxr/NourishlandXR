@@ -31,6 +31,7 @@ jobs:
           set -euo pipefail
           node root-site/tests/menu-interaction-checks.mjs
           node root-site/tests/creator-feature-checks.mjs
+          node --test tests/crafted-totem.test.mjs tests/crafted-totem-studio.test.mjs tests/crafted-totem-world.test.mjs
           node root-site/tools/verify-release.mjs "$RELEASE_VERSION"
       - name: Configure existing HostArmada deployment identity
         env:

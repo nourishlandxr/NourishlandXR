@@ -23,10 +23,29 @@ export function createCreatorFeatures(root){
   const face=document.createElementNS('http://www.w3.org/2000/svg','path');face.setAttribute('d',pimoCellPath(layout));svg.append(face);button.prepend(svg);cells.append(button);cellButtons.push(button);
   button.addEventListener('click',()=>{root.querySelector('[data-creator-cell-title]').textContent=node.title;root.querySelector('[data-creator-cell-copy]').textContent=familyText[node.title];for(const item of cellButtons)item.setAttribute('aria-pressed',String(item===button))});
  }
- let active=false,current='pimo',open=true,orb=null,orbPending=false,map=null,mapPending=false,mapModel=null,mapLevel=0,disposed=false,drag=null,suppressClick=false;
+ let active=false,current='pimo',open=true,orb=null,orbPending=false,map=null,mapPending=false,mapModel=null,mapLevel=0,disposed=false,drag=null,suppressClick=false,totem=null,totemPending=false;
  let queuedYaw=0,queuedPitch=0;
  function visible(){return active&&!document.hidden&&!disposed}
- function syncOrb(){orb?.setActive(visible()&&current==='pimo');}
+ function syncOrb(){orb?.setActive(visible()&&current==='pimo');totem?.setActive(visible()&&current==='totem');}
+ function followTotemSign(target){
+  if(target==='notes')root.querySelector('[data-creator-totem-note]').textContent='Field Notes holds observations from the area, keeping learning close to the place.';
+  else if(target==='pimo'||target==='imap')show(target,{focus:true});
+ }
+ async function loadTotem(){
+  if(totem||totemPending||disposed)return;totemPending=true;
+  const status=root.querySelector('[data-creator-totem-status]'),stage=root.querySelector('[data-creator-totem-stage]'),select=root.querySelector('[data-creator-totem-style]');
+  if(!stage){totemPending=false;return;}
+  status.hidden=false;status.textContent='Preparing the Totem…';
+  try{
+   const {createTotemStudio,TOTEM_MODEL_CHOICES}=await import('/xr/services/craftedTotemStudio.js?v=0.9780');if(disposed)return;
+   const cards=[{id:'home',title:'Food Forest'},{id:'pimo',title:'Plant Orbs',boardSide:'right',navigation:{reliable:true}},{id:'notes',title:'Field Notes',boardSide:'left',navigation:{reliable:true}},{id:'imap',title:'Next Totem',boardSide:'right',navigation:{reliable:true}}];
+   totem=createTotemStudio(root.querySelector('[data-creator-totem]'),{pixelRatio:1.5,cards,onSign:({signId})=>followTotemSign(signId)});
+   select.textContent='';for(const choice of TOTEM_MODEL_CHOICES){const option=document.createElement('option');option.value=choice.id;option.textContent=choice.label;select.append(option);}
+   stage.dataset.ready='true';status.hidden=true;syncOrb();
+  }catch{status.textContent='The 3D Totem could not start on this device. The signs below still connect its destinations.';}finally{totemPending=false;}
+ }
+ root.querySelector('[data-creator-totem-style]')?.addEventListener('change',event=>{totem?.select(event.target.value);root.querySelector('[data-creator-totem-note]').textContent='Each Totem has its own material and signs, suited to its place.';});
+ root.querySelector('[data-creator-totem]')?.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();totem?.turn(event.key==='ArrowLeft'?-.15:.15);}if(event.key==='Home'){event.preventDefault();totem?.front();}});
  function setOpen(value){
   open=value;flower.dataset.open=String(value);orbButton.setAttribute('aria-expanded',String(value));orbButton.setAttribute('aria-label',(value?'Close':'Open')+' the PIMO; drag to rotate the orb');cells.inert=!value;cells.setAttribute('aria-hidden',String(!value));
   const image=orbButton.querySelector('img');image.src='/site/creator/actual-orb-v3-'+(value?'open':'closed')+'.webp';image.alt='Current Nourishland Organic V3 orb, '+(value?'open':'closed');orb?.setOpen(value);
@@ -62,19 +81,17 @@ export function createCreatorFeatures(root){
   if(!panels.some(panel=>panel.dataset.creatorPanel===key))return;current=key;
   for(const panel of panels){const selected=panel.dataset.creatorPanel===key;panel.hidden=!selected;panel.inert=!selected}
   for(const button of buttons)button.setAttribute('aria-expanded',String(button.dataset.creatorFeature===key));
-  syncOrb();if(visible()){if(key==='pimo')loadOrb();if(key==='imap')loadMap()}
+  syncOrb();if(visible()){if(key==='pimo')loadOrb();if(key==='imap')loadMap();if(key==='totem')loadTotem()}
   if(focus)root.querySelector('[data-creator-panel="'+key+'"] h3').focus({preventScroll:true});
  }
  for(const button of buttons)button.addEventListener('click',()=>show(button.dataset.creatorFeature,{focus:true}));
  for(const sign of root.querySelectorAll('[data-creator-sign]'))sign.addEventListener('click',()=>{
-  const target=sign.dataset.creatorSign;
-  if(target==='notes')root.querySelector('[data-creator-totem-note]').textContent='Field Notes holds observations from the area, keeping learning close to the place.';
-  else show(target,{focus:true});
+  followTotemSign(sign.dataset.creatorSign);
  });
  for(const button of root.querySelectorAll('[data-map-control]'))button.addEventListener('click',()=>{if(!map)return;const action=button.dataset.mapControl;if(action==='in')map.zoom(.85);else if(action==='out')map.zoom(1.15);else map[action]()});
  root.querySelector('[data-map-growth]').addEventListener('input',event=>{mapLevel=Math.max(0,Math.min(3,Number(event.target.value)||0));drawMap()});
  document.addEventListener('visibilitychange',syncOrb);
- window.addEventListener('pagehide',event=>{if(event.persisted){orb?.setActive(false);return}disposed=true;orb?.dispose();map?.dispose()});
+ window.addEventListener('pagehide',event=>{if(event.persisted){orb?.setActive(false);totem?.setActive(false);return}disposed=true;orb?.dispose();map?.dispose();totem?.destroy()});
  window.addEventListener('pageshow',()=>syncOrb());
  setOpen(true);
  return {focusIntro(){root.querySelector('[data-creator-panel="'+current+'"] h3').focus({preventScroll:true})},setActive(value){active=value;root.hidden=!value;root.inert=!value;if(value)show(current);else syncOrb()}};

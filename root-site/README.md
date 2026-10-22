@@ -1,5 +1,9 @@
 # Official root website source and reviewed overlays
 
+## Release 0.9780 — crafted Totems
+
+Eight shared 3D Totems now use distinct materials, sculpture and directional signage. Rock uses engraved stone slabs; Moon, Sun, Leaf and Botanical use their own ceramic forms; Halo uses opal glass; the two timber models retain different wood plaques. The Creator introduction loads the rotatable collection on demand. The same source updates the native project/Demo renderers and the optional full-world information layer. V0.9775's clean hero and all terrain/content payloads are preserved. See `docs/release-0.9780.md` for scope and validation limits.
+
 This directory owns the official nourishland.org marketing frontend. The root-release marker protects it from the legacy XR rsync workflow. That guard remains enabled.
 
 ## Release 0.9775

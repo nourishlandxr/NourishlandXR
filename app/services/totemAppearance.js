@@ -2,13 +2,13 @@ import { currentTotemModel } from './spatialVisualSettings.js';
 export const DEFAULT_TOTEM_COLOR = '#715a46';
 
 export const TOTEM_STYLES = Object.freeze([
-    Object.freeze({ id: 'basic', label: 'Bionic Pole', description: 'Turned timber post with a fluted sage ceramic crown' }),
-    Object.freeze({ id: 'carved', label: 'Carved timber', description: 'Flowing timber with engraved controls' }),
-    Object.freeze({ id: 'botanical', label: 'Botanical column', description: 'Quiet flutes and bronze leaf inlay' }),
-    Object.freeze({ id: 'organic', label: 'Halo Stem', description: 'Slender timber pole with an open oval glass halo' }),
+    Object.freeze({ id: 'basic', label: 'Bionic Pole', description: 'Turned timber, fluted sage crown and pale timber arrow signs with bronze joinery' }),
+    Object.freeze({ id: 'carved', label: 'Carved timber', description: 'Asymmetric carved trunk, terracotta bowl and hand-shaped dark timber plaques' }),
+    Object.freeze({ id: 'botanical', label: 'Botanical column', description: 'Slender ribbed stem, a green ceramic bud and sage porcelain petal signs' }),
+    Object.freeze({ id: 'organic', label: 'Halo Stem', description: 'Open opal halo and frosted glass direction signs, held by quiet metal fittings' }),
     Object.freeze({ id: 'sun', label: 'Sun Totem', secondary: true, color: '#ecc276', description: '1.35 m · Sunny clearings, flowering guilds and pollinator areas. A warm sun light in carved timber.' }),
     Object.freeze({ id: 'leaf', label: 'Leaf Totem', secondary: true, color: '#a5db8d', description: '1.35 m · Woodland edges, edible foliage and regeneration guilds. Light follows the leaf veins.' }),
-    Object.freeze({ id: 'rock', label: 'Rock Totem', secondary: true, color: '#38d1dc', description: '1.35 m · Rock gardens, soil communities and water edges. A mineral light seam in stacked stone.' }),
+    Object.freeze({ id: 'rock', label: 'Rock Totem', secondary: true, color: '#83b7b0', description: 'Weathered standing stone with quartz seams, lichen and engraved stone direction slabs' }),
     Object.freeze({ id: 'moon', label: 'Moon Totem', secondary: true, color: '#c2b4ef', description: '1.35 m · Shaded retreats, nocturnal life and reflection areas. A softly lit crescent.' }),
     Object.freeze({ id: 'flat-disc', label: 'Disk Totem', description: 'Flat round marker' })
 ]);
