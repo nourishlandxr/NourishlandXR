@@ -1,0 +1,29 @@
+{
+  "version": "0.9782",
+  "public": false,
+  "results": [
+    {
+      "name": "desktop",
+      "education": true,
+      "totemJourney": true,
+      "phonePreview": true,
+      "wheel": true,
+      "places": true,
+      "die": true,
+      "version": true
+    },
+    {
+      "name": "phone",
+      "education": true,
+      "totemJourney": true,
+      "phonePreview": true,
+      "wheel": true,
+      "places": true,
+      "die": true,
+      "version": true
+    }
+  ],
+  "errors": [],
+  "physicalDevice": false,
+  "heroCrevice": "Known issue: retained video predates food-area repair"
+}

@@ -1,5 +1,9 @@
 # Official root website source and reviewed overlays
 
+## Release 0.9782 — centred website experience
+
+The reviewed 36-file additive overlay publishes the V0.9781 website work: staged entrances, connected Totem navigation, original botanical wheel, three-place showcase, on-page phone preview and discovery die. Shared styles and module imports carry the release version to refresh existing browser caches. Run `node root-site/tools/verify-release.mjs 0.9782` and publish with the protected `Publish reviewed root website` workflow. Details and the known hero-video crevice are recorded in `docs/release-0.9782.md`.
+
 ## Release 0.9780 — crafted Totems
 
 Eight shared 3D Totems now use distinct materials, sculpture and directional signage. Rock uses engraved stone slabs; Moon, Sun, Leaf and Botanical use their own ceramic forms; Halo uses opal glass; the two timber models retain different wood plaques. The Creator introduction loads the rotatable collection on demand. The same source updates the native project/Demo renderers and the optional full-world information layer. V0.9775's clean hero and all terrain/content payloads are preserved. See `docs/release-0.9780.md` for scope and validation limits.
