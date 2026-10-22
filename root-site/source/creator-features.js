@@ -28,7 +28,7 @@ export function createCreatorFeatures(root){
  function visible(){return active&&!document.hidden&&!disposed}
  function syncOrb(){orb?.setActive(visible()&&current==='pimo');totem?.setActive(visible()&&current==='totem');}
  function followTotemSign(target){
-  if(target==='notes')root.querySelector('[data-creator-totem-note]').textContent='Field Notes holds observations from the area, keeping learning close to the place.';
+  if(target==='notes'){root.querySelector('[data-creator-totem-note]').textContent='Field Notes holds observations from the area, keeping learning close to the place.';if(root.dataset.cleanMap)window.dispatchEvent(new CustomEvent('nourishland:phone-preview'));}
   else if(target==='pimo'||target==='imap')show(target,{focus:true});
  }
  async function loadTotem(){
@@ -40,7 +40,7 @@ export function createCreatorFeatures(root){
    const {createTotemStudio,TOTEM_MODEL_CHOICES}=await import('/xr/services/craftedTotemStudio.js?v=0.9780');if(disposed)return;
    const cards=[{id:'home',title:'Food Forest'},{id:'pimo',title:'Plant Orbs',boardSide:'right',navigation:{reliable:true}},{id:'notes',title:'Field Notes',boardSide:'left',navigation:{reliable:true}},{id:'imap',title:'Next Totem',boardSide:'right',navigation:{reliable:true}}];
    totem=createTotemStudio(root.querySelector('[data-creator-totem]'),{pixelRatio:1.5,cards,onSign:({signId})=>followTotemSign(signId)});
-   select.textContent='';for(const choice of TOTEM_MODEL_CHOICES){const option=document.createElement('option');option.value=choice.id;option.textContent=choice.label;select.append(option);}
+   if(select){select.textContent='';for(const choice of TOTEM_MODEL_CHOICES){const option=document.createElement('option');option.value=choice.id;option.textContent=choice.label;select.append(option);}}
    stage.dataset.ready='true';status.hidden=true;syncOrb();
   }catch{status.textContent='The 3D Totem could not start on this device. The signs below still connect its destinations.';}finally{totemPending=false;}
  }
@@ -68,6 +68,7 @@ export function createCreatorFeatures(root){
   root.querySelector('[data-map-selection]').textContent=stage?.description||'Totems guide people through a growing project.';
  }
  async function loadMap(){
+  if(root.dataset.cleanMap){if(map||mapPending||disposed)return;mapPending=true;try{const {mountPlaceShowcase}=await import('./place-showcase.js');map=await mountPlaceShowcase(root.querySelector('[data-places-showcase]'));}finally{mapPending=false}return;}
   if(map||mapPending||disposed)return;mapPending=true;const status=root.querySelector('[data-creator-map-status]');status.hidden=false;status.textContent='Preparing the Border Ranges map…';
   try{
    const [{createImapV2Landscape3D},response]=await Promise.all([import('./creator/imapV2Landscape3D.js'),fetch('/site/creator/border-ranges.json')]);if(!response.ok)throw Error('Map data unavailable');mapModel=await response.json();if(disposed)return;
@@ -89,7 +90,7 @@ export function createCreatorFeatures(root){
   followTotemSign(sign.dataset.creatorSign);
  });
  for(const button of root.querySelectorAll('[data-map-control]'))button.addEventListener('click',()=>{if(!map)return;const action=button.dataset.mapControl;if(action==='in')map.zoom(.85);else if(action==='out')map.zoom(1.15);else map[action]()});
- root.querySelector('[data-map-growth]').addEventListener('input',event=>{mapLevel=Math.max(0,Math.min(3,Number(event.target.value)||0));drawMap()});
+ root.querySelector('[data-map-growth]')?.addEventListener('input',event=>{mapLevel=Math.max(0,Math.min(3,Number(event.target.value)||0));drawMap()});
  document.addEventListener('visibilitychange',syncOrb);
  window.addEventListener('pagehide',event=>{if(event.persisted){orb?.setActive(false);totem?.setActive(false);return}disposed=true;orb?.dispose();map?.dispose();totem?.destroy()});
  window.addEventListener('pageshow',()=>syncOrb());

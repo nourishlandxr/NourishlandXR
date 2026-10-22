@@ -1,0 +1,26 @@
+import{createRequire}from'node:module';import assert from'node:assert/strict';import fs from'node:fs';const require=createRequire(import.meta.url),{chromium}=require('C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true}),results=[];
+try{for(const[name,width,height]of [['desktop',1440,1000],['phone',390,844]]){
+ const p=await browser.newPage({viewport:{width,height},isMobile:name==='phone',hasTouch:name==='phone'}),errors=[];p.on('pageerror',e=>errors.push(e.message+' '+e.stack?.split('\n')[1]));
+ const go=async route=>{await p.goto('http://127.0.0.1:8010/'+route+'/',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.querySelector('[data-route]:not([hidden])')?.dataset.entrance==='ready',null,{timeout:60000});};
+ for(const route of ['education','platform','food-forests','places','collaborate','immersive-learning','hillyards','about','contact','food-forests/story','food-forests/guide']){
+  await go(route);if(route==='platform')await p.waitForFunction(()=>!!document.querySelector('.journey-parent')?.dataset.portraitStyle,null,{timeout:30000});
+  if(route==='food-forests'){await p.waitForFunction(()=>document.querySelector('[data-forest-wheel]')?.dataset.wheelReady==='true');const wheel=p.locator('[data-forest-wheel] canvas');const before=await p.locator('[data-forest-wheel]').getAttribute('data-wheel-angle');await wheel.focus();await p.keyboard.press('ArrowRight');await p.waitForTimeout(350);assert.notEqual(await p.locator('[data-forest-wheel]').getAttribute('data-wheel-angle'),before);await p.locator('[data-forest-topic=layers]').click();assert.match(await p.locator('[data-forest-answer]').innerText(),/Canopy trees/);}
+  if(route==='places'){await p.waitForFunction(()=>document.querySelector('#places [data-places-showcase]')?.dataset.placeReady==='true');for(const id of ['uki','hillyards','border']){await p.locator('#places [data-place-step="1"]').click();await p.waitForFunction(id=>document.querySelector('#places [data-places-showcase]').dataset.place===id&&document.querySelector('#places [data-places-showcase]').dataset.placeReady==='true',id);}}
+  if(route==='collaborate'){await p.waitForFunction(()=>document.querySelector('[data-discovery-die]')?.dataset.ready==='true');await p.locator('[data-partner=educator]').click();assert.match(await p.locator('[data-partner-answer]').innerText(),/learning experience/);}
+  assert(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),name+' '+route+' horizontal overflow');
+  await p.waitForTimeout(400);await p.screenshot({path:'artifacts/website-'+route.replaceAll('/','-')+'-'+name+'.png'});
+ }
+ await go('platform');await p.getByRole('button',{name:'Inside Creator',exact:false}).click();await p.locator('.creator-preview[open]').waitFor();
+ await p.locator('.creator-preview [data-creator-feature=imap]').click();await p.waitForFunction(()=>document.querySelector('.creator-preview [data-places-showcase]')?.dataset.placeReady==='true');
+ assert.equal(await p.locator('.creator-preview input[type=range],.creator-preview [data-map-control]').count(),0);
+ await p.locator('.creator-preview [data-place-step="1"]').click();await p.waitForFunction(()=>document.querySelector('.creator-preview [data-places-showcase]')?.dataset.place==='uki'&&document.querySelector('.creator-preview [data-places-showcase]').dataset.placeReady==='true');
+ await p.screenshot({path:'artifacts/website-creator-map-'+name+'.png'});
+ await p.locator('.creator-preview [data-creator-feature=totem]').click();await p.waitForFunction(()=>document.querySelector('.creator-preview [data-creator-totem-stage]')?.dataset.ready==='true');
+ await p.locator('.creator-preview [data-creator-sign=notes]').click();await p.locator('.phone-preview[open]').waitFor();assert.equal(new URL(p.url()).pathname,'/platform/');
+ await p.locator('#preview-observation').fill('New flowers beside the path.');await p.locator('[data-note-form] button').click();assert.match(await p.locator('[data-phone-feedback]').innerText(),/kept in this preview/);
+ await p.screenshot({path:'artifacts/website-phone-preview-'+name+'.png'});await p.getByRole('button',{name:'Close phone preview',exact:true}).click();await p.getByRole('button',{name:'Close Creator preview',exact:true}).click();
+ assert.deepEqual(errors,[]);results.push({name,routes:11,creatorPreview:true,threePlaces:true,originalWheel:true,phonePreview:true,noMapControls:true,errors});await p.close();
+ }
+ const p=await browser.newPage({reducedMotion:'reduce'});await p.goto('http://127.0.0.1:8010/education/');await p.waitForFunction(()=>document.querySelector('#education')?.dataset.entrance==='ready');assert.equal(await p.locator('#education h1').evaluate(n=>getComputedStyle(n).opacity),'1');await p.goto('http://127.0.0.1:8010/xr/');await p.locator('.welcome-version-badge').waitFor();assert((await p.locator('.welcome-version-badge').innerText()).includes('0.9781'));await p.close();
+ fs.writeFileSync('artifacts/website-experience-qa.json',JSON.stringify({version:'0.9781',results,reducedMotion:true,welcomeVersion:true,physicalDevice:false},null,2));console.log(JSON.stringify(results,null,2));
+}finally{await browser.close();}

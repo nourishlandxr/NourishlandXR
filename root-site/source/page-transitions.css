@@ -1,0 +1,33 @@
+@supports(view-transition-name:nl-content){
+ main{view-transition-name:nl-content}
+ #site-header{view-transition-name:nl-header}
+ ::view-transition-group(nl-header){animation:none}
+ ::view-transition-old(nl-header){display:none}
+ ::view-transition-new(nl-header){animation:none}
+ ::view-transition-old(nl-content){animation:nl-leave .36s ease both}
+ ::view-transition-new(nl-content){animation:nl-enter .48s cubic-bezier(.22,.8,.25,1) both}
+ :root[data-route-motion=back]{--route-shift:-35px}
+ :root[data-route-motion=forward]{--route-shift:35px}
+ :root[data-route-motion=landscape]::view-transition-old(nl-content){animation:nl-landscape-leave .48s ease both}
+ :root[data-route-motion=landscape]::view-transition-new(nl-content){animation:nl-landscape-enter .55s ease both}
+}
+@keyframes nl-leave{to{opacity:0;transform:translateX(calc(var(--route-shift,35px)*-1))}}
+@keyframes nl-enter{from{opacity:0;transform:translateX(var(--route-shift,35px))}to{opacity:1;transform:none}}
+@keyframes nl-landscape-leave{to{opacity:0;transform:scale(.975);filter:brightness(.8)}}
+@keyframes nl-landscape-enter{from{opacity:0;transform:scale(1.025)}to{opacity:1;transform:none}}
+/* The overview uses the space remaining below the real masthead and intro. */
+body[data-page=platform] .simple-footer{display:none}
+body[data-page=platform] main{height:calc(100svh - var(--site-header-height,106px));min-height:0}
+#platform:not([hidden]){height:100%;display:flex;flex-direction:column;padding-bottom:0}
+#platform .platform-intro{flex:none;max-width:850px;padding:18px 24px 8px;text-align:center}
+#platform .platform-intro h1{font-size:clamp(26px,3vw,40px);margin-bottom:10px}
+#platform .platform-intro p{font-size:15px;line-height:1.6;max-width:65ch;margin:auto;text-wrap:pretty}
+#platform [data-totem-journey]{flex:1}
+#platform .platform-totem-secondary{display:none}
+@media(max-width:700px){#platform .platform-intro{padding:14px 22px 8px}#platform .platform-intro h1{font-size:27px}#platform .platform-intro p{font-size:14px}}
+@media(prefers-reduced-motion:reduce){::view-transition-group(*),::view-transition-old(*),::view-transition-new(*){animation:none!important}}
+@media(max-height:740px) and (max-width:700px){
+ #platform .platform-intro{padding:8px 22px 2px}
+ #platform .platform-intro h1{font-size:22px;margin-bottom:6px}
+ #platform .platform-intro p{font-size:12px;line-height:1.45}
+}

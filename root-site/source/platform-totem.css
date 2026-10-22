@@ -1,3 +1,4 @@
+@import url('./totem-journey.css');
 /* Stable centred sculpture. Details use normal grid flow; no resize feedback loop. */
 body[data-page=platform]{background:#eee9dc}
 .platform-intro{text-align:center;padding-block:28px 16px;max-width:720px}

@@ -6,6 +6,10 @@ Eight shared 3D Totems now use distinct materials, sculpture and directional sig
 
 This directory owns the official nourishland.org marketing frontend. The root-release marker protects it from the legacy XR rsync workflow. That guard remains enabled.
 
+## Local experience source · 0.9781
+
+`npm run build:website` assembles the current website from the protected 0.9780 shell and maintained component sources. Run `node root-site/tools/preview-transitions.mjs` for local review at `http://127.0.0.1:8010/`. This includes staged page entrances, shared-model Totem navigation, the original botanical wheel, the three-place carousel, the on-page phone preview and the discovery die. See `docs/website-experience-0.9781.md` for scope and verification. No production overlay or deployment is included in this local-source update.
+
 ## Release 0.9775
 
 The reviewed 50-file overlay retains the 0.9774 Education and Platform pages and adds the clean high-quality intro video, the paused NL layer, and pending static XR tutorial/material/microphone fixes since 10e330ec. The desktop video is 2560 × 1440 (43.2 MB); the portrait video is 1080 × 1920 (20.1 MB). The intro does not load the full 3D world.

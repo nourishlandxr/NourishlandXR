@@ -1,0 +1,28 @@
+import {assembleWebsite} from './assemble-website.mjs';
+import http from 'node:http';
+import fs from 'node:fs';
+import path from 'node:path';
+const root=process.cwd(),release=path.join(root,'root-site/releases/0.9780/payload');
+const routes=new Set(Object.values(JSON.parse(fs.readFileSync('root-site/routes.json'))).map(r=>r.path));
+const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.webp':'image/webp','.mp4':'video/mp4'};
+export function shell(_bytes,route='/'){const key=Object.entries(JSON.parse(fs.readFileSync('root-site/routes.json'))).find(([,r])=>r.path===route)?.[0]||'home';return assembleWebsite().replace('data-page="home"',`data-page="${key}"`);}
+const server=http.createServer(async(req,res)=>{
+ try{
+  const url=new URL(req.url,'http://localhost'),name=decodeURIComponent(url.pathname);
+  if(name.split('/').some(part=>part==='..'||part.startsWith('.')))throw Error('Unsafe path');
+  let file;
+  if(routes.has(name))file=path.join(release,'index.html');
+  else if(name.startsWith('/site/'))file=path.join(root,'root-site/source',name.slice(6));
+  else file=path.join(root,'dist',name);
+  if(!fs.existsSync(file)||!fs.statSync(file).isFile()){
+   const fallback=path.join(release,name);if(fs.existsSync(fallback)&&fs.statSync(fallback).isFile())file=fallback;
+   else {const remote=await fetch('https://nourishland.org'+name,{signal:AbortSignal.timeout(30000)});res.writeHead(remote.status,{'Content-Type':remote.headers.get('content-type')||'application/octet-stream'});res.end(Buffer.from(await remote.arrayBuffer()));return;}
+  }
+  let bytes=fs.readFileSync(file);if(routes.has(name))bytes=Buffer.from(shell(bytes,name));
+  res.setHeader('Content-Type',types[path.extname(file)]||'application/octet-stream');res.setHeader('Cache-Control','no-store');
+  const range=req.headers.range?.match(/bytes=(\d+)-(\d*)/);
+  if(range){const start=Number(range[1]),end=Math.min(bytes.length-1,range[2]?Number(range[2]):bytes.length-1);res.writeHead(206,{'Accept-Ranges':'bytes','Content-Range':`bytes ${start}-${end}/${bytes.length}`});res.end(bytes.subarray(start,end+1));}
+  else res.end(bytes);
+ }catch(error){res.writeHead(500);res.end(error.message);}
+});
+server.listen(8010,'127.0.0.1',()=>console.log('Local transition review: http://127.0.0.1:8010/platform/'));

@@ -1,6 +1,6 @@
 import {createCreatorFeatures} from './creator-features.js?v=0.9780';
 const stage=document.querySelector('[data-platform-totem]');
-if(stage){
+if(stage&&stage.dataset.totemJourney===undefined){
  const nav=stage.querySelector('.totem-signs'),panel=stage.querySelector('[data-totem-highlights]'),caption=stage.querySelector('[data-totem-caption]');
  const title=panel.querySelector('[data-highlight-title]'),image=panel.querySelector('[data-highlight-image]'),entry=panel.querySelector('[data-highlight-entry]');
  const reduced=matchMedia('(prefers-reduced-motion:reduce)');

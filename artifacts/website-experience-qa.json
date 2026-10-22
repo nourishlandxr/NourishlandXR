@@ -1,0 +1,28 @@
+{
+  "version": "0.9781",
+  "results": [
+    {
+      "name": "desktop",
+      "routes": 11,
+      "creatorPreview": true,
+      "threePlaces": true,
+      "originalWheel": true,
+      "phonePreview": true,
+      "noMapControls": true,
+      "errors": []
+    },
+    {
+      "name": "phone",
+      "routes": 11,
+      "creatorPreview": true,
+      "threePlaces": true,
+      "originalWheel": true,
+      "phonePreview": true,
+      "noMapControls": true,
+      "errors": []
+    }
+  ],
+  "reducedMotion": true,
+  "welcomeVersion": true,
+  "physicalDevice": false
+}

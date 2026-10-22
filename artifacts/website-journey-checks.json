@@ -1,0 +1,35 @@
+{
+  "headingFirst": true,
+  "orbThenCopy": true,
+  "heroVideoRetained": true,
+  "fieldPreviewStaysOnPage": true,
+  "history": true,
+  "errors": [],
+  "frameCount": 100,
+  "keyframes": [
+    {
+      "t": 421.0999999999999,
+      "title": 0,
+      "orb": 0,
+      "copy": 0
+    },
+    {
+      "t": 1072.8000000000002,
+      "title": 0.280026,
+      "orb": 0,
+      "copy": 0
+    },
+    {
+      "t": 2376.1000000000004,
+      "title": 1,
+      "orb": 0.9981,
+      "copy": 0
+    },
+    {
+      "t": 3216.8999999999996,
+      "title": 1,
+      "orb": 1,
+      "copy": 0.940505
+    }
+  ]
+}

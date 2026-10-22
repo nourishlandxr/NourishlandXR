@@ -50,6 +50,12 @@ if(root){
  summary.addEventListener('keydown',e=>{if(e.key==='Escape'&&selected){e.preventDefault();closeSummary({focus:true})}});
  function route(){visible=document.body.dataset.page==='education';orb?.setActive(visible&&inView&&!document.hidden);if(!visible&&open)setOpen(false);if(!visible&&footerHint)footerHint.dataset.visible='false';syncHint()}
  window.addEventListener('nourishland:route',route);document.addEventListener('visibilitychange',()=>{orb?.setActive(inView&&visible&&!document.hidden);syncHint()});
- const observer=new IntersectionObserver(entries=>{inView=entries.some(e=>e.isIntersecting);orb?.setActive(inView&&visible&&!document.hidden);if(inView&&!orb&&!pending){pending=true;createCeramicOrb(root.querySelector('canvas'),{reduced}).then(value=>{orb=value;root.dataset.orbReady='true';if(queuedYaw||queuedPitch){orb.rotateBy(queuedYaw,queuedPitch);queuedYaw=queuedPitch=0}orb.setOpen(open);orb.setActive(inView&&visible&&!document.hidden)}).catch(()=>{root.dataset.orbReady='fallback'})}},{rootMargin:'160px'});
+ function loadVisibleOrb(){
+  if(!inView||orb||pending)return;
+  if(document.documentElement?.hasAttribute('data-experience-site')&&root.closest('[data-route]')?.dataset.entrance!=='ready')return;
+  pending=true;createCeramicOrb(root.querySelector('canvas'),{reduced}).then(value=>{orb=value;root.dataset.orbReady='true';if(queuedYaw||queuedPitch){orb.rotateBy(queuedYaw,queuedPitch);queuedYaw=queuedPitch=0}orb.setOpen(open);orb.setActive(inView&&visible&&!document.hidden)}).catch(()=>{root.dataset.orbReady='fallback'});
+ }
+ window.addEventListener('nourishland:page-settled',event=>{if(event.detail.page==='education')loadVisibleOrb()});
+ const observer=new IntersectionObserver(entries=>{inView=entries.some(e=>e.isIntersecting);orb?.setActive(inView&&visible&&!document.hidden);loadVisibleOrb();},{rootMargin:'160px'});
  observer.observe(root);setOpen(false);route();
 }
