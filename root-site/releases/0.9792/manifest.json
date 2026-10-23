@@ -1,0 +1,283 @@
+{
+  "schema": "nourishland.root-overlay.v1",
+  "version": "0.9792",
+  "managedBy": "root-site-release",
+  "files": [
+    {
+      "file": "about/index.html",
+      "bytes": 70113,
+      "sha256": "5c58da09c72fd8f19edf6ac05a59522c864c6011a9bfd8bce8c0e61c6d3273df",
+      "previousSha256": "30d6b875c3f9ab60dd00c38eab32fcb983d2b80c3ccd3a5b022cc9f5b0e3ac35",
+      "mode": "0644"
+    },
+    {
+      "file": "collaborate/index.html",
+      "bytes": 70119,
+      "sha256": "2ac53ce1ca92a933b912bd2b50ab3426d155ae469be8f73dc35ad54c7feccf76",
+      "previousSha256": "2ceb8d759ca200becff1162e745c4ff4e926259db7ea20e695c707632c399b49",
+      "mode": "0644"
+    },
+    {
+      "file": "contact/index.html",
+      "bytes": 70115,
+      "sha256": "e79d5455a14fd46701a8108b57a284b30e59867506b231cbe250edac31ecb8ac",
+      "previousSha256": "351ea88e2b798022f14154cca557dbfaf6bbbf0d8726e2dbe485512fbdfa0057",
+      "mode": "0644"
+    },
+    {
+      "file": "education/index.html",
+      "bytes": 70117,
+      "sha256": "2ac738c0e3b94164d6cda35ca0a208993d719ce1b522cbcaf60b5ded334bde8c",
+      "previousSha256": "c95da5f4bba20c2326daa9ddef94452f1648e9885f8a539b0844b5472dc905ab",
+      "mode": "0644"
+    },
+    {
+      "file": "food-forests/guide/index.html",
+      "bytes": 70125,
+      "sha256": "8821387c01b32591d730e2206ab8e5832ed35ba8729253278987a7547d351765",
+      "previousSha256": "757d26b741d44cfb86926524bfbb46d0f99df2f4b53340a502be8b23a7c2f06a",
+      "mode": "0644"
+    },
+    {
+      "file": "food-forests/index.html",
+      "bytes": 70120,
+      "sha256": "4a4c371a99b1d33b381920e6b0ad8b4106b7a30118c2807102eb471181c33deb",
+      "previousSha256": "9329335395ba5bd459ca0dcf649bb55af0e2a775bbb83504941018df07ee1565",
+      "mode": "0644"
+    },
+    {
+      "file": "food-forests/story/index.html",
+      "bytes": 70125,
+      "sha256": "517016145bc4c495fec64e63f59c1ecf65e972ce9192374ac5ce1108236eccba",
+      "previousSha256": "ff7e8128e06c6821649cec20b669915cb6d0b49a647e670aaa4e00b82d28b658",
+      "mode": "0644"
+    },
+    {
+      "file": "hillyards/index.html",
+      "bytes": 70117,
+      "sha256": "38d9239b7c9f12690fa9760e0a2741553b551ec243cc9d763bed5cd217c0ab10",
+      "previousSha256": "2114b001a46d521f76782118b2afa389a6a7568584f773704dbc5e8328884f6e",
+      "mode": "0644"
+    },
+    {
+      "file": "immersive-learning/index.html",
+      "bytes": 70123,
+      "sha256": "b53011aa26ef13238b5bbef78cab21e6b70f8ac4ce78b45b24d540a2546d685d",
+      "previousSha256": "5f740a49c33736eac061e633a7e8a9136be9a647451f65b5b83bb0a2f3aefb5b",
+      "mode": "0644"
+    },
+    {
+      "file": "index.html",
+      "bytes": 70112,
+      "sha256": "cf5441b34bd079dc07637c1eeee350284110901ca84d2dac934a3d3d0578b7f4",
+      "previousSha256": "0ecc6157ef35e888d118d1a070a68d817eefbfe8d6e71a216b4c3f18d65e61e5",
+      "mode": "0644"
+    },
+    {
+      "file": "places/index.html",
+      "bytes": 70114,
+      "sha256": "58308fb1b5323398cc503276fa3f1880206b2457ab4c45254b0b77419ed50a9d",
+      "previousSha256": "1fadfa76fbf140acd2125bf869e7f74466b73a54e4bc8fd3ed07612f0967a135",
+      "mode": "0644"
+    },
+    {
+      "file": "platform/index.html",
+      "bytes": 70116,
+      "sha256": "3b7d349934f8d94513bddd9fefe7c092a9dc883f6070cdd55aef10ae288ef3cc",
+      "previousSha256": "fd8f92b9f08bba88bae8d8a6e7838d7f76ee5b2d844f0d8d351216c64bae99f6",
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator-features.js",
+      "bytes": 11445,
+      "sha256": "569b72da70c1a4c9ae6805b0112caf0f7b891fa011c81ff43bb3e2bed9cfb4d5",
+      "previousSha256": "1755c98f3b2eaa876fd721ca343562006809d4265e6eae3853e0cd2a122bb5ac",
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/imapV2Landscape3D.js",
+      "bytes": 16060,
+      "sha256": "04cd53ada1f341e0726af3a5cd22103841af18a9af1e01b67241f6993dc9509d",
+      "previousSha256": "ad848d5897888fc9aa061f74944f5f032a1a64d6da9ca2275b576d1c9ede8ef6",
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/pimoGraph.js",
+      "bytes": 9891,
+      "sha256": "7317f777f6816a4ce464642952911a2ba1a1a794f8642ffaabac251863f4434a",
+      "previousSha256": "74cbb0358ecb101b110ea4103113140c4092396fb5e1830efe6925cc3b468e29",
+      "mode": "0644"
+    },
+    {
+      "file": "site/creator/pimoGraphTemplates.js",
+      "bytes": 4082,
+      "sha256": "8fd02ec732d1e4041c2d0ea30c610f56f18bc57c666fc20a5e1a6269ceec06cf",
+      "previousSha256": "dedde195bf0505e834077fe559bd1e23e16c6d217e63182aba220420b2442aa6",
+      "mode": "0644"
+    },
+    {
+      "file": "site/education-orb.js",
+      "bytes": 8261,
+      "sha256": "21989fca160a9e1998d21320454283924b6457218423f170f3e8f573221aba03",
+      "previousSha256": "94fa177b7138708cc82f7e291ad3b31f4242303cedece3e44b0240df27e9c89e",
+      "mode": "0644"
+    },
+    {
+      "file": "site/experience.css",
+      "bytes": 16707,
+      "sha256": "b1c2e1e1eea0bc07a4b5782957c52a912d8c7de9abd0694d19ae56d930c5ade0",
+      "previousSha256": "8f6b7ceb60e42de5a5a68bec2b7c7b3a67f8579eb34cd1f53fae983bdadc571e",
+      "mode": "0644"
+    },
+    {
+      "file": "site/experience.js",
+      "bytes": 15770,
+      "sha256": "5c87b7624477a3dd6fa203802a165dae082354a493209212c5dc1325d64411f7",
+      "previousSha256": "139857211dfe3a4e1a922eb12dda322576f9848a3cf1cd52b7ad80ae6bf1e488",
+      "mode": "0644"
+    },
+    {
+      "file": "site/food-forest-guide.js",
+      "bytes": 7288,
+      "sha256": "2fb41ad6f3a35996f2bf5a76740ecba59846a235409b1f2c5410f13852d838aa",
+      "previousSha256": "435332c1d11b268a3898f2228140b1495f74ef6f580b5da9c633526dbbebf35c",
+      "mode": "0644"
+    },
+    {
+      "file": "site/food-forest-wheel.js",
+      "bytes": 5192,
+      "sha256": "1c7ff2868fa59f20ebef07785ccf82e35bc41fe76a3320b2be56eb0c6ce49364",
+      "previousSha256": "efd6490c6be72795ac796d8b579d31fb0856b2c2d648c4b14ea4402deebc04ca",
+      "mode": "0644"
+    },
+    {
+      "file": "site/living-surfaces.js",
+      "bytes": 2510,
+      "sha256": "1b2a6dd16c1e6726979d247a4acb7ba44e2491d92f1677b8b2cdfe358372a1dc",
+      "previousSha256": "eb627d35822f53945cb30b54566b5698590b3df3ca020ece0b7c9bb4d7a296ac",
+      "mode": "0644"
+    },
+    {
+      "file": "site/orb/ceramic-orb.js",
+      "bytes": 4718,
+      "sha256": "de6ea0a0fd0f4363b4037143433ff9bc01f48a80838ee5e06685392178e462a8",
+      "previousSha256": "62b9588ef6c3ffd1b4515b97c00a1485fb2738388226c9891c42a6923ac7bd1e",
+      "mode": "0644"
+    },
+    {
+      "file": "site/orb/organicOrbGeometry.mjs",
+      "bytes": 4372,
+      "sha256": "2aff87632a12f1c4af5edbe859acb685c04e684927de20a181a3b46b4bbeb60a",
+      "previousSha256": "6f37da4b7a934a127078e56f580c551c9216913cd0224e1180be4fe78ea25a23",
+      "mode": "0644"
+    },
+    {
+      "file": "site/orb/three.mjs",
+      "bytes": 338920,
+      "sha256": "518ebedfa663e4af0344af922d596027682972483ef3f15ffa94f0a610833a74",
+      "previousSha256": "7e2fa0cc3619c4bd55977b6450c0d0309033aa58d1a83331b773f9b31fb29347",
+      "mode": "0644"
+    },
+    {
+      "file": "site/place-showcase.js",
+      "bytes": 4150,
+      "sha256": "83dcc5dbfcc423ddf6ad3359559de3b54625969c14e5b88b39e15ed0e6bb3887",
+      "previousSha256": "d82752d3066611596382450e7dd74e05bd9c1b9af7ec01b4287f317454dfd2f8",
+      "mode": "0644"
+    },
+    {
+      "file": "site/platform-totem.css",
+      "bytes": 20297,
+      "sha256": "da609c742866994d6a51470dc80b118d9a2f6e1e72178ff11869fc300a7e0ed2",
+      "previousSha256": "306f174b29629d17aae714e0e78f2327bd783ad7c7347833543efcbd47acc06a",
+      "mode": "0644"
+    },
+    {
+      "file": "site/platform-totem.js",
+      "bytes": 5186,
+      "sha256": "0cf64ad1a8cea87800ec3b40726da18e8e30705476440df5535e2d6d6c47a30d",
+      "previousSha256": "4446dc5584f3f788c42d795d3a53bb819e317f234fa1d6724e4743b2cfb1f8af",
+      "mode": "0644"
+    },
+    {
+      "file": "site/root-release.json",
+      "bytes": 180,
+      "sha256": "94d6317fd9e2e51a11fefeffe73b2f526b6de2513db063349d0b04e6d15e370f",
+      "previousSha256": "a8f6bf3dac160b21388306ff2f4200b6e21cc82e05c35a1ccc031320b773e3c0",
+      "mode": "0644"
+    },
+    {
+      "file": "site/root-router.js",
+      "bytes": 3415,
+      "sha256": "b1a5aea4c4e64be0f25e73596637f06df03c256d7d0d812819c62470f5e85bf1",
+      "previousSha256": "5edb8ea3696c2d3dad1fb26cdf44d3cd2393cd709d8a42e9fa09223f1a24e63d",
+      "mode": "0644"
+    },
+    {
+      "file": "site/site-navigation.css",
+      "bytes": 2910,
+      "sha256": "c99d7bd65e9b18d5ec99d7c1d52a93dd3c1f2ad3db038a32baf6492ec62b0dd5",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/site-navigation.js",
+      "bytes": 2132,
+      "sha256": "96fec367a7b08a6d004d4f98bba49cefb50c77666ec7da4148bc6392cf4b8222",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "site/site.css",
+      "bytes": 2541,
+      "sha256": "ad9909e881d9410c8a74544b1982cabd8d5af9215bba8ae1790ef7ec9ad8489a",
+      "previousSha256": "5618512d41f1940090ee081b9856656f7ec05c5a6567681c348927ecc78b7668",
+      "mode": "0644"
+    },
+    {
+      "file": "site/totem-journey.js",
+      "bytes": 17995,
+      "sha256": "23e4893032d091ecb7e8d0fe645c27a2fd756d1b1806fd0c51bf5b702e120527",
+      "previousSha256": "454a55eaea275637c1ffa4f47325cb3b87f573041c2507715328a0af586b7155",
+      "mode": "0644"
+    },
+    {
+      "file": "site/totem-portraits.js",
+      "bytes": 1650,
+      "sha256": "43034c92d9ce8a0e629c6e9146d3e269bc8bf18452e1703df57c04bc0645dcf6",
+      "previousSha256": "cae06bc81ff754d51268717042356b97f0051ce603626cbf9506e4b9925e597f",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/entry.js",
+      "bytes": 3043,
+      "sha256": "07bf66e29ed9d803a61511e52da730c6dee68108fb76ac28cf56928bb15c186d",
+      "previousSha256": "f6f0b6a6ccca96387f80b1629d16fbfded2b1d91cff9b835a99c22821163a32d",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/screens/accessPortal.js",
+      "bytes": 21142,
+      "sha256": "fe4da61848335e02e82583e3cbdc47ecc624493651ed8d7c554cf1adfc9f1ff0",
+      "previousSha256": "962e7702f647e6673d76e31ded0e89edb4b36fec18da522ffef1459e49557a0a",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/buildInfo.js",
+      "bytes": 164,
+      "sha256": "9e80cbb4101a2493f44eed50d8a6968dae922793ff70b92b89b46ecdc660592c",
+      "previousSha256": "2bf3b40372c6d6cc5b82ba89111ef6896a6bf8fd4f52722214fdc48fdbbe2c5d",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/portalRoutes.js",
+      "bytes": 1375,
+      "sha256": "4b548ac6c2a8bd5ce2a23aa8711dc2d2ae0e990d39a5b30ee50598cb788164af",
+      "previousSha256": "eba72af1849733d8b795aa99a2a22026e1b2e33823010098eebba2a048bb17f1",
+      "mode": "0644"
+    }
+  ],
+  "backendChanged": false,
+  "routingChanged": false,
+  "wordPressChanged": false
+}

@@ -2,7 +2,7 @@ import './totem-journey.js?v=0.9789';
 import {transitionPage} from './page-transitions.js';
 import {prepareEntrance,enterPage} from './experience.js?v=0.9789';
 import {BUILD_INFO} from '/xr/services/buildInfo.js';
-import '/xr/v2/site-navigation.js';
+import './site-navigation.js';
 import {WEBSITE_ROUTES as routes,WEBSITE_ALIASES as aliases} from '/xr/services/siteRoutes.js';
 const reverse=Object.fromEntries(Object.entries(routes).map(([k,v])=>[v,k]));let heroStarted=false;
 function render({focus=false}={}){let key=reverse[location.pathname]||'home',section=location.hash.slice(1);if(section==='demos'){location.replace('/demos/'+location.search);return;}if(section&&(routes[section]||aliases[section])){key=routes[section]?section:aliases[section];const hash=section===key?'':'#'+section;if(location.pathname!==routes[key]||section===key)history.replaceState(null,'',routes[key]+location.search+hash);}

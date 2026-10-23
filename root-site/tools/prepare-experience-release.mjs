@@ -1,11 +1,12 @@
-// Package canonical pages and reviewed entry bridges over V0.9790.
+// Package the reviewed interface over V0.9791, retaining canonical routing.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {versionModuleImports,versionCssImports} from './release-module-urls.mjs';
 import {revision as version} from './assemble-website.mjs';
 import {releaseHtmlFiles,auxiliaryFiles,LEGACY_ENTRY_FILES} from './canonical-pages.mjs';
 import {writeRoutingPlan} from './routing-plan.mjs';
-const previousVersion='0.9790',release=`root-site/releases/${version}`,candidate='dist/website';
+const previousVersion='0.9791',release=`root-site/releases/${version}`,candidate='dist/website';
+const previousManifest=JSON.parse(fs.readFileSync(`root-site/releases/${previousVersion}/manifest.json`));
 if(fs.existsSync(release))throw Error('Release already exists; preserve published payloads.');
 const routes=releaseHtmlFiles;
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex'),candidates=new Map();
@@ -33,12 +34,19 @@ const probes={};for(const prefix of ['xr','site']){
  const response=await fetch(`https://nourishland.org/${prefix}/__experience_missing_${version}__.json?baseline=${Date.now()}`,{signal:AbortSignal.timeout(30000)});
  if(response.status===404){probes[prefix]=null;continue;}
  const bytes=Buffer.from(await response.arrayBuffer());
- if(!response.ok||!response.headers.get('content-type')?.includes('text/html')||!bytes.toString().includes('https://nourishland.org/app/'))throw Error('Unexpected missing-file response: '+prefix);
+ const knownBridge=previousManifest.files.some(item=>Object.hasOwn(LEGACY_ENTRY_FILES,item.file)&&item.sha256===sha(bytes));
+ if(!response.ok||!response.headers.get('content-type')?.includes('text/html')||!knownBridge)throw Error('Unexpected missing-file response: '+prefix);
  probes[prefix]=sha(bytes);
 }
 const files=[],queue=[...candidates];let cursor=0;
 await Promise.all(Array.from({length:4},async()=>{while(cursor<queue.length){
  const [file,bytes]=queue[cursor++];if(!allowedFrontendFile(file,routes))throw Error('Unreviewed path: '+file);
+ // Canonical entry URLs now redirect, so their HTTP body is not a file inventory.
+ // Keep identical, already published bridges out of this unrelated interface update.
+ if(Object.hasOwn(LEGACY_ENTRY_FILES,file)){
+  if(previousManifest.files.find(item=>item.file===file)?.sha256===sha(bytes))continue;
+  throw Error('Entry bridge changed: obtain its private file baseline before packaging '+file);
+ }
  const response=await fetch('https://nourishland.org/'+file+'?baseline='+version+'-'+Date.now(),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(60000)});
  if(!response.ok&&response.status!==404)throw Error('Baseline HTTP '+response.status+': '+file);
  let previousSha256=response.ok?sha(Buffer.from(await response.arrayBuffer())):null;
@@ -50,6 +58,6 @@ await Promise.all(Array.from({length:4},async()=>{while(cursor<queue.length){
  files.push({file,bytes:bytes.length,sha256,previousSha256,mode:'0644',...(LEGACY_ENTRY_FILES[file]?{redirectTarget:LEGACY_ENTRY_FILES[file]}:{})});console.log(file+(previousSha256?' replace':' new'));
 }}));
 files.sort((a,b)=>a.file.localeCompare(b.file));
-const routing=writeRoutingPlan(release,version);
-fs.writeFileSync(release+'/manifest.json',JSON.stringify({schema:'nourishland.root-overlay.v1',version,managedBy:'root-site-release',files,backendChanged:false,routingChanged:true,routing,wordPressChanged:false},null,2)+'\n');
+const routing=process.argv.includes('--update-routing')?writeRoutingPlan(release,version):null;
+fs.writeFileSync(release+'/manifest.json',JSON.stringify({schema:'nourishland.root-overlay.v1',version,managedBy:'root-site-release',files,backendChanged:false,routingChanged:!!routing,...(routing?{routing}:{}),wordPressChanged:false},null,2)+'\n');
 console.log(`Prepared V${version}: ${files.length} explicit files; hero video and world geometry preserved.`);
