@@ -1,23 +1,11 @@
-import {createCeramicOrb} from './orb/ceramic-orb.js';
+import {createCeramicOrb} from './orb/ceramic-orb.js?v=0.9789';
 const root=document.querySelector('[data-education-orb]');
 if(root){
  const button=root.querySelector('[data-open-orb]'),paths=root.querySelector('[data-orb-paths]'),summary=document.querySelector('[data-education-summary]'),footerHint=document.querySelector('[data-education-idle-hint]');
  const title=summary.querySelector('[data-summary-title]'),more=summary.querySelector('[data-summary-more]'),reduced=matchMedia('(prefers-reduced-motion: reduce)');
  const choices=[...paths.querySelectorAll('[data-education-choice]')];
- const branches={
-  'food-forests':[['Layers','Explore a growing place from its canopy to its groundcover. Each layer makes use of a different part of the space.'],['Relationships','Follow connections between plants, soil, water and wildlife. A food forest is a place to observe these relationships over time.'],['Participation','Plant, observe and care for a living system. Questions and shared experience become part of the learning.']],
-  'immersive-learning':[['Observation','Begin by looking closely. Follow a question from something you notice in the world around you.'],['Experience','Explore through images, interaction and activities that bring knowledge back to a living place.'],['Reflection','Return to an experience, compare what you noticed and share the questions it opens.']],
-  hillyards:[['The place','Hillyards Food Forest is the setting for the first Nourishland learning-walk prototype.'],['The walk','Plant guides and learning stops are being developed around the garden, connecting knowledge to the places where it can be observed.'],['The pilot','The prototype is a place to test, listen and refine the experience with the people taking part.']],
-  collaborate:[['Growers','Bring the knowledge that comes from tending plants and caring for a place.'],['Educators','Help shape experiences that encourage curiosity, participation and reflection.'],['Communities','Share the places, stories and questions that can make a learning experience meaningful.']]
- };
- const childNav=summary.querySelector('[data-summary-children]'),child=summary.querySelector('[data-summary-child]');
- let childButtons=[];
- function closeChild(){if(child){child.hidden=true;child.inert=true}for(const item of childButtons)item.setAttribute('aria-expanded','false')}
- function populateChildren(key){
-  if(!childNav||!child)return;closeChild();childButtons=(branches[key]||[]).map(([label,copy])=>{const item=document.createElement('button');item.type='button';item.textContent=label;item.setAttribute('aria-expanded','false');item.setAttribute('aria-controls','education-child');item.addEventListener('click',()=>{const was=item.getAttribute('aria-expanded')==='true';closeChild();if(was)return;child.querySelector('[data-child-title]').textContent=label;child.querySelector('[data-child-copy]').textContent=copy;child.hidden=false;child.inert=false;item.setAttribute('aria-expanded','true')});return item});childNav.replaceChildren(...childButtons);
- }
  const details={
-  'food-forests':{label:'Food Forests',title:'Different plants. One growing system.',copy:'Trees, shrubs and smaller plants form layers that share light, water and space. Explore how these relationships can support food production and habitat.',href:'/food-forests/',action:'Explore food forests',color:'#526c45'},
+  'food-forests':{label:'Food Forests',title:'A new way to grow.',copy:'Discover food forests: diverse, welcoming places to grow food, reconnect with nature and keep learning.',href:'/food-forests/',action:'Explore food forests',color:'#526c45'},
   'immersive-learning':{label:'Immersive Learning',title:'Learn by looking, doing and discovering.',copy:'Follow a plant guide through images, questions and activities. Connect what you learn on screen with the living plants around you, with AR where supported.',href:'/immersive-learning/',action:'Explore immersive learning',color:'#37777b'},
   hillyards:{label:'Hillyards prototype',title:'A real garden becomes a learning place.',copy:'Hillyards Food Forest is the setting for Nourishland’s first immersive-walk prototype. Plant guides and learning activities are being developed around the garden.',href:'/hillyards/',action:'Explore the Hillyards prototype',color:'#ad684c'},
   collaborate:{label:'Build with us',title:'Help shape the first learning experience.',copy:'Educators, growers, researchers and site hosts can help develop the first pilot. Start with a place, the people who know it and something worth sharing.',href:'/collaborate/',action:'See how to take part',color:'#8a7951'}
@@ -28,13 +16,13 @@ if(root){
  function showHint(){if(interacted||!visible||document.hidden||!footerHint)return;footerHint.textContent='Tap or click the orb to explore.';footerHint.dataset.visible='true'}
  function syncHint(){pauseHint();if(interacted||!visible||document.hidden)return;if(hintRemaining<=0){showHint();return}hintStarted=performance.now();hintTimer=setTimeout(()=>{hintTimer=null;hintRemaining=0;showHint()},hintRemaining)}
  function markUsed(){interacted=true;pauseHint();if(footerHint){footerHint.dataset.visible='false';footerHint.textContent=''}}
- function closeSummary({focus=false}={}){const trigger=origin,current=++revision;selected=null;animation?.cancel();summary.hidden=true;summary.inert=true;summary.setAttribute('aria-hidden','true');root.dataset.selection='';summary.dataset.side='';closeChild();for(const choice of choices)choice.setAttribute('aria-expanded','false');if(focus&&trigger)requestAnimationFrame(()=>{if(revision===current&&!selected)trigger.focus({preventScroll:true})})}
+ function closeSummary({focus=false}={}){const trigger=origin,current=++revision;selected=null;animation?.cancel();summary.hidden=true;summary.inert=true;summary.setAttribute('aria-hidden','true');root.dataset.selection='';root.closest('.education-experience').dataset.detail='false';summary.dataset.side='';for(const choice of choices)choice.setAttribute('aria-expanded','false');if(focus&&trigger)requestAnimationFrame(()=>{if(revision===current&&!selected)trigger.focus({preventScroll:true})})}
  function setOpen(value,{focus=false}={}){
   open=value;root.dataset.open=String(value);button.setAttribute('aria-expanded',String(value));button.setAttribute('aria-label',(value?'Close learning connections':'Open learning connections')+'; drag to rotate the orb');paths.inert=!value;paths.setAttribute('aria-hidden',String(!value));if(!value)closeSummary();orb?.setOpen(value);if(focus)button.focus({preventScroll:true});
  }
- function choose(key,choice){const data=details[key];if(!data||!open)return;if(selected===key){closeSummary({focus:true});return}markUsed();const current=++revision;selected=key;origin=choice;root.dataset.selection=key;summary.dataset.side=key==='food-forests'||key==='hillyards'?'left':'right';summary.dataset.row=key==='hillyards'||key==='collaborate'?'lower':'upper';populateChildren(key);
+ function choose(key,choice){const data=details[key];if(!data||!open)return;if(selected===key){closeSummary({focus:true});return}markUsed();const current=++revision;selected=key;origin=choice;root.dataset.selection=key;root.closest('.education-experience').dataset.detail='true';summary.dataset.side='right';summary.dataset.row='upper';
   summary.querySelector('[data-summary-topic]').textContent=data.label;title.textContent=data.title;summary.querySelector('[data-summary-copy]').textContent=data.copy;more.href=data.href;more.textContent=data.action+' ↗';summary.style.setProperty('--summary-accent',data.color);
-  summary.hidden=false;summary.inert=false;summary.setAttribute('aria-hidden','false');for(const item of choices)item.setAttribute('aria-expanded',String(item===choice));animation?.cancel();if(!reduced.matches)animation=summary.animate?.([{opacity:0,transform:'scale(.45) rotate(-5deg)',filter:'blur(4px)'},{opacity:1,transform:'scale(1.025) rotate(.5deg)',filter:'blur(0px)',offset:.78},{opacity:1,transform:'none',filter:'none'}],{duration:650,easing:'cubic-bezier(.2,.75,.2,1)'});
+  summary.hidden=false;summary.inert=false;summary.setAttribute('aria-hidden','false');for(const item of choices)item.setAttribute('aria-expanded',String(item===choice));animation?.cancel();if(!reduced.matches)animation=summary.animate?.([{opacity:0,transform:'translateY(14px)'},{opacity:1,transform:'none'}],{duration:420,easing:'cubic-bezier(.2,.75,.2,1)'});
   requestAnimationFrame(()=>{if(revision===current&&selected)title.focus({preventScroll:true})});
  }
  function rotate(x,y){markUsed();if(orb)orb.rotateBy(x,y);else{queuedYaw+=x;queuedPitch+=y}}
@@ -54,7 +42,7 @@ if(root){
  function loadVisibleOrb(){
   if(!inView||orb||pending)return;
   if(document.documentElement?.hasAttribute('data-experience-site')&&root.closest('[data-route]')?.dataset.entrance!=='ready')return;
-  pending=true;createCeramicOrb(root.querySelector('canvas'),{reduced}).then(value=>{orb=value;root.dataset.orbReady='true';if(queuedYaw||queuedPitch){orb.rotateBy(queuedYaw,queuedPitch);queuedYaw=queuedPitch=0}orb.setOpen(open);orb.setActive(inView&&visible&&!document.hidden)}).catch(()=>{root.dataset.orbReady='fallback'});
+  pending=true;createCeramicOrb(root.querySelector('canvas'),{reduced,connectionOnly:true}).then(value=>{orb=value;root.dataset.orbReady='true';if(queuedYaw||queuedPitch){orb.rotateBy(queuedYaw,queuedPitch);queuedYaw=queuedPitch=0}orb.setOpen(open);orb.setActive(inView&&visible&&!document.hidden)}).catch(()=>{root.dataset.orbReady='fallback'});
  }
  window.addEventListener('nourishland:page-settled',event=>{if(event.detail.page==='education')loadVisibleOrb()});
  const observer=new IntersectionObserver(entries=>{inView=entries.some(e=>e.isIntersecting);orb?.setActive(inView&&visible&&!document.hidden);loadVisibleOrb();},{rootMargin:'160px'});

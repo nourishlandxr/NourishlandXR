@@ -1,10 +1,10 @@
 {
-  "version": "0.9774",
+  "version": "0.9790",
   "education": [
     "Footer hint appears after eight inactive seconds, with no message under the orb",
     "Using the orb permanently dismisses this page session’s hint",
     "All four child cells stay on Education and show a summary plus a separate deeper link",
-    "Each topic extends towards its matching side and contains three colour-coded child cells that toggle same-page detail",
+    "Each connection has one prominent destination; subject subtopics belong inside that destination",
     "Grab-and-move rotates the orb and suppresses the click after a drag",
     "A tap still toggles the orb normally",
     "The eight-second hint timer pauses in hidden tabs"

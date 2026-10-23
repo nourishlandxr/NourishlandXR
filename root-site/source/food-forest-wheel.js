@@ -1,6 +1,9 @@
 // Original botanical artwork as a slowly turning mineral relief, with authored views.
 export const WHEEL_VIEWS=Object.freeze({
  overview:{zoom:1,x:0,y:0,rx:-.08,ry:0,rz:0},
+ story:{zoom:1.06,x:0,y:0,rx:-.16,ry:.12,rz:-.12},
+ guide:{zoom:1.08,x:0,y:0,rx:.14,ry:-.16,rz:.18},
+ hillyards:{zoom:1.06,x:0,y:0,rx:-.12,ry:.2,rz:-.2},
  layers:{zoom:1.85,x:-.35,y:.95,rx:-.24,ry:.22,rz:-.25},
  relationships:{zoom:2.05,x:.25,y:-1.05,rx:.24,ry:-.22,rz:.3},
  seasons:{zoom:2.1,x:1,y:-.35,rx:-.14,ry:-.28,rz:-.48}
@@ -28,7 +31,10 @@ export async function mountOriginalWheel(host){
   const target=WHEEL_VIEWS[topic],ease=reduced.matches?1:1-Math.exp(-dt*4.4);let settling=false;
   for(const key of Object.keys(view)){view[key]+=(target[key]-view[key])*ease;if(Math.abs(target[key]-view[key])>.0001)settling=true;}
   wheel.rotation.set(view.rx,view.ry,angle+view.rz);wheel.updateMatrixWorld();focus.set(view.x,view.y,0).applyMatrix4(wheel.matrixWorld);
-  camera.position.set(focus.x,focus.y,distance);camera.lookAt(focus.x,focus.y,0);camera.zoom=view.zoom;camera.updateProjectionMatrix();renderer.render(scene,camera);
+  // Bound the view by the original artwork's circular footprint. Close views
+  // change the angle and approach gently, without losing the wheel's edge.
+  const zoom=Math.min(view.zoom,1.08),safeDistance=Math.max(distance,6.5*zoom/Math.min(1,camera.aspect));
+  camera.position.set(focus.x,focus.y,safeDistance);camera.lookAt(focus.x,focus.y,0);camera.zoom=zoom;camera.updateProjectionMatrix();renderer.render(scene,camera);
   host.dataset.wheelAngle=angle.toFixed(4);host.dataset.wheelZoom=view.zoom.toFixed(3);host.dataset.wheelView=topic;
   if(!reduced.matches||settling)schedule();else last=0;
  }

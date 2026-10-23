@@ -1,0 +1,130 @@
+/* Four picture-led chapters. The independent V2 guide retains its own layout. */
+#food-forest-guide.guide-page:not([hidden]){display:flex;flex-direction:column;width:100%;max-width:1380px;min-height:0;height:100%;padding:20px 32px 14px;gap:0;background:none;border:0}
+.guide-page .guide-heading{flex:none;text-align:center;max-width:860px;margin:0 auto 16px}
+.guide-page .guide-heading h1{font:500 clamp(30px,3.4vw,44px)/1.14 var(--sans);letter-spacing:-.045em;margin:0 0 12px}
+.guide-page .guide-heading>p{font:400 17px/1.55 var(--sans);max-width:68ch;margin:0 auto;color:#567260}
+.guide-page .guide-views{flex:1;min-height:0;position:relative;width:100%}
+.guide-page .guide-panel{height:100%;min-height:0;margin:0;padding:0;border:0;background:none}
+.guide-page .guide-panel[hidden]{display:none!important}
+.guide-page .guide-scenes-nav{display:flex;justify-content:center;flex:none;gap:16px;position:relative;z-index:5;margin:0;padding:14px 0 0;flex-wrap:nowrap}
+.guide-page .guide-scenes-nav button{border:0;border-bottom:2px solid #93a77b40;border-radius:0;background:none;min-height:48px;padding:10px 20px;font:500 18px/1.2 var(--sans);color:#5a775d;cursor:pointer}
+.guide-page .guide-scenes-nav button[aria-selected=true]{color:#234e38;border-bottom-color:#52734e;background:linear-gradient(0deg,#d9e2c96b,transparent)}
+.guide-page button:focus-visible{outline:2px solid #446c4f;outline-offset:3px}
+.guide-page .guide-layer-tabs button:hover,.guide-page .people-choices button:hover,.guide-page .design-choice:hover{background:#dfe6cf;color:#244e3c}
+.guide-page h2,.guide-page h3{font:500 clamp(26px,2.8vw,37px)/1.15 var(--sans);letter-spacing:-.035em;color:#244e3d;margin:0 0 17px}
+.guide-page p{font:400 17px/1.65 var(--sans);color:#4c6a57;margin:0}
+.guide-page .eyebrow{font:600 10px/1.5 var(--sans);text-transform:uppercase;letter-spacing:.12em;color:#7a8b68;margin:0 0 13px}
+
+/* The original system artwork stays intact, with discreet full-sized hit areas. */
+.guide-page .forest-system{display:grid;grid-template-columns:minmax(0,1.8fr) minmax(250px,.8fr);gap:45px;align-items:center;box-shadow:none;border:0;border-radius:0}
+.guide-page .system-image-space{width:100%;height:100%;min-height:0;display:flex;align-items:center;justify-content:center}
+.guide-page .forest-system-art{position:relative;flex:none;margin:0;overflow:hidden;border-radius:5px;box-shadow:0 14px 36px #405d301a}
+.guide-page .forest-system-art>img{display:block;width:100%;height:100%;object-fit:contain}
+.guide-page .forest-system>figcaption{padding:0;background:none;border:0;max-width:340px;align-self:center}
+.guide-page .forest-system-point,.guide-page .forest-system-point[aria-pressed=true]{width:44px;height:44px;min-width:44px;padding:0;border:0;background:transparent;box-shadow:none;outline:0;cursor:pointer}
+.guide-page .forest-system-point:after{content:'';position:absolute;inset:18px;border:1px solid #53714e;border-radius:50%;background:#f7edd2;box-shadow:0 1px 5px #25493180;transition:transform .3s,box-shadow .3s}
+.guide-page .forest-system-point[aria-pressed=true]:after{transform:scale(1.4);box-shadow:0 0 0 5px #f7edd250,0 1px 6px #25493170}
+.guide-page .forest-system-point:focus-visible{border:1px solid #315c43;outline:2px solid #fff2ce;border-radius:50%}
+
+/* Layer labels and information are live text in the original picture's spaces. */
+.guide-page .layer-guide{display:flex;align-items:center;justify-content:center}
+.layer-spread{position:relative;flex:none;margin:0;max-width:1100px;overflow:hidden;border-radius:5px;isolation:isolate;box-shadow:0 12px 32px #2d503c12}
+.layer-art{display:block;width:100%;height:100%;object-fit:contain}
+.guide-layer-tabs{position:absolute;left:4%;top:8%;width:19.5%;height:62%;display:flex;flex-direction:column;gap:5px;z-index:3}
+.guide-layer-tabs button{flex:1;min-height:44px;padding:5px 9px;text-align:left;border:1px solid transparent;border-left:2px solid #81976d55;border-radius:0;background:#f4efdd70;font:500 clamp(13px,1.35vw,19px)/1.2 var(--sans);color:#395c42;cursor:pointer;transition:background .3s,border-color .3s}
+.guide-layer-tabs button[aria-selected=true]{background:#e1e7cced;border-color:#7e966b66;border-left:3px solid #5e7b4c;box-shadow:inset 0 1px #ffffdd}
+.guide-layer-panel{position:absolute;left:69.5%;top:20%;width:26%;height:50%;margin:0;padding:14px 9px;display:flex;flex-direction:column;justify-content:center;border:0;background:none;z-index:2}
+.guide-page .guide-layer-panel h2{font-size:clamp(22px,2.3vw,32px);margin-bottom:14px}
+.guide-page .guide-layer-panel>p:not(.eyebrow){font-size:clamp(13px,1.25vw,17px);line-height:1.6}
+.layer-pointer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;z-index:1}
+.layer-pointer path{fill:none;stroke:#4f7757;stroke-width:.14;stroke-dasharray:.35 .45;opacity:.9}
+.layer-pointer circle[data-layer-glow]{fill:#fff8d780;stroke:#d7dcaf70;stroke-width:.3;transition:cx .5s,cy .5s}
+.layer-pointer circle[data-layer-target]{fill:#f5e9bd;stroke:#4a704f;stroke-width:.2;transition:cx .5s,cy .5s}
+.layer-mini-title{display:none}
+
+/* The original triangle becomes a focusable, animated picture. */
+.guide-page .design-guide{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(260px,.85fr);gap:55px;align-items:center;max-width:1140px;margin:auto}
+.design-triangle{position:relative;min-height:0;width:min(100%,calc((var(--page-space) - 195px)*1.2));height:auto;aspect-ratio:1.2;justify-self:center;--focus-x:50%;--focus-y:55%;--design-tone:#69856c}
+.design-triangle>svg{display:block;width:100%;height:100%;overflow:visible}
+.triangle-shadow{fill:#9da883;filter:drop-shadow(0 12px 14px #36563725)}
+.triangle-rim{fill:none;stroke:url(#guide-triangle-rim);stroke-width:8;stroke-linejoin:round}
+.triangle-facet{stroke:#eae7cb;stroke-width:2;stroke-linejoin:round}.triangle-air{fill:#9cafac}.triangle-earth{fill:#78916a}.triangle-fire{fill:#b7825c}
+.triangle-bonds{fill:none;stroke:#f8efd6;stroke-width:1.5;stroke-dasharray:3 5;opacity:.95;transition:d .7s}
+.triangle-aura{fill:#faf3cf50;stroke:#f8efce;stroke-width:1;transition:cx .7s,cy .7s}
+.triangle-seed{fill:var(--design-tone);stroke:#fff1cd;stroke-width:3;transition:cx .7s,cy .7s,fill .7s}
+.design-choice{position:absolute;min-height:44px;padding:8px 12px;border:0;border-bottom:2px solid transparent;border-radius:0;background:#eee9d8e0;font:500 20px/1.2 var(--sans);color:#52705c;cursor:pointer;transition:color .3s,border-color .3s}
+.design-choice[aria-pressed=true]{color:#244e3c;border-bottom-color:var(--design-tone);background:#dfe6cf}
+.design-ornamental{left:50%;top:0;transform:translateX(-50%)}.design-efficient{left:1%;bottom:0}.design-productive{right:0;bottom:0}
+.design-blend{position:absolute;left:var(--focus-x);top:var(--focus-y);transform:translate(-50%,-50%);min-width:44px;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:#fff8d9;font:500 24px/1 var(--sans);text-shadow:0 1px 5px #2d4c35;cursor:pointer;transition:left .7s,top .7s}
+.guide-page .design-explanation{max-width:360px}
+.guide-page .design-explanation .design-note{font-size:12px;line-height:1.5;margin-top:25px;color:#7a8d72;border-top:1px solid #9cac8a40;padding-top:16px}
+
+/* A welcoming human experience, with quiet changes in emphasis. */
+.guide-page .people-guide{display:grid;grid-template-columns:minmax(0,1.85fr) minmax(260px,.75fr);gap:45px;align-items:center;max-width:1210px;margin:auto}
+.people-picture{position:relative;width:100%;min-height:0;height:auto;aspect-ratio:1.5;margin:0;border-radius:5px;overflow:hidden;box-shadow:0 15px 32px #3655341a;--person-x:18%;--person-y:42%}
+.people-picture>img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1.045);transform-origin:var(--person-x) var(--person-y);transition:transform-origin 1.1s,transform 1.1s}
+.people-focus{position:absolute;left:var(--person-x);top:var(--person-y);width:65px;height:65px;transform:translate(-50%,-50%);border:1px solid #fff2cdcf;border-radius:50%;box-shadow:0 0 0 8px #fff3d51f;transition:left 1.1s,top 1.1s;pointer-events:none}
+.people-picture>figcaption{position:absolute;right:12px;bottom:8px;font:400 9px/1.4 var(--sans);color:#fff8de;text-shadow:0 1px 4px #203d29}
+.people-choices{display:flex;justify-content:space-between;gap:9px;margin:0 0 28px}
+.people-choices button{min-height:44px;padding:8px 5px;border:0;border-bottom:2px solid #91a47c40;border-radius:0;background:none;font:500 17px/1.2 var(--sans);color:#58765a;cursor:pointer}
+.people-choices button[aria-pressed=true]{border-bottom-color:#52754b;color:#264f37}
+.people-detail{min-width:0;max-width:340px}
+@media(max-width:1050px) and (min-width:701px){
+ .guide-page .forest-system,.guide-page .people-guide,.guide-page .design-guide{gap:25px;grid-template-columns:minmax(0,1.4fr) minmax(240px,.9fr)}
+ .guide-layer-tabs{gap:2px;height:68%;top:5%}.guide-layer-tabs button{font-size:13px;min-height:36px}
+ .guide-page .guide-layer-panel{padding:0 3px}.guide-page .guide-layer-panel>p:not(.eyebrow){font-size:13px}.guide-page .guide-layer-panel h2{font-size:23px}
+}
+@media(max-width:700px){
+ #food-forest-guide.guide-page:not([hidden]){padding:14px 18px 8px}
+ .guide-page .guide-heading{margin-bottom:10px}
+ .guide-page .guide-heading h1{font-size:28px;margin-bottom:9px}
+ .guide-page .guide-heading>p{font-size:14px;line-height:1.5}
+ .guide-page h2,.guide-page h3{font-size:25px;margin-bottom:10px}
+ .guide-page p{font-size:14px;line-height:1.55}
+ .guide-page .guide-scenes-nav{gap:4px;padding-top:9px;justify-content:space-between}
+ .guide-page .guide-scenes-nav button{min-height:46px;padding:8px 5px;font-size:14px}
+ .guide-page .forest-system{display:flex;flex-direction:column;gap:16px}
+ .guide-page .system-image-space{flex:1;min-height:100px;height:auto}
+ .guide-page .forest-system>figcaption{flex:none;max-width:none;width:100%;padding:0 8px}
+ .guide-page .forest-system>figcaption>.eyebrow{font-size:9px;margin-bottom:8px}
+ .guide-page .layer-guide{align-items:center}
+ .layer-spread{width:100%;height:auto;overflow:visible;box-shadow:none;display:flex;flex-direction:column}
+ .layer-art{width:100%;height:auto;border-radius:5px;aspect-ratio:1.5;flex:none}
+ .guide-layer-tabs{position:static;width:100%;height:auto;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;margin:9px 0 0;flex:none}
+ .guide-layer-tabs button{min-height:44px;font-size:12px;padding:5px 3px;text-align:center;border-left:0;border-bottom:1px solid #8ca17c70;background:none}
+ .guide-layer-tabs button[aria-selected=true]{border-left:0;border-bottom:2px solid #5e7b4c;background:#dce5ca}
+ .guide-layer-panel{position:static;display:block;flex:none;width:auto;height:auto;margin:10px 0 0;padding:0 5px}
+ .guide-page .guide-layer-panel>h2{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ .guide-page .guide-layer-panel>.eyebrow{display:none}
+ .guide-page .guide-layer-panel>p:not(.eyebrow){font-size:14px;line-height:1.55}
+ .layer-mini-title{position:absolute;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;left:69%;top:10%;width:27%;height:26vw;max-height:105px;padding:6px;pointer-events:none}
+ .layer-mini-title small{font:500 8px/1.3 var(--sans);letter-spacing:.03em;color:#7c8c6b;margin-bottom:8px}
+ .layer-mini-title span{font:500 17px/1.2 var(--sans);color:#315b40}
+ .layer-pointer{height:auto;aspect-ratio:1.5;inset:0;max-height:none}.layer-pointer path{display:none}
+ .guide-page .design-guide{display:flex;flex-direction:column;gap:14px;justify-content:center}
+ .design-triangle{flex:none;width:min(100%,396px);min-height:0;height:auto}
+ .design-choice{font-size:15px;padding:6px 8px}
+ .guide-page .design-explanation{flex:none;max-width:none;width:100%;padding:0 5px}
+ .guide-page .design-explanation .eyebrow{display:none}
+ .guide-page .design-explanation .design-note{font-size:10px;padding-top:8px;margin-top:12px}
+ .guide-page .people-guide{display:flex;flex-direction:column;justify-content:center;gap:13px}
+ .people-picture{flex:none;max-height:290px;aspect-ratio:1.5}
+ .people-detail{flex:none;width:100%;max-width:none;padding:0 5px}
+ .people-choices{justify-content:center;gap:26px;margin-bottom:15px}
+ .people-choices button{font-size:15px;min-height:44px}
+ .people-focus{width:45px;height:45px;box-shadow:0 0 0 5px #fff3d51f}
+}
+@media(max-width:700px) and (max-height:740px){
+ #food-forest-guide.guide-page:not([hidden]){padding-top:10px}
+ .guide-page .guide-heading{margin-bottom:7px}.guide-page .guide-heading h1{font-size:25px;margin-bottom:7px}.guide-page .guide-heading>p{font-size:12px;line-height:1.45}
+ .guide-page h2,.guide-page h3{font-size:22px;margin-bottom:8px}.guide-page p{font-size:13px;line-height:1.5}
+ .guide-page .guide-scenes-nav{padding-top:5px}.guide-page .guide-scenes-nav button{font-size:13px;min-height:44px;padding:7px 4px}
+ .guide-page .forest-system{gap:10px}.guide-page .forest-system>figcaption .eyebrow{display:none}
+ .layer-spread{max-width:330px}.guide-layer-tabs{gap:3px;margin-top:5px}.guide-layer-tabs button{font-size:11px;min-height:44px}.guide-layer-panel{margin-top:7px}.guide-page .guide-layer-panel>p:not(.eyebrow){font-size:12px;line-height:1.45}
+ .layer-mini-title{top:8%;height:80px}.layer-mini-title small{font-size:7px;margin-bottom:6px}.layer-mini-title span{font-size:15px}
+ .guide-page .design-guide{gap:8px}.design-triangle{width:min(100%,264px);min-height:0}.guide-page .design-explanation .design-note{margin-top:8px;padding-top:6px}
+ .people-picture{max-width:330px;max-height:220px}.guide-page .people-guide{gap:7px}.people-choices{margin-bottom:8px}.people-detail>div>p{font-size:13px}
+}
+@media(prefers-reduced-motion:reduce){
+ .guide-page *, .guide-page *:before,.guide-page *:after{transition:none!important;animation:none!important}
+}

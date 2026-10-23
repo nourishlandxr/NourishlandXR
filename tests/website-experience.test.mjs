@@ -5,8 +5,16 @@ test('assembled website preserves every public route and the existing story grap
  const html=assembleWebsite(),routes=JSON.parse(fs.readFileSync('root-site/routes.json'));
  for(const key of Object.keys(routes))assert.equal((html.match(new RegExp(`data-route="${key}"`,'g'))||[]).length,1,key);
  assert(html.includes('data-open-orb'));assert(html.includes('creator-showcase-template'));assert(html.includes('data-totem-journey'));
- assert(html.includes('food-forest-story.js'));assert(html.includes('forest-system.js'));
+ assert(html.includes('story-reader.js'));assert(html.includes('forest-system.js'));
  assert(html.includes('data-discovery-die'));assert(html.includes('data-forest-wheel'));
+});
+test('the complete original story remains available without a second education submenu',()=>{
+ const html=assembleWebsite(),content=JSON.parse(fs.readFileSync('root-site/source/food-forest-story-content.json'));
+ const escaped=value=>value.replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;');
+ assert.equal(content.chapters.length,7);assert.equal(content.chapters.flatMap(c=>c.paragraphs).length,54);
+ for(const chapter of content.chapters){for(const paragraph of chapter.paragraphs)assert(html.includes(escaped(paragraph)));if(chapter.quote)assert(html.includes(escaped(chapter.quote.text)));}
+ assert.equal((html.match(/class="story-original-quote"/g)||[]).length,5);
+ assert(!html.includes('data-summary-children'));assert(!html.includes('data-summary-child'));
 });
 test('route replacement respects nested sections and adjacent content',()=>{
  assert.equal(replaceSection('<main><section id="a"><section><p>inner</p></section></section><section id="b">keep</section></main>','a','<section id="a">new</section>'),'<main><section id="a">new</section><section id="b">keep</section></main>');

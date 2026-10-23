@@ -1,3 +1,4 @@
+import {revision} from '../tools/assemble-website.mjs';
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';import {fileURLToPath} from 'node:url';
 const root=path.dirname(fileURLToPath(import.meta.url)),site=path.resolve(root,'../source');
 function harness(page){
@@ -11,6 +12,7 @@ function harness(page){
 }
 function education(){
  const h=harness('education'),{Node,doc,win}=h,root=new Node(),button=new Node(),paths=new Node(),summary=new Node(),footer=new Node(),title=new Node(),more=new Node(),calls=[];
+ root.closest=()=>({dataset:{}});
  const choices=['food-forests','immersive-learning','hillyards','collaborate'].map(key=>{const n=new Node();n.dataset.educationChoice=key;return n});paths.items=choices;
  root.nodes={'[data-open-orb]':button,'[data-orb-paths]':paths,canvas:new Node()};const childNav=new Node(),child=new Node();child.nodes={'[data-child-title]':new Node(),'[data-child-copy]':new Node()};summary.nodes={'[data-summary-children]':childNav,'[data-summary-child]':child,'[data-summary-title]':title,'[data-summary-more]':more,'[data-summary-topic]':new Node(),'[data-summary-copy]':new Node()};
  doc.querySelector=s=>({'[data-education-orb]':root,'[data-education-summary]':summary,'[data-education-idle-hint]':footer})[s];
@@ -19,12 +21,12 @@ function education(){
  new Function('document','window','requestAnimationFrame','setTimeout','clearTimeout','performance','IntersectionObserver','matchMedia','createCeramicOrb',code)(doc,win,h.raf,h.setTimeout,h.clearTimeout,h.performance,class{constructor(fn){observe=fn}observe(){}},()=>({matches:false}),async()=>orb);
  return {...h,root,button,paths,summary,footer,title,more,choices,calls,observe,childNav,child};
 }
-const report={version:'0.9774',education:[],platform:[],browserVisualVerified:false,productionChanged:false};
+const report={version:revision,education:[],platform:[],browserVisualVerified:false,productionChanged:false};
 const e=education();e.advance(7999);assert.notEqual(e.footer.dataset.visible,'true');e.advance(1);assert.equal(e.footer.dataset.visible,'true');report.education.push('Footer hint appears after eight inactive seconds, with no message under the orb');
 e.button.dispatch('click',{detail:0});assert.equal(e.root.dataset.open,'true');assert.equal(e.footer.dataset.visible,'false');e.advance(16000);assert.equal(e.footer.dataset.visible,'false');report.education.push('Using the orb permanently dismisses this page session’s hint');
 for(const [i,href] of ['/food-forests/','/immersive-learning/','/hillyards/','/collaborate/'].entries()){e.choices[i].dispatch('click');e.flush();assert.equal(e.root.dataset.open,'true');assert.equal(e.summary.hidden,false);assert.equal(e.more.href,href);assert.equal(e.doc.activeElement,e.title)}report.education.push('All four child cells stay on Education and show a summary plus a separate deeper link');
-for(const [i,side] of ['left','right','left','right'].entries()){e.choices[i].dispatch('click');e.flush();assert.equal(e.summary.dataset.side,side);assert.equal(e.childNav.children.length,3);e.childNav.children[0].dispatch('click');assert.equal(e.child.hidden,false);assert.equal(e.childNav.children[0].attrs['aria-expanded'],'true');e.childNav.children[1].dispatch('click');assert.equal(e.childNav.children[0].attrs['aria-expanded'],'false');assert.equal(e.childNav.children[1].attrs['aria-expanded'],'true');e.childNav.children[1].dispatch('click');assert.equal(e.child.hidden,true)}
-report.education.push('Each topic extends towards its matching side and contains three colour-coded child cells that toggle same-page detail');
+for(const [i,href] of ['/food-forests/','/immersive-learning/','/hillyards/','/collaborate/'].entries()){e.choices[i].dispatch('click');e.flush();assert.equal(e.summary.dataset.side,'right');assert.equal(e.more.href,href);assert.equal(e.summary.hidden,false)}
+report.education.push('Each connection has one prominent destination; subject subtopics belong inside that destination');
 e.summary.dispatch('keydown',{key:'Escape',preventDefault(){}});e.flush();assert.equal(e.summary.hidden,true);assert.equal(e.doc.activeElement,e.choices[3]);
 e.observe([{isIntersecting:true}]);await Promise.resolve();await Promise.resolve();const open=e.root.dataset.open;
 e.button.dispatch('pointerdown',{button:0,pointerId:1,clientX:50,clientY:50});e.button.dispatch('pointermove',{pointerId:1,clientX:90,clientY:70});e.button.dispatch('pointerup',{pointerId:1});e.button.dispatch('click',{detail:1});assert.equal(e.root.dataset.open,open);assert.ok(e.calls.some(row=>row[0]==='rotate'));report.education.push('Grab-and-move rotates the orb and suppresses the click after a drag');
@@ -40,5 +42,5 @@ signs[2].dispatch('click');assert.equal(panel.hidden,true);report.platform.push(
 signs[1].dispatch('click');p.flush();stage.dispatch('keydown',{key:'Escape',preventDefault(){}});p.flush();assert.equal(panel.hidden,true);assert.equal(doc.activeElement,signs[1]);report.platform.push('Escape restores focus to the selected sign');
 const css=fs.readFileSync(path.join(site,'platform-totem.css'),'utf8'),js=fs.readFileSync(path.join(site,'platform-totem.js'),'utf8'),html=fs.readFileSync(path.join(site,'platform-totem.html'),'utf8');
 assert.ok(!css.includes('scale('));assert.ok(!css.includes('--detail-min-height'));assert.ok(!js.includes('ResizeObserver'));assert.ok(!html.includes('data-totem-back'));assert.ok(css.includes('grid-template-columns:minmax(0,1fr) 340px minmax(0,1fr)'));assert.ok(css.includes('#platform .platform-highlights{position:absolute'));assert.ok(css.includes('translateX(calc(-50% + 200px))'));assert.ok(css.includes('translateX(calc(-50% - 200px))'));report.platform.push('Directional side panels, one-viewport layout and smooth Totem translation without shrinking');
-const educationHTML=fs.readFileSync(path.join(site,'education-flower.html'),'utf8');assert.ok(!educationHTML.includes('orb-core-label'));assert.ok(!educationHTML.includes('orb-hint'));assert.equal((educationHTML.match(/data-education-choice=/g)||[]).length,4);assert.ok(!/<a[^>]+data-education-choice/.test(educationHTML));
+const educationHTML=fs.readFileSync(path.join(site,'education-flower.html'),'utf8');assert.ok(!educationHTML.includes('data-summary-children'));assert.ok(!educationHTML.includes('data-summary-child'));assert.ok(!educationHTML.includes('orb-core-label'));assert.ok(!educationHTML.includes('orb-hint'));assert.equal((educationHTML.match(/data-education-choice=/g)||[]).length,4);assert.ok(!/<a[^>]+data-education-choice/.test(educationHTML));
 fs.writeFileSync(path.join(root,'menu-interaction-checks.json'),JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));

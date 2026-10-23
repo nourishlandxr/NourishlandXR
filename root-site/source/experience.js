@@ -1,5 +1,5 @@
 import {mountPlaceShowcase} from './place-showcase.js';
-import './living-surfaces.js';
+import './living-surfaces.js?v=0.9789';
 const reduced=matchMedia('(prefers-reduced-motion:reduce)');
 let entrance=[],pendingEntrance=[],epoch=0,wheel=null,wheelLoading=false,dieDispose=null,dieLoading=false,places=null,placesLoading=false,forestSelection=null;
 const forestTopics={layers:{title:'Different layers. Shared light.',copy:'Canopy trees shape the shade. Smaller trees and shrubs fill the middle. Herbs, groundcovers, climbers and roots use other parts of the space. Plan for the size each plant will reach.',points:['Canopy','Understorey','Roots'],color:'#607953'},relationships:{title:'The connections make the forest.',copy:'Roots meet soil and fungi. Flowers attract pollinators. Leaves become shelter and organic matter. These relationships change with the species, conditions and care a place receives.',points:['Soil life','Pollinators','Habitat'],color:'#3f7775'},seasons:{title:'A forest keeps becoming.',copy:'Flowering, harvest, leaf fall and new growth follow different rhythms. A mix of species can spread activity through the year. Watch what changes in your own climate.',points:['Flower','Harvest','Renew'],color:'#a46a4c'}};
@@ -33,7 +33,7 @@ export function enterPage(key){
 }
 async function loadPageObject(key){
  wheel?.setActive(key==='food-forests');
- if(key==='food-forests'&&!wheel&&!wheelLoading){wheelLoading=true;const host=document.querySelector('[data-forest-wheel]');try{const {mountOriginalWheel}=await import('./food-forest-wheel.js');wheel=await mountOriginalWheel(host);wheel.setTopic(forestSelection);wheel.setActive(document.body.dataset.page==='food-forests');}catch{host.dataset.finish='fallback';}finally{wheelLoading=false;}}
+ if(key==='food-forests'&&!wheel&&!wheelLoading){wheelLoading=true;const host=document.querySelector('[data-forest-wheel]');try{const {mountOriginalWheel}=await import('./food-forest-wheel.js?v=0.9789');wheel=await mountOriginalWheel(host);wheel.setTopic(forestSelection);wheel.setActive(document.body.dataset.page==='food-forests');}catch{host.dataset.finish='fallback';}finally{wheelLoading=false;}}
  if(key==='places'&&!places&&!placesLoading){placesLoading=true;places=await mountPlaceShowcase(document.querySelector('#places [data-places-showcase]'));placesLoading=false;}
  if(key==='collaborate'&&!dieDispose&&!dieLoading){dieLoading=true;try{const {mountLandingWheel}=await import('/xr/v2/nlxr/services/landingWheel.js');dieDispose=await mountLandingWheel(document.querySelector('[data-discovery-die]'));}finally{dieLoading=false;}}
 }
@@ -47,7 +47,15 @@ function forestThreads(now=performance.now()){
  if(now<threadUntil)threadFrame=requestAnimationFrame(forestThreads);
 }
 function trackForest(){forest?.querySelectorAll('a.forest-node').forEach(n=>n.inert=!!forestSelection&&matchMedia('(max-width:700px)').matches);threadUntil=performance.now()+1250;if(!threadFrame)threadFrame=requestAnimationFrame(forestThreads);}
-if(forest){new ResizeObserver(trackForest).observe(forest);forest.querySelectorAll('.forest-node').forEach((node,i)=>node.style.setProperty('--node-order',i));}
+if(forest){new ResizeObserver(trackForest).observe(forest);forest.querySelectorAll('.forest-node').forEach((node,i)=>{
+ node.style.setProperty('--node-order',i);
+ if(node.matches('a.forest-entry')){
+  const topic=['story','guide','hillyards'][i];
+  node.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')wheel?.setTopic(topic);});
+  node.addEventListener('pointerleave',()=>wheel?.setTopic(null));
+  node.addEventListener('focus',()=>wheel?.setTopic(topic));node.addEventListener('blur',()=>wheel?.setTopic(null));
+ }
+});}
 function forestOpen(open){if(!forest)return;forest.dataset.menuOpen=String(open);forestMenu.inert=!open;forestMenu.setAttribute('aria-hidden',String(!open));forestTrigger.setAttribute('aria-expanded',String(open));trackForest();}
 function closeForest(){forestSelection=null;forest.dataset.focused='false';forestAnswer.hidden=true;wheel?.setTopic(null);forest.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-expanded','false'));forest.querySelectorAll('a.forest-node').forEach(n=>n.inert=false);forestTrigger.focus({preventScroll:true});trackForest();}
 forestTrigger?.addEventListener('click',()=>forestOpen(true));

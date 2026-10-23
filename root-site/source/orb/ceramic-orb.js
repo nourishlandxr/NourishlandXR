@@ -1,10 +1,10 @@
 // The current NL Organic V3 shell: 18 adjoining cells, with a matte mineral finish.
 // This presentation adapter does not import Creator, XR, account services or the biome.
-export async function createCeramicOrb(canvas,{reduced}){
+export async function createCeramicOrb(canvas,{reduced,connectionOnly=false}){
  const T=await import('./three.mjs'),{createOrganicOrbGeometry}=await import('./organicOrbGeometry.mjs');
  const renderer=new T.WebGLRenderer({canvas,alpha:true,antialias:true,powerPreference:'low-power'});
  renderer.setPixelRatio(Math.min(devicePixelRatio||1,1.5));renderer.setClearColor(0,0);renderer.outputColorSpace=T.SRGBColorSpace;renderer.toneMapping=T.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
- const scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.1,20);camera.position.set(0,.1,5.1);
+ const scene=new T.Scene(),camera=new T.PerspectiveCamera(32,1,.1,20);camera.position.set(0,connectionOnly?0:.1,connectionOnly?5.9:5.1);
  scene.add(new T.HemisphereLight(0xfff6df,0x455e4f,2.2));
  for(const [color,intensity,pos] of [[0xffe6bc,3,[-3,5,5]],[0xc9e0df,1.1,[4,1,2]],[0xfffaf0,1.9,[-1,2,-4]]]){const light=new T.DirectionalLight(color,intensity);light.position.set(...pos);scene.add(light)}
  const source=createOrganicOrbGeometry('medium'),p=[],n=[],uv=[];
@@ -30,5 +30,6 @@ export async function createCeramicOrb(canvas,{reduced}){
  }
  function motionChanged(){dirty=true;schedule()}
  reduced.addEventListener('change',motionChanged);size();
- return {rotateBy(x,y){if(!manualRotation){yaw+=time*.09;pitch+=Math.sin(time*.22)*.04;manualHeight=reduced.matches?0:Math.sin(time*.7)*.035}manualRotation=true;yaw+=x;pitch=T.MathUtils.clamp(pitch+y,-1.2,1.2);dirty=true;schedule()},setOpen(value){target=value?1:0;dirty=true;schedule()},setActive(value){active=value;if(active){dirty=true;schedule()}else{cancelAnimationFrame(raf);raf=0;previous=0}},dispose(){disposed=true;resize.disconnect();cancelAnimationFrame(raf);reduced.removeEventListener('change',motionChanged);geometry.dispose();material.dispose();core.geometry.dispose();core.material.dispose();grain.dispose();renderer.dispose()}};
+ // Navigation reveals the surrounding connections; the sculpture stays whole.
+ return {rotateBy(x,y){if(!manualRotation){yaw+=time*.09;pitch+=Math.sin(time*.22)*.04;manualHeight=reduced.matches?0:Math.sin(time*.7)*.035}manualRotation=true;yaw+=x;pitch=T.MathUtils.clamp(pitch+y,-1.2,1.2);dirty=true;schedule()},setOpen(value){target=value?(connectionOnly?.1:1):0;dirty=true;schedule()},setActive(value){active=value;if(active){dirty=true;schedule()}else{cancelAnimationFrame(raf);raf=0;previous=0}},dispose(){disposed=true;resize.disconnect();cancelAnimationFrame(raf);reduced.removeEventListener('change',motionChanged);geometry.dispose();material.dispose();core.geometry.dispose();core.material.dispose();grain.dispose();renderer.dispose()}};
 }

@@ -1,9 +1,9 @@
-// Package the assembled website as an explicit additive overlay over V0.9784.
+// Package the assembled website as an explicit additive overlay over V0.9785.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {versionModuleImports,versionCssImports} from './release-module-urls.mjs';
 import {revision as version} from './assemble-website.mjs';
-const previousVersion='0.9784',release=`root-site/releases/${version}`,candidate='dist/website';
+const previousVersion='0.9785',release=`root-site/releases/${version}`,candidate='dist/website';
 if(fs.existsSync(release))throw Error('Release already exists; preserve published payloads.');
 const routes=new Set(Object.values(JSON.parse(fs.readFileSync('root-site/routes.json'))).map(r=>(r.path==='/'?'':r.path.slice(1))+'index.html'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex'),candidates=new Map();
@@ -19,7 +19,7 @@ function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
  candidates.set(file,bytes);
 }}
 walk(path.join(candidate,'site'));
-for(const name of ['homepage-hero.js','hero-preview.css','index.html'])candidates.set('xr/v2/'+name,fs.readFileSync('dist/xr/v2/'+name));
+for(const name of ['homepage-hero.js','hero-preview.css','food-forest-story.js','index.html'])candidates.set('xr/v2/'+name,fs.readFileSync('dist/xr/v2/'+name));
 const build=fs.readFileSync('dist/xr/services/buildInfo.js');if(!build.toString().includes(version))throw Error('Build version does not match website.');
 candidates.set('xr/services/buildInfo.js',build);
 candidates.set('site/root-release.json',Buffer.from(JSON.stringify({managedBy:'root-site-release',version,publishedAt:new Date().toISOString(),legacyXrAutoDeployMustNotOverwrite:true,backendChanged:false},null,2)+'\n'));

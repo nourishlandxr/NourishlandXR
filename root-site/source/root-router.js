@@ -1,6 +1,6 @@
-import './totem-journey.js';
+import './totem-journey.js?v=0.9789';
 import {transitionPage} from './page-transitions.js';
-import {prepareEntrance,enterPage} from './experience.js';
+import {prepareEntrance,enterPage} from './experience.js?v=0.9789';
 import {BUILD_INFO} from '/xr/services/buildInfo.js';
 import '/xr/v2/site-navigation.js';
 const routes={home:'/',education:'/education/','food-forests':'/food-forests/','food-forest-story':'/food-forests/story/','food-forest-guide':'/food-forests/guide/','nature-learning':'/immersive-learning/',platform:'/platform/',hillyards:'/hillyards/',collaborate:'/collaborate/',about:'/about/',contact:'/contact/',places:'/places/'};
