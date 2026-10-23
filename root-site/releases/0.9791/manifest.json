@@ -266,7 +266,7 @@
       "file": "xr/index.html",
       "bytes": 2699,
       "sha256": "be60b8a5dbfcea8ca822d47ae8023e0c75697f2da8eb2bf20d80674cb1cbbbdb",
-      "previousSha256": null,
+      "previousSha256": "e08ebd754bcb07088ecd4db6e5f7a29f97df69107de8f8fe78c963e6e2d05046",
       "mode": "0644",
       "redirectTarget": "/platform/"
     },

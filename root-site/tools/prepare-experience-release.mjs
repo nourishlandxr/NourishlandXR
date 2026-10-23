@@ -42,7 +42,9 @@ await Promise.all(Array.from({length:4},async()=>{while(cursor<queue.length){
  const response=await fetch('https://nourishland.org/'+file+'?baseline='+version+'-'+Date.now(),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(60000)});
  if(!response.ok&&response.status!==404)throw Error('Baseline HTTP '+response.status+': '+file);
  let previousSha256=response.ok?sha(Buffer.from(await response.arrayBuffer())):null;
- if(previousSha256&&previousSha256===probes[file.split('/')[0]])previousSha256=null;
+ // Known entry bridges can legitimately equal the host's missing-file fallback.
+ // They are existing files, so retain their prior hash rather than marking them new.
+ if(previousSha256&&previousSha256===probes[file.split('/')[0]]&&!Object.hasOwn(LEGACY_ENTRY_FILES,file))previousSha256=null;
  const sha256=sha(bytes);if(previousSha256===sha256&&!routes.has(file)&&file!=='xr/services/buildInfo.js')continue;
  const out=path.join(release,'payload',file);fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,bytes);
  files.push({file,bytes:bytes.length,sha256,previousSha256,mode:'0644',...(LEGACY_ENTRY_FILES[file]?{redirectTarget:LEGACY_ENTRY_FILES[file]}:{})});console.log(file+(previousSha256?' replace':' new'));
