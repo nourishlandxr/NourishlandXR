@@ -7,7 +7,7 @@ export function versionModuleImports(source,version){
   if(!node||typeof node!=='object')return;
   if(['ImportDeclaration','ImportExpression','ExportNamedDeclaration','ExportAllDeclaration'].includes(node.type)){
    const target=node.source,value=target?.value;
-   if(typeof value==='string'&&/^(?:\.\.?\/|\/site\/|\/xr\/services\/buildInfo\.js)/.test(value)&&/\.(?:m?js)(?:\?|$)/.test(value)){
+   if(typeof value==='string'&&/^(?:\.\.?\/|\/site\/|\/xr\/services\/)/.test(value)&&/\.(?:m?js)(?:\?|$)/.test(value)){
     const [pathname,query='']=value.split('?'),params=new URLSearchParams(query);params.set('v',version);
     edits.push({start:target.start,end:target.end,text:JSON.stringify(pathname+'?'+params)});
    }

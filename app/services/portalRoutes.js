@@ -1,6 +1,9 @@
-const root=new URL('../',import.meta.url);
+import {websiteUrl} from './siteRoutes.js';
+export {websiteUrl} from './siteRoutes.js';
+const config=globalThis.NOURISHLAND_CONFIG||{};
+const root=new URL(config.portalBase||'../',import.meta.url);
 export function portalUrl(section='home',query={}){
-    const url=new URL(section==='home'?'':`${section}/`,root);
+    const url=section==='home'&&config.websiteBase?websiteUrl('platform'):new URL(section==='home'?(config.appEntry||''):`${section}/`,root);
     for(const [key,value] of Object.entries(query))if(value!=='' && value!=null)url.searchParams.set(key,value);
     return url;
 }

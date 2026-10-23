@@ -1,7 +1,7 @@
 import {BUILD_INFO} from '../services/buildInfo.js';
 import {creatorLogoMarkup} from '../services/creatorIdentity.js';
 import {dashboardIcon as icon} from '../services/workspaceIcons.js';
-import {portalUrl,ensurePortalStyles} from '../services/portalRoutes.js';
+import {portalUrl,websiteUrl,ensurePortalStyles} from '../services/portalRoutes.js';
 import {accountRequest,logoutCreatorAuthentication} from '../services/apiClient.js';
 import {signInMarkup,bindSignIn} from '../services/creatorSignIn.js';
 import {demoHardwareAccess} from '../services/demoHardwareAccess.js';
@@ -9,7 +9,7 @@ import {creatorAccessCapabilities} from '../services/creatorHub.js';
 import {workspaceUrl,suggestedCreatorWorkspace,creatorProjectTutorialUrl} from '../services/creatorWorkspaceMode.js';
 const html=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const link=(section,query)=>html(portalUrl(section,query).href);
-const website=new URL('../v2/',import.meta.url);
+const website=websiteUrl();
 const card=(symbol,title,copy,action,tag='')=>`<article class="access-card">${icon(symbol)}${tag?`<span class="access-tag">${html(tag)}</span>`:''}<h2>${title}</h2><p>${copy}</p>${action}</article>`;
 const action=(href,label)=>`<a class="access-primary" href="${html(href)}">${label}${icon('arrow')}</a>`;
 export async function renderAccessPortal(app,section='home'){
@@ -21,7 +21,7 @@ export async function renderAccessPortal(app,section='home'){
     const session=async()=>accountRequest('/auth/session');
     document.title=`${{home:'Start',demos:'Demos',creator:'Creator',account:'Account',admin:'Administration'}[section]} · Nourishland`;
     if(section==='home'){
-        main.innerHTML=intro('Nourishland / Access','What would you like to do?','Try a tool, work on a project, or explore a place.')+`<div class="access-grid">${card('explore','Try a demo.','Test the tools with sample content. No account needed.',action(portalUrl('demos'),'Browse demos'))}${card('tools','Create a project.','Add plants, connect knowledge and build a guided walk.',action(portalUrl('creator'),'Open Creator'))}${card('plant','Explore a place.','Read plant guides and visit published projects.',action(new URL('../platform.html',import.meta.url),'Open Explorer'))}</div><p class="access-section"><a class="access-link" href="${html(website.href)}#why">New to Nourishland? Start with why, what and how ${icon('arrow')}</a></p>`;return;
+        main.innerHTML=intro('Nourishland / Access','What would you like to do?','Try a tool, work on a project, or explore a place.')+`<div class="access-grid">${card('explore','Try a demo.','Test the tools with sample content. No account needed.',action(portalUrl('demos'),'Browse demos'))}${card('tools','Create a project.','Add plants, connect knowledge and build a guided walk.',action(portalUrl('creator'),'Open Creator'))}${card('plant','Explore a place.','Read plant guides and visit published projects.',action(globalThis.NOURISHLAND_CONFIG?.hosted?new URL('/explorer/',location.origin):new URL('../platform.html',import.meta.url),'Open Explorer'))}</div><p class="access-section"><a class="access-link" href="${html(websiteUrl('education').href)}">New to Nourishland? Start here ${icon('arrow')}</a></p>`;return;
     }
     if(section==='demos'){
         const tool=params.get('tool');

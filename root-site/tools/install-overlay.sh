@@ -12,10 +12,10 @@ test -f "$stage/files.tsv"
 # Every previous hash is checked before any public file is changed.
 tab=$(printf '\t')
 while IFS="$tab" read -r name sha previous; do
- case "$name" in index.html|education/index.html|platform/index.html|food-forests/index.html|food-forests/story/index.html|food-forests/guide/index.html|places/index.html|immersive-learning/index.html|hillyards/index.html|collaborate/index.html|about/index.html|contact/index.html|privacy/index.html|terms/index.html|demos/index.html|xr/living-objects.css|xr/screens/*|xr/services/*|xr/v2/*|xr/vendor/*|site/*) ;; *) echo "Unexpected path: $name"; exit 1;; esac
+ case "$name" in index.html|404.html|robots.txt|sitemap.xml|education/index.html|platform/index.html|food-forests/index.html|food-forests/story/index.html|food-forests/guide/index.html|places/index.html|immersive-learning/index.html|hillyards/index.html|collaborate/index.html|about/index.html|contact/index.html|privacy/index.html|terms/index.html|demos/index.html|xr/index.html|xr/entry.js|xr/living-objects.css|xr/screens/*|xr/services/*|xr/v2/*|xr/vendor/*|site/*) ;; *) echo "Unexpected path: $name"; exit 1;; esac
  case "$name" in /*|*..*|*\\*) exit 1;; esac
  case "/$name" in */.*|*//* ) echo "Hidden or empty path component"; exit 1;; esac
- case "$name" in *.html|*.js|*.mjs|*.css|*.json|*.webp|*.png|*.jpg|*.jpeg|*.svg|*.mp4|*.webm|*.wasm|*.bin|*.glb|*.gltf) ;; *) echo "Unexpected file type"; exit 1;; esac
+ case "$name" in *.html|*.js|*.mjs|*.css|*.json|*.webp|*.png|*.jpg|*.jpeg|*.svg|*.mp4|*.webm|*.wasm|*.bin|*.glb|*.gltf|*.xml|*.txt) ;; *) echo "Unexpected file type"; exit 1;; esac
  prefix="$root"; oldIFS="$IFS"; IFS='/'; set -- $name; IFS="$oldIFS"
  for part do prefix="$prefix/$part"; test ! -L "$prefix" || { echo "Symlink in deployment path"; exit 1; }; done
  target="$root/$name"
@@ -26,15 +26,28 @@ while IFS="$tab" read -r name sha previous; do
   test -f "$target" && test "$(sha256sum "$target" | cut -d' ' -f1)" = "$previous" || { echo "Production changed since baseline: $name"; exit 1; }
  fi
 done < "$stage/files.tsv"
+routing=false; routing_installed=false; routing_before=''; routing_after=''
+if test -f "$stage/routing-block.conf"; then
+ test -f "$stage/merge-route-config.py" && test -f "$root/.htaccess" && test ! -L "$root/.htaccess"
+ command -v python3 >/dev/null
+ routing_before=$(sha256sum "$root/.htaccess" | cut -d' ' -f1)
+ python3 -B "$stage/merge-route-config.py" "$root/.htaccess" "$stage/routing-block.conf" "$stage/root-next.htaccess"
+ routing_after=$(sha256sum "$stage/root-next.htaccess" | cut -d' ' -f1)
+ routing=true
+fi
 umask 077
 mkdir "$backup"
 cp "$stage/files.tsv" "$backup/files.tsv"
 cp "$stage/manifest.json" "$backup/manifest.json"
+if test "$routing" = true; then cp -p "$root/.htaccess" "$backup/root-before.htaccess"; fi
 while IFS="$tab" read -r name sha previous; do
  if test -f "$root/$name"; then mkdir -p "$backup/previous/$(dirname "$name")"; cp -p "$root/$name" "$backup/previous/$name"; fi
 done < "$stage/files.tsv"
 rollback(){
  trap - HUP INT TERM
+ if test "$routing_installed" = true && test "$(sha256sum "$root/.htaccess" | cut -d' ' -f1)" = "$routing_after"; then
+  cp -p "$backup/root-before.htaccess" "$root/.htaccess.nl-pending" && mv "$root/.htaccess.nl-pending" "$root/.htaccess"
+ fi
  while IFS="$tab" read -r name sha previous; do
   target="$root/$name"
   # Roll back only a file still matching this release, preserving concurrent edits.
@@ -53,5 +66,18 @@ while IFS="$tab" read -r name sha previous; do
  if ! cp "$stage/payload/$name" "$target.nl-pending" || ! chmod 644 "$target.nl-pending" || ! mv "$target.nl-pending" "$target"; then rollback; exit 1; fi
  if test "$(sha256sum "$target" | cut -d' ' -f1)" != "$sha"; then rollback; exit 1; fi
 done < "$stage/files.tsv"
+if test "$routing" = true; then
+ if test "$(sha256sum "$root/.htaccess" | cut -d' ' -f1)" != "$routing_before"; then echo 'Routing changed concurrently.' >&2; rollback; exit 1; fi
+ if ! cp "$stage/root-next.htaccess" "$root/.htaccess.nl-pending" || ! chmod 644 "$root/.htaccess.nl-pending" || ! mv "$root/.htaccess.nl-pending" "$root/.htaccess"; then rollback; exit 1; fi
+ routing_installed=true
+ if test "$(sha256sum "$root/.htaccess" | cut -d' ' -f1)" != "$routing_after"; then rollback; exit 1; fi
+ healthy=false
+ for attempt in 1 2 3; do
+  status=$(curl --silent --show-error --max-time 30 -H 'Cache-Control: no-cache' -o "$stage/route-health.html" -w '%{http_code}' "https://nourishland.org/__canonical_route_health_$version?attempt=$attempt") || status=000
+  if test "$status" = 404 && grep -q 'data-current-website-error' "$stage/route-health.html"; then healthy=true; break; fi
+  sleep 2
+ done
+ if test "$healthy" != true; then echo 'Canonical route health check failed.' >&2; rollback; exit 1; fi
+fi
 trap - HUP INT TERM
 printf 'Installed V%s. Private rollback backup: %s\n' "$version" "$backup"

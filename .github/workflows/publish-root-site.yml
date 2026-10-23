@@ -32,6 +32,8 @@ jobs:
           node root-site/tests/menu-interaction-checks.mjs
           node root-site/tests/creator-feature-checks.mjs
           node --test tests/crafted-totem.test.mjs tests/crafted-totem-studio.test.mjs tests/crafted-totem-world.test.mjs
+          node --test tests/canonical-routes.test.mjs tests/access-navigation.test.mjs tests/root-release-boundary.test.mjs
+          bash -n root-site/tools/install-overlay.sh
           node root-site/tools/verify-release.mjs "$RELEASE_VERSION"
       - name: Configure existing HostArmada deployment identity
         env:
@@ -71,4 +73,8 @@ jobs:
       - name: Verify all public file hashes
         env:
           RELEASE_VERSION: ${{ inputs.version }}
-        run: node root-site/tools/verify-release.mjs "$RELEASE_VERSION" --public
+        run: |
+          node root-site/tools/verify-release.mjs "$RELEASE_VERSION" --public
+          if test -f "root-site/releases/$RELEASE_VERSION/routing-block.conf"; then
+            node root-site/tools/verify-canonical-routes.mjs
+          fi

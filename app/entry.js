@@ -1,7 +1,11 @@
 // Direct workspace routes load only their presentation and shared data services.
 import {requestedPortalRoute} from './services/portalRoutes.js';
+import {resolveLegacyEntry} from './services/siteRoutes.js';
 const params = new URLSearchParams(location.search);
-if(params.get('editor')==='pimo'){
+const canonicalEntry=globalThis.NOURISHLAND_CONFIG?.hosted?resolveLegacyEntry(location):null;
+if(canonicalEntry&&new URL(canonicalEntry,location.origin).href!==location.href){
+    location.replace(canonicalEntry);
+}else if(params.get('editor')==='pimo'){
     const {renderPimoEditor}=await import('./screens/pimoEditor.js');
     renderPimoEditor(document.getElementById('app'), { xr: params.get('mode') === 'xr', projectId:params.get('project') || '', workspace:params.get('workspace') || 'desktop', siteId:params.get('site') || '', recordKey:params.get('record') || '' });
 } else if(params.has('tour')&&params.get('project')){

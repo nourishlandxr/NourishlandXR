@@ -1,0 +1,81 @@
+{
+  "version": "0.9791",
+  "public": false,
+  "results": [
+    {
+      "name": "desktop",
+      "heroAutoplay": true,
+      "noHeroControls": true,
+      "educationBalloon": true,
+      "totemJourney": true,
+      "outward": {
+        "frames": 207,
+        "intermediate": 57,
+        "firstMovementMs": 49,
+        "largestFrameGapMs": 97
+      },
+      "returnToOverview": {
+        "frames": 276,
+        "intermediate": 108,
+        "firstMovementMs": 20,
+        "largestFrameGapMs": 19
+      },
+      "rapidSwitch": true,
+      "phonePreview": true,
+      "wheelAutospin": true,
+      "wheelHoverOrTapMenu": true,
+      "threeIntroDestinations": true,
+      "storyHoverReveal": true,
+      "rectangularPortraits": true,
+      "unobscuredSystem": true,
+      "fourGuideScenes": true,
+      "layerPicture": true,
+      "designTriangle": true,
+      "peopleExperience": true,
+      "singleScreen": true,
+      "places": true,
+      "die": true,
+      "version": true
+    },
+    {
+      "name": "phone",
+      "heroAutoplay": true,
+      "noHeroControls": true,
+      "educationBalloon": true,
+      "totemJourney": true,
+      "outward": {
+        "frames": 207,
+        "intermediate": 51,
+        "firstMovementMs": 57,
+        "largestFrameGapMs": 78
+      },
+      "returnToOverview": {
+        "frames": 276,
+        "intermediate": 108,
+        "firstMovementMs": 20,
+        "largestFrameGapMs": 19
+      },
+      "rapidSwitch": true,
+      "phonePreview": true,
+      "wheelAutospin": true,
+      "wheelHoverOrTapMenu": true,
+      "threeIntroDestinations": true,
+      "storyHoverReveal": true,
+      "rectangularPortraits": true,
+      "unobscuredSystem": true,
+      "fourGuideScenes": true,
+      "layerPicture": true,
+      "designTriangle": true,
+      "peopleExperience": true,
+      "singleScreen": true,
+      "places": true,
+      "die": true,
+      "version": true
+    }
+  ],
+  "reducedMotion": true,
+  "autoplayWithoutPoster": true,
+  "errors": [],
+  "physicalDevice": false,
+  "heroCrevice": "Known issue: retained video predates food-area repair"
+}

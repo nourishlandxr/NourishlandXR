@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Nourishland</title><link rel="canonical" href="https://nourishland.org/experience/"><script>const WEBSITE_ROUTES={"home":"/","education":"/education/","food-forests":"/food-forests/","food-forest-story":"/food-forests/story/","food-forest-guide":"/food-forests/guide/","nature-learning":"/immersive-learning/","platform":"/platform/","hillyards":"/hillyards/","collaborate":"/collaborate/","about":"/about/","contact":"/contact/","places":"/places/"},WEBSITE_ALIASES={"main":"home","why":"education","what":"education","how":"education","learn":"education","pathways":"education","explore":"platform","grow":"food-forests","connect":"nature-learning","create":"platform","creator":"platform","explorer":"platform","creator-start":"platform","creator-steps":"platform","projects":"hillyards","project-hillyards":"hillyards","pilot":"collaborate","pilot-program":"collaborate","pilot-application":"collaborate","support":"collaborate","tools":"platform","library-guide":"education","webxr-guide":"platform","field-guide":"platform","studio-guide":"platform","imap-guide":"platform","native-xr-guide":"platform","solarpunk":"about","contact":"contact"};const resolve=function resolveLegacyEntry(locationLike,routes=WEBSITE_ROUTES,aliases=WEBSITE_ALIASES){
+ const path=locationLike.pathname.replace(/\/index\.html$/,'/').replace(/\/$/,'')||'/',query=new URLSearchParams(locationLike.search||''),hash=(locationLike.hash||'').slice(1);
+ let target;
+ if(/^\/(?:xr|app)$/.test(path)){
+  const portal=query.get('creator')==='1'?'creator':query.get('section');
+  if(['creator','account','admin','demos'].includes(portal))target='/'+portal+'/';
+  else if([...query.keys()].some(key=>!['review','ref','gclid','fbclid','release'].includes(key)&&!key.startsWith('utm_')))target='/app/';
+  else target='/platform/';
+ }else if(/\/(?:xr|app)?\/?v2\/full-3d$/.test(path))target='/experience/';
+ else if(/^\/(?:(?:xr|app)\/)?v2(?:\/mobile-study)?$/.test(path))target='/';
+ else return null;
+ let fragment=locationLike.hash||'';
+ if(target!=='/app/'&&target!=='/experience/'&&hash){
+  const page=routes[hash]?hash:aliases[hash];
+  if(page){target=routes[page];fragment='';}
+  else if(hash==='demos'){target='/demos/';fragment='';}
+ }
+ return target+(locationLike.search||'')+fragment;
+};const next=resolve(location)||"/experience/";location.replace(new URL(next,location.origin).href);</script><noscript><meta http-equiv="refresh" content="0;url=/experience/"></noscript></head><body><a href="/experience/">Continue to Nourishland</a></body></html>

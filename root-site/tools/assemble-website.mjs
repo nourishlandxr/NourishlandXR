@@ -1,6 +1,7 @@
 import fs from 'node:fs';import path from 'node:path';
 import {experiencePages} from '../source/experience-pages.mjs';
-export const revision='0.9790';
+import {LEGACY_ENTRY_FILES,bridgeHtml,sitemapXml,robotsTxt,notFoundHtml} from './canonical-pages.mjs';
+export const revision='0.9791';
 export function replaceSection(html,id,replacement){
  const start=html.search(new RegExp(`<section\\b[^>]*\\bid="${id}"`));if(start<0)throw Error('Missing route '+id);
  const tags=/<\/?section\b[^>]*>/g;tags.lastIndex=start;let depth=0,match;
@@ -38,5 +39,7 @@ if(process.argv.includes('--build')){
  const html=assembleWebsite(),routes=JSON.parse(fs.readFileSync('root-site/routes.json'));
  for(const [key,route]of Object.entries(routes)){const dir=path.join(output,route.path);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'index.html'),html.replace('data-page="home"',`data-page="${key}"`));}
  fs.cpSync('root-site/source',path.join(output,'site'),{recursive:true});
+ for(const file of Object.keys(LEGACY_ENTRY_FILES)){const target=path.join(output,file);fs.mkdirSync(path.dirname(target),{recursive:true});fs.writeFileSync(target,bridgeHtml(file));}
+ fs.writeFileSync(path.join(output,'sitemap.xml'),sitemapXml());fs.writeFileSync(path.join(output,'robots.txt'),robotsTxt());fs.writeFileSync(path.join(output,'404.html'),notFoundHtml());
  console.log(`Assembled ${Object.keys(routes).length} routes at ${output}`);
 }

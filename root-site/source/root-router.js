@@ -3,8 +3,7 @@ import {transitionPage} from './page-transitions.js';
 import {prepareEntrance,enterPage} from './experience.js?v=0.9789';
 import {BUILD_INFO} from '/xr/services/buildInfo.js';
 import '/xr/v2/site-navigation.js';
-const routes={home:'/',education:'/education/','food-forests':'/food-forests/','food-forest-story':'/food-forests/story/','food-forest-guide':'/food-forests/guide/','nature-learning':'/immersive-learning/',platform:'/platform/',hillyards:'/hillyards/',collaborate:'/collaborate/',about:'/about/',contact:'/contact/',places:'/places/'};
-const aliases={main:'home',why:'education',what:'education',how:'education',learn:'education',pathways:'education',explore:'platform',grow:'food-forests',connect:'nature-learning',create:'platform',creator:'platform',explorer:'platform',projects:'hillyards','project-hillyards':'hillyards',pilot:'collaborate',support:'collaborate',tools:'platform','library-guide':'education','webxr-guide':'platform','field-guide':'platform','studio-guide':'platform','imap-guide':'platform','native-xr-guide':'platform',contact:'contact'};
+import {WEBSITE_ROUTES as routes,WEBSITE_ALIASES as aliases} from '/xr/services/siteRoutes.js';
 const reverse=Object.fromEntries(Object.entries(routes).map(([k,v])=>[v,k]));let heroStarted=false;
 function render({focus=false}={}){let key=reverse[location.pathname]||'home',section=location.hash.slice(1);if(section==='demos'){location.replace('/demos/'+location.search);return;}if(section&&(routes[section]||aliases[section])){key=routes[section]?section:aliases[section];const hash=section===key?'':'#'+section;if(location.pathname!==routes[key]||section===key)history.replaceState(null,'',routes[key]+location.search+hash);}
  document.body.dataset.page=key;document.querySelectorAll('[data-route]').forEach(n=>n.hidden=n.dataset.route!==key);const current=document.querySelector(`[data-route="${key}"]`);document.title=current?.dataset.title||'Nourishland';

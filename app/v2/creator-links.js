@@ -1,7 +1,7 @@
 // Website handoff only. This module never creates a project or writes platform data.
 export const CREATOR_TARGETS = Object.freeze({
-  hosted: Object.freeze({base:'https://nourishland.org/xr/',entry:'index.html',label:'Hosted development platform',onboarding:false}),
-  deployed: Object.freeze({base:'https://nourishland.org/xr/',entry:'',label:'Deployed Creator tutorial · testing',onboarding:true}),
+  hosted: Object.freeze({base:'https://nourishland.org/creator/',entry:'',label:'Creator',onboarding:false}),
+  deployed: Object.freeze({base:'https://nourishland.org/creator/',entry:'',label:'Deployed Creator tutorial · testing',onboarding:true}),
   local: Object.freeze({base:'http://127.0.0.1:8342/app/',entry:'',label:'Local isolated Creator QA · port 8342',onboarding:true})
 });
 export const CREATOR_MODES = Object.freeze(['desktop','field','spatial']);
@@ -24,6 +24,6 @@ export function creatorLaunch({target='hosted',mode='desktop',project='',site=''
   else if(context.project)url.searchParams.set('workspace',mode);
   else url.searchParams.set('creator','1');
   if(context.project){url.searchParams.set('project',context.project);if(context.site)url.searchParams.set('site',context.site);if(context.record)url.searchParams.set('record',context.record);}
-  const projectsUrl=new URL('index.html',destination.base);projectsUrl.searchParams.set('creator','1');
+  const projectsUrl=new URL('',destination.base);projectsUrl.searchParams.set('creator','1');
   return {href:url.href,projectsHref:projectsUrl.href,target,mode,context,guided,chooser:!guided&&!context.project};
 }

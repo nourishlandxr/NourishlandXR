@@ -27,6 +27,6 @@ try{
   await p.locator('.story-guide-link').click();await p.waitForFunction(()=>document.body.dataset.page==='food-forest-guide');assert.equal(await p.locator('[data-guide-view]').count(),4);
   results.push({name,allSevenChapters:true,allTextReachable:true,noOverlap:true,originalImageProportions:true});await context.close();
  }
- const welcome=await b.newPage();await welcome.goto(origin+'/xr/index.html');await welcome.waitForFunction(version=>document.body.innerText.includes('V'+version),version);await welcome.screenshot({path:folder+'/welcome.png'});
+ const welcome=await b.newPage();await welcome.goto(origin+'/app/?mode=welcome');await welcome.waitForFunction(version=>document.body.innerText.includes('V'+version),version);await welcome.screenshot({path:folder+'/welcome.png'});
  assert.deepEqual(errors,[]);const result={version,local:!process.argv.includes('--public'),results,welcomeVersion:true,errors};fs.writeFileSync(folder+'/checks.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 }finally{await b.close();}

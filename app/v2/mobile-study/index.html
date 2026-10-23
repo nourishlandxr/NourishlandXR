@@ -1,5 +1,19 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#173f34"><title>Nourishland — mobile world study</title><link rel="stylesheet" href="hero.css"><link rel="preload" as="image" href="phone-colour.webp" media="(max-aspect-ratio: 1/1)"><link rel="preload" as="image" href="desktop-colour.webp" media="(min-aspect-ratio: 1/1)"></head><body>
-<div class="world" aria-label="Nourishland central biome landscape"><picture class="poster"><source media="(max-aspect-ratio:1/1)" srcset="phone-colour.webp"><img src="desktop-colour.webp" alt="The central opening, forests and connected waterways of Nourishland" fetchpriority="high"></picture><canvas aria-hidden="true"></canvas></div>
-<header><a class="brand" href="https://nourishland.org/xr/v2/#home">nourishland<small>KNOWLEDGE, CONNECTED TO LIFE</small></a><button class="menu-button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">☰</button><nav id="menu" hidden><a href="https://nourishland.org/xr/v2/#education">Education</a><a href="https://nourishland.org/xr/v2/#platform">Platform</a><a href="https://nourishland.org/xr/v2/#pilot">The pilot</a><a href="https://nourishland.org/xr/v2/#about">About</a></nav></header>
-<main><section class="landing"><h1>A living world.<br>A world to discover.</h1><p class="gesture">Scroll or swipe to explore <span aria-hidden="true">↓</span></p></section><section class="journey" aria-label="Explore the connections in the landscape"><a class="marker" data-marker="water" href="https://nourishland.org/xr/v2/#food-forests"><span aria-hidden="true">＋</span><strong>Follow the water</strong></a><a class="marker" data-marker="forest" href="https://nourishland.org/xr/v2/#education"><span aria-hidden="true">＋</span><strong>Explore living systems</strong></a><a class="full-world" href="https://nourishland.org/xr/v2/full-3d/Nourishland-Hero-Living-v17.html?central=1">Explore the complete world <span aria-hidden="true">↗</span></a></section></main>
-<div class="progress" aria-hidden="true"><i></i></div><script type="module" src="hero.mjs"></script></body></html>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,follow"><title>Nourishland</title><link rel="canonical" href="https://nourishland.org/"><script>const WEBSITE_ROUTES={"home":"/","education":"/education/","food-forests":"/food-forests/","food-forest-story":"/food-forests/story/","food-forest-guide":"/food-forests/guide/","nature-learning":"/immersive-learning/","platform":"/platform/","hillyards":"/hillyards/","collaborate":"/collaborate/","about":"/about/","contact":"/contact/","places":"/places/"},WEBSITE_ALIASES={"main":"home","why":"education","what":"education","how":"education","learn":"education","pathways":"education","explore":"platform","grow":"food-forests","connect":"nature-learning","create":"platform","creator":"platform","explorer":"platform","creator-start":"platform","creator-steps":"platform","projects":"hillyards","project-hillyards":"hillyards","pilot":"collaborate","pilot-program":"collaborate","pilot-application":"collaborate","support":"collaborate","tools":"platform","library-guide":"education","webxr-guide":"platform","field-guide":"platform","studio-guide":"platform","imap-guide":"platform","native-xr-guide":"platform","solarpunk":"about","contact":"contact"};const resolve=function resolveLegacyEntry(locationLike,routes=WEBSITE_ROUTES,aliases=WEBSITE_ALIASES){
+ const path=locationLike.pathname.replace(/\/index\.html$/,'/').replace(/\/$/,'')||'/',query=new URLSearchParams(locationLike.search||''),hash=(locationLike.hash||'').slice(1);
+ let target;
+ if(/^\/(?:xr|app)$/.test(path)){
+  const portal=query.get('creator')==='1'?'creator':query.get('section');
+  if(['creator','account','admin','demos'].includes(portal))target='/'+portal+'/';
+  else if([...query.keys()].some(key=>!['review','ref','gclid','fbclid','release'].includes(key)&&!key.startsWith('utm_')))target='/app/';
+  else target='/platform/';
+ }else if(/\/(?:xr|app)?\/?v2\/full-3d$/.test(path))target='/experience/';
+ else if(/^\/(?:(?:xr|app)\/)?v2(?:\/mobile-study)?$/.test(path))target='/';
+ else return null;
+ let fragment=locationLike.hash||'';
+ if(target!=='/app/'&&target!=='/experience/'&&hash){
+  const page=routes[hash]?hash:aliases[hash];
+  if(page){target=routes[page];fragment='';}
+  else if(hash==='demos'){target='/demos/';fragment='';}
+ }
+ return target+(locationLike.search||'')+fragment;
+};const next=resolve(location)||"/";location.replace(new URL(next,location.origin).href);</script><noscript><meta http-equiv="refresh" content="0;url=/"></noscript></head><body><a href="/">Continue to Nourishland</a></body></html>

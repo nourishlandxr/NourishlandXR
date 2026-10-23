@@ -1,13 +1,16 @@
-// Package the assembled website as an explicit additive overlay over V0.9785.
+// Package canonical pages and reviewed entry bridges over V0.9790.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {versionModuleImports,versionCssImports} from './release-module-urls.mjs';
 import {revision as version} from './assemble-website.mjs';
-const previousVersion='0.9785',release=`root-site/releases/${version}`,candidate='dist/website';
+import {releaseHtmlFiles,auxiliaryFiles,LEGACY_ENTRY_FILES} from './canonical-pages.mjs';
+import {writeRoutingPlan} from './routing-plan.mjs';
+const previousVersion='0.9790',release=`root-site/releases/${version}`,candidate='dist/website';
 if(fs.existsSync(release))throw Error('Release already exists; preserve published payloads.');
-const routes=new Set(Object.values(JSON.parse(fs.readFileSync('root-site/routes.json'))).map(r=>(r.path==='/'?'':r.path.slice(1))+'index.html'));
+const routes=releaseHtmlFiles;
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex'),candidates=new Map();
 for(const file of routes)candidates.set(file,fs.readFileSync(path.join(candidate,file)));
+for(const file of auxiliaryFiles)candidates.set(file,fs.readFileSync(path.join(candidate,file)));
 function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
  const name=path.join(dir,entry.name);if(entry.isDirectory()){walk(name);continue;}
  const file='site/'+path.relative(path.join(candidate,'site'),name).replaceAll('\\','/');
@@ -19,7 +22,8 @@ function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
  candidates.set(file,bytes);
 }}
 walk(path.join(candidate,'site'));
-for(const name of ['homepage-hero.js','hero-preview.css','food-forest-story.js','index.html'])candidates.set('xr/v2/'+name,fs.readFileSync('dist/xr/v2/'+name));
+for(const name of ['homepage-hero.js','hero-preview.css','food-forest-story.js','creator-links.js'])candidates.set('xr/v2/'+name,fs.readFileSync('dist/xr/v2/'+name));
+for(const name of ['entry.js','screens/accessPortal.js','services/portalRoutes.js','services/siteRoutes.js'])candidates.set('xr/'+name,Buffer.from(versionModuleImports(fs.readFileSync('dist/xr/'+name,'utf8'),version)));
 const build=fs.readFileSync('dist/xr/services/buildInfo.js');if(!build.toString().includes(version))throw Error('Build version does not match website.');
 candidates.set('xr/services/buildInfo.js',build);
 candidates.set('site/root-release.json',Buffer.from(JSON.stringify({managedBy:'root-site-release',version,publishedAt:new Date().toISOString(),legacyXrAutoDeployMustNotOverwrite:true,backendChanged:false},null,2)+'\n'));
@@ -41,8 +45,9 @@ await Promise.all(Array.from({length:4},async()=>{while(cursor<queue.length){
  if(previousSha256&&previousSha256===probes[file.split('/')[0]])previousSha256=null;
  const sha256=sha(bytes);if(previousSha256===sha256&&!routes.has(file)&&file!=='xr/services/buildInfo.js')continue;
  const out=path.join(release,'payload',file);fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,bytes);
- files.push({file,bytes:bytes.length,sha256,previousSha256,mode:'0644'});console.log(file+(previousSha256?' replace':' new'));
+ files.push({file,bytes:bytes.length,sha256,previousSha256,mode:'0644',...(LEGACY_ENTRY_FILES[file]?{redirectTarget:LEGACY_ENTRY_FILES[file]}:{})});console.log(file+(previousSha256?' replace':' new'));
 }}));
 files.sort((a,b)=>a.file.localeCompare(b.file));
-fs.writeFileSync(release+'/manifest.json',JSON.stringify({schema:'nourishland.root-overlay.v1',version,managedBy:'root-site-release',files,backendChanged:false,routingChanged:false,wordPressChanged:false},null,2)+'\n');
+const routing=writeRoutingPlan(release,version);
+fs.writeFileSync(release+'/manifest.json',JSON.stringify({schema:'nourishland.root-overlay.v1',version,managedBy:'root-site-release',files,backendChanged:false,routingChanged:true,routing,wordPressChanged:false},null,2)+'\n');
 console.log(`Prepared V${version}: ${files.length} explicit files; hero video and world geometry preserved.`);

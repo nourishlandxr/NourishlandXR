@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /wp-admin/
+Allow: /wp-admin/admin-ajax.php
+Disallow: /admin/
+Disallow: /account/
+Disallow: /app/
+Disallow: /xr-api/
+Sitemap: https://nourishland.org/sitemap.xml
