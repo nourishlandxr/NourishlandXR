@@ -1,0 +1,79 @@
+{
+  "version": "0.9798",
+  "origin": "http://127.0.0.1:8016",
+  "bookmarks": [
+    {
+      "device": "desktop",
+      "old": "/xr/v2/#education",
+      "current": "/education/"
+    },
+    {
+      "device": "desktop",
+      "old": "/xr/v2/index.html#food-forest-story",
+      "current": "/food-forests/story/"
+    },
+    {
+      "device": "desktop",
+      "old": "/v2/#about",
+      "current": "/about/"
+    },
+    {
+      "device": "desktop",
+      "old": "/xr/",
+      "current": "/platform/"
+    },
+    {
+      "device": "desktop",
+      "old": "/food-forests-2/",
+      "current": "/food-forests/"
+    },
+    {
+      "device": "desktop",
+      "old": "/a-food-forest-story/",
+      "current": "/food-forests/story/"
+    },
+    {
+      "device": "desktop",
+      "old": "/hillyards-food-forest/",
+      "current": "/hillyards/"
+    },
+    {
+      "device": "phone",
+      "old": "/xr/v2/#education",
+      "current": "/education/"
+    },
+    {
+      "device": "phone",
+      "old": "/xr/v2/index.html#food-forest-story",
+      "current": "/food-forests/story/"
+    },
+    {
+      "device": "phone",
+      "old": "/v2/#about",
+      "current": "/about/"
+    },
+    {
+      "device": "phone",
+      "old": "/xr/",
+      "current": "/platform/"
+    },
+    {
+      "device": "phone",
+      "old": "/food-forests-2/",
+      "current": "/food-forests/"
+    },
+    {
+      "device": "phone",
+      "old": "/a-food-forest-story/",
+      "current": "/food-forests/story/"
+    },
+    {
+      "device": "phone",
+      "old": "/hillyards-food-forest/",
+      "current": "/hillyards/"
+    }
+  ],
+  "welcomeVersion": true,
+  "creatorLinksCurrent": true,
+  "errors": []
+}

@@ -71,11 +71,11 @@ try{
   if(name==='desktop')await page.locator('[data-forest-menu]').hover();else await page.locator('[data-forest-menu]').tap();
   await page.waitForFunction(()=>document.querySelector('[data-forest-orbit]').dataset.menuOpen==='true');
   assert.equal(await page.locator('#food-forests h1').innerText(),'A new way to grow.');
-  assert.deepEqual(await page.locator('.forest-connections a').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('href'))),['/food-forests/story/','/food-forests/guide/','/hillyards/']);
+  assert.deepEqual(await page.locator('.forest-connections [data-forest-topic]').evaluateAll(nodes=>nodes.map(n=>n.dataset.forestTopic)),['story','guide','hillyards']);
   assert.equal(await page.locator('.forest-entry-guide svg').count(),1);
   await page.waitForTimeout(700);await screenFit(page,'Food Forests introduction');
   await page.screenshot({path:`artifacts/website-wheel-${version}-${live?'public':'candidate'}-${name}.png`});
-  await page.locator('.forest-entry-guide').click();await page.waitForFunction(()=>document.body.dataset.page==='food-forest-guide');
+  await page.locator('.forest-entry-guide').click();assert.equal(new URL(page.url()).pathname,'/food-forests/');await page.locator('[data-forest-more]').click();await page.waitForFunction(()=>document.body.dataset.page==='food-forest-guide');
   await go('/food-forests/story/');if(name==='desktop')await page.locator('[data-story-tab="1"]').click();else await page.locator('[data-story-select]').selectOption('1');await page.waitForTimeout(250);
   await page.locator('#story-chapter-2 img').evaluate(image=>image.decode());
   if(name==='desktop')await page.locator('#story-chapter-2 figure').hover();else await page.locator('#story-chapter-2 .story-full-text').focus();

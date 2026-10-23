@@ -91,9 +91,6 @@ html[data-experience-site] .experience-page{padding:20px 24px 16px;gap:0}
 
 @media(max-width:1050px){
  #education .education-summary{width:min(440px,calc(100% - 32px));padding:29px 25px 19px}
- #education .education-experience[data-detail=true] .knowledge-flower{bottom:auto;height:45%;--petal-y:65px;--petal-width:125px;--petal-height:110px;--petal-x:95px}
- #education .education-experience[data-detail=true] .learning-orb{width:120px;height:132px}#education .education-experience[data-detail=true] .learning-orb canvas{width:120px;height:120px}#education .education-experience[data-detail=true] .orb-fallback{width:94px;height:94px;left:13px;top:13px}
- #education .education-experience[data-detail=true] .flower-petal-copy small{display:none}#education .education-experience[data-detail=true] .petal-icon{width:18px;height:18px}#education .education-experience[data-detail=true] .flower-petal-copy strong{font-size:11px}
  .journey-detail.living-balloon{width:min(320px,calc(100% - 28px));max-height:none}
 
 }
@@ -102,10 +99,9 @@ html[data-experience-site] .experience-page{padding:20px 24px 16px;gap:0}
  .experience-page>.place-acknowledgement{font-size:9px;line-height:1.4;margin-top:4px}.experience-page>.experience-next a,.experience-page>.experience-next button{font-size:12px}.experience-page .experience-choices{gap:5px;margin:4px auto}.experience-page .experience-choices button{font-size:11px;padding:8px 10px}
  #education .education-intro,#platform .platform-intro{padding:14px 18px 7px}#education .education-intro h1,#platform .platform-intro h1{font-size:27px}#platform .platform-intro>p{font-size:13px;line-height:1.5}#education .education-after-orb{font-size:12px;line-height:1.45;margin-top:3px}
  #education .learning-orb{width:140px;height:150px}#education .learning-orb canvas{width:140px;height:140px}#education .orb-fallback{width:108px;height:108px;left:16px;top:16px}
- #education:has(.education-experience[data-detail=true]) .education-after-orb{display:none}
  #education .education-summary:has(.education-child-detail:not([hidden]))>[data-summary-copy]{display:none}
- #food-forests:has([data-focused=true]) .experience-intro>p,#platform:has([data-detail=true]) .platform-intro>p{display:none}
- #education .education-experience{padding:0 10px}#education .education-experience[data-detail=true] .knowledge-flower{height:36%}
+ #platform:has([data-detail=true]) .platform-intro>p{display:none}
+ #education .education-experience{padding:0 10px}
  #education .education-summary{width:calc(100% - 26px);padding:30px 25px 20px}#education .education-summary h2{font-size:23px}#education .education-summary>p:not(.eyebrow){font-size:13px;line-height:1.5;margin-bottom:10px}
  .living-balloon{padding:31px 26px 22px}.living-balloon :is(h2,h3){font-size:24px}.living-balloon>p:not(.eyebrow){font-size:13px;line-height:1.55}.journey-detail.living-balloon{padding:33px 26px 21px}
  .forest-orbit{--orbit-x:clamp(86px,27vw,140px);--orbit-y:min(24svh,205px)}.forest-orbit .forest-wheel{width:100%;height:min(95%,450px)}.forest-node{width:135px;font-size:14px;gap:7px}.forest-node i{width:7px;height:7px}.forest-orbit-threads{inset:8% 0;width:100%;height:84%}.forest-balloon{max-width:none;width:calc(100% - 26px);right:13px;bottom:10px;padding:29px 26px 18px}.forest-balloon h2{font-size:24px}.forest-balloon>p:not(.eyebrow){font-size:13px;line-height:1.55}

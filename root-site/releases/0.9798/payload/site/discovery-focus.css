@@ -1,0 +1,84 @@
+/* A selected cell reveals information; it never moves the knowledge flower. */
+#education .education-summary[data-placement=overlay]{z-index:12;background:linear-gradient(145deg,#faf7ec,#e6ecdd);box-shadow:0 16px 60px #203d3033}
+#education .education-summary[data-placement=overlay]:before{background-image:none}
+
+/* The same three illustrated choices stay in place throughout the approach. */
+.forest-orbit[data-introduction]{max-width:1500px;overflow:visible;--entry-width:190px}
+.forest-orbit[data-introduction] .forest-wheel{left:50%;top:calc(50% - 48px);width:100%;height:calc(100% - 100px);max-height:none;mask-image:none;overflow:visible;z-index:2;transition:left 1.4s cubic-bezier(.22,.7,.2,1),width 1.4s cubic-bezier(.22,.7,.2,1),height 1.4s cubic-bezier(.22,.7,.2,1),top 1.4s cubic-bezier(.22,.7,.2,1)}
+.forest-orbit[data-introduction] .forest-heart{top:calc(50% - 48px);width:220px;height:220px;transition:left 1.4s,top 1.4s}
+.forest-orbit[data-introduction] .forest-connections{z-index:5}
+.forest-orbit[data-introduction] .forest-node{top:auto;bottom:0;width:190px;min-height:88px;padding:5px 10px;gap:3px;border:0;border-radius:0;background:none;box-shadow:none;--ny:0px;transition:opacity .6s,visibility .6s,color .25s;transform:translateX(calc(-50% + var(--nx)))}
+.forest-orbit[data-introduction] .forest-node:nth-child(1){--nx:-225px}
+.forest-orbit[data-introduction] .forest-node:nth-child(2){--nx:0px}
+.forest-orbit[data-introduction] .forest-node:nth-child(3){--nx:225px}
+.forest-orbit[data-introduction][data-menu-open=true] .forest-node{transform:translateX(calc(-50% + var(--nx)))}
+.forest-orbit[data-introduction] .forest-node .forest-entry-art{width:72px;height:48px;transform:none;transition:filter .3s}
+.forest-orbit[data-introduction] .forest-node span{font-size:20px;font-weight:500;line-height:1.3;text-decoration:none}
+.forest-orbit[data-introduction] .forest-node i{top:0;width:6px;height:6px}
+.forest-orbit[data-introduction] .forest-node:is(:hover,:focus-visible,[aria-expanded=true],[data-highlighted=true]){background:none;color:#193f2d;text-decoration:none}
+.forest-orbit[data-introduction] .forest-node:is(:hover,:focus-visible,[aria-expanded=true]) span{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:7px}
+.forest-orbit[data-introduction] .forest-node:is(:hover,:focus-visible,[aria-expanded=true]) .forest-entry-art{transform:none;filter:drop-shadow(0 3px 3px #45643c40) saturate(1.2)}
+.forest-orbit[data-introduction] .forest-node[aria-expanded=true] i{background:#a47745;box-shadow:0 0 0 4px #b5c69d50}
+.forest-orbit[data-introduction] .forest-node:focus-visible{outline:2px solid #6c8660;outline-offset:2px;border-radius:8px}
+.forest-orbit[data-introduction] .forest-invitation{bottom:16px;font-size:17px}
+.forest-orbit[data-introduction][data-focused=true] .forest-wheel{left:34%;width:68%}
+.forest-orbit[data-introduction][data-focused=true] .forest-heart{left:34%}
+.forest-orbit[data-introduction][data-focused=true] .forest-node{width:var(--entry-width)}
+.forest-orbit[data-introduction][data-focused=true] .forest-node:nth-child(1){--nx:-225px;--ny:0px}
+.forest-orbit[data-introduction][data-focused=true] .forest-node:nth-child(2){--nx:0px;--ny:0px}
+.forest-orbit[data-introduction][data-focused=true] .forest-node:nth-child(3){--nx:225px;--ny:0px}
+
+/* A short botanical introduction accompanies the artwork, without a card menu. */
+.forest-preview{position:absolute;z-index:6;right:0;top:calc(50% - 48px);transform:translateY(-50%);width:30%;max-width:390px;max-height:calc(100% - 110px);padding:22px 8px 12px 28px;text-align:left;color:#254e3e;border-left:1px solid #9daa8566;overflow:auto;scrollbar-width:thin}
+.forest-preview[hidden]{display:none}
+.forest-preview-mark{width:110px;height:40px;color:#8da376;margin-bottom:18px;display:block}
+.forest-preview .balloon-close{right:0;top:0;width:44px;height:44px}
+.forest-preview .eyebrow{font-size:11px;letter-spacing:.13em;margin:0 0 12px;color:#68835a}
+.forest-preview h2{font:500 clamp(27px,2.8vw,42px)/1.12 var(--sans);letter-spacing:-.04em;margin:0 0 20px;padding-right:6px}
+.forest-preview h2:focus{outline:none}
+.forest-preview>[data-forest-copy]{font-size:clamp(17px,1.3vw,21px);line-height:1.6;margin:0 0 22px}
+.forest-preview .experience-link{display:flex;justify-content:space-between;font-size:19px;min-height:52px;padding:10px 0;gap:12px;margin:0;width:100%}
+
+@media(max-width:1050px){
+ .forest-orbit[data-introduction]{--entry-width:104px}
+ .forest-preview{width:33%;padding-left:20px}
+ .forest-preview h2{font-size:28px}
+ .forest-preview>[data-forest-copy]{font-size:17px}
+ .forest-orbit[data-introduction][data-focused=true] .forest-wheel{left:32%;width:64%}
+ .forest-orbit[data-introduction][data-focused=true] .forest-heart{left:32%}
+}
+@media(max-width:1050px){
+ #food-forests>.experience-intro>p{max-height:150px;overflow:hidden;transition:max-height .9s ease,opacity .65s ease}
+ #food-forests:has([data-focused=true])>.experience-intro>p{max-height:0;opacity:0}
+ .forest-orbit[data-introduction] .forest-wheel{top:calc(50% - 42px);height:calc(100% - 90px);width:100%}
+ .forest-orbit[data-introduction] .forest-heart{top:calc(50% - 42px);width:150px;height:150px}
+ .forest-orbit[data-introduction] .forest-node{width:104px;min-height:78px;padding:4px;bottom:0;gap:3px}
+ .forest-orbit[data-introduction] .forest-node:nth-child(1),.forest-orbit[data-introduction][data-focused=true] .forest-node:nth-child(1){--nx:-112px;--ny:0px}
+ .forest-orbit[data-introduction] .forest-node:nth-child(3),.forest-orbit[data-introduction][data-focused=true] .forest-node:nth-child(3){--nx:112px;--ny:0px}
+ .forest-orbit[data-introduction] .forest-node span{font-size:16px;line-height:1.25}
+ .forest-orbit[data-introduction] .forest-node .forest-entry-art{height:40px;width:58px}
+ .forest-orbit[data-introduction][data-focused=true] .forest-wheel{left:50%;top:calc((100% - 226px)/2 - 16px);height:calc(100% - 226px);width:100%}
+ .forest-orbit[data-introduction][data-focused=true] .forest-heart{left:50%;top:calc((100% - 226px)/2 - 16px)}
+ .forest-orbit[data-introduction][data-focused=true] .forest-orbit-threads{opacity:0}
+ .forest-preview{top:auto;bottom:84px;right:0;width:100%;max-width:none;max-height:178px;transform:none;border-left:0;border-top:1px solid #9daa8566;padding:14px 4px 0;text-align:center}
+ .forest-preview-mark,.forest-preview .eyebrow{display:none}
+ .forest-preview .balloon-close{top:0;right:-6px}
+ .forest-preview h2{font-size:23px;line-height:1.15;margin:0 20px 8px;padding:0}
+ .forest-preview>[data-forest-copy]{font-size:15px;line-height:1.45;margin:0 auto 7px;max-width:43ch}
+ .forest-preview .experience-link{font-size:17px;min-height:44px;justify-content:center;padding:6px 0;border-bottom:0}
+}
+@media(min-width:760px) and (max-width:1050px){
+ .forest-orbit[data-introduction]{--entry-width:190px}
+ .forest-orbit[data-introduction] .forest-node{width:190px;min-height:88px}
+ .forest-orbit[data-introduction] .forest-node:nth-child(1),.forest-orbit[data-introduction][data-focused=true] .forest-node:nth-child(1){--nx:-225px}
+ .forest-orbit[data-introduction] .forest-node:nth-child(3),.forest-orbit[data-introduction][data-focused=true] .forest-node:nth-child(3){--nx:225px}
+ .forest-orbit[data-introduction] .forest-node span{font-size:20px}
+ .forest-orbit[data-introduction] .forest-node .forest-entry-art{width:72px;height:48px}
+ .forest-preview{width:min(600px,100%);right:50%;transform:translateX(50%);max-height:205px;bottom:94px}
+ .forest-preview h2{font-size:28px}.forest-preview>[data-forest-copy]{font-size:17px}.forest-preview .experience-link{font-size:19px}
+ .forest-orbit[data-introduction][data-focused=true] .forest-wheel{top:calc((100% - 310px)/2);height:calc(100% - 310px)}
+ .forest-orbit[data-introduction][data-focused=true] .forest-heart{top:calc((100% - 310px)/2)}
+}
+@media(prefers-reduced-motion:reduce){
+ .forest-orbit[data-introduction] :is(.forest-wheel,.forest-heart,.forest-node),#food-forests>.experience-intro>p{transition:none}
+}

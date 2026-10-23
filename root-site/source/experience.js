@@ -3,7 +3,11 @@ import './living-surfaces.js?v=0.9789';
 import './hillyards-animations.js';
 const reduced=matchMedia('(prefers-reduced-motion:reduce)');
 let entrance=[],pendingEntrance=[],epoch=0,wheel=null,wheelLoading=false,dieDispose=null,dieLoading=false,places=null,placesLoading=false,forestSelection=null;
-const forestTopics={layers:{title:'Different layers. Shared light.',copy:'Canopy trees shape the shade. Smaller trees and shrubs fill the middle. Herbs, groundcovers, climbers and roots use other parts of the space. Plan for the size each plant will reach.',points:['Canopy','Understorey','Roots'],color:'#607953'},relationships:{title:'The connections make the forest.',copy:'Roots meet soil and fungi. Flowers attract pollinators. Leaves become shelter and organic matter. These relationships change with the species, conditions and care a place receives.',points:['Soil life','Pollinators','Habitat'],color:'#3f7775'},seasons:{title:'A forest keeps becoming.',copy:'Flowering, harvest, leaf fall and new growth follow different rhythms. A mix of species can spread activity through the year. Watch what changes in your own climate.',points:['Flower','Harvest','Renew'],color:'#a46a4c'}};
+const forestTopics={
+ story:{label:'The story',title:'The food forest story.',copy:'Discover the ideas and people behind food forests, from observing the land to making space for life.',href:'/food-forests/story/',action:'Read the full story'},
+ guide:{label:'Learning guide',title:'Discover how it works.',copy:'Explore the layers, growing needs and relationships that shape a food forest, and the people who belong within it.',href:'/food-forests/guide/',action:'Open the learning guide'},
+ hillyards:{label:'Hillyards',title:'A real place to explore.',copy:'Explore Hillyards Food Forest, the setting for Nourishland’s first immersive learning-walk prototype.',href:'/hillyards/',action:'Explore Hillyards'}
+};
 const partnerTopics={educator:['Shape a learning experience.','Bring a group of learners, a question or a research interest. Help test a small activity in a real place.'],host:['Start with a small patch of land.','A garden, campus or food forest can become a pilot setting. We begin with an introduction and a shared development plan.'],build:['Help turn the concept into a useful pilot.','Contribute plant knowledge, design, technical skills or funding. We’re looking for people to help develop and test the foundation.']};
 function answer(host,text){host.querySelector('h2').textContent=text[0];host.querySelector('p').textContent=text[1];if(!reduced.matches)host.animate([{opacity:.25,transform:'translateY(7px)'},{opacity:1,transform:'none'}],{duration:320,easing:'ease-out'});}
 function cancelEntrance(){epoch++;for(const a of entrance)a.cancel();entrance=[];for(const node of pendingEntrance)node.style.opacity='';pendingEntrance=[];}
@@ -39,40 +43,43 @@ async function loadPageObject(key){
  if(key==='collaborate'&&!dieDispose&&!dieLoading){dieLoading=true;try{const {mountLandingWheel}=await import('/xr/v2/nlxr/services/landingWheel.js');dieDispose=await mountLandingWheel(document.querySelector('[data-discovery-die]'));}finally{dieLoading=false;}}
 }
 const forest=document.querySelector('[data-forest-orbit]'),forestMenu=forest?.querySelector('#forest-connections'),forestTrigger=forest?.querySelector('[data-forest-menu]'),forestAnswer=forest?.querySelector('[data-forest-answer]');
-let threadFrame=0,threadUntil=0;
+let threadFrame=0,threadUntil=0,forestAnimation=null;
 function forestThreads(now=performance.now()){
  threadFrame=0;if(!forest||document.body.dataset.page!=='food-forests')return;const box=forest.getBoundingClientRect(),svg=forest.querySelector('.forest-orbit-threads');if(!box.width||!box.height)return;
- const origin=forestTrigger.getBoundingClientRect();
- svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);const paths=[...svg.querySelectorAll('path')],middle={x:origin.left+origin.width/2-box.left,y:origin.top+origin.height/2-box.top};
+ const origin=forest.querySelector('[data-forest-wheel]').getBoundingClientRect();
+ svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);const paths=[...svg.querySelectorAll('path')],middle={x:origin.left+origin.width/2-box.left,y:origin.top+origin.height*.8-box.top};
  forest.querySelectorAll('.forest-node').forEach((node,i)=>{const r=node.querySelector('i').getBoundingClientRect(),x=r.left+r.width/2-box.left,y=r.top+r.height/2-box.top;paths[i].setAttribute('d',`M${middle.x} ${middle.y} Q${middle.x+(x-middle.x)*.55} ${middle.y} ${x} ${y}`);});
  if(now<threadUntil)threadFrame=requestAnimationFrame(forestThreads);
 }
-function trackForest(){forest?.querySelectorAll('a.forest-node').forEach(n=>n.inert=!!forestSelection&&matchMedia('(max-width:700px)').matches);threadUntil=performance.now()+1250;if(!threadFrame)threadFrame=requestAnimationFrame(forestThreads);}
+function trackForest(){threadUntil=performance.now()+1800;if(!threadFrame)threadFrame=requestAnimationFrame(forestThreads);}
 if(forest){new ResizeObserver(trackForest).observe(forest);forest.querySelectorAll('.forest-node').forEach((node,i)=>{
  node.style.setProperty('--node-order',i);
- if(node.matches('a.forest-entry')){
-  const topic=['story','guide','hillyards'][i];
-  node.addEventListener('pointerenter',event=>{if(event.pointerType==='mouse')wheel?.setTopic(topic);});
-  node.addEventListener('pointerleave',()=>wheel?.setTopic(null));
-  node.addEventListener('focus',()=>wheel?.setTopic(topic));node.addEventListener('blur',()=>wheel?.setTopic(null));
+ if(node.matches('.forest-entry')){
+  // Hover and keyboard focus only highlight the destination. The wheel keeps
+  // its continuous spin; selecting a link must not reset its camera or angle.
+  node.addEventListener('pointerenter',()=>node.dataset.highlighted='true');
+  node.addEventListener('pointerleave',()=>delete node.dataset.highlighted);
+  node.addEventListener('focus',()=>node.dataset.highlighted='true');
+  node.addEventListener('blur',()=>delete node.dataset.highlighted);
  }
 });}
 function forestOpen(open){if(!forest)return;forest.dataset.menuOpen=String(open);forestMenu.inert=!open;forestMenu.setAttribute('aria-hidden',String(!open));forestTrigger.setAttribute('aria-expanded',String(open));trackForest();}
-function closeForest(){forestSelection=null;forest.dataset.focused='false';forestAnswer.hidden=true;wheel?.setTopic(null);forest.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-expanded','false'));forest.querySelectorAll('a.forest-node').forEach(n=>n.inert=false);forestTrigger.focus({preventScroll:true});trackForest();}
+function closeForest({focus=true}={}){const previous=forest.querySelector('[data-forest-topic][aria-expanded=true]');forestSelection=null;forest.dataset.focused='false';forestAnimation?.cancel();forestAnswer.hidden=true;forestAnswer.inert=true;wheel?.setTopic(null);forest.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-expanded','false'));if(focus)(previous||forestTrigger).focus({preventScroll:true});trackForest();}
 forestTrigger?.addEventListener('click',()=>forestOpen(true));
 forest?.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')forestOpen(true);});
 forest?.addEventListener('focusin',()=>forestOpen(true));
 forest?.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!forestSelection&&!forest.contains(document.activeElement))forestOpen(false);});
 forest?.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(forestSelection)closeForest();else {forestTrigger.focus({preventScroll:true});forestOpen(false);}}});
-forest?.querySelector('[data-close-forest]')?.addEventListener('click',closeForest);
+forest?.querySelector('[data-close-forest]')?.addEventListener('click',()=>closeForest());
+window.addEventListener('nourishland:route',event=>{if(forestSelection&&event.detail.page!=='food-forests')closeForest({focus:false});});
 document.querySelectorAll('[data-forest-topic]').forEach(button=>button.addEventListener('click',()=>{
- const key=button.dataset.forestTopic,data=forestTopics[key];if(forestSelection===key){closeForest();return;}forestSelection=key;forest.dataset.focused='true';forestAnswer.hidden=false;
- forestAnswer.style.setProperty('--balloon-accent',data.color);forestAnswer.querySelector('[data-forest-label]').textContent=button.textContent;
+ const key=button.dataset.forestTopic,data=forestTopics[key];if(!data)return;if(forestSelection===key){closeForest();return;}forestSelection=key;forest.dataset.focused='true';forestAnswer.hidden=false;forestAnswer.inert=false;forestOpen(true);
+ forestAnswer.querySelector('[data-forest-label]').textContent=data.label;
  forestAnswer.querySelector('h2').textContent=data.title;forestAnswer.querySelector('[data-forest-copy]').textContent=data.copy;
- forestAnswer.querySelector('.forest-knowledge-points').replaceChildren(...data.points.map(text=>{const span=document.createElement('span');span.textContent=text;return span;}));
+ const more=forestAnswer.querySelector('[data-forest-more]');more.href=data.href;more.replaceChildren(document.createTextNode(data.action),Object.assign(document.createElement('span'),{textContent:'↗'}));more.lastChild.setAttribute('aria-hidden','true');
  forest.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-expanded',String(b===button)));wheel?.setTopic(key);
- forest.querySelectorAll('a.forest-node').forEach(n=>n.inert=matchMedia('(max-width:700px)').matches);trackForest();
- if(!reduced.matches)forestAnswer.animate([{opacity:0,transform:'translateY(24px) scale(.5) rotate(-4deg)'},{opacity:1,transform:'none'}],{duration:700,easing:'cubic-bezier(.2,.75,.2,1)'});
+ trackForest();forestAnimation?.cancel();
+ if(!reduced.matches)forestAnimation=forestAnswer.animate([{opacity:0,translate:'0 16px'},{opacity:1,translate:'0 0'}],{duration:650,delay:180,fill:'backwards',easing:'cubic-bezier(.2,.75,.2,1)'});
  forestAnswer.querySelector('h2').focus({preventScroll:true});
 }));
 document.querySelectorAll('[data-partner]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-partner]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));answer(document.querySelector('[data-partner-answer]'),partnerTopics[button.dataset.partner]);}));
