@@ -1,11 +1,11 @@
-// Package the reviewed interface over V0.9795, retaining canonical routing.
+// Package the reviewed interface over V0.9798, retaining canonical routing.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {versionModuleImports,versionCssImports} from './release-module-urls.mjs';
 import {revision as version} from './assemble-website.mjs';
 import {releaseHtmlFiles,auxiliaryFiles,LEGACY_ENTRY_FILES} from './canonical-pages.mjs';
 import {writeRoutingPlan} from './routing-plan.mjs';
-const previousVersion='0.9795',release=`root-site/releases/${version}`,candidate='dist/website';
+const previousVersion='0.9798',release=`root-site/releases/${version}`,candidate='dist/website';
 const previousManifest=JSON.parse(fs.readFileSync(`root-site/releases/${previousVersion}/manifest.json`));
 const history=fs.readdirSync('root-site/releases').filter(v=>/^0\.\d{4}$/.test(v)&&v<=previousVersion&&fs.existsSync(`root-site/releases/${v}/manifest.json`)).sort().reverse().map(v=>JSON.parse(fs.readFileSync(`root-site/releases/${v}/manifest.json`)));
 const previousFile=file=>history.flatMap(m=>m.files||[]).find(item=>item.file===file);

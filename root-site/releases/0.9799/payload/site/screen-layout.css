@@ -1,0 +1,93 @@
+/* The shared shell occupies the corners. The composition owns the viewport. */
+html[data-experience-site]{--site-header-height:0px!important;--page-space:100dvh;--screen-edge:clamp(20px,3.2vw,64px);--corner-top:max(20px,env(safe-area-inset-top));--corner-size:60px;--content-top:28px}
+html[data-experience-site] #site-header{position:fixed!important;inset:0 0 auto;width:100%;max-width:none;height:0!important;min-height:0;margin:0;padding:0;border:0!important;background:none!important;display:block;pointer-events:none;z-index:50}
+#site-header .brand{position:absolute;top:var(--corner-top);left:max(var(--screen-edge),env(safe-area-inset-left));width:var(--corner-size);height:var(--corner-size);padding:0;margin:0;display:grid;place-items:center;pointer-events:auto;border-radius:50%;filter:none}
+#site-header .brand-emblem{display:block;position:relative;flex:none;width:var(--corner-size);height:var(--corner-size);margin:0;overflow:visible;border-radius:0;background:transparent!important;box-shadow:none!important;filter:drop-shadow(0 3px 4px #183a2e20)}
+#site-header .brand-emblem img{display:block;position:static;width:100%;height:100%;max-width:100%;left:auto;top:auto;object-fit:contain}
+#site-header .brand-name,#site-header .header-pathways{display:none}
+body[data-page=home] #site-header .brand{width:auto;display:flex;gap:13px;border-radius:0;color:#fff}
+body[data-page=home] #site-header .brand-name{display:block;font:700 30px/1.1 var(--sans);letter-spacing:-1.4px}
+body[data-page=home] #site-header .brand-name small{font-size:8px;letter-spacing:.1em;margin-top:6px}
+body[data-page=home] #site-header .header-pathways{display:flex;position:absolute;top:var(--corner-top);right:calc(var(--screen-edge) + 84px);height:52px;width:auto;gap:30px;align-items:center;border:0;margin:0;padding:0;pointer-events:auto}
+body[data-page=home] #site-header .header-pathways a{display:flex;align-items:center;min-height:48px;font-size:17px;padding:8px 0;color:#fff;text-shadow:0 1px 5px #071b13}
+#site-header .menu-toggle{position:absolute;top:var(--corner-top);right:max(var(--screen-edge),env(safe-area-inset-right));width:52px;height:52px;min-height:52px;min-width:52px;margin:0;display:grid;place-items:center;pointer-events:auto;border:1px solid #70836d45;border-radius:14px;background:#f4f2e6d9;color:#254e3e;box-shadow:0 4px 16px #21422f08;backdrop-filter:blur(12px)}
+#site-header .brand:focus-visible,#site-header .menu-toggle:focus-visible{outline:3px solid #a87740;outline-offset:4px}
+body[data-page=home] #site-header .menu-toggle{color:#fff9e6;background:#183e32a8;border-color:#f4f0d659}
+#site-header .site-navigation{position:fixed;inset:calc(var(--corner-top) + var(--corner-size) + 12px) var(--screen-edge) auto auto;translate:none;pointer-events:auto;width:min(340px,calc(100vw - 2 * var(--screen-edge)));max-height:calc(100dvh - var(--corner-top) - var(--corner-size) - 28px);margin:0}
+html[data-experience-site] main,html[data-experience-site] body[data-page=education] main{height:100dvh;max-height:100dvh;min-height:0}
+html[data-experience-site] .route-block:not([hidden]){width:100%;max-width:none;margin:0;box-sizing:border-box}
+html[data-experience-site] .experience-page{padding:var(--content-top) var(--screen-edge) max(24px,env(safe-area-inset-bottom));gap:10px}
+.experience-page>.experience-intro{width:calc(100% - 160px);max-width:1080px;margin:0 auto 8px}
+.experience-page>.experience-intro h1{font-size:clamp(38px,3.8vw,62px);line-height:1.12;margin-bottom:16px;letter-spacing:-.045em}
+.experience-page>.experience-intro>p{font-size:clamp(18px,1.35vw,23px);line-height:1.55;max-width:64ch}
+.experience-page>.experience-answer{max-width:72ch;margin:8px auto 10px;min-height:0}
+.experience-page>.experience-answer h2{font-size:clamp(28px,2.4vw,40px);line-height:1.18;margin-bottom:12px}
+.experience-page>.experience-answer p{font-size:clamp(17px,1.2vw,21px);line-height:1.55}
+.experience-page>.experience-answer small{font-size:14px;line-height:1.5;margin:12px auto 0}
+.experience-page>.experience-next{flex:none;gap:8px 36px;max-width:100%;margin:0 auto}
+.experience-page .experience-link,.experience-page>.experience-next .experience-link{font-size:clamp(18px,1.45vw,24px);line-height:1.35;min-height:52px;padding:8px 0;gap:18px;text-decoration:none;border-bottom:1px solid #66836b66}
+.experience-page .experience-link:hover{text-decoration:underline;text-underline-offset:6px}.experience-page .experience-link>span{font-size:1.1em}
+.experience-page .experience-choices button{font-size:18px;min-height:48px;padding:10px 22px}
+.experience-page .contact-connections{gap:16px}.experience-page .contact-connections a{font-size:clamp(22px,2vw,32px)}
+.experience-page .place-acknowledgement,.experience-page>.model-context{font-size:14px;line-height:1.5}
+#education:not([hidden]),#platform:not([hidden]){padding:var(--content-top) var(--screen-edge) 24px}
+#education .education-intro,#platform .platform-intro{width:calc(100% - 160px);max-width:1150px;margin:0 auto;padding:0;text-align:center}
+#education .education-intro h1,#platform .platform-intro h1{font-size:clamp(38px,3.8vw,60px);line-height:1.13;margin:0 0 16px}
+#platform .platform-intro>p{font-size:clamp(18px,1.3vw,22px);line-height:1.55;max-width:70ch;margin:0 auto}
+#education .education-experience{max-width:none;width:100%}#education .knowledge-flower{max-height:680px;width:min(960px,100%)}
+#education .education-after-orb{font-size:clamp(17px,1.2vw,21px);max-width:76ch;line-height:1.5;padding:0 16px}
+#platform .platform-totem-layout{width:100%;max-width:none;padding:0}
+.forest-orbit[data-introduction] .forest-node span{font-size:21px}
+.experience-page .place-switcher h2{font-size:clamp(26px,2.5vw,40px)}.experience-page .place-switcher p{font-size:17px}
+.experience-page .place-switcher{min-height:80px}
+html[data-experience-site] #food-forest-story.story-page:not([hidden]),html[data-experience-site] #food-forest-guide.guide-page:not([hidden]){max-width:none;padding:var(--content-top) var(--screen-edge) 24px}
+#food-forest-story .story-heading{width:calc(100% - 176px);margin:0 auto 24px}
+#food-forest-story .story-heading h1{font-size:clamp(32px,3vw,48px)}
+#food-forest-story .story-chapter{gap:clamp(32px,5vw,96px)}#food-forest-story .story-chapter-copy{max-width:760px}
+#food-forest-story .story-full-text>p{font-size:clamp(18px,1.25vw,22px);line-height:1.65}
+.guide-page .guide-heading{max-width:1100px;width:calc(100% - 176px);margin-bottom:20px}.guide-page .guide-heading h1{font-size:clamp(34px,3.2vw,52px)}
+.guide-page .guide-heading>p{font-size:19px}.guide-page .guide-scenes-nav button{font-size:20px}
+@media(min-width:1050px){
+ #hillyards.experience-page:not([hidden]){display:grid;grid-template-columns:minmax(0,1.35fr) minmax(340px,.85fr);grid-template-rows:auto minmax(0,1fr) auto;column-gap:clamp(40px,5vw,96px);row-gap:24px;align-items:center}
+ #hillyards>.experience-intro{grid-column:1/-1;margin-bottom:0}
+ #hillyards .hillyards-animations{grid-column:1;grid-row:2/4;width:100%;height:auto;aspect-ratio:16/9;margin:0;max-height:100%;align-self:center}
+ #hillyards>.experience-answer{grid-column:2;grid-row:2;width:100%;max-width:none;margin:0;align-self:end;text-align:left}
+ #hillyards>.experience-answer h2{font-size:clamp(32px,2.8vw,48px)}
+ #hillyards>.experience-answer small{font-size:16px}
+ #hillyards>.experience-next{grid-column:2;grid-row:3;display:flex;flex-direction:column;align-items:stretch;justify-self:stretch;align-self:start;width:100%;margin:0;padding-bottom:clamp(0px,7vh,90px);gap:8px}
+ #hillyards .experience-link{justify-content:space-between;font-size:clamp(21px,1.65vw,28px);min-height:60px;text-align:left}
+}
+@media(max-width:1049px){
+ html[data-experience-site]{--screen-edge:24px;--corner-size:52px;--corner-top:max(16px,env(safe-area-inset-top));--content-top:88px}
+ #site-header .menu-toggle{width:48px;height:48px;min-width:48px;min-height:48px}
+ .experience-page>.experience-intro,#education .education-intro,#platform .platform-intro{width:100%;max-width:900px}
+ .experience-page>.experience-intro h1,#education .education-intro h1,#platform .platform-intro h1{font-size:clamp(30px,4.3vw,44px);margin-bottom:12px}
+ #food-forest-story .story-heading,.guide-page .guide-heading{width:100%}
+ #hillyards .hillyards-animations{width:min(860px,100%,calc(40dvh * 16 / 9));margin:0 auto}
+}
+@media(max-width:600px){
+ html[data-experience-site]{--screen-edge:20px;--content-top:82px}
+ body[data-page=home] #site-header .brand-name{font-size:24px}
+ body[data-page=home] #site-header .brand-name small{font-size:6px}
+ body[data-page=home] #site-header .header-pathways{top:calc(var(--corner-top) + var(--corner-size) + 8px);left:var(--screen-edge);right:auto;gap:28px;height:44px}
+ body[data-page=home] #site-header .header-pathways a{font-size:16px;min-height:44px}
+ html[data-experience-site] .experience-page{gap:8px;padding-bottom:max(18px,env(safe-area-inset-bottom))}
+ .experience-page>.experience-intro h1,#education .education-intro h1,#platform .platform-intro h1{font-size:29px;line-height:1.14}
+ .experience-page>.experience-intro>p,#platform .platform-intro>p{font-size:16px;line-height:1.5}
+ .experience-page>.experience-answer h2{font-size:25px;margin-bottom:8px}.experience-page>.experience-answer p{font-size:16px;line-height:1.5}.experience-page>.experience-answer small{font-size:13px;margin-top:8px}
+ .experience-page .experience-link,.experience-page>.experience-next .experience-link{font-size:18px;min-height:48px;gap:10px}.experience-page>.experience-next{gap:4px 22px}
+ #hillyards>.experience-next{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:4px 20px}
+ #hillyards>.experience-next .experience-link{justify-content:space-between;text-align:left}#hillyards>.experience-next .experience-link:last-child{grid-column:1/-1;justify-self:center}
+ .experience-page .experience-choices{gap:6px;margin:0}.experience-page .experience-choices button{font-size:16px;padding:8px 12px}
+ #education .education-after-orb{font-size:16px;padding:0}
+ .experience-page .place-switcher p{font-size:15px}.experience-page .place-switcher{min-height:72px}
+ #food-forest-story .story-heading h1{font-size:28px}.guide-page .guide-heading h1{font-size:29px}.guide-page .guide-heading>p{font-size:16px}
+ .guide-page .guide-scenes-nav button{font-size:17px;padding:10px 12px}
+ .forest-orbit[data-introduction] .forest-node span{font-size:16px}
+}
+@media(max-height:740px) and (max-width:600px){
+ html[data-experience-site]{--content-top:76px;--corner-top:max(12px,env(safe-area-inset-top));--corner-size:48px}
+ .experience-page>.experience-intro h1,#education .education-intro h1,#platform .platform-intro h1{font-size:26px}
+ .experience-page>.experience-intro>p,#platform .platform-intro>p{font-size:15px}
+ .experience-page>.experience-answer h2{font-size:23px}.experience-page .experience-link,.experience-page>.experience-next .experience-link{font-size:17px}
+}
