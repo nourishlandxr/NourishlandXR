@@ -2,7 +2,7 @@
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
 import {createRequire} from 'node:module';
 const require=createRequire(import.meta.url),{chromium}=require('C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
-const version=process.argv.find(a=>/^0\.[0-9]{4}$/.test(a))||'0.9783',live=process.argv.includes('--public');
+const version=process.argv.find(a=>/^0\.[0-9]{4}$/.test(a))||'0.9784',live=process.argv.includes('--public');
 const payload=path.resolve('root-site/releases',version,'payload'),origin='https://nourishland.org',errors=[],results=[];
 const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json','.webp':'image/webp'};
 const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true});
@@ -26,6 +26,11 @@ async function motion(page,selector){
  const gaps=frames.slice(1).map((f,i)=>f.t-frames[i].t);assert(Math.max(...gaps)<250,'Animation frames were blocked');
  return {frames:frames.length,intermediate:intermediate.length,firstMovementMs:Math.round(intermediate[0].t),largestFrameGapMs:Math.round(Math.max(...gaps))};
 }
+async function screenFit(page,label){
+ const outside=await page.evaluate(()=>[...document.querySelectorAll('[data-route]:not([hidden]) :is(button,a,h1,h2,h3,p)')].filter(e=>e.getClientRects().length&&!e.closest('[hidden],[inert],.sr-only,.story-portrait-idea')&&!e.matches('.sr-only,[aria-hidden=true]')).map(e=>{const r=e.getBoundingClientRect();return {text:e.textContent.trim().slice(0,45),top:r.top,bottom:r.bottom,left:r.left,right:r.right};}).filter(r=>r.bottom>innerHeight+3||r.top< -3||r.left< -3||r.right>innerWidth+3));
+ assert.deepEqual(outside,[],label+' has content outside its screen');
+ assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),label+' has horizontal overflow');
+}
 try{
  for(const [name,viewport]of Object.entries({desktop:{width:1440,height:1000},phone:{width:390,height:844}})){
   const context=await browser.newContext({viewport,isMobile:name==='phone',hasTouch:name==='phone',reducedMotion:'no-preference'});
@@ -40,6 +45,12 @@ try{
   await go('/education/');await page.waitForFunction(()=>!!document.querySelector('.knowledge-flower canvas'),null,{timeout:60000});
   assert.match(await page.locator('[data-site-version]').first().innerText(),new RegExp(version.replace('.','\\.')));
   await page.locator('[data-open-orb]').click();
+  await page.locator('[data-education-choice=food-forests]').click();await page.locator('[data-education-summary]').waitFor();
+  await page.locator('[data-summary-children] button').first().click();await page.waitForTimeout(700);
+  await screenFit(page,'Education child');
+  assert(await page.locator('[data-education-summary]').evaluate(e=>getComputedStyle(e).backgroundImage.includes('gradient')));
+  await page.screenshot({path:`artifacts/website-balloon-${version}-${live?'public':'candidate'}-${name}.png`});
+  await page.getByRole('button',{name:'Close learning connection',exact:true}).click();
   await go('/platform/');await page.waitForFunction(()=>!!document.querySelector('.journey-parent')?.dataset.portraitStyle,null,{timeout:60000});
   const outward=await motion(page,'[data-journey-branch=creator]');
   assert.equal(await page.locator('.journey-parent [data-journey-branch=creator]').getAttribute('aria-label'),'Creator');
@@ -48,17 +59,31 @@ try{
   await page.waitForFunction(()=>document.querySelector('[data-totem-journey]').dataset.motion==='idle'&&document.querySelector('.journey-child').dataset.portraitStyle==='organic');
   await page.locator('[data-journey-branch=creator]').click();await page.waitForFunction(()=>document.querySelector('[data-totem-journey]').dataset.motion==='idle'&&document.querySelector('.journey-child').dataset.portraitStyle==='botanical');
   assert.equal(await page.locator('[data-totem-journey]').getAttribute('data-connector-alive'),'true');
+  assert.doesNotMatch(await page.locator('[data-totem-journey]').innerText(),/Choose Creator or Explorer|Inside Creator|Device demos/);
   await page.locator('[data-journey-item=field]').click();await page.locator('[data-detail-link]').click();await page.locator('.phone-preview[open]').waitFor();assert.equal(new URL(page.url()).pathname,'/platform/');
   await page.getByRole('button',{name:'Close phone preview',exact:true}).click();
   await go('/food-forests/');await page.waitForFunction(()=>document.querySelector('[data-forest-wheel]')?.dataset.wheelReady==='true',null,{timeout:60000});
-  await page.locator('[data-forest-topic=layers]').click();assert.match(await page.locator('[data-forest-answer]').innerText(),/Canopy trees/);
+  const initialAngle=await page.locator('[data-forest-wheel]').getAttribute('data-wheel-angle');await page.waitForTimeout(300);assert.notEqual(await page.locator('[data-forest-wheel]').getAttribute('data-wheel-angle'),initialAngle);
+  assert.equal(await page.locator('[data-forest-wheel] canvas[tabindex]').count(),0);
+  if(name==='desktop')await page.locator('[data-forest-menu]').hover();else await page.locator('[data-forest-menu]').tap();
+  await page.waitForFunction(()=>document.querySelector('[data-forest-orbit]').dataset.menuOpen==='true');
+  for(const key of ['layers','relationships','seasons']){await page.locator(`[data-forest-topic=${key}]`).click();await page.waitForFunction(key=>document.querySelector('[data-forest-wheel]').dataset.wheelView===key&&Number(document.querySelector('[data-forest-wheel]').dataset.wheelZoom)>1.5,key);}
+  await page.waitForTimeout(700);await screenFit(page,'Food Forests close-up');
+  await page.screenshot({path:`artifacts/website-wheel-${version}-${live?'public':'candidate'}-${name}.png`});
+  await page.getByRole('button',{name:'Close food forest connection',exact:true}).click();await page.waitForFunction(()=>Number(document.querySelector('[data-forest-wheel]').dataset.wheelZoom)<1.05);
+  await go('/food-forests/story/');await page.locator('[data-story-tab="1"]').click();await page.waitForTimeout(250);
+  await page.locator('#story-chapter-2 .story-portrait-toggle').click();assert.equal(await page.locator('#story-chapter-2 figure').getAttribute('data-revealed'),'true');
+  await screenFit(page,'Food forest story');
+  await page.screenshot({path:`artifacts/website-story-${version}-${live?'public':'candidate'}-${name}.png`});
+  await go('/food-forests/guide/');for(const key of ['system','layers','decisions','learning','people','system']){await page.locator(`[data-guide-view=${key}]`).click();assert(await page.locator(`[data-guide-scene=${key}]`).isVisible());await screenFit(page,'Guide '+key);}
   await go('/places/');await page.waitForFunction(()=>document.querySelector('#places [data-places-showcase]')?.dataset.placeReady==='true',null,{timeout:60000});
   await page.locator('#places [data-place-step="1"]').click();await page.waitForFunction(()=>document.querySelector('#places [data-places-showcase]').dataset.place==='uki'&&document.querySelector('#places [data-places-showcase]').dataset.placeReady==='true');
   await go('/collaborate/');await page.waitForFunction(()=>document.querySelector('[data-discovery-die]')?.dataset.ready==='true',null,{timeout:60000});
   await page.locator('[data-partner=educator]').click();assert.match(await page.locator('[data-partner-answer]').innerText(),/learning experience/);
+  await screenFit(page,'Collaborate');for(const route of ['/about/','/contact/','/hillyards/','/immersive-learning/']){await go(route);await screenFit(page,route);}
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
   await page.screenshot({path:`artifacts/website-release-${version}-${live?'public':'candidate'}-${name}.png`});
-  results.push({name,heroAutoplay:true,noHeroControls:true,education:true,totemJourney:true,outward,returnToOverview,rapidSwitch:true,phonePreview:true,wheel:true,places:true,die:true,version:true});await context.close();
+  results.push({name,heroAutoplay:true,noHeroControls:true,educationBalloon:true,totemJourney:true,outward,returnToOverview,rapidSwitch:true,phonePreview:true,wheelAutospin:true,wheelHoverOrTapMenu:true,threeCameraViews:true,storyHoverReveal:true,fiveGuideScenes:true,singleScreen:true,places:true,die:true,version:true});await context.close();
  }
  const accessible=await browser.newContext({reducedMotion:'reduce'});await overlay(accessible);const still=await accessible.newPage();still.on('pageerror',e=>errors.push(e.message));
  await still.goto(origin+'/?review=release-'+version);await still.waitForFunction(()=>window.nourishlandBiomeHero?.metrics.reducedMotion);

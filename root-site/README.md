@@ -1,5 +1,9 @@
 # Official root website source and reviewed overlays
 
+## Release 0.9784 — living information and a cinematic food-forest wheel
+
+Education and Platform reveal tinted, sculpted information balloons connected to their source. Food Forests turns gently on its own, opens radial menus on hover/focus/tap and changes camera view for Layers, Relationships and Seasons. The original story portraits retain their key-idea reveals in a compact gallery, and the guide presents one of five scenes at a time. Obsolete Platform prompts and preview/demo links are removed. See `docs/release-0.9784.md` for scope and checks.
+
 ## Release 0.9783 — Totem motion and automatic hero playback
 
 Replaces click-time WebGL portrait rendering with three small, prepared portraits from the same shared XR sculptures. Totem transitions retain their visible intermediate frames and survive rapid switching. The hero requests muted inline autoplay immediately, without waiting for its poster, and has no playback/reset buttons. The protected 39-file overlay preserves the existing video and world geometry. See `docs/release-0.9783.md`.

@@ -23,10 +23,10 @@ export function initTotemJourney(stage) {
   stage.innerHTML=`<nav class="journey-breadcrumb" aria-label="Platform location"><button type="button" data-journey-home>Platform</button><button type="button" data-journey-parent hidden></button><span data-journey-trail hidden></span></nav>
     <svg class="journey-connection" aria-hidden="true"><path data-ground-link="branch"/><path class="journey-ground-flow" data-ground-flow/><g class="journey-ground-seeds"><circle r="2.5"/><circle r="2"/><circle r="2.5"/></g></svg>
     <svg class="journey-balloon-tether" aria-hidden="true"><path/></svg>
-    <figure class="journey-actor journey-parent">${sculpture('Platform',sign('Creator','data-journey-branch="creator" aria-expanded="false"',0)+sign('Explorer','data-journey-branch="explorer" aria-expanded="false"',1)+sign('Demos','data-journey-demos',2))}<figcaption data-parent-caption>Choose Creator or Explorer</figcaption></figure>
+    <figure class="journey-actor journey-parent">${sculpture('Platform',sign('Creator','data-journey-branch="creator" aria-expanded="false"',0)+sign('Explorer','data-journey-branch="explorer" aria-expanded="false"',1)+sign('Demos','data-journey-demos',2))}<figcaption data-parent-caption></figcaption></figure>
     <section class="journey-actor journey-child" hidden aria-label="Selected platform branch"><h2 class="sr-only" tabindex="-1" data-branch-heading></h2><figure>${sculpture('','')}<figcaption data-child-caption></figcaption></figure></section>
-    <section class="journey-detail journey-info-balloon" hidden aria-labelledby="journey-detail-title"><button class="journey-close" type="button" data-detail-close aria-label="Close selected tool">×</button><p class="eyebrow" data-detail-label></p><h3 id="journey-detail-title" tabindex="-1"></h3><p data-detail-copy></p><p class="journey-availability" data-detail-status></p><a data-detail-link></a></section>
-    <p class="sr-only" role="status" data-journey-status></p><nav class="journey-bottom" aria-label="Platform previews"><button type="button" data-open-showcase>Inside Creator ↗</button><a href="/demos/">Device demos ↗</a></nav>`;
+    <section class="journey-detail journey-info-balloon living-balloon" hidden aria-labelledby="journey-detail-title"><button class="journey-close balloon-close" type="button" data-detail-close aria-label="Close selected tool">×</button><p class="eyebrow" data-detail-label></p><h3 id="journey-detail-title" tabindex="-1"></h3><p data-detail-copy></p><p class="journey-availability" data-detail-status></p><a data-detail-link></a></section>
+    <p class="sr-only" role="status" data-journey-status></p>`;
   const parent=stage.querySelector('.journey-parent'),child=stage.querySelector('.journey-child'),detail=stage.querySelector('.journey-detail');
   const actors=[parent,child],reduced=matchMedia('(prefers-reduced-motion:reduce)');
   const animations=new Map();let branch=null,selected=null,revision=0,branchRevision=0,frame=0,until=0,positions=[],balloonAnimation=null,lastFrame=0,measured={width:0,height:0};
@@ -73,7 +73,7 @@ export function initTotemJourney(stage) {
     // Reserve space above for breadcrumbs and below for captions / demo link.
     const size=Math.max(80,Math.min(420,r.width*(mobile?.88:.38),(r.height-100)/1.5));
     stage.style.setProperty('--totem-size',size+'px');
-    const floor=r.height-78,height=size*1.5;
+    const floor=r.height-28,height=size*1.5;
     const pose=(x,scale,depth=0)=>({x:x-size/2,y:floor-depth-height,scale,opacity:1});
     let next;
     if(!branch)next=[pose(r.width*.5,1),pose(r.width*.52,.18,50)];
@@ -113,7 +113,7 @@ export function initTotemJourney(stage) {
   function home(restore=false){
     branchRevision++;
     const old=branch;branch=null;selected=null;detail.hidden=true;updateNavigation();
-    stage.querySelector('[data-parent-caption]').textContent='Choose Creator or Explorer';
+    stage.querySelector('[data-parent-caption]').textContent='';
     layout({focus:restore?parent.querySelector(`[data-journey-branch="${old}"]`):null});
     stage.querySelector('[data-journey-status]').textContent='Platform overview';
   }
@@ -128,20 +128,21 @@ export function initTotemJourney(stage) {
     delete child.querySelector('.journey-sculpture').dataset.crafted;
     await craftPortrait(child,key==='creator'?'botanical':'organic');
     if(request!==branchRevision||branch!==key)return;
-    child.querySelector('[data-child-caption]').textContent=data.copy;
-    stage.querySelector('[data-parent-caption]').textContent='Platform';
+    child.querySelector('[data-child-caption]').textContent='';
+    stage.querySelector('[data-parent-caption]').textContent='';
     updateNavigation();layout({focus:child.querySelector('[data-branch-heading]')});
     stage.querySelector('[data-journey-status]').textContent=data.label+' connected to Platform';
   }
   function openItem(id){
     const item=totemBranches[branch]?.items.find(item=>item.id===id);if(!item)return;
     selected=id;balloonAnimation?.cancel();
+    detail.dataset.tone=id==='field'?'earth':branch==='creator'?'leaf':'water';
     detail.querySelector('[data-detail-label]').textContent=item.label;detail.querySelector('h3').textContent=item.title;
     detail.querySelector('[data-detail-copy]').textContent=item.copy;detail.querySelector('[data-detail-status]').textContent=item.status;
     const link=detail.querySelector('[data-detail-link]');link.hidden=!item.href;if(item.href){link.href=item.href;link.textContent=item.action+' ↗';}else link.removeAttribute('href');
-    detail.querySelector('[data-open-showcase]')?.remove();if(branch==='creator'){const preview=document.createElement('button');preview.type='button';preview.className='experience-link';preview.dataset.openShowcase='';preview.textContent='Preview the tools ↗';detail.append(preview);}
+    detail.querySelector('[data-open-showcase]')?.remove();
     detail.hidden=false;updateNavigation();positionBalloon();track();
-    if(!reduced.matches)balloonAnimation=detail.animate([{opacity:0,transform:'scale(.94) translateY(6px)'},{opacity:1,transform:'none'}],{duration:260,easing:'ease-out'});
+    if(!reduced.matches)balloonAnimation=detail.animate([{opacity:0,transform:'scale(.35) translateY(18px) rotate(-5deg)',filter:'blur(4px)'},{opacity:1,transform:'scale(1.025) rotate(.5deg)',filter:'blur(0)',offset:.78},{opacity:1,transform:'none',filter:'none'}],{duration:650,easing:'cubic-bezier(.2,.75,.2,1)'});
     detail.querySelector('h3').focus({preventScroll:true});
   }
   stage.addEventListener('click',event=>{

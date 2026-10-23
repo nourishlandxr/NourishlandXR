@@ -34,7 +34,7 @@ if(root){
  }
  function choose(key,choice){const data=details[key];if(!data||!open)return;if(selected===key){closeSummary({focus:true});return}markUsed();const current=++revision;selected=key;origin=choice;root.dataset.selection=key;summary.dataset.side=key==='food-forests'||key==='hillyards'?'left':'right';summary.dataset.row=key==='hillyards'||key==='collaborate'?'lower':'upper';populateChildren(key);
   summary.querySelector('[data-summary-topic]').textContent=data.label;title.textContent=data.title;summary.querySelector('[data-summary-copy]').textContent=data.copy;more.href=data.href;more.textContent=data.action+' ↗';summary.style.setProperty('--summary-accent',data.color);
-  summary.hidden=false;summary.inert=false;summary.setAttribute('aria-hidden','false');for(const item of choices)item.setAttribute('aria-expanded',String(item===choice));animation?.cancel();if(!reduced.matches)animation=summary.animate?.([{opacity:0,transform:summary.dataset.side==='left'?'translateX(8px)':'translateX(-8px)'},{opacity:1,transform:'translateX(0)'}],{duration:240,easing:'ease-out'});
+  summary.hidden=false;summary.inert=false;summary.setAttribute('aria-hidden','false');for(const item of choices)item.setAttribute('aria-expanded',String(item===choice));animation?.cancel();if(!reduced.matches)animation=summary.animate?.([{opacity:0,transform:'scale(.45) rotate(-5deg)',filter:'blur(4px)'},{opacity:1,transform:'scale(1.025) rotate(.5deg)',filter:'blur(0px)',offset:.78},{opacity:1,transform:'none',filter:'none'}],{duration:650,easing:'cubic-bezier(.2,.75,.2,1)'});
   requestAnimationFrame(()=>{if(revision===current&&selected)title.focus({preventScroll:true})});
  }
  function rotate(x,y){markUsed();if(orb)orb.rotateBy(x,y);else{queuedYaw+=x;queuedPitch+=y}}
@@ -45,6 +45,7 @@ if(root){
  for(const event of ['pointerup','pointercancel','lostpointercapture'])button.addEventListener(event,endDrag);
  button.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key))return;e.preventDefault();rotate(e.key==='ArrowLeft'?-.2:e.key==='ArrowRight'?.2:0,e.key==='ArrowUp'?-.2:e.key==='ArrowDown'?.2:0)});
  for(const choice of choices)choice.addEventListener('click',()=>choose(choice.dataset.educationChoice,choice));
+ summary.querySelector('[data-close-education]')?.addEventListener('click',()=>closeSummary({focus:true}));
  paths.addEventListener('keydown',e=>{if(!['ArrowRight','ArrowLeft','ArrowDown','ArrowUp','Home','End'].includes(e.key))return;e.preventDefault();let i=choices.indexOf(document.activeElement);if(e.key==='Home')i=0;else if(e.key==='End')i=choices.length-1;else i=(i+(e.key==='ArrowLeft'||e.key==='ArrowUp'?-1:1)+choices.length)%choices.length;choices[i].focus()});
  root.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(selected){e.preventDefault();closeSummary({focus:true})}else if(open){e.preventDefault();setOpen(false,{focus:true})}});
  summary.addEventListener('keydown',e=>{if(e.key==='Escape'&&selected){e.preventDefault();closeSummary({focus:true})}});

@@ -1,0 +1,71 @@
+{
+  "version": "0.9784",
+  "public": false,
+  "results": [
+    {
+      "name": "desktop",
+      "heroAutoplay": true,
+      "noHeroControls": true,
+      "educationBalloon": true,
+      "totemJourney": true,
+      "outward": {
+        "frames": 185,
+        "intermediate": 52,
+        "firstMovementMs": 126,
+        "largestFrameGapMs": 103
+      },
+      "returnToOverview": {
+        "frames": 368,
+        "intermediate": 140,
+        "firstMovementMs": 21,
+        "largestFrameGapMs": 30
+      },
+      "rapidSwitch": true,
+      "phonePreview": true,
+      "wheelAutospin": true,
+      "wheelHoverOrTapMenu": true,
+      "threeCameraViews": true,
+      "storyHoverReveal": true,
+      "fiveGuideScenes": true,
+      "singleScreen": true,
+      "places": true,
+      "die": true,
+      "version": true
+    },
+    {
+      "name": "phone",
+      "heroAutoplay": true,
+      "noHeroControls": true,
+      "educationBalloon": true,
+      "totemJourney": true,
+      "outward": {
+        "frames": 393,
+        "intermediate": 151,
+        "firstMovementMs": 34,
+        "largestFrameGapMs": 17
+      },
+      "returnToOverview": {
+        "frames": 406,
+        "intermediate": 160,
+        "firstMovementMs": 17,
+        "largestFrameGapMs": 7
+      },
+      "rapidSwitch": true,
+      "phonePreview": true,
+      "wheelAutospin": true,
+      "wheelHoverOrTapMenu": true,
+      "threeCameraViews": true,
+      "storyHoverReveal": true,
+      "fiveGuideScenes": true,
+      "singleScreen": true,
+      "places": true,
+      "die": true,
+      "version": true
+    }
+  ],
+  "reducedMotion": true,
+  "autoplayWithoutPoster": true,
+  "errors": [],
+  "physicalDevice": false,
+  "heroCrevice": "Known issue: retained video predates food-area repair"
+}

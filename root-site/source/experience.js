@@ -1,7 +1,8 @@
 import {mountPlaceShowcase} from './place-showcase.js';
+import './living-surfaces.js';
 const reduced=matchMedia('(prefers-reduced-motion:reduce)');
-let entrance=[],pendingEntrance=[],epoch=0,wheel=null,wheelLoading=false,dieDispose=null,dieLoading=false,places=null,placesLoading=false;
-const forestTopics={layers:['A place for every layer.','Canopy trees, smaller trees, shrubs, herbs, groundcover, climbers and roots use different parts of the space.'],relationships:['Nothing grows alone.','Plants interact with soil, water, fungi, insects and wildlife. Look for those relationships before choosing what to plant.'],seasons:['A living system keeps changing.','Notice flowering, fruiting, shade and new growth through the year. Local observations help you decide what to do next.']};
+let entrance=[],pendingEntrance=[],epoch=0,wheel=null,wheelLoading=false,dieDispose=null,dieLoading=false,places=null,placesLoading=false,forestSelection=null;
+const forestTopics={layers:{title:'Different layers. Shared light.',copy:'Canopy trees shape the shade. Smaller trees and shrubs fill the middle. Herbs, groundcovers, climbers and roots use other parts of the space. Plan for the size each plant will reach.',points:['Canopy','Understorey','Roots'],color:'#607953'},relationships:{title:'The connections make the forest.',copy:'Roots meet soil and fungi. Flowers attract pollinators. Leaves become shelter and organic matter. These relationships change with the species, conditions and care a place receives.',points:['Soil life','Pollinators','Habitat'],color:'#3f7775'},seasons:{title:'A forest keeps becoming.',copy:'Flowering, harvest, leaf fall and new growth follow different rhythms. A mix of species can spread activity through the year. Watch what changes in your own climate.',points:['Flower','Harvest','Renew'],color:'#a46a4c'}};
 const partnerTopics={educator:['Shape a learning experience.','Bring a group of learners, a question or a research interest. Help test a small activity in a real place.'],host:['Start with a small patch of land.','A garden, campus or food forest can become a pilot setting. We begin with an introduction and a shared development plan.'],build:['Help turn the concept into a useful pilot.','Contribute plant knowledge, design, technical skills or funding. We’re looking for people to help develop and test the foundation.']};
 function answer(host,text){host.querySelector('h2').textContent=text[0];host.querySelector('p').textContent=text[1];if(!reduced.matches)host.animate([{opacity:.25,transform:'translateY(7px)'},{opacity:1,transform:'none'}],{duration:320,easing:'ease-out'});}
 function cancelEntrance(){epoch++;for(const a of entrance)a.cancel();entrance=[];for(const node of pendingEntrance)node.style.opacity='';pendingEntrance=[];}
@@ -12,7 +13,7 @@ export function prepareEntrance(key){
 export function enterPage(key){
  const page=document.querySelector(`[data-route="${key}"]`);if(!page)return;
  delete page.dataset.entering;page.dataset.entrance='running';const token=epoch;
- const title=page.querySelector('h1'),object=page.querySelector('.knowledge-flower,[data-platform-totem],.forest-wheel,.places-sculpture,.hillyards-object,.discovery-die,.learning-path-object,.about-emblem,.contact-seed');
+ const title=page.querySelector('h1'),object=page.querySelector('.knowledge-flower,[data-platform-totem],.forest-orbit,.places-sculpture,.hillyards-object,.discovery-die,.learning-path-object,.about-emblem,.contact-seed,.story-reader,.guide-scenes');
  const copy=page.querySelector('.education-after-orb,.experience-intro>p,.platform-intro>p');
  const complete=()=>{if(token!==epoch)return;page.dataset.entrance='ready';window.dispatchEvent(new CustomEvent('nourishland:page-settled',{detail:{page:key}}));};
  if(reduced.matches){loadPageObject(key);complete();return;}
@@ -32,11 +33,38 @@ export function enterPage(key){
 }
 async function loadPageObject(key){
  wheel?.setActive(key==='food-forests');
- if(key==='food-forests'&&!wheel&&!wheelLoading){wheelLoading=true;const host=document.querySelector('[data-forest-wheel]');try{const {mountOriginalWheel}=await import('./food-forest-wheel.js');wheel=await mountOriginalWheel(host);wheel.setActive(document.body.dataset.page==='food-forests');}catch{host.dataset.finish='fallback';}finally{wheelLoading=false;}}
+ if(key==='food-forests'&&!wheel&&!wheelLoading){wheelLoading=true;const host=document.querySelector('[data-forest-wheel]');try{const {mountOriginalWheel}=await import('./food-forest-wheel.js');wheel=await mountOriginalWheel(host);wheel.setTopic(forestSelection);wheel.setActive(document.body.dataset.page==='food-forests');}catch{host.dataset.finish='fallback';}finally{wheelLoading=false;}}
  if(key==='places'&&!places&&!placesLoading){placesLoading=true;places=await mountPlaceShowcase(document.querySelector('#places [data-places-showcase]'));placesLoading=false;}
  if(key==='collaborate'&&!dieDispose&&!dieLoading){dieLoading=true;try{const {mountLandingWheel}=await import('/xr/v2/nlxr/services/landingWheel.js');dieDispose=await mountLandingWheel(document.querySelector('[data-discovery-die]'));}finally{dieLoading=false;}}
 }
-document.querySelectorAll('[data-forest-topic]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));answer(document.querySelector('[data-forest-answer]'),forestTopics[button.dataset.forestTopic]);}));
+const forest=document.querySelector('[data-forest-orbit]'),forestMenu=forest?.querySelector('#forest-connections'),forestTrigger=forest?.querySelector('[data-forest-menu]'),forestAnswer=forest?.querySelector('[data-forest-answer]');
+let threadFrame=0,threadUntil=0;
+function forestThreads(now=performance.now()){
+ threadFrame=0;if(!forest||document.body.dataset.page!=='food-forests')return;const box=forest.getBoundingClientRect(),svg=forest.querySelector('.forest-orbit-threads');if(!box.width||!box.height)return;
+ svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);const paths=[...svg.querySelectorAll('path')],middle={x:box.width/2,y:box.height/2};
+ forest.querySelectorAll('.forest-node').forEach((node,i)=>{const r=node.querySelector('i').getBoundingClientRect(),x=r.left+r.width/2-box.left,y=r.top+r.height/2-box.top;paths[i].setAttribute('d',`M${middle.x} ${middle.y} Q${middle.x+(x-middle.x)*.55} ${middle.y} ${x} ${y}`);});
+ if(now<threadUntil)threadFrame=requestAnimationFrame(forestThreads);
+}
+function trackForest(){forest?.querySelectorAll('a.forest-node').forEach(n=>n.inert=!!forestSelection&&matchMedia('(max-width:700px)').matches);threadUntil=performance.now()+1250;if(!threadFrame)threadFrame=requestAnimationFrame(forestThreads);}
+if(forest){new ResizeObserver(trackForest).observe(forest);forest.querySelectorAll('.forest-node').forEach((node,i)=>node.style.setProperty('--node-order',i));}
+function forestOpen(open){if(!forest)return;forest.dataset.menuOpen=String(open);forestMenu.inert=!open;forestMenu.setAttribute('aria-hidden',String(!open));forestTrigger.setAttribute('aria-expanded',String(open));trackForest();}
+function closeForest(){forestSelection=null;forest.dataset.focused='false';forestAnswer.hidden=true;wheel?.setTopic(null);forest.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-expanded','false'));forest.querySelectorAll('a.forest-node').forEach(n=>n.inert=false);forestTrigger.focus({preventScroll:true});trackForest();}
+forestTrigger?.addEventListener('click',()=>forestOpen(true));
+forest?.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse')forestOpen(true);});
+forest?.addEventListener('focusin',()=>forestOpen(true));
+forest?.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'&&!forestSelection&&!forest.contains(document.activeElement))forestOpen(false);});
+forest?.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();if(forestSelection)closeForest();else {forestTrigger.focus({preventScroll:true});forestOpen(false);}}});
+forest?.querySelector('[data-close-forest]')?.addEventListener('click',closeForest);
+document.querySelectorAll('[data-forest-topic]').forEach(button=>button.addEventListener('click',()=>{
+ const key=button.dataset.forestTopic,data=forestTopics[key];if(forestSelection===key){closeForest();return;}forestSelection=key;forest.dataset.focused='true';forestAnswer.hidden=false;
+ forestAnswer.style.setProperty('--balloon-accent',data.color);forestAnswer.querySelector('[data-forest-label]').textContent=button.textContent;
+ forestAnswer.querySelector('h2').textContent=data.title;forestAnswer.querySelector('[data-forest-copy]').textContent=data.copy;
+ forestAnswer.querySelector('.forest-knowledge-points').replaceChildren(...data.points.map(text=>{const span=document.createElement('span');span.textContent=text;return span;}));
+ forest.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-expanded',String(b===button)));wheel?.setTopic(key);
+ forest.querySelectorAll('a.forest-node').forEach(n=>n.inert=matchMedia('(max-width:700px)').matches);trackForest();
+ if(!reduced.matches)forestAnswer.animate([{opacity:0,transform:'translateY(24px) scale(.5) rotate(-4deg)'},{opacity:1,transform:'none'}],{duration:700,easing:'cubic-bezier(.2,.75,.2,1)'});
+ forestAnswer.querySelector('h2').focus({preventScroll:true});
+}));
 document.querySelectorAll('[data-partner]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-partner]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));answer(document.querySelector('[data-partner-answer]'),partnerTopics[button.dataset.partner]);}));
 document.querySelector('[data-open-learning]')?.addEventListener('click',()=>document.querySelector('.header-pathways a[href="/education/"]').click());
 
