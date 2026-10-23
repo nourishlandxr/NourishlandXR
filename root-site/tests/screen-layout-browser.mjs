@@ -1,0 +1,23 @@
+import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
+import {chromium} from 'file:///C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
+import {revision as version} from '../tools/assemble-website.mjs';
+const live=process.argv.includes('--public'),candidate=process.argv.includes('--candidate'),audit=process.argv.includes('--audit'),origin=live||candidate?'https://nourishland.org':process.env.NL_REVIEW_ORIGIN||'http://127.0.0.1:8011',label=live?'live':candidate?'candidate':'local',folder='.tmp/screen-layout-'+version,payload=path.resolve('root-site/releases/'+version+'/payload');
+const routes=Object.entries(JSON.parse(fs.readFileSync('root-site/routes.json')));fs.mkdirSync(folder,{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true}),errors=[],results=[];
+try{
+ for(const [device,viewport]of [['wide',{width:1886,height:850}],['desktop',{width:1440,height:900}],['phone',{width:390,height:844}],['compact',{width:375,height:667}]]){
+  const c=await browser.newContext({viewport,isMobile:['phone','compact'].includes(device),hasTouch:['phone','compact'].includes(device),reducedMotion:'reduce'});
+  if(candidate)await c.route(origin+'/**',async r=>{let n=new URL(r.request().url()).pathname;if(n.endsWith('/'))n+='index.html';const f=path.resolve(payload,'.'+n);if(f.startsWith(payload+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile())await r.fulfill({body:fs.readFileSync(f),contentType:({'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json'})[path.extname(f)]||'application/octet-stream'});else await r.continue();});
+  const p=await c.newPage();p.on('pageerror',e=>errors.push(device+': '+e.message));
+  for(const [key,route]of routes){
+   await p.goto(origin+route.path,{waitUntil:'domcontentloaded'});await p.waitForFunction(key=>document.body.dataset.page===key,key);await p.locator('#site-header .brand img').evaluate(i=>i.decode());await p.evaluate(()=>document.fonts.ready);const broken=await p.evaluate(async()=>{const images=[...document.querySelectorAll('[data-route]:not([hidden]) img')].filter(i=>i.checkVisibility());return (await Promise.all(images.map(async i=>{try{await i.decode();return null;}catch{return i.currentSrc||i.src;}}))).filter(Boolean);});if(!audit)assert.deepEqual(broken,[],device+' '+key+' image failed');await p.waitForTimeout(150);
+   const row=await p.evaluate(()=>{
+    const page=document.querySelector('[data-route]:not([hidden])'),rect=e=>{const r=e.getBoundingClientRect();return{left:r.left,top:r.top,right:r.right,bottom:r.bottom,width:r.width,height:r.height};},elements=[...page.querySelectorAll('h1,h2,p,.experience-next a,.experience-next button,.story-heading a,.story-navigation button,.guide-scenes-nav button')].filter(e=>e.checkVisibility({checkOpacity:true,checkVisibilityCSS:true})&&!e.closest('.sr-only,[aria-hidden=true],[inert],.story-full-text,.story-hover-quote,.story-portrait-idea,.living-balloon')&&!e.matches('.sr-only'));
+    return {header:rect(document.querySelector('#site-header')),logo:rect(document.querySelector('#site-header .brand')),menu:rect(document.querySelector('.menu-toggle')),wordmark:document.querySelector('#site-header .brand').textContent.trim(),pathways:document.querySelectorAll('.header-pathways').length,main:rect(document.querySelector('main')),pageBounds:rect(page),outside:elements.map(e=>({text:e.textContent.trim().slice(0,65),...rect(e)})).filter(r=>r.left< -2||r.top< -2||r.right>innerWidth+2||r.bottom>innerHeight+2),actions:[...page.querySelectorAll('.experience-next a,.experience-next button')].filter(e=>e.checkVisibility()).map(e=>({label:e.textContent.trim(),font:parseFloat(getComputedStyle(e).fontSize),...rect(e)}))};
+   });
+   if(!audit){assert.equal(row.pathways,0);assert.equal(row.wordmark,'');assert.equal(row.header.height,0);assert.equal(Math.round(row.main.height),viewport.height);assert.deepEqual(row.outside,[],device+' '+key+' clipped content');for(const a of row.actions){assert(a.font>=17,device+' '+key+' small action');assert(a.height>=44);}}
+   await p.screenshot({path:folder+'/'+label+'-'+device+'-'+key+'.png'});results.push({device,page:key,...row});
+  }
+  await c.close();
+ }
+ if(!audit)assert.deepEqual(errors,[]);const report={version,label,results,errors,physicalPhone:false};fs.writeFileSync(folder+'/'+label+'.json',JSON.stringify(report,null,2));console.log(JSON.stringify({version,label,checks:results.length,errors,overflow:results.filter(r=>r.outside.length).map(r=>({device:r.device,page:r.page,outside:r.outside}))},null,2));
+}finally{await browser.close();}

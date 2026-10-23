@@ -1,0 +1,49 @@
+{
+  "version": "0.9795",
+  "origin": "https://nourishland.org",
+  "label": "candidate",
+  "results": [
+    {
+      "name": "desktop",
+      "minContrast": 10.115897091166996,
+      "allTargets44px": true,
+      "insideViewport": true,
+      "scrolls": false,
+      "keyboardAndDismissal": true
+    },
+    {
+      "name": "phone",
+      "minContrast": 10.115897091166996,
+      "allTargets44px": true,
+      "insideViewport": true,
+      "scrolls": false,
+      "keyboardAndDismissal": true
+    },
+    {
+      "name": "compact",
+      "minContrast": 10.115897091166996,
+      "allTargets44px": true,
+      "insideViewport": true,
+      "scrolls": false,
+      "keyboardAndDismissal": true
+    },
+    {
+      "name": "narrow",
+      "minContrast": 10.115897091166996,
+      "allTargets44px": true,
+      "insideViewport": true,
+      "scrolls": false,
+      "keyboardAndDismissal": true
+    },
+    {
+      "name": "landscape",
+      "minContrast": 10.115897091166996,
+      "allTargets44px": true,
+      "insideViewport": true,
+      "scrolls": true,
+      "keyboardAndDismissal": true
+    }
+  ],
+  "errors": [],
+  "physicalPhone": false
+}

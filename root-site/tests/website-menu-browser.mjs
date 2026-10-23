@@ -2,7 +2,7 @@
 import fs from 'node:fs';import path from 'node:path';import assert from 'node:assert/strict';
 import {chromium} from 'file:///C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import {revision as version} from '../tools/assemble-website.mjs';
-const live=process.argv.includes('--public'),candidate=process.argv.includes('--candidate'),origin=live||candidate?'https://nourishland.org':'http://127.0.0.1:8010';
+const live=process.argv.includes('--public'),candidate=process.argv.includes('--candidate'),origin=live||candidate?'https://nourishland.org':(process.env.NL_REVIEW_ORIGIN||'http://127.0.0.1:8010');
 const label=live?'live':candidate?'candidate':'local',folder=`.tmp/menu-${version}`,payload=path.resolve(`root-site/releases/${version}/payload`);
 fs.mkdirSync(folder,{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true}),errors=[],results=[];
 const types={'.html':'text/html','.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.json':'application/json'};

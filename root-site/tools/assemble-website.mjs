@@ -1,7 +1,7 @@
 import fs from 'node:fs';import path from 'node:path';
 import {experiencePages} from '../source/experience-pages.mjs';
 import {LEGACY_ENTRY_FILES,bridgeHtml,sitemapXml,robotsTxt,notFoundHtml} from './canonical-pages.mjs';
-export const revision='0.9794';
+export const revision='0.9795';
 export function replaceSection(html,id,replacement){
  const start=html.search(new RegExp(`<section\\b[^>]*\\bid="${id}"`));if(start<0)throw Error('Missing route '+id);
  const tags=/<\/?section\b[^>]*>/g;tags.lastIndex=start;let depth=0,match;
@@ -11,7 +11,8 @@ export function replaceSection(html,id,replacement){
 export function assembleWebsite(){
  let html=fs.readFileSync('root-site/releases/0.9780/payload/index.html','utf8');
  html=html.replace('<html lang="en">','<html lang="en" data-experience-site>');
- html=html.replace(/<nav id="main-nav"[\s\S]*?<\/nav>/,fs.readFileSync('root-site/source/site-navigation.html','utf8'));
+ const header=fs.readFileSync('root-site/source/site-header.html','utf8').replace('<!-- navigation -->',fs.readFileSync('root-site/source/site-navigation.html','utf8'));
+ html=html.replace(/<header\b[^>]*id="site-header"[\s\S]*?<\/header>/,header);
  let education=fs.readFileSync('root-site/source/education-flower.html','utf8');
  education=education.replace(/<header class="wrap education-intro">[\s\S]*?<\/header>/,`<header class="wrap education-intro"><h1 tabindex="-1">Learning begins with curiosity.</h1></header>`)
  .replace(/<\/section>\s*$/,`<p class="education-after-orb">Nourishland connects plant knowledge to real places. Observe, explore and learn through food forests, guided experiences and the people who care for them.</p></section>`);
@@ -29,6 +30,7 @@ export function assembleWebsite(){
  html=html.replace('</head>',`<link rel="stylesheet" href="/site/experience-refinements.css?v=${revision}"><script type="module" src="/site/story-reader.js?v=${revision}"></script></head>`);
  html=html.replace('</head>',`<link rel="stylesheet" href="/site/site-navigation.css?v=${revision}"></head>`);
  html=html.replace('</head>',`<link rel="stylesheet" href="/site/hillyards-animations.css?v=${revision}"></head>`);
+ html=html.replace('</head>',`<link rel="stylesheet" href="/site/screen-layout.css?v=${revision}"></head>`);
  const platform=fs.readFileSync('root-site/source/platform-totem.html','utf8'),start=platform.indexOf('<section class="creator-system"');
  const tags=/<\/?section\b[^>]*>/g;tags.lastIndex=start;let depth=0,match,feature='';
  while((match=tags.exec(platform))){depth+=match[0].startsWith('</')?-1:1;if(depth===0){feature=platform.slice(start,tags.lastIndex);break;}}

@@ -1,7 +1,7 @@
 import {revision} from '../tools/assemble-website.mjs';
 import fs from 'node:fs';import assert from 'node:assert/strict';
 import {chromium} from 'file:///C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
-const version=process.argv.find(a=>/^0\.[0-9]{4}$/.test(a))||revision,origin=process.argv.includes('--public')?'https://nourishland.org':'http://127.0.0.1:8010';
+const version=process.argv.find(a=>/^0\.[0-9]{4}$/.test(a))||revision,origin=process.argv.includes('--public')?'https://nourishland.org':(process.env.NL_REVIEW_ORIGIN||'http://127.0.0.1:8010');
 const folder='.tmp/story-layout-'+version;fs.mkdirSync(folder,{recursive:true});const b=await chromium.launch({channel:'chrome',headless:true});const errors=[],results=[];
 try{
  for(const [name,viewport,scale] of [['wide',{width:1894,height:836},1],['screenshot-scale',{width:1263,height:557},1.5],['desktop',{width:1440,height:1000},1],['short-laptop',{width:1365,height:640},1],['tablet',{width:820,height:1180},1],['phone',{width:390,height:844},1],['compact',{width:375,height:667},1]]){
@@ -27,6 +27,6 @@ try{
   await p.locator('.story-guide-link').click();await p.waitForFunction(()=>document.body.dataset.page==='food-forest-guide');assert.equal(await p.locator('[data-guide-view]').count(),4);
   results.push({name,allSevenChapters:true,allTextReachable:true,noOverlap:true,originalImageProportions:true});await context.close();
  }
- const welcome=await b.newPage();await welcome.goto(origin+'/app/?mode=welcome');await welcome.waitForFunction(version=>document.body.innerText.includes('V'+version),version);await welcome.screenshot({path:folder+'/welcome.png'});
+ const welcome=await b.newPage();await welcome.goto(origin+'/app/?mode=welcome');await welcome.waitForFunction(version=>document.body.innerText.includes('V'+version),version,{timeout:60000});await welcome.screenshot({path:folder+'/welcome.png'});
  assert.deepEqual(errors,[]);const result={version,local:!process.argv.includes('--public'),results,welcomeVersion:true,errors};fs.writeFileSync(folder+'/checks.json',JSON.stringify(result,null,2));console.log(JSON.stringify(result,null,2));
 }finally{await b.close();}

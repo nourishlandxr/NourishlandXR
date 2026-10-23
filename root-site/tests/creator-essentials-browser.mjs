@@ -2,7 +2,7 @@ import fs from 'node:fs';import path from 'node:path';import assert from 'node:a
 import {chromium} from 'file:///C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import {PIGEON_PEA_PIM} from '../../app/services/pigeonPeaPim.js';
 import {revision as version} from '../tools/assemble-website.mjs';
-const live=process.argv.includes('--public'),candidate=process.argv.includes('--candidate'),origin=live||candidate?'https://nourishland.org':'http://127.0.0.1:8010';
+const live=process.argv.includes('--public'),candidate=process.argv.includes('--candidate'),origin=live||candidate?'https://nourishland.org':(process.env.NL_REVIEW_ORIGIN||'http://127.0.0.1:8010');
 const label=live?'live':candidate?'candidate':'local',folder=`.tmp/creator-${version}`,payload=path.resolve(`root-site/releases/${version}/payload`),errors=[],results=[];
 fs.mkdirSync(folder,{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true});
 const android='Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0.0.0 Mobile Safari/537.36';
@@ -24,7 +24,7 @@ try{
   await p.locator('[data-hillyards-animations] video').first().evaluate(video=>video.dispatchEvent(new Event('ended')));
   await p.waitForFunction(()=>{const h=document.querySelector('[data-hillyards-animations]'),v=h?.querySelectorAll('video')[1];return h?.dataset.animation==='1'&&v&&!v.paused&&v.currentTime>.1;},null,{timeout:60000});
   await p.locator('.menu-toggle').click();await p.waitForFunction(()=>[...document.querySelectorAll('[data-hillyards-animations] video')].every(v=>v.paused));await p.locator('.menu-toggle').click();
-  await p.locator('.header-pathways a[href="/education/"]').click();await p.waitForFunction(()=>document.body.dataset.page==='education');assert(await p.locator('[data-hillyards-animations] video').evaluateAll(videos=>videos.every(v=>v.paused)));
+  await p.locator('.menu-toggle').click();await p.locator('#main-nav a[href="/education/"]').click();await p.waitForFunction(()=>document.body.dataset.page==='education');assert(await p.locator('[data-hillyards-animations] video').evaluateAll(videos=>videos.every(v=>v.paused)));
   await p.goto(origin+'/demos/?tool=pimo',{waitUntil:'domcontentloaded'});await p.locator('[data-cell="uses"]').waitFor();assert.equal(await p.locator('[data-cell]').count(),7);
   await p.locator('[data-cell="uses"]').click();const body=p.locator('[data-inspector] [data-field=body]');await body.fill('A field observation added in the honeycomb editor.');await body.press('Tab');
   await p.locator('[data-action=preview]').click();const preview=p.getByRole('dialog',{name:'Preview your PIMO'});await preview.waitFor();await p.waitForFunction(()=>getComputedStyle(document.querySelector('.pimo-reader-preview')).backgroundColor==='rgb(238, 234, 222)');await preview.locator('[data-preview-node=uses]').click();await preview.locator('[data-preview-reading]').getByText('A field observation added in the honeycomb editor.',{exact:true}).waitFor();

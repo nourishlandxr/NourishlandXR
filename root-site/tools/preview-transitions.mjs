@@ -35,4 +35,5 @@ const server=http.createServer(async(req,res)=>{
   else res.end(bytes);
  }catch(error){res.writeHead(500);res.end(error.message);}
 });
-server.listen(8010,'127.0.0.1',()=>console.log('Local transition review: http://127.0.0.1:8010/platform/'));
+const port=Number(process.env.NL_PREVIEW_PORT||8010);
+server.listen(port,'127.0.0.1',()=>console.log(`Local transition review: http://127.0.0.1:${port}/platform/`));

@@ -2,7 +2,7 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';
 import {chromium} from 'file:///C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright/index.mjs';
 import {revision as version} from '../tools/assemble-website.mjs';
-const origin=process.argv.includes('--public')?'https://nourishland.org':'http://127.0.0.1:8010',folder='.tmp/canonical-'+version;
+const origin=process.argv.includes('--public')?'https://nourishland.org':(process.env.NL_REVIEW_ORIGIN||'http://127.0.0.1:8010'),folder='.tmp/canonical-'+version;
 fs.mkdirSync(folder,{recursive:true});const browser=await chromium.launch({channel:'chrome',headless:true}),errors=[],results=[];
 try{
  for(const [name,viewport]of [['desktop',{width:1440,height:900}],['phone',{width:390,height:844}]]){
