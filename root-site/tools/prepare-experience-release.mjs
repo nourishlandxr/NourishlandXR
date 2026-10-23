@@ -1,11 +1,11 @@
-// Package the reviewed interface over V0.9792, retaining canonical routing.
+// Package the reviewed interface over V0.9793, retaining canonical routing.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {versionModuleImports,versionCssImports} from './release-module-urls.mjs';
 import {revision as version} from './assemble-website.mjs';
 import {releaseHtmlFiles,auxiliaryFiles,LEGACY_ENTRY_FILES} from './canonical-pages.mjs';
 import {writeRoutingPlan} from './routing-plan.mjs';
-const previousVersion='0.9792',release=`root-site/releases/${version}`,candidate='dist/website';
+const previousVersion='0.9793',release=`root-site/releases/${version}`,candidate='dist/website';
 const previousManifest=JSON.parse(fs.readFileSync(`root-site/releases/${previousVersion}/manifest.json`));
 const history=fs.readdirSync('root-site/releases').filter(v=>/^0\.\d{4}$/.test(v)&&v<=previousVersion&&fs.existsSync(`root-site/releases/${v}/manifest.json`)).sort().reverse().map(v=>JSON.parse(fs.readFileSync(`root-site/releases/${v}/manifest.json`)));
 const previousFile=file=>history.flatMap(m=>m.files||[]).find(item=>item.file===file);
@@ -26,8 +26,9 @@ function walk(dir){for(const entry of fs.readdirSync(dir,{withFileTypes:true})){
 }}
 walk(path.join(candidate,'site'));
 for(const name of ['homepage-hero.js','hero-preview.css','food-forest-story.js','creator-links.js'])candidates.set('xr/v2/'+name,fs.readFileSync('dist/xr/v2/'+name));
-for(const name of ["entry.js","screens/accessPortal.js","services/portalRoutes.js","services/siteRoutes.js","screens/pimoEditor.js","screens/temporaryArDemo.js","screens/projectDashboard.js","screens/creatorHubWorkspace.js","screens/creatorDesktopWorkspace.js","features/ar-demo/demoPreviewMarkup.js","services/pimoGraph.js","services/pimoGraphTemplates.js","services/pimoGraphDocument.js","services/pimoReaderPreview.js","services/pimoProjectEditor.js","services/pimoXRWorkbench.js","services/pimoEditorIcons.js","services/creatorQuickStart.js"])candidates.set('xr/'+name,Buffer.from(versionModuleImports(fs.readFileSync('dist/xr/'+name,'utf8'),version)));
-for(const file of ['pimo-editor.css','pimo-reader-preview.css'])candidates.set('xr/'+file,fs.readFileSync('dist/xr/'+file));
+for(const name of ["screens/biomeWheelXR.js","services/biomeWheelPresentation.js","entry.js","screens/accessPortal.js","services/portalRoutes.js","services/siteRoutes.js","screens/pimoEditor.js","screens/temporaryArDemo.js","screens/projectDashboard.js","screens/creatorHubWorkspace.js","screens/creatorDesktopWorkspace.js","features/ar-demo/demoPreviewMarkup.js","services/pimoGraph.js","services/pimoGraphTemplates.js","services/pimoGraphDocument.js","services/pimoReaderPreview.js","services/pimoProjectEditor.js","services/pimoXRWorkbench.js","services/pimoEditorIcons.js","services/creatorQuickStart.js"])candidates.set('xr/'+name,Buffer.from(versionModuleImports(fs.readFileSync('dist/xr/'+name,'utf8'),version)));
+for(const file of ['pimo-editor.css','pimo-reader-preview.css','biome-wheel-xr.css'])candidates.set('xr/'+file,fs.readFileSync('dist/xr/'+file));
+for(const file of ['current-landscape.bin','current-landscape.json'])candidates.set('xr/assets/biome-wheel/'+file,fs.readFileSync('dist/xr/assets/biome-wheel/'+file));
 const build=fs.readFileSync('dist/xr/services/buildInfo.js');if(!build.toString().includes(version))throw Error('Build version does not match website.');
 candidates.set('xr/services/buildInfo.js',build);
 candidates.set('site/root-release.json',Buffer.from(JSON.stringify({managedBy:'root-site-release',version,publishedAt:new Date().toISOString(),legacyXrAutoDeployMustNotOverwrite:true,backendChanged:false},null,2)+'\n'));

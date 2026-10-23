@@ -1,0 +1,26 @@
+{
+  "version": "0.9794",
+  "label": "candidate",
+  "results": [
+    {
+      "device": "desktop",
+      "unsupportedDoesNotDownload": true,
+      "backWorks": true
+    },
+    {
+      "device": "phone",
+      "unsupportedDoesNotDownload": true,
+      "backWorks": true
+    },
+    {
+      "currentModelPrepares": true,
+      "loadFailureCanRetry": true,
+      "bothModesRequestCorrectly": true,
+      "permissionFailureRecovers": true,
+      "lightingWorks": true,
+      "exitDisposes": true
+    }
+  ],
+  "errors": [],
+  "physicalXR": false
+}

@@ -1,0 +1,42 @@
+{
+  "version": "0.9794",
+  "label": "candidate",
+  "results": [
+    {
+      "device": "desktop",
+      "hillyardsAutoplay": true,
+      "automaticSceneChange": true,
+      "pausesOffPage": true,
+      "originalHoneycomb": true,
+      "previewShowsEdits": true,
+      "coreProtected": true
+    },
+    {
+      "device": "phone",
+      "hillyardsAutoplay": true,
+      "automaticSceneChange": true,
+      "pausesOffPage": true,
+      "originalHoneycomb": true,
+      "previewShowsEdits": true,
+      "coreProtected": true
+    },
+    {
+      "device": "desktop",
+      "linkedPlant": true,
+      "saveIsExplicit": true,
+      "originalIdsPreserved": true,
+      "editedTopicsAreDrafts": true,
+      "conflictRetainsWork": true
+    },
+    {
+      "device": "phone",
+      "linkedPlant": true,
+      "saveIsExplicit": true,
+      "originalIdsPreserved": true,
+      "editedTopicsAreDrafts": true,
+      "conflictRetainsWork": true
+    }
+  ],
+  "errors": [],
+  "physicalXR": false
+}

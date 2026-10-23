@@ -1,0 +1,38 @@
+{
+  "schema": "nourishland.biome-wheel.v1",
+  "source": "app/v2/full-3d/Nourishland-Hero-Living-v17.html",
+  "sourceSha256": "dcbecc2311ed6fbcdff11b8278f065ac5e0f8c34caa619a84bdaaf40eff899ab",
+  "file": "current-landscape.bin",
+  "encoding": "gzip",
+  "decodedFormat": "glTF 2.0 binary",
+  "sha256": "2e171e787f03a7800ebe2bd7678d31da44ea3ef4f5accaa64f809fc14e383ff0",
+  "meshes": 462,
+  "instances": 22043,
+  "logicalTriangles": 12828058,
+  "bounds": {
+    "min": [
+      -2.017758423906738,
+      -1.0833699703216553,
+      -2.088911855582557
+    ],
+    "max": [
+      2.08138057919695,
+      0.6877362454578062,
+      1.9885296821594238
+    ],
+    "center": [
+      0.031811077645106156,
+      -0.19781686243192453,
+      -0.05019108671156669
+    ],
+    "size": [
+      4.099139003103688,
+      1.7711062157794615,
+      4.077441537741981
+    ]
+  },
+  "bytes": 52724853,
+  "decodedBytes": 122929392,
+  "nlLayer": false,
+  "representation": "Static geometry snapshot; compact foliage; GPU instancing; standard materials"
+}
