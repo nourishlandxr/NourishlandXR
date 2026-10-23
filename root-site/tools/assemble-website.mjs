@@ -1,6 +1,6 @@
 import fs from 'node:fs';import path from 'node:path';
 import {experiencePages} from '../source/experience-pages.mjs';
-export const revision='0.9785';
+export const revision='0.9788';
 export function replaceSection(html,id,replacement){
  const start=html.search(new RegExp(`<section\\b[^>]*\\bid="${id}"`));if(start<0)throw Error('Missing route '+id);
  const tags=/<\/?section\b[^>]*>/g;tags.lastIndex=start;let depth=0,match;
@@ -15,12 +15,15 @@ export function assembleWebsite(){
  .replace(/<\/section>\s*$/,`<p class="education-after-orb">Nourishland connects plant knowledge to real places. Observe, explore and learn through food forests, guided experiences and the people who care for them.</p></section>`);
  html=replaceSection(html,'education',education);
  html=replaceSection(html,'platform',fs.readFileSync('root-site/source/platform-totem.html','utf8'));
+ html=replaceSection(html,'food-forest-guide',fs.readFileSync('root-site/source/food-forest-guide.html','utf8'));
+ html=replaceSection(html,'food-forest-story',fs.readFileSync('root-site/source/food-forest-story.html','utf8'));
  for(const [key,markup]of Object.entries(experiencePages))html=replaceSection(html,key,markup);
  html=html.replace(/<h2 id="foodforest-title">([\s\S]*?)<\/h2>/,'<h1 id="foodforest-title" tabindex="-1">$1</h1>');
  html=html.replace(/<script type="module" src="\/site\/platform-totem.js[^>]*><\/script>/,'');
  html=html.replace(/<script type="module" src="\/site\/root-router.js[^>]*><\/script>/,`<script type="module" src="/site/root-router.js?v=${revision}"></script>`);
- html=html.replace('</head>',`<link rel="stylesheet" href="/site/experience.css?v=${revision}"><link rel="stylesheet" href="/site/living-surfaces.css?v=${revision}"></head>`);
+ html=html.replace('</head>',`<link rel="stylesheet" href="/site/experience.css?v=${revision}"><link rel="stylesheet" href="/site/living-surfaces.css?v=${revision}"><link rel="stylesheet" href="/site/food-forest-guide.css?v=${revision}"><link rel="stylesheet" href="/site/food-forest-story.css?v=${revision}"></head>`);
  html=html.replace(/hero-preview\.css\?[^" ]+/g,`hero-preview.css?v=${revision}`);
+ html=html.replace('src="/xr/v2/food-forest-story.js"',`src="/xr/v2/food-forest-story.js?v=${revision}"`);
  const platform=fs.readFileSync('root-site/source/platform-totem.html','utf8'),start=platform.indexOf('<section class="creator-system"');
  const tags=/<\/?section\b[^>]*>/g;tags.lastIndex=start;let depth=0,match,feature='';
  while((match=tags.exec(platform))){depth+=match[0].startsWith('</')?-1:1;if(depth===0){feature=platform.slice(start,tags.lastIndex);break;}}

@@ -65,32 +65,7 @@ html[data-experience-site] .experience-page{padding:20px 24px 16px;gap:0}
 .forest-balloon{position:absolute;z-index:6;right:3%;bottom:27%;width:330px;max-width:35%;transform-origin:0 20%}.forest-balloon[hidden]{display:none}.forest-balloon .forest-knowledge-points{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11px;color:var(--balloon-accent);margin:10px 0}.forest-knowledge-points span:before{content:'·';margin-right:7px;color:#8a9d77}
 .forest-orbit[data-focused=true] .forest-node:nth-child(-n+3){--ny:calc(var(--orbit-y)*-.95);--nx:0px}.forest-orbit[data-focused=true] .forest-node:nth-child(1){--nx:-200px}.forest-orbit[data-focused=true] .forest-node:nth-child(3){--nx:200px}.forest-orbit[data-focused=true] .forest-node:nth-child(4){--ny:var(--orbit-y)}.forest-orbit[data-focused=true] .forest-node:nth-child(6){--ny:var(--orbit-y);--nx:var(--orbit-x)}
 
-/* Story portraits replace the rectangular article reader. */
-#food-forest-story:not([hidden]){display:flex;flex-direction:column;padding:18px 24px 12px}
-#food-forest-story .simple-intro{position:relative;flex:none;display:block;text-align:center;padding:0;max-width:1000px;margin:0 auto 8px}
-#food-forest-story .simple-intro h1{font-size:clamp(29px,3.2vw,42px);line-height:1.15;margin:0 0 10px}.simple-intro .story-back{position:fixed;left:24px;top:calc(var(--site-header-height) + 20px);font-size:12px;min-height:44px;display:flex;align-items:center;gap:7px}
-#food-forest-story .simple-intro>.eyebrow{display:none}#food-forest-story .simple-intro>.lead{font-size:16px;line-height:1.5;margin:0 auto;max-width:60ch}
-#food-forest-story .story-reader{position:relative;flex:1;min-height:0;display:flex;flex-direction:column;width:100%;max-width:1300px;padding:0;border:0;border-radius:0;background:none;overflow:visible}
-#food-forest-story .story-chapter{position:relative;flex:1;min-height:0;display:grid;grid-template-columns:1fr 1.3fr 1fr;gap:25px;align-items:center;background:none;border:0;padding:10px 0 40px;overflow:visible}
-#food-forest-story .story-chapter[hidden]{display:none}
-#food-forest-story .story-chapter-copy{grid-column:1;grid-row:1;width:min(290px,100%);justify-self:end;padding:0 0 0 16px;border:0;background:none;z-index:2}
-#food-forest-story .story-chapter-copy .eyebrow{font-size:10px;letter-spacing:.12em;margin:0 0 14px;color:#7c8e6d}
-#food-forest-story .story-chapter-copy h2{font-size:clamp(28px,3vw,42px);line-height:1.12;margin:0 0 18px}
-#food-forest-story .story-chapter-copy>p:not(.eyebrow){font-size:15px;line-height:1.6;margin:0;max-width:32ch}#food-forest-story .story-chapter-copy .story-person{display:none}
-#food-forest-story .story-chapter>figure{position:relative;grid-column:2;grid-row:1;place-self:center;width:min(100%,calc(var(--page-space)*.55));height:auto;aspect-ratio:.92;max-height:100%;margin:0;overflow:hidden;border-radius:46% 54% 44% 56% / 55% 42% 58% 45%;box-shadow:0 23px 40px #3a562923,inset 0 0 0 1px #fff8;isolation:isolate;background:#d9dfc8}
-#food-forest-story .story-chapter>figure:after{content:'';position:absolute;inset:8px;border:1px solid #f7f1d17a;border-radius:inherit;pointer-events:none;z-index:3}
-#food-forest-story .story-chapter>figure>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 22%;transition:transform 1.3s cubic-bezier(.2,.7,.2,1)}
-#food-forest-story .story-chapter>figure:hover>img{transform:scale(1.06)}
-#food-forest-story .story-identity{position:absolute;bottom:3px;left:50%;transform:translateX(-50%);margin:0;font-size:15px;color:#4e7154;white-space:nowrap}
-#food-forest-story .story-chapter:before{content:'';position:absolute;inset:4% 19%;border:1px solid #9caf8b40;border-radius:50%;transform:rotate(-18deg);pointer-events:none;z-index:-1}
-#food-forest-story .story-chapter:after{content:'';position:absolute;left:79%;top:32%;width:14px;height:14px;border-radius:50%;background:radial-gradient(circle at 30% 20%,#fff4ca,#95ad7f);box-shadow:0 5px 9px #3b5c2f1c}
-#food-forest-story .story-tabs{order:2;display:flex;flex:none;justify-content:center;gap:5px;padding:12px 48px 0;min-height:57px;background:none;border:0;position:relative}
-#food-forest-story .story-tabs button{flex:none;min-width:70px;min-height:44px;padding:7px 12px;border:0;border-bottom:1px solid #a2b19244;background:none;font:500 13px/1.2 var(--sans);color:#5e7a62}
-#food-forest-story .story-tabs button span{font-size:10px;opacity:.6;margin-right:6px}#food-forest-story .story-tabs button[aria-selected=true]{border-bottom-color:#597b55;color:#254b36;background:none;box-shadow:none}
-#food-forest-story .story-controls{display:contents}#food-forest-story .story-controls button{position:absolute;bottom:1px;z-index:3;background:none;border:1px solid #92a48066;border-radius:50%;width:44px;height:44px;color:#456a4c}
-#food-forest-story [data-story-step='-1']{left:calc(50% - 292px)}#food-forest-story [data-story-step='1']{right:calc(50% - 292px)}#food-forest-story [data-story-count]{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
-#food-forest-story .story-bridge{flex:none;display:block;border:0;margin:0;padding:8px 0 0;width:100%;max-width:none}.story-next{display:flex;justify-content:center;gap:28px}.story-next a{display:inline-flex;align-items:center;min-height:36px;font-size:12px;color:#55725b;text-decoration:underline;text-underline-offset:5px}
-#food-forest-story .story-portrait-idea{background:linear-gradient(transparent,#294d3cdd);padding:30px 24px;display:flex;flex-direction:column;justify-content:end;font-size:14px;line-height:1.55}#food-forest-story .story-portrait-toggle{top:18px;right:18px;background:#f4f0ddda}
+/* Food-forest editorial layouts are defined together below. */
 
 /* The living guide becomes five focused scenes, retaining original graphics. */
 #food-forest-guide:not([hidden]){display:flex;flex-direction:column;padding:20px 24px 12px;max-width:1300px;border:0;background:none}
@@ -120,7 +95,7 @@ html[data-experience-site] .experience-page{padding:20px 24px 16px;gap:0}
  #education .education-experience[data-detail=true] .learning-orb{width:120px;height:132px}#education .education-experience[data-detail=true] .learning-orb canvas{width:120px;height:120px}#education .education-experience[data-detail=true] .orb-fallback{width:94px;height:94px;left:13px;top:13px}
  #education .education-experience[data-detail=true] .flower-petal-copy small{display:none}#education .education-experience[data-detail=true] .petal-icon{width:18px;height:18px}#education .education-experience[data-detail=true] .flower-petal-copy strong{font-size:11px}
  .journey-detail.living-balloon{width:min(320px,calc(100% - 28px));max-height:none}
- #food-forest-story .story-chapter{grid-template-columns:.9fr 1.1fr;gap:20px}#food-forest-story .story-chapter:after{display:none}#food-forest-story .story-chapter:before{inset:5% 7%}
+
 }
 @media(max-width:700px){
  html[data-experience-site] .experience-page{padding:15px 16px 10px}.experience-intro h1{font-size:28px;margin-bottom:9px}.experience-intro>p{font-size:14px;line-height:1.5;max-width:42ch}.experience-page>.experience-answer p{font-size:13px}.experience-page>.experience-answer h2{font-size:22px}.experience-page>.experience-answer small{font-size:10px;line-height:1.45}.experience-page>.experience-next{gap:0 18px}
@@ -135,12 +110,7 @@ html[data-experience-site] .experience-page{padding:20px 24px 16px;gap:0}
  .living-balloon{padding:31px 26px 22px}.living-balloon :is(h2,h3){font-size:24px}.living-balloon>p:not(.eyebrow){font-size:13px;line-height:1.55}.journey-detail.living-balloon{padding:33px 26px 21px}
  .forest-orbit{--orbit-x:clamp(86px,27vw,140px);--orbit-y:min(24svh,205px)}.forest-orbit .forest-wheel{width:100%;height:min(95%,450px)}.forest-node{width:135px;font-size:14px;gap:7px}.forest-node i{width:7px;height:7px}.forest-orbit-threads{inset:8% 0;width:100%;height:84%}.forest-balloon{max-width:none;width:calc(100% - 26px);right:13px;bottom:10px;padding:29px 26px 18px}.forest-balloon h2{font-size:24px}.forest-balloon>p:not(.eyebrow){font-size:13px;line-height:1.55}
  .forest-orbit[data-focused=true] .forest-node:nth-child(-n+3){--ny:calc(var(--orbit-y)*-.9);--nx:0px;font-size:12px;width:110px}.forest-orbit[data-focused=true] .forest-node:nth-child(1){--nx:-110px}.forest-orbit[data-focused=true] .forest-node:nth-child(3){--nx:110px}.forest-orbit[data-focused=true] .forest-node:nth-child(n+4){visibility:hidden;opacity:0;pointer-events:none}.forest-orbit[data-focused=true] .forest-heart{pointer-events:none}.forest-invitation{bottom:5%}
- #food-forest-story:not([hidden]){padding:12px 16px 8px}#food-forest-story .simple-intro h1{font-size:28px;margin-bottom:8px}#food-forest-story .simple-intro>.lead{font-size:13px;line-height:1.5;max-width:36ch}.simple-intro .story-back{position:static;justify-content:center;min-height:24px;font-size:11px;margin-bottom:4px}
- #food-forest-story .story-chapter{display:flex;flex-direction:column;justify-content:center;gap:10px;padding:10px 0 26px}#food-forest-story .story-chapter[hidden]{display:none}#food-forest-story .story-chapter>figure{order:0;flex:1;min-height:90px;height:auto;max-height:45%;width:auto;aspect-ratio:1.08}
- #food-forest-story .story-chapter-copy{order:1;flex:none;text-align:center;width:min(340px,100%);padding:0;max-width:none}#food-forest-story .story-chapter-copy .eyebrow{font-size:9px;margin:0 0 7px}#food-forest-story .story-chapter-copy h2{font-size:27px;margin:0 0 8px}#food-forest-story .story-chapter-copy h2 br{display:none}#food-forest-story .story-chapter-copy h2 br:after{content:' '}
- #food-forest-story .story-chapter-copy>p:not(.eyebrow){font-size:13px;line-height:1.5;max-width:40ch;margin:auto}#food-forest-story .story-identity{bottom:0;font-size:12px}#food-forest-story .story-chapter:before{inset:3% 12% 35%;border-color:#8ea78033}
- #food-forest-story .story-tabs{padding:8px 44px 0;gap:0;min-height:52px}#food-forest-story .story-tabs button{min-width:0;flex:1;padding:6px 3px;font-size:10px}#food-forest-story .story-tabs button span{display:block;margin:0 0 4px;font-size:9px}#food-forest-story [data-story-step='-1']{left:0}#food-forest-story [data-story-step='1']{right:0}.story-next{gap:20px}.story-next a{font-size:11px;min-height:30px}
- #food-forest-story .story-portrait-idea{padding:25px 18px 18px}#food-forest-story .story-portrait-idea p{font-size:11px;line-height:1.5}#food-forest-story .story-portrait-toggle{top:8px;right:8px;width:44px;height:44px}
+
  #food-forest-guide:not([hidden]){padding:15px 16px 9px}#food-forest-guide .ff-opening h1{font-size:27px}#food-forest-guide .ff-opening>p{font-size:13px;line-height:1.5}.guide-scenes-nav{gap:3px;padding-top:4px}.guide-scenes-nav button{font-size:11px;padding-inline:7px}.guide-scene .ff-module-heading h3{font-size:20px}.guide-scene p{font-size:12px;line-height:1.5}.guide-scene h3{font-size:22px}.guide-scene .forest-system-art{max-height:calc(100% - 75px);width:100%}.guide-scene .forest-system-caption h3{font-size:20px}.guide-scene .forest-system-caption p{font-size:12px}
  .guide-scene .layer-explorer,.guide-scene .learning-card{padding:13px;max-height:calc(100% - 35px)}.guide-scene .layer-tabs{display:flex;flex-wrap:wrap}.guide-scene .layer-tabs button{font-size:10px;min-height:36px}.guide-scene .orientation-layout{display:flex;flex-direction:column;padding:5px 0;gap:8px}.guide-scene .orientation-layout>article{padding:17px}.guide-scene .orientation-columns{gap:12px}.guide-scene .orientation-tabs{display:flex;gap:4px}.guide-scene .orientation-tabs button{font-size:10px;padding:8px;min-height:44px}
  .guide-scene.ff-teachers{grid-template-columns:1fr;grid-template-rows:minmax(80px,1fr) auto;gap:10px}.guide-scene.ff-teachers>figure{max-height:210px;margin:0 auto}.guide-scene .ff-teacher-copy{text-align:center}.guide-scene .ff-teacher-copy>h3{font-size:24px}.guide-scene .ff-teacher-copy>p{font-size:12px;line-height:1.5}.guide-scene .teacher-controls{justify-content:center}
@@ -150,25 +120,60 @@ html[data-experience-site] .experience-page{padding:20px 24px 16px;gap:0}
  .experience-intro h1,#education .education-intro h1,#platform .platform-intro h1{font-size:24px}.experience-intro>p,#platform .platform-intro>p{font-size:12px}.experience-page>.experience-answer h2{font-size:20px}.experience-page>.experience-answer p{font-size:12px}.experience-page>.experience-answer small{font-size:9px}.experience-page>.experience-next a,.experience-page>.experience-next button{font-size:11px;min-height:36px}
  #education .education-after-orb{font-size:11px}#education .education-summary{padding:27px 22px 16px}#education .education-summary h2{font-size:21px;margin-bottom:8px}#education .education-summary>p:not(.eyebrow){font-size:12px}#education .education-child-cells{margin:6px 0}#education .education-child-cells button{font-size:10px}#education .education-child-detail p{font-size:11px}#education .education-summary>a{font-size:11px;min-height:36px}
  .forest-balloon{padding:27px 24px 17px}.forest-balloon h2{font-size:22px}.forest-balloon>p:not(.eyebrow){font-size:12px;margin-bottom:6px}.forest-balloon .forest-knowledge-points{margin:5px 0;font-size:10px}.forest-balloon>a{min-height:36px;font-size:11px}
- #food-forest-story .simple-intro h1{font-size:25px}#food-forest-story .simple-intro>.lead{font-size:12px}#food-forest-story .story-chapter-copy h2{font-size:23px}#food-forest-story .story-chapter-copy>p:not(.eyebrow){font-size:12px}#food-forest-story .story-chapter>figure{max-height:40%}
+
 }
 @media(prefers-reduced-motion:reduce){.forest-node,.forest-orbit-threads path,.forest-heart-mark{transition:none!important}.story-chapter>figure>img{transition:none!important}}
 
 /* Size illustrations inside their scene, rather than letting intrinsic images set the page height. */
-#food-forest-story .story-reader{margin:0 auto}#food-forest-story .story-chapter-copy{min-height:0;height:auto}
-#food-forest-story .story-portrait-toggle{right:12%;top:12%;z-index:6}
+
 .guide-scene .layers-figure img{mix-blend-mode:normal;isolation:isolate}
 .guide-scene.layers-module{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);gap:14px 30px}.guide-scene.layers-module>.ff-module-heading{grid-column:1/-1}.guide-scene .layers-figure{grid-column:1;grid-row:2;margin:0;min-height:0;height:100%;display:flex;flex-direction:column}.guide-scene .layers-figure img{width:100%;height:auto;min-height:0;flex:1;object-fit:contain}.guide-scene .layers-figure figcaption{flex:none;font-size:10px;line-height:1.4;padding:6px 8px}.guide-scene.layers-module .layer-explorer{grid-column:2;grid-row:2;align-self:center;margin:0;width:100%;max-height:none}.guide-scene.layers-module h4{font-size:28px;margin:15px 0 8px}.guide-scene.layers-module .layer-tabs button{border:0;border-bottom:1px solid #82977680;background:none;min-height:44px}.guide-scene.layers-module .layer-tabs button[aria-selected=true]{border-bottom-color:#38694b;background:#cbd9bf}
 .guide-scene.ff-teachers>figure{display:flex;flex-direction:column}.guide-scene.ff-teachers img{flex:1;height:auto;min-height:0;max-height:none;object-fit:contain}.guide-scene.ff-teachers figcaption{flex:none;padding:10px 0;text-align:center;background:none}.guide-scene.ff-teachers figcaption strong{font:500 23px/1.2 var(--sans)}.guide-scene.ff-teachers figcaption span{display:block;font-size:11px;line-height:1.4;margin-top:5px}
 @media(max-width:700px){
  .forest-orbit[data-focused=true] .forest-wheel{top:35%;height:80%}
- #food-forest-story .story-chapter>figure{flex:none;height:clamp(150px,28svh,240px);width:clamp(162px,30.2svh,260px);max-height:none;min-height:0;aspect-ratio:1.08}
- #food-forest-story .story-chapter-copy{order:2}#food-forest-story .story-identity{position:static;transform:none;order:1;flex:none;margin:0 auto 3px}#food-forest-story .story-chapter{gap:8px;padding-bottom:8px}.simple-intro .story-back{border:0}
+
  .guide-scene.layers-module{display:flex;flex-direction:column;gap:8px}.guide-scene.layers-module>.ff-module-heading{margin-bottom:0}.guide-scene .layers-figure{flex:1;min-height:80px;height:auto}.guide-scene .layers-figure img{min-height:0;max-height:100%;width:100%}.guide-scene .layers-figure figcaption{font-size:9px;line-height:1.35;padding:4px}.guide-scene.layers-module .layer-explorer{flex:none;padding:13px;align-self:stretch}.guide-scene.layers-module h4{font-size:23px;margin:9px 0 6px}.guide-scene.layers-module .layer-explorer .eyebrow{font-size:9px;margin:9px 0 3px}.guide-scene.layers-module .layer-explorer p{font-size:12px;line-height:1.45;margin:0}
  .guide-scene.ff-teachers{grid-template-rows:minmax(90px,1fr) auto;gap:8px}.guide-scene.ff-teachers>figure{grid-row:1;grid-column:1;max-height:none;width:100%;min-height:0}.guide-scene.ff-teachers img{max-width:290px;margin:0 auto;object-fit:contain}.guide-scene.ff-teachers figcaption strong{font-size:22px}.guide-scene.ff-teachers .ff-teacher-copy{grid-row:2;grid-column:1}.guide-scene.ff-teachers .ff-teacher-copy>h3,.guide-scene.ff-teachers .ff-teacher-copy>p:not(#teacher-theme){display:none}.guide-scene.ff-teachers .teacher-theme{padding:0 12px;font-size:13px}.guide-scene .teacher-controls{margin-top:10px}
 }
 @media(max-width:700px) and (max-height:700px){
- #food-forest-story .story-chapter>figure{height:130px;width:140px}#food-forest-story .simple-intro>.lead{display:none}
+
  #food-forest-guide .ff-opening>p{display:none}.guide-scene.layers-module>.ff-module-heading{display:none}.guide-scene.layers-module .layer-explorer p{font-size:11px}.guide-scene.layers-module .layers-figure figcaption{display:none}
  .guide-scene.ff-orientations>.ff-module-heading{display:none}.guide-scene.ff-orientations .forest-archetype-graphic{min-height:50px;max-height:80px}
 }
+
+/* Introduction first: three illustrated destinations, with technical topics in the guide. */
+.forest-orbit[data-introduction]{max-width:1050px;margin:0 auto}
+.forest-orbit[data-introduction] .forest-wheel{top:43%;width:min(640px,90vw);height:calc(100% - 105px);max-height:640px;mask-image:none}
+.forest-orbit[data-introduction] .forest-heart{top:43%;width:180px;height:180px}
+.forest-orbit[data-introduction] .forest-node{top:auto;bottom:0;left:50%;width:200px;min-height:104px;flex-direction:column;gap:5px;padding:8px;--ny:0px;transform:translateX(calc(-50% + var(--nx))) translateY(14px);font-size:19px}
+.forest-orbit[data-introduction] .forest-node:nth-child(1){--nx:-235px}.forest-orbit[data-introduction] .forest-node:nth-child(2){--nx:0px}.forest-orbit[data-introduction] .forest-node:nth-child(3){--nx:235px}
+.forest-orbit[data-introduction][data-menu-open=true] .forest-node{transform:translateX(calc(-50% + var(--nx))) translateY(0)}
+.forest-orbit[data-introduction] .forest-node i{position:absolute;top:8px;width:6px;height:6px}
+.forest-orbit[data-introduction] .forest-entry-art{width:64px;height:52px;overflow:visible;filter:drop-shadow(0 4px 4px #36543c16);transition:transform .4s}
+.forest-orbit[data-introduction] .forest-entry-guide .forest-entry-art{width:76px;height:60px}
+.forest-orbit[data-introduction] .forest-node:hover .forest-entry-art{transform:translateY(-4px)}
+.forest-orbit[data-introduction] .forest-orbit-threads path{stroke-width:.7}
+.forest-orbit[data-introduction] .forest-orbit-threads{inset:0;width:100%;height:100%}
+.forest-orbit[data-introduction] .forest-invitation{bottom:8px;min-height:44px;display:flex;align-items:center;font-size:15px}
+
+/* Small light points preserve the illustration; each retains a full touch target. */
+.guide-scene .forest-system-art{border-radius:5px;box-shadow:0 12px 30px #45603c12}
+.guide-scene .forest-system-point,.guide-scene .forest-system-point[aria-pressed=true]{width:44px;height:44px;min-width:44px;padding:0;border:0;background:transparent;box-shadow:none;outline:0;cursor:pointer}
+.guide-scene .forest-system-point:after{content:'';position:absolute;inset:18px;border-radius:50%;background:#f7edd2;border:1px solid #53714e;box-shadow:0 1px 5px #25493180;transition:transform .25s,box-shadow .25s}
+.guide-scene .forest-system-point[aria-pressed=true]:after{transform:scale(1.45);box-shadow:0 0 0 4px #f7edd250,0 1px 6px #25493170}
+.guide-scene .forest-system-point:focus-visible{outline:2px solid #f4edda;outline-offset:0;border:1px solid #315c43;border-radius:50%}
+@media(max-width:700px){
+ .forest-orbit[data-introduction] .forest-wheel{top:40%;height:calc(100% - 100px);width:100%}
+ .forest-orbit[data-introduction] .forest-heart{top:40%;width:130px;height:130px}
+ .forest-orbit[data-introduction] .forest-node{width:112px;min-height:96px;font-size:14px;gap:5px;padding:8px 2px}
+ .forest-orbit[data-introduction] .forest-node:nth-child(1){--nx:-112px}.forest-orbit[data-introduction] .forest-node:nth-child(3){--nx:112px}
+ .forest-orbit[data-introduction] .forest-entry-art{width:54px;height:45px}.forest-orbit[data-introduction] .forest-entry-guide .forest-entry-art{width:62px;height:51px}
+
+}
+@media(max-height:740px) and (max-width:700px){
+
+ .forest-orbit[data-introduction] .forest-wheel{height:calc(100% - 85px)}
+ .forest-orbit[data-introduction] .forest-node{min-height:86px;font-size:13px}
+}
+
+@media(prefers-reduced-motion:reduce){.forest-entry-art{transition:none!important}}

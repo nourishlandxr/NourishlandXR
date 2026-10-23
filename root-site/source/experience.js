@@ -41,7 +41,8 @@ const forest=document.querySelector('[data-forest-orbit]'),forestMenu=forest?.qu
 let threadFrame=0,threadUntil=0;
 function forestThreads(now=performance.now()){
  threadFrame=0;if(!forest||document.body.dataset.page!=='food-forests')return;const box=forest.getBoundingClientRect(),svg=forest.querySelector('.forest-orbit-threads');if(!box.width||!box.height)return;
- svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);const paths=[...svg.querySelectorAll('path')],middle={x:box.width/2,y:box.height/2};
+ const origin=forestTrigger.getBoundingClientRect();
+ svg.setAttribute('viewBox',`0 0 ${box.width} ${box.height}`);const paths=[...svg.querySelectorAll('path')],middle={x:origin.left+origin.width/2-box.left,y:origin.top+origin.height/2-box.top};
  forest.querySelectorAll('.forest-node').forEach((node,i)=>{const r=node.querySelector('i').getBoundingClientRect(),x=r.left+r.width/2-box.left,y=r.top+r.height/2-box.top;paths[i].setAttribute('d',`M${middle.x} ${middle.y} Q${middle.x+(x-middle.x)*.55} ${middle.y} ${x} ${y}`);});
  if(now<threadUntil)threadFrame=requestAnimationFrame(forestThreads);
 }
