@@ -1,9 +1,9 @@
-// Package the assembled website as an explicit additive overlay over V0.9783.
+// Package the assembled website as an explicit additive overlay over V0.9784.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {versionModuleImports,versionCssImports} from './release-module-urls.mjs';
 import {revision as version} from './assemble-website.mjs';
-const previousVersion='0.9783',release=`root-site/releases/${version}`,candidate='dist/website';
+const previousVersion='0.9784',release=`root-site/releases/${version}`,candidate='dist/website';
 if(fs.existsSync(release))throw Error('Release already exists; preserve published payloads.');
 const routes=new Set(Object.values(JSON.parse(fs.readFileSync('root-site/routes.json'))).map(r=>(r.path==='/'?'':r.path.slice(1))+'index.html'));
 const sha=bytes=>crypto.createHash('sha256').update(bytes).digest('hex'),candidates=new Map();

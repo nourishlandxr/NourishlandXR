@@ -1,5 +1,9 @@
 # Official root website source and reviewed overlays
 
+## Release 0.9785 — verified publication of the living website
+
+Retains the full V0.9784 redesign. Public verification retries transient delivery mismatches with a fresh retry URL and a longer propagation window, while still requiring every file's exact SHA-256. The first V0.9784 publication installed correctly but its immediate public image check failed; subsequent independent checks matched the image. See `docs/release-0.9785.md`.
+
 ## Release 0.9784 — living information and a cinematic food-forest wheel
 
 Education and Platform reveal tinted, sculpted information balloons connected to their source. Food Forests turns gently on its own, opens radial menus on hover/focus/tap and changes camera view for Layers, Relationships and Seasons. The original story portraits retain their key-idea reveals in a compact gallery, and the guide presents one of five scenes at a time. Obsolete Platform prompts and preview/demo links are removed. See `docs/release-0.9784.md` for scope and checks.

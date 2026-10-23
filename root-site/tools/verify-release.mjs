@@ -19,10 +19,10 @@ fs.writeFileSync(path.join(root,'files.tsv'),manifest.files.map(item=>[item.file
 if(process.argv.includes('--public')){
  for(const item of manifest.files){
   let success=false;
-  for(let attempt=0;attempt<3;attempt++){
-   const response=await fetch('https://nourishland.org/'+item.file+'?release='+version+'-'+item.sha256.slice(0,10),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(20000)});
+  for(let attempt=0;attempt<5;attempt++){
+   const response=await fetch('https://nourishland.org/'+item.file+'?release='+version+'-'+item.sha256.slice(0,10)+(attempt?'&retry='+attempt+'-'+Date.now():''),{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(20000)});
    if(response.ok&&digest(Buffer.from(await response.arrayBuffer()))===item.sha256){success=true;break}
-   await new Promise(resolve=>setTimeout(resolve,2000));
+   if(attempt<4)await new Promise(resolve=>setTimeout(resolve,5000));
   }
   if(!success)throw Error('Public hash mismatch: '+item.file);
  }

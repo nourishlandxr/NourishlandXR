@@ -1,6 +1,6 @@
 import fs from 'node:fs';import path from 'node:path';
 import {experiencePages} from '../source/experience-pages.mjs';
-export const revision='0.9784';
+export const revision='0.9785';
 export function replaceSection(html,id,replacement){
  const start=html.search(new RegExp(`<section\\b[^>]*\\bid="${id}"`));if(start<0)throw Error('Missing route '+id);
  const tags=/<\/?section\b[^>]*>/g;tags.lastIndex=start;let depth=0,match;
