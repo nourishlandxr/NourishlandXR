@@ -1,0 +1,11 @@
+{
+  "version": "0.9793",
+  "label": "candidate",
+  "orbOpensHoneycomb": true,
+  "noteEditsWithoutVoice": true,
+  "totemSignsWork": true,
+  "microphoneRequests": 0,
+  "speechRequests": 0,
+  "errors": [],
+  "physicalXR": false
+}

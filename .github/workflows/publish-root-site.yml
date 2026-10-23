@@ -33,6 +33,7 @@ jobs:
           node root-site/tests/creator-feature-checks.mjs
           node --test tests/crafted-totem.test.mjs tests/crafted-totem-studio.test.mjs tests/crafted-totem-world.test.mjs
           node --test tests/canonical-routes.test.mjs tests/access-navigation.test.mjs tests/root-release-boundary.test.mjs
+          node --test tests/creator-essentials.test.mjs tests/pimo-graph.test.mjs tests/pimo-xr-workbench.test.mjs tests/demo-placement-update.test.mjs
           bash -n root-site/tools/install-overlay.sh
           node root-site/tools/verify-release.mjs "$RELEASE_VERSION"
       - name: Configure existing HostArmada deployment identity

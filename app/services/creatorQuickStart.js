@@ -1,4 +1,4 @@
-export const CREATOR_PRACTICE_COMPLETE='You placed an Orb, a Note and a Totem. Practice objects stay in this session.';
+export const CREATOR_PRACTICE_COMPLETE='Open your Orb and explore its honeycomb. Open your Note and try its controls. Select a Totem sign to open its information. Practice objects stay in this session.';
 export const CREATOR_QUICK_STEPS=Object.freeze([
     {type:'plant',title:'1 / Place an Orb',instruction:'Choose Orb. Aim beside a plant, then confirm placement.'},
     {type:'note',title:'2 / Place a Note',instruction:'Choose Note. Aim where the observation belongs, then confirm placement.'},

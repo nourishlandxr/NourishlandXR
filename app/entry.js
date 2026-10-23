@@ -6,8 +6,9 @@ const canonicalEntry=globalThis.NOURISHLAND_CONFIG?.hosted?resolveLegacyEntry(lo
 if(canonicalEntry&&new URL(canonicalEntry,location.origin).href!==location.href){
     location.replace(canonicalEntry);
 }else if(params.get('editor')==='pimo'){
-    const {renderPimoEditor}=await import('./screens/pimoEditor.js');
-    renderPimoEditor(document.getElementById('app'), { xr: params.get('mode') === 'xr', projectId:params.get('project') || '', workspace:params.get('workspace') || 'desktop', siteId:params.get('site') || '', recordKey:params.get('record') || '' });
+    const options={xr:params.get('mode')==='xr',projectId:params.get('project')||'',workspace:params.get('workspace')||'desktop',siteId:params.get('site')||'',recordKey:params.get('record')||''};
+    if(options.projectId&&options.recordKey){const {renderProjectPimoEditor}=await import('./services/pimoProjectEditor.js');await renderProjectPimoEditor(document.getElementById('app'),options);}
+    else {const {renderPimoEditor}=await import('./screens/pimoEditor.js');renderPimoEditor(document.getElementById('app'),options);}
 } else if(params.has('tour')&&params.get('project')){
     const {renderTourExplorer}=await import('./screens/tourExplorer.js');
     await renderTourExplorer(document.getElementById('app'),params.get('project'),params.get('tour'));

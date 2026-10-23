@@ -1,5 +1,6 @@
 import {mountPlaceShowcase} from './place-showcase.js';
 import './living-surfaces.js?v=0.9789';
+import './hillyards-animations.js';
 const reduced=matchMedia('(prefers-reduced-motion:reduce)');
 let entrance=[],pendingEntrance=[],epoch=0,wheel=null,wheelLoading=false,dieDispose=null,dieLoading=false,places=null,placesLoading=false,forestSelection=null;
 const forestTopics={layers:{title:'Different layers. Shared light.',copy:'Canopy trees shape the shade. Smaller trees and shrubs fill the middle. Herbs, groundcovers, climbers and roots use other parts of the space. Plan for the size each plant will reach.',points:['Canopy','Understorey','Roots'],color:'#607953'},relationships:{title:'The connections make the forest.',copy:'Roots meet soil and fungi. Flowers attract pollinators. Leaves become shelter and organic matter. These relationships change with the species, conditions and care a place receives.',points:['Soil life','Pollinators','Habitat'],color:'#3f7775'},seasons:{title:'A forest keeps becoming.',copy:'Flowering, harvest, leaf fall and new growth follow different rhythms. A mix of species can spread activity through the year. Watch what changes in your own climate.',points:['Flower','Harvest','Renew'],color:'#a46a4c'}};

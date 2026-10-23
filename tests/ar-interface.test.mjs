@@ -1356,7 +1356,7 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(source, /pointer\?\.removeAttribute\('hidden'\);[\s\S]*pointer\?\.classList\.add\('is-revealing', 'is-ready'\)/);
     assert.match(source, /function hideGuidedChoice\(\{ hideBoard = false \} = \{\}\)/);
     assert.match(source, /addEventListener\('beforexrselect', event => event\.preventDefault\(\)\)/);
-    assert.match(source, /demoInteractive: !\['plant', 'plant2'\]\.includes\(type\)/);
+    assert.match(source, /demoInteractive: directCreatorPractice \|\| !\['plant', 'plant2'\]\.includes\(type\)/);
     assert.match(source, /record\.demoInteractive = true/);
     assert.match(styles, /\.tryit-sim-marker\.is-arriving \{ pointer-events:none; \}/);
     assert.match(source, /place\?\.classList\.add\('is-pressed'\)/);

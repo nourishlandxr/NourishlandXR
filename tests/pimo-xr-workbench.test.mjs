@@ -59,8 +59,11 @@ test('relationships can be named, selected, retyped and removed without removing
     work.remove(); assert.equal(api.getGraph().nodes.length, count); assert.ok(!api.getGraph().edges.some(edge => edge.id === id));
     work.history('undo'); select('', id); assert.equal(work.edge().label, 'visited by');
 });
-test('removing a cell keeps its children and undo restores all connections', () => {
-    const { api, work } = fixture(), graph = structuredClone(api.getGraph()); work.remove(); assert.equal(api.getGraph().nodes.length, graph.nodes.length - 1); assert.equal(api.getGraph().edges.length, 0);
+test('the original families remain connected; removing added content keeps its children and supports undo', () => {
+    const { api, work,select } = fixture(), original = structuredClone(api.getGraph());
+    assert.equal(work.remove(),false);assert.deepEqual(api.getGraph(),original);
+    const parent=work.grow('Local knowledge');work.grow('Observation');const graph=structuredClone(api.getGraph());select(parent);
+    work.remove();assert.equal(api.getGraph().nodes.length,graph.nodes.length-1);assert(api.getGraph().nodes.some(n=>n.title==='Observation'));
     work.history('undo'); assert.deepEqual(api.getGraph(), graph);
 });
 test('all templates and designs stay available in XR without replacing saved maps', () => {

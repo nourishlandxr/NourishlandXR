@@ -1,4 +1,5 @@
 import { pimoDesignCellDefaults, arrangePimoDesign } from './pimoGraphDesigns.js';
+import {PIM_COMPASS} from './pimCompass.js';
 // Portable knowledge graph. Semantic links and drawing coordinates are independent.
 export const PIMO_GRAPH_VERSION = 2;
 const clone = value => structuredClone(value);
@@ -8,6 +9,16 @@ const finite = value => Number.isFinite(Number(value));
 export const pimoId = (prefix = 'cell') => `${prefix}-${globalThis.crypto.randomUUID()}`;
 export const PIMO_COLORS = ['#6f825a', '#bc7959', '#648f9b', '#b19a64', '#7b769b', '#507869'];
 export const PIMO_SHAPES = ['organic', 'hexagon', 'square', 'round', 'drawn'];
+export const pimoCoreCell=(graph,id)=>Boolean(graph.metadata?.originalHoneycomb&&(id===graph.metadata.identityNodeId||PIM_COMPASS.some(family=>family.id===id)));
+export function pimoVisibleCells(graph,selected='',query=''){
+ if(!graph.metadata?.originalHoneycomb||graph.layout.design!=='classic')return new Set(graph.nodes.map(n=>n.id));
+ const parents=new Map(graph.edges.filter(e=>e.kind==='branch').map(e=>[e.to,e.from]));
+ const visible=new Set([graph.metadata.identityNodeId,...PIM_COMPASS.map(f=>f.id)]);
+ function path(id){const seen=new Set();while(id&&!seen.has(id)){seen.add(id);visible.add(id);id=parents.get(id);}}
+ path(selected);for(const edge of graph.edges)if(edge.kind==='branch'&&edge.from===selected)visible.add(edge.to);
+ if(query)for(const node of graph.nodes)if((node.title+' '+(node.body||'')).toLowerCase().includes(query.toLowerCase()))path(node.id);
+ return visible;
+}
 
 export function createPimoGraph(title = 'My knowledge garden') {
     return { kind: 'nourishland-pimo', schemaVersion: PIMO_GRAPH_VERSION, id: pimoId('pimo'),
@@ -48,11 +59,16 @@ export function validatePimoGraph(graph) {
         const seen = new Set([id]); let current = parents.get(id);
         while (current) { if (seen.has(current)) { errors.push('Branches cannot form a loop. Use relationship connections for loops.'); break; } seen.add(current); current = parents.get(current); }
     }
+    if(graph.metadata?.originalHoneycomb){
+        const core=graph.metadata.identityNodeId;
+        if(!ids.has(core))errors.push('The original honeycomb needs its identity cell.');
+        for(const family of PIM_COMPASS)if(!ids.has(family.id)||parents.get(family.id)!==core)errors.push('Keep the six original knowledge families connected to the identity cell.');
+    }
     return { valid: !errors.length, errors: [...new Set(errors)] };
 }
 
-export function addPimoCell(graph, { title = 'New idea', x = 0, y = 0, parentId = '', color, shape, outline, body = '', ...fields } = {}) {
-    const next = clone(graph), id = pimoId();
+export function addPimoCell(graph, { id:requestedId, title = 'New idea', x = 0, y = 0, parentId = '', color, shape, outline, body = '', ...fields } = {}) {
+    const next = clone(graph), id = requestedId || pimoId();
     next.nodes.push({ id, title: text(title) || 'New idea', body: text(body), informationType: 'topic', evidenceStatus: 'draft', status: 'draft', sourceIds: [], provenance: [], ...fields });
     next.layout.nodes[id] = { x, y, ...pimoDesignCellDefaults(graph), ...(shape ? { shape } : {}), color: color || PIMO_COLORS[next.nodes.length % PIMO_COLORS.length], ...(outline ? { outline } : {}) };
     if (parentId) next.edges.push({ id: pimoId('link'), from: parentId, to: id, kind: 'branch', label: '', waypoints: [] });
@@ -68,6 +84,7 @@ export function connectPimoCells(graph, from, to, { kind = 'relationship', label
 }
 
 export function removePimoCell(graph, id) {
+    if(pimoCoreCell(graph,id))throw Error('Keep the original honeycomb families. Remove or edit the content inside them.');
     const next = clone(graph); next.nodes = next.nodes.filter(node => node.id !== id); next.edges = next.edges.filter(edge => edge.from !== id && edge.to !== id); delete next.layout.nodes[id]; return next;
 }
 

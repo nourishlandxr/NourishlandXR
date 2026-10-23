@@ -1,3 +1,4 @@
+import {creatorPimoUrl} from '../services/creatorHub.js';
 import { loadCreatorWorkspace, entryProfile, entryAnchor, saveWorkspaceRecord, createWorkspaceRecord, createWorkspaceArea, prepareCreatorFieldPackage, savePlanPoint, loadFieldOperations, syncCreatorFieldResults } from '../services/creatorWorkspaceData.js';
 import { workspaceHeader, updateWorkspaceNavigation, attachCreatorProjectTutorialLink, guardWorkspaceNavigation, escapeWorkspaceHtml as html, openLegacyCreatorTool, fieldPhoto } from '../services/creatorWorkspaceFrame.js';
 import { workspaceUrl, fieldCheckState } from '../services/creatorWorkspaceMode.js';
@@ -162,7 +163,7 @@ export async function renderWorkspace(app, projectId, options = {}) {
     function renderKnowledgePreview() {
         const form=root.querySelector('[data-topic-form]');if(!form)return;
         const value=name=>form.elements.namedItem(name).value;
-        root.querySelector('[data-inspector]').innerHTML=`<p class="studio-eyebrow">Reading preview</p><h2>${html(activeEntry.marker.name)}</h2><p>${html(profile.scientific_name || '')}</p><article class="studio-reading-preview"><small>${value('knowledgeScope')==='specimen'?'Local specimen knowledge':value('knowledgeScope')==='species'?'Species knowledge':'Scope needs review'}</small><h3>${html(value('title') || 'Untitled topic')}</h3><p>${html(value('body'))}</p></article><p>${value('status')==='published'?'Published topic · project visibility still applies':'Draft · not public'}</p><p class="studio-hint">Same topic in the desktop guide, Android reader and XR plant cells.</p>`;
+        root.querySelector('[data-inspector]').innerHTML=`<p class="studio-eyebrow">Reading preview</p><h2>${html(activeEntry.marker.name)}</h2><p>${html(profile.scientific_name || '')}</p><article class="studio-reading-preview"><small>${value('knowledgeScope')==='specimen'?'Local specimen knowledge':value('knowledgeScope')==='species'?'Species knowledge':'Scope needs review'}</small><h3>${html(value('title') || 'Untitled topic')}</h3><p>${html(value('body'))}</p></article><p>${value('status')==='published'?'Published topic · project visibility still applies':'Draft · not public'}</p><p class="studio-hint">Same topic in the desktop guide, Android reader and XR plant cells.</p><a class="studio-primary" href="${html(creatorPimoUrl(projectId,{mode,siteId:activeEntry.siteId,recordKey:activeEntry.key}).href)}">Open honeycomb editor ↗</a>`;
     }
     async function selectEntry(key) {
         const entry=model.entries.find(entry=>entry.key===key);

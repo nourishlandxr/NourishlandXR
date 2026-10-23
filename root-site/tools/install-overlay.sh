@@ -12,7 +12,7 @@ test -f "$stage/files.tsv"
 # Every previous hash is checked before any public file is changed.
 tab=$(printf '\t')
 while IFS="$tab" read -r name sha previous; do
- case "$name" in index.html|404.html|robots.txt|sitemap.xml|education/index.html|platform/index.html|food-forests/index.html|food-forests/story/index.html|food-forests/guide/index.html|places/index.html|immersive-learning/index.html|hillyards/index.html|collaborate/index.html|about/index.html|contact/index.html|privacy/index.html|terms/index.html|demos/index.html|xr/index.html|xr/entry.js|xr/living-objects.css|xr/screens/*|xr/services/*|xr/v2/*|xr/vendor/*|site/*) ;; *) echo "Unexpected path: $name"; exit 1;; esac
+ case "$name" in index.html|404.html|robots.txt|sitemap.xml|education/index.html|platform/index.html|food-forests/index.html|food-forests/story/index.html|food-forests/guide/index.html|places/index.html|immersive-learning/index.html|hillyards/index.html|collaborate/index.html|about/index.html|contact/index.html|privacy/index.html|terms/index.html|demos/index.html|xr/index.html|xr/entry.js|xr/living-objects.css|xr/pimo-editor.css|xr/pimo-reader-preview.css|xr/features/ar-demo/demoPreviewMarkup.js|xr/screens/*|xr/services/*|xr/v2/*|xr/vendor/*|site/*) ;; *) echo "Unexpected path: $name"; exit 1;; esac
  case "$name" in /*|*..*|*\\*) exit 1;; esac
  case "/$name" in */.*|*//* ) echo "Hidden or empty path component"; exit 1;; esac
  case "$name" in *.html|*.js|*.mjs|*.css|*.json|*.webp|*.png|*.jpg|*.jpeg|*.svg|*.mp4|*.webm|*.wasm|*.bin|*.glb|*.gltf|*.xml|*.txt) ;; *) echo "Unexpected file type"; exit 1;; esac

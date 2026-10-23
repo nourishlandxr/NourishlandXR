@@ -1,0 +1,9 @@
+.experience-page .hillyards-object.hillyards-animations{position:relative;width:min(980px,100%,calc((100dvh - var(--site-header-height,108px)) * .82));height:auto;aspect-ratio:16/9;flex:0 0 auto;min-height:0;margin:14px auto 8px;overflow:hidden;border-radius:12px;background:#29493b}
+.hillyards-animations>img,.hillyards-animations>video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hillyards-animations>img{object-fit:contain;background:#eeeade}
+.hillyards-animations[data-playback=playing]>img{opacity:0}
+.hillyards-animations>video{opacity:0;transition:opacity .6s ease;pointer-events:none}
+.hillyards-animations[data-playback=playing][data-animation="0"]>video:nth-of-type(1),.hillyards-animations[data-playback=playing][data-animation="1"]>video:nth-of-type(2){opacity:1}
+.hillyards-animations figcaption{position:absolute;bottom:0;left:0;right:0;padding:30px 20px 14px;background:linear-gradient(transparent,#102a21b8);color:#fff6e3;font:500 15px/1.4 var(--sans);text-align:left;pointer-events:none}
+@media(max-width:700px){.hillyards-animations{margin-block:10px}.hillyards-animations>video{object-fit:contain}}
+@media(prefers-reduced-motion:reduce){.hillyards-animations>video{transition:none}}

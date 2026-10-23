@@ -1,8 +1,9 @@
 import { createPimoGraph, addPimoCell, connectPimoCells } from './pimoGraph.js';
 import { applyPimoDesign } from './pimoGraphDesigns.js';
+import {PIM_COMPASS} from './pimCompass.js';
 
 export const PIMO_TEMPLATES = [
-    { id: 'classic', title: 'Classic', subtitle: 'The original six knowledge families', icon: 'hexagon', color: '#507869' },
+    { id: 'classic', title: 'Original honeycomb', subtitle: 'The six original knowledge families', icon: 'hexagon', color: '#507869' },
     { id: 'utility', title: 'Utility', subtitle: 'Uses, in all their forms', icon: 'spark', color: '#bc7959' },
     { id: 'bio', title: 'Bio', subtitle: 'Scientific & historical knowledge', icon: 'leaf', color: '#648f9b' },
     { id: 'food-forest', title: 'Food Forest', subtitle: 'Layers & living relationships', icon: 'sprout', color: '#6f825a' },
@@ -10,21 +11,22 @@ export const PIMO_TEMPLATES = [
     { id: 'empty', title: 'Empty', subtitle: 'One idea. Any direction.', icon: 'circle', color: '#7b769b' }
 ];
 
-export function createPimoTemplate(template = 'utility', { design = template === 'classic' ? 'classic' : 'organic' } = {}) {
+export function createPimoTemplate(template = 'classic', { design = template === 'classic' ? 'classic' : 'organic' } = {}) {
     const titles = { classic: 'My plant knowledge', utility: 'The useful garden', bio: 'A closer look', 'food-forest': 'My food forest', growing: 'Growing together', empty: 'My knowledge garden' };
     if (!titles[template]) throw Error('Choose a PIMO starter template.');
     let graph = createPimoGraph(titles[template]);
     graph.metadata = { template };
     const ids = [];
-    function cell(title, x, y, parent = -1, color = '#6f825a', body = '') { const result = addPimoCell(graph, { title, x, y, parentId: ids[parent] || '', color, body }); graph = result.graph; ids.push(result.id); return ids.length - 1; }
+    function cell(title, x, y, parent = -1, color = '#6f825a', body = '', fields={}) { const result = addPimoCell(graph, { title, x, y, parentId: ids[parent] || '', color, body,...fields }); graph = result.graph; ids.push(result.id); return ids.length - 1; }
     cell(graph.identity.title, 0, 0, -1, '#507869', 'The beginning of your knowledge map. Add what matters to this place.');
     graph.layout.nodes[ids[0]].width = 216; graph.layout.nodes[ids[0]].height = 158;
     if (template === 'empty') return applyPimoDesign(graph, design);
     if (template === 'classic') {
-        ['Food Forest', 'Uses', 'Propagation', 'Scientific Information', 'Historical Data', 'Cultivation'].forEach((title, i) => {
+        PIM_COMPASS.forEach((family, i) => {
             const angle = i / 6 * Math.PI * 2 - Math.PI / 2;
-            cell(title, Math.cos(angle) * 350, Math.sin(angle) * 245, 0, ['#6f825a', '#bc7959', '#648f9b', '#7b769b', '#b19a64', '#507869'][i]);
+            cell(family.title, Math.cos(angle) * 350, Math.sin(angle) * 245, 0, family.color, '',{id:family.id,informationType:'category',compassId:family.id});
         });
+        graph.metadata={...graph.metadata,originalHoneycomb:true,identityNodeId:ids[0]};graph.identity.subjectType='plant';
     } else if (template === 'utility') {
         cell('Uses', 0, -220, 0, '#b19a64');
         cell('Edible', -330, -240, 1, '#6f825a'); cell('Medicinal knowledge', 330, -240, 1, '#bc7959', 'Collect attributed knowledge, sources and safety context.');

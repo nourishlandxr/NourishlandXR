@@ -575,7 +575,8 @@ test('Try It Now guides two Plants, an in-place Note and a final Totem example',
     assert.match(guidedDemoStep('ELEMENTS 1.18').main, /signs help visitors/);
     assert.match(source, /function createDemoSecondTotem\(\)/);
     assert.doesNotMatch(source, /const DEMO_TOTEM_STYLES|function cycleDemoTotemStyle\(record\)/);
-    assert.match(previewSource, /is-totem-style-basic/);
+    assert.match(previewSource, /const style=renderedTotemStyle\(record\)/);
+    assert.match(previewSource, /is-totem-style-\$\{style\}/);
     assert.match(source, /function connectDemoTotems\(\)/);
     assert.match(source, /first\.demoLinkVisible=second\.demoLinkVisible=true/);
     assert.match(source, /createDemoNeighbourhood\(totem\)/);

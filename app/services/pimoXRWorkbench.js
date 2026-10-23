@@ -1,4 +1,4 @@
-import { addPimoCell, connectPimoCells, removePimoCell, arrangePimoGraph, pimoSuggestions, validatePimoGraph } from './pimoGraph.js';
+import { addPimoCell, connectPimoCells, removePimoCell, arrangePimoGraph, pimoSuggestions, validatePimoGraph,pimoCoreCell } from './pimoGraph.js';
 import { createPimoTemplate } from './pimoGraphTemplates.js';
 import { applyPimoDesign } from './pimoGraphDesigns.js';
 
@@ -70,6 +70,7 @@ export function createPimoXRWorkbench(api) {
     function remove() {
         const graph = api.getGraph();
         if (edge()) { const next = copy(graph); next.edges = next.edges.filter(item => item.id !== edge().id); return commit(next, { cell: '', edge: '' }); }
+        if(selected()&&pimoCoreCell(graph,selected().id)){status('Keep the original families. Edit or grow their content.');return false;}
         if (selected()) return commit(removePimoCell(graph, selected().id), { cell: '', edge: '' });
         return false;
     }

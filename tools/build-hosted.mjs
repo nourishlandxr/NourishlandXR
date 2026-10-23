@@ -50,6 +50,7 @@ const frontendEntries = [
     'style.css',
     'pim.css',
     'pimo-editor.css',
+    'pimo-reader-preview.css',
     'product-v2.css',
     'living-objects.css',
     'creator-workspace.css',

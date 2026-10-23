@@ -3482,8 +3482,10 @@ function shiftSimulatedSceneForStage(type) {
 
 function demoControlPanelRect() {
     const panel = infoPanel?.element;
-    if (!simulatedMode || !panel || !panel.getClientRects().length) return null;
-    return panel.getBoundingClientRect();
+    if (!simulatedMode || !panel) return null;
+    const boxes=[panel,...(appRoot?.querySelectorAll('.nlxr-settings-companion:not([hidden])')||[])].filter(node=>node.getClientRects().length).map(node=>node.getBoundingClientRect());
+    if(!boxes.length)return null;
+    return {left:Math.min(...boxes.map(b=>b.left)),right:Math.max(...boxes.map(b=>b.right)),top:Math.min(...boxes.map(b=>b.top)),bottom:Math.max(...boxes.map(b=>b.bottom))};
 }
 
 function keepDemoAnchorClear(anchor, radius) {
@@ -3808,7 +3810,7 @@ function toggleDemoPlantProfile(record) {
     if (demoHeldIndex === recordIndex) releaseHeldDemoRecord();
     const opening=!record.demoExpanded;knowledgeExplorer(record);
     record.demoPlacementHighlight=false;
-    if(opening && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='tag';knowledgeExplorerAction(record,'KnowledgeMode:tag');infoPanel?.refreshExplorer({mode:'tag'});}
+    if(opening && !directCreatorPractice && record.tutorialStage==='plant' && !record.demoPimoLesson){record.demoPimoLesson='tag';knowledgeExplorerAction(record,'KnowledgeMode:tag');infoPanel?.refreshExplorer({mode:'tag'});}
     record.demoExpanded = opening;
     if (record.demoExpanded) {
         infoPanel?.setContextualHint('');
@@ -3818,7 +3820,7 @@ function toggleDemoPlantProfile(record) {
         const ambientNeighbour=Boolean(record.demoAmbientNeighbour);
         const plantMedia=demoPlantMedia(record);
         infoPanel?.focusPlant(record,demoOrbKnowledge(record).document,plantMedia);
-        if(!ambientNeighbour)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
+        if(!ambientNeighbour&&!directCreatorPractice)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.PIM);
         setDemoPimState(record, pimCreateInteractionState(demoPimExpandedNodeIds(record), record.demoSelectedNodeId || '', record.id || record.name || ''));
         record.profileRevealStarted = now;
         const firstOpen = !record.demoProfileOpened;
@@ -3826,8 +3828,8 @@ function toggleDemoPlantProfile(record) {
         record.demoActiveBranch ||= '';
         record.demoExpandedBranches ||= [];
         if (firstOpen) {
-            record.demoProfileInteracted = false;
-            record.demoProfileReady = false;
+            record.demoProfileInteracted = directCreatorPractice;
+            record.demoProfileReady = directCreatorPractice;
             record.demoProfileInteractionCount = 0;
         }
         ensureDemoPimPose(record);
@@ -3835,6 +3837,7 @@ function toggleDemoPlantProfile(record) {
         // Establish the compact tutorial board before sizing the canonical
         // mesh so its first frame already respects the true top safe inset.
         if(ambientNeighbour)setGuide(`${record.name} information opened. Select a cell to explore its story.`);
+        else if(directCreatorPractice)setGuide('Orb open. Select a honeycomb cell to explore its information. You can continue placing your Note.');
         else showPersistentPimPrompt(record);
     }
     refreshDemoRecord(record);
@@ -3844,7 +3847,7 @@ function toggleDemoPlantProfile(record) {
     }
     if (!record.demoExpanded) {
         infoPanel?.setMediaCollapsed(true);
-        if(!record.demoAmbientNeighbour)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.GUIDED);
+        if(!record.demoAmbientNeighbour&&!directCreatorPractice)setDemoTutorialStep(DEMO_TUTORIAL_STEPS.GUIDED);
         setGuide(`${record.name || 'Plant'} profile hidden. The living orb remains anchored in place.`);
     }
 }
@@ -4033,7 +4036,7 @@ function updateSimulatedMarkers() {
             const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultPlantPanelOffset(anchor));
             return renderSimulatedPlant(record, index, anchor, offset).replace('tryit-sim-marker tryit-sim-marker-plant',`tryit-sim-marker tryit-sim-marker-plant${highlighted.has(record.id)?' is-sign-target':''}${record.demoPlacementHighlight?' is-placement-highlight':''}`);
         }
-        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('nlxr-totem-system',`nlxr-totem-system is-totem-${renderedTotemStyle(record)}`).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
+        if (record.demoType === 'zone' && record.demoExpanded) return renderSimulatedTotem(record, index, anchor).replace('tryit-sim-totem-system',`tryit-sim-totem-system${highlighted.has(record.id)?' is-sign-target':''}`);
         const defaultOffsets = { note: { x: 0, y: 0 }, zone: { x: 0, y: 0 } };
         const offset = record.demoPanelOffset || (record.demoPanelOffset = defaultOffsets[record.demoType] || { x: 0, y: 0 });
         return simulatedRecordMarkup({
@@ -4707,9 +4710,10 @@ function deleteDemoNote(record){
 function focusDemoNoteControls(record){
     if(record.demoNativeChooserFor){const orb=markers.find(item=>item.id===record.demoNativeChooserFor);if(orb)showDemoNativePlantChooser(orb);return true;}
     infoPanel?.restore();infoPanel?.showLearning({title:record.name,body:record.description || record.notes,mesh:'note'});
-    infoPanel?.setObjectContext({title:'Controls · Note',linkedName:record.name,hint:'Open the Note to review your words. Grip a card to move it; the stick turns it or adjusts distance.',actions:[{id:'open',label:'Open Note'},{id:'dictate',label:'Speak to Zinnia'},{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'},...(record.demoNoteSelectedCard?[{id:'delete-selected',label:'Delete',description:'Delete the held Note card.'}]:[])],onAction:id=>{
+    infoPanel?.setObjectContext({title:'Controls · Note',linkedName:record.name,hint:'Open the Note to review your words. Grip a card to move it; the stick turns it or adjusts distance.',actions:[{id:'open',label:'Open Note'},...(!directCreatorPractice?[{id:'dictate',label:'Speak to Zinnia'}]:(simulatedMode||domOverlayEnabled)?[{id:'edit',label:'Edit Note'}]:[]),{id:'add',label:'+ Add widget'},{id:'new-note',label:'+ Note'},{id:'glass-colour',label:'Glass colour'},...(record.demoNoteSelectedCard?[{id:'delete-selected',label:'Delete',description:'Delete the held Note card.'}]:[])],onAction:id=>{
         if(id==='open'){openDemoNoteExperience(record);return;}
-        if(id==='dictate'){showDemoZinniaNote(record);return;}
+        if(id==='edit'&&directCreatorPractice){openDemoNoteEditor(record);return;}
+        if(id==='dictate'){if(!directCreatorPractice)showDemoZinniaNote(record);return;}
         if(id==='collapse' || id==='reopen'){const view=demoPlacedNoteViews.get(String(record.id)) || demoPlacedNoteDomViews.get(String(record.id));if(view)view.workspace.action(id);else if(demoKnowledgeRoot?.dataset.noteRecord===String(record.id))demoKnowledgeWorkspace?.action(id);else{record.demoNoteCollapsed=id==='collapse';openDemoNoteExperience(record,false);}return;}
         if(id==='delete-selected'){if(record.demoNoteSelectedCard==='main'){deleteDemoNote(record);return;}const selected=record.demoNoteSelectedCard;delete record.demoNoteSelectedCard;openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.('delete:'+selected);return;}
         if(id==='new-note'){
@@ -4724,7 +4728,7 @@ function focusDemoNoteControls(record){
         }
         openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.(id);
     }});
-    infoPanel?.setExplorerOpen(true);return true;
+    infoPanel?.setExplorerOpen(true);refreshSimulatedPlacementAim();return true;
 }
 function moveDemoNoteDepth(record,delta){
     const renderer=demoPlacedNoteViews.get(String(record.id))?.renderer;
@@ -4754,7 +4758,7 @@ function openDemoNoteExperience(record,reopen=true){
     focusDemoNoteControls(record);
 }
 function openDemoNoteEditor(record,widgetId=''){
-    if(record.demoType==='note'){openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.('edit');return;}
+    if(record.demoType==='note'&&!directCreatorPractice){openDemoNoteExperience(record);demoKnowledgeWorkspace?.action?.('edit');return;}
     closeDemoKnowledge(true);
     const root=document.createElement('section');demoKnowledgeRoot=root;appRoot.append(root);
     demoKnowledgeWorkspace=mountSpatialNoteEditor(root,record,{widgetId,objectLabel:record.demoType==='zone'?'Totem':'Note',onSave:async update=>{Object.assign(record,update);record.demoContent={...record.demoContent,title:update.name,description:update.description,lines:[update.description]};refreshDemoRecord(record);updateSimulatedMarkers();},onClose:()=>{closeDemoKnowledge(true);focusDemoObjectControls(record);if(widgetId){openDemoNoteExperience(record);root.remove();demoKnowledgeRoot?.querySelector('[data-note-expand]')?.click();}}});
@@ -4858,7 +4862,8 @@ function placeMarker() {
         demoPlacementHighlight:['plant','plant2'].includes(type),
         demoPlacementHighlightAt:performance.now(),
         demoExpanded: false,
-        demoInteractive: !['plant', 'plant2'].includes(type),
+        demoInteractive: directCreatorPractice || !['plant', 'plant2'].includes(type),
+        ...(directCreatorPractice&&type==='plant'?{name:PIGEON_PEA_EXAMPLE.commonName,demoPlantPreset:PIGEON_PEA_EXAMPLE.slug,demoExampleId:PIGEON_PEA_EXAMPLE.id,demoPimoLesson:'practice'}:{}),
         demoPanelOffset: panelOffsets[type],
         simulatedAnchor,
         informationPosition: null,

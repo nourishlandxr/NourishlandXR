@@ -1,4 +1,5 @@
 const paths = {
+    preview:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
     settings: '<path d="m12 3 2 3 4-1 1 4 3 3-3 2 1 4-4 1-4 3-2-3-4 1-1-4-3-3 3-2-1-4 4-1Z"/><circle cx="12" cy="12" r="3"/>',
     tools: '<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>',
     controller: '<path d="M8 4h8l4 14-2 2-5-5h-2l-5 5-2-2Z"/><path d="M7 9h5M9.5 6.5v5"/><circle cx="16" cy="10" r="1"/>',

@@ -25,7 +25,7 @@ import {
     TOTEM_MODEL_CHOICES,
     TOTEM_TONES,
     normalizeTotemHeightPreset,
-    normalizeTotemStyle,
+    normalizeTotemStyle, renderedTotemStyle,
     totemHeightPreset
 } from '../services/totemAppearance.js';
 import {
@@ -812,7 +812,7 @@ export async function renderAreaCheckpointForm(app, encodedProjectId, encodedAre
         const totemName = existing?.marker.name || `${context.area.name} Totem`;
         const totemColor = /^#[0-9a-f]{6}$/i.test(existing?.marker.appearance?.color || '') ? existing.marker.appearance.color : DEFAULT_TOTEM_COLOR;
         const totemHeight = normalizeTotemHeightPreset(existing?.marker);
-        const totemStyle = normalizeTotemStyle(existing?.marker);
+        const totemStyle = renderedTotemStyle(existing?.marker);
         const totemHeightDetails = totemHeightPreset(totemHeight);
         const totemToneOptions = TOTEM_TONES.map(tone => `<option value="${tone.color}" ${tone.color.toLowerCase() === totemColor.toLowerCase() ? 'selected' : ''}>${tone.label}</option>`).join('');
         const totemHeightButtons = TOTEM_HEIGHT_PRESETS.map(preset => `<button type="button" data-totem-height="${preset.id}" aria-pressed="${preset.id === totemHeight}"><strong>${preset.label}</strong><small>${preset.metres.toFixed(2)} m</small></button>`).join('');
@@ -1112,7 +1112,7 @@ export async function saveAreaCheckpoint(event, encodedProjectId, encodedAreaId,
                 information_bubbles: informationBubbles
             },
             visibility: existing?.marker.visibility || 'draft',
-            appearance: { ...(existing?.marker.appearance || {}), color, totemStyle, heightPreset },
+            appearance: { ...(existing?.marker.appearance || {}), color, totemStyle, totemStyleExplicit:true, heightPreset },
             physicalAnchor: physicalAnchorControlPresent ? physicalAnchor : existing?.marker.physicalAnchor,
             reassignPhysicalMarker
         };
