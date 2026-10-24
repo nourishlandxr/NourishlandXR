@@ -12,7 +12,7 @@ try{
   const context=await browser.newContext({viewport,isMobile:['phone','compact'].includes(device),hasTouch:['phone','compact'].includes(device)});
   if(candidate)await context.route(origin+'/**',async route=>{let name=new URL(route.request().url()).pathname;if(name.endsWith('/'))name+='index.html';const file=path.resolve(payload,'.'+name);if(file.startsWith(payload+path.sep)&&fs.existsSync(file)&&fs.statSync(file).isFile())await route.fulfill({body:fs.readFileSync(file),contentType:({'.js':'text/javascript','.mjs':'text/javascript','.css':'text/css','.html':'text/html','.json':'application/json'})[path.extname(file)]||'application/octet-stream'});else await route.continue();});
   const p=await context.newPage();p.on('pageerror',e=>errors.push(device+': '+e.message));
-  await p.goto(origin+'/education/',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.querySelector('#education').dataset.entrance==='ready');
+  await p.goto(origin+'/education/?review=release-'+version,{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.querySelector('#education').dataset.entrance==='ready');
   await p.evaluate(()=>document.fonts.ready);await p.locator('[data-open-orb]').click();await p.waitForTimeout(1200);await p.locator('[data-education-orb]').evaluate(async n=>{await Promise.all(n.getAnimations({subtree:true}).map(a=>a.finished.catch(()=>{})));});const before=await p.evaluate(shape);
   for(const key of ['food-forests','immersive-learning','hillyards','collaborate']){
    await p.locator(`[data-education-choice="${key}"]`).click();
@@ -22,14 +22,14 @@ try{
    if(key==='food-forests')await p.screenshot({path:folder+'/'+label+'-'+device+'-education-detail.png'});
    await p.locator('[data-close-education]').click();fixed(before,await p.evaluate(shape),device+' close');
   }
-  await p.goto(origin+'/food-forests/',{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.querySelector('[data-forest-wheel]').dataset.wheelReady==='true',null,{timeout:60000});await p.waitForFunction(()=>document.querySelector('#food-forests').dataset.entrance==='ready');
+  await p.goto(origin+'/food-forests/?review=release-'+version,{waitUntil:'domcontentloaded'});await p.waitForFunction(()=>document.querySelector('[data-forest-wheel]').dataset.wheelReady==='true',null,{timeout:60000});await p.waitForFunction(()=>document.querySelector('#food-forests').dataset.entrance==='ready');
   await p.locator('[data-forest-menu]').click();await p.waitForTimeout(700);const overview=await p.evaluate(outline);contained(overview,device+' overview');
   await p.locator('[data-forest-topic=story]').hover();await p.waitForTimeout(400);assert.equal((await p.evaluate(outline)).view,'overview');
   const choices=await p.locator('[data-forest-topic]').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height};}));
   for(const [key,href]of [['story','/food-forests/story/'],['guide','/food-forests/guide/'],['hillyards','/hillyards/']]){
    await p.locator(`[data-forest-topic=${key}]`).click();assert.equal(new URL(p.url()).pathname,'/food-forests/');
    await p.waitForFunction(()=>+document.querySelector('[data-forest-wheel]').dataset.wheelFill>.938);await p.waitForTimeout(1600);
-   const close=await p.evaluate(outline);contained(close,device+' '+key);await p.screenshot({path:folder+'/'+label+'-'+device+'-'+key+'.png'});assert(Math.max(close.width,close.height)>Math.max(overview.width,overview.height)*1.08,device+' zoom is not visible '+JSON.stringify({overview,close}));
+   const close=await p.evaluate(outline);contained(close,device+' '+key);await p.screenshot({path:folder+'/'+label+'-'+device+'-'+key+'.png'});const ratio=Math.max(close.width,close.height)/Math.max(overview.width,overview.height);assert(ratio>(viewport.width>1050?1.75:1.4),device+' close view is not prominent enough '+JSON.stringify({ratio,overview,close}));
    const positions=await p.locator('[data-forest-topic]').evaluateAll(es=>es.map(e=>{const r=e.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height};}));fixed(choices,positions,device+' wheel choices');
    assert.equal(await p.locator('[data-forest-more]').getAttribute('href'),href);assert.equal(await p.locator('[data-forest-topic][aria-expanded=true]').count(),1);
    const box=await p.locator('[data-forest-answer]').boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=viewport.width+1&&box.y+box.height<=viewport.height+1);

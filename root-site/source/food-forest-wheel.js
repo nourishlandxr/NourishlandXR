@@ -1,9 +1,9 @@
 // Original botanical artwork as a slowly turning mineral relief, with authored views.
 export const WHEEL_VIEWS=Object.freeze({
  overview:{fill:.64,rx:-.08,ry:0},
- story:{fill:.94,rx:-.14,ry:.10},
- guide:{fill:.94,rx:.08,ry:-.12},
- hillyards:{fill:.94,rx:-.10,ry:.14}
+ story:{fill:.97,rx:-.14,ry:.10},
+ guide:{fill:.97,rx:.08,ry:-.12},
+ hillyards:{fill:.97,rx:-.10,ry:.14}
 });
 export async function mountOriginalWheel(host){
  const T=await import('./orb/three.mjs'),reduced=matchMedia('(prefers-reduced-motion:reduce)');

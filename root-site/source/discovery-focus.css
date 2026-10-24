@@ -3,6 +3,8 @@
 #education .education-summary[data-placement=overlay]:before{background-image:none}
 
 /* The same three illustrated choices stay in place throughout the approach. */
+#food-forests>.experience-intro{max-height:270px;overflow:hidden;opacity:1;transition:max-height 1.1s cubic-bezier(.22,.7,.2,1),opacity .65s,margin-bottom 1.1s}
+#food-forests:has([data-focused=true])>.experience-intro{max-height:0;opacity:0;margin-bottom:0;pointer-events:none}
 .forest-orbit[data-introduction]{max-width:1500px;overflow:visible;--entry-width:190px}
 .forest-orbit[data-introduction] .forest-wheel{left:50%;top:calc(50% - 48px);width:100%;height:calc(100% - 100px);max-height:none;mask-image:none;overflow:visible;z-index:2;transition:left 1.4s cubic-bezier(.22,.7,.2,1),width 1.4s cubic-bezier(.22,.7,.2,1),height 1.4s cubic-bezier(.22,.7,.2,1),top 1.4s cubic-bezier(.22,.7,.2,1)}
 .forest-orbit[data-introduction] .forest-heart{top:calc(50% - 48px);width:220px;height:220px;transition:left 1.4s,top 1.4s}
@@ -80,5 +82,5 @@
  .forest-orbit[data-introduction][data-focused=true] .forest-heart{top:calc((100% - 310px)/2)}
 }
 @media(prefers-reduced-motion:reduce){
- .forest-orbit[data-introduction] :is(.forest-wheel,.forest-heart,.forest-node),#food-forests>.experience-intro>p{transition:none}
+ .forest-orbit[data-introduction] :is(.forest-wheel,.forest-heart,.forest-node),#food-forests>.experience-intro,#food-forests>.experience-intro>p{transition:none}
 }

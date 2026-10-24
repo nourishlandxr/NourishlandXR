@@ -1,5 +1,5 @@
 {
-  "version": "0.9798",
+  "version": "0.9800",
   "education": [
     "Footer hint appears after eight inactive seconds, with no message under the orb",
     "Using the orb permanently dismisses this page session’s hint",

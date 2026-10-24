@@ -12,7 +12,7 @@ try{
    const chapter=p.locator('#story-chapter-'+(i+1));await chapter.locator('img').evaluate(img=>img.decode());await p.waitForTimeout(60);
    const measured=await chapter.evaluate(chapter=>{
     const rect=el=>el.getBoundingClientRect().toJSON(),figure=chapter.querySelector('figure'),img=figure.querySelector('img'),text=chapter.querySelector('.story-full-text');
-    const visible=[...document.querySelectorAll('#food-forest-story :is(h1,h2,p,a,button,select)')].filter(e=>e.getClientRects().length&&!e.closest('[hidden],[inert],.sr-only,.story-hover-quote,.story-full-text')).map(e=>({text:e.textContent.trim().slice(0,40),...rect(e)}));
+    const visible=[...document.querySelectorAll('#food-forest-story :is(h1,h2,p,a,button,select)')].filter(e=>e.getClientRects().length&&!e.closest('[hidden],[inert],.sr-only,.story-photo-quote,.story-full-text')).map(e=>({text:e.textContent.trim().slice(0,40),...rect(e)}));
     return {header:rect(document.querySelector('.story-heading')),copy:rect(chapter.querySelector('.story-chapter-copy')),picture:rect(figure),nav:rect(document.querySelector('.story-navigation')),outside:visible.filter(r=>r.top< -2||r.left< -2||r.right>innerWidth+2||r.bottom>innerHeight+2),naturalRatio:img.naturalWidth/img.naturalHeight,textHeight:text.clientHeight};
    });
    assert.deepEqual(measured.outside,[],name+' chapter '+i+' overflows');assert(measured.copy.top>=measured.header.bottom+4,name+' heading overlap');

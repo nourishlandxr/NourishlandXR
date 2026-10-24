@@ -1,0 +1,188 @@
+{
+  "version": "0.9800",
+  "label": "local",
+  "results": [
+    {
+      "device": "desktop",
+      "expert": "Masanobu Fukuoka",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "desktop",
+      "expert": "Bill Mollison",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "desktop",
+      "expert": "Sepp Holzer",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "desktop",
+      "expert": "Geoff Lawton",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "desktop",
+      "expert": "Ernst Götsch",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "short-laptop",
+      "expert": "Masanobu Fukuoka",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "short-laptop",
+      "expert": "Bill Mollison",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "short-laptop",
+      "expert": "Sepp Holzer",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "short-laptop",
+      "expert": "Geoff Lawton",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "short-laptop",
+      "expert": "Ernst Götsch",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "phone",
+      "expert": "Masanobu Fukuoka",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "phone",
+      "expert": "Bill Mollison",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "phone",
+      "expert": "Sepp Holzer",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "phone",
+      "expert": "Geoff Lawton",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "phone",
+      "expert": "Ernst Götsch",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "compact",
+      "expert": "Masanobu Fukuoka",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "compact",
+      "expert": "Bill Mollison",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "compact",
+      "expert": "Sepp Holzer",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "compact",
+      "expert": "Geoff Lawton",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    },
+    {
+      "device": "compact",
+      "expert": "Ernst Götsch",
+      "quoteOnPhoto": true,
+      "quoteAndAttributionComplete": true,
+      "rectangularPhoto": true,
+      "leftStoryVisible": true,
+      "interactionCloses": true
+    }
+  ],
+  "errors": [],
+  "physicalPhone": false
+}

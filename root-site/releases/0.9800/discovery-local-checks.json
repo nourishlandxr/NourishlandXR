@@ -1,0 +1,59 @@
+{
+  "version": "0.9800",
+  "label": "local",
+  "origin": "http://127.0.0.1:8015",
+  "results": [
+    {
+      "device": "wide",
+      "orbAndCellsFixed": true,
+      "previewBeforeNavigation": true,
+      "visibleContainedZoom": true,
+      "choicesFixed": true,
+      "continuousSpin": true,
+      "escapeZoomsOut": true,
+      "continueWorks": true
+    },
+    {
+      "device": "desktop",
+      "orbAndCellsFixed": true,
+      "previewBeforeNavigation": true,
+      "visibleContainedZoom": true,
+      "choicesFixed": true,
+      "continuousSpin": true,
+      "escapeZoomsOut": true,
+      "continueWorks": true
+    },
+    {
+      "device": "tablet",
+      "orbAndCellsFixed": true,
+      "previewBeforeNavigation": true,
+      "visibleContainedZoom": true,
+      "choicesFixed": true,
+      "continuousSpin": true,
+      "escapeZoomsOut": true,
+      "continueWorks": true
+    },
+    {
+      "device": "phone",
+      "orbAndCellsFixed": true,
+      "previewBeforeNavigation": true,
+      "visibleContainedZoom": true,
+      "choicesFixed": true,
+      "continuousSpin": true,
+      "escapeZoomsOut": true,
+      "continueWorks": true
+    },
+    {
+      "device": "compact",
+      "orbAndCellsFixed": true,
+      "previewBeforeNavigation": true,
+      "visibleContainedZoom": true,
+      "choicesFixed": true,
+      "continuousSpin": true,
+      "escapeZoomsOut": true,
+      "continueWorks": true
+    }
+  ],
+  "errors": [],
+  "physicalPhone": false
+}

@@ -1,0 +1,57 @@
+{
+  "version": "0.9800",
+  "local": true,
+  "results": [
+    {
+      "name": "wide",
+      "allSevenChapters": true,
+      "allTextReachable": true,
+      "noOverlap": true,
+      "originalImageProportions": true
+    },
+    {
+      "name": "screenshot-scale",
+      "allSevenChapters": true,
+      "allTextReachable": true,
+      "noOverlap": true,
+      "originalImageProportions": true
+    },
+    {
+      "name": "desktop",
+      "allSevenChapters": true,
+      "allTextReachable": true,
+      "noOverlap": true,
+      "originalImageProportions": true
+    },
+    {
+      "name": "short-laptop",
+      "allSevenChapters": true,
+      "allTextReachable": true,
+      "noOverlap": true,
+      "originalImageProportions": true
+    },
+    {
+      "name": "tablet",
+      "allSevenChapters": true,
+      "allTextReachable": true,
+      "noOverlap": true,
+      "originalImageProportions": true
+    },
+    {
+      "name": "phone",
+      "allSevenChapters": true,
+      "allTextReachable": true,
+      "noOverlap": true,
+      "originalImageProportions": true
+    },
+    {
+      "name": "compact",
+      "allSevenChapters": true,
+      "allTextReachable": true,
+      "noOverlap": true,
+      "originalImageProportions": true
+    }
+  ],
+  "welcomeVersion": true,
+  "errors": []
+}
