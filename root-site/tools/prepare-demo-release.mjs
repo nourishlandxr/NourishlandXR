@@ -8,13 +8,20 @@ import {releaseHtmlFiles} from './canonical-pages.mjs';
 const version='0.9817',baseline='0.9813',release=`root-site/releases/${version}`;
 if(fs.existsSync(release))throw Error('Release already exists; inspect it before preparing again.');
 const hash=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
+let missingModuleHash=null;
 async function readLive(file){
     const response=await fetch(`https://nourishland.org/${file}?demoBaseline=${version}-${Date.now()}`,{headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(30000)});
     if(!response.ok && response.status!==404)throw Error(`Baseline HTTP ${response.status}: ${file}`);
-    return {bytes:Buffer.from(await response.arrayBuffer()),exists:response.ok};
+    const bytes=Buffer.from(await response.arrayBuffer());
+    return {bytes,exists:response.ok && !(file.endsWith('.js') && hash(bytes)===missingModuleHash)};
 }
 const liveMarker=await readLive('site/root-release.json'),marker=JSON.parse(liveMarker.bytes);
 if(marker.version!==baseline || marker.managedBy!=='root-site-release')throw Error('Production baseline changed.');
+const missing=await readLive('xr/services/__missing_demo_release_probe__.js');
+if(missing.exists){
+    if(!missing.bytes.toString().startsWith('<!doctype html>'))throw Error('Unexpected missing-module response.');
+    missingModuleHash=hash(missing.bytes);
+}
 const candidates=new Map();
 // The publisher requires these website files in every overlay. Preserve their
 // exact live bytes; no platform or website content is rebuilt for this release.

@@ -84,14 +84,14 @@
       "file": "xr/services/demoBorderRangesSeed.js",
       "bytes": 15317,
       "sha256": "0b8cec387c6803e27c6871d112c57126cd6b310c02d868bc3e473a20d218578f",
-      "previousSha256": "be60b8a5dbfcea8ca822d47ae8023e0c75697f2da8eb2bf20d80674cb1cbbbdb",
+      "previousSha256": null,
       "mode": "0644"
     },
     {
       "file": "xr/services/demoBorderRangesTerrain.js",
       "bytes": 2625,
       "sha256": "00550e445a4a34da87bdedc1500a4b0ecdfa8c09c5d043b2296242eb4e7a1834",
-      "previousSha256": "be60b8a5dbfcea8ca822d47ae8023e0c75697f2da8eb2bf20d80674cb1cbbbdb",
+      "previousSha256": null,
       "mode": "0644"
     },
     {
