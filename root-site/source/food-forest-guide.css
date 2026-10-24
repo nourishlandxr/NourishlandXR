@@ -128,3 +128,23 @@
 @media(prefers-reduced-motion:reduce){
  .guide-page *, .guide-page *:before,.guide-page *:after{transition:none!important;animation:none!important}
 }
+/* Layers owns the available screen, retaining its illustrated menu and note. */
+#food-forest-guide[data-guide-scene-active=layers]{--content-top:18px}
+#food-forest-guide[data-guide-scene-active=layers] .guide-heading{margin-bottom:8px}
+#food-forest-guide[data-guide-scene-active=layers] .guide-heading h1{font-size:clamp(28px,3vw,44px);margin-bottom:6px}
+#food-forest-guide[data-guide-scene-active=layers] .guide-heading>p{font-size:16px;line-height:1.4}
+#food-forest-guide[data-guide-scene-active=layers] .guide-scenes-nav{padding-top:6px}
+.layer-spread{max-width:none}
+@media(min-width:701px){
+ #food-forest-guide[data-guide-scene-active=layers] .guide-layer-tabs{top:8%;height:82%;gap:3px}
+ #food-forest-guide[data-guide-scene-active=layers] .guide-layer-tabs button{min-height:0;padding:3px 8px;font-size:clamp(13px,1.5vw,23px);line-height:1.12}
+ #food-forest-guide[data-guide-scene-active=layers] .guide-layer-panel{top:18%;height:53%;padding:8px 12px;justify-content:flex-start;overflow:auto;scrollbar-width:thin}
+ #food-forest-guide .guide-layer-panel>.eyebrow{display:none}
+ #food-forest-guide .guide-layer-panel h2{font-size:clamp(20px,2vw,30px);line-height:1.12;margin:0 0 10px}
+ #food-forest-guide .guide-layer-panel>p:not(.eyebrow){line-height:1.4}
+}
+@media(max-width:700px){
+ #food-forest-guide[data-guide-scene-active=layers]{--content-top:78px}
+ #food-forest-guide[data-guide-scene-active=layers] .guide-heading>p{font-size:14px}
+ #food-forest-guide[data-guide-scene-active=layers] .layer-spread{max-width:none}
+}

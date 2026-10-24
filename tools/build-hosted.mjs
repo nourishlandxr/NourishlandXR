@@ -141,10 +141,11 @@ if (!frontendOnly) {
     fs.writeFileSync(path.join(apiDist, 'server.mjs'), apiServer);
     fs.copyFileSync(path.join(root, 'tools', 'zipArchive.mjs'), path.join(apiDist, 'zipArchive.mjs'));
     for(const file of ['zinniaVoiceServer.mjs','zinniaInterpretation.mjs','zinniaPreviewProxy.mjs','projectAccess.mjs'])fs.copyFileSync(path.join(root,'tools',file),path.join(apiDist,file));
+    fs.writeFileSync(path.join(apiDist,'projectForestBoards.mjs'),fs.readFileSync(path.join(root,'tools','projectForestBoards.mjs'),'utf8').replaceAll('../app/services/','./app/services/'));
     fs.writeFileSync(path.join(apiDist,'projectChecklists.mjs'), fs.readFileSync(path.join(root,'tools','projectChecklists.mjs'),'utf8').replaceAll('../app/services/', './app/services/'));
     fs.writeFileSync(path.join(apiDist,'projectTours.mjs'),fs.readFileSync(path.join(root,'tools','projectTours.mjs'),'utf8').replaceAll('../app/services/','./app/services/'));
     const apiServices = ['spatialDataModel.js', 'daleysPlant.js', 'pigeonPeaTemplate.js', 'pigeonPeaExample.js', 'pigeonPeaPim.js', 'plantTrialContent.js', 'pimCellIllustrations.js', 'pimModel.js', 'pimCompass.js'];
-    apiServices.push('sharedProjectContract.js', 'checklistContract.js', 'projectListContract.js',
+    apiServices.push('foodForestV3Model.js','foodForestBoardModel.js','imapV2Terrain.js','sharedProjectContract.js', 'checklistContract.js', 'projectListContract.js',
         'tourModel.js','siteFeature.js',
         'imapElevationSource.js', 'projectGeographicPersistence.js', 'creatorProjectGeography.js');
     const apiServiceDist = path.join(apiDist, 'app', 'services');

@@ -1,3 +1,4 @@
+import {checkForestV3} from './food-forest-v3-browser-qa.mjs';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -32,6 +33,7 @@ try{
     await page.goto(`${origin}/tools/preview-food-forest-kit.html`);await page.waitForFunction(()=>!!window.foodForestTable);await page.waitForTimeout(300);
     assert.equal((await read()).pieces.length,7);assert.equal(await page.locator('[data-layer]').count(),7);
     assert.deepEqual((await read()).underground,{board:'transparent-glass',roots:7});await page.waitForTimeout(850);
+    const initialRendering=(await read()).rendering;assert.equal(initialRendering.shadows,false,'no stereo shadow-map pass');assert.ok(initialRendering.calls<100,'initial board draw-call budget');
     await page.screenshot({path:'artifacts/food-forest-table.png'});
     const before=await read(),center=await target('board:center');await drag('bay:0',center);assert.equal((await read()).pieces.length,8);
     assert.equal((await read()).underground.roots,8);
@@ -42,6 +44,7 @@ try{
     const canvas=await page.locator('canvas').first().boundingBox();await drag('bay:1',{x:canvas.x+3,y:canvas.y+3});assert.equal((await read()).pieces.length,8);
     await page.locator('[data-action=kit]').click();let kit=await read();assert.equal(kit.pieces.length,28);assert.equal(new Set(kit.pieces.map(p=>`${p.layer}:${p.variant}`)).size,28);
     await page.locator('[data-action=labels]').click();await page.waitForTimeout(250);await page.screenshot({path:'artifacts/food-forest-28-pieces.png'});
+    const kitRendering=(await read()).rendering;assert.ok(kitRendering.calls<160,'full kit draw-call budget');assert.ok(kitRendering.triangles<180000,'full kit triangle budget');fs.writeFileSync('artifacts/food-forest-graphics-budget.json',JSON.stringify({fixture:'Chrome WebGL, desktop view; counts are not a Quest frame-rate measurement',initial:initialRendering,kit28:kitRendering},null,2));
     await page.locator('[data-action=undo]').click();assert.equal((await read()).pieces.length,8);
     await page.locator('[data-tab=board]').click();await page.locator('[data-dimension=widthM]').fill('30');await page.locator('[data-dimension=widthM]').press('Tab');assert.equal((await read()).widthM,30);
     const chosen=(await read()).pieces.at(-1),spot=await target(chosen.id);await page.mouse.click(spot.x,spot.y);await page.locator('[data-canopy]').fill('5');await page.locator('[data-canopy]').press('Tab');assert.equal((await read()).pieces.at(-1).canopyDiameterM,5);
@@ -63,7 +66,8 @@ try{
     await page.reload();await page.waitForFunction(()=>!!window.foodForestTable);assert.equal((await read()).widthM,30);assert.equal((await read()).wishlist.length,1);assert.equal((await read()).goal,'lower-input');
     await page.setViewportSize({width:390,height:844});await page.waitForTimeout(250);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));await page.screenshot({path:'artifacts/food-forest-mobile.png',fullPage:true});
     await page.setViewportSize({width:1512,height:982});await page.goto(`${origin}/app/?editor=food-forest`);await page.waitForFunction(()=>!!window.foodForestTable);assert.equal((await read()).wishlist.length,1);
+    await checkForestV3(page,origin);
     await page.goto(`${origin}/app/`);await page.locator('.welcome-version-badge').first().waitFor({timeout:60000});const version=fs.readFileSync('app/services/buildInfo.js','utf8').match(/const VERSION = '([^']+)'/)[1];assert.ok((await page.locator('.welcome-version-badge').first().textContent()).includes(version));await page.screenshot({path:'artifacts/food-forest-welcome-version.png'});
     assert.deepEqual(errors,[]);console.log(JSON.stringify({version,fixture:'repository files, network intercepted',kit:28,dragUndoCancel:'passed',collection:'passed',spatialControls:'passed',mobile:'passed',welcomeBadge:'visible',feedback,errors},null,2));
-}catch(error){await page.screenshot({path:'artifacts/food-forest-error.png'}).catch(()=>{});console.log(JSON.stringify({errors,state:await read().catch(()=>null)}));throw error;}
+}catch(error){await page.screenshot({path:'artifacts/food-forest-error.png'}).catch(()=>{});console.log(JSON.stringify({errors,state:await read().then(s=>({plants:s.pieces.length,growth:s.growth,scenario:s.scenario,walking:s.walking,tool:s.tool,comparisons:s.comparisons.length,xr:s.xrControlsVisible})).catch(()=>null)}));throw error;}
 finally{await browser.close();}

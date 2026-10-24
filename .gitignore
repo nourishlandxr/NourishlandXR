@@ -13,3 +13,7 @@ workspace/*
 workspace/**/.backups/
 workspace.zip
 nourishland-data/
+
+# Generated smoke-test workspaces and captured supplier-page caches.
+artifacts/forest-api-*/
+artifacts/daleys-traits/

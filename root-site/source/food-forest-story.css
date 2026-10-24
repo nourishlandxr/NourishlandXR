@@ -79,7 +79,8 @@
 @media(prefers-reduced-motion:reduce){#food-forest-story *{animation:none!important;transition:none!important}}
 /* Original quotations belong on their rectangular photographs. */
 #food-forest-story figure[role=button]{cursor:pointer;-webkit-tap-highlight-color:transparent}
-.story-photo-quote{position:absolute;inset:0;z-index:2;display:flex;align-items:center;justify-content:center;padding:18px 24px;margin:0;background:linear-gradient(145deg,#102e25d9,#123b2aeb);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .4s,visibility .4s;text-align:left;color:#fff8e5;overflow:hidden}
+.story-photo-quote{position:absolute;inset:7% 51% 7% 5%;z-index:2;display:flex;align-items:safe center;justify-content:center;padding:4px;margin:0;background:transparent;opacity:0;visibility:hidden;pointer-events:auto;transition:opacity .35s,visibility .35s;text-align:left;color:#fff8e5;overflow:auto;scrollbar-width:thin;text-shadow:0 1px 3px #10251d,0 2px 12px #10251d99}
+figure[data-quote-side=right] .story-photo-quote{left:52%;right:4%}
 .story-photo-quote .story-original-quote{border:0;background:none;margin:0;padding:0;max-width:34ch}
 .story-photo-quote .story-original-quote>p{font:400 var(--photo-quote-size,25px)/1.4 var(--serif);color:#fff8e5;margin:0 0 15px}
 .story-photo-quote .story-original-quote cite{font:600 clamp(12px,1.1vw,17px)/1.4 var(--sans);color:#fff8e5;margin:0 0 5px}
@@ -89,7 +90,7 @@
 @media(max-width:700px){
  #food-forest-story .story-chapter[data-idea-highlighted=true] .story-picture-space{height:50%;min-height:min(235px,48dvh)}
  #food-forest-story .story-picture-space{transition:height .45s ease,min-height .45s ease}
- .story-photo-quote{padding:14px 16px}
+ .story-photo-quote{padding:3px;inset:5% 49% 5% 4%}
  .story-photo-quote .story-original-quote>p{margin-bottom:10px}
 }
 @media(prefers-reduced-motion:reduce){.story-photo-quote,#food-forest-story .story-picture-space{transition:none}}

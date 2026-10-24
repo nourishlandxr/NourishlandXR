@@ -13,9 +13,9 @@ if(story){
   const text=chapter.querySelector('.story-full-text');chapter.dataset.more=String(text.scrollHeight>text.clientHeight+4&&text.scrollTop+text.clientHeight<text.scrollHeight-8);
   const overlay=figure.querySelector('.story-photo-quote');
   if(overlay){
-   const quote=overlay.querySelector('blockquote');let size=Math.min(27,Math.max(15,figure.clientWidth*.047));
+   const quote=overlay.querySelector('blockquote');let size=Math.min(25,Math.max(15,figure.clientWidth*.035));
    overlay.style.setProperty('--photo-quote-size',size+'px');
-   while(quote.offsetHeight>overlay.clientHeight-28&&size>14){size-=.5;overlay.style.setProperty('--photo-quote-size',size+'px');}
+   while(quote.offsetHeight>overlay.clientHeight-16&&size>14){size-=.5;overlay.style.setProperty('--photo-quote-size',size+'px');}
   }
  }
  function show(index,focus=false){
@@ -39,6 +39,7 @@ if(story){
   if(quote){
    const preview=document.createElement('figcaption');preview.className='story-photo-quote';preview.id=chapter.id+'-photo-quote';preview.setAttribute('aria-hidden','true');preview.append(quote.cloneNode(true));figure.append(preview);
    const name=chapter.querySelector('.story-person').textContent;
+   figure.dataset.quoteSide=name.includes('Götsch')?'right':'left';
    figure.tabIndex=0;figure.setAttribute('role','button');figure.setAttribute('aria-label','Show quotation from '+name);figure.setAttribute('aria-controls',preview.id);figure.setAttribute('aria-expanded','false');figure.title='Hover, focus or tap for the quotation';
    let hover=false,focused=false,pinned=false,dismissed=false;
    const reveal=()=>{const open=pinned||(!dismissed&&(hover||focused));chapter.dataset.ideaHighlighted=String(open);figure.setAttribute('aria-expanded',String(open));figure.setAttribute('aria-label',(open?'Hide':'Show')+' quotation from '+name);preview.setAttribute('aria-hidden',String(!open));requestAnimationFrame(fit);};

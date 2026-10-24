@@ -1,3 +1,4 @@
+import {handleProjectForestBoards} from './projectForestBoards.mjs';
 import http from 'http';
 import { createProjectAccess, projectRole } from './projectAccess.mjs';
 import { handleProjectChecklists } from './projectChecklists.mjs';
@@ -1225,6 +1226,7 @@ function handleApi(req, res) {
             return sendJson(res, 403, { error: 'Platform administrator required' });
         }
     }
+    if(handleProjectForestBoards(req,res,pathname,{visitor,access:projectAccess,sendJson,readRequestJson,readJson,writeJson,getProjectPath:getSitePath}))return true;
     if (handleProjectChecklists(req, res, pathname, { visitor, access: projectAccess, sendJson, readRequestJson, readJson, writeJson, getProjectPath: getSitePath, publicSnapshot: buildPublicSnapshot })) return true;
     if (handleProjectTours(req,res,pathname,{visitor,access:projectAccess,sendJson,readRequestJson,readJson,writeJson,getProjectPath:getSitePath,publicSnapshot:buildPublicSnapshot})) return true;
 

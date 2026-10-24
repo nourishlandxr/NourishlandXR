@@ -1,5 +1,26 @@
 # Food Forest Table: first interactive design study
 
+## V3 local prototype — V0.9807
+
+V3 extends the same editor and local document. The deployed first-test release remains V0.9806 until a new release is requested. Existing V1 documents are migrated; the original saved document is retained under the `.pre-v3` local-storage key.
+
+- **Landscape:** drag to raise/lower/smooth terrain, draw a path or lower a waterway. One complete stroke is one undo step; pointer cancellation and XR tracking interruption roll it back. Plants and roots follow the sculpted surface. IMAP terrain JSON imports reuse its terrain sampler, convert visual heights into explicitly assumed metres, bring across plant symbols and simple landmarks, and retain the original sketch inside the exported document.
+- **Discover:** choose sandbox, fruit, shelter or diversity invitations; track investigation steps. Three illustrative growth stages and pruning resize symbols and declared footprints. Wind direction, sun elevation, shade, dry conditions and pests support experiments. These do not calculate survival, hydrology, nitrogen supply, yield or forest health.
+- **Inspect:** assign roles to investigate and connect plants with labelled design hypotheses. Supplier-listed pollinisers are identified separately. Descriptive role candidates retain evidence and conditional statements remain distinct. No beneficial relationship is inferred just from neighbouring plants.
+- **Step inside:** desktop uses drag-to-look and W/A/S/D; XR uses explicit clear-ground selection to move. The scene uses board dimensions and editable assumed older-plant heights. The model remains a symbolic design preview. The right stick can bring controls back into view; Return to table preserves the layout.
+- **Studies:** save three local studies, restore with undo and compare layout differences. Export/import transfers complete JSON studies; imported collections merge with the current collection. Shared project loads preserve personal collections.
+- **Zinnia:** requested guidance loads the existing animated companion and voice service lazily. Speech level drives her animation. A spatial explanation card provides readable chunks with replay, next and close controls; stopping or muting cancels speech. Text remains available if speech service access is unavailable.
+
+### Classroom project boards
+
+The new authenticated `GET/PUT /api/projects/:projectId/forest-boards/:boardId` resource stores a private document with a revision number. Project members can explicitly save/load and follow updates every four seconds. The client does not apply a background update over local changes; stale saves return 409. This is shared-document collaboration, not simultaneous cell merging or avatar presence. Personal wishlist data is excluded from shared storage.
+
+Use **Studies → Choose classroom project**, choose a project you belong to and save a named board. Copy its classroom link for other project members; the link opens Studies and asks them to load the shared document. Account authentication and membership remain the existing project's responsibility.
+
+Classroom sharing needs the updated API running alongside the frontend (`npm run build` packages both). The small preview-only server serves static files and cannot save shared boards. No production API or project data is changed by this implementation.
+
+Verification: `tests/food-forest-v3.test.mjs` covers document migration, terrain, comparison assumptions, IMAP provenance, relationship evidence, private access and revision conflicts. `artifacts/food-forest-v3-browser-qa.mjs` adds actual pointer/world-panel interactions, terrain cancel/undo, speech-driven companion animation with fixture audio, studies, shared API response handling, walk mode, file transfer, persistence and mobile layout. `artifacts/food-forest-api-smoke.mjs` starts the built API against an isolated fixture workspace and checks save/load/conflict/access behavior. Physical Quest validation remains separate.
+
 Local preview: `/tools/preview-food-forest-kit.html` or `/app/?editor=food-forest`.
 Run `node tools/serve-food-forest-preview.mjs` for a loopback-only preview on port 8093.
 The frontend build includes `/xr/?editor=food-forest`; it has not been deployed.
@@ -45,3 +66,11 @@ Next implementation gates:
 `node --test tests/food-forest-board.test.mjs tests/pimo-xr-interaction.test.mjs` checks polygon/area/footprint math, all 28 finite/distinct symbol geometries and the reused sound/haptic service.
 
 `node artifacts/food-forest-browser-qa.mjs` serves repository files into Chromium through request interception. It exercises actual Three.js ray targets, drag/invalid drop/cancel, history, custom outlines, footprint editing, goals, collection/species assignment, spatial controls, persistence, mobile overflow and welcome version. It is browser simulation, not a live-server or physical headset benchmark.
+
+## V3 ceramic forest graphics (local V0.9812)
+
+The tabletop now uses a deep forest studio background, warm/cool directional lighting, smooth matte ceramic plant forms, brighter layer colours, rounded loading-bay stations and a defined double glass perimeter with scale ticks. Transparent glass and warm, tapered illustrative roots remain visible. A gold ring marks the selected piece. Terrain uses height-coloured shading, paths are flat ribbons, and waterways have distinct banks. The mobile camera fits the whole table without changing the saved board.
+
+All opaque components of a token are baked into one vertex-coloured mesh, plus one small identity-mark plane. The complete 28-piece kit uses 28 opaque meshes rather than the previous 209; its richer geometry totals 66,996 triangles rather than 17,298. This trades more triangles for substantially fewer draw submissions. Contact shadows use one shared 64px radial texture, with no real-time shadow map, refraction, bloom, downloaded textures or postprocessing. Root systems remain one mesh each.
+
+`getState().rendering` exposes calls, triangles, geometry/texture counts and shadow-map status for review. Browser QA saves `artifacts/food-forest-graphics-budget.json` and checks rendering budgets, in addition to the existing interaction suite. These are desktop renderer counts, not a Quest frame-rate benchmark. Local graphical review does not confirm physical-headset comfort or performance.

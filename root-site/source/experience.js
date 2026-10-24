@@ -11,17 +11,17 @@ const forestTopics={
 const partnerTopics={educator:['Shape a learning experience.','Bring a group of learners, a question or a research interest. Help test a small activity in a real place.'],host:['Start with a small patch of land.','A garden, campus or food forest can become a pilot setting. We begin with an introduction and a shared development plan.'],build:['Help turn the concept into a useful pilot.','Contribute plant knowledge, design, technical skills or funding. We’re looking for people to help develop and test the foundation.']};
 function answer(host,text){host.querySelector('h2').textContent=text[0];host.querySelector('p').textContent=text[1];if(!reduced.matches)host.animate([{opacity:.25,transform:'translateY(7px)'},{opacity:1,transform:'none'}],{duration:320,easing:'ease-out'});}
 function cancelEntrance(){epoch++;for(const a of entrance)a.cancel();entrance=[];for(const node of pendingEntrance)node.style.opacity='';pendingEntrance=[];}
-export function prepareEntrance(key){
+export function prepareEntrance(key,{animate=true}={}){
  cancelEntrance();const page=document.querySelector(`[data-route="${key}"]`);if(!page)return;
- page.dataset.entering='true';
+ if(animate)page.dataset.entering='true';else delete page.dataset.entering;
 }
-export function enterPage(key){
+export function enterPage(key,{animate=true}={}){
  const page=document.querySelector(`[data-route="${key}"]`);if(!page)return;
  delete page.dataset.entering;page.dataset.entrance='running';const token=epoch;
  const title=page.querySelector('h1'),object=page.querySelector('.knowledge-flower,[data-platform-totem],.forest-orbit,.places-sculpture,.hillyards-object,.discovery-die,.learning-path-object,.about-emblem,.contact-seed,.story-reader,.guide-scenes');
  const copy=page.querySelector('.education-after-orb,.experience-intro>p,.platform-intro>p');
  const complete=()=>{if(token!==epoch)return;page.dataset.entrance='ready';window.dispatchEvent(new CustomEvent('nourishland:page-settled',{detail:{page:key}}));};
- if(reduced.matches){loadPageObject(key);complete();return;}
+ if(reduced.matches||!animate){loadPageObject(key);complete();return;}
  pendingEntrance=[object,copy].filter(Boolean);for(const node of pendingEntrance)node.style.opacity='0';
  const reveal=async(node,duration,scale=1)=>{if(!node||token!==epoch)return;node.style.opacity='';const animation=node.animate([{opacity:0,transform:`translateY(12px) scale(${scale})`},{opacity:1,transform:'none'}],{duration,easing:'cubic-bezier(.22,.75,.2,1)'});entrance.push(animation);await animation.finished.catch(()=>{});};
  (async()=>{
@@ -38,7 +38,7 @@ export function enterPage(key){
 }
 async function loadPageObject(key){
  wheel?.setActive(key==='food-forests');
- if(key==='food-forests'&&!wheel&&!wheelLoading){wheelLoading=true;const host=document.querySelector('[data-forest-wheel]');try{const {mountOriginalWheel}=await import('./food-forest-wheel.js?v=0.9789');wheel=await mountOriginalWheel(host);wheel.setTopic(forestSelection);wheel.setActive(document.body.dataset.page==='food-forests');}catch{host.dataset.finish='fallback';}finally{wheelLoading=false;}}
+ if(key==='food-forests'&&!wheel&&!wheelLoading){wheelLoading=true;const host=document.querySelector('[data-forest-wheel]');try{const {mountOriginalWheel}=await import('./food-forest-wheel.js?v=0.9803');wheel=await mountOriginalWheel(host);wheel.setTopic(forestSelection);wheel.setActive(document.body.dataset.page==='food-forests');}catch{host.dataset.finish='fallback';}finally{wheelLoading=false;}}
  if(key==='places'&&!places&&!placesLoading){placesLoading=true;places=await mountPlaceShowcase(document.querySelector('#places [data-places-showcase]'));placesLoading=false;}
  if(key==='collaborate'&&!dieDispose&&!dieLoading){dieLoading=true;try{const {mountLandingWheel}=await import('/xr/v2/nlxr/services/landingWheel.js');dieDispose=await mountLandingWheel(document.querySelector('[data-discovery-die]'));}finally{dieLoading=false;}}
 }
@@ -79,7 +79,7 @@ document.querySelectorAll('[data-forest-topic]').forEach(button=>button.addEvent
  const more=forestAnswer.querySelector('[data-forest-more]');more.href=data.href;more.replaceChildren(document.createTextNode(data.action),Object.assign(document.createElement('span'),{textContent:'↗'}));more.lastChild.setAttribute('aria-hidden','true');
  forest.querySelectorAll('[data-forest-topic]').forEach(b=>b.setAttribute('aria-expanded',String(b===button)));wheel?.setTopic(key);
  trackForest();forestAnimation?.cancel();
- if(!reduced.matches)forestAnimation=forestAnswer.animate([{opacity:0,translate:'0 16px'},{opacity:1,translate:'0 0'}],{duration:650,delay:180,fill:'backwards',easing:'cubic-bezier(.2,.75,.2,1)'});
+ if(!reduced.matches)forestAnimation=forestAnswer.animate([{opacity:0,filter:'blur(3px)'},{opacity:1,filter:'blur(0)'}],{duration:380,delay:240,fill:'backwards',easing:'cubic-bezier(.2,.75,.2,1)'});
  forestAnswer.querySelector('h2').focus({preventScroll:true});
 }));
 document.querySelectorAll('[data-partner]').forEach(button=>button.addEventListener('click',()=>{document.querySelectorAll('[data-partner]').forEach(b=>b.setAttribute('aria-pressed',String(b===button)));answer(document.querySelector('[data-partner-answer]'),partnerTopics[button.dataset.partner]);}));

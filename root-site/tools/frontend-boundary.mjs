@@ -5,5 +5,6 @@ export function allowedFrontendFile(name, routes) {
       name.split('/').some(part => !part || part.startsWith('.'))) return false;
   return routes.has(name) || ['xr/food-forest-workbench.css','xr/assets/food-forest/plants.json','xr/assets/food-forest/daleys-codebook.json','xr/assets/food-forest/data-quality.json','xr/assets/food-forest/overrides.json','xr/biome-wheel-xr.css','xr/assets/biome-wheel/current-landscape.bin','xr/assets/biome-wheel/current-landscape.json','xr/living-objects.css','xr/pimo-editor.css','xr/pimo-reader-preview.css','xr/features/ar-demo/demoPreviewMarkup.js','xr/entry.js','robots.txt','sitemap.xml','404.html'].includes(name) ||
     /^site\/[a-zA-Z0-9_./-]+\.(js|mjs|css|json|webp)$/.test(name) ||
+    /^xr\/features\/food-forest\/[a-zA-Z0-9_/-]+\.(js|css|html)$/.test(name) ||
     /^xr\/(screens|services|v2|vendor)\/[a-zA-Z0-9_./-]+\.(html|js|mjs|css|json|webp|png|jpg|jpeg|svg|mp4|webm|wasm|bin|glb|gltf)$/.test(name);
 }

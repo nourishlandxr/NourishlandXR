@@ -1,0 +1,17 @@
+{
+  "fixture": "Chrome WebGL, desktop view; counts are not a Quest frame-rate measurement",
+  "initial": {
+    "calls": 59,
+    "triangles": 32658,
+    "geometries": 51,
+    "textures": 19,
+    "shadows": false
+  },
+  "kit28": {
+    "calls": 136,
+    "triangles": 97164,
+    "geometries": 136,
+    "textures": 33,
+    "shadows": false
+  }
+}

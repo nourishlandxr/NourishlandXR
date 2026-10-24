@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import * as THREE from '../app/vendor/three.module.min.js';
 import {foodForestBoundary,foodForestArea,validFoodForestBoundary,boardPointInside,foodForestFootprintOverlaps} from '../app/services/foodForestBoardModel.js';
 import {FOOD_FOREST_LAYERS,FOOD_FOREST_VARIANTS,createFoodForestPiece} from '../app/services/foodForestPieces.js';
@@ -27,7 +28,7 @@ test('all 28 original symbols are finite, distinct, and bounded for the loading 
         for(let variant=0;variant<4;variant++){
             const piece=createFoodForestPiece(layer.id,{variant,marks:false}),box=new THREE.Box3().setFromObject(piece.group),size=box.getSize(new THREE.Vector3());
             assert.ok([size.x,size.y,size.z].every(Number.isFinite));assert.ok(size.y>.04&&size.y<1.2);assert.ok(size.x<1.1&&size.z<1.1);
-            const vertices=[];piece.group.traverse(object=>{if(object.geometry){const positions=object.geometry.attributes.position.array;assert.ok(positions.every(Number.isFinite));vertices.push(object.geometry.type,object.position.toArray(),object.scale.toArray(),positions.length);}});signatures.add(JSON.stringify(vertices));piece.dispose();count++;
+            const vertices=[];let meshes=0,triangles=0;piece.group.traverse(object=>{if(object.geometry){meshes++;const positions=object.geometry.attributes.position.array;assert.ok(positions.every(Number.isFinite));triangles+=(object.geometry.index?.count||positions.length/3)/3;vertices.push(createHash('sha256').update(Buffer.from(positions.buffer)).digest('hex'));}});assert.equal(meshes,1,'opaque token parts share one draw call');assert.ok(triangles<5000,'each token stays within the XR geometry budget');signatures.add(JSON.stringify(vertices));piece.dispose();count++;
         }
         assert.equal(signatures.size,4,`${layer.id} variants differ in geometry`);
     }

@@ -8,7 +8,7 @@ if(canonicalEntry&&new URL(canonicalEntry,location.origin).href!==location.href)
 }else if(params.get('editor')==='food-forest'){
     const {mountFoodForestWorkbench}=await import('./screens/foodForestWorkbench.js');
     const backUrl=params.get('from')==='demos'?portalUrl('demos').href:params.get('from')==='chapters'?new URL('./?chapters=1',import.meta.url).href:'';
-    window.foodForestTable=await mountFoodForestWorkbench(document.getElementById('app'),{backUrl});
+    window.foodForestTable=await mountFoodForestWorkbench(document.getElementById('app'),{backUrl,projectId:params.get('project')||'',boardId:params.get('board')||'classroom'});
 }else if(params.get('editor')==='pimo'){
     const options={xr:params.get('mode')==='xr',projectId:params.get('project')||'',workspace:params.get('workspace')||'desktop',siteId:params.get('site')||'',recordKey:params.get('record')||''};
     if(options.projectId&&options.recordKey){const {renderProjectPimoEditor}=await import('./services/pimoProjectEditor.js');await renderProjectPimoEditor(document.getElementById('app'),options);}

@@ -1,11 +1,11 @@
-// Package the reviewed interface over V0.9799, retaining canonical routing.
+// Package the reviewed interface over V0.9806, retaining canonical routing.
 import fs from 'node:fs';import path from 'node:path';import crypto from 'node:crypto';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {versionModuleImports,versionCssImports} from './release-module-urls.mjs';
 import {revision as version} from './assemble-website.mjs';
 import {releaseHtmlFiles,auxiliaryFiles,LEGACY_ENTRY_FILES} from './canonical-pages.mjs';
 import {writeRoutingPlan} from './routing-plan.mjs';
-const previousVersion='0.9799',release=`root-site/releases/${version}`,candidate='dist/website';
+const previousVersion='0.9806',release=`root-site/releases/${version}`,candidate='dist/website';
 const previousManifest=JSON.parse(fs.readFileSync(`root-site/releases/${previousVersion}/manifest.json`));
 const history=fs.readdirSync('root-site/releases').filter(v=>/^0\.\d{4}$/.test(v)&&v<=previousVersion&&fs.existsSync(`root-site/releases/${v}/manifest.json`)).sort().reverse().map(v=>JSON.parse(fs.readFileSync(`root-site/releases/${v}/manifest.json`)));
 const previousFile=file=>history.flatMap(m=>m.files||[]).find(item=>item.file===file);
@@ -30,6 +30,20 @@ for(const name of ["screens/biomeWheelXR.js","services/biomeWheelPresentation.js
 for(const file of ['pimo-editor.css','pimo-reader-preview.css','biome-wheel-xr.css'])candidates.set('xr/'+file,fs.readFileSync('dist/xr/'+file));
 for(const file of ['current-landscape.bin','current-landscape.json'])candidates.set('xr/assets/biome-wheel/'+file,fs.readFileSync('dist/xr/assets/biome-wheel/'+file));
 const build=fs.readFileSync('dist/xr/services/buildInfo.js');if(!build.toString().includes(version))throw Error('Build version does not match website.');
+// Include the independent Food Forest workbench and every local module it uses.
+const forestModules=new Set();
+function forestGraph(file){
+ if(forestModules.has(file))return;forestModules.add(file);
+ const source=fs.readFileSync('dist/xr/'+file,'utf8');
+ for(const match of source.matchAll(/(?:from\s*|import\s*\()\s*['"](\.[^'"]+)['"]/g)){
+  const target=path.posix.normalize(path.posix.join(path.posix.dirname(file),match[1].split('?')[0]));
+  if(/\.m?js$/.test(target)&&!target.startsWith('vendor/')&&!target.includes('/vendor/'))forestGraph(target);
+ }
+}
+forestGraph('screens/foodForestWorkbench.js');
+for(const file of forestModules)candidates.set('xr/'+file,Buffer.from(versionModuleImports(fs.readFileSync('dist/xr/'+file,'utf8'),version)));
+for(const file of ['screens/demoChapters.js','features/food-forest/database.js'])candidates.set('xr/'+file,Buffer.from(versionModuleImports(fs.readFileSync('dist/xr/'+file,'utf8'),version)));
+for(const file of ['food-forest-workbench.css','features/food-forest/database.css','features/food-forest/database.html',...['plants.json','daleys-codebook.json','data-quality.json','overrides.json'].map(name=>'assets/food-forest/'+name),'v2/assets/hero-wheel-v5.png'])candidates.set('xr/'+file,fs.readFileSync('dist/xr/'+file));
 candidates.set('xr/services/buildInfo.js',build);
 candidates.set('site/root-release.json',Buffer.from(JSON.stringify({managedBy:'root-site-release',version,publishedAt:new Date().toISOString(),legacyXrAutoDeployMustNotOverwrite:true,backendChanged:false},null,2)+'\n'));
 const marker=await fetch('https://nourishland.org/site/root-release.json?baseline='+Date.now(),{signal:AbortSignal.timeout(30000)});
