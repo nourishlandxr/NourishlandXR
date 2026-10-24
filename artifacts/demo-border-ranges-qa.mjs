@@ -1,0 +1,12 @@
+import http from 'node:http';import {readFile,stat,writeFile} from 'node:fs/promises';import {resolve,extname,sep} from 'node:path';import {createRequire} from 'node:module';import assert from 'node:assert/strict';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/andre/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright'),root=resolve('.'),mime={'.html':'text/html','.js':'text/javascript','.css':'text/css','.png':'image/png','.webp':'image/webp','.json':'application/json','.woff2':'font/woff2'};
+const server=http.createServer(async(req,res)=>{try{let pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);if(pathname.startsWith('/xr/'))pathname='/dist'+pathname;let file=resolve(root,'.'+pathname);if(!file.startsWith(root+sep))throw Error();if((await stat(file)).isDirectory())file=resolve(file,'index.html');res.writeHead(200,{'Content-Type':mime[extname(file)]||'application/octet-stream'});res.end(await readFile(file));}catch{res.writeHead(404);res.end();}});await new Promise(done=>server.listen(0,'127.0.0.1',done));
+const browser=await chromium.launch({executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe',headless:true}),origin=`http://127.0.0.1:${server.address().port}`,errors=[];
+try{
+ const page=await browser.newPage({viewport:{width:1200,height:1050}});page.on('pageerror',e=>errors.push(e.message));
+ await page.goto(origin+'/tools/preview-demo-border-ranges.html');await page.waitForFunction(()=>window.demoMapPreview);
+ const scene=await page.evaluate(()=>{const {model,map}=window.demoMapPreview;return {title:model.title,totems:model.items.length,meshes:map.scene.children.length,visibleTotems:map.scene.children.filter(node=>node.isGroup&&node.children.some(child=>child.geometry?.attributes?.uv?.count>200)).filter(node=>node.visible).length};});
+ assert.equal(scene.totems,4);await page.screenshot({path:'artifacts/demo-border-ranges-preview.png'});
+ const welcome=await browser.newPage();await welcome.goto(origin+'/xr/');await welcome.locator('.welcome-version-badge').first().waitFor({timeout:60000});const version=await welcome.locator('.welcome-version-badge').first().textContent();assert.match(version,/0\.9817/);await welcome.screenshot({path:'artifacts/demo-border-ranges-welcome.png'});
+ assert.deepEqual(errors,[]);console.log(JSON.stringify({scene,version,errors,questVerified:false}));
+}finally{await browser.close();server.close();}

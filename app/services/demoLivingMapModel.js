@@ -1,3 +1,4 @@
+import {DEMO_BORDER_RANGES_SEED} from './demoBorderRangesSeed.js';
 const finite = value => Number.isFinite(Number(value));
 const ease = value => { const t = Math.max(0, Math.min(1, value)); return t * t * (3 - 2 * t); };
 export const LIVING_MAP_DURATION_MS = 16700;
@@ -40,9 +41,19 @@ export function createDemoLivingMapConcept({interactive=false}={}) {
     return {concept:true,items:[first,second,...plants],areas,links:[[first,second]],landscape:{swales,trees}};
 }
 
+// A saved map avoids network/elevation work during an XR session.
+export function createDemoBorderRangesMap(){
+    const seed=DEMO_BORDER_RANGES_SEED;
+    const zones=seed.elements.filter(item=>item.type==='totem').map(item=>({...item,type:'zone',totemStyle:'basic'}));
+    return {concept:true,staticMap:true,title:seed.mapInfo.title,mapSeed:seed,items:zones,
+        areas:zones.map(totem=>({id:totem.id,name:totem.name,totem,members:[totem],left:totem.x-.5,right:totem.x+.5,far:totem.z-.5,near:totem.z+.5})),
+        links:[],landscape:{trees:[],swales:[]}};
+}
+
 // Placement order is independent of rendering, controller input and motion
 // preference. Reduced motion never automatically completes an interaction.
 export function createDemoLivingMapPlacement(model=createDemoLivingMapConcept({interactive:true})){
+    if(model.staticMap)return {current:()=>null,snapshot:()=>model.areas.map(area=>({id:area.id,at:0})),restore:()=>true,place:()=>false,reset(){}};
     const ids=model.areas.map(area=>area.id);let placements=[];
     return {
         current:elapsed=>{

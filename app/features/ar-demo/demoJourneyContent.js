@@ -250,10 +250,10 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
     {
         "id": "UTILITY 1.1",
         "act": "Explore, learn and plan",
-        "title": "Your Interactive Map · IMAP",
+        "title": "Your Interactive Map · Border Ranges",
         "main": "Plants, Notes and Areas can connect knowledge to any land — from school gardens and university campuses to farms and public landscapes.",
         "panel": "Visitors can discover the plants along a public trail. School students can observe a garden through the seasons. University groups can connect field studies to a site. People caring for land can explore planting possibilities. The same tools support different questions and purposes.",
-        "hint": "Grip the map centre to move it; use the joystick to turn or adjust distance. Release to place it. Set Totems on the pulsing entrance, forest and swale circles.",
+        "hint": "Grab the wooden map ring to move it. Use both hands to turn it while keeping it level. Release to place it. Finish when you are ready.",
         "art": null
     },
     {
@@ -262,62 +262,8 @@ export const DEMO_GUIDED_STEPS = Object.freeze([
         "title": "Learn before planting",
         "main": "Explore what could grow here before anything is planted.\n\nCompare what to plant, the light, water, soil and climate each plant needs, and what it can provide — food, shade, habitat or support for the soil.\n\nVisitors, teachers and students can use these questions to learn about a place. People planning a planting can use that knowledge to make informed choices.",
         "panel": "Try three questions: What could grow here? What conditions would it need? What could it contribute? A school class could compare plants for a garden; a university group could investigate a site's conditions; a visitor could discover why a plant suits its surroundings.",
-        "hint": "Continue to Learning Pathways to follow a question.",
+        "hint": "Finish the demo when you are ready.",
         "art": null
-    },
-    {
-        "id": "LEARNING 1.6",
-        "act": "Learning pathways",
-        "title": "An optional learning discovery",
-        "main": "Learning Pathways turn discoveries into questions people can explore together. Here is an optional example.",
-        "panel": "Six starting questions surround the Living Frame. LIMO is the final feature.",
-        "hint": "Open Learning Pathways, or choose Finish without learning example in the Control Panel.",
-        "art": "connection"
-    },
-    {
-        "id": "LEARNING 1.7",
-        "act": "Learning pathways",
-        "title": "A question to explore",
-        "main": "Explore a starting question, then connect two related LIMO cells. A new discovery opens between their ideas and can connect again to develop a deeper story.",
-        "panel": "Selected learning question. The connection catalogue contains ten authored combinations.",
-        "hint": "",
-        "art": "pathways"
-    },
-    {
-        "id": "LEARNING 1.8",
-        "act": "Learning pathways",
-        "title": "Build on what you discovered",
-        "main": "When two questions connect, a new discovery can appear between them. That discovery can become the start of another question.",
-        "panel": "Both source cells remain visible. The new discovery and its strings follow the orbit around the Living Frame.",
-        "hint": "Connect Sun & shade with Plants & forest layers. Then connect Who shades whom? with First steps & later roles.",
-        "art": null
-    },
-    {
-        "id": "LEARNING 1.9",
-        "act": "Learning pathways",
-        "panel": "The existing source and target remain visible together.",
-        "hint": "Select Uses.",
-        "art": null,
-        "title": "Choose the plant information",
-        "main": "A learning question can connect to information about a real plant."
-    },
-    {
-        "id": "LEARNING 1.10",
-        "act": "Learning pathways",
-        "panel": "Preserve the existing deliberate target hold.",
-        "hint": "Hold Uses and Making.",
-        "art": null,
-        "title": "Connect a learning question",
-        "main": "Hold the plant detail and learning question together to make their connection."
-    },
-    {
-        "id": "LEARNING 1.11",
-        "act": "Learning pathways",
-        "panel": "Show the actual connected source, target and matching image.",
-        "hint": "Finish the example.",
-        "art": null,
-        "title": "A detail becomes a learning activity",
-        "main": "A teacher could ask which plant part is used and what preparation is recorded. The connected plant detail gives learners a source to return to."
     },
     {
         "id": "CLOSURE 1.1",

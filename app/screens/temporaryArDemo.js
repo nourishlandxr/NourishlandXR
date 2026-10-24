@@ -72,11 +72,11 @@ let demoPalmOrb=null,demoPalmStartedAt=0,demoPalmCooldownUntil=0;
 import {mountDemoNativePlantChooser} from '../services/demoNativePlantChooser.js';
 import {selectExplorerNode,explorerDetailDocument,explorerSelectedPath} from '../services/explorerMoleculeModel.js';
 import {DEMO_GUIDED_COPY,DEMO_RETURN_WELCOME_PARAGRAPHS,DEMO_IMAP_INTRO_PARAGRAPHS,guidedDemoStep} from '../features/ar-demo/demoJourneyContent.js';
-import {createDemoLivingMapConcept,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress,LIVING_MAP_ORB_SETTLE_MS} from '../services/demoLivingMapModel.js';
+import {createDemoBorderRangesMap,createDemoLivingMapPlayback,createDemoLivingMapPlacement,livingMapDropAccepted,demoLivingMapProgress,LIVING_MAP_ORB_SETTLE_MS} from '../services/demoLivingMapModel.js';
 import {createDemoLivingMapScene} from '../services/demoLivingMapScene.js';
 import {livingMapReveal,drawLivingMapPreview,livingMapWorldPoint,livingMapRayPoint,livingMapWorldDropAccepted,livingMapHeldContact,livingMapRotation,livingMapTotemRayHit,LIVING_MAP_REVEAL_READY_MS} from '../services/demoLivingMapReveal.js';
 import {createDemoLivingMapXR} from '../services/demoLivingMapXR.js';
-import {livingMapPlacementCopy,resetDemoPlantForMap} from '../services/demoLivingMapPresentation.js';
+import {resetDemoPlantForMap} from '../services/demoLivingMapPresentation.js';
 import {createLivingMapGripInput,limitLivingMapTilt} from '../services/demoLivingMapGrip.js';
 import {livingMapHandleRayHit} from '../services/demoLivingMapHandles.js';
 import {drawLivingFrameButton,applyLivingFrameButtonSampling} from '../services/livingFrameButton.js';
@@ -102,7 +102,7 @@ function updateSpatialLivingMap(now){
     const flatPreview=appRoot?.querySelector('[data-demo-living-map]');if(flatPreview)flatPreview.hidden=reveal.preview<=0;
     if(reveal.appear>0 && demoMapNarrationCount!==placedCount){
         clearDemoNarration({preserveAction:true});demoMapNarrationCount=placedCount;
-        introBoardBody=introBoardVisibleBody=demoLocalizedText(livingMapPlacementCopy(placedCount));if(typeof demoProjectVoice!=='undefined')narrateDemoFrame(introBoardBody);
+        introBoardBody=introBoardVisibleBody=demoLocalizedText(DEMO_GUIDED_COPY['UTILITY 1.1']);if(typeof demoProjectVoice!=='undefined')narrateDemoFrame(introBoardBody);
         introBoardParagraphFadeStartedAt=now;introBoardParagraphFadeTimes=[now];introBoardTextureDirty=true;
         const text=appRoot?.querySelector('[data-tryit-guided-choice] .tryit-board-text-window');
         if(text){text.innerHTML='<p class="is-revealed"></p>';const paragraph=text.querySelector('p');paragraph.textContent=introBoardVisibleBody;paragraph.style.cssText='opacity:0;transition:opacity 1.2s ease';requestAnimationFrame(()=>{if(paragraph.isConnected)paragraph.style.opacity='1';});}
@@ -113,7 +113,7 @@ function updateSpatialLivingMap(now){
     if(instructions){
         instructions.hidden=reveal.appear<=0;
         if(!instructions.querySelector('[data-map-grip-task]'))instructions.innerHTML='<span data-map-grip-task="totem"></span><span data-map-grip-task="plate"></span>';
-        for(const [id,label,done] of [['totem','Grip a Totem',demoMapTotemGripped],['plate','Grab the wooden map ring',demoMapPlateGripped]]){
+        for(const [id,label,done] of [['plate','Grab the wooden map ring · use both hands to turn it level',demoMapPlateGripped]]){
             const task=instructions.querySelector(`[data-map-grip-task="${id}"]`);task.textContent=demoLocalizedText(label);task.style.cssText=`display:block;text-align:center;margin:16px auto;text-decoration:${done?'line-through':'none'}`;
         }
     }
@@ -323,7 +323,7 @@ function ensureDemoLimo(){
  },onChange:()=>{introBoardTextureDirty=true;const id=demoLimo?.snapshot().state.cellId,node=welcomeFrames().flatMap(frame=>frame.nodes).find(item=>item.limId===id);selectedLimCell=node?.key || '';},onClose:()=>{selectedLimCell='';limMeshVisible=false;contextCellKey='';limPointerKey='';limActivation?.cancel('return-to-demo');introBoardTextureDirty=true;if(demoLimoReturn)infoPanel.restoreSnapshot(demoLimoReturn);demoLimoReturn=null;infoPanel.setExplorerOpen(false);const title='Ideas connected. A story to continue.',body='Your discoveries remain saved in Learning cells. Continue to see how this learning belongs in a living place.';infoPanel.showLearning({title,body,retainImage:true,mesh:'lim',editable:false});restoreMappedSceneAfterLimo();showIntroBoard(title,body,'Continue',showAudienceValue,{stepLabel:'LEARNING 1.8',dynamicCopy:true,keepPanel:true});setGuide('Continue when you are ready.');syncDemoPanelActions();}});
  return demoLimo;
 }
-async function openDemoLimo(){if(!demoLimoUnlocked)return;const previous=infoPanel.snapshot();if(!previous.selection?.limo)demoLimoReturn=previous;if(demoLimo?.snapshot().context)demoLimo.show();else await ensureDemoLimo().open({context:demoLimoContext()});}
+async function openDemoLimo(){ /* LIMO is deferred from the Demo. */ }
 
 let pimHold = null;
 let lastSpatialPimActivationAt = -Infinity;
@@ -880,7 +880,7 @@ function demoPanelActions() {
     actions.push({id:'back',label:'‹',ariaLabel:'Previous',description:'Previous',disabled:!(demoSlideHistoryIndex>0 || demoOrientationStep>0 && demoTutorialStep===DEMO_TUTORIAL_STEPS.WELCOME)});
     actions.push({id:'forward',label:'›',ariaLabel:'Next slide',description:'Next',disabled:!(demoSlideHistoryIndex>=0 && demoSlideHistoryIndex<demoSlideHistory.length-1)});
     if(activePimLimBridge && demoTutorialStep===DEMO_TUTORIAL_STEPS.PIM)actions.push({id:'pim-lim',label:'Why does this matter?'});
-    if(arWelcomeShowcaseActive && demoJourneyStage==='apply')actions.push({id:'lim-visibility',label:'Learning Pathways'});
+    // LIMO is deferred from the Demo controls.
     if(!desktopDemo)actions.push({id:'safety',label:'Safety guidance'});
     if(simulatedMode && isQuestHeadsetBrowser())actions.push({id:'quest',label:questLaunchPending?'Opening Spatial device…':'Enter Spatial device',disabled:questLaunchPending});
     if(introBoardStep==='FDW 1.2')actions.push(...DEMO_FRUIT_EXAMPLES.map(item=>({id:'fruit-example:'+item.id,label:item.label,disabled:markers.some(record=>record.demoFruitExample===item.id)})));
@@ -1012,7 +1012,7 @@ function handleDemoPanelAction(action) {
     if(action==='back'){showDemoSlideFromHistory(demoSlideHistoryIndex-1);return;}
     if(action==='forward'){showDemoSlideFromHistory(demoSlideHistoryIndex+1);return;}
     if(action==='skip'){skipDemoNarration?.();return;}
-    if(action==='lim-visibility'){setLimMeshVisible(true);showLearningPathLanding();return;}
+    if(action==='lim-visibility'){showDemoLivingMap();return;}
     if(action==='quest'){void retryQuestImmersive();return;}
     if(action==='recenter'){infoPanel?.recenter();return;}
 }
@@ -1701,9 +1701,9 @@ function showIntroBoard(title, body, buttonLabel, onContinue, options = {}) {
     appRoot?.querySelector('.tryit-demo')?.setAttribute('data-demo-utility',String(Boolean(options.stepLabel?.startsWith('UTILITY '))));
     if(options.stepLabel==='UTILITY 1.1'){
         appRoot?.querySelector('.tryit-demo')?.removeAttribute('data-lim-opening');
-        if(!demoLivingMapPlacement){demoLivingMapPlacement=createDemoLivingMapPlacement();demoLivingMapStartedAt=performance.now();}
+        if(!demoLivingMapPlacement){demoLivingMapPlacement=createDemoLivingMapPlacement(createDemoBorderRangesMap());demoLivingMapStartedAt=performance.now();}
         demoLivingMapPlayback.reset(demoLivingMapStartedAt);
-        if(!demoLivingMapScene)try{demoLivingMapScene=createDemoLivingMapScene(createDemoLivingMapConcept({interactive:true}),{placement:demoLivingMapPlacement});}catch(error){console.warn('Living map preview unavailable:',error);}
+        if(!demoLivingMapScene)try{demoLivingMapScene=createDemoLivingMapScene(createDemoBorderRangesMap(),{placement:demoLivingMapPlacement});}catch(error){console.warn('Living map preview unavailable:',error);}
     }else if(demoLivingMapScene){clearDemoMapPiece();disposeSpatialLivingMap();demoLivingMapScene.dispose();demoLivingMapScene=null;demoLivingMapPlacement=null;}
     useSharedWelcomeBoard(true);
     setDemoTutorialStep(options.tutorialStep || DEMO_TUTORIAL_STEPS.GUIDED);
@@ -1914,7 +1914,7 @@ function showDemoSlideFromHistory(index){
     if(slide.stepLabel==='UTILITY 1.1'){
         clearDemoMapPiece();demoLivingMapGrip?.reset();
         // Intro and activity share preloaded meshes and shaders on Back.
-        demoLivingMapPlacement ??=createDemoLivingMapPlacement();demoLivingMapPlacement.restore(slide.map?.placements || []);
+        demoLivingMapPlacement ??=createDemoLivingMapPlacement(createDemoBorderRangesMap());demoLivingMapPlacement.restore(slide.map?.placements || []);
         demoMapIntroPaused=slide.map?.paused ?? slide.options?.historyPhase==='intro';demoLivingMapStartedAt=performance.now()-(slide.map?.elapsed || 0);demoMapNarrationCount=-1;
     }
     const currentRecords=markers,firstOrb=currentRecords.find(record=>record.tutorialStage==='plant');
@@ -2911,6 +2911,7 @@ function createDemoTotemExample(practicePosition=null,practiceAnchor=null) {
         demoType: 'zone',
         tutorialStage: 'totem',
         demoTotemExampleId:'botanical-garden',
+        appearance:{totemStyle:'basic',totemStyleExplicit:true},
         demoZoneName:'My area',
         demoNeighbourZoneName:'Second Area',
         demoTotemColor:'#785a43',
@@ -2965,7 +2966,7 @@ function createDemoSecondTotem() {
         type: 'area_checkpoint',
         demoType: 'zone',
         tutorialStage: 'totem2',
-        appearance:{totemStyle:'sun',totemStyleExplicit:true,heightPreset:'secondary',notificationColor:'#ecc276'},
+        appearance:{totemStyle:'basic',totemStyleExplicit:true,heightPreset:'secondary',notificationColor:'#ecc276'},
         demoTotemExampleId:'rainforest-walk',
         demoZoneName:'Second Area',
         demoNeighbourZoneName:'My area',
@@ -3028,9 +3029,9 @@ function startDemoLivingMapActivity(){
     const step=guidedDemoStep('UTILITY 1.1');
     // Continue releases the existing sample directly into space. Keep the
     // same frame and scene instead of loading a second flat-map screen.
-    rememberDemoSlide({kind:'intro',stepLabel:step.id,title:step.title,body:livingMapPlacementCopy(0),buttonLabel:'Continue',onContinue:showDemoBeforePlanting,options:{stepLabel:step.id,historyPhase:'activity',skipMapPreview:true,dynamicCopy:true,nextGuide:step.hint}});
+    rememberDemoSlide({kind:'intro',stepLabel:step.id,title:step.title,body:DEMO_GUIDED_COPY['UTILITY 1.1'],buttonLabel:'Finish demo',onContinue:showDemoClosingMessage,options:{stepLabel:step.id,historyPhase:'activity',skipMapPreview:true,dynamicCopy:true,nextGuide:step.hint}});
     const button=appRoot?.querySelector('[data-tryit-intro-continue]');
-    if(button){button.hidden=false;button.disabled=false;button.onclick=()=>{if(button.disabled || introBoardStep!=='UTILITY 1.1' || demoMapIntroPaused)return;button.disabled=true;clearDemoNarration();showDemoBeforePlanting();};}
+    if(button){button.textContent=demoLocalizedText('Finish demo');button.hidden=false;button.disabled=false;button.onclick=()=>{if(button.disabled || introBoardStep!=='UTILITY 1.1' || demoMapIntroPaused)return;button.disabled=true;clearDemoNarration();showDemoClosingMessage();};}
     setIntroBoardNextGuide(step.hint);updateSpatialLivingMap(performance.now());syncDemoPanelActions();paintWelcomeLayer(performance.now());
 }
 
@@ -3097,7 +3098,7 @@ function showDemoBeforePlanting(){
         if(center){const offset=index%2?1.05:-1.05;record.position={x:center.x+right.x*offset,y:record.groundBaseY+demoTotemHalfHeight(record),z:center.z+right.z*offset};}
     });
     const step=guidedDemoStep('UTILITY 1.2');
-    showIntroBoard(step.title,step.main,'Continue to Learning Pathways',showLimoLearningModes,
+    showIntroBoard(step.title,step.main,'Finish the demo',showDemoClosingMessage,
         {stepLabel:step.id,dynamicCopy:true,nextGuide:step.hint});
     updateSimulatedMarkers();
     infoPanel?.showLearning({id:'demo-before-planting',title:step.title,body:step.panel,accent:'#b9d59c',mesh:'lim',editable:false});
@@ -5767,7 +5768,7 @@ function drawIntroNoteContent(ctx) {
         if(demoMapIntroPaused)drawLivingMapPreview(ctx,demoLivingMapScene,elapsed,reduced,{...DEMO_MAP_RECT,y:headingBottom+85,height:300,hideGuidance:true});
         if(!demoMapIntroPaused && livingMapReveal(elapsed,reduced).preview<.05){
             ctx.font=`500 34px ${DEMO_PRESENTATION_FONT}`;
-            const copy=demoLocalizedText(livingMapPlacementCopy(demoLivingMapPlacement?.snapshot().length || 0));
+            const copy=demoLocalizedText(DEMO_GUIDED_COPY['UTILITY 1.1']);
             wrappedTextureLines(ctx,copy,850).forEach((line,index)=>ctx.fillText(line,700,headingBottom+115+index*44));
             ctx.font=`500 28px ${DEMO_PRESENTATION_FONT}`;
             const prompts=[['Grip a Totem',demoMapTotemGripped],['Grip both plate edges',demoMapPlateGripped]];
@@ -7140,7 +7141,7 @@ export async function startTemporaryArDemo(app, { livingMapPreviewRecords = null
             else if(refinementPreview==='notes'){const note=markers.find(record=>record.demoType==='note');if(note){showIntroBoard('Notes','Select a Note, select a Plant Orb, then re-select the Note. Try turning it with the stick, adding a widget and minimizing it.','Continue',showDemoLivingMap,{stepLabel:'ELEMENTS 1.17',dynamicCopy:true});openDemoNoteExperience(note);}}
             else if(refinementPreview==='totems')createDemoTotemExample();
             else if(refinementPreview==='fruit'){const plant=markers.find(record=>record.demoType==='plant');if(plant)showDemoFruitDiscovery(plant);}
-            else if(refinementPreview==='learning'){demoLimoUnlocked=true;showLimoArchetypes();}
+            else if(refinementPreview==='learning'){showDemoLivingMap();}
             else if(refinementPreview==='space')runArWelcomeTutorial(2);
             else showDemoLivingMap();
         }
@@ -7172,7 +7173,7 @@ function activateDeveloperStation(){
         updateSimulatedMarkers();
         if(id==='map'){disposeSpatialLivingMap();showDemoLivingMap();startDemoLivingMapActivity();}
         else if(id==='pimo'){limMeshVisible=false;introBoardVisible=developerLab.context;const plant=markers.find(r=>r.demoType==='plant');if(plant){toggleDemoPlantProfile(plant);showDemoInfo(plant,'');}}
-        else if(id==='limo'){demoLimoUnlocked=true;showLimoArchetypes();void openDemoLimo();}
+        else if(id==='limo'){showDemoLivingMap();}
         else if(id==='zinnia'){showIntroBoard('Zinnia · Developer Lab','Replay the voice, inspect expressions and move around the porch.','',()=>{},{stepLabel:'DEVELOPER ZINNIA',dynamicCopy:true,keepPanel:true});narrateDemoFrame("Here I am. A little flower to keep you company.");}
     }
     const skip=appRoot?.querySelector('[data-tryit-skip]');if(skip)skip.hidden=true;
@@ -7209,5 +7210,5 @@ function activateDemoChapter(id){
  for(const record of developerLabRecords()){record.texture=createMarkerTexture(record);markers.push(record);}updateSimulatedMarkers();
  if(id==='plants'){const plant=markers.find(record=>record.demoType==='plant');if(plant){plant.position=introLocalPosition(introWorldAnchor,[0,-.55,-1.6]);plant.demoProfileInteracted=true;toggleDemoPlantProfile(plant);showDemoInfo(plant,'');}return;}
  if(id==='map'){showDemoLivingMap();return;}
- if(id==='learning'){demoLimoUnlocked=true;showLimoArchetypes();}
+ if(id==='learning'){showDemoLivingMap();}
 }

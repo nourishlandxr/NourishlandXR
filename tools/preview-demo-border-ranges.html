@@ -1,0 +1,10 @@
+<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Demo · Border Ranges IMAP</title>
+<style>body{margin:0;background:#14251e;color:#f4ecd9;font:16px/1.5 system-ui}main{max-width:1100px;margin:auto;padding:24px}canvas{width:100%;height:auto}p{color:#c3d4c7}</style>
+<main><h1>Demo · Border Ranges IMAP</h1><p>Saved illustrative terrain, tracks and four Area Totems. This is the final Demo activity before the closing message. Positions and relief are schematic, not surveyed.</p><canvas id="map" width="1100" height="760" aria-label="Border Ranges map with four timber Totems"></canvas></main>
+<script type="module">
+import {createDemoBorderRangesMap,createDemoLivingMapPlacement} from '../app/services/demoLivingMapModel.js';
+import {createDemoLivingMapScene} from '../app/services/demoLivingMapScene.js';
+const model=createDemoBorderRangesMap(),map=createDemoLivingMapScene(model,{placement:createDemoLivingMapPlacement(model)}),canvas=document.querySelector('canvas');
+map.draw(canvas.getContext('2d'),20000,true,{x:0,y:0,width:1100,height:760,hideGuidance:true});
+window.demoMapPreview={model,map};addEventListener('pagehide',()=>map.dispose());
+</script></html>

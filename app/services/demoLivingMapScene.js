@@ -7,6 +7,7 @@ import {createTotemSculptureGeometry,createTotemMaterialCanvas} from './spatialT
 import {livingMapGreeneryProgress} from './demoLivingMapReveal.js';
 import {createLivingMapDetailKit} from './demoLivingMapDetail.js';
 import {createLivingMapHandles} from './demoLivingMapHandles.js';
+import {addDemoBorderRangesTerrain} from './demoBorderRangesTerrain.js';
 
 // A contained live scene. Its camera never changes the visitor's XR pose.
 export function createDemoLivingMapScene(model, { width = 1200, height = 560, placement=null } = {}) {
@@ -22,7 +23,9 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const material = color => { if (!materials.has(color)) materials.set(color, new THREE.MeshLambertMaterial({ color })); return materials.get(color); };
     const geometry = value => { geometries.add(value); return value; };
     const sphere = geometry(new THREE.SphereGeometry(1, 16, 10));
-    const timberTexture=new THREE.CanvasTexture(createTotemMaterialCanvas());timberTexture.colorSpace=THREE.SRGBColorSpace;
+    const timberCanvas=createTotemMaterialCanvas();
+    const timberInk=timberCanvas.getContext('2d');timberInk.fillStyle='#ffffff';timberInk.fillRect(0,0,timberCanvas.width,2);timberInk.fillRect(0,timberCanvas.height-2,timberCanvas.width,2);
+    const timberTexture=new THREE.CanvasTexture(timberCanvas);timberTexture.colorSpace=THREE.SRGBColorSpace;
     const cylinder = geometry(new THREE.CylinderGeometry(1, 1, 1, 12));
     const mesh = (geo, color, x, y, z, sx, sy = sx, sz = sx, parent = scene) => {
         const node = new THREE.Mesh(geo, material(color)); node.position.set(x, y, z); node.scale.set(sx, sy, sz); parent.add(node); return node;
@@ -34,7 +37,9 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const handles=createLivingMapHandles({geometry,mesh});
     handles.forEach(handle=>scene.add(handle));
     const scenery = new THREE.Group();scene.add(scenery);scenery.visible=false;scenery.name='Living Map shared scenery';
-    const soil=new THREE.Group();soil.name='Living Map shared terrain';scene.add(soil);detail.terrain(soil,model);
+    const soil=new THREE.Group();soil.name='Living Map shared terrain';scene.add(soil);
+    const terrainHeight=model.mapSeed?addDemoBorderRangesTerrain({model,parent:soil,geometry,materials}):()=>0;
+    if(!model.mapSeed)detail.terrain(soil,model);
     for(const [y,r,h,c] of [[-.16,6.29,.035,'#8a7955'],[-.30,6.30,.025,'#514a39']])mesh(geometry(new THREE.CylinderGeometry(1,1,1,64)),c,0,y,0,r,h,r,soil);
     // Shared geometry for small planting clusters and tree canopies.
     const shrub = new THREE.InstancedMesh(sphere, material('#455e3b'), 65);
@@ -65,7 +70,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         const curve=new THREE.Curve();curve.getPoint=(t,target=new THREE.Vector3())=>{const p=sampleLivingMapRoute(points,t);return target.set(p.x,.075,p.z);};
         const path=mesh(geometry(new THREE.TubeGeometry(curve,32,.09,5,false)), '#c1ae85', 0,0,0,1);path.visible=false;return path;
     });
-    const boundaries = model.areas.map((area,index) => {
+    const boundaries = (model.staticMap?[]:model.areas).map((area,index) => {
         const {left:l,right:r,near:n,far:f} = area;
         const corners = [[l,f],[r,f],[r,n],[l,n],[l,f]];
         const points = Array.from({length:65},(_,i)=>{
@@ -80,6 +85,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         return {area,line,fill};
     });
     const plantGrowthIndices=new Map(model.items.filter(item=>item.type==='plant').map((item,index)=>[item.id,index]));
+    const mapLabelTextures=[];
     const markers = model.items.map((item,index) => {
         const group = new THREE.Group(); group.position.set(item.x,0,item.z);group.visible=false;scene.add(group);
         let orb=null,beacon=null;
@@ -90,10 +96,10 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             orb=new THREE.Mesh(sphere,orbMaterial);orb.position.y=.4;orb.scale.setScalar(.38);group.add(orb);
         } else if(item.type === 'zone') {
             const data=createTotemSculptureGeometry(32,20,item.totemStyle || 'botanical'),shape=geometry(new THREE.BufferGeometry()),positions=[],normals=[],uvs=[],colours=[];
-            for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));uvs.push(...data.vertices.slice(i+6,i+8));const tint=new THREE.Color(data.vertices[i+7]>1?(item.totemStyle==='sun'?'#ecc276':'#c2b4ef'):'#ffffff');colours.push(tint.r,tint.g,tint.b);}
+            for(let i=0;i<data.vertices.length;i+=8){positions.push(...data.vertices.slice(i,i+3));normals.push(...data.vertices.slice(i+3,i+6));uvs.push(...data.vertices.slice(i+6,i+8));const v=data.vertices[i+7],tint=new THREE.Color(v>2?(['#ffffff','#ffffff','#bb945c','#362419','#a77b4e','#82936e','#e6ddc4'][Math.floor(v)] || '#ffffff'):v>1?(item.totemStyle==='sun'?'#ecc276':item.totemStyle==='moon'?'#c2b4ef':'#82936e'):'#ffffff');colours.push(tint.r,tint.g,tint.b);}
             shape.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));shape.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));shape.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));shape.setAttribute('color',new THREE.Float32BufferAttribute(colours,3));shape.setIndex(new THREE.BufferAttribute(data.indices,1));
-            const timber=new THREE.MeshLambertMaterial({color:item.totemStyle==='sun' || item.totemStyle==='moon'?'#e0d1b5':'#795f41',vertexColors:true,map:item.totemStyle==='sun' || item.totemStyle==='moon'?null:timberTexture});materials.set('totem-timber'+index,timber);
-            const post=new THREE.Mesh(shape,timber);post.position.y=1.35;post.scale.set(.095,1.35,.075);group.add(post);
+            const timber=new THREE.MeshLambertMaterial({color:item.totemStyle==='sun' || item.totemStyle==='moon'?'#e0d1b5':'#ffffff',vertexColors:true,map:item.totemStyle==='sun' || item.totemStyle==='moon'?null:timberTexture});materials.set('totem-timber'+index,timber);
+            const post=new THREE.Mesh(shape,timber);post.position.y=model.staticMap?.8:1.35;post.scale.set(model.staticMap?.18:.095,model.staticMap?.8:1.35,model.staticMap?.14:.075);group.add(post);
             const glass=new THREE.MeshPhongMaterial({color:'#bfe0d6',transparent:true,opacity:.48,shininess:85,depthWrite:false});materials.set('totem-glass'+index,glass);
             const collar=new THREE.Mesh(cylinder,glass);collar.position.y=2.53125;collar.scale.set(.073,.3375,.073);collar.visible=!item.totemStyle || item.totemStyle==='botanical';group.add(collar);
             const tip=new THREE.MeshPhongMaterial({color:'#a5db8d',emissive:'#a5db8d',emissiveIntensity:.3,transparent:true,opacity:.25,depthWrite:false,shininess:50});materials.set('totem-tip'+index,tip);
@@ -103,6 +109,14 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         }
         const ringMaterial=new THREE.MeshBasicMaterial({color:item.type==='note'?'#dec88e':'#c7e4ae',transparent:true,opacity:.8,depthWrite:false});materials.set('ring'+index,ringMaterial);
         const ring=new THREE.Mesh(geometry(new THREE.RingGeometry(.17,.195,32)),ringMaterial);ring.rotation.x=-Math.PI/2;ring.position.y=.095;group.add(ring);
+        if(model.staticMap){
+            ring.visible=false;
+            const label=document.createElement('canvas');label.width=512;label.height=96;
+            const ctx=localizedCanvasContext(label.getContext('2d'));ctx.fillStyle='#172f25';ctx.fillRect(0,0,512,96);ctx.fillStyle='#fff2d3';ctx.font='500 34px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(item.name,256,48,490);
+            const texture=new THREE.CanvasTexture(label);texture.colorSpace=THREE.SRGBColorSpace;mapLabelTextures.push(texture);
+            const ink=new THREE.MeshBasicMaterial({map:texture,side:THREE.DoubleSide});materials.set('map-label-'+index,ink);
+            const title=new THREE.Mesh(geometry(new THREE.PlaneGeometry(2.25,.422)),ink);title.position.y=2.25;title.rotation.x=-.4;group.add(title);
+        }
         if(model.concept && item.type==='plant')ring.visible=false;
         return {item,group,ring,orb,beacon};
     });
@@ -119,7 +133,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     // Bake the solid toy scenery into a single coloured mesh per group. Tiny
     // leaves and trunks keep their detail without a draw call for every part.
     function mergeSolids(parent){
-        const sources=parent.children.filter(node=>node.isMesh && !node.isInstancedMesh && !node.material.transparent && !node.material.map && !Array.isArray(node.material));
+        const sources=parent.children.filter(node=>node.isMesh && !node.isInstancedMesh && !node.material.transparent && !node.material.map && !node.material.vertexColors && !Array.isArray(node.material));
         if(sources.length<2)return;
         const positions=[],normals=[],colours=[],point=new THREE.Vector3(),normal=new THREE.Vector3(),normalMatrix=new THREE.Matrix3();
         for(const node of sources){node.updateMatrix();normalMatrix.getNormalMatrix(node.matrix);const data=node.geometry.index?node.geometry.toNonIndexed():node.geometry;
@@ -139,7 +153,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const heldHandle=new THREE.MeshLambertMaterial({color:'#ffffff',vertexColors:true});
     materials.set('resting-handle',restingHandle);materials.set('held-handle',heldHandle);
     handles.forEach(handle=>{handle.children[0].material=restingHandle;});
-    const visitors=model.interactive?createLivingMapVisitors(model,routes):null;
+    const visitors=model.interactive && !model.staticMap?createLivingMapVisitors(model,routes):null;
     const pegs=[];
     if(visitors){
         // A rounded foot and shoulder add a second visual layer within the
@@ -199,6 +213,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
     const projected = new THREE.Vector3();
     const rotation=new THREE.Quaternion();
     function guidance(elapsed){
+        if(model.staticMap)return 'Border Ranges · illustrative terrain, tracks and four Area Totems';
         const placed=placement?.snapshot() || [];
         if(placed.length===0)return 'Place a Totem at the visitor entrance';
         if(placed.length===1)return 'Place a Totem in the open forest';
@@ -206,6 +221,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
         return 'Three Totems · one connected place';
     }
     function totemLabel(elapsed){
+        if(model.staticMap)return model.title;
         const placed=placement?.snapshot() || [],current=placement?.current(elapsed),id=current?.id || placed.at(-1)?.id || 'map-entry';
         return id==='map-entry'?'Visitor entrance':id==='map-forest'?'Open forest':'Swale entrance';
     }
@@ -219,7 +235,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                 });
                 scheduledPlacements=placed;settledPaint=false;lastPaint=-Infinity;
             }
-            const bornFor=id=>model.interactive && !Number.isFinite(schedule.items[id]?.startAt)?0:demoLivingMapItemProgress(schedule,id,elapsed,reducedMotion);
+            const bornFor=id=>model.staticMap?1:model.interactive && !Number.isFinite(schedule.items[id]?.startAt)?0:demoLivingMapItemProgress(schedule,id,elapsed,reducedMotion);
             const progress=demoLivingMapProgress(elapsed,reducedMotion,schedule);
             if(model.interactive){progress.camera=1;progress.wide=1;progress.scenery=1;progress.settled=!placement?.current() && elapsed>Math.max(9800,(placed.at(-1)?.at || 0)+2800);}
             if(elapsed<lastPaint || lastReduced!==reducedMotion)settledPaint=false;
@@ -245,7 +261,7 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
                     const landscapePlant=model.concept && item.type==='plant';
                     const growth=landscapePlant?livingMapGreeneryProgress(elapsed,plantGrowthIndices.get(item.id),reducedMotion):born;
                     group.visible=landscapePlant || born>0;group.scale.setScalar(landscapePlant?Math.max(.001,growth):Math.max(.001,born));
-                    group.position.y=landscapePlant?0:item.type==='zone'?-.68*(1-born):.12*(1-born);
+                    group.position.y=terrainHeight(item.x,item.z)+(landscapePlant?0:item.type==='zone'?-.68*(1-born):.12*(1-born));
                     if(landscapePlant){orb.visible=born>0;orb.scale.setScalar(.38*born);orb.material.opacity=.32*born;}
                     const age=elapsed-schedule.items[item.id].startAt;
                     if(beacon){const colour='#5b9da6';beacon.material.color.set(colour);beacon.material.emissive.set(colour);beacon.material.opacity=.6;beacon.material.emissiveIntensity=.15;const collar=materials.get('totem-glass'+index);if(collar){collar.color.set(colour);collar.opacity=.85;}}
@@ -291,10 +307,11 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             }
             const {placed,bornFor}=update(elapsed,reducedMotion);
             ctx.drawImage(canvas,x,landY,w,landHeight);
+            if(rect.hideGuidance)return;
             ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';
             if(model.concept && !rect.hideGuidance && (!model.interactive || placed.length)){
                 ctx.font=`500 ${fontSize}px system-ui`;ctx.fillStyle='#f4f2df';
-                const title=model.interactive?translateNxrText(placed.length?totemLabel(elapsed):'Pick up the highlighted Totem'):demoLivingMapStage(elapsed,reducedMotion);
+                const title=model.staticMap?model.title:model.interactive?translateNxrText(placed.length?totemLabel(elapsed):'Pick up the highlighted Totem'):demoLivingMapStage(elapsed,reducedMotion);
                 const cloudWidth=Math.min(w-12,ctx.measureText(title).width+28);
                 ctx.fillStyle='rgba(19,48,37,.94)';ctx.beginPath();ctx.roundRect(x+(w-cloudWidth)/2,y,cloudWidth,tagHeight,tagHeight/2);ctx.fill();
                 ctx.fillStyle='#f4f2df';ctx.fillText(title,x+w/2,y+tagHeight/2,w-28);
@@ -342,6 +359,6 @@ export function createDemoLivingMapScene(model, { width = 1200, height = 560, pl
             }
             ctx.restore();
         },
-        dispose(){if(disposed)return;disposed=true;visitorTotemTitles.forEach(entry=>entry.texture.dispose());welcomeTexture?.dispose();timberTexture.dispose();geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
+        dispose(){if(disposed)return;disposed=true;visitorTotemTitles.forEach(entry=>entry.texture.dispose());mapLabelTextures.forEach(texture=>texture.dispose());welcomeTexture?.dispose();timberTexture.dispose();geometries.forEach(value=>value.dispose());materials.forEach(value=>value.dispose());renderer.dispose();renderer.forceContextLoss();}
     };
 }
