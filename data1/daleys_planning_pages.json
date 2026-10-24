@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "pages": [
+    {
+      "sku": "463",
+      "url": "https://www.daleysfruit.com.au/buy/golden-shower-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:19.086Z",
+      "specifications": {
+        "Preferred Climate": "Subtropical",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "10m+",
+        "Plants required to Pollinate": "1 (Self Pollinating)",
+        "Can it Handle Frosts?": "Yes",
+        "Amount of leaves in Winter?": "Some Leaves (Partly Deciduous)",
+        "Water Requirements": "Moderate Watering",
+        "Is it a Dwarf Fruit Tree?": "No (Full Size)",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)"
+      }
+    },
+    {
+      "sku": "62",
+      "url": "https://www.daleysfruit.com.au/buy/cordyline-terminalis-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:19.349Z",
+      "specifications": {
+        "Preferred Climate": "Tropical, Subtropical",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "2-3m",
+        "Plants required to Pollinate": "1 (Self Pollinating)",
+        "Can it Handle Frosts?": "Sometimes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Suitability in Pots": "Yes",
+        "Water Requirements": "Moderate Watering",
+        "Is it a Dwarf Fruit Tree?": "Can be pruned to 2m",
+        "Time to Fruit/Flower/Harvest": "2-3 Years",
+        "Sun or Shade": "Part (Sun:50-80%), Shade (Sun:0-50%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)"
+      }
+    },
+    {
+      "sku": "63",
+      "url": "https://www.daleysfruit.com.au/buy/cycad-sago-palm-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:19.615Z",
+      "specifications": {
+        "Preferred Climate": "Tropical, Subtropical",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "0-1m",
+        "Plants required to Pollinate": "3 Plants (Male and Female)",
+        "Can it Handle Frosts?": "Sometimes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Water Requirements": "Drought Hardy (Little Watering)",
+        "Time to Fruit/Flower/Harvest": "4-5 Years",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)",
+        "Fruiting/Harvest Months": "February, March"
+      }
+    },
+    {
+      "sku": "3324",
+      "url": "https://www.daleysfruit.com.au/buy/dwarf-date-palm-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:19.877Z",
+      "specifications": {
+        "Preferred Climate": "Tropical, Subtropical, Warm Temperate",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "1-2m",
+        "Plants required to Pollinate": "1 (Self Pollinating)",
+        "Can it Handle Frosts?": "Sometimes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Water Requirements": "Drought Hardy (Little Watering)",
+        "Is it a Dwarf Fruit Tree?": "No (Full Size)",
+        "Time to Fruit/Flower/Harvest": "5+ Years",
+        "Sun or Shade": "Full (Sun:80%-100%), Part (Sun:50-80%), Shade (Sun:0-50%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)"
+      }
+    },
+    {
+      "sku": "283",
+      "url": "https://www.daleysfruit.com.au/buy/sandalwood-red-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:20.158Z",
+      "specifications": {
+        "Preferred Climate": "Tropical",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "10m+",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Quarantine Restrictions to these Areas": "WA"
+      }
+    },
+    {
+      "sku": "2617",
+      "url": "https://www.daleysfruit.com.au/buy/english-oak-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:20.446Z",
+      "specifications": {
+        "Preferred Climate": "Cool Temperate",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "10m+",
+        "Can it Handle Frosts?": "Yes (Often below -2)",
+        "Amount of leaves in Winter?": "No Leaves (Deciduous)",
+        "Water Requirements": "Moderate Watering"
+      }
+    },
+    {
+      "sku": "888",
+      "url": "https://www.daleysfruit.com.au/buy/olive-arbequina-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:20.719Z",
+      "specifications": {
+        "Preferred Climate": "Arid (Dry)",
+        "Grown From": "Cutting",
+        "Max Height (when in the ground with good conditions)": "2-3m",
+        "Plants required to Pollinate": "1 (Self Pollinating)",
+        "Can it Handle Frosts?": "Yes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Suitability in Pots": "Yes with 35L+ Pot",
+        "Water Requirements": "Drought Hardy (Little Watering)",
+        "Is it a Dwarf Fruit Tree?": "Can be pruned to 2m",
+        "Time to Fruit/Flower/Harvest": "2-3 Years",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Moderately Alkaline (7.4-8.0)",
+        "Fruiting/Harvest Months": "April, May, June",
+        "Fertiliser": "All Purpose, Compost, PotAsh, Dolomite/Lime",
+        "Plant Width": "4-6m",
+        "Growth Rate": "Medium"
+      }
+    },
+    {
+      "sku": "3583",
+      "url": "https://www.daleysfruit.com.au/Dwarf-Plumcott-Spring-Satin.htm",
+      "retrievedAt": "2026-10-24T00:51:20.985Z",
+      "specifications": {
+        "Preferred Climate": "Warm Temperate",
+        "Grown From": "Grafted",
+        "Max Height (when in the ground with good conditions)": "1-2m",
+        "Plants required to Pollinate": "2 compatible plants (Pollination Required)",
+        "Can it Handle Frosts?": "Yes (Often below -2)",
+        "Amount of leaves in Winter?": "No Leaves (Deciduous)",
+        "Suitability in Pots": "Yes with 35L+ Pot",
+        "Water Requirements": "Moderate Watering",
+        "Is it a Dwarf Fruit Tree?": "Dwarf (1/2 Normal Size)",
+        "Time to Fruit/Flower/Harvest": "2-3 Years",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)",
+        "Fruiting/Harvest Months": "February, March",
+        "Fertiliser": "All Purpose, Compost",
+        "Plant Width": "1-2m",
+        "Growth Rate": "Medium"
+      }
+    },
+    {
+      "sku": "707",
+      "url": "https://www.daleysfruit.com.au/buy/araucaria-bidwilli-bunya-nut-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:21.267Z",
+      "specifications": {
+        "Preferred Climate": "Subtropical, Warm Temperate",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "10m+",
+        "Plants required to Pollinate": "1+ Beneficial (cross pollination helps with fruit set)",
+        "Can it Handle Frosts?": "Yes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Water Requirements": "Drought Hardy (Little Watering)",
+        "Is it a Dwarf Fruit Tree?": "No (Full Size)",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)"
+      }
+    },
+    {
+      "sku": "384",
+      "url": "https://www.daleysfruit.com.au/buy/scaly-zamia-cycad-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:21.519Z",
+      "specifications": {
+        "Preferred Climate": "Tropical, Subtropical",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "2-3m",
+        "Plants required to Pollinate": "2 compatible plants (Pollination Required)",
+        "Can it Handle Frosts?": "Sometimes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Water Requirements": "Drought Hardy (Little Watering)",
+        "Is it a Dwarf Fruit Tree?": "No (Full Size)",
+        "Time to Fruit/Flower/Harvest": "5+ Years",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)"
+      }
+    },
+    {
+      "sku": "3108",
+      "url": "https://www.daleysfruit.com.au/Pigeon-Pea.htm",
+      "retrievedAt": "2026-10-24T00:51:21.777Z",
+      "specifications": {
+        "Preferred Climate": "Tropical, Subtropical",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "2-3m",
+        "Plants required to Pollinate": "1 (Self Pollinating)",
+        "Can it Handle Frosts?": "Sometimes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Quarantine Restrictions to these Areas": "WA",
+        "Water Requirements": "Moderate Watering",
+        "Is it a Dwarf Fruit Tree?": "Can be pruned to 2m",
+        "Time to Fruit/Flower/Harvest": "First Year",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)"
+      }
+    },
+    {
+      "sku": "2171",
+      "url": "https://www.daleysfruit.com.au/buy/dwarf-orange-valencia-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:22.042Z",
+      "specifications": {
+        "Preferred Climate": "Subtropical, Warm Temperate",
+        "Grown From": "Grafted",
+        "Max Height (when in the ground with good conditions)": "1-2m",
+        "Plants required to Pollinate": "1 (Self Pollinating)",
+        "Can it Handle Frosts?": "Yes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Suitability in Pots": "Yes with 35L+ Pot",
+        "Water Requirements": "Frequent Watering",
+        "Is it a Dwarf Fruit Tree?": "Dwarf (1/2 Normal Size), Can be pruned to 2m",
+        "Time to Fruit/Flower/Harvest": "2-3 Years",
+        "Sun or Shade": "Full (Sun:80%-100%)",
+        "Preferred Soil Type": "Good Drainage",
+        "Soil pH": "Neutral (6.6-7.3pH)",
+        "Fruiting/Harvest Months": "September, October, November, December"
+      }
+    },
+    {
+      "sku": "73",
+      "url": "https://www.daleysfruit.com.au/buy/tagasaste-tree-lucerne.htm",
+      "retrievedAt": "2026-10-24T00:51:22.362Z",
+      "specifications": {
+        "Preferred Climate": "Arid (Dry), Warm Temperate",
+        "Grown From": "Seedling",
+        "Max Height (when in the ground with good conditions)": "2-3m",
+        "Can it Handle Frosts?": "Yes",
+        "Amount of leaves in Winter?": "All Leaves (Evergreen)",
+        "Quarantine Restrictions to these Areas": "WA"
+      }
+    },
+    {
+      "sku": "685",
+      "url": "https://www.daleysfruit.com.au/buy/blueberry-biloxi-tree.htm",
+      "retrievedAt": "2026-10-24T00:51:22.634Z",
+      "specifications": {
+        "Preferred Climate": "Subtropical, Warm Temperate",
+        "Grown From": "Cutting",
+        "Max Height (when in the ground with good conditions)": "1-2m",
+        "Plants required to Pollinate": "1+ Beneficial (cross pollination helps with fruit set)",
+        "Can it Handle Frosts?": "Yes",
+        "Amount of leaves in Winter?": "Some Leaves (Partly Deciduous)",
+        "Quarantine Restrictions to these Areas": "SA",
+        "Suitability in Pots": "Yes",
+        "Water Requirements": "Frequent Watering",
+        "Is it a Dwarf Fruit Tree?": "Can be pruned to 2m",
+        "Time to Fruit/Flower/Harvest": "2-3 Years",
+        "Sun or Shade": "Part (Sun:50-80%)",
+        "Preferred Soil Type": "Perfect Drainage (Sand/Volcanic)",
+        "Soil pH": "Moderately Acidic (5.5-6.5)",
+        "Fruiting/Harvest Months": "October, November, December",
+        "Fertiliser": "All Purpose, Compost, Sulphur",
+        "Growth Rate": "Medium",
+        "Planting tips": "Planting Blueberries"
+      }
+    }
+  ]
+}

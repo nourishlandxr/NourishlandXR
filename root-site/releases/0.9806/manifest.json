@@ -1,0 +1,173 @@
+{
+  "schema": "nourishland.root-overlay.v1",
+  "version": "0.9806",
+  "managedBy": "root-site-release",
+  "baselineVersion": "0.9800",
+  "scope": "Food Forest Table XR first test",
+  "files": [
+    {
+      "file": "education/index.html",
+      "bytes": 71889,
+      "sha256": "d0420ee71db4aea4129a15b6f596c8786ceb6829eebfe049743552201b73102c",
+      "previousSha256": "d0420ee71db4aea4129a15b6f596c8786ceb6829eebfe049743552201b73102c",
+      "mode": "0644"
+    },
+    {
+      "file": "index.html",
+      "bytes": 71884,
+      "sha256": "cdd8094bfccc4c49cbb2c8c50b35c014110fa6456b4b62b1401aa381dd05b1e7",
+      "previousSha256": "cdd8094bfccc4c49cbb2c8c50b35c014110fa6456b4b62b1401aa381dd05b1e7",
+      "mode": "0644"
+    },
+    {
+      "file": "platform/index.html",
+      "bytes": 71888,
+      "sha256": "7e680754a4f4758b4c40718ca3f026b39cfb77ab16c0a33cf7c7e98f288d3077",
+      "previousSha256": "7e680754a4f4758b4c40718ca3f026b39cfb77ab16c0a33cf7c7e98f288d3077",
+      "mode": "0644"
+    },
+    {
+      "file": "site/root-release.json",
+      "bytes": 260,
+      "sha256": "01750a04246292d188af73fc77ffbf049891a2b977feadccf949b659ec2e18ee",
+      "previousSha256": "002b4e0c20dd5800d509d197a0a317421429e46c3ddb60a75093cdae5bc9fffc",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/assets/food-forest/daleys-codebook.json",
+      "bytes": 2644,
+      "sha256": "0ef54c5c775e1668d6f9fd29ac7fb4532e9dcbdb09a3ee35302519932b8886b8",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/assets/food-forest/data-quality.json",
+      "bytes": 8652,
+      "sha256": "0f076f70912e7a979e457b510893074a009467133b66c47569959502d1e0d659",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/assets/food-forest/overrides.json",
+      "bytes": 297,
+      "sha256": "598053b5d978b33040fee809b0dcb54e41fa416e995e120b2c2ab06d86f773e1",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/assets/food-forest/plants.json",
+      "bytes": 7181571,
+      "sha256": "cb0f3f95308f1e573c44fe8a51dd1bac9fd580fc1f566633645df798adcc5c6d",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/entry.js",
+      "bytes": 3672,
+      "sha256": "dfb25036392eea265cba9fa70ca1371a38085182de75f73cd32a6b429385ea7c",
+      "previousSha256": "4061c7e92fe4d67d92b22243949b57958140b677e4d3d3177785c142211350ae",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/food-forest-workbench.css",
+      "bytes": 9680,
+      "sha256": "2bf3aefb3e41dcc484fe8adf000d7fb13505b3f516ca7a93ffb347ce4adc3b4c",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/screens/accessPortal.js",
+      "bytes": 21958,
+      "sha256": "72196abd43ed9b6bfd5cc84906a66e5e30f455fac618a0d3dc44b99e4fee7b68",
+      "previousSha256": "f88fd4913e43febdd94db1a6b7ea92622fb8926e23c54cf11ab57ea3e5a10b00",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/screens/demoChapters.js",
+      "bytes": 1665,
+      "sha256": "34e20313025df0019f225dab9ee3402ce21c1b93578937f7f8fe42a921a6d40e",
+      "previousSha256": "773a2652c5cc28c121ed44b0cac8edccf9a1744cf3f0d8921b7a45c26949b3ed",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/screens/foodForestWorkbench.js",
+      "bytes": 50616,
+      "sha256": "fa5d683be5e00ac19c1a165b96d677600d8932e65f2a67771a4845b8aee97d9a",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/buildInfo.js",
+      "bytes": 164,
+      "sha256": "d3fbf0e3bc3ed44a33d85c946d9c0569b5bb0e03d709f42d78f80b9b35185652",
+      "previousSha256": "8e5d2515562e81cccc312bdfab56077ec1ab5d429145793643a2abd523e683ef",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/daleysPlanningTraits.js",
+      "bytes": 12597,
+      "sha256": "2b39b271434e3585d866000e8d21b083ca4b5c985b153c4059ac90cbea939797",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/foodForestBoardModel.js",
+      "bytes": 2868,
+      "sha256": "6ed12093c1479e5cc514fcb9f1e2da1908b1fda18371f44427645959b4f7fa73",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/foodForestPieces.js",
+      "bytes": 8059,
+      "sha256": "86cc14926a842a8256515b696b7634e251806ead3923681b9d60f8065c75aabd",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/foodForestRoots.js",
+      "bytes": 1765,
+      "sha256": "74413cfdd00861a26a0b1be08730d8e2511b4d0cf9971f0ac802616804825dec",
+      "previousSha256": null,
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/pimoEditorIcons.js",
+      "bytes": 3795,
+      "sha256": "60e46ede2c90e3e27fc79cf5e12e37098d5f670d4d12bdf6ab4bf6db4fedef45",
+      "previousSha256": "a352e00f8196f746073419b47ed7e84e3697221b8d627a239c1d379947eeeda3",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/pimoGraph.js",
+      "bytes": 11367,
+      "sha256": "5649dd869394d44ae46cca49358219980a7d819feb9bab369dc957e9401353cd",
+      "previousSha256": "5a5b3ac200471506e1ba1a401a9c14740e446fc68dcc26254ff779be68da5ecc",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/pimoGraphTemplates.js",
+      "bytes": 4222,
+      "sha256": "4e08b679d46617daecb5c639f69c506d087bac12a626f4c94427573f88649844",
+      "previousSha256": "9b62972dc91771f75a483b9fb86d7b6244ba24829c1a8f838a014c0a23ae8c11",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/pimoXRPanel.js",
+      "bytes": 5366,
+      "sha256": "551a50bebcd7117598b16223d7005afb33c1013a2be32de2332e767aadcdeb26",
+      "previousSha256": "7018c0d0a44de5baaf245e8fca5e5fde402e29c7c08cd0e4db9625d80969b7ee",
+      "mode": "0644"
+    },
+    {
+      "file": "xr/services/pimoXRWorkbench.js",
+      "bytes": 7406,
+      "sha256": "841a7f0c5026cd9de5001c2f3b6ac34a105f0baef9cfef49f4ca4726d1b1f7bf",
+      "previousSha256": "da10ad249c8c99cd65aa8c119d7b6cd681fc80e3a3355c1df7abf3eb3835c642",
+      "mode": "0644"
+    }
+  ],
+  "backendChanged": false,
+  "routingChanged": false,
+  "wordPressChanged": false
+}

@@ -1,0 +1,5 @@
+{
+  "schemaVersion": 1,
+  "notes": "Optional reviewed corrections keyed by daleys:SKU. Keep them separate from imported source records. Each entry can supply layer, functions, canopySpreadM, spacingM, evidence and reviewer notes. No initial facts have been manually certified.",
+  "records": {}
+}

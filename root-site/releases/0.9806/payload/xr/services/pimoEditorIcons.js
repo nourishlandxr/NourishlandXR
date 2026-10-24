@@ -1,0 +1,47 @@
+const paths = {
+    back: '<path d="M20 12H4m6-6-6 6 6 6"/>',
+    preview:'<path d="M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    settings: '<path d="m12 3 2 3 4-1 1 4 3 3-3 2 1 4-4 1-4 3-2-3-4 1-1-4-3-3 3-2-1-4 4-1Z"/><circle cx="12" cy="12" r="3"/>',
+    tools: '<path d="M3 6h18M3 12h18M3 18h18"/><circle cx="8" cy="6" r="2"/><circle cx="16" cy="12" r="2"/><circle cx="10" cy="18" r="2"/>',
+    controller: '<path d="M8 4h8l4 14-2 2-5-5h-2l-5 5-2-2Z"/><path d="M7 9h5M9.5 6.5v5"/><circle cx="16" cy="10" r="1"/>',
+    hand: '<path d="M6 20 3 12l2-1 3 3V5h3v7-9h3v9-7h3v8-5h3v9l-3 5H9Z"/>',
+    check: '<path d="m4 12 5 5L20 6"/>',
+    square: '<rect x="3" y="3" width="18" height="18" rx="1"/>',
+    notes: '<rect x="2" y="3" width="7" height="7" rx="1"/><rect x="15" y="14" width="7" height="7" rx="1"/><path d="M5 10v8h10M13 3h9v7"/>',
+    flower: '<path d="m12 2 3 2v4l-3 2-3-2V4Zm0 12 3 2v4l-3 2-3-2v-4ZM5 6l3 2v4l-3 2-3-2V8Zm14 0 3 2v4l-3 2-3-2V8ZM5 14l3 2v4l-3 2-3-2v-4Zm14 0 3 2v4l-3 2-3-2v-4Z"/>',
+    sprout: '<path d="M12 21v-9M12 14C3 14 3 5 3 5s9 0 9 9ZM12 11c0-7 9-8 9-8s0 9-9 9"/>',
+    leaf: '<path d="M4 20 19 5M5 17C0 6 10 1 21 3c2 12-5 19-16 14Z"/>',
+    grow: '<path d="M12 21V9m0 5C5 14 4 7 4 7s8 0 8 7m0-4c0-5 7-7 7-7s1 7-7 7M3 21h18"/>',
+    spark: '<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3ZM20 2v4m-2-2h4"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    select: '<path d="m6 3 13 10-7 1-3 7Z"/>',
+    link: '<circle cx="5" cy="5" r="3"/><circle cx="19" cy="19" r="3"/><path d="M7 7c0 8 10 2 10 10"/>',
+    draw: '<path d="m4 20 4-1L21 6l-4-4L4 15ZM14 5l4 4M3 22h18"/>',
+    undo: '<path d="M8 4 3 9l5 5M3 9h10a7 7 0 0 1 0 14"/>',
+    redo: '<path d="m16 4 5 5-5 5m5-5H11a7 7 0 0 0 0 14"/>',
+    fit: '<path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5M8 8h8v8H8Z"/>',
+    arrange: '<rect x="9" y="2" width="6" height="5" rx="1"/><path d="M12 7v5M4 16v-4h16v4"/><rect x="1" y="16" width="6" height="5" rx="1"/><rect x="9" y="16" width="6" height="5" rx="1"/><rect x="17" y="16" width="6" height="5" rx="1"/>',
+    mic: '<rect x="9" y="2" width="6" height="13" rx="3"/><path d="M5 10v2a7 7 0 0 0 14 0v-2M12 19v3m-4 0h8"/>',
+    volume: '<path d="m3 9 5 0 5-5v16l-5-5H3ZM17 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14"/>',
+    mute: '<path d="m3 9 5 0 5-5v16l-5-5H3Zm14 0 5 6m0-6-5 6"/>',
+    download: '<path d="M12 2v13m-5-5 5 5 5-5M3 16v6h18v-6"/>',
+    upload: '<path d="M12 16V3m-5 5 5-5 5 5M3 16v6h18v-6"/>',
+    close: '<path d="m6 6 12 12m0-12L6 18"/>',
+    xr: '<path d="M4 6h16l2 4v8h-6l-4-4-4 4H2v-8ZM6 10h3m6 0h3"/>',
+    search: '<circle cx="10" cy="10" r="6"/><path d="m15 15 6 6"/>',
+    minus: '<path d="M5 12h14"/>',
+    delete: '<path d="M3 6h18M9 6V3h6v3m-10 0 1 15h12l1-15M10 10v7m4-7v7"/>',
+    copy: '<rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V3H3v13h5"/>',
+    hexagon: '<path d="m12 2 9 5v10l-9 5-9-5V7Z"/>',
+    organic: '<path d="M11 2c8-1 11 4 10 10s-3 11-12 9S0 14 3 8s3-6 8-6Z"/>',
+    circle: '<circle cx="12" cy="12" r="9"/>',
+    drawn: '<path d="M5 4c3-5 6 2 11 0s7 7 4 9 2 9-4 8-7 2-10-1-6-4-3-8-3-5 2-8Z"/>',
+    panel: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M14 3v18m3-13h1m-1 4h1"/>',
+    library: '<path d="M4 4h5v16H4Zm7 0h4v16h-4Zm6-1 4 1v16l-4-1Z"/>',
+    arrow: '<path d="M4 12h16m-6-6 6 6-6 6"/>'
+};
+export const pimoIcon = name => `<svg class="icon" viewBox="0 0 24 24" aria-hidden="true">${paths[name] || paths.spark}</svg>`;
+export const pimoIconButton = (action, name, label, extra = '') => {
+    const classes = extra.match(/class="([^"]*)"/)?.[1] || '';
+    return `<button type="button" class="pimo-icon ${classes}" data-action="${action}" aria-label="${label}" title="${label}" ${extra.replace(/class="[^"]*"/, '')}>${pimoIcon(name)}</button>`;
+};

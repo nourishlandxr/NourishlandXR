@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "status": "reviewable-import-mapping",
+  "source": "https://www.daleysfruit.com.au/Rainforest/primary.htm",
+  "verification": "Mappings checked against public specifications in data1/daleys_planning_pages.json. The current page details and the older API filter snapshot retain separate dates.",
+  "notes": "Height codes describe broad filter bands, not a species-specific height or canopy width. Product specifications can be more precise. Unknown codes stay unlabelled. Shipping/selling height in offers is never mature height. Polliniser links are separate from customers-also-bought. Raw Harvest filter values remain opaque because zero-based versus one-based month indexing is unverified.",
+  "unmappedFields": {
+    "Harvest": { "status": "unverified", "reason": "Observed values include 0 through 12; month indexing has not been confirmed. Values are retained as source codes, not calendar months." },
+    "Bonsai": { "status": "unmapped", "reason": "Raw codes are preserved until a supplier codebook is verified." },
+    "Dwarf": { "status": "unmapped", "reason": "Raw codes are preserved until a supplier codebook is verified." },
+    "stateRestrict": { "status": "unmapped", "reason": "State abbreviations and non-state tokens are preserved verbatim; restrictions need semantics review." },
+    "Frost_Tolerance2.N": { "status": "unmapped", "reason": "Raw code is preserved until its exact supplier meaning is verified." }
+  },
+  "fields": {
+    "Height": {
+      "1": {"label":"Under 1m","range":{"min":0,"max":1,"unit":"m","kind":"filter-band"}},
+      "2": {"label":"1-2m","range":{"min":1,"max":2,"unit":"m","kind":"filter-band"}},
+      "3": {"label":"2-5m","range":{"min":2,"max":5,"unit":"m","kind":"filter-band"}},
+      "4": {"label":"5-10m","range":{"min":5,"max":10,"unit":"m","kind":"filter-band"}},
+      "5": {"label":"Over 10m","range":{"min":10,"max":null,"unit":"m","kind":"filter-band"}}
+    },
+    "climateZone2": {"1":{"label":"Arid (Dry)"},"2":{"label":"Cool Temperate"},"5":{"label":"Subtropical"},"7":{"label":"Tropical"},"9":{"label":"Warm Temperate"}},
+    "Pollination2": {"1":{"label":"Self pollinating"},"2":{"label":"Cross pollination required"},"3":{"label":"Male and female plants"},"4":{"label":"Cross pollination beneficial"}},
+    "Frost_Tolerance2": {"H":{"label":"Yes"},"S":{"label":"Sometimes"},"V":{"label":"Yes (often below -2°C)"}},
+    "Deciduous2": {"E":{"label":"Evergreen"},"D":{"label":"Deciduous"},"S":{"label":"Semi-deciduous"}},
+    "TimeToFruit": {"1":{"label":"First year"},"2":{"label":"2-3 years"},"3":{"label":"4-5 years"},"4":{"label":"5+ years"}}
+  }
+}
