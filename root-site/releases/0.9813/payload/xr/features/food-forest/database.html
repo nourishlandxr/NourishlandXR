@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f1e6">
+  <title>Food Forest Plant Evidence Library · Nourishland</title>
+  <link rel="stylesheet" href="./database.css">
+</head>
+<body>
+  <main class="library" id="library" aria-busy="true">
+    <header class="masthead">
+      <a class="wordmark" href="/" aria-label="Nourishland home">nourishland<span>FOOD FOREST CREATOR</span></a>
+      <a class="back-link" href="../../index.html">Back to Nourishland</a>
+    </header>
+    <section class="intro">
+      <p class="eyebrow">PLANT COLLECTION · SOURCE REVIEW</p>
+      <h1>Explore the plant database</h1>
+      <p class="lede">Browse the catalogue as imported. Each record keeps its source evidence visible so you can see what is known, what is only a candidate, and what still needs review.</p>
+      <div class="stats" id="stats" aria-live="polite"><div class="stat"><strong>Loading</strong><span>plant records</span></div></div>
+      <p class="source-note" id="source-note">Loading the local catalogue…</p>
+    </section>
+    <section class="browser" aria-label="Plant database browser">
+      <div class="catalog-column">
+        <div class="filters">
+          <label class="search-label" for="search">Search plants, names, descriptions, and source categories</label>
+          <input id="search" type="search" placeholder="Try “pigeon pea”, “nitrogen”, or a botanical name" autocomplete="off">
+          <div class="filter-grid">
+            <label>Supplier climate<select id="climate"><option value="">All climates</option></select></label>
+            <label>Source category<select id="category"><option value="">All categories</option></select></label>
+            <label>Evidence function<select id="function"><option value="">All functions</option></select></label>
+            <label>Record view<select id="view"><option value="plants">Plant candidates</option><option value="all">All imported records</option><option value="identity">Needs botanical identity</option><option value="specifications">Has live specifications</option><option value="unreviewed">Unreviewed plants</option></select></label>
+          </div>
+          <div class="list-heading"><strong id="result-count">Preparing records…</strong><span id="page-label"></span></div>
+        </div>
+        <div class="results" id="results" role="listbox" aria-label="Plant records"></div>
+        <nav class="pagination" aria-label="Result pages"><button id="previous" type="button" aria-label="Previous results" disabled>← Previous</button><button id="next" type="button" aria-label="Next results" disabled>Next →</button></nav>
+      </div>
+      <article class="detail" id="detail" aria-live="polite"><div class="empty-detail"><span class="loader"></span><p>Reading the database…</p></div></article>
+    </section>
+    <footer class="footer"><span>Read-only catalogue view · Supplier records are not planting recommendations.</span><a href="../../assets/food-forest/data-quality.json">Open data quality report</a></footer>
+  </main>
+  <script type="module" src="./database.js"></script>
+</body>
+</html>

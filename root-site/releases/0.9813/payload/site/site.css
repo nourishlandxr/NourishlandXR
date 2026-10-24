@@ -1,0 +1,28 @@
+@import url('./page-transitions.css?v=0.9813');
+.site-art{width:100%;height:auto;display:block;border-radius:4px}.simple-drawing:has(.site-art){background:#f4eee3}.simple-drawing .site-art{object-fit:contain;max-height:none}.root-copy{max-width:840px;padding-bottom:80px}.root-copy p{max-width:70ch}.place-links{display:grid;gap:12px;margin:30px 0}.place-links a{padding:18px 0;border-bottom:1px solid #24453725}.site-404{min-height:100svh;display:grid;place-content:center;padding:30px;background:#f3f0e6;color:#193e32;font:18px/1.6 system-ui}.site-404 h1{font:400 clamp(36px,7vw,70px)/1.1 Georgia,serif}.site-404 a{color:inherit}.simple-page[data-route=about] h2{font-size:clamp(28px,4vw,45px);margin:40px 0 20px}.simple-page[data-route=about] img{max-width:100%;height:auto}
+
+/* A short introduction with visible routes into the learning and pilot. */
+.education-intro{display:grid;grid-template-columns:1.12fr 1fr;gap:clamp(32px,6vw,88px);align-items:end;padding-block:48px 36px}
+.education-intro .eyebrow{margin-bottom:16px}
+.education-intro h1{font-size:clamp(36px,4.1vw,56px);line-height:1.13;max-width:22ch;margin:0}
+.education-copy p{font-size:17px;line-height:1.65;max-width:49ch}
+.education-copy p+p{margin-top:12px}
+.education-paths{display:grid;grid-template-columns:1fr 1fr;column-gap:clamp(28px,5vw,72px);padding-bottom:48px}
+.education-paths>a{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:23px 0;border-top:1px solid var(--line);color:var(--ink);text-decoration:none}
+.education-paths h2{font-size:clamp(25px,2.5vw,34px);line-height:1.2;margin:0 0 8px}
+.education-paths p{font-size:15px;line-height:1.5;color:var(--soft);max-width:44ch;margin:0}
+.education-paths>a>span{flex:none;font-size:23px;transition:transform .18s ease}
+.education-paths>a:hover h2{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:5px}
+.education-paths>a:hover>span{transform:translate(2px,-2px)}
+.education-paths>a:focus-visible{outline:2px solid var(--ink);outline-offset:6px}
+.forest-start{grid-template-columns:1fr}
+@media(max-width:760px){
+ .education-intro{grid-template-columns:1fr;gap:20px;padding-block:30px 24px}
+ .education-intro h1{font-size:clamp(32px,8.5vw,43px)}
+ .education-copy p{font-size:16px;line-height:1.6}
+ .education-paths{grid-template-columns:1fr;padding-bottom:30px}
+ .education-paths>a{padding-block:18px}
+ .education-paths h2{font-size:27px}
+ .education-paths p{font-size:14px}
+}
+@media(prefers-reduced-motion:reduce){.education-paths>a>span{transition:none}}

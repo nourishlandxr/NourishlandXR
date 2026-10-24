@@ -1,0 +1,127 @@
+/* A sculpture and its readable companion share a composition, never a stack of menus. */
+.living-balloon,#education .education-summary.living-balloon,.journey-detail.living-balloon{
+ border-radius:24px 48px 24px 24px;border:1px solid #a5b29666;
+ background:radial-gradient(ellipse at 0 0,#fffcf3 0,transparent 65%),linear-gradient(145deg,#f6f2e7,#e5e9dc);
+ box-shadow:inset 0 2px 1px #fffffff0,0 18px 50px #324d3212;
+ padding:34px 30px 26px;overflow:auto;scrollbar-width:thin;scrollbar-color:#a2b399 transparent;
+}
+.living-balloon:before,#education .education-summary:before{inset:10px;border:1px solid #fff9;border-radius:16px 38px 16px 16px;background:none;pointer-events:none}
+.living-balloon:after{width:6px;height:42px;left:0;right:auto;top:42px;bottom:auto;border:0;border-radius:0 4px 4px 0;background:var(--balloon-accent);box-shadow:none}
+.living-balloon .balloon-close{top:6px;right:8px}
+.living-balloon :is(h2,h3){font:500 clamp(25px,2.4vw,34px)/1.15 var(--sans);letter-spacing:-.04em;max-width:19ch;margin-bottom:18px}
+.living-balloon>p:not(.eyebrow){font-size:16px;line-height:1.65}
+.living-balloon>a,#education .education-summary>a,.journey-detail.living-balloon>a{
+ display:flex;align-items:center;justify-content:space-between;min-height:56px;gap:14px;margin-top:22px;padding:12px 16px;
+ border:1px solid #68806a55;border-radius:12px;background:#dbe4d1;color:#254c38;
+ font:600 16px/1.35 var(--sans);text-decoration:none;text-align:left;box-shadow:inset 0 1px #ffffffe0;
+}
+.living-balloon>a:hover{background:#ccdabe}.living-balloon .eyebrow{margin-bottom:16px}
+.journey-detail.living-balloon{width:min(340px,30%);max-width:none}
+.journey-detail .journey-availability{margin:14px 0 0!important}
+.journey-breadcrumb{gap:5px}
+
+/* Stable petals: the hover changes the light, never the position of the cell. */
+#education .knowledge-flower{width:min(760px,100%);--petal-x:195px;--petal-y:116px;--petal-width:182px;--petal-height:142px}
+#education .learning-orb{width:180px;height:180px;top:46%}
+#education .learning-orb canvas{width:180px;height:180px}
+#education .learning-orb .orb-fallback{width:136px;height:136px;left:22px;top:22px}
+#education .flower-cell{filter:drop-shadow(0 6px 3px #213e2919);transition:filter .25s}
+#education .flower-cell .cell-face{stroke-width:1.5;fill:color-mix(in srgb,var(--cell) 28%,#ede8d6);stroke:color-mix(in srgb,var(--cell) 50%,#e4dcc0)}
+#education .flower-links [data-education-choice]{color:color-mix(in srgb,var(--cell) 65%,#183b2c)}
+#education .flower-cell .cell-light{opacity:.8;transform:scale(.93);transform-origin:center;stroke:#fffaeaaa;stroke-width:.8}
+#education .flower-links [data-education-choice]:is(:hover,:focus-visible) .flower-cell{transform:none;filter:drop-shadow(0 8px 9px #213e2930) brightness(1.08)}
+#education .flower-links [aria-expanded=true] .cell-face{stroke:#fff8df;stroke-width:3}
+#education .flower-petal-copy{gap:8px;padding:19px}
+#education .flower-petal-copy strong{font-size:17px;line-height:1.2}
+#education .flower-petal-copy small{font-size:11px}
+#education .petal-icon{width:30px;height:30px}
+#education .flower-threads{width:690px;opacity:.6}
+#education .education-experience{max-width:1200px}
+#education .education-summary{width:350px;max-height:calc(100% - 20px);margin:0;padding:34px 30px 26px}
+#education .education-balloon-tether{opacity:.35;z-index:0}
+#education .education-after-orb{text-align:center;max-width:670px;margin-top:8px}
+
+/* The botanical wheel is fully contained. Three illustrated entries live below it. */
+.forest-orbit[data-introduction]{display:flex;flex-direction:column;justify-content:center}
+.forest-orbit[data-introduction] .forest-wheel{top:40%;width:min(700px,100%);height:calc(100% - 152px);max-height:650px;overflow:visible;mask-image:none}
+.forest-orbit[data-introduction] .forest-heart{top:40%;width:min(250px,35vw);height:min(250px,35vw)}
+.forest-orbit[data-introduction] .forest-node{width:195px;min-height:124px;bottom:5px;padding:14px 12px;gap:5px;border:1px solid #b0bb9f70;border-radius:18px;background:linear-gradient(145deg,#fffbefbb,#e1e7d6a6);box-shadow:inset 0 1px #fff,0 6px 18px #264b3010;text-decoration:none}
+.forest-orbit[data-introduction] .forest-node:nth-child(1){--nx:-218px}.forest-orbit[data-introduction] .forest-node:nth-child(3){--nx:218px}
+.forest-orbit[data-introduction] .forest-node i{position:absolute;left:50%;top:-5px;width:7px;height:7px;margin-left:-3px}
+.forest-orbit[data-introduction] .forest-node span{font-size:17px;font-weight:600;text-shadow:none}
+.forest-orbit[data-introduction] .forest-entry-art{height:65px;width:85px;filter:drop-shadow(0 3px 2px #264b3020);transition:filter .25s}
+.forest-orbit[data-introduction] .forest-node:hover{background:#f8f6e9;text-decoration:none;border-color:#79916e}
+.forest-orbit[data-introduction] .forest-node:hover .forest-entry-art{filter:drop-shadow(0 4px 3px #264b3030)}
+.forest-orbit[data-introduction] .forest-node:is(:hover,:focus-visible) .forest-entry-art{transform:none}
+.forest-orbit[data-introduction] .forest-node[data-highlighted=true]{background:#f8f6e9;border-color:#79916e;color:#193f2d}
+.forest-orbit[data-introduction] .forest-invitation{bottom:8%}
+
+@media(min-width:760px) and (max-width:1050px){
+ #education .education-summary{width:290px;padding:30px 22px 20px}
+}
+@media(max-width:759px){
+ .living-balloon,#education .education-summary.living-balloon,.journey-detail.living-balloon{padding:29px 22px 19px;border-radius:19px 36px 19px 19px}
+ .living-balloon :is(h2,h3){font-size:25px;max-width:24ch;margin-bottom:10px}
+ .living-balloon>p:not(.eyebrow){font-size:14px;line-height:1.55;margin-bottom:10px}
+ .living-balloon>a,#education .education-summary>a,.journey-detail.living-balloon>a{min-height:50px;margin-top:14px;font-size:15px;padding:10px 12px}
+ .living-balloon .eyebrow{margin-bottom:10px;font-size:9px}
+ .journey-detail.living-balloon{width:calc(100% - 32px)}
+ #education .knowledge-flower{width:100%;--petal-x:100px;--petal-y:104px;--petal-width:145px;--petal-height:126px}
+ #education .learning-orb,#education .learning-orb canvas{width:130px;height:130px}
+ #education .learning-orb .orb-fallback{left:16px;top:16px;width:98px;height:98px}
+ #education .flower-petal-copy{gap:6px;padding:18px 13px}#education .flower-petal-copy strong{font-size:14px}#education .flower-petal-copy small{font-size:10px}
+ #education .petal-icon{width:24px;height:24px}
+ #education .education-summary{width:calc(100% - 32px);max-height:57%}
+ .forest-orbit[data-introduction] .forest-wheel{top:39%;height:calc(100% - 130px);width:100%}
+ .forest-orbit[data-introduction] .forest-heart{top:39%}
+ .forest-orbit[data-introduction] .forest-node{width:104px;min-height:108px;padding:10px 4px;bottom:0;gap:3px}
+ .forest-orbit[data-introduction] .forest-node:nth-child(1){--nx:-113px}.forest-orbit[data-introduction] .forest-node:nth-child(3){--nx:113px}
+ .forest-orbit[data-introduction] .forest-node span{font-size:13px}
+ .forest-orbit[data-introduction] .forest-entry-art{height:55px;width:65px}
+}
+@media(max-width:759px) and (max-height:740px){
+ #education .education-intro{padding-top:8px;padding-bottom:6px}
+ #education .education-intro h1{font-size:25px}
+ #education .knowledge-flower{--petal-y:88px;--petal-height:112px}
+ #education .education-after-orb{font-size:12px}
+ #education .education-summary{max-height:61%}
+ .journey-detail.living-balloon{padding-block:25px 16px}.journey-detail h3{font-size:23px!important}
+ .journey-detail .journey-availability{display:none}
+}
+@media(prefers-reduced-motion:reduce){.knowledge-flower,.forest-entry-art,.living-balloon{transition:none!important}}
+/* Keep the selected sculpture generous; its introduction already carries the detail. */
+#platform:has([data-journey]:not([data-journey=overview])) .platform-intro>p{display:none}
+#platform:has([data-journey]:not([data-journey=overview])) .platform-intro{padding-bottom:0}
+@media(min-width:760px) and (max-height:740px){
+ #education .knowledge-flower{--petal-y:78px;--petal-height:114px}
+ #education .learning-orb,#education .learning-orb canvas{width:140px;height:140px}
+ #education .flower-petal-copy{gap:4px;padding:14px}
+ #education .flower-petal-copy strong{font-size:14px}
+ #education .flower-petal-copy small{font-size:10px}
+ #education .petal-icon{width:23px;height:23px}
+ .journey-detail.living-balloon{padding:28px 24px 20px}
+ .journey-detail.living-balloon h3{font-size:28px}
+ .journey-detail.living-balloon>p:not(.eyebrow){font-size:14px;line-height:1.5}
+ .journey-detail.living-balloon .journey-availability{display:none}
+ .journey-detail.living-balloon>a{margin-top:14px;min-height:48px;font-size:15px}
+}
+@media(max-width:759px){
+ #platform:has([data-journey]:not([data-journey=overview])) .platform-intro h1{font-size:24px}
+ .journey-detail.living-balloon>p:not(.eyebrow){font-size:14px;line-height:1.5}
+ .journey-detail.living-balloon .journey-availability{font-size:10px!important;margin-top:6px!important}
+}
+/* The connector breathes through travelling light, without repainting a blurred full-screen SVG. */
+.journey-connection path,.journey-ground-seeds circle{filter:none}
+.journey-connection .journey-ground-flow{filter:none}
+.journey-sculpture img{filter:none}
+#platform [data-stacked=true] .journey-detail.living-balloon{width:min(440px,calc(100% - 32px));max-width:none}
+/* Decorative threads must not turn the scene into a focus-scroll container. */
+#education,#education .education-experience{overflow:clip}
+#education .education-summary:not([hidden]){display:flex;flex-direction:column}
+#education .education-summary>.eyebrow,#education .education-summary>h2,#education .education-summary>a{flex:none}
+#education .education-summary>[data-summary-copy]{min-height:0;overflow:auto;scrollbar-width:thin;flex:1}
+@media(max-width:759px){#education .flower-threads{width:335px;height:300px}}
+/* Keep the destination action visible when a compact device needs a reading area. */
+.journey-detail.living-balloon:not([hidden]){display:flex;flex-direction:column}
+.journey-detail.living-balloon>.eyebrow,.journey-detail.living-balloon>h3,.journey-detail.living-balloon>.journey-availability,.journey-detail.living-balloon>a{flex:none}
+.journey-detail.living-balloon>[data-detail-copy]{min-height:0;flex:1;overflow:auto;scrollbar-width:thin}

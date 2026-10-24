@@ -74,7 +74,7 @@ jobs:
           find . -type f | sort > "$backup/new-files.txt"
           while IFS= read -r relative; do
             relative="${relative#./}"
-            case "$relative" in *.mjs|app/services/*.js|package.json) ;; *) echo "Unexpected artifact: $relative"; exit 1;; esac
+            case "$relative" in *.mjs|app/services/*.js|package.json|data1/daleys_plant_catalog.json) ;; *) echo "Unexpected artifact: $relative"; exit 1;; esac
             if test -f "$root/$relative"; then
               mkdir -p "$backup/$(dirname "$relative")"
               cp -p "$root/$relative" "$backup/$relative"
