@@ -28,77 +28,77 @@
       "file": "xr/entry.js",
       "bytes": 3749,
       "sha256": "3508da425a49ea234e24d5e5062e10eb0e2cf0ea9af1ef6c38d47d87343e2151",
-      "previousSha256": "8ce849fe7c4b23f2d5c360f05ba24d4ae5a39ee1083e7c3fff95f8847aeda8cc",
+      "previousSha256": "3508da425a49ea234e24d5e5062e10eb0e2cf0ea9af1ef6c38d47d87343e2151",
       "mode": "0644"
     },
     {
       "file": "xr/main.js",
       "bytes": 70714,
       "sha256": "7b494633afc65a6ed154b7b75c995895036798fa592cde7f37ad00caa11012a9",
-      "previousSha256": "a260fe426c475ba60ff97d9f4bb523f7f035fe7bc1ca67fbd259634bf1d2a060",
+      "previousSha256": "7b494633afc65a6ed154b7b75c995895036798fa592cde7f37ad00caa11012a9",
       "mode": "0644"
     },
     {
       "file": "xr/screens/temporaryArDemo.js",
       "bytes": 524849,
       "sha256": "3446d913cdc01015c6798abf8390c43430135f284472cebfd21839fc35a8c798",
-      "previousSha256": "c2966f3d2c2f27d3ff5b23b251210b50030d1892b08080737dc359a4f0956959",
+      "previousSha256": "3446d913cdc01015c6798abf8390c43430135f284472cebfd21839fc35a8c798",
       "mode": "0644"
     },
     {
       "file": "xr/features/ar-demo/demoJourneyContent.js",
       "bytes": 15507,
       "sha256": "e92f8b0dc39816118c4bdd8f42db1325f81b75c87a63e1f3b6432ce4be129ec6",
-      "previousSha256": "d2319aff69598fdbc50f2bdbb6e9bb8c47d8e1909d7c8299dfc891ef4acbb405",
+      "previousSha256": "e92f8b0dc39816118c4bdd8f42db1325f81b75c87a63e1f3b6432ce4be129ec6",
       "mode": "0644"
     },
     {
       "file": "xr/services/buildInfo.js",
-      "bytes": 426,
-      "sha256": "91439e03e3afcc156f8a3c7b44e62766b268219497ae05e416f59cd7c75ba123",
-      "previousSha256": "a5c8c67796226dd3597e53689cdd112714b4c858027912b4727867ab13c5e87b",
+      "bytes": 199,
+      "sha256": "8c1f178c0a13eda87e24b9b79b945b7df0355b0a11613add2a01ab7e82bf45ad",
+      "previousSha256": "91439e03e3afcc156f8a3c7b44e62766b268219497ae05e416f59cd7c75ba123",
       "mode": "0644"
     },
     {
       "file": "xr/services/demoChapters.js",
       "bytes": 1004,
       "sha256": "348a3b8737588d485bacc873a67fb900f5488b9012d31104b4fd1cc7703a286b",
-      "previousSha256": "41b2e1b079e3b8fef3780ec6a8ad7401bfdcd62e11568e6357392111e7cbb477",
+      "previousSha256": "348a3b8737588d485bacc873a67fb900f5488b9012d31104b4fd1cc7703a286b",
       "mode": "0644"
     },
     {
       "file": "xr/services/demoLivingMapModel.js",
       "bytes": 11770,
       "sha256": "b57f9d380be051f5a0013773a399e192cd5f17459be5c91cd27ae24265552212",
-      "previousSha256": "95ceb45dc8e0d11965ab9881af0b60b2d3d1d5ffc0d2809a2ac679ac5d5777ba",
+      "previousSha256": "b57f9d380be051f5a0013773a399e192cd5f17459be5c91cd27ae24265552212",
       "mode": "0644"
     },
     {
       "file": "xr/services/demoLivingMapScene.js",
       "bytes": 33660,
       "sha256": "528b0ab19955e612aeec8896dd58c5464ec23640997721425a78ef4264ba87a0",
-      "previousSha256": "054214dded1a285ac8e0a3f12fa4442d0afbb6fc149891ff3357686fd223cbd7",
+      "previousSha256": "528b0ab19955e612aeec8896dd58c5464ec23640997721425a78ef4264ba87a0",
       "mode": "0644"
     },
     {
       "file": "xr/services/demoBorderRangesSeed.js",
       "bytes": 15317,
       "sha256": "0b8cec387c6803e27c6871d112c57126cd6b310c02d868bc3e473a20d218578f",
-      "previousSha256": null,
+      "previousSha256": "0b8cec387c6803e27c6871d112c57126cd6b310c02d868bc3e473a20d218578f",
       "mode": "0644"
     },
     {
       "file": "xr/services/demoBorderRangesTerrain.js",
       "bytes": 2625,
       "sha256": "00550e445a4a34da87bdedc1500a4b0ecdfa8c09c5d043b2296242eb4e7a1834",
-      "previousSha256": null,
+      "previousSha256": "00550e445a4a34da87bdedc1500a4b0ecdfa8c09c5d043b2296242eb4e7a1834",
       "mode": "0644"
     },
     {
       "file": "site/root-release.json",
       "bytes": 253,
       "sha256": "a41734642ade08dd0cde260083289188d7fa36334af770badf2dc434a9dbd5ce",
-      "previousSha256": "2534e64f6b472e32dc8e2a66bcd141b23d760930ccdc6d5e4b384d671c07dcf8",
+      "previousSha256": "a41734642ade08dd0cde260083289188d7fa36334af770badf2dc434a9dbd5ce",
       "mode": "0644"
     }
   ],

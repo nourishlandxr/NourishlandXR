@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import {execFileSync} from 'node:child_process';
 import {versionModuleImports} from './release-module-urls.mjs';
 import {allowedFrontendFile} from './frontend-boundary.mjs';
 import {releaseHtmlFiles} from './canonical-pages.mjs';
@@ -31,7 +32,10 @@ for(const file of ['index.html','education/index.html','platform/index.html']){
 for(const file of ['entry.js','main.js','screens/temporaryArDemo.js','features/ar-demo/demoJourneyContent.js',
     'services/buildInfo.js','services/demoChapters.js','services/demoLivingMapModel.js','services/demoLivingMapScene.js',
     'services/demoBorderRangesSeed.js','services/demoBorderRangesTerrain.js']){
-    const bytes=Buffer.from(versionModuleImports(fs.readFileSync(path.join('app',file),'utf8'),version));
+    const source=file==='services/buildInfo.js'
+        ? `export const BUILD_INFO = Object.freeze(${JSON.stringify({version,commit:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),builtAt:new Date().toISOString(),target:'production'},null,4)});\n`
+        : fs.readFileSync(path.join('app',file),'utf8');
+    const bytes=Buffer.from(versionModuleImports(source,version));
     candidates.set('xr/'+file,{bytes});
 }
 candidates.set('site/root-release.json',{bytes:Buffer.from(JSON.stringify({...marker,version,publishedAt:new Date().toISOString(),scope:'Demo: Border Ranges IMAP, crafted Totems and deferred LIMO'},null,2)+'\n'),live:liveMarker});
