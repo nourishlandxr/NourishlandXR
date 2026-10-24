@@ -5,7 +5,7 @@ import {normalizeFoodForestStudy,sculptForestTerrain,sampleForestTerrain,forestD
 import {handleProjectForestBoards} from '../tools/projectForestBoards.mjs';
 const board=()=>normalizeFoodForestStudy({widthM:20,depthM:12,boundary:foodForestBoundary(),pieces:[{id:'tree',layer:'small-tree',variant:0,x:0,z:0,size:1,plantId:'daleys:1',canopyDiameterM:6}],wishlist:['daleys:1']});
 test('V1 studies upgrade without changing placements or personal collections',()=>{
-    const b=board();assert.equal(b.schemaVersion,3);assert.equal(b.pieces[0].x,0);assert.equal(b.pieces[0].plannedHeightM,6);assert.equal(b.terrain.heights.length,425);assert.deepEqual(b.wishlist,['daleys:1']);assert.equal(b.growth,2);
+    const b=board();assert.equal(b.schemaVersion,4);assert.equal(b.pieces[0].x,0);assert.equal(b.pieces[0].plannedHeightM,6);assert.equal(b.terrain.heights.length,425);assert.deepEqual(b.wishlist,['daleys:1']);assert.equal(b.growth,2);
     assert.throws(()=>normalizeFoodForestStudy({...b,pieces:[b.pieces[0],b.pieces[0]]}),/duplicate/);assert.throws(()=>normalizeFoodForestStudy({...b,terrain:{...b.terrain,heights:[NaN]}}),/terrain/);
 });
 test('terrain brush is local, bounded, reversible and accepts no outside strokes',()=>{

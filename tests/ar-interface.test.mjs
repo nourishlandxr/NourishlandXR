@@ -1408,7 +1408,8 @@ test('welcome Try It Now AR keeps one live placement control and no dashboard pa
     assert.match(styles, /\.tryit-demo\.has-companion-actions \.tryit-demo-footer \{ display:none !important; \}/);
     assert.match(source, /function demoPanelActions\(\)/);
     assert.match(source, /onUtilityAction:handleDemoPanelAction/);
-    assert.match(source, /id:'lim-visibility',label:'Learning Pathways'/);
+    assert.doesNotMatch(source, /id:'lim-visibility',label:'Learning Pathways'/);
+    assert.match(source, /if\(action==='lim-visibility'\)\{showDemoLivingMap\(\);return;\}/);
     assert.match(source, /if\(action==='recenter'\)\{infoPanel\?\.recenter\(\)/);
     assert.match(source, /id:'back',label:'‹',ariaLabel:'Previous',description:'Previous',disabled:/);
     assert.match(immersiveSelectHandler, /if \(placementReady\) return pressPlacementPointer\(\);/);

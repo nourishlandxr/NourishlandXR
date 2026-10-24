@@ -1,0 +1,1063 @@
+import { isArActive as isVisitorArActive } from "./services/arNote.js?v=0.9818";
+import { launchCreatorArFromPage } from "./services/creatorArNavigation.js?v=0.9818";
+import {isDesktopLearningBookTarget} from "./services/desktopLearningBookTarget.js?v=0.9818";
+import { enhanceProductScreen } from "./services/productExperience.js?v=0.9818";
+import { renderCreatorWorkspace } from "./services/creatorWorkspaceRouting.js?v=0.9818";
+import { renderVisitorExperience, clearVisitorCache, cancelVisitorExperience } from "./screens/visitorExperience.js?v=0.9818";
+import { SiteManager } from "./managers/siteManager.js?v=0.9818";
+import { renderLaunchScreen } from "./screens/launch.js?v=0.9818";
+import {renderAccessPortal} from "./screens/accessPortal.js?v=0.9818";
+import {portalUrl} from "./services/portalRoutes.js?v=0.9818";
+import { renderBiomeWheelXR } from "./screens/biomeWheelXR.js?v=0.9818";
+import { renderStudio } from "./screens/studio.js?v=0.9818";
+import { renderSites, renderProjectFormScreen, setProjectTemplate } from "./screens/sites.js?v=0.9818";
+import { createProjectSite, deleteProjectSite, renderProjectSiteForm, renderProjectSites, updateProjectSite } from "./screens/projectSites.js?v=0.9818";
+import { renderSiteDashboard, renderSiteOverview, renderSiteAssets, renderSiteExperiences, renderSitePublish } from "./screens/siteDashboard.js?v=0.9818";
+import { renderSiteLocations, renderLocationFormScreen, renderLocationDetailScreen } from "./screens/siteLocations.js?v=0.9818";
+import { renderSiteMap } from "./screens/siteMap.js?v=0.9818";
+import { renderPlaceAssets } from "./screens/placeAssets.js?v=0.9818";
+import { renderAssetWorkspace, renderAssetGeneral } from "./screens/assetWorkspace.js?v=0.9818";
+import { renderV1Editors, renderV1General, renderV1PlantProfile, renderV1Anchors } from "./components/v1Editors.js?v=0.9818";
+import { exitAr, renderArFailure, renderArPreparation, renderExplorerGps, renderExplorerMarker, renderExplorerMarkers, renderExplorerPlaces, renderExplorerPlantProfile, renderExplorerProjects, renderExplorerSites, renderVisitorLocationExperience, renderVisitorLocationIntro, renderXrProjects, renderHillyardsExplorer, resetArPlacement, startExplorerAr, startLocationAr, startWelcomeAr, startArWithSkipCheck, toggleArTechnicalDetails, toggleGlobalAr, updateExplorerGps } from "./screens/explorer.js?v=0.9818";
+import { openTemporaryArDemoWindow, startTemporaryArDemo } from "./screens/temporaryArDemo.js?v=0.9818";
+import { startArMode, exitArMode, isArModeActive, getCreatorPerformanceSnapshot } from "./screens/arMode.js?v=0.9818";
+import { workspaceUrl, suggestedCreatorWorkspace } from "./services/creatorWorkspaceMode.js?v=0.9818";
+import { cancelGlobalPlantPreview, confirmGlobalPlantImport, continueManualPlantCreation, createFieldArea, refreshFieldLocation, renderFieldMarker, reviewGlobalPlantImport, saveFieldMarker, searchGlobalPlantOptions, selectFieldPlace, selectFieldPlantProfile, selectFieldProject, selectFieldSite, selectGlobalImportExistingPlant, selectGlobalImportRecommended, selectGlobalPlant, setFieldMarkerType, setGlobalImportDestination, setPlantSearchScope } from "./screens/fieldMarker.js?v=0.9818";
+import { renderFieldTest } from "./screens/fieldTest.js?v=0.9818";
+import { renderDemoHome } from "./screens/demo.js?v=0.9818";
+import { deleteHillyardsMarker, openHillyardsEntry, openHillyardsMarkerActions, openHillyardsPlantProfileEditor, openMarkerPlantProfile, renderCheckpointForm, renderComingSoon, renderDemoProjects, renderFirstSteps, renderGlobalPlantList, renderHillyardsGuidelines, renderHillyardsProject, saveCheckpoint, editDraftMarker, saveDraftMarker, editDraftPlantProfile, saveDraftPlantProfile, deleteDraftMarker } from "./screens/v1Navigation.js?v=0.9818";
+import { captureMarkerLocation, renderMarkerFirst, renderMarkerFirstEditor, saveMarkerFirst, saveMarkerFirstEditor } from "./screens/markerFirst.js?v=0.9818";
+import { hostedGps, openHostedMarker, openHostedPlace, openHostedProject, openHostedSite, startHostedAr } from "./screens/hostedExplorer.js?v=0.9818";
+import { applyAnalogFilters, renderAnalogExplorer, renderAnalogLibraryPlant, renderAnalogPlace, renderAnalogPlant, renderAnalogPlantList } from "./screens/analogExplorer.js?v=0.9818";
+import { applyFieldGuideFilter, openFieldGuidePlant, positionFieldGuidePlant, renderFieldGuide, renderFieldGuideProjects } from "./screens/fieldGuide.js?v=0.9818";
+import { printCenterOutput, printPlantVirtualTag, renderPrintCenter, updatePrintRangeFields } from "./screens/printCenter.js?v=0.9818";
+import { captureProjectAreaLocation, deleteProjectArea, deleteProjectFromSettings, navigateToProjectArea, openProjectAreaAr, renderProjectAreaDashboard, renderProjectAreaLocationForm, saveProjectAreaLocation, saveProjectTheme } from "./screens/projectDashboard.js?v=0.9818";
+import { startAreaNavigationAr } from "./screens/explorer.js?v=0.9818";
+import { advanceDashboardTutorial, applyPlatformSettings, beginSiteMapAreaLink, captureStartingPointLocation, deleteProjectEntry, dismissProjectGuidance, ensureProjectLocation, filterAllProjectEntries, filterProjectSearch, focusStartingPointMapFields, openCheckpointQuickSetup, openCreatorArMode, openCreatorContentMode, openCreatorVisitorPreview, openProjectEntry, openProjectStartingPoint, openQuickAccessChoice, placeLinkedAreaOnSiteMap, removeSiteMapPhoto, renderAddToLocation, renderAllProjectEntries, renderArAreaPicker, renderAreaCheckpointForm, renderAreaRequired, renderBrowseContent, renderCheckpointPlacementChoice, renderContentMode, renderLocationMap, renderNewLocationSetup, renderPigeonPeaExample, renderPlacementChoice, renderPlatformComingSoon, renderPlatformHome, renderProjectAreaForm, renderProjectHome, renderProjectSettings, renderStartingPointForm, renderStartingPoints, renderStoriesAndFocus, renderUnplacedContent, renderVisitorWelcomeEditor, replayArTutorialFromSettings, resetArLearningTipsFromSettings, resetLearningTipsFromSettings, restartProjectTutorialFromSettings, resumeAreaCreationFlow, saveArLocationNoteSettings, saveAreaCheckpoint, saveAreaInformation, savePlatformSetting, saveProjectArea, saveProjectEntryChanges, saveProjectName, saveProjectPublishing, saveProjectStartingPoint, saveVisitorWelcome, setArHintsFromSettings, setProjectTutorialModeFromSettings, showWorkModeGuidance, toggleAreas, updateProjectExpertMode, uploadSiteMapPhoto } from "./screens/projectDashboard.js?v=0.9818";
+import { renderProjectDashboardV2 as renderProjectDashboardV2Screen } from "./screens/projectDashboardV2.js?v=0.9818";
+import { renderProjectGuide } from "./screens/projectGuide.js?v=0.9818";
+import { createPlaceMarker, createSitePlace, deletePlaceMarker, deleteSitePlace, exportProject, importProject, loadDemoMarkers, loadPlaceMarkers, loadProjectSites, loadProjects, loadSitePlaces, saveMarkerAnchor, savePlantProfile, updatePlaceMarker, updateSitePlace } from "./services/persistence.js?v=0.9818";
+import { ensureCreatorAuthentication, HOSTED_MODE, isCreatorAuthDisabled } from "./services/apiClient.js?v=0.9818";
+import { isProjectTutorialEnabled, recordTutorialEvent, restartProjectTutorial, setProjectTutorialMode } from "./services/tutorialProgress.js?v=0.9818";
+import { acknowledgeArCameraSafety, hasArCameraSafetyAcknowledgement, renderArSafetyScreen } from "./services/arOnboarding.js?v=0.9818";
+import { projectTemplates } from "./templates/projectTemplates.js?v=0.9818";
+import { isDefaultHomeArea } from "./services/arExperienceConfig.js?v=0.9818";
+import { applyNxrLanguage, translateApp } from "./services/i18n.js?v=0.9818";
+
+const app = document.getElementById('app');
+document.body.dataset.desktopAr=isDesktopLearningBookTarget()?'unavailable':'available';
+// Only common fonts on the welcome page; garden data and demo media remain scoped.
+// Spatial preparation belongs to an explicit AR entry, not desktop authoring.
+const CURRENT_VIEW_KEY = 'nourishland-xr-current-view-v1';
+function rememberCurrentView(view, args = []) {
+    try { sessionStorage.setItem(CURRENT_VIEW_KEY, JSON.stringify({ view, args })); }
+    catch {}
+}
+function forgetCurrentView() {
+    try { sessionStorage.removeItem(CURRENT_VIEW_KEY); }
+    catch {}
+}
+function readCurrentView() {
+    try { return JSON.parse(sessionStorage.getItem(CURRENT_VIEW_KEY) || 'null'); }
+    catch {
+        forgetCurrentView();
+        return null;
+    }
+}
+function pushViewHistory(view, args = [], extra = {}) {
+    const state = { nourishlandView: view, viewArgs: args, ...extra };
+    const sameView = history.state?.nourishlandView === view
+        && JSON.stringify(history.state?.viewArgs || []) === JSON.stringify(args);
+    if (!sameView) history.pushState(state, '', window.location.href);
+}
+function replaceViewHistory(view, args = [], extra = {}) {
+    history.replaceState({ nourishlandView: view, viewArgs: args, ...extra }, '', window.location.href);
+}
+function placeGlobalNavigationAtBottom() {
+    enhanceProductScreen(app.querySelector('.screen'));
+}
+let observedScreen = app.querySelector('.screen');
+new MutationObserver(() => {
+    requestAnimationFrame(() => {
+        const currentScreen = app.querySelector('.screen');
+        const screenChanged = currentScreen !== observedScreen;
+        observedScreen = currentScreen;
+        placeGlobalNavigationAtBottom();
+        translateApp(app);
+        // PIM edits redraw inside the same screen. Do not reset the user's
+        // reading position for those local updates; only a real screen
+        // navigation should begin at the top.
+        if (screenChanged) window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    });
+}).observe(app, { childList: true });
+const siteManager = new SiteManager();
+const escapeMainHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]);
+const decodeMainValue = value => {
+    try { return decodeURIComponent(String(value ?? '')); }
+    catch { return String(value ?? ''); }
+};
+applyPlatformSettings();
+applyNxrLanguage();
+const setExperienceRole = role => {
+    if(role !== 'visitor') {
+        cancelVisitorExperience();
+        const cleanUrl = new URL(window.location.href);
+        ['visit','explore','page','plant'].forEach(name=>cleanUrl.searchParams.delete(name));
+        history.replaceState(history.state,'',cleanUrl);
+    }
+    document.body.dataset.experienceRole = role;
+    queueMicrotask(syncCreatorTestingWarning);
+};
+
+function syncCreatorTestingWarning() {
+    const existing = document.getElementById('creatorAuthTestingWarning');
+    if (document.body.dataset.experienceRole !== 'creator' || !isCreatorAuthDisabled()) {
+        existing?.remove();
+        return;
+    }
+    if (existing) return;
+    const screen = app.querySelector('.screen');
+    if (!screen) return;
+    const warning = document.createElement('div');
+    warning.id = 'creatorAuthTestingWarning';
+    warning.className = 'creator-auth-testing-warning';
+    warning.setAttribute('role', 'status');
+    warning.textContent = 'Creator authentication disabled — testing mode';
+    screen.prepend(warning);
+}
+
+async function unregisterServiceWorkersForTesting() {
+    if (!('serviceWorker' in navigator)) return;
+    try {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map(registration => registration.unregister()));
+    } catch (error) {
+        console.warn(`Service worker cleanup failed: ${error.message}`);
+    }
+}
+
+function moveBackButtonsToBottom() { /* V2 retains return controls beside the screen heading. */ }
+
+function syncArLocationAvailability() {
+    document.body.classList.toggle('ar-location-selected', Boolean(app.querySelector('.location-selected')));
+}
+
+const backButtonObserver = new MutationObserver(() => queueMicrotask(() => {
+    moveBackButtonsToBottom();
+    syncCreatorTestingWarning();
+    syncArLocationAvailability();
+}));
+backButtonObserver.observe(app, { childList: true, subtree: true });
+
+async function openDirectExplorer(params) {
+    const projectId = params.get('project'); const siteId = params.get('site'); const placeId = params.get('place'); const markerId = params.get('marker');
+    setExperienceRole('visitor');
+    const projects = await loadProjects(true);
+    const project = projects.find(item => String(item.id).toLowerCase() === String(projectId).toLowerCase());
+    if (!project) throw new Error('Location not found');
+    const sites = await loadProjectSites(project.id, true); const site = sites.find(item => item.id === siteId);
+    if (!site) throw new Error('Site not found');
+    const places = await loadSitePlaces(project.id, site.id, true); const place = places.find(item => item.id === placeId);
+    if (!place) throw new Error('Area not found');
+    const markers = await loadPlaceMarkers(project.id, site.id, place.id, true); const marker = markers.find(item => item.id === markerId);
+    if (!marker) throw new Error('Marker not found');
+    renderExplorerMarker(app, project, site, place, marker);
+}
+
+window.openLivingPaintingTest = async () => {
+    const {renderLivingPaintingTest} = await import("./screens/livingPaintingTest.js?v=0.9818");
+    await renderLivingPaintingTest(app,{onBack:()=>window.renderLaunchScreen()});
+};
+
+async function bootstrap() {
+    try {
+        if (new URLSearchParams(location.search).has('reset-workers')) await unregisterServiceWorkersForTesting();
+        const params = new URLSearchParams(window.location.search);
+        if(params.get('questPerf')==='report'){
+            const {renderQuestTutorialReport}=await import("./services/questTutorialCapture.js?v=0.9818");
+            renderQuestTutorialReport(app);
+            return;
+        }
+        if (params.get('experience') === 'webxr-demo') {
+            const { renderWebxrDemoEntry } = await import("./screens/webxrDemoEntry.js?v=0.9818");
+            renderWebxrDemoEntry(app, { onStart: () => window.openTemporaryArDemoWindow(), onHome: () => {
+                const url = new URL(location.href); url.searchParams.delete('experience');
+                history.replaceState(null, '', url); window.renderLaunchScreen();
+            } });
+            return;
+        }
+        if (params.get('creator') === '1') { await window.renderDemoProjects(); return; }
+        if(params.has('chapters')){await window.openDemoChapters();return;}
+        if(params.get('dev')==='lab'){await window.openDeveloperLab();return;}
+        // Explicit development test only. Normal demo/visitor routes are unchanged.
+        if (params.get('test') === 'living-painting') {
+            setExperienceRole('launch');
+            const {renderLivingPaintingTest} = await import("./screens/livingPaintingTest.js?v=0.9818");
+            await renderLivingPaintingTest(app, {onBack: () => {
+                const clean = new URL(location.href);clean.searchParams.delete('test');
+                history.replaceState(history.state, '', clean);window.renderLaunchScreen();
+            }});
+            return;
+        }
+        const recoveryKey = 'nourishland-xr-active-creator-ar';
+        let recovery = null;
+        try { recovery = JSON.parse(sessionStorage.getItem(recoveryKey) || 'null'); }
+        catch { sessionStorage.removeItem(recoveryKey); }
+        if (!params.size && recovery?.projectId) {
+            sessionStorage.removeItem(recoveryKey);
+            setExperienceRole('creator');
+            await window.renderProjectDashboard(encodeURIComponent(recovery.projectId));
+            return;
+        }
+        const visitorLink = params.get('explore');
+        if (visitorLink || params.has('visit')) { await window.openVisitor(params.get('visit') || params.get('page') || 'place',visitorLink || '',params.get('plant') || '',true); return; }
+        const rememberedView = !params.size ? readCurrentView() : null;
+        if (rememberedView?.view === 'visitor-v2') { await window.openVisitor(...rememberedView.args,true); return; }
+        if (rememberedView?.view === 'projects') {
+            setExperienceRole('creator');
+            replaceViewHistory('projects');
+            await renderDemoProjects(app);
+            return;
+        }
+        if (['dashboard', 'dashboard-v2', 'living-dashboard', 'dashboard-classic'].includes(rememberedView?.view) && rememberedView.args?.[0]) {
+            setExperienceRole('creator');
+            replaceViewHistory('dashboard', rememberedView.args, { projectId: rememberedView.args[0], projectName: rememberedView.args[1] || '' });
+            await window.renderProjectDashboard(rememberedView.args[0], rememberedView.args[1] || '', true);
+            return;
+        }
+        if (rememberedView?.view === 'creator-workspace' && rememberedView.args?.[0]) {
+            location.href=workspaceUrl(rememberedView.args[0],rememberedView.args[1] || {});
+            return;
+        }
+        if (rememberedView?.view === 'print-center' && rememberedView.args?.[0]) {
+            setExperienceRole('creator');
+            replaceViewHistory('print-center', rememberedView.args);
+            await renderPrintCenter(app, ...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'area' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
+            setExperienceRole('creator');
+            replaceViewHistory('area', rememberedView.args);
+            await renderProjectAreaDashboard(app, ...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'totem' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
+            setExperienceRole('creator');
+            replaceViewHistory('totem', rememberedView.args);
+            await renderAreaCheckpointForm(app, ...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'entry' && rememberedView.args?.[0] && rememberedView.args?.[1]) {
+            setExperienceRole('creator');
+            replaceViewHistory('entry', rememberedView.args);
+            await openProjectEntry(app, ...rememberedView.args);
+            return;
+        }
+        if (rememberedView?.view === 'field-guide' && rememberedView.args?.[0]) {
+            setExperienceRole(rememberedView.args?.[1] ? 'creator' : 'visitor');
+            replaceViewHistory('field-guide', rememberedView.args);
+            await renderFieldGuide(app, ...rememberedView.args);
+            return;
+        }
+        if (!HOSTED_MODE) {
+            await siteManager.loadSitesFromDisk();
+            await loadDemoMarkers();
+        }
+        if (params.get('mode') === 'analog' && params.get('instance')) await renderAnalogPlant(app, encodeURIComponent(params.get('instance')));
+        else if (params.get('mode') === 'analog' && params.get('place')) await renderAnalogPlace(app, params.get('place'));
+        else if (params.get('mode') === 'analog') await renderAnalogExplorer(app);
+        else if (params.get('mode') === 'explorer') await openDirectExplorer(params);
+        else if (params.get('project')) openHostedProject(app, params.get('project'));
+        else renderLaunchScreen(app);
+    } catch (error) {
+        // The bare /xr/ entry point is also the public demo entry point. If a
+        // remembered creator view can no longer be restored (for example when
+        // the API session has expired or the hosted persistence service is
+        // restarting), do not strand the user on the local-development error
+        // screen. Clear the stale route and return to the welcome screen so
+        // the demo remains available. Explicit deep links still show the
+        // diagnostic because they need their requested data source.
+        if (!new URLSearchParams(window.location.search).size) {
+            forgetCurrentView();
+            replaceViewHistory('welcome');
+            setExperienceRole('launch');
+            renderLaunchScreen(app);
+            return;
+        }
+        app.innerHTML = `
+        <div class="screen">
+            <div class="page-header">
+                <h1>Studio could not start</h1>
+                <p class="subtitle">The persistence server is unavailable.</p>
+            </div>
+            <div class="panel">
+                <p>Start the Studio with <code>node tools/persistence-server.mjs</code> from the repository root, then open <code>http://127.0.0.1:8000/app/</code>.</p>
+                <p class="meta">${escapeMainHtml(error.message)}</p>
+                <button type="button" onclick="window.renderLaunchScreen()">Return to welcome</button>
+            </div>
+        </div>`;
+    }
+}
+
+window.renderLaunchScreen = () => { if (isArModeActive()) { exitArMode(() => window.renderLaunchScreen()); return; } if (isVisitorArActive()) return exitAr().then(() => window.renderLaunchScreen()); forgetCurrentView(); replaceViewHistory('welcome'); setExperienceRole('launch'); history.replaceState(null,'',portalUrl('home')); return renderAccessPortal(app); };
+window.renderHillyardsDemo = () => renderDemoHome(app);
+window.renderAnalogExplorer = () => { setExperienceRole('visitor'); return renderAnalogExplorer(app).catch(error => { app.innerHTML = `<div class="screen"><p>Field Guide unavailable: ${escapeMainHtml(error.message)}</p></div>`; }); };
+window.renderAnalogPlantList = () => renderAnalogPlantList(app).catch(error => { app.innerHTML = `<div class="screen"><p>Plant list unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
+window.renderAnalogPlace = placeId => renderAnalogPlace(app, placeId).catch(error => { app.innerHTML = `<div class="screen"><p>Area unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
+window.renderAnalogPlant = instanceId => renderAnalogPlant(app, instanceId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
+window.renderAnalogLibraryPlant = plantId => renderAnalogLibraryPlant(app, plantId).catch(error => { app.innerHTML = `<div class="screen"><p>Plant unavailable: ${escapeMainHtml(error.message)}</p></div>`; });
+window.applyAnalogFilters = applyAnalogFilters;
+window.renderDemoProjects = async () => {
+    if (isArModeActive()) { exitArMode(() => window.renderDemoProjects()); return; }
+    if (isVisitorArActive()) return exitAr().then(() => window.renderDemoProjects());
+    location.href=portalUrl('creator');
+};
+window.renderProjectHome = async projectId => {
+    if (window.__nourishlandSpatialWindow?.renderProjectHome) {
+        return window.__nourishlandSpatialWindow.renderProjectHome(projectId);
+    }
+    setExperienceRole('creator');
+    return renderProjectHome(app, projectId);
+};
+window.renderProjectDashboard = async (projectId, projectName = '', fromHistory = false, loadingContext = 'opening') => {
+    if (window.__nourishlandSpatialWindow?.renderProjectDashboard) {
+        return window.__nourishlandSpatialWindow.renderProjectDashboard(projectId);
+    }
+    const args = [projectId, projectName];
+    const resolvedName = decodeMainValue(projectName || history.state?.projectName || projectId || 'Project');
+    rememberCurrentView('dashboard', args);
+    if (!fromHistory && (history.state?.nourishlandView !== 'dashboard' || history.state?.projectId !== projectId)) {
+        history.pushState({ nourishlandView: 'dashboard', projectId, projectName: resolvedName, viewArgs: args }, '', window.location.href);
+    }
+    setExperienceRole('creator');
+    const decodedProjectId=decodeMainValue(projectId);
+    if (!new URLSearchParams(location.search).has('workspace')) {
+        let mode=suggestedCreatorWorkspace();
+        try {mode=localStorage.getItem(`nlxr.creator-workspace.${decodedProjectId}`) || mode;}catch{}
+        location.href=workspaceUrl(decodedProjectId,{mode});
+        return;
+    }
+    return renderCreatorWorkspace(app, decodedProjectId);
+};
+window.renderProjectGuide = (projectId = '', returnTo = 'creator') => {
+    setExperienceRole('creator');
+    return renderProjectGuide(app, projectId, returnTo);
+};
+window.addEventListener('popstate', event => {
+    if (isArModeActive()) return;
+    if(event.state?.nourishlandView==='experience-settings'){ window.openExperienceSettings(true,event.state.returnState); return; }
+    if (event.state?.nourishlandView === 'visitor-v2') { void window.openVisitor(...event.state.viewArgs,true); return; }
+    if (['dashboard', 'dashboard-v2', 'living-dashboard', 'dashboard-classic'].includes(event.state?.nourishlandView) && event.state.projectId) {
+        void window.renderProjectDashboard(event.state.projectId, event.state.projectName || '', true);
+        return;
+    }
+    if (event.state?.nourishlandView === 'print-center' && event.state.viewArgs?.[0]) {
+        rememberCurrentView('print-center', event.state.viewArgs);
+        setExperienceRole('creator');
+        void renderPrintCenter(app, ...event.state.viewArgs);
+        return;
+    }
+    if (event.state?.nourishlandView === 'projects') {
+        setExperienceRole('creator');
+        void renderDemoProjects(app);
+        return;
+    }
+    const args = event.state?.viewArgs || [];
+    if (event.state?.nourishlandView === 'area' && args[0] && args[1]) {
+        rememberCurrentView('area', args);
+        setExperienceRole('creator');
+        void renderProjectAreaDashboard(app, ...args);
+        return;
+    }
+    if (event.state?.nourishlandView === 'totem' && args[0] && args[1]) {
+        rememberCurrentView('totem', args);
+        setExperienceRole('creator');
+        void renderAreaCheckpointForm(app, ...args);
+        return;
+    }
+    if (event.state?.nourishlandView === 'entry' && args[0] && args[1]) {
+        rememberCurrentView('entry', args);
+        setExperienceRole('creator');
+        void openProjectEntry(app, ...args);
+        return;
+    }
+    if (event.state?.nourishlandView === 'field-guide' && args[0]) {
+        rememberCurrentView('field-guide', args);
+        setExperienceRole(args[1] ? 'creator' : 'visitor');
+        void renderFieldGuide(app, ...args);
+        return;
+    }
+    forgetCurrentView();
+    setExperienceRole('launch');
+    renderLaunchScreen(app);
+});
+window.toggleAreas = toggleAreas;
+window.openCreatorArMode = projectId => openCreatorArMode(app, projectId);
+window.openProjectArMode = async (projectId, areaId = '') => {
+    const decodedProjectId = decodeArArgument(projectId);
+    const decodedAreaId = decodeArArgument(areaId);
+    // The dashboard AR button is a direct entry point.  A failed immersive
+    // launch should leave the dashboard in place so Quest never drops the
+    // user into the creator setup picker; the explicit "Place in AR" action
+    // remains the route for setup and placement configuration.
+    return window.startArMode(projectId, areaId, '', '', '', 'project-dashboard');
+};
+window.openCreatorArCheckpointSetup = projectId => renderArAreaPicker(app, projectId);
+window.openCheckpointQuickSetup = projectId => openCheckpointQuickSetup(app, projectId);
+window.openCreatorContentMode = projectId => openCreatorContentMode(app, projectId);
+window.openQuickAccessChoice = (projectId, type) => openQuickAccessChoice(app, projectId, type);
+window.openCreatorVisitorPreview = projectId => openCreatorVisitorPreview(projectId);
+window.renderContentMode = projectId => renderContentMode(app, projectId);
+window.renderPrintCenter = (projectId, section = 'prints', fromHistory = false) => {
+    const args = [projectId, section];
+    rememberCurrentView('print-center', args);
+    if (!fromHistory && history.state?.nourishlandView !== 'print-center') history.pushState({ nourishlandView: 'print-center', viewArgs: args }, '', window.location.href);
+    setExperienceRole('creator');
+    return renderPrintCenter(app, projectId, section);
+};
+window.printCenterOutput = kind => printCenterOutput(app, kind);
+window.printPlantVirtualTag = (projectId, siteId, placeId, markerId) => printPlantVirtualTag(app, projectId, siteId, placeId, markerId);
+window.updatePrintRangeFields = updatePrintRangeFields;
+window.beginSiteMapAreaLink = beginSiteMapAreaLink;
+window.placeLinkedAreaOnSiteMap = placeLinkedAreaOnSiteMap;
+window.uploadSiteMapPhoto = uploadSiteMapPhoto;
+window.removeSiteMapPhoto = removeSiteMapPhoto;
+window.dismissProjectGuidance = (projectId, feature) => dismissProjectGuidance(app, projectId, feature);
+window.showWorkModeGuidance = projectId => showWorkModeGuidance(app, projectId);
+window.advanceDashboardTutorial = (projectId, step) => advanceDashboardTutorial(app, projectId, step);
+window.filterProjectSearch = filterProjectSearch;
+window.renderNewLocationSetup = projectId => renderNewLocationSetup(app, projectId);
+window.renderAddToLocation = projectId => renderAddToLocation(app, projectId);
+window.renderPlacementChoice = (projectId, type) => renderPlacementChoice(app, projectId, type);
+window.renderBrowseContent = (projectId, creator = false) => renderBrowseContent(app, projectId, creator);
+window.renderLocationMap = (projectId, creator = true, returnContext = '') => renderLocationMap(app, projectId, creator, returnContext);
+window.renderStoriesAndFocus = projectId => renderStoriesAndFocus(app, projectId);
+window.renderProjectSettings = projectId => renderProjectSettings(app, projectId);
+window.saveArLocationNoteSettings = (event, projectId) => saveArLocationNoteSettings(app, event, projectId);
+window.saveProjectTheme = (projectId, theme) => saveProjectTheme(projectId, theme);
+window.saveProjectName = (event, projectId) => saveProjectName(app, event, projectId);
+window.saveProjectPublishing = (event, projectId) => saveProjectPublishing(app, event, projectId);
+window.updateProjectExpertMode = (projectId, enabled) => updateProjectExpertMode(app, projectId, enabled);
+window.setProjectTutorialMode = (projectId, enabled) => setProjectTutorialModeFromSettings(app, projectId, enabled);
+window.restartProjectTutorial = projectId => restartProjectTutorialFromSettings(app, projectId);
+window.resetLearningTips = projectId => resetLearningTipsFromSettings(app, projectId);
+window.replayArTutorial = projectId => replayArTutorialFromSettings(app, projectId);
+window.resetArLearningTips = projectId => resetArLearningTipsFromSettings(app, projectId);
+window.setArHints = (projectId, enabled) => setArHintsFromSettings(app, projectId, enabled);
+window.deleteProjectFromSettings = (projectId, projectName = '') => deleteProjectFromSettings(projectId, projectName);
+window.renderUnplacedContent = projectId => renderUnplacedContent(app, projectId);
+window.renderPigeonPeaExample = projectId => renderPigeonPeaExample(app, projectId);
+window.renderAllProjectEntries = projectId => renderAllProjectEntries(app, projectId);
+window.filterAllProjectEntries = filterAllProjectEntries;
+window.renderProjectAreaForm = (projectId, intent = 'dashboard') => renderProjectAreaForm(app, projectId, intent);
+window.saveProjectArea = (event, projectId, intent) => saveProjectArea(event, projectId, intent);
+window.renderAreaCheckpointForm = (projectId, areaId, flow = '') => {
+    const args = [projectId, areaId, flow];
+    rememberCurrentView('totem', args);
+    pushViewHistory('totem', args);
+    return renderAreaCheckpointForm(app, projectId, areaId, flow);
+};
+window.saveAreaCheckpoint = (event, projectId, areaId, flow = '') => saveAreaCheckpoint(event, projectId, areaId, flow);
+window.renderCheckpointPlacementChoice = (projectId, areaId, markerId) => renderCheckpointPlacementChoice(app, projectId, areaId, markerId);
+window.renderProjectAreaDashboard = (projectId, areaId, options = {}) => {
+    if (window.__nourishlandSpatialWindow?.renderProjectAreaDashboard) {
+        return window.__nourishlandSpatialWindow.renderProjectAreaDashboard(projectId, areaId, options);
+    }
+    const args = [projectId, areaId];
+    rememberCurrentView('area', args);
+    pushViewHistory('area', args);
+    return renderProjectAreaDashboard(app, projectId, areaId, options);
+};
+window.saveAreaInformation = (event, projectId, areaId) => saveAreaInformation(event, projectId, areaId);
+window.openProjectAreaAr = (projectId, areaId, checkpointId = '', initialPlacementType = '') => openProjectAreaAr(app, projectId, areaId, checkpointId, initialPlacementType);
+window.navigateToProjectArea = (projectId, areaId) => navigateToProjectArea(app, projectId, areaId);
+window.renderProjectAreaLocationForm = (projectId, areaId) => renderProjectAreaLocationForm(app, projectId, areaId);
+window.captureProjectAreaLocation = captureProjectAreaLocation;
+window.saveProjectAreaLocation = (event, projectId, areaId) => saveProjectAreaLocation(event, projectId, areaId);
+window.deleteProjectArea = (projectId, areaId) => deleteProjectArea(projectId, areaId);
+window.renderStartingPoints = projectId => renderStartingPoints(app, projectId);
+window.resumeAreaCreationFlow = (projectId, areaId, intent) => resumeAreaCreationFlow(app, projectId, areaId, intent);
+window.editVisitorWelcome = projectId => renderVisitorWelcomeEditor(app, projectId);
+window.saveVisitorWelcome = (event, projectId) => saveVisitorWelcome(event, projectId);
+window.renderPlatformComingSoon = (feature, returnTo) => renderPlatformComingSoon(app, feature, returnTo);
+window.savePlatformSetting = savePlatformSetting;
+window.addProjectStartingPoint = (projectId, areaId = '', flow = '') => renderStartingPointForm(app, projectId, areaId, flow);
+window.editProjectStartingPoint = (projectId, areaId = '', flow = '') => renderStartingPointForm(app, projectId, areaId, flow);
+window.saveProjectStartingPoint = (event, projectId, flow = '') => saveProjectStartingPoint(event, projectId, flow);
+window.captureStartingPointLocation = captureStartingPointLocation;
+window.focusStartingPointMapFields = focusStartingPointMapFields;
+window.openProjectStartingPoint = projectId => openProjectStartingPoint(app, projectId);
+window.openProjectEntry = (projectId, markerId, returnToAr = false, returnContext = '', initialState = null) => {
+    if (window.__nourishlandSpatialWindow?.openProjectEntry) {
+        return window.__nourishlandSpatialWindow.openProjectEntry(projectId, markerId, returnToAr, returnContext, initialState);
+    }
+    const args = [projectId, markerId, returnToAr, returnContext, initialState];
+    rememberCurrentView('entry', args);
+    pushViewHistory('entry', args);
+    return openProjectEntry(app, projectId, markerId, returnToAr, returnContext, initialState).catch(error => window.alert(error.message));
+};
+window.openProjectPim = (projectId, markerId, returnToAr = false, returnContext = '') => window.openProjectEntry(projectId, markerId, returnToAr, returnContext, { workspace: 'pim' });
+// Plant Editor preview opens a focused AR view of the plant being
+// edited.  Keep the Area and site IDs explicit so the preview resolves the
+// same saved spatial context as the editor without creating a new placement.
+window.startPlantEditorPreview = (projectId, siteId, areaId, markerId) => window.startArMode(
+    projectId,
+    areaId,
+    '',
+    '',
+    markerId,
+    `plant-editor-preview:${markerId}`,
+    siteId
+);
+window.saveProjectEntryChanges = saveProjectEntryChanges;
+window.deleteProjectEntry = (projectId, markerId) => deleteProjectEntry(projectId, markerId).catch(error => window.alert(`Delete failed: ${error.message}`));
+window.renderFirstSteps = () => renderFirstSteps(app);
+window.renderHillyardsProject = () => renderHillyardsProject(app);
+window.renderHillyardsGuidelines = () => renderHillyardsGuidelines(app);
+window.renderGlobalPlantList = () => renderFieldGuide(app, encodeURIComponent('Hillyards'), true);
+window.renderMarkerFirst = (type) => renderMarkerFirst(app, type).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+window.captureMarkerLocation = () => captureMarkerLocation();
+window.saveMarkerFirst = (event) => saveMarkerFirst(event);
+window.openMarkerFirstEditor = (markerId) => renderMarkerFirstEditor(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+window.saveMarkerFirstEditor = (event, markerId, type) => saveMarkerFirstEditor(event, markerId, type);
+window.renderCheckpointForm = (type) => renderCheckpointForm(app, type);
+window.saveCheckpoint = (event, type) => saveCheckpoint(event, type);
+window.renderComingSoon = (feature, purpose, how, example, backAction) => renderComingSoon(app, feature, purpose, how, example, backAction);
+window.openHillyardsPlantProfileEditor = () => openHillyardsPlantProfileEditor();
+window.openHillyardsEntry = (markerId) => openHillyardsEntry(markerId);
+window.openHillyardsMarkerActions = (markerId) => openHillyardsMarkerActions(app, markerId);
+window.openMarkerPlantProfile = (markerId) => openMarkerPlantProfile(markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+window.deleteHillyardsMarker = (markerId) => deleteHillyardsMarker(markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+
+window.editDraftMarker = (markerId) => editDraftMarker(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+window.saveDraftMarker = (event, markerId) => saveDraftMarker(event, markerId).catch(error => window.alert(`Save failed: ${error.message}`));
+window.editDraftPlantProfile = (markerId) => editDraftPlantProfile(app, markerId).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+window.saveDraftPlantProfile = (event, markerId) => saveDraftPlantProfile(event, markerId).catch(error => window.alert(`Profile save failed: ${error.message}`));
+window.deleteDraftMarker = (markerId) => deleteDraftMarker(markerId).catch(error => window.alert(`Delete failed: ${error.message}`));
+window.renderStudio = () => renderStudio(app);
+window.renderFieldTest = (site, place, marker) => renderFieldTest(app, site, place, marker);
+window.copyFieldTestUrl = async (url) => { try { await navigator.clipboard.writeText(url); document.getElementById('fieldTestStatus').textContent = 'Test URL copied.'; } catch { document.getElementById('fieldTestStatus').textContent = 'Copy failed. Copy the browser URL manually.'; } };
+window.openFieldTestExplorer = (url) => { window.location.href = url; };
+window.renderFieldMarker = () => renderFieldMarker(app).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+window.renderLocationFieldMarker = async (projectId, type, placementMode = 'without-ar', allowUnassigned = false, preferredAreaId = '') => {
+    const decodedProjectId = decodeURIComponent(projectId);
+    const project = (await loadProjects().catch(() => [])).find(item => item.id === decodedProjectId);
+    let sites = await loadProjectSites(decodedProjectId);
+    let site = sites.find(item => item.id === 'main_food_forest') || sites[0] || null;
+    const areas = site ? await loadSitePlaces(decodedProjectId, site.id) : [];
+    if (!allowUnassigned && !areas.some(area => !isDefaultHomeArea(area))) return renderAreaRequired(app, projectId, type, placementMode, 'content');
+    if (!site) {
+        site = await ensureProjectLocation(decodedProjectId);
+        sites = [site];
+    }
+    const decodedAreaId = preferredAreaId ? decodeURIComponent(preferredAreaId) : '';
+    const selectedArea = areas.some(area => area.id === decodedAreaId) ? decodedAreaId : allowUnassigned ? '__unassigned__' : '';
+    await renderFieldMarker(app, { project: decodedProjectId, site: site.id, place: selectedArea, type, placementMode, dashboardProjectId: decodedProjectId, nonPlantMode: project?.template === 'inventory_exhibition' });
+};
+window.renderPlaceForLocation = async (projectId) => {
+    const decodedProjectId = decodeURIComponent(projectId);
+    const sites = await loadProjectSites(decodedProjectId);
+    if (!sites.length) { window.alert('Add a Location before creating an Area.'); return; }
+    renderLocationFormScreen(app, sites[0]);
+};
+window.setFieldMarkerType = (type) => setFieldMarkerType(type);
+window.selectFieldProject = (id) => selectFieldProject(id);
+window.selectFieldSite = (id) => selectFieldSite(id);
+window.selectFieldPlace = (id) => selectFieldPlace(id);
+window.selectFieldPlantProfile = (id) => selectFieldPlantProfile(id);
+window.setPlantSearchScope = setPlantSearchScope;
+window.searchGlobalPlantOptions = searchGlobalPlantOptions;
+window.selectGlobalPlant = selectGlobalPlant;
+window.selectGlobalImportRecommended = selectGlobalImportRecommended;
+window.setGlobalImportDestination = setGlobalImportDestination;
+window.selectGlobalImportExistingPlant = selectGlobalImportExistingPlant;
+window.reviewGlobalPlantImport = () => reviewGlobalPlantImport();
+window.cancelGlobalPlantPreview = cancelGlobalPlantPreview;
+window.confirmGlobalPlantImport = () => confirmGlobalPlantImport().catch(error => { const status = document.getElementById('fieldError'); if (status) status.textContent = `Plant profile could not be created. ${error.message}`; });
+window.continueManualPlantCreation = continueManualPlantCreation;
+window.createFieldArea = () => createFieldArea().catch(error => window.alert(`Area could not be created: ${error.message}`));
+window.refreshFieldLocation = () => refreshFieldLocation();
+window.saveFieldMarker = event => saveFieldMarker(event);
+window.startWelcomeAr = () => startWelcomeAr();
+window.startLocationAr = projectId => startLocationAr(projectId).catch(error => renderArFailure(app, projectId, 'visitor', error));
+window.startCreatorLocationAr = async projectId => {
+    try {
+        await startLocationAr(projectId);
+        recordTutorialEvent(decodeURIComponent(projectId), 'ar_mode_launched');
+    } catch (error) {
+        renderArFailure(app, projectId, 'creator', error);
+    }
+};
+window.toggleArTechnicalDetails = toggleArTechnicalDetails;
+let globalInfoTriggerSequence = 0;
+function closeGlobalInfoOverlay(restoreFocus = false) {
+    const overlay = document.querySelector('[data-global-info-overlay]');
+    if (!overlay) return;
+    const trigger = overlay.dataset.infoTrigger ? document.getElementById(overlay.dataset.infoTrigger) : null;
+    const source = overlay.dataset.infoSource ? document.getElementById(overlay.dataset.infoSource) : null;
+    source?.setAttribute('hidden', '');
+    trigger?.setAttribute('aria-expanded', 'false');
+    overlay.remove();
+    if (restoreFocus) trigger?.focus();
+}
+window.toggleInfoOverlay = button => {
+    const sourceId = button?.getAttribute('data-info-source') || button?.getAttribute('aria-controls');
+    const source = sourceId ? document.getElementById(sourceId) : null;
+    if (!button || !source) return;
+    if (!button.id) button.id = `globalInfoTrigger${++globalInfoTriggerSequence}`;
+    const existing = document.querySelector('[data-global-info-overlay]');
+    if (existing?.dataset.infoTrigger === button.id) {
+        closeGlobalInfoOverlay(true);
+        return;
+    }
+    closeGlobalInfoOverlay();
+    source.setAttribute('hidden', '');
+    const overlay = document.createElement('aside');
+    overlay.className = 'global-info-overlay';
+    overlay.dataset.globalInfoOverlay = 'true';
+    overlay.dataset.infoTrigger = button.id;
+    overlay.dataset.infoSource = source.id;
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'false');
+    const header = document.createElement('header');
+    const title = document.createElement('strong');
+    title.textContent = source.dataset.infoTitle || String(button.getAttribute('aria-label') || 'Information').replace(/^About\s+/i, '');
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'global-info-overlay-close';
+    close.setAttribute('aria-label', 'Close information');
+    close.textContent = 'Close';
+    header.append(title, close);
+    const body = document.createElement('div');
+    body.className = 'global-info-overlay-body';
+    body.innerHTML = source.innerHTML;
+    overlay.append(header, body);
+    document.body.append(overlay);
+    button.setAttribute('aria-expanded', 'true');
+    close.addEventListener('click', () => closeGlobalInfoOverlay(true), { once: true });
+    overlay.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeGlobalInfoOverlay(true);
+    });
+    close.focus();
+};
+window.toggleProjectLayoutInfo = button => {
+    window.toggleInfoOverlay(button);
+};
+window.copyArDiagnostics = () => copyArDiagnostics().catch(error => {
+    const status = document.getElementById('developerDiagnosticsStatus') || document.getElementById('arTechnicalCopyStatus');
+    if (status) status.textContent = `Copy failed: ${error.message}`;
+});
+window.renderArPreparation = (projectId, returnContext, placementType, placeId, siteId) => renderArPreparation(app, projectId, returnContext, placementType, placeId, siteId);
+window.startArWithSkipCheck = (projectId, returnContext, placementType, placeId, siteId) => startArWithSkipCheck(app, projectId, returnContext, placementType, placeId, siteId);
+window.beginPlacementAr = async (projectId, type) => {
+    await startLocationAr(projectId);
+    window.renderLocationFieldMarker(projectId, type, 'ar');
+};
+window.beginExistingPlacementAr = async (projectId, markerId, placeId, siteId) => {
+    try {
+        const decodedProjectId = decodeURIComponent(projectId);
+        const decodedSiteId = decodeURIComponent(siteId);
+        const decodedPlaceId = decodeURIComponent(placeId);
+        const decodedMarkerId = decodeURIComponent(markerId);
+        await startLocationAr(projectId);
+        const site = (await loadProjectSites(decodedProjectId)).find(item => item.id === decodedSiteId);
+        const place = (await loadSitePlaces(decodedProjectId, decodedSiteId)).find(item => item.id === decodedPlaceId);
+        const marker = (await loadPlaceMarkers(decodedProjectId, decodedSiteId, decodedPlaceId)).find(item => item.id === decodedMarkerId);
+        if (!site || !place || !marker) throw new Error('Saved content could not be reopened for placement.');
+        app.innerHTML = await renderV1Anchors(site, place, marker);
+        window.updateAnchorFields();
+    } catch (error) {
+        window.alert(`Placement could not start: ${error.message}`);
+    }
+};
+window.beginAreaNavigationAr = (projectId, siteId, placeId) => startAreaNavigationAr(projectId, siteId, placeId).catch(error => window.alert(`Area navigation could not start: ${error.message}`));
+window.toggleGlobalAr = () => toggleGlobalAr();
+window.renderExplorerProjects = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
+window.renderVisitorLocationExperience = projectId => { setExperienceRole('visitor'); return renderVisitorLocationExperience(app, projectId); };
+window.renderVisitorLocationIntro = (projectId, creatorPreview = false, explorePreview = false) => { setExperienceRole(creatorPreview ? 'creator' : 'visitor'); return renderVisitorLocationIntro(app, projectId, creatorPreview, explorePreview); };
+window.renderXrProjects = () => { setExperienceRole('visitor'); return renderXrProjects(app); };
+window.renderFieldGuideProjects = () => { setExperienceRole('visitor'); return renderFieldGuideProjects(app); };
+window.renderFieldGuide = (projectId, creator = false) => {
+    if (window.__nourishlandSpatialWindow?.renderFieldGuide) {
+        return window.__nourishlandSpatialWindow.renderFieldGuide(projectId, creator);
+    }
+    const args = [projectId, creator];
+    rememberCurrentView('field-guide', args);
+    pushViewHistory('field-guide', args);
+    setExperienceRole(creator ? 'creator' : 'visitor');
+    return renderFieldGuide(app, projectId, creator);
+};
+window.openFieldGuidePlant = instanceId => openFieldGuidePlant(app, instanceId);
+window.positionFieldGuidePlant = instanceId => positionFieldGuidePlant(instanceId);
+window.applyFieldGuideFilter = () => applyFieldGuideFilter();
+window.filterFieldGuidePlace = placeId => applyFieldGuideFilter(placeId);
+window.renderV1Explorer = () => { setExperienceRole('visitor'); return renderExplorerProjects(app); };
+window.startTemporaryArDemo = () => { setExperienceRole('visitor'); return startTemporaryArDemo(app); };
+const decodeArArgument = value => {
+    const text = String(value ?? '');
+    try { return decodeURIComponent(text); } catch { return text; }
+};
+window.startArMode = (projectId, areaId, checkpointId, initialPlacementType = '', existingMarkerId = '', returnContext = '', preferredSiteId = '') => (async () => {
+    if(isDesktopLearningBookTarget())return launchCreatorArFromPage(app,()=>false,true);
+    const decodedProjectId = decodeArArgument(projectId);
+    const decodedAreaId = decodeArArgument(areaId);
+    const decodedCheckpointId = decodeArArgument(checkpointId);
+    const decodedInitialPlacementType = decodeArArgument(initialPlacementType);
+    const decodedExistingMarkerId = decodeArArgument(existingMarkerId);
+    const decodedReturnContext = decodeArArgument(returnContext);
+    const decodedPreferredSiteId = decodeArArgument(preferredSiteId);
+    const launch = async () => {
+        const started = await launchCreatorArFromPage(app, () => startArMode(decodedProjectId, decodedAreaId, decodedCheckpointId, decodedInitialPlacementType, decodedExistingMarkerId, decodedReturnContext, decodedPreferredSiteId));
+        if (started && isProjectTutorialEnabled(decodedProjectId)) {
+            acknowledgeArCameraSafety();
+            recordTutorialEvent(decodedProjectId, 'ar_mode_launched');
+        }
+        return started;
+    };
+    if (navigator.xr && window.isSecureContext && isProjectTutorialEnabled(decodedProjectId) && !hasArCameraSafetyAcknowledgement()) {
+        const origin = app.firstElementChild;
+        const originScroll = window.scrollY;
+        renderArSafetyScreen(app, {
+            onContinue: launch,
+            onCancel: () => {
+                if (origin) { app.replaceChildren(origin); window.scrollTo(0, originScroll); }
+                else window.renderProjectDashboard(encodeURIComponent(decodedProjectId));
+            }
+        });
+        return true;
+    }
+    return launch();
+})();
+window.startExistingMarkerPlacement = async (projectId, siteId, areaId, markerId, markerType = 'sub_checkpoint') => {
+    const started = await window.startArMode(
+        projectId,
+        areaId,
+        '',
+        markerType,
+        markerId,
+        'dashboard',
+        siteId
+    );
+    if (!started) {
+        const status = document.getElementById('projectStartingError');
+        const message = 'AR could not start. Check camera access and WebXR support, then try again.';
+        if (status) status.textContent = message;
+        else window.alert(message);
+    }
+};
+window.exitArMode = () => exitArMode();
+window.isArModeActive = () => isArModeActive();
+window.getNourishlandCreatorPerformance = getCreatorPerformanceSnapshot;
+window.openTemporaryArDemoWindow = () => { setExperienceRole('visitor'); return openTemporaryArDemoWindow(app); };
+window.openBiomeWheelXR = () => { forgetCurrentView(); replaceViewHistory('biome-wheel-xr'); setExperienceRole('visitor'); return renderBiomeWheelXR(app,{onExit:()=>window.renderLaunchScreen()}); };
+window.openHillyardsExplorer = () => renderHillyardsExplorer(app);
+window.openHostedProjectPrompt = () => { const url = window.prompt('Hosted project.json URL'); if (url) openHostedProject(app, url); };
+window.openHostedProject = (url) => openHostedProject(app, url);
+window.openHostedSite = (url) => openHostedSite(url);
+window.openHostedPlace = (url) => openHostedPlace(url);
+window.openHostedMarker = (url) => openHostedMarker(url);
+window.hostedGps = () => hostedGps();
+window.startHostedAr = (url) => startHostedAr(url);
+window.renderExplorerSites = (project) => renderExplorerSites(app, project);
+window.renderExplorerPlaces = (project, site) => renderExplorerPlaces(app, project, site);
+window.renderExplorerMarkers = (project, site, place) => renderExplorerMarkers(app, project, site, place);
+window.renderExplorerMarker = (project, site, place, marker) => renderExplorerMarker(app, project, site, place, marker);
+window.renderExplorerPlantProfile = (project, site, place, marker) => renderExplorerPlantProfile(app, project, site, place, marker);
+window.renderExplorerGps = (project) => renderExplorerGps(app, project);
+window.updateExplorerGps = () => updateExplorerGps();
+window.startExplorerAr = (project, site, place, marker) => startExplorerAr(project, site, place, marker);
+window.resetArPlacement = () => resetArPlacement();
+window.exitAr = () => exitAr();
+window.renderProjects = async () => {
+    await siteManager.loadSitesFromDisk();
+    renderSites(app, siteManager);
+};
+window.renderSites = window.renderProjects;
+window.renderProjectSites = (project) => renderProjectSites(app, project);
+window.renderProjectSiteForm = (project, site = null) => renderProjectSiteForm(app, project, site);
+window.saveProjectSite = async (project, site) => {
+    const name = document.getElementById('managedSiteName').value.trim();
+    if (!name) return;
+    if (site) await updateProjectSite(project.id, site.id, { name });
+    else await createProjectSite(project.id, { name });
+    window.renderProjectSites(project);
+};
+window.deleteProjectSite = async (project, siteId) => {
+    if (!window.confirm('Delete this Location and all of its Areas and content?')) return;
+    await deleteProjectSite(project.id, siteId);
+    window.renderProjectSites(project);
+};
+window.renderProjectForm = (project = null) => renderProjectFormScreen(app, project);
+window.setProjectTemplate = (templateKey) => setProjectTemplate(app, templateKey);
+window.renderSiteForm = () => window.renderProjectForm();
+window.renderSiteDashboard = (site) => renderSiteDashboard(app, site, `window.renderProjectSites(${JSON.stringify({ id: site.projectId, name: site.projectId })})`);
+window.renderSiteOverview = (site) => renderSiteOverview(app, site);
+window.renderSiteAssets = (site) => renderSiteAssets(app, site);
+window.renderSiteExperiences = (site) => renderSiteExperiences(app, site);
+window.renderSitePublish = (site) => renderSitePublish(app, site);
+window.renderSiteLocations = (site) => renderSiteLocations(app, site);
+window.renderSiteMap = (site) => renderSiteMap(app, site);
+window.renderPlaceAssets = (site, place, mode, asset) => renderPlaceAssets(app, site, place, mode, asset);
+window.renderAssetWorkspace = (site, place, asset) => renderAssetWorkspace(app, site, place, asset);
+window.renderAssetGeneral = (site, place, asset) => renderAssetGeneral(app, site, place, asset);
+window.renderV1Editors = (site, place, asset) => {
+    app.innerHTML = renderV1Editors(site, place, asset, `window.renderPlaceAssets(${JSON.stringify(site)}, ${JSON.stringify(place)}, 'list')`);
+};
+window.renderV1General = (site, place, asset) => {
+    app.innerHTML = renderV1General(site, place, asset);
+};
+window.renderV1PlantProfile = (site, place, asset) => {
+    renderV1PlantProfile(site, place, asset).then(html => { app.innerHTML = html; }).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+};
+window.savePlantProfile = async (site, place, asset) => {
+    const keys = ['common_name','scientific_name','overview','identification','edible_uses','propagation','growing_conditions','notes','references'];
+    const profile = Object.fromEntries(keys.map(key => [key, document.getElementById(`profile_${key}`).value]));
+    const error = document.getElementById('plantProfileError');
+    if (!profile.common_name.trim() || !profile.scientific_name.trim()) { error.textContent = 'Common Name and Scientific Name are required.'; return; }
+    try { await savePlantProfile(site.projectId, site.id, place.id, asset.id, profile); window.renderAssetWorkspace(site, place, asset); } catch (failure) { error.textContent = `Save failed: ${failure.message}`; }
+};
+window.renderV1Anchors = (site, place, asset) => {
+    renderV1Anchors(site, place, asset).then(html => { app.innerHTML = html; window.updateAnchorFields(); }).catch(error => { app.innerHTML = `<div class="screen"><p>${escapeMainHtml(error.message)}</p></div>`; });
+};
+window.updateAnchorFields = () => {
+    const gps = document.getElementById('anchor_type').value === 'gps';
+    document.getElementById('gpsAnchorFields').style.display = gps ? 'block' : 'none';
+    document.getElementById('qrAnchorFields').style.display = gps ? 'none' : 'block';
+};
+window.useCurrentAnchorLocation = () => {
+    const error = document.getElementById('anchorError');
+    if (!navigator.geolocation) { error.textContent = 'Location is unavailable in this browser.'; return; }
+    navigator.geolocation.getCurrentPosition(position => {
+        document.getElementById('anchor_type').value = 'gps'; window.updateAnchorFields();
+        document.getElementById('anchor_latitude').value = position.coords.latitude;
+        document.getElementById('anchor_longitude').value = position.coords.longitude;
+        document.getElementById('anchor_altitude').value = position.coords.altitude ?? '';
+        document.getElementById('anchor_accuracy').value = position.coords.accuracy;
+        document.getElementById('anchor_captured_at').value = new Date(position.timestamp).toISOString();
+        error.textContent = 'Current location captured. Save Anchor to persist it.';
+    }, failure => { error.textContent = failure.code === 1 ? 'Location permission was denied.' : 'Location could not be captured.'; }, { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 });
+};
+window.saveMarkerAnchor = async (site, place, asset) => {
+    const type = document.getElementById('anchor_type').value;
+    const anchor = { type, latitude: document.getElementById('anchor_latitude').value, longitude: document.getElementById('anchor_longitude').value, altitude: document.getElementById('anchor_altitude').value, accuracy: document.getElementById('anchor_accuracy').value, captured_at: document.getElementById('anchor_captured_at').value, qr_code: document.getElementById('anchor_qr_code').value, description: document.getElementById('anchor_description').value };
+    const error = document.getElementById('anchorError');
+    const latitude = Number(anchor.latitude), longitude = Number(anchor.longitude);
+    if (type === 'gps' && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180)) { error.textContent = 'Enter latitude (-90 to 90) and longitude (-180 to 180).'; return; }
+    if (type === 'qr' && !anchor.qr_code.trim()) { error.textContent = 'QR Code is required.'; return; }
+    try { await saveMarkerAnchor(site.projectId, site.id, place.id, asset.id, anchor); error.textContent = `Saved ${anchor.latitude}, ${anchor.longitude} · accuracy ${anchor.accuracy || 'not available'} m · ${asset.name} at ${place.name}.`; } catch (failure) { error.textContent = `Save failed: ${failure.message}`; }
+};
+window.renderLocationForm = (site, location) => renderLocationFormScreen(app, site, location);
+window.renderLocationDetail = (site, location) => renderLocationDetailScreen(app, site, location);
+window.selectMapPlace = (placeId, site) => {
+    const place = (site.locations || []).find(location => location.id === placeId);
+    const container = document.getElementById('mapPlaceInfo');
+
+    if (container) {
+        container.innerHTML = place
+            ? `<strong>${place.name}</strong><br />Type: ${place.type}`
+            : 'No Area selected';
+    }
+};
+window.createProjectFromForm = async () => {
+    const projectName = document.getElementById('projectName');
+    const projectTemplate = document.getElementById('projectTemplate');
+
+    if (projectName && projectTemplate) {
+        const name = projectName.value.trim();
+        const template = projectTemplate.value;
+
+        if (name) {
+            const suggestions = projectTemplates[template]?.sites || [];
+            const expertMode = document.getElementById('projectExpertMode')?.checked === true;
+            const tutorialEnabled = document.getElementById('projectTutorialEnabled')?.checked !== false;
+            const created = await siteManager.createProject({ name, template, description: document.getElementById('projectDescription')?.value.trim() || '', coverImage: '', visibility: 'draft', projectStatus: 'under_construction', expertMode, siteSuggestions: suggestions });
+            restartProjectTutorial(created.id);
+            setProjectTutorialMode(created.id, tutorialEnabled && !expertMode);
+            await siteManager.loadSitesFromDisk();
+            // A new project opens at the project dashboard. The protected Home
+            // workspace and its seeded template marker remain available there.
+            window.renderProjectDashboard(encodeURIComponent(created.id));
+        }
+    }
+};
+window.createSiteFromForm = window.createProjectFromForm;
+window.renameProjectFromForm = async (project) => {
+    const projectName = document.getElementById('projectName');
+    const projectTemplate = document.getElementById('projectTemplate');
+
+    if (projectName && projectTemplate) {
+        const name = projectName.value.trim();
+
+        if (name) {
+            await siteManager.renameProject(project.id, {
+                name,
+                template: projectTemplate.value,
+                description: document.getElementById('projectDescription')?.value.trim() || '',
+                coverImage: project.coverImage || '',
+                expertMode: document.getElementById('projectExpertMode')?.checked === true
+            });
+            await siteManager.loadSitesFromDisk();
+            window.renderProjects();
+        }
+    }
+};
+window.deleteProject = async (projectId) => {
+    if (!window.confirm('Delete this project and all of its Areas and content?')) {
+        return;
+    }
+
+    await siteManager.deleteProject(projectId);
+    await siteManager.loadSitesFromDisk();
+    window.renderProjects();
+};
+window.exportProject = async (projectId) => { try { await exportProject(projectId); } catch (error) { window.alert(`Export failed: ${error.message}`); } };
+window.importProjectFile = async (file) => {
+    if (!file) return;
+    try { await importProject(file); }
+    catch (error) {
+        if (!error.message.includes('already exists') || !window.confirm('A location with this ID already exists. Import as a copy?')) { if (!error.message.includes('already exists')) window.alert(`Import failed: ${error.message}`); return; }
+        try { await importProject(file, true); } catch (copyError) { window.alert(`Import failed: ${copyError.message}`); return; }
+    }
+    await siteManager.loadSitesFromDisk(); window.renderProjects();
+};
+window.createLocation = async (site) => {
+    const locationName = document.getElementById('locationName');
+    const locationType = document.getElementById('locationType');
+
+    if (locationName && locationType) {
+        const name = locationName.value.trim();
+        const type = locationType.value;
+
+        if (name) {
+            await createSitePlace(site.projectId, site.id, { name, type, description: '' });
+            window.renderSiteLocations(site);
+        }
+    }
+};
+window.updateLocation = async (site, location) => {
+    const locationName = document.getElementById('locationName');
+    const locationType = document.getElementById('locationType');
+
+    if (locationName && locationType) {
+        const name = locationName.value.trim();
+        const type = locationType.value;
+
+        if (name) {
+            const updatedLocation = {
+                ...location,
+                name,
+                type,
+                description: location.description || '',
+                notes: location.notes || '',
+                mapPosition: location.mapPosition || 'Not set'
+            };
+            await updateSitePlace(site.projectId, site.id, location.id, updatedLocation);
+            window.renderSiteLocations(site);
+        }
+    }
+};
+window.deleteLocation = async (site, locationId) => {
+    await deleteSitePlace(site.projectId, site.id, locationId);
+    window.renderSiteLocations(site);
+};
+window.createAsset = async (site, place) => {
+    const assetName = document.getElementById('assetName');
+    const assetCategory = document.getElementById('assetCategory');
+
+    if (assetName && assetCategory) {
+        const name = assetName.value.trim();
+        const category = assetCategory.value;
+
+        if (name) {
+            await createPlaceMarker(site.projectId, site.id, place.id, { name, type: category });
+            window.renderPlaceAssets(site, place, 'list');
+        }
+    }
+};
+window.updateAsset = async (site, place, asset) => {
+    const assetName = document.getElementById('assetName');
+    const assetCategory = document.getElementById('assetCategory');
+
+    if (assetName && assetCategory) {
+        const name = assetName.value.trim();
+        const category = assetCategory.value;
+
+        if (name) {
+            await updatePlaceMarker(site.projectId, site.id, place.id, asset.id, { name, type: category });
+            window.renderPlaceAssets(site, place, 'list');
+        }
+    }
+};
+window.deleteAsset = async (site, place, assetId) => {
+    await deletePlaceMarker(site.projectId, site.id, place.id, assetId);
+    window.renderPlaceAssets(site, place, 'list');
+};
+
+
+window.addEventListener('nxr:latest-entry-added', async () => {
+    // Refresh the hidden Tool Box while AR is active so the saved marker is
+    // already visible in Changes when the session closes.
+    if (app.querySelector('.project-entry')) {
+        await renderHillyardsProject(app);
+    }
+});
+
+window.openExperienceSettings=(fromHistory=false,returnState=history.state)=>{
+    cancelVisitorExperience();
+    if(!fromHistory) history.pushState({nourishlandView:'experience-settings',returnState},'',window.location.href);
+    renderPlatformComingSoon(app,'Settings','launch');
+    const back=app.querySelector('.page-header > button');
+    if(back){back.removeAttribute('onclick');back.textContent='Back to your experience';back.addEventListener('click',()=>history.back());}
+};
+// Existing entry points remain callable; visitor destinations share one history-aware journey.
+let creatorPreviewProjectId = '';
+window.openCreatorExplorerPreview = projectId => {
+    creatorPreviewProjectId = projectId;
+    return window.openVisitor('place', projectId);
+};
+window.openVisitor = async (view='places',project='',selection='',fromHistory=false) => {
+    const args=[view,project,selection];
+    setExperienceRole('visitor');
+    rememberCurrentView('visitor-v2',args);
+    const url = new URL(window.location.href);
+    url.search='';url.searchParams.set('visit',view);
+    if(project)url.searchParams.set('explore',project);
+    if(selection)url.searchParams.set('plant',selection);
+    const entry={nourishlandView:'visitor-v2',viewArgs:args};
+    if(!fromHistory && JSON.stringify(history.state?.viewArgs)!==JSON.stringify(args)) history.pushState(entry,'',url);
+    else history.replaceState(entry,'',url);
+    if (view === 'places' || (creatorPreviewProjectId && project !== creatorPreviewProjectId)) creatorPreviewProjectId = '';
+    await renderVisitorExperience(app,view,project,selection);
+    if (creatorPreviewProjectId && project === creatorPreviewProjectId && app.querySelector('.v2-screen')) {
+        const banner = document.createElement('div');
+        banner.className = 'creator-explorer-preview-banner';
+        banner.innerHTML = '<strong>Visitor preview</strong><span>Showing published content only</span><button type="button">Back to Creator</button>';
+        banner.querySelector('button').addEventListener('click', () => {
+            const id = creatorPreviewProjectId;
+            creatorPreviewProjectId = '';
+            window.renderProjectDashboard(encodeURIComponent(id));
+        });
+        app.querySelector('.v2-screen').prepend(banner);
+    }
+};
+const legacyFieldGuide=window.renderFieldGuide;
+const legacyWelcome=window.renderVisitorLocationIntro;
+const legacyBrowse=window.renderBrowseContent;
+window.renderV1Explorer=()=>{clearVisitorCache();return window.openVisitor('places');};
+window.renderExplorerProjects=window.renderV1Explorer;
+window.renderFieldGuideProjects=window.renderV1Explorer;
+window.renderVisitorLocationIntro=(id,creator=false,preview=false)=>creator||preview?legacyWelcome(id,creator,preview):window.openVisitor('place',decodeMainValue(id));
+window.renderFieldGuide=(id,creator=false)=>creator?legacyFieldGuide(id,true):window.openVisitor('plants',decodeMainValue(id));
+window.renderBrowseContent=(id,creator=false)=>creator?legacyBrowse(id,true):window.openVisitor('plants',decodeMainValue(id));
+if(!history.state?.nourishlandView) replaceViewHistory('welcome');
+
+window.openDemoChapters=async()=>{cancelVisitorExperience();const url=new URL(location.href);url.search='';url.searchParams.set('chapters','1');history.replaceState({nourishlandView:'chapters'},'',url);const {renderDemoChapters}=await import("./screens/demoChapters.js?v=0.9818");return renderDemoChapters(app);};
+window.openDeveloperLab=async()=>{cancelVisitorExperience();const url=new URL(location.href);url.search='';url.searchParams.set('dev','lab');history.replaceState({nourishlandView:'developer-lab'},'',url);const {renderDeveloperLab}=await import("./screens/developerLab.js?v=0.9818");return renderDeveloperLab(app);};
+
+if (!window.__nxrSkipBootstrap) bootstrap();
+
+// Creator camera entry is independent of immersive AR capability.
+window.scanCreatorArUco = async projectId => {
+    try { const { startPhysicalAnchorScanner } = await import("./screens/physicalAnchorScanner.js?v=0.9818"); await startPhysicalAnchorScanner(decodeURIComponent(projectId)); }
+    catch (error) { window.alert(error.message); }
+};

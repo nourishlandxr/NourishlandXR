@@ -1,3 +1,5 @@
+import {checkLivingPieces} from './food-forest-pieces-v5-browser-qa.mjs';
+import {checkForestV4} from './food-forest-v4-browser-qa.mjs';
 import {checkForestV3} from './food-forest-v3-browser-qa.mjs';
 import {createRequire} from 'node:module';
 import assert from 'node:assert/strict';
@@ -22,6 +24,8 @@ const target=async id=>{const t=(await targets()).find(t=>t.id===id);assert.ok(t
 async function drag(id,to,cancel=false){const from=await target(id);await page.mouse.move(from.x,from.y);await page.mouse.down();await page.mouse.move(to.x,to.y,{steps:9});if(cancel)await page.evaluate(()=>dispatchEvent(new Event('blur')));await page.mouse.up();}
 try{
     await page.addInitScript(()=>{if(new URLSearchParams(location.search).get('editor')==='food-forest'){window.xrRequests=0;Object.defineProperty(navigator,'xr',{configurable:true,value:{isSessionSupported:async()=>true,requestSession:async()=>{window.xrRequests++;throw Error('Headset fixture: session requires physical device');}}});}});
+    await checkLivingPieces(page,origin);
+    await checkForestV4(page,origin);
     await page.goto(`${origin}/app/demos/`);await page.getByRole('link',{name:'Open Food Forest Table',exact:true}).click();await page.waitForFunction(()=>!!window.foodForestTable);
     assert.equal(new URL(page.url()).searchParams.get('mode'),'xr');assert.equal(await page.evaluate(()=>window.xrRequests),0);
     await page.setViewportSize({width:390,height:844});await page.waitForTimeout(100);
@@ -30,8 +34,8 @@ try{
     await page.locator('[data-action=enter-xr]').click();assert.equal(await page.evaluate(()=>window.xrRequests),1);assert.match(await page.locator('[data-caption]').textContent(),/Headset fixture/);
     await page.locator('[data-action=back-to-demos]').click();await page.getByRole('heading',{name:'Choose one thing to test.'}).waitFor();
     await page.goto(`${origin}/app/?chapters=1`);await page.getByRole('link',{name:'Open Food Forest Table',exact:true}).click();await page.waitForFunction(()=>!!window.foodForestTable);await page.locator('[data-action=back-to-demos]').click();await page.getByRole('heading',{name:'Demo chapters',exact:true}).waitFor();
-    await page.goto(`${origin}/tools/preview-food-forest-kit.html`);await page.waitForFunction(()=>!!window.foodForestTable);await page.waitForTimeout(300);
-    assert.equal((await read()).pieces.length,7);assert.equal(await page.locator('[data-layer]').count(),7);
+    await page.goto(`${origin}/tools/preview-food-forest-kit.html?sample=layers`);await page.waitForFunction(()=>!!window.foodForestTable);await page.waitForTimeout(300);
+    await page.locator('[data-v4="page:more"]').click();assert.equal((await read()).pieces.length,7);assert.equal(await page.locator('[data-layer]').count(),7);
     assert.deepEqual((await read()).underground,{board:'transparent-glass',roots:7});await page.waitForTimeout(850);
     const initialRendering=(await read()).rendering;assert.equal(initialRendering.shadows,false,'no stereo shadow-map pass');assert.ok(initialRendering.calls<100,'initial board draw-call budget');
     await page.screenshot({path:'artifacts/food-forest-table.png'});
