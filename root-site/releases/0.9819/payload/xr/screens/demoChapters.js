@@ -1,0 +1,8 @@
+import {DEMO_CHAPTERS,DEMO_CHAPTER_STEPS} from "../services/demoChapters.js?v=0.9819";
+import {html} from "../services/productExperience.js?v=0.9819";
+import {startTemporaryArDemo} from "./temporaryArDemo.js?v=0.9819";
+export function renderDemoChapters(app){
+ app.innerHTML=`<section class="screen v2-screen demo-chapters"><header class="page-header"><button data-back>← Welcome</button><h1>Demo chapters</h1><p>From a soft landing to learning in real places. Start at a chapter or follow the whole journey.</p></header><div class="panel">${DEMO_CHAPTERS.map((chapter,i)=>`<article><h2>${i+1}. ${html(chapter.title)}</h2><p>${html(chapter.description)}</p><button data-chapter="${chapter.id}">Start this chapter</button></article>`).join('')}</div><section class="panel"><h2>Food Forest Table · XR prototype</h2><p>Plant miniature trees on transparent glass and watch their roots grow.</p><a href="${html(new URL('../?editor=food-forest&mode=xr&from=chapters',import.meta.url).href)}">Open Food Forest Table</a></section><details class="panel"><summary>Full guided sequence</summary><ol>${DEMO_CHAPTER_STEPS.map(step=>`<li><strong>${html(step.id)}</strong> · ${html(step.title)}</li>`).join('')}</ol></details></section>`;
+ app.querySelector('[data-back]').onclick=()=>{const url=new URL(location.href);url.searchParams.delete('chapters');history.replaceState({},'',url);window.renderLaunchScreen();};
+ for(const button of app.querySelectorAll('[data-chapter]'))button.onclick=async()=>{button.disabled=true;try{await startTemporaryArDemo(app,{chapter:button.dataset.chapter});}catch(error){button.disabled=false;button.textContent=error.message;}};
+}

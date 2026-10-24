@@ -1,0 +1,240 @@
+import {createCraftedSignGeometry} from "./craftedTotemGeometry.js?v=0.9819";
+function compileShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        const message = gl.getShaderInfoLog(shader) || 'Unknown prism shader error.';
+        gl.deleteShader(shader);
+        throw new Error(message);
+    }
+    return shader;
+}
+
+export function createPrismGeometry() {
+    const vertices = [];
+    const face = (normal, corners) => {
+        const indices = [0, 1, 2, 0, 2, 3];
+        indices.forEach(index => vertices.push(...corners[index], ...normal));
+    };
+    face([0, 0, 1], [[-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]]);
+    face([1, 0, 0], [[1, -1, 1], [1, -1, -1], [1, 1, -1], [1, 1, 1]]);
+    face([0, 0, -1], [[1, -1, -1], [-1, -1, -1], [-1, 1, -1], [1, 1, -1]]);
+    face([-1, 0, 0], [[-1, -1, -1], [-1, -1, 1], [-1, 1, 1], [-1, 1, -1]]);
+    face([0, 1, 0], [[-1, 1, 1], [1, 1, 1], [1, 1, -1], [-1, 1, -1]]);
+    face([0, -1, 0], [[-1, -1, -1], [1, -1, -1], [1, -1, 1], [-1, -1, 1]]);
+    return new Float32Array(vertices);
+}
+
+export function prismModelMatrix(position, dimensions = {}, rotationY = Math.PI / 7) {
+    const halfWidth = Number(dimensions.halfWidth) || .14;
+    const halfHeight = Number(dimensions.halfHeight) || .72;
+    const halfDepth = Number(dimensions.halfDepth) || halfWidth;
+    const cosine = Math.cos(rotationY);
+    const sine = Math.sin(rotationY);
+    return new Float32Array([
+        cosine * halfWidth, 0, -sine * halfWidth, 0,
+        0, halfHeight, 0, 0,
+        sine * halfDepth, 0, cosine * halfDepth, 0,
+        Number(position?.x) || 0,
+        (Number(position?.y) || 0) + halfHeight,
+        Number(position?.z) || 0,
+        1
+    ]);
+}
+
+export function createBeveledPrismGeometry() {
+    const points=[];
+    for(let corner=0;corner<4;corner++)for(let step=0;step<10;step++){const a=corner*Math.PI/2+step*Math.PI/18;points.push([Math.cos(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.cos(a)*.28,Math.sin(corner*Math.PI/2+Math.PI/4)*Math.SQRT2*.72+Math.sin(a)*.28]);}
+    const rings = [[-1,.82],[-.98,1],[.98,1],[1,.82]];
+    const vertices = [];
+    const triangle = (a,b,c) => {
+        const u=b.map((v,i)=>v-a[i]), v=c.map((n,i)=>n-a[i]);
+        const n=[u[1]*v[2]-u[2]*v[1],u[2]*v[0]-u[0]*v[2],u[0]*v[1]-u[1]*v[0]];
+        const length=Math.hypot(...n);
+        for(const p of [a,b,c]) vertices.push(...p,...n.map(value=>value/length));
+    };
+    const point=(ring,i)=>[points[i][0]*rings[ring][1],rings[ring][0],points[i][1]*rings[ring][1]];
+    for(let r=0;r<3;r++) for(let i=0;i<points.length;i++) {
+        const j=(i+1)%points.length,a=point(r,i),b=point(r+1,i),c=point(r+1,j),d=point(r,j);
+        triangle(a,b,c);triangle(a,c,d);
+    }
+    for(let i=0;i<points.length;i++) {
+        triangle([0,1,0],point(3,(i+1)%points.length),point(3,i));
+        triangle([0,-1,0],point(0,i),point(0,(i+1)%points.length));
+    }
+    return new Float32Array(vertices);
+}
+
+function multiplyMatrices(a, b) {
+    const out = new Float32Array(16);
+    for (let column = 0; column < 4; column += 1) {
+        for (let row = 0; row < 4; row += 1) {
+            out[column * 4 + row] = a[row] * b[column * 4]
+                + a[4 + row] * b[column * 4 + 1]
+                + a[8 + row] * b[column * 4 + 2]
+                + a[12 + row] * b[column * 4 + 3];
+        }
+    }
+    return out;
+}
+
+export function createSpatialPrismRenderer(gl) {
+    const vertexShader = compileShader(gl, gl.VERTEX_SHADER, `
+        attribute vec3 position;
+        attribute vec3 normal;
+        uniform mat4 projection;
+        uniform mat4 modelView;
+        uniform vec3 inverseScale;
+        uniform float topTaper;
+        varying vec3 surfaceNormal;
+        varying vec3 viewDirection;
+        varying vec3 localPosition;
+        void main() {
+            localPosition=position;
+            float taper=mix(1.0,topTaper,smoothstep(-.35,1.0,position.y));
+            vec3 shapedPosition=vec3(position.x*taper,position.y,position.z*taper);
+            vec4 viewPosition = modelView * vec4(shapedPosition, 1.0);
+            surfaceNormal = normalize((modelView * vec4(normal * inverseScale * inverseScale, 0.0)).xyz);
+            viewDirection = normalize(-viewPosition.xyz);
+            gl_Position = projection * viewPosition;
+        }
+    `);
+    const fragmentShader = compileShader(gl, gl.FRAGMENT_SHADER, `
+        precision mediump float;
+        varying vec3 surfaceNormal;
+        varying vec3 viewDirection;
+        varying vec3 localPosition;
+        uniform vec3 color;
+        uniform vec3 topColor;
+        uniform float alpha;
+        uniform float woodGrain;
+        uniform float grainDirection;
+        uniform float craftedSign;
+        uniform float signMaterial;
+        uniform vec3 notificationColour;
+        uniform float notificationStrength;
+        void main() {
+            vec3 normal = normalize(surfaceNormal);
+            vec3 viewer = normalize(viewDirection);
+            vec3 lightDirection = normalize(vec3(-0.5, 0.82, 0.42));
+            float diffuse = max(dot(normal, lightDirection), 0.0);
+            float facing = max(dot(normal, viewer), 0.0);
+            float topFace = smoothstep(0.72, 0.94, normal.y);
+            float sideShade = 0.52 + diffuse * 0.38 + facing * 0.08;
+            vec3 shaded = color * sideShade;
+            shaded = mix(shaded, topColor, topFace);
+            float rim = pow(1.0 - facing, 3.0);
+            float sheen = pow(max(dot(reflect(-lightDirection, normal), viewer), 0.0), 28.0);
+            shaded += vec3(.8,.86,.74) * (sheen * .16 + rim * .07);
+            float collar=smoothstep(.70,.75,localPosition.y);
+            float base=smoothstep(-.95,-.94,localPosition.y)*(1.-smoothstep(-.90,-.89,localPosition.y));
+            shaded=mix(shaded,shaded*.55,base*.65);
+            shaded=mix(shaded,mix(topColor,vec3(.9,.97,.84),.6),collar*.9);
+            if(woodGrain > 0.0){
+                float along=mix(localPosition.y,localPosition.x,grainDirection);
+                float across=mix(localPosition.x,localPosition.y,grainDirection);
+                float grain=sin(across*22.0+sin(along*3.5+localPosition.z*2.0)*.9);
+                float fine=sin(across*46.0+sin(along*5.0)*1.4);
+                shaded*=1.0+woodGrain*(grain*.07+fine*.025);
+                shaded=mix(shaded,shaded*.78,woodGrain*collar);
+            }
+            float glassGrain=.5+.5*sin(localPosition.x*115.+sin(localPosition.y*90.)*.6);
+            shaded=mix(shaded,notificationColour*(.72+.16*glassGrain+notificationStrength*1.5)+vec3(.8,.94,.9)*sheen*.55,collar);
+            if(craftedSign>.5){
+                float grain=sin(localPosition.y*92.+sin(localPosition.x*5.)*.35)*.018;
+                if(signMaterial>1.5)grain=sin(localPosition.x*231.+localPosition.y*113.)*sin(localPosition.y*193.)*.006;
+                if(signMaterial>3.5)grain+=sin(localPosition.y*54.+sin(localPosition.x*15.)*1.6)*.035;
+                float glint=pow(max(dot(normal,normalize(lightDirection+viewer)),0.),28.);
+                shaded=color*(.64+.37*diffuse+grain)+vec3(.95,.80,.55)*glint*.055;
+                if(signMaterial>2.5&&signMaterial<3.5)shaded+=vec3(.8,.94,.92)*(glint*.12+rim*.09);
+            }
+            gl_FragColor = vec4(shaded, alpha);
+        }
+    `);
+    const program = gl.createProgram();
+    gl.attachShader(program, vertexShader);
+    gl.attachShader(program, fragmentShader);
+    gl.linkProgram(program);
+    gl.deleteShader(vertexShader);
+    gl.deleteShader(fragmentShader);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        const message = gl.getProgramInfoLog(program) || 'Unknown prism program error.';
+        gl.deleteProgram(program);
+        throw new Error(message);
+    }
+    const geometry = createBeveledPrismGeometry();
+    const vertexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, geometry, gl.STATIC_DRAW);
+    return {
+        program,
+        signMeshes:{},
+        vertexBuffer,
+        vertexCount: geometry.length / 6,
+        positionLocation: gl.getAttribLocation(program, 'position'),
+        normalLocation: gl.getAttribLocation(program, 'normal'),
+        projectionLocation: gl.getUniformLocation(program, 'projection'),
+        modelViewLocation: gl.getUniformLocation(program, 'modelView'),
+        inverseScaleLocation: gl.getUniformLocation(program, 'inverseScale'),
+        topTaperLocation: gl.getUniformLocation(program, 'topTaper'),
+        colorLocation: gl.getUniformLocation(program, 'color'),
+        topColorLocation: gl.getUniformLocation(program, 'topColor'),
+        craftedSignLocation:gl.getUniformLocation(program,'craftedSign'),
+        signMaterialLocation:gl.getUniformLocation(program,'signMaterial'),
+        woodLocation:gl.getUniformLocation(program,'woodGrain'),grainLocation:gl.getUniformLocation(program,'grainDirection'),
+        alphaLocation: gl.getUniformLocation(program, 'alpha'),
+        notificationColourLocation:gl.getUniformLocation(program,'notificationColour'),
+        notificationStrengthLocation:gl.getUniformLocation(program,'notificationStrength')
+    };
+}
+
+export function drawSpatialPrism(gl, renderer, view, position, options = {}) {
+    if (!renderer || !view?.projectionMatrix || !view?.transform?.inverse?.matrix || !position) return;
+    const alpha = Number.isFinite(options.alpha) ? options.alpha : .96;
+    const model = prismModelMatrix(position, options, Number.isFinite(options.rotationY) ? options.rotationY : Math.PI / 7);
+    const modelView = multiplyMatrices(view.transform.inverse.matrix, model);
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.enable(gl.CULL_FACE);
+    gl.frontFace(gl.CCW);
+    gl.cullFace(gl.BACK);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    gl.depthMask(alpha >= .95);
+    gl.useProgram(renderer.program);
+    let vertexBuffer=renderer.vertexBuffer,vertexCount=renderer.vertexCount;
+    if(options.signBoard){
+        const key=options.signStyle?options.signStyle+':'+options.signBoard:options.signBoard;
+        if(!renderer.signMeshes[key]){const geometry=createCraftedSignGeometry(options.signBoard,options.signStyle),buffer=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buffer);gl.bufferData(gl.ARRAY_BUFFER,geometry,gl.STATIC_DRAW);renderer.signMeshes[key]={buffer,count:geometry.length/6};}
+        vertexBuffer=renderer.signMeshes[key].buffer;vertexCount=renderer.signMeshes[key].count;
+    }
+    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
+    gl.enableVertexAttribArray(renderer.positionLocation);
+    gl.vertexAttribPointer(renderer.positionLocation, 3, gl.FLOAT, false, 24, 0);
+    gl.enableVertexAttribArray(renderer.normalLocation);
+    gl.vertexAttribPointer(renderer.normalLocation, 3, gl.FLOAT, false, 24, 12);
+    gl.uniformMatrix4fv(renderer.projectionLocation, false, view.projectionMatrix);
+    gl.uniformMatrix4fv(renderer.modelViewLocation, false, modelView);
+    gl.uniform3fv(renderer.inverseScaleLocation, [1/(Number(options.halfWidth)||.14),1/(Number(options.halfHeight)||.72),1/(Number(options.halfDepth)||Number(options.halfWidth)||.14)]);
+    gl.uniform1f(renderer.topTaperLocation, Number.isFinite(options.topTaper) ? options.topTaper : 1);
+    gl.uniform3fv(renderer.colorLocation, options.color || [.34, .78, .7]);
+    gl.uniform3fv(renderer.topColorLocation, options.topColor || [.58, .93, .84]);
+    gl.uniform1f(renderer.craftedSignLocation,options.signBoard?1:0);
+    gl.uniform1f(renderer.signMaterialLocation,options.signMaterial||0);
+    gl.uniform1f(renderer.woodLocation,options.woodGrain || 0);
+    gl.uniform1f(renderer.grainLocation,options.grainDirection || 0);
+    gl.uniform1f(renderer.alphaLocation, alpha);
+    gl.uniform3fv(renderer.notificationColourLocation,options.notification?.colour || [1,1,1]);
+    gl.uniform1f(renderer.notificationStrengthLocation,options.notification?.strength || 0);
+    gl.drawArrays(gl.TRIANGLES, 0, vertexCount);
+    gl.depthMask(true);
+    gl.disable(gl.CULL_FACE);
+}
+
+export function destroySpatialPrismRenderer(gl, renderer) {
+    if (!gl || !renderer) return;
+    gl.deleteBuffer(renderer.vertexBuffer);
+    for(const mesh of Object.values(renderer.signMeshes||{}))gl.deleteBuffer(mesh.buffer);
+    gl.deleteProgram(renderer.program);
+}

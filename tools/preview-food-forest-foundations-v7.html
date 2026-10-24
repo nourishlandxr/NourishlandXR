@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#17362d">
+  <title>Nourishland · Food Forest Foundations V7</title>
+  <style>
+    :root{color-scheme:light;--forest:#17362d;--moss:#637d52;--sage:#a9b791;--cream:#f3efdf;--ink:#284638;--clay:#b77c55;--line:#d4d8c5}
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--forest);color:var(--cream);font:14px/1.5 Manrope,system-ui,sans-serif}button{font:inherit;color:inherit;cursor:pointer}button:focus-visible{outline:3px solid #e6bb67;outline-offset:3px}header{height:72px;padding:0 30px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #adc4a333}header strong{font:25px Georgia,serif;letter-spacing:.01em}header small{display:block;color:#a9bd9e;font-size:9px;letter-spacing:.2em}header a{color:#e1d7b6;text-decoration:none}.layout{height:calc(100dvh - 72px);min-height:600px;display:grid;grid-template-columns:minmax(0,1fr) 360px}.stage{position:relative;min-width:0;overflow:hidden;background:radial-gradient(ellipse at 50% 48%,#536a4d 0,#263f34 44%,#142e27 82%)}canvas{display:block;width:100%;height:100%;touch-action:none}.intro{position:absolute;left:34px;top:26px;max-width:490px;pointer-events:none}.eyebrow{color:#d7c48b;font-size:10px;letter-spacing:.18em;text-transform:uppercase}.intro h1{font:clamp(32px,4vw,54px)/1.04 Georgia,serif;letter-spacing:-.03em;margin:12px 0 9px}.intro p{margin:0;color:#c4d0b6;font-size:13px}.foot{position:absolute;left:34px;right:26px;bottom:26px;color:#bfceb8;font-size:11px;pointer-events:none}.foot strong{color:#f2dca6}.rail{overflow:auto;background:var(--cream);color:var(--ink);padding:24px 23px 32px}.rail h2{font:28px/1.12 Georgia,serif;margin:8px 0}.rail p{font-size:12px;color:#657463}.family-list{display:grid;gap:7px;margin:19px 0}.family-list button{display:flex;align-items:center;gap:11px;text-align:left;width:100%;min-height:53px;padding:8px 10px;background:#fffdf5;border:1px solid var(--line);border-radius:9px;color:var(--ink)}.family-list button[aria-pressed=true]{background:#e2e9d5;border-color:#738c62;box-shadow:inset 3px 0 var(--moss)}.family-list button[aria-pressed=true] .family-mark{background:var(--forest);color:#f4e8c4}.family-mark{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#e7e9d9;color:#58714e;font:15px Georgia,serif}.family-copy{display:grid;gap:1px}.family-copy strong{font-size:12px}.family-copy small{font-size:10px;color:#74816f}.variant-list{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:13px 0}.variant-list button{min-height:45px;padding:8px;text-align:left;border:1px solid var(--line);border-radius:7px;background:#fffdf5;color:#4d634b;font-size:11px}.variant-list button[aria-pressed=true]{background:#315942;color:#fff3ce;border-color:#315942}.actions{display:flex;gap:8px;margin:16px 0}.actions button{width:45px;height:45px;display:grid;place-items:center;border:1px solid #c4cbb4;border-radius:10px;background:#fffdf4;color:#4e6b4b}.actions button[aria-pressed=true]{background:#315942;color:#fff3ce;border-color:#315942}.icon{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}.meta{padding-top:15px;border-top:1px solid var(--line)}.meta strong{font:18px Georgia,serif}.meta p{margin:7px 0}.example-tags{display:flex;flex-wrap:wrap;gap:6px;margin:12px 0 17px}.example-tags span{font-size:10px;padding:4px 8px;background:#e3e8d7;border-radius:5px;color:#476147}.disclaimer{padding-top:12px;border-top:1px solid var(--line);font-size:10px!important;color:#788071!important}.count{font-size:10px;letter-spacing:.12em;color:#80917c}
+    @media(max-width:850px){header{padding:0 18px}.layout{height:auto;min-height:0;grid-template-columns:1fr}.stage{height:58vh;min-height:430px}.intro{left:20px;top:18px}.foot{left:20px;bottom:17px}.rail{padding:22px 20px}.family-list{grid-template-columns:1fr 1fr}.family-list button{min-height:64px}.family-copy strong{font-size:11px}}@media(max-width:520px){.family-list{grid-template-columns:1fr}.family-list button{min-height:53px}.stage{height:53vh;min-height:380px}}
+  </style>
+</head>
+<body>
+  <header><div><strong>nourishland</strong><small>FOOD FOREST · FOUNDATIONAL PIECES V7</small></div><a href="../app/?editor=food-forest&preview=v6">Open the table ↗</a></header>
+  <main class="layout">
+    <section class="stage" aria-label="Interactive 3D foundational plant pieces">
+      <div class="intro"><span class="eyebrow">A playful kit for building a living system</span><h1>Pieces with a purpose.</h1><p>Each shape tells you how it grows and what job it might do.</p></div>
+      <p class="foot"><strong data-caption></strong><br>Drag to turn · scroll to explore · shapes are teaching symbols, not species replicas</p>
+    </section>
+    <aside class="rail">
+      <span class="count" data-count>20 FOUNDATIONAL FORMS · 5 GROUPS</span>
+      <h2 data-title></h2><p data-role></p>
+      <nav class="family-list" aria-label="Foundational piece groups"></nav>
+      <div class="variant-list" aria-label="Piece forms"></div>
+      <div class="actions" aria-label="Preview actions">
+        <button data-action="planted" aria-label="Show planted form" title="Show planted form" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20V10m0 5c-5 0-8-3-8-8 5 0 8 3 8 8Zm0-3c0-5 3-8 8-8 0 5-3 8-8 8Z"/></svg></button>
+        <button data-action="collection" aria-label="Compare all twenty pieces" title="Compare all twenty pieces" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg></button>
+        <button data-action="spin" aria-label="Slow rotation" title="Slow rotation" aria-pressed="false"><svg class="icon" viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5l2 2M20 4v5h-5M20 12a8 8 0 0 1-14 5l-2-2M4 20v-5h5"/></svg></button>
+      </div>
+      <section class="meta"><strong data-form></strong><p data-note></p><div class="example-tags" data-examples></div><p class="disclaimer">Plant roles and companion effects need local review. These models show a design vocabulary; they do not imply a species is suitable or beneficial in every climate.</p></section>
+    </aside>
+  </main>
+  <script type="module" src="./preview-food-forest-foundations-v7.js"></script>
+</body>
+</html>

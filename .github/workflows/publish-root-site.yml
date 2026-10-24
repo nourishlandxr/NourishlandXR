@@ -35,7 +35,7 @@ jobs:
           node --test tests/canonical-routes.test.mjs tests/access-navigation.test.mjs tests/root-release-boundary.test.mjs
           node --test tests/creator-essentials.test.mjs tests/pimo-graph.test.mjs tests/pimo-xr-workbench.test.mjs tests/demo-placement-update.test.mjs
           node --test tests/biome-wheel-xr.test.mjs tests/biome-wheel-model.test.mjs
-          node --test tests/food-forest-board.test.mjs tests/food-forest-v3.test.mjs tests/food-forest-v4.test.mjs tests/food-forest-pieces-v5.test.mjs tests/food-forest-root-space.test.mjs tests/daleys-planning-traits.test.mjs tests/pimo-xr-interaction.test.mjs
+          node --test tests/food-forest-board.test.mjs tests/food-forest-v3.test.mjs tests/food-forest-v4.test.mjs tests/food-forest-pieces-v5.test.mjs tests/food-forest-root-space.test.mjs tests/food-forest-foundations-v7.test.mjs tests/daleys-planning-traits.test.mjs tests/pimo-xr-interaction.test.mjs
           bash -n root-site/tools/install-overlay.sh
           node root-site/tools/verify-release.mjs "$RELEASE_VERSION"
       - name: Configure existing HostArmada deployment identity
